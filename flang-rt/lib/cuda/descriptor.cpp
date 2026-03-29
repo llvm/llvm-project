@@ -33,7 +33,8 @@ void *RTDEF(CUFGetDeviceAddress)(
     void *hostPtr, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   void *p;
-  CUDA_REPORT_IF_ERROR(cudaGetSymbolAddress((void **)&p, hostPtr));
+  CUDA_REPORT_IF_ERROR_LOC(
+      cudaGetSymbolAddress((void **)&p, hostPtr), sourceFile, sourceLine);
   if (!p) {
     terminator.Crash("Could not retrieve symbol's address");
   }
@@ -43,8 +44,9 @@ void *RTDEF(CUFGetDeviceAddress)(
 void RTDEF(CUFDescriptorSync)(Descriptor *dst, const Descriptor *src,
     const char *sourceFile, int sourceLine) {
   std::size_t count{src->SizeInBytes()};
-  CUDA_REPORT_IF_ERROR(cudaMemcpy(
-      (void *)dst, (const void *)src, count, cudaMemcpyHostToDevice));
+  CUDA_REPORT_IF_ERROR_LOC(
+      cudaMemcpy((void *)dst, (const void *)src, count, cudaMemcpyHostToDevice),
+      sourceFile, sourceLine);
 }
 
 void RTDEF(CUFSyncGlobalDescriptor)(
@@ -60,15 +62,6 @@ void RTDEF(CUFDescriptorCheckSection)(
     Terminator terminator{sourceFile, sourceLine};
     terminator.Crash("device array section argument is not contiguous");
   }
-}
-
-void RTDEF(CUFSetAllocatorIndex)(
-    Descriptor *desc, int index, const char *sourceFile, int sourceLine) {
-  if (!desc) {
-    Terminator terminator{sourceFile, sourceLine};
-    terminator.Crash("descriptor is null");
-  }
-  desc->SetAllocIdx(index);
 }
 
 RT_EXT_API_GROUP_END

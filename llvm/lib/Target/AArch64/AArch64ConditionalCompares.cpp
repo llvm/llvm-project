@@ -209,6 +209,17 @@ public:
 };
 } // end anonymous namespace
 
+static Register lookThroughCopies(Register Reg, MachineRegisterInfo *MRI) {
+  MachineInstr *MI;
+  while ((MI = MRI->getUniqueVRegDef(Reg)) &&
+         MI->getOpcode() == TargetOpcode::COPY) {
+    if (MI->getOperand(1).getReg().isPhysical())
+      break;
+    Reg = MI->getOperand(1).getReg();
+  }
+  return Reg;
+}
+
 // Check that all PHIs in Tail are selecting the same value from Head and CmpBB.
 // This means that no if-conversion is required when merging CmpBB into Head.
 bool SSACCmpConv::trivialTailPHIs() {
@@ -219,7 +230,7 @@ bool SSACCmpConv::trivialTailPHIs() {
     // PHI operands come in (VReg, MBB) pairs.
     for (unsigned oi = 1, oe = I.getNumOperands(); oi != oe; oi += 2) {
       MachineBasicBlock *MBB = I.getOperand(oi + 1).getMBB();
-      Register Reg = I.getOperand(oi).getReg();
+      Register Reg = lookThroughCopies(I.getOperand(oi).getReg(), MRI);
       if (MBB == Head) {
         assert((!HeadReg || HeadReg == Reg) && "Inconsistent PHI operands");
         HeadReg = Reg;
@@ -629,8 +640,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
     }
     const MCInstrDesc &MCID = TII->get(Opc);
     // Create a dummy virtual register for the SUBS def.
-    Register DestReg =
-        MRI->createVirtualRegister(TII->getRegClass(MCID, 0, TRI, *MF));
+    Register DestReg = MRI->createVirtualRegister(TII->getRegClass(MCID, 0));
     // Insert a SUBS Rn, #0 instruction instead of the cbz / cbnz.
     BuildMI(*Head, Head->end(), TermDL, MCID)
         .addReg(DestReg, RegState::Define | RegState::Dead)
@@ -638,8 +648,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
         .addImm(0)
         .addImm(0);
     // SUBS uses the GPR*sp register classes.
-    MRI->constrainRegClass(HeadCond[2].getReg(),
-                           TII->getRegClass(MCID, 1, TRI, *MF));
+    MRI->constrainRegClass(HeadCond[2].getReg(), TII->getRegClass(MCID, 1));
   }
 
   Head->splice(Head->end(), CmpBB, CmpBB->begin(), CmpBB->end());
@@ -686,10 +695,10 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CmpBBTailCC);
   const MCInstrDesc &MCID = TII->get(Opc);
   MRI->constrainRegClass(CmpMI->getOperand(FirstOp).getReg(),
-                         TII->getRegClass(MCID, 0, TRI, *MF));
+                         TII->getRegClass(MCID, 0));
   if (CmpMI->getOperand(FirstOp + 1).isReg())
     MRI->constrainRegClass(CmpMI->getOperand(FirstOp + 1).getReg(),
-                           TII->getRegClass(MCID, 1, TRI, *MF));
+                           TII->getRegClass(MCID, 1));
   MachineInstrBuilder MIB = BuildMI(*Head, CmpMI, CmpMI->getDebugLoc(), MCID)
                                 .add(CmpMI->getOperand(FirstOp)); // Register Rn
   if (isZBranch)
@@ -822,8 +831,8 @@ void AArch64ConditionalCompares::updateDomTree(
     MachineDomTreeNode *Node = DomTree->getNode(RemovedMBB);
     assert(Node != HeadNode && "Cannot erase the head node");
     assert(Node->getIDom() == HeadNode && "CmpBB should be dominated by Head");
-    while (Node->getNumChildren())
-      DomTree->changeImmediateDominator(Node->back(), HeadNode);
+    while (!Node->isLeaf())
+      DomTree->changeImmediateDominator(*Node->begin(), HeadNode);
     DomTree->eraseNode(RemovedMBB);
   }
 }
@@ -915,9 +924,9 @@ bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
     CmpConv.convert(RemovedBlocks);
     Changed = true;
     updateDomTree(RemovedBlocks);
+    updateLoops(RemovedBlocks);
     for (MachineBasicBlock *MBB : RemovedBlocks)
       MBB->eraseFromParent();
-    updateLoops(RemovedBlocks);
   }
   return Changed;
 }

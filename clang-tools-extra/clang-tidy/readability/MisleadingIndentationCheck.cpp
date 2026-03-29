@@ -1,4 +1,4 @@
-//===--- MisleadingIndentationCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ static const IfStmt *getPrecedingIf(const SourceManager &SM,
   if (Parents.size() != 1)
     return nullptr;
   if (const auto *PrecedingIf = Parents[0].get<IfStmt>()) {
-    SourceLocation PreviousElseLoc = PrecedingIf->getElseLoc();
+    const SourceLocation PreviousElseLoc = PrecedingIf->getElseLoc();
     if (SM.getExpansionLineNumber(PreviousElseLoc) ==
         SM.getExpansionLineNumber(If->getIfLoc()))
       return PrecedingIf;
@@ -33,7 +33,7 @@ void MisleadingIndentationCheck::danglingElseCheck(const SourceManager &SM,
                                                    ASTContext *Context,
                                                    const IfStmt *If) {
   SourceLocation IfLoc = If->getIfLoc();
-  SourceLocation ElseLoc = If->getElseLoc();
+  const SourceLocation ElseLoc = If->getElseLoc();
 
   if (IfLoc.isMacroID() || ElseLoc.isMacroID())
     return;
@@ -89,8 +89,8 @@ void MisleadingIndentationCheck::missingBracesCheck(
     if (isa<CompoundStmt>(Inner))
       continue;
 
-    SourceLocation InnerLoc = Inner->getBeginLoc();
-    SourceLocation OuterLoc = CurrentStmt->getBeginLoc();
+    const SourceLocation InnerLoc = Inner->getBeginLoc();
+    const SourceLocation OuterLoc = CurrentStmt->getBeginLoc();
 
     if (InnerLoc.isInvalid() || InnerLoc.isMacroID() || OuterLoc.isInvalid() ||
         OuterLoc.isMacroID())
@@ -101,7 +101,7 @@ void MisleadingIndentationCheck::missingBracesCheck(
       continue;
 
     const Stmt *NextStmt = CStmt->body_begin()[I + 1];
-    SourceLocation NextLoc = NextStmt->getBeginLoc();
+    const SourceLocation NextLoc = NextStmt->getBeginLoc();
 
     if (NextLoc.isInvalid() || NextLoc.isMacroID())
       continue;

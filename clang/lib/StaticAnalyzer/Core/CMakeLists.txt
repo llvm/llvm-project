@@ -64,6 +64,7 @@ add_clang_library(clangStaticAnalyzerCore
   clangLex
   clangRewrite
   clangToolingCore
+  clangUnifiedSymbolResolution
 
   DEPENDS
   omp_gen

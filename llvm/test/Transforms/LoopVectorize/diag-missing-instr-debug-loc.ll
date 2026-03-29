@@ -20,11 +20,11 @@
 source_filename = "/tmp/s.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-@out = external local_unnamed_addr global [0 x i32], align 4
-@map = external local_unnamed_addr global [0 x i32], align 4
+@out = external global [0 x i32], align 4
+@map = external global [0 x i32], align 4
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define void @f(i32 %a, i32 %n) local_unnamed_addr #0 !dbg !6 {
+define void @f(i32 %a, i32 %n) #0 !dbg !6 {
 entry:
   %cmp7 = icmp sgt i32 %n, 0, !dbg !8
   br i1 %cmp7, label %for.body.preheader, label %for.cond.cleanup, !dbg !9
@@ -50,7 +50,7 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !9, !llvm.loop !18
 }
 
-attributes #0 = { norecurse nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3,+x87" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

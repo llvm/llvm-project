@@ -14,10 +14,12 @@
 #define CLANG_CIR_DIALECT_IR_CIRTYPES_TD
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIREnumAttr.td"
 include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
 include "clang/CIR/Interfaces/CIRTypeInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Types
@@ -226,31 +228,57 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 ]> {
   let summary = "CIR pointer type";
   let description = [{
-    The `!cir.ptr` type represents C and C++ pointer types and C++ reference
-    types, other than pointers-to-members.  The `pointee` type is the type
-    pointed to.
+    The `!cir.ptr` type is a typed pointer type. It is used to represent
+    pointers to objects in C/C++. The type of the pointed-to object is given by
+    the `pointee` parameter. The `addrSpace` parameter is an optional address
+    space attribute that specifies the address space of the pointer. If not
+    specified, the pointer is assumed to be in the default address space.
 
-    TODO(CIR): The address space attribute is not yet implemented.
+    The `!cir.ptr` type can point to any type, including fundamental types,
+    records, arrays, vectors, functions, and other pointers. It can also point
+    to incomplete types, such as incomplete records.
+
+    Examples:
+
+    ```mlir
+    !cir.ptr<!cir.int<u, 8>>
+    !cir.ptr<!cir.float>
+    !cir.ptr<!cir.record<struct "MyStruct">>
+    !cir.ptr<!cir.int<u, 8>, target_address_space(1)>
+    !cir.ptr<!cir.record<struct "MyStruct">, target_address_space(5)>
+    ```
   }];
 
-  let parameters = (ins "mlir::Type":$pointee);
+  let parameters = (ins
+    "mlir::Type":$pointee,
+    OptionalParameter<
+        "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
+  );
 
+  let skipDefaultBuilders = 1;
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$pointee), [{
-      return $_get(pointee.getContext(), pointee);
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$pointee,
+       CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+        // Drop default address space and replace with empty attribute.
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
+        return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
-    TypeBuilder<(ins "mlir::Type":$pointee), [{
-      return $_get($_ctxt, pointee);
+    TypeBuilder<(ins
+      "mlir::Type":$pointee,
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+        // Drop default address space and replace with empty attribute.
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
+        return $_get($_ctxt, pointee, addrSpace);
     }]>
   ];
 
   let assemblyFormat = [{
-    `<` $pointee  `>`
+    `<`
+      $pointee
+      ( `,` ` ` custom<AddressSpaceValue>($addrSpace)^ )?
+    `>`
   }];
-
-  let genVerifyDecl = 1;
-
-  let skipDefaultBuilders = 1;
 
   let extraClassDeclaration = [{
     template <typename ...Types>
@@ -279,6 +307,38 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
       return false;
     }
   }];
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CIR_DataMemberType
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]
+> {
+  let summary = "CIR type that represents a pointer-to-data-member in C++";
+  let description = [{
+    `cir.data_member` models a pointer-to-data-member in C++. Values of this
+    type are essentially offsets of the pointed-to member within one of its
+    containing record.
+  }];
+
+  let parameters = (ins "mlir::Type":$member_ty,
+                        "cir::RecordType":$class_ty);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$member_ty, "cir::RecordType":$class_ty
+    ), [{
+      return $_get(member_ty.getContext(), member_ty, class_ty);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $member_ty `in` $class_ty `>`
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -296,10 +356,10 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     access to the vptr.
 
     This type will be the element type of the 'vptr' member of structures that
-    require a vtable pointer. A pointer to this type is returned by the
-    `cir.vtable.address_point` and `cir.vtable.get_vptr` operations, and this
-    pointer may be passed to the `cir.vtable.get_virtual_fn_addr` operation to
-    get the address of a virtual function pointer.
+    require a vtable pointer. The `cir.vtable.address_point` operation returns
+    this type. The `cir.vtable.get_vptr` operations returns a pointer to this
+    type. This pointer may be passed to the `cir.vtable.get_virtual_fn_addr`
+    operation to get the address of a virtual function pointer.
 
     The pointer may also be cast to other pointer types in order to perform
     pointer arithmetic based on information encoded in the AST layout to get
@@ -368,13 +428,15 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 ]> {
   let summary = "CIR vector type";
   let description = [{
-    The `!cir.vector` type represents a fixed-size, one-dimensional vector.
-    It takes two parameters: the element type and the number of elements.
+    The `!cir.vector` type represents a one-dimensional vector.
+    It takes three parameters: the element type, the number of elements and the
+    scalability flag (optional, defaults to `false`).
 
     Syntax:
 
     ```mlir
     vector-type ::= !cir.vector<size x element-type>
+    size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
     ```
 
@@ -387,22 +449,27 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     !cir.vector<4 x !cir.int<u, 8>>
     !cir.vector<2 x !cir.float>
     ```
+
+    Scalable vectors are indicated by enclosing size in square brackets.
+
+    Example:
+    ```mlir
+    !cir.vector<[4] x !cir.int<u, 8>>
+    ```
   }];
 
   let parameters = (ins
-    CIR_VectorElementType:$elementType,
-    "uint64_t":$size
+    CIR_VectorElementType:$element_type,
+    "uint64_t":$size,
+    OptionalParameter<"bool">:$is_scalable
   );
-
-  let assemblyFormat = [{
-    `<` $size `x` $elementType `>`
-  }];
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$elementType, "uint64_t":$size
+      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
+      "false">:$is_scalable
     ), [{
-        return $_get(elementType.getContext(), elementType, size);
+        return $_get(element_type.getContext(), element_type, size, is_scalable);
     }]>,
   ];
 
@@ -413,6 +480,8 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   }];
 
   let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -485,6 +554,34 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     /// Returns a clone of this function type with the given argument
     /// and result types.
     FuncType clone(mlir::TypeRange inputs, mlir::TypeRange results) const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MethodType
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodType : CIR_Type<"Method", "method",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+  let summary = "CIR type that represents C++ pointer-to-member-function type";
+  let description = [{
+    `cir.method` models the pointer-to-member-function type in C++. The layout
+    of this type is ABI-dependent.
+  }];
+
+  let parameters = (ins "cir::FuncType":$member_func_ty,
+                        "cir::RecordType":$class_ty);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "cir::FuncType":$member_func_ty, "cir::RecordType":$class_ty
+    ), [{
+      return $_get(member_func_ty.getContext(), member_func_ty, class_ty);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` qualified($member_func_ty) `in` $class_ty `>`
   }];
 }
 
@@ -633,6 +730,9 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       }
       llvm_unreachable("Invalid value for RecordType::getKind()");
     }
+    mlir::Type getElementType(size_t idx) {
+      return getMembers()[idx];
+    }
     std::string getPrefixedName() {
       return getKindAsStr() + "." + getName().getValue().str();
     }
@@ -642,6 +742,8 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
               unsigned idx) const;
+
+    bool isLayoutIdentical(const RecordType &other);
 
   private:
     unsigned computeStructSize(const mlir::DataLayout &dataLayout) const;
@@ -658,13 +760,54 @@ def CIRRecordType : Type<
   CPred<"::mlir::isa<::cir::RecordType>($_self)">, "CIR record type">;
 
 //===----------------------------------------------------------------------===//
+// Exception Handling Token Types
+//===----------------------------------------------------------------------===//
+
+def CIR_EhTokenType : CIR_Type<"EhToken", "eh_token"> {
+  let summary = "CIR exception handling token type";
+  let description = [{
+    `!cir.eh_token` is an opaque type used to track exception handling state
+    in flattened CIR. It is returned by `cir.eh.initiate` and passed to
+    `cir.eh.dispatch`, `cir.begin_cleanup`, and `cir.begin_catch` operations.
+
+    This token represents an in-flight exception and is used during ABI-lowering
+    to generate the appropriate exception handling code.
+  }];
+}
+
+def CIR_CleanupTokenType : CIR_Type<"CleanupToken", "cleanup_token"> {
+  let summary = "CIR cleanup token type";
+  let description = [{
+    `!cir.cleanup_token` is an opaque type used to track cleanup handling state
+    in flattened CIR. It is returned by `cir.begin_cleanup` and consumed by
+    `cir.end_cleanup`.
+
+    This token ensures that cleanup regions are properly paired and allows
+    the ABI lowering pass to generate appropriate cleanup handling code.
+  }];
+}
+
+def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
+  let summary = "CIR catch token type";
+  let description = [{
+    `!cir.catch_token` is an opaque type used to track catch handling state
+    in flattened CIR. It is returned by `cir.begin_catch` and consumed by
+    `cir.end_catch`.
+
+    This token ensures that catch handlers are properly paired and allows
+    the ABI lowering pass to generate appropriate exception catching code.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Global type constraints
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType, CIR_VPtrType
+  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
+  CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

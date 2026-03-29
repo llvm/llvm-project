@@ -383,6 +383,9 @@ public:
     const auto stt = getSparseTensorType(op);
     if (!stt.hasEncoding())
       return failure();
+    // Verify that the element type is supported by the runtime library.
+    if (!isValidPrimaryType(stt.getElementType()))
+      return rewriter.notifyMatchFailure(op, "unsupported element type");
     // Construct the `reader` opening method calls.
     SmallVector<Value> dimSizesValues;
     Value dimSizesBuffer;
@@ -730,9 +733,9 @@ public:
                    {tensor, lvlCoords, values, filled, added, count},
                    EmitCInterface::On);
     Operation *parent = getTop(op);
+    rewriter.setInsertionPointAfter(parent);
     rewriter.replaceOp(op, adaptor.getTensor());
     // Deallocate the buffers on exit of the loop nest.
-    rewriter.setInsertionPointAfter(parent);
     memref::DeallocOp::create(rewriter, loc, values);
     memref::DeallocOp::create(rewriter, loc, filled);
     memref::DeallocOp::create(rewriter, loc, added);

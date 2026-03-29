@@ -156,23 +156,23 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(Ctx &ctx,
 
   std::pair<ELFKind, uint16_t> ret =
       StringSwitch<std::pair<ELFKind, uint16_t>>(s)
-          .Cases("aarch64elf", "aarch64linux", {ELF64LEKind, EM_AARCH64})
-          .Cases("aarch64elfb", "aarch64linuxb", {ELF64BEKind, EM_AARCH64})
-          .Cases("armelf", "armelf_linux_eabi", {ELF32LEKind, EM_ARM})
-          .Cases("armelfb", "armelfb_linux_eabi", {ELF32BEKind, EM_ARM})
+          .Cases({"aarch64elf", "aarch64linux"}, {ELF64LEKind, EM_AARCH64})
+          .Cases({"aarch64elfb", "aarch64linuxb"}, {ELF64BEKind, EM_AARCH64})
+          .Cases({"armelf", "armelf_linux_eabi"}, {ELF32LEKind, EM_ARM})
+          .Cases({"armelfb", "armelfb_linux_eabi"}, {ELF32BEKind, EM_ARM})
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
-          .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
-          .Cases("elf32ltsmip", "elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
+          .Cases({"elf32btsmip", "elf32btsmipn32"}, {ELF32BEKind, EM_MIPS})
+          .Cases({"elf32ltsmip", "elf32ltsmipn32"}, {ELF32LEKind, EM_MIPS})
           .Case("elf32lriscv", {ELF32LEKind, EM_RISCV})
-          .Cases("elf32ppc", "elf32ppclinux", {ELF32BEKind, EM_PPC})
-          .Cases("elf32lppc", "elf32lppclinux", {ELF32LEKind, EM_PPC})
+          .Cases({"elf32ppc", "elf32ppclinux"}, {ELF32BEKind, EM_PPC})
+          .Cases({"elf32lppc", "elf32lppclinux"}, {ELF32LEKind, EM_PPC})
           .Case("elf32loongarch", {ELF32LEKind, EM_LOONGARCH})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
           .Case("elf64lriscv", {ELF64LEKind, EM_RISCV})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
           .Case("elf64lppc", {ELF64LEKind, EM_PPC64})
-          .Cases("elf_amd64", "elf_x86_64", {ELF64LEKind, EM_X86_64})
+          .Cases({"elf_amd64", "elf_x86_64"}, {ELF64LEKind, EM_X86_64})
           .Case("elf_i386", {ELF32LEKind, EM_386})
           .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
           .Case("elf64_sparc", {ELF64BEKind, EM_SPARCV9})
@@ -236,8 +236,10 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
-                                                offsetInArchive, lazy));
+  auto file = std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                            offsetInArchive, lazy);
+  file->obj->fatLTOObject(true);
+  files.push_back(std::move(file));
   return true;
 }
 
@@ -628,6 +630,25 @@ static ZicfissPolicy getZZicfiss(Ctx &ctx, opt::InputArgList &args) {
   return ret;
 }
 
+static int getZMemtagMode(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ELF::NT_MEMTAG_LEVEL_NONE;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "memtag-mode") {
+      arg->claim();
+      if (kv.second == "none")
+        ret = ELF::NT_MEMTAG_LEVEL_NONE;
+      else if (kv.second == "sync")
+        ret = ELF::NT_MEMTAG_LEVEL_SYNC;
+      else if (kv.second == "async")
+        ret = ELF::NT_MEMTAG_LEVEL_ASYNC;
+      else
+        ErrAlways(ctx) << "unknown -z memtag-mode= value: " << kv.second;
+    }
+  }
+  return ret;
+}
+
 // Report a warning for an unknown -z option.
 static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   // This function is called before getTarget(), when certain options are not
@@ -844,27 +865,19 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
 }
 
 static int getMemtagMode(Ctx &ctx, opt::InputArgList &args) {
-  StringRef memtagModeArg = args.getLastArgValue(OPT_android_memtag_mode);
-  if (memtagModeArg.empty()) {
-    if (ctx.arg.androidMemtagStack)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-stack a no-op";
-    else if (ctx.arg.androidMemtagHeap)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-heap a no-op";
-    return ELF::NT_MEMTAG_LEVEL_NONE;
+  auto memtagMode = getZMemtagMode(ctx, args);
+  if (memtagMode == ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (ctx.arg.memtagStack)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-stack a no-op";
+    if (ctx.arg.memtagHeap)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-heap a no-op";
+    if (ctx.arg.memtagAndroidNote)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "--android-memtag-note a no-op";
   }
-
-  if (memtagModeArg == "sync")
-    return ELF::NT_MEMTAG_LEVEL_SYNC;
-  if (memtagModeArg == "async")
-    return ELF::NT_MEMTAG_LEVEL_ASYNC;
-  if (memtagModeArg == "none")
-    return ELF::NT_MEMTAG_LEVEL_NONE;
-
-  ErrAlways(ctx) << "unknown --android-memtag-mode value: \"" << memtagModeArg
-                 << "\", should be one of {async, sync, none}";
-  return ELF::NT_MEMTAG_LEVEL_NONE;
+  return memtagMode;
 }
 
 static ICFLevel getICF(opt::InputArgList &args) {
@@ -1155,7 +1168,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
 
   SmallSetVector<StringRef, 0> vtableSymbolsWithNoRTTI;
   for (StringRef s : vtableSymbols)
-    if (!typeInfoSymbols.count(s))
+    if (!typeInfoSymbols.contains(s))
       vtableSymbolsWithNoRTTI.insert(s);
 
   // Remove known safe symbols.
@@ -1356,13 +1369,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false);
-  ctx.arg.androidMemtagHeap =
-      args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
-  ctx.arg.androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
-                                            OPT_no_android_memtag_stack, false);
+  ctx.arg.memtagHeap = hasZOption(args, "memtag-heap");
+  ctx.arg.memtagStack = hasZOption(args, "memtag-stack");
+  ctx.arg.memtagAndroidNote = args.hasArg(OPT_android_memtag_note);
   ctx.arg.fatLTOObjects =
       args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false);
-  ctx.arg.androidMemtagMode = getMemtagMode(ctx, args);
+  ctx.arg.memtagMode = getMemtagMode(ctx, args);
   ctx.arg.auxiliaryList = args::getStrings(args, OPT_auxiliary);
   ctx.arg.armBe8 = args.hasArg(OPT_be8);
   if (opt::Arg *arg = args.getLastArg(
@@ -1399,8 +1411,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
   ctx.arg.dtltoDistributorArgs =
       args::getStrings(args, OPT_thinlto_distributor_arg);
-  ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_compiler_eq);
-  ctx.arg.dtltoCompilerArgs = args::getStrings(args, OPT_thinlto_compiler_arg);
+  ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler_eq);
+  ctx.arg.dtltoCompilerPrependArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg);
+  ctx.arg.dtltoCompilerArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
   ctx.arg.dwoDir = args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
   ctx.arg.dynamicLinker = getDynamicLinker(ctx, args);
   ctx.arg.ehFrameHdr =
@@ -1510,8 +1525,14 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
   ctx.arg.printIcfSections =
       args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
-  ctx.arg.printGcSections =
-      args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
+  if (auto *arg =
+          args.getLastArg(OPT_print_gc_sections, OPT_no_print_gc_sections,
+                          OPT_print_gc_sections_eq)) {
+    if (arg->getOption().matches(OPT_print_gc_sections))
+      ctx.arg.printGcSections = "-";
+    else if (arg->getOption().matches(OPT_print_gc_sections_eq))
+      ctx.arg.printGcSections = arg->getValue();
+  }
   ctx.arg.printMemoryUsage = args.hasArg(OPT_print_memory_usage);
   ctx.arg.printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   ctx.arg.printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
@@ -1695,6 +1716,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
+  if (ctx.arg.zForceBti) {
+    ctx.arg.zBtiReport = ReportPolicy::Warning;
+    ctx.arg.zBtiReportSource = "-z force-bti";
+  }
+  if (ctx.arg.zGcs == GcsPolicy::Always) {
+    ctx.arg.zGcsReport = ReportPolicy::Warning;
+    ctx.arg.zGcsReportSource = "-z gcs";
+  }
+
   auto reports = {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
       std::make_pair("cet-report", &ctx.arg.zCetReport),
@@ -1726,6 +1756,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       }
       hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
+      if (option.first == "bti-report")
+        ctx.arg.zBtiReportSource = "-z bti-report";
+      else if (option.first == "gcs-report")
+        ctx.arg.zGcsReportSource = "-z gcs-report";
     }
   }
 
@@ -2306,11 +2340,11 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &args) {
 // This is not a popular option, but some programs such as bionic libc use it.
 static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
   DenseSet<StringRef> libs = getExcludeLibs(args);
-  bool all = libs.count("ALL");
+  bool all = libs.contains("ALL");
 
   auto visit = [&](InputFile *file) {
     if (file->archiveName.empty() ||
-        !(all || libs.count(path::filename(file->archiveName))))
+        !(all || libs.contains(path::filename(file->archiveName))))
       return;
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
@@ -2678,7 +2712,7 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   for (BitcodeFile *file : ctx.lazyBitcodeFiles)
     bufs.insert(file->mb.getBufferStart());
   for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
-    if (bufs.count(mb.getBufferStart()))
+    if (bufs.contains(mb.getBufferStart()))
       mb.dontNeedIfMmap();
 }
 
@@ -2935,14 +2969,14 @@ static void readSecurityNotes(Ctx &ctx) {
 
     reportUnless(ctx.arg.zBtiReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
-        << f
-        << ": -z bti-report: file does not have "
+        << f << ": " << ctx.arg.zBtiReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
     reportUnless(ctx.arg.zGcsReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
-        << f
-        << ": -z gcs-report: file does not have "
+        << f << ": " << ctx.arg.zGcsReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
     reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
@@ -2997,10 +3031,6 @@ static void readSecurityNotes(Ctx &ctx) {
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      if (ctx.arg.zBtiReport == ReportPolicy::None)
-        Warn(ctx) << f
-                  << ": -z force-bti: file does not have "
-                     "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
     } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
       if (ctx.arg.zCetReport == ReportPolicy::None)

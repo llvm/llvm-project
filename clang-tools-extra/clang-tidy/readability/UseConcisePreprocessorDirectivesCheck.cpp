@@ -1,4 +1,4 @@
-//===--- UseConcisePreprocessorDirectivesCheck.cpp - clang-tidy -----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,7 +36,7 @@ public:
 
 private:
   void impl(SourceLocation DirectiveLoc, SourceRange ConditionRange,
-            const std::array<llvm::StringLiteral, 2> &Replacements) {
+            const std::array<StringRef, 2> &Replacements) {
     // Lexer requires its input range to be null-terminated.
     SmallString<128> Condition =
         Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),
@@ -91,7 +91,10 @@ private:
     Check.diag(
         DirectiveLoc,
         "preprocessor condition can be written more concisely using '#%0'")
-        << FixItHint::CreateReplacement(DirectiveLoc, Replacements[Inverted])
+        << FixItHint::CreateReplacement(
+               CharSourceRange::getCharRange(DirectiveLoc,
+                                             ConditionRange.getBegin()),
+               (Replacements[Inverted].str() + " "))
         << FixItHint::CreateReplacement(ConditionRange, Macro)
         << Replacements[Inverted];
   }

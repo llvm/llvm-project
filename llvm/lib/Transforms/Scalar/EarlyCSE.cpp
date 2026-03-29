@@ -108,7 +108,7 @@ struct SimpleValue {
     // of instruction handled below (UnaryOperator, etc.).
     if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
       if (Function *F = CI->getCalledFunction()) {
-        switch ((Intrinsic::ID)F->getIntrinsicID()) {
+        switch (F->getIntrinsicID()) {
         case Intrinsic::experimental_constrained_fadd:
         case Intrinsic::experimental_constrained_fsub:
         case Intrinsic::experimental_constrained_fmul:
@@ -154,9 +154,7 @@ struct SimpleValue {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-template <> struct DenseMapInfo<SimpleValue> {
+template <> struct llvm::DenseMapInfo<SimpleValue> {
   static inline SimpleValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
@@ -168,8 +166,6 @@ template <> struct DenseMapInfo<SimpleValue> {
   static unsigned getHashValue(SimpleValue Val);
   static bool isEqual(SimpleValue LHS, SimpleValue RHS);
 };
-
-} // end namespace llvm
 
 /// Match a 'select' including an optional 'not's of the condition.
 static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
@@ -509,9 +505,7 @@ struct CallValue {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-template <> struct DenseMapInfo<CallValue> {
+template <> struct llvm::DenseMapInfo<CallValue> {
   static inline CallValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
@@ -523,8 +517,6 @@ template <> struct DenseMapInfo<CallValue> {
   static unsigned getHashValue(CallValue Val);
   static bool isEqual(CallValue LHS, CallValue RHS);
 };
-
-} // end namespace llvm
 
 unsigned DenseMapInfo<CallValue>::getHashValue(CallValue Val) {
   Instruction *Inst = Val.Inst;
@@ -580,9 +572,7 @@ struct GEPValue {
 
 } // namespace
 
-namespace llvm {
-
-template <> struct DenseMapInfo<GEPValue> {
+template <> struct llvm::DenseMapInfo<GEPValue> {
   static inline GEPValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
@@ -594,8 +584,6 @@ template <> struct DenseMapInfo<GEPValue> {
   static unsigned getHashValue(const GEPValue &Val);
   static bool isEqual(const GEPValue &LHS, const GEPValue &RHS);
 };
-
-} // end namespace llvm
 
 unsigned DenseMapInfo<GEPValue>::getHashValue(const GEPValue &Val) {
   auto *GEP = cast<GetElementPtrInst>(Val.Inst);
@@ -949,7 +937,7 @@ private:
 
   bool processNode(DomTreeNode *Node);
 
-  bool handleBranchCondition(Instruction *CondInst, const BranchInst *BI,
+  bool handleBranchCondition(Instruction *CondInst, const CondBrInst *BI,
                              const BasicBlock *BB, const BasicBlock *Pred);
 
   Value *getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
@@ -1029,14 +1017,14 @@ private:
     };
     auto MaskOp = [](const IntrinsicInst *II) {
       if (II->getIntrinsicID() == Intrinsic::masked_load)
-        return II->getOperand(2);
+        return II->getOperand(1);
       if (II->getIntrinsicID() == Intrinsic::masked_store)
-        return II->getOperand(3);
+        return II->getOperand(2);
       llvm_unreachable("Unexpected IntrinsicInst");
     };
     auto ThruOp = [](const IntrinsicInst *II) {
       if (II->getIntrinsicID() == Intrinsic::masked_load)
-        return II->getOperand(3);
+        return II->getOperand(2);
       llvm_unreachable("Unexpected IntrinsicInst");
     };
 
@@ -1178,9 +1166,8 @@ bool EarlyCSE::isOperatingOnInvariantMemAt(Instruction *I, unsigned GenAt) {
 }
 
 bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
-                                     const BranchInst *BI, const BasicBlock *BB,
+                                     const CondBrInst *BI, const BasicBlock *BB,
                                      const BasicBlock *Pred) {
-  assert(BI->isConditional() && "Should be a conditional branch!");
   assert(BI->getCondition() == CondInst && "Wrong condition?");
   assert(BI->getSuccessor(0) == BB || BI->getSuccessor(1) == BB);
   auto *TorF = (BI->getSuccessor(0) == BB)
@@ -1370,8 +1357,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
   // value.  Since we're adding this to the scoped hash table (like any other
   // def), it will have been popped if we encounter a future merge block.
   if (BasicBlock *Pred = BB->getSinglePredecessor()) {
-    auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
-    if (BI && BI->isConditional()) {
+    if (auto *BI = dyn_cast<CondBrInst>(Pred->getTerminator())) {
       auto *CondInst = dyn_cast<Instruction>(BI->getCondition());
       if (CondInst && SimpleValue::canHandle(CondInst))
         Changed |= handleBranchCondition(CondInst, BI, BB, Pred);

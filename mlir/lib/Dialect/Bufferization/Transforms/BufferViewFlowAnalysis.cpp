@@ -121,7 +121,7 @@ void BufferViewFlowAnalysis::build(Operation *op) {
     // Add additional dependencies created by view changes to the alias list.
     if (auto viewInterface = dyn_cast<ViewLikeOpInterface>(op)) {
       registerDependencies(viewInterface.getViewSource(),
-                           viewInterface->getResult(0));
+                           viewInterface.getViewDest());
       return WalkResult::advance();
     }
 
@@ -142,37 +142,12 @@ void BufferViewFlowAnalysis::build(Operation *op) {
     }
 
     if (auto regionInterface = dyn_cast<RegionBranchOpInterface>(op)) {
-      // Query the RegionBranchOpInterface to find potential successor regions.
-      // Extract all entry regions and wire all initial entry successor inputs.
-      SmallVector<RegionSuccessor, 2> entrySuccessors;
-      regionInterface.getSuccessorRegions(/*point=*/RegionBranchPoint::parent(),
-                                          entrySuccessors);
-      for (RegionSuccessor &entrySuccessor : entrySuccessors) {
-        // Wire the entry region's successor arguments with the initial
-        // successor inputs.
-        registerDependencies(
-            regionInterface.getEntrySuccessorOperands(entrySuccessor),
-            entrySuccessor.getSuccessorInputs());
-      }
-
-      // Wire flow between regions and from region exits.
-      for (Region &region : regionInterface->getRegions()) {
-        // Iterate over all successor region entries that are reachable from the
-        // current region.
-        SmallVector<RegionSuccessor, 2> successorRegions;
-        regionInterface.getSuccessorRegions(region, successorRegions);
-        for (RegionSuccessor &successorRegion : successorRegions) {
-          // Iterate over all immediate terminator operations and wire the
-          // successor inputs with the successor operands of each terminator.
-          for (Block &block : region)
-            if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
-                    block.getTerminator()))
-              registerDependencies(
-                  terminator.getSuccessorOperands(successorRegion),
-                  successorRegion.getSuccessorInputs());
-        }
-      }
-
+      // Wire the successor operands with the successor inputs.
+      DenseMap<OpOperand *, SmallVector<Value>> mapping;
+      regionInterface.getSuccessorOperandInputMapping(mapping);
+      for (const auto &[operand, inputs] : mapping)
+        for (Value input : inputs)
+          registerDependencies({operand->get()}, {input});
       return WalkResult::advance();
     }
 
@@ -231,8 +206,12 @@ static bool isFunctionArgument(Value v) {
 /// Given a memref value, return the "base" value by skipping over all
 /// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
 static Value getViewBase(Value value) {
-  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
+  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>()) {
+    if (value != viewLikeOp.getViewDest()) {
+      break;
+    }
     value = viewLikeOp.getViewSource();
+  }
   return value;
 }
 

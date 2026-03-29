@@ -147,7 +147,6 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -189,7 +188,6 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn_2048(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] offset:2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -228,7 +226,6 @@ define amdgpu_ps float @global_xchg_saddr_i32_rtn_neg2048(ptr addrspace(1) inreg
 ; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[2:3] offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -295,7 +292,6 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn(i32 %voffset,
 ; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %sbase = load ptr addrspace(1), ptr addrspace(3) @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
@@ -356,7 +352,6 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn_immoffset(i32
 ; GFX12-NEXT:    global_atomic_swap_b32 v0, v0, v1, s[0:1] offset:42 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %sbase = load ptr addrspace(1), ptr addrspace(3) @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
@@ -523,7 +518,6 @@ define amdgpu_ps <2 x float> @global_xchg_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_swap_b64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -561,7 +555,6 @@ define amdgpu_ps <2 x float> @global_xchg_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX12-NEXT:    global_atomic_swap_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -677,7 +670,6 @@ define amdgpu_ps float @global_add_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    global_atomic_add_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -715,7 +707,6 @@ define amdgpu_ps float @global_add_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_add_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -827,7 +818,6 @@ define amdgpu_ps <2 x float> @global_add_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    global_atomic_add_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -865,7 +855,6 @@ define amdgpu_ps <2 x float> @global_add_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    global_atomic_add_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -981,11 +970,10 @@ define amdgpu_ps float @global_sub_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    global_atomic_sub_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw sub ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw sub ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1019,12 +1007,11 @@ define amdgpu_ps float @global_sub_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_sub_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw sub ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw sub ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1061,7 +1048,7 @@ define amdgpu_ps void @global_sub_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw sub ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw sub ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1098,7 +1085,7 @@ define amdgpu_ps void @global_sub_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw sub ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw sub ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1131,11 +1118,10 @@ define amdgpu_ps <2 x float> @global_sub_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    global_atomic_sub_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw sub ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw sub ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1169,12 +1155,11 @@ define amdgpu_ps <2 x float> @global_sub_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    global_atomic_sub_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw sub ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw sub ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1211,7 +1196,7 @@ define amdgpu_ps void @global_sub_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw sub ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw sub ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1248,7 +1233,7 @@ define amdgpu_ps void @global_sub_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw sub ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw sub ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1285,11 +1270,10 @@ define amdgpu_ps float @global_and_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    global_atomic_and_b32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw and ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw and ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1323,12 +1307,11 @@ define amdgpu_ps float @global_and_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_and_b32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw and ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw and ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1365,7 +1348,7 @@ define amdgpu_ps void @global_and_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw and ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw and ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1402,7 +1385,7 @@ define amdgpu_ps void @global_and_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw and ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw and ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1435,11 +1418,10 @@ define amdgpu_ps <2 x float> @global_and_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    global_atomic_and_b64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw and ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw and ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1473,12 +1455,11 @@ define amdgpu_ps <2 x float> @global_and_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    global_atomic_and_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw and ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw and ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1515,7 +1496,7 @@ define amdgpu_ps void @global_and_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw and ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw and ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1552,7 +1533,7 @@ define amdgpu_ps void @global_and_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw and ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw and ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1589,11 +1570,10 @@ define amdgpu_ps float @global_or_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, i
 ; GFX12-NEXT:    global_atomic_or_b32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw or ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw or ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1627,12 +1607,11 @@ define amdgpu_ps float @global_or_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    global_atomic_or_b32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw or ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw or ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1669,7 +1648,7 @@ define amdgpu_ps void @global_or_saddr_i32_nortn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw or ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw or ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1706,7 +1685,7 @@ define amdgpu_ps void @global_or_saddr_i32_nortn_neg128(ptr addrspace(1) inreg %
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw or ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw or ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1739,11 +1718,10 @@ define amdgpu_ps <2 x float> @global_or_saddr_i64_rtn(ptr addrspace(1) inreg %sb
 ; GFX12-NEXT:    global_atomic_or_b64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw or ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw or ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1777,12 +1755,11 @@ define amdgpu_ps <2 x float> @global_or_saddr_i64_rtn_neg128(ptr addrspace(1) in
 ; GFX12-NEXT:    global_atomic_or_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw or ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw or ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -1819,7 +1796,7 @@ define amdgpu_ps void @global_or_saddr_i64_nortn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw or ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw or ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1856,7 +1833,7 @@ define amdgpu_ps void @global_or_saddr_i64_nortn_neg128(ptr addrspace(1) inreg %
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw or ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw or ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1893,11 +1870,10 @@ define amdgpu_ps float @global_xor_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    global_atomic_xor_b32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw xor ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw xor ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1931,12 +1907,11 @@ define amdgpu_ps float @global_xor_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_xor_b32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw xor ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw xor ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -1973,7 +1948,7 @@ define amdgpu_ps void @global_xor_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw xor ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw xor ptr addrspace(1) %gep0, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2010,7 +1985,7 @@ define amdgpu_ps void @global_xor_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw xor ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst
+  %unused = atomicrmw xor ptr addrspace(1) %gep1, i32 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2043,11 +2018,10 @@ define amdgpu_ps <2 x float> @global_xor_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    global_atomic_xor_b64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw xor ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw xor ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2081,12 +2055,11 @@ define amdgpu_ps <2 x float> @global_xor_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    global_atomic_xor_b64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw xor ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %rtn = atomicrmw xor ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2123,7 +2096,7 @@ define amdgpu_ps void @global_xor_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw xor ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw xor ptr addrspace(1) %gep0, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2160,7 +2133,7 @@ define amdgpu_ps void @global_xor_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw xor ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst
+  %unused = atomicrmw xor ptr addrspace(1) %gep1, i64 %data syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2194,11 +2167,10 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    global_atomic_max_i32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw max ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw max ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2229,12 +2201,11 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_max_i32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw max ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw max ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2267,7 +2238,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw max ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw max ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2300,7 +2271,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw max ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw max ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2330,11 +2301,10 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    global_atomic_max_i64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw max ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw max ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2365,12 +2335,11 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    global_atomic_max_i64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw max ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw max ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2403,7 +2372,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw max ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw max ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2436,7 +2405,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw max ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw max ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2470,11 +2439,10 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    global_atomic_min_i32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw min ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw min ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2505,12 +2473,11 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_min_i32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw min ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw min ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2543,7 +2510,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw min ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw min ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2576,7 +2543,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw min ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw min ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2606,11 +2573,10 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    global_atomic_min_i64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw min ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw min ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2641,12 +2607,11 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX12-NEXT:    global_atomic_min_i64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw min ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw min ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2679,7 +2644,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw min ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw min ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2712,7 +2677,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw min ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw min ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2746,11 +2711,10 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    global_atomic_max_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2781,12 +2745,11 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    global_atomic_max_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -2819,7 +2782,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw umax ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umax ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2852,7 +2815,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw umax ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umax ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2882,11 +2845,10 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_max_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umax ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2917,12 +2879,11 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX12-NEXT:    global_atomic_max_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umax ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -2955,7 +2916,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw umax ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umax ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2988,7 +2949,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw umax ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umax ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3022,11 +2983,10 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    global_atomic_min_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3057,12 +3017,11 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX12-NEXT:    global_atomic_min_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3095,7 +3054,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw umin ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umin ptr addrspace(1) %gep0, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3128,7 +3087,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw umin ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umin ptr addrspace(1) %gep1, i32 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3158,11 +3117,10 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    global_atomic_min_u64 v[0:1], v0, v[1:2], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umin ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3193,12 +3151,11 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX12-NEXT:    global_atomic_min_u64 v[0:1], v0, v[1:2], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %rtn = atomicrmw umin ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3231,7 +3188,7 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw umin ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umin ptr addrspace(1) %gep0, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3264,7 +3221,7 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw umin ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst
+  %unused = atomicrmw umin ptr addrspace(1) %gep1, i64 %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3307,7 +3264,6 @@ define amdgpu_ps float @global_cmpxchg_saddr_i32_rtn(ptr addrspace(1) inreg %sba
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v0, v[2:3], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3352,7 +3308,6 @@ define amdgpu_ps float @global_cmpxchg_saddr_i32_rtn_neg128(ptr addrspace(1) inr
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v0, v[2:3], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3487,7 +3442,6 @@ define amdgpu_ps <2 x float> @global_cmpxchg_saddr_i64_rtn(ptr addrspace(1) inre
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[0:1], v0, v[3:6], s[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3536,7 +3490,6 @@ define amdgpu_ps <2 x float> @global_cmpxchg_saddr_i64_rtn_neg128(ptr addrspace(
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v[0:1], v0, v[3:6], s[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -3664,7 +3617,7 @@ define amdgpu_ps float @global_inc_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic
+  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3690,7 +3643,7 @@ define amdgpu_ps float @global_inc_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic
+  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3712,7 +3665,7 @@ define amdgpu_ps void @global_inc_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic
+  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3734,7 +3687,7 @@ define amdgpu_ps void @global_inc_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic
+  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3758,7 +3711,7 @@ define amdgpu_ps <2 x float> @global_inc_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic
+  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3784,7 +3737,7 @@ define amdgpu_ps <2 x float> @global_inc_saddr_i64_rtn_neg128(ptr addrspace(1) i
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
+  %rtn = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3806,7 +3759,7 @@ define amdgpu_ps void @global_inc_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic
+  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3828,7 +3781,7 @@ define amdgpu_ps void @global_inc_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
+  %unused = atomicrmw uinc_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3857,7 +3810,7 @@ define amdgpu_ps float @global_dec_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic
+  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3883,7 +3836,7 @@ define amdgpu_ps float @global_dec_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic
+  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -3905,7 +3858,7 @@ define amdgpu_ps void @global_dec_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic
+  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep0, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3927,7 +3880,7 @@ define amdgpu_ps void @global_dec_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic
+  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i32 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3951,7 +3904,7 @@ define amdgpu_ps <2 x float> @global_dec_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX12-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic
+  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3977,7 +3930,7 @@ define amdgpu_ps <2 x float> @global_dec_saddr_i64_rtn_neg128(ptr addrspace(1) i
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
+  %rtn = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %cast.rtn = bitcast i64 %rtn to <2 x float>
   ret <2 x float> %cast.rtn
 }
@@ -3999,7 +3952,7 @@ define amdgpu_ps void @global_dec_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic
+  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep0, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -4021,8 +3974,10 @@ define amdgpu_ps void @global_dec_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic
+  %unused = atomicrmw udec_wrap ptr addrspace(1) %gep1, i64 %data syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
 attributes #0 = { argmemonly nounwind willreturn }
+
+!0 = !{}

@@ -55,7 +55,7 @@ public:
     Plugins = Layer.Plugins;
   }
 
-  ~JITLinkCtx() {
+  ~JITLinkCtx() override {
     // If there is an object buffer return function then use it to
     // return ownership of the buffer.
     if (Layer.ReturnObjectBuffer && ObjBuffer)
@@ -357,7 +357,7 @@ private:
 
         // If that block has any definitions then use the first one as the
         // "effective" dependence here (all symbols in TgtBI will become
-        // ready at the same time, and chosing a single symbol to represent
+        // ready at the same time, and choosing a single symbol to represent
         // the block keeps the SymbolDepGroup size small).
         if (!TgtBI.Defs.empty()) {
           BI.SymbolDeps.insert(*TgtBI.Defs.begin());

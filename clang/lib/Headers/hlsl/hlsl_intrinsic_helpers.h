@@ -58,6 +58,21 @@ constexpr float dot2add_impl(half2 a, half2 b, float c) {
 #endif
 }
 
+template <typename T, int N>
+constexpr enable_if_t<!is_same<double, T>::value, T>
+mul_vec_impl(vector<T, N> x, vector<T, N> y) {
+  return dot(x, y);
+}
+
+// Double vectors do not have a dot intrinsic, so expand manually.
+template <typename T, int N>
+enable_if_t<is_same<double, T>::value, T> mul_vec_impl(vector<T, N> x,
+                                                       vector<T, N> y) {
+  T sum = x[0] * y[0];
+  [unroll] for (int i = 1; i < N; ++i) sum = mad(x[i], y[i], sum);
+  return sum;
+}
+
 template <typename T> constexpr T reflect_impl(T I, T N) {
   return I - 2 * N * I * N;
 }
@@ -137,15 +152,51 @@ template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
 }
 
 template <typename T> constexpr T faceforward_impl(T N, T I, T Ng) {
-#if (__has_builtin(__builtin_spirv_faceforward))
-  return __builtin_spirv_faceforward(N, I, Ng);
-#else
   return select(dot(I, Ng) < 0, N, -N);
-#endif
 }
 
 template <typename T> constexpr T ldexp_impl(T X, T Exp) {
   return exp2(Exp) * X;
+}
+
+template <typename K, typename T, int BitWidth>
+constexpr K firstbithigh_impl(T X) {
+  K FBH = __builtin_hlsl_elementwise_firstbithigh(X);
+#if defined(__DIRECTX__)
+  // The firstbithigh DXIL ops count bits from the wrong side, so we need to
+  // invert it for DirectX.
+  K Inversion = (BitWidth - 1) - FBH;
+  FBH = select(FBH == -1, FBH, Inversion);
+#endif
+  return FBH;
+}
+
+template <typename T> constexpr T ddx_impl(T input) {
+#if (__has_builtin(__builtin_spirv_ddx))
+  return __builtin_spirv_ddx(input);
+#else
+  return __builtin_hlsl_elementwise_ddx_coarse(input);
+#endif
+}
+
+template <typename T> constexpr T ddy_impl(T input) {
+#if (__has_builtin(__builtin_spirv_ddy))
+  return __builtin_spirv_ddy(input);
+#else
+  return __builtin_hlsl_elementwise_ddy_coarse(input);
+#endif
+}
+
+template <typename T> constexpr T fwidth_impl(T input) {
+#if (__has_builtin(__builtin_spirv_fwidth))
+  return __builtin_spirv_fwidth(input);
+#else
+  T derivCoarseX = ddx_coarse(input);
+  derivCoarseX = abs(derivCoarseX);
+  T derivCoarseY = ddy_coarse(input);
+  derivCoarseY = abs(derivCoarseY);
+  return derivCoarseX + derivCoarseY;
+#endif
 }
 
 } // namespace __detail

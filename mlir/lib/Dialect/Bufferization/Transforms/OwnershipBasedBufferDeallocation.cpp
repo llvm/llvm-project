@@ -51,14 +51,8 @@ static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
 /// Return "true" if the given op is guaranteed to have neither "Allocate" nor
 /// "Free" side effects.
 static bool hasNeitherAllocateNorFreeSideEffect(Operation *op) {
-  if (isa<MemoryEffectOpInterface>(op))
-    return !hasEffect<MemoryEffects::Allocate>(op) &&
-           !hasEffect<MemoryEffects::Free>(op);
-  // If the op does not implement the MemoryEffectOpInterface but has has
-  // recursive memory effects, then this op in isolation (without its body) does
-  // not have any side effects. All the ops inside the regions of this op will
-  // be processed separately.
-  return op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+  return !mightHaveEffect<MemoryEffects::Allocate>(op) &&
+         !mightHaveEffect<MemoryEffects::Free>(op);
 }
 
 /// Return "true" if the given op has buffer semantics. I.e., it has buffer
@@ -517,9 +511,7 @@ LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
   //   MemoryEffectOpInterface. They usually do not have side effects apart
   //   from the callee, which will be analyzed separately. (This is similar to
   //   "recursive memory effects".)
-  if (!isa<MemoryEffectOpInterface>(op) &&
-      !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>() &&
-      !isa<CallOpInterface>(op))
+  if (hasUnknownEffects(op) && !isa<CallOpInterface>(op))
     return op->emitError(
         "ops with unknown memory side effects are not supported");
 
@@ -570,8 +562,9 @@ LogicalResult
 BufferDeallocation::updateFunctionSignature(FunctionOpInterface op) {
   SmallVector<TypeRange> returnOperandTypes(llvm::map_range(
       op.getFunctionBody().getOps<RegionBranchTerminatorOpInterface>(),
-      [](RegionBranchTerminatorOpInterface op) {
-        return op.getSuccessorOperands(RegionBranchPoint::parent()).getTypes();
+      [&](RegionBranchTerminatorOpInterface branchOp) {
+        return branchOp.getSuccessorOperands(RegionSuccessor::parent())
+            .getTypes();
       }));
   if (!llvm::all_equal(returnOperandTypes))
     return op->emitError(
@@ -675,6 +668,11 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
 Operation *BufferDeallocation::appendOpResults(Operation *op,
                                                ArrayRef<Type> types) {
   SmallVector<Type> newTypes(op->getResultTypes());
+  // Save the old result values before appendOpResults erases the op. The
+  // liveness analysis holds references to these values and they may be queried
+  // later (e.g., from handleInterface(BranchOpInterface) in the same block).
+  SmallVector<Value> oldResults(op->getResults());
+
   newTypes.append(types.begin(), types.end());
   auto *newOp = Operation::create(op->getLoc(), op->getName(), newTypes,
                                   op->getOperands(), op->getAttrDictionary(),
@@ -687,6 +685,12 @@ Operation *BufferDeallocation::appendOpResults(Operation *op,
   OpBuilder(op).insert(newOp);
   op->replaceAllUsesWith(newOp->getResults().take_front(op->getNumResults()));
   op->erase();
+
+  // Register the replacement of each old result with the corresponding new
+  // result so that stale liveness entries can be translated on demand.
+  for (auto [oldResult, newResult] :
+       llvm::zip(oldResults, newOp->getResults().take_front(oldResults.size())))
+    state.mapValue(oldResult, newResult);
 
   return newOp;
 }
@@ -719,7 +723,7 @@ BufferDeallocation::handleInterface(RegionBranchOpInterface op) {
   // the outside.
   Value falseVal = buildBoolValue(builder, op.getLoc(), false);
   op->insertOperands(op->getNumOperands(),
-                     SmallVector<Value>(numMemrefOperands, falseVal));
+                     Repeated<Value>(numMemrefOperands, falseVal));
 
   int counter = op->getNumResults();
   unsigned numMemrefResults = llvm::count_if(op->getResults(), isMemref);
@@ -951,7 +955,7 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
   // which condition they are taken, etc.
 
   MutableOperandRange operands =
-      op.getMutableSuccessorOperands(RegionBranchPoint::parent());
+      op.getMutableSuccessorOperands(RegionSuccessor::parent());
 
   SmallVector<Value> updatedOwnerships;
   auto result = deallocation_impl::insertDeallocOpForReturnLike(

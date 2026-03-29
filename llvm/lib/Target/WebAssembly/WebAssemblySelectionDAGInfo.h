@@ -17,13 +17,26 @@
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
-namespace llvm {
+#define GET_SDNODE_ENUM
+#include "WebAssemblyGenSDNodeInfo.inc"
 
-class WebAssemblySelectionDAGInfo final : public SelectionDAGTargetInfo {
+namespace llvm {
+namespace WebAssemblyISD {
+
+enum NodeType : unsigned {
+  CALL = GENERATED_OPCODE_END,
+  RET_CALL,
+};
+
+} // namespace WebAssemblyISD
+
+class WebAssemblySelectionDAGInfo final : public SelectionDAGGenTargetInfo {
 public:
+  WebAssemblySelectionDAGInfo();
+
   ~WebAssemblySelectionDAGInfo() override;
 
-  bool isTargetMemoryOpcode(unsigned Opcode) const override;
+  const char *getTargetNodeName(unsigned Opcode) const override;
 
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Op1, SDValue Op2,

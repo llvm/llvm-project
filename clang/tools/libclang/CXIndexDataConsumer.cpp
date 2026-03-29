@@ -389,13 +389,20 @@ SourceLocation CXIndexDataConsumer::CXXBasesListInfo::getBaseLoc(
   if (QualifiedTypeLoc QL = TL.getAs<QualifiedTypeLoc>())
     TL = QL.getUnqualifiedLoc();
 
-  if (ElaboratedTypeLoc EL = TL.getAs<ElaboratedTypeLoc>())
-    return EL.getNamedTypeLoc().getBeginLoc();
-  if (DependentNameTypeLoc DL = TL.getAs<DependentNameTypeLoc>())
-    return DL.getNameLoc();
-  if (DependentTemplateSpecializationTypeLoc DTL =
-          TL.getAs<DependentTemplateSpecializationTypeLoc>())
-    return DTL.getTemplateNameLoc();
+  // FIXME: Factor this out, a lot of TypeLoc users seem to need a generic
+  // TypeLoc::getNameLoc()
+  if (auto TTL = TL.getAs<DependentNameTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<TemplateSpecializationTypeLoc>())
+    return TTL.getTemplateNameLoc();
+  if (auto TTL = TL.getAs<TagTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<TypedefTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<UnresolvedUsingTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<UsingTypeLoc>())
+    return TTL.getNameLoc();
 
   return Loc;
 }
@@ -498,7 +505,11 @@ void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {
     if (SrcMod->getTopLevelModule() == Mod->getTopLevelModule())
       return;
 
-  OptionalFileEntryRef FE = Mod->getASTFile();
+  OptionalFileEntryRef FE;
+  if (const ModuleFileName *ASTFileName = Mod->getASTFileName()) {
+    FileManager &FileMgr = cxtu::getASTUnit(CXTU)->getFileManager();
+    FE = FileMgr.getOptionalFileRef(*ASTFileName);
+  }
   CXIdxImportedASTFileInfo Info = {cxfile::makeCXFile(FE), Mod,
                                    getIndexLoc(ImportD->getLocation()),
                                    ImportD->isImplicit()};
@@ -506,9 +517,12 @@ void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {
   (void)astFile;
 }
 
-void CXIndexDataConsumer::importedPCH(FileEntryRef File) {
+void CXIndexDataConsumer::importedPCH(StringRef FileName) {
   if (!CB.importedASTFile)
     return;
+
+  FileManager &FileMgr = cxtu::getASTUnit(CXTU)->getFileManager();
+  OptionalFileEntryRef File = FileMgr.getOptionalFileRef(FileName);
 
   CXIdxImportedASTFileInfo Info = {
                                     cxfile::makeCXFile(File),
@@ -1232,6 +1246,7 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
   case SymbolKind::TemplateTypeParm:
   case SymbolKind::TemplateTemplateParm:
   case SymbolKind::NonTypeTemplateParm:
+  case SymbolKind::IncludeDirective:
     return CXIdxEntity_Unexposed;
 
   case SymbolKind::Enum: return CXIdxEntity_Enum;

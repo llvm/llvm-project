@@ -86,6 +86,13 @@ Value spirv::Deserializer::getValue(uint32_t id) {
   if (auto undef = getUndefType(id)) {
     return spirv::UndefOp::create(opBuilder, unknownLoc, undef);
   }
+  if (std::optional<spirv::GraphConstantARMOpMaterializationInfo>
+          graphConstantARMInfo = getGraphConstantARM(id)) {
+    IntegerAttr graphConstantID = graphConstantARMInfo->graphConstantID;
+    Type resultType = graphConstantARMInfo->resultType;
+    return spirv::GraphConstantARMOp::create(opBuilder, unknownLoc, resultType,
+                                             graphConstantID);
+  }
   return valueMap.lookup(id);
 }
 
@@ -140,6 +147,7 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processMemoryModel(operands);
   case spirv::Opcode::OpEntryPoint:
   case spirv::Opcode::OpExecutionMode:
+  case spirv::Opcode::OpExecutionModeId:
     if (deferInstructions) {
       deferredInstructions.emplace_back(opcode, operands);
       return success();
@@ -180,6 +188,7 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpTypeStruct:
   case spirv::Opcode::OpTypePointer:
   case spirv::Opcode::OpTypeTensorARM:
+  case spirv::Opcode::OpTypeGraphARM:
   case spirv::Opcode::OpTypeCooperativeMatrixKHR:
     return processType(opcode, operands);
   case spirv::Opcode::OpTypeForwardPointer:
@@ -208,12 +217,26 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processConstantBool(/*isTrue=*/false, operands, /*isSpec=*/true);
   case spirv::Opcode::OpConstantNull:
     return processConstantNull(operands);
+  case spirv::Opcode::OpGraphConstantARM:
+    return processGraphConstantARM(operands);
   case spirv::Opcode::OpDecorate:
     return processDecoration(operands);
   case spirv::Opcode::OpMemberDecorate:
     return processMemberDecoration(operands);
   case spirv::Opcode::OpFunction:
     return processFunction(operands);
+  case spirv::Opcode::OpGraphEntryPointARM:
+    if (deferInstructions) {
+      deferredInstructions.emplace_back(opcode, operands);
+      return success();
+    }
+    return processGraphEntryPointARM(operands);
+  case spirv::Opcode::OpGraphARM:
+    return processGraphARM(operands);
+  case spirv::Opcode::OpGraphSetOutputARM:
+    return processOpGraphSetOutputARM(operands);
+  case spirv::Opcode::OpGraphEndARM:
+    return processGraphEndARM(operands);
   case spirv::Opcode::OpLabel:
     return processLabel(operands);
   case spirv::Opcode::OpBranch:
@@ -226,6 +249,8 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processLoopMerge(operands);
   case spirv::Opcode::OpPhi:
     return processPhi(operands);
+  case spirv::Opcode::OpSwitch:
+    return processSwitch(operands);
   case spirv::Opcode::OpUndef:
     return processUndef(operands);
   default:
@@ -423,6 +448,42 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
   }
   auto values = opBuilder.getArrayAttr(attrListElems);
   spirv::ExecutionModeOp::create(
+      opBuilder, unknownLoc,
+      SymbolRefAttr::get(opBuilder.getContext(), fn.getName()), execMode,
+      values);
+  return success();
+}
+
+template <>
+LogicalResult
+Deserializer::processOp<spirv::ExecutionModeIdOp>(ArrayRef<uint32_t> words) {
+  unsigned wordIndex = 0;
+  unsigned const wordsSize = words.size();
+  if (wordIndex >= wordsSize)
+    return emitError(unknownLoc,
+                     "missing function result <id> in OpExecutionModeId");
+
+  // Get the function <id> to get the name of the function.
+  uint32_t fnID = words[wordIndex++];
+  FuncOp fn = getFunction(fnID);
+  if (!fn)
+    return emitError(unknownLoc, "no function matching <id> ") << fnID;
+
+  // Get the Execution mode.
+  if (wordIndex >= wordsSize)
+    return emitError(unknownLoc, "missing Execution Mode in OpExecutionModeId");
+
+  ExecutionModeAttr execMode = spirv::ExecutionModeAttr::get(
+      context, static_cast<spirv::ExecutionMode>(words[wordIndex++]));
+
+  // Get the values.
+  SmallVector<Attribute, 4> attrListElems;
+  while (wordIndex < words.size()) {
+    std::string id = getSpecConstantSymbol(words[wordIndex++]);
+    attrListElems.push_back(FlatSymbolRefAttr::get(context, id));
+  }
+  ArrayAttr values = opBuilder.getArrayAttr(attrListElems);
+  spirv::ExecutionModeIdOp::create(
       opBuilder, unknownLoc,
       SymbolRefAttr::get(opBuilder.getContext(), fn.getName()), execMode,
       values);

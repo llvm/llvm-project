@@ -7,13 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDBREAKPOINTPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDBREAKPOINTPYTHONINTERFACE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDBREAKPOINTPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDBREAKPOINTPYTHONINTERFACE_H
 
-#include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
-
-#if LLDB_ENABLE_PYTHON
 
 #include "ScriptedPythonInterface.h"
 
@@ -36,6 +33,12 @@ public:
   bool ResolverCallback(SymbolContext sym_ctx) override;
   lldb::SearchDepth GetDepth() override;
   std::optional<std::string> GetShortHelp() override;
+  lldb::BreakpointLocationSP
+  WasHit(lldb::StackFrameSP frame_sp,
+         lldb::BreakpointLocationSP bp_loc_sp) override;
+  virtual std::optional<std::string>
+  GetLocationDescription(lldb::BreakpointLocationSP bp_loc_sp,
+                         lldb::DescriptionLevel level) override;
 
   static void Initialize();
 
@@ -49,5 +52,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDBREAKPOINTPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDBREAKPOINTPYTHONINTERFACE_H

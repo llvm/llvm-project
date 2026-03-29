@@ -6,13 +6,11 @@
 
 include "APIDefs.td"
 
-def : Handle {
-    let name = "ol_foo_handle_t";
+def ol_foo_handle_t : Handle {
     let desc = "Example handle type";
 }
 
-def : Function {
-    let name = "FunctionA";
+def FunctionA : Function {
     let desc = "Function A description";
     let details = [ "Function A detailed information" ];
     let params = [

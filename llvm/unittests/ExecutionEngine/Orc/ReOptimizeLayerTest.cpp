@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
@@ -25,7 +26,7 @@ using namespace llvm::jitlink;
 
 class ReOptimizeLayerTest : public testing::Test {
 public:
-  ~ReOptimizeLayerTest() {
+  ~ReOptimizeLayerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));
@@ -33,6 +34,9 @@ public:
 
 protected:
   void SetUp() override {
+
+    OrcNativeTarget::initialize();
+
     auto JTMB = JITTargetMachineBuilder::detectHost();
     // Bail out if we can not detect the host.
     if (!JTMB) {
@@ -42,7 +46,7 @@ protected:
 
     // COFF-ARM64 is not supported yet
     auto Triple = JTMB->getTargetTriple();
-    if (Triple.isOSBinFormatCOFF() && Triple.isAArch64())
+    if (Triple.isOSBinFormatCOFF())
       GTEST_SKIP();
 
     // SystemZ is not supported yet.
@@ -84,8 +88,11 @@ protected:
 
     ES = std::make_unique<ExecutionSession>(std::move(*EPC));
     JD = &ES->createBareJITDylib("main");
+
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
+        *ES, std::make_unique<MapperJITLinkMemoryManager>(
+                 10 * 1024 * 1024,
+                 std::make_unique<InProcessMemoryMapper>(*PageSize)));
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
 
     auto TM = JTMB->createTargetMachine();
@@ -133,22 +140,13 @@ static Function *createRetFunction(Module *M, StringRef Name,
 TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
   MangleAndInterner Mangle(*ES, *DL);
 
-  auto &EPC = ES->getExecutorProcessControl();
-  EXPECT_THAT_ERROR(JD->define(absoluteSymbols(
-                        {{Mangle("__orc_rt_jit_dispatch"),
-                          {EPC.getJITDispatchInfo().JITDispatchFunction,
-                           JITSymbolFlags::Exported}},
-                         {Mangle("__orc_rt_jit_dispatch_ctx"),
-                          {EPC.getJITDispatchInfo().JITDispatchContext,
-                           JITSymbolFlags::Exported}},
-                         {Mangle("__orc_rt_reoptimize_tag"),
-                          {ExecutorAddr(), JITSymbolFlags::Exported}}})),
-                    Succeeded());
-
   auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer);
   EXPECT_THAT_ERROR(RM.takeError(), Succeeded());
 
   ROLayer = std::make_unique<ReOptimizeLayer>(*ES, *DL, *CompileLayer, **RM);
+  if (auto Err = ROLayer->addOrcRTLiteSupport(*JD, *DL))
+    FAIL() << toString(std::move(Err));
+
   ROLayer->setReoptimizeFunc(
       [&](ReOptimizeLayer &Parent,
           ReOptimizeLayer::ReOptMaterializationUnitID MUID, unsigned CurVerison,
@@ -170,7 +168,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
         });
         return Error::success();
       });
-  EXPECT_THAT_ERROR(ROLayer->reigsterRuntimeFunctions(*JD), Succeeded());
+  EXPECT_THAT_ERROR(ROLayer->registerRuntimeFunctions(*JD), Succeeded());
 
   auto Ctx = std::make_unique<LLVMContext>();
   auto M = std::make_unique<Module>("<main>", *Ctx);

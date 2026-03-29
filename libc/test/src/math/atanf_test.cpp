@@ -9,11 +9,17 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/atanf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 4
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcAtanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -22,7 +28,6 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 // TODO: This test needs to have its checks for exceptions, errno
 // tightened
 TEST_F(LlvmLibcAtanfTest, SpecialNumbers) {
-  libc_errno = 0;
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanf(aNaN));
   // TODO: Uncomment these checks later, RoundingMode affects running
@@ -51,9 +56,9 @@ TEST_F(LlvmLibcAtanfTest, InFloatRange) {
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
-                                   LIBC_NAMESPACE::atanf(x), 0.5);
+                                   LIBC_NAMESPACE::atanf(x), TOLERANCE + 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, -x,
-                                   LIBC_NAMESPACE::atanf(-x), 0.5);
+                                   LIBC_NAMESPACE::atanf(-x), TOLERANCE + 0.5);
   }
 }
 
@@ -74,6 +79,6 @@ TEST_F(LlvmLibcAtanfTest, SpecialValues) {
   for (uint32_t v : val_arr) {
     float x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
-                                   LIBC_NAMESPACE::atanf(x), 0.5);
+                                   LIBC_NAMESPACE::atanf(x), TOLERANCE + 0.5);
   }
 }

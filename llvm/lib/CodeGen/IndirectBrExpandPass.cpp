@@ -53,9 +53,7 @@ class IndirectBrExpandLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  IndirectBrExpandLegacyPass() : FunctionPass(ID) {
-    initializeIndirectBrExpandLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  IndirectBrExpandLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();
@@ -243,7 +241,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
       Updates.reserve(IndirectBrs.size() + 2 * IndirectBrSuccs.size());
     for (auto *IBr : IndirectBrs) {
       SwitchPN->addIncoming(GetSwitchValue(IBr), IBr->getParent());
-      BranchInst::Create(SwitchBB, IBr->getIterator());
+      UncondBrInst::Create(SwitchBB, IBr->getIterator());
       if (DTU) {
         Updates.push_back({DominatorTree::Insert, IBr->getParent(), SwitchBB});
         for (BasicBlock *SuccBB : IBr->successors())

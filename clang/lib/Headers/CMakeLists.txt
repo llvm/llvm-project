@@ -3,7 +3,11 @@
 # to platform specific lists below.
 set(core_files
   builtins.h
+  endian.h
   float.h
+  __float_float.h
+  __float_header_macro.h
+  __float_infinity_nan.h
   inttypes.h
   iso646.h
   limits.h
@@ -21,6 +25,7 @@ set(core_files
   stdcountof.h
   stdckdint.h
   stddef.h
+  stddefer.h
   __stddef_header_macro.h
   __stddef_max_align_t.h
   __stddef_null.h
@@ -116,6 +121,7 @@ set(opencl_files
 
 set(ppc_files
   altivec.h
+  amo.h
   )
 
 set(ppc_htm_files
@@ -124,17 +130,21 @@ set(ppc_htm_files
   )
 
 set(riscv_files
+  # Standard headers
   riscv_bitmanip.h
-  riscv_corev_alu.h
   riscv_crypto.h
-  riscv_nds.h
   riscv_ntlh.h
-  sifive_vector.h
+  # Vendor headers
   andes_vector.h
+  riscv_corev_alu.h
+  riscv_mips.h
+  riscv_nds.h
+  sifive_vector.h
   )
 
 set(spirv_files
   __clang_spirv_builtins.h
+  __clang_spirv_libdevice_declares.h
   )
 
 set(systemz_files
@@ -158,18 +168,12 @@ set(x86_files
   adxintrin.h
   ammintrin.h
   amxavx512intrin.h
-  amxbf16transposeintrin.h
   amxcomplexintrin.h
-  amxcomplextransposeintrin.h
   amxfp16intrin.h
-  amxfp16transposeintrin.h
   amxfp8intrin.h
   amxintrin.h
   amxmovrsintrin.h
-  amxmovrstransposeintrin.h
   amxtf32intrin.h
-  amxtf32transposeintrin.h
-  amxtransposeintrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
@@ -294,9 +298,11 @@ set(x86_files
   )
 
 set(gpu_files
+  amdhsa_abi.h
   gpuintrin.h
   nvptxintrin.h
   amdgpuintrin.h
+  spirvintrin.h
   )
 
 set(windows_only_files
@@ -499,6 +505,15 @@ if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)
     )
 endif()
 
+# Generate HLSL intrinsic overloads
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/hlsl")
+clang_generate_header(-gen-hlsl-alias-intrinsics HLSLIntrinsics.td
+                      hlsl/hlsl_alias_intrinsics_gen.inc)
+clang_generate_header(-gen-hlsl-inline-intrinsics HLSLIntrinsics.td
+                      hlsl/hlsl_inline_intrinsics_gen.inc)
+set(hlsl_generated_files
+  "${CMAKE_CURRENT_BINARY_DIR}/hlsl/hlsl_alias_intrinsics_gen.inc"
+  "${CMAKE_CURRENT_BINARY_DIR}/hlsl/hlsl_inline_intrinsics_gen.inc")
 
 # Check if the generated headers are included in a target specific lists
 # Currently, all generated headers are target specific.
@@ -506,6 +521,7 @@ set(all_target_specific_generated_files
   ${arm_common_generated_files}
   ${arm_only_generated_files}
   ${aarch64_only_generated_files}
+  ${hlsl_generated_files}
   ${riscv_generated_files})
 foreach( f ${generated_files} )
   if (NOT ${f} IN_LIST all_target_specific_generated_files)
@@ -515,8 +531,8 @@ foreach( f ${generated_files} )
   endif()
 endforeach( f )
 
-function(add_header_target target_name file_list)
-  add_library(${target_name} INTERFACE ${file_list})
+function(add_header_target target_name)
+  add_library(${target_name} INTERFACE ${ARGN})
   set_target_properties(${target_name} PROPERTIES
     FOLDER "Clang/Resources"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
@@ -574,7 +590,7 @@ add_header_target("x86-resource-headers" "${x86_files}")
 add_header_target("gpu-resource-headers" "${gpu_files}")
 
 # Other header groupings
-add_header_target("hlsl-resource-headers" ${hlsl_files})
+add_header_target("hlsl-resource-headers" "${hlsl_files};${hlsl_generated_files}")
 add_header_target("spirv-resource-headers" ${spirv_files})
 add_header_target("opencl-resource-headers" ${opencl_files})
 add_header_target("llvm-libc-resource-headers" ${llvm_libc_wrapper_files})

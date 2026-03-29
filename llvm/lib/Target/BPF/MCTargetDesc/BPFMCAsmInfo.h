@@ -24,13 +24,14 @@ public:
     if (TT.getArch() == Triple::bpfeb)
       IsLittleEndian = false;
 
-    PrivateGlobalPrefix = ".L";
-    PrivateLabelPrefix = "L";
+    InternalSymbolPrefix = ".L";
+    PrivateLabelPrefix = ".L";
     WeakRefDirective = "\t.weak\t";
 
     UsesELFSectionDirectiveForBSS = true;
     HasSingleParameterDotFile = true;
     HasDotTypeDotSizeDirective = true;
+    HasIdentDirective = false;
 
     SupportsDebugInformation = true;
     ExceptionsType = ExceptionHandling::DwarfCFI;
@@ -46,6 +47,10 @@ public:
 
   void setDwarfUsesRelocationsAcrossSections(bool enable) {
     DwarfUsesRelocationsAcrossSections = enable;
+  }
+
+  MCSection *getStackSection(MCContext &Ctx, bool Exec) const override {
+    return nullptr;
   }
 };
 }

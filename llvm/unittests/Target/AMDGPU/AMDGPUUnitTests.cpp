@@ -168,6 +168,12 @@ static void testDynamicVGPRLimits(StringRef CPUName, StringRef FS,
         << CPUName << " dynamic VGPR block size " << DynamicVGPRBlockSize
         << ":\nOcc    MinVGPR        MaxVGPR\n"
         << Table.str() << '\n';
+    // In dVGPR mode, max VGPR limits do not depend on occupancy:
+    EXPECT_EQ(ST.getMaxNumVGPRs(1, DynamicVGPRBlockSize),
+              ST.getMaxNumVGPRs(ST.getMaxWavesPerEU(), DynamicVGPRBlockSize));
+    EXPECT_EQ(ST.getMinNumVGPRs(1, DynamicVGPRBlockSize), 0u);
+    EXPECT_EQ(ST.getMinNumVGPRs(ST.getMaxWavesPerEU(), DynamicVGPRBlockSize),
+              0u);
   };
 
   testWithBlockSize(16);
@@ -317,6 +323,26 @@ TEST(AMDGPU, TestReverseComposeSubRegIndices) {
         unsigned Recompose = TRI->composeSubRegIndices(SubIdx0, ReverseCompose);
         EXPECT_EQ(Recompose, SubIdx1);
       }
+    }
+  }
+}
+
+TEST(AMDGPU, TestGetNamedOperandIdx) {
+  std::unique_ptr<const GCNTargetMachine> TM =
+      createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
+  if (!TM)
+    return;
+  const MCInstrInfo *MCII = TM->getMCInstrInfo();
+
+  for (unsigned Opcode = 0, E = MCII->getNumOpcodes(); Opcode != E; ++Opcode) {
+    const MCInstrDesc &Desc = MCII->get(Opcode);
+    for (unsigned Idx = 0; Idx < Desc.getNumOperands(); ++Idx) {
+      AMDGPU::OpName OpName = AMDGPU::getOperandIdxName(Opcode, Idx);
+      if (OpName == AMDGPU::OpName::NUM_OPERAND_NAMES)
+        continue;
+      int16_t RetrievedIdx = AMDGPU::getNamedOperandIdx(Opcode, OpName);
+      EXPECT_EQ(Idx, static_cast<unsigned>(RetrievedIdx))
+          << "Opcode " << Opcode << " (" << MCII->getName(Opcode) << ')';
     }
   }
 }

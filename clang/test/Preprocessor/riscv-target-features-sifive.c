@@ -5,6 +5,11 @@
 
 // CHECK-NOT: __riscv_xsfcease {{.*$}}
 // CHECK-NOT: __riscv_xsfvcp {{.*$}}
+// CHECK-NOT: __riscv_xsfvfbfexp16e {{.*$}}
+// CHECK-NOT: __riscv_xsfvfexp16e {{.*$}}
+// CHECK-NOT: __riscv_xsfvfexp32e {{.*$}}
+// CHECK-NOT: __riscv_xsfvfexpa {{.*$}}
+// CHECK-NOT: __riscv_xsfvfexpa64e {{.*$}}
 // CHECK-NOT: __riscv_xsfvfnrclipxfqf {{.*$}}
 // CHECK-NOT: __riscv_xsfvfwmaccqqq {{.*$}}
 // CHECK-NOT: __riscv_xsfqmaccdod {{.*$}}
@@ -37,6 +42,46 @@
 // RUN:   -march=rv64ixsfvcp -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVCP-EXT %s
 // CHECK-XSFVCP-EXT: __riscv_xsfvcp 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsfvfbfexp16e_zvfbfmin -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFBFEXP16E-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsfvfbfexp16e_zvfbfmin -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFBFEXP16E-EXT %s
+// CHECK-XSFVFBFEXP16E-EXT: __riscv_xsfvfbfexp16e 5000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsfvfexp16e -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFEXP16E-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsfvfexp16e -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFEXP16E-EXT %s
+// CHECK-XSFVFEXP16E-EXT: __riscv_xsfvfexp16e 5000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsfvfexp32e -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFEXP32E-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsfvfexp32e -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFEXP32E-EXT %s
+// CHECK-XSFVFEXP32E-EXT: __riscv_xsfvfexp32e 5000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsfvfexpa -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFEXPA-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsfvfexpa -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFEXPA-EXT %s
+// CHECK-XSFVFEXPA-EXT: __riscv_xsfvfexpa 2000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ixsfvfexpa64e -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFEXPA64E-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ixsfvfexpa64e -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XSFVFEXPA64E-EXT %s
+// CHECK-XSFVFEXPA64E-EXT: __riscv_xsfvfexpa64e 2000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ixsfvfnrclipxfqf -E -dM %s \

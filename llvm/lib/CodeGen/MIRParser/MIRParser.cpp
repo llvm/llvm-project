@@ -106,7 +106,8 @@ public:
   ///
   /// Return true if an error occurred.
   bool parseMachineFunction(Module &M, MachineModuleInfo &MMI,
-                            ModuleAnalysisManager *FAM);
+                            ModuleAnalysisManager *FAM,
+                            Module::iterator &FirstUnvisitedFunction);
 
   /// Initialize the machine function to the state that's described in the MIR
   /// file.
@@ -114,6 +115,12 @@ public:
   /// Return true if error occurred.
   bool initializeMachineFunction(const yaml::MachineFunction &YamlMF,
                                  MachineFunction &MF);
+
+  bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
+                              const yaml::MachineFunction &YamlMF);
+
+  bool initializePrefetchTargets(PerFunctionMIParsingState &PFS,
+                                 const yaml::MachineFunction &YamlMF);
 
   bool parseRegisterInfo(PerFunctionMIParsingState &PFS,
                          const yaml::MachineFunction &YamlMF);
@@ -124,8 +131,10 @@ public:
   bool initializeFrameInfo(PerFunctionMIParsingState &PFS,
                            const yaml::MachineFunction &YamlMF);
 
-  bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
-                              const yaml::MachineFunction &YamlMF);
+  bool initializeSaveRestorePoints(
+      PerFunctionMIParsingState &PFS,
+      const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+      llvm::SaveRestorePoints &SaveRestorePoints);
 
   bool parseCalleeSavedRegister(PerFunctionMIParsingState &PFS,
                                 std::vector<CalleeSavedInfo> &CSIInfo,
@@ -291,8 +300,9 @@ bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI,
     return false;
 
   // Parse the machine functions.
+  auto FirstUnvisitedFunction = M.begin();
   do {
-    if (parseMachineFunction(M, MMI, MAM))
+    if (parseMachineFunction(M, MMI, MAM, FirstUnvisitedFunction))
       return true;
     In.nextDocument();
   } while (In.setCurrentDocument());
@@ -314,8 +324,19 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
   return F;
 }
 
-bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
-                                         ModuleAnalysisManager *MAM) {
+static Function *
+getNextUnusedUnnamedFunction(const Module &M,
+                             Module::iterator &FirstUnvisitedFunction) {
+  for (; FirstUnvisitedFunction != M.end(); ++FirstUnvisitedFunction)
+    if (!FirstUnvisitedFunction->hasName())
+      return &*FirstUnvisitedFunction++;
+
+  return nullptr;
+}
+
+bool MIRParserImpl::parseMachineFunction(
+    Module &M, MachineModuleInfo &MMI, ModuleAnalysisManager *MAM,
+    Module::iterator &FirstUnvisitedFunction) {
   // Parse the yaml.
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
@@ -334,7 +355,8 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
   if (!F) {
     if (NoLLVMIR) {
       F = createDummyFunction(FunctionName, M);
-    } else {
+    } else if (!FunctionName.empty() ||
+               !(F = getNextUnusedUnnamedFunction(M, FirstUnvisitedFunction))) {
       return error(Twine("function '") + FunctionName +
                    "' isn't defined in the provided LLVM IR");
     }
@@ -529,7 +551,7 @@ void MIRParserImpl::setupDebugValueTracking(
   unsigned MaxInstrNum = 0;
   for (auto &MBB : MF)
     for (auto &MI : MBB)
-      MaxInstrNum = std::max((unsigned)MI.peekDebugInstrNum(), MaxInstrNum);
+      MaxInstrNum = std::max(MI.peekDebugInstrNum(), MaxInstrNum);
   MF.setDebugInstrNumberingCount(MaxInstrNum);
 
   // Load any substitutions.
@@ -580,6 +602,8 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
 
   PerFunctionMIParsingState PFS(MF, SM, IRSlots, *Target);
   if (parseRegisterInfo(PFS, YamlMF))
+    return true;
+  if (initializePrefetchTargets(PFS, YamlMF))
     return true;
   if (!YamlMF.Constants.empty()) {
     auto *ConstantPool = MF.getConstantPool();
@@ -666,11 +690,29 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   if (parseCalledGlobals(PFS, MF, YamlMF))
     return true;
 
+  if (initializePrefetchTargets(PFS, YamlMF))
+    return true;
+
   setupDebugValueTracking(MF, PFS, YamlMF);
 
   MF.getSubtarget().mirFileLoaded(MF);
 
   MF.verify(nullptr, nullptr, &errs());
+  return false;
+}
+
+bool MIRParserImpl::initializePrefetchTargets(
+    PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF) {
+  MachineFunction &MF = PFS.MF;
+  SMDiagnostic Error;
+  DenseMap<UniqueBBID, SmallVector<unsigned>> Targets;
+  for (const auto &YamlTarget : YamlMF.PrefetchTargets) {
+    CallsiteID Target;
+    if (llvm::parsePrefetchTarget(PFS, Target, YamlTarget.Value, Error))
+      return error(Error, YamlTarget.SourceRange);
+    Targets[Target.BBID].push_back(Target.CallsiteIndex);
+  }
+  MF.setPrefetchTargets(Targets);
   return false;
 }
 
@@ -867,18 +909,14 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasTailCall(YamlMFI.HasTailCall);
   MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
-  if (!YamlMFI.SavePoint.Value.empty()) {
-    MachineBasicBlock *MBB = nullptr;
-    if (parseMBBReference(PFS, MBB, YamlMFI.SavePoint))
-      return true;
-    MFI.setSavePoint(MBB);
-  }
-  if (!YamlMFI.RestorePoint.Value.empty()) {
-    MachineBasicBlock *MBB = nullptr;
-    if (parseMBBReference(PFS, MBB, YamlMFI.RestorePoint))
-      return true;
-    MFI.setRestorePoint(MBB);
-  }
+  llvm::SaveRestorePoints SavePoints;
+  if (initializeSaveRestorePoints(PFS, YamlMFI.SavePoints, SavePoints))
+    return true;
+  MFI.setSavePoints(SavePoints);
+  llvm::SaveRestorePoints RestorePoints;
+  if (initializeSaveRestorePoints(PFS, YamlMFI.RestorePoints, RestorePoints))
+    return true;
+  MFI.setRestorePoints(RestorePoints);
 
   std::vector<CalleeSavedInfo> CSIInfo;
   // Initialize the fixed frame objects.
@@ -1093,6 +1131,29 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
   return false;
 }
 
+// Return true if basic block was incorrectly specified in MIR
+bool MIRParserImpl::initializeSaveRestorePoints(
+    PerFunctionMIParsingState &PFS,
+    const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+    llvm::SaveRestorePoints &SaveRestorePoints) {
+  SMDiagnostic Error;
+  MachineBasicBlock *MBB = nullptr;
+  for (const yaml::SaveRestorePointEntry &Entry : YamlSRPoints) {
+    if (parseMBBReference(PFS, MBB, Entry.Point.Value))
+      return true;
+
+    std::vector<CalleeSavedInfo> Registers;
+    for (auto &RegStr : Entry.Registers) {
+      Register Reg;
+      if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
+        return error(Error, RegStr.SourceRange);
+      Registers.push_back(CalleeSavedInfo(Reg));
+    }
+    SaveRestorePoints.try_emplace(MBB, std::move(Registers));
+  }
+  return false;
+}
+
 bool MIRParserImpl::initializeJumpTableInfo(PerFunctionMIParsingState &PFS,
     const yaml::MachineJumpTable &YamlJTI) {
   MachineJumpTableInfo *JTI = PFS.MF.getOrCreateJumpTableInfo(YamlJTI.Kind);
@@ -1249,7 +1310,7 @@ std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(
   auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError()) {
     Error = SMDiagnostic(Filename, SourceMgr::DK_Error,
-                         "Could not open input file: " + EC.message());
+                         "could not open input file: " + EC.message());
     return nullptr;
   }
   return createMIRParser(std::move(FileOrErr.get()), Context,
@@ -1266,7 +1327,7 @@ llvm::createMIRParser(std::unique_ptr<MemoryBuffer> Contents,
         DS_Error,
         SMDiagnostic(
             Filename, SourceMgr::DK_Error,
-            "Can't read MIR with a Context that discards named Values")));
+            "cannot read MIR with a Context that discards named Values")));
     return nullptr;
   }
   return std::make_unique<MIRParser>(std::make_unique<MIRParserImpl>(

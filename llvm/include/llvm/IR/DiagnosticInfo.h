@@ -20,15 +20,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TypeSize.h"
-#include <algorithm>
 #include <cstdint>
 #include <functional>
-#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>
@@ -555,6 +554,7 @@ public:
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
     LLVM_ABI Argument(StringRef Key, DebugLoc dl);
     LLVM_ABI Argument(StringRef Key, InstructionCost C);
+    LLVM_ABI Argument(StringRef Key, BranchProbability P);
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p
@@ -1192,19 +1192,41 @@ public:
 
 LLVM_ABI void diagnoseDontCall(const CallInst &CI);
 
+/// Inlining location extracted from debug info.
+struct DebugInlineInfo {
+  StringRef FuncName;
+  StringRef Filename;
+  unsigned Line;
+  unsigned Column;
+};
+
 class LLVM_ABI DiagnosticInfoDontCall : public DiagnosticInfo {
   StringRef CalleeName;
   StringRef Note;
   uint64_t LocCookie;
+  MDNode *InlinedFromMD = nullptr;
+  SmallVector<DebugInlineInfo, 4> DebugInlineChain;
 
 public:
   DiagnosticInfoDontCall(StringRef CalleeName, StringRef Note,
-                         DiagnosticSeverity DS, uint64_t LocCookie)
+                         DiagnosticSeverity DS, uint64_t LocCookie,
+                         MDNode *InlinedFromMD = nullptr)
       : DiagnosticInfo(DK_DontCall, DS), CalleeName(CalleeName), Note(Note),
-        LocCookie(LocCookie) {}
+        LocCookie(LocCookie), InlinedFromMD(InlinedFromMD) {}
+
   StringRef getFunctionName() const { return CalleeName; }
   StringRef getNote() const { return Note; }
   uint64_t getLocCookie() const { return LocCookie; }
+  MDNode *getInlinedFromMD() const { return InlinedFromMD; }
+  SmallVector<std::pair<StringRef, uint64_t>> getInliningDecisions() const;
+
+  void setDebugInlineChain(SmallVector<DebugInlineInfo, 4> &&Chain) {
+    DebugInlineChain = std::move(Chain);
+  }
+  ArrayRef<DebugInlineInfo> getDebugInlineChain() const {
+    return DebugInlineChain;
+  }
+
   void print(DiagnosticPrinter &DP) const override;
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;

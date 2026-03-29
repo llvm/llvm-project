@@ -23,7 +23,6 @@ namespace mlir {
 #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
 } // namespace mlir
 
-using namespace llvm;
 using namespace mlir;
 using scf::ForOp;
 using scf::WhileOp;
@@ -58,9 +57,12 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     auto *beforeBlock = rewriter.createBlock(
         &whileOp.getBefore(), whileOp.getBefore().begin(), lcvTypes, lcvLocs);
     rewriter.setInsertionPointToStart(whileOp.getBeforeBody());
-    auto cmpOp = arith::CmpIOp::create(
-        rewriter, whileOp.getLoc(), arith::CmpIPredicate::slt,
-        beforeBlock->getArgument(0), forOp.getUpperBound());
+    arith::CmpIPredicate predicate = forOp.getUnsignedCmp()
+                                         ? arith::CmpIPredicate::ult
+                                         : arith::CmpIPredicate::slt;
+    auto cmpOp = arith::CmpIOp::create(rewriter, whileOp.getLoc(), predicate,
+                                       beforeBlock->getArgument(0),
+                                       forOp.getUpperBound());
     scf::ConditionOp::create(rewriter, whileOp.getLoc(), cmpOp.getResult(),
                              beforeBlock->getArguments());
 

@@ -41,6 +41,7 @@ add_llvm_component_library(LLVMAsmPrinter
   DebugInfoDWARFLowLevel
   MC
   MCParser
+  ProfileData
   Remarks
   Support
   Target

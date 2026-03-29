@@ -181,7 +181,7 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   }
 
   if (!Suffix.empty())
-    Name += DL.getPrivateGlobalPrefix();
+    Name += DL.getInternalSymbolPrefix();
 
   if (MO.isGlobal()) {
     const GlobalValue *GV = MO.getGlobal();
@@ -370,7 +370,7 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
 
 // Replace TAILJMP opcodes with their equivalent opcodes that have encoding
 // information.
-static unsigned convertTailJumpOpcode(unsigned Opcode) {
+static unsigned convertTailJumpOpcode(unsigned Opcode, bool IsLarge = false) {
   switch (Opcode) {
   case X86::TAILJMPr:
     Opcode = X86::JMP32r;
@@ -392,7 +392,7 @@ static unsigned convertTailJumpOpcode(unsigned Opcode) {
     break;
   case X86::TAILJMPd:
   case X86::TAILJMPd64:
-    Opcode = X86::JMP_1;
+    Opcode = IsLarge ? X86::JMPABS64i : X86::JMP_1;
     break;
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC:
@@ -485,10 +485,17 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   case X86::TAILJMPr64:
   case X86::TAILJMPr64_REX:
   case X86::TAILJMPd:
-  case X86::TAILJMPd64:
     assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
+  case X86::TAILJMPd64: {
+    assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
+    bool IsLarge = TM.getCodeModel() == CodeModel::Large;
+    assert((!IsLarge || AsmPrinter.getSubtarget().hasJMPABS()) &&
+           "Unexpected TAILJMPd64 in large code model without JMPABS");
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode(), IsLarge));
+    break;
+  }
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC:
     assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
@@ -1565,10 +1572,16 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
       printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
     if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
-      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-        if (I != 0)
-          CS << ',';
-        printConstant(CF->getValueAPF(), CS, PrintZero);
+      unsigned EltBits = VTy->getScalarSizeInBits();
+      unsigned E = std::min(BitWidth / EltBits, VTy->getNumElements());
+      if ((BitWidth % EltBits) == 0) {
+        for (unsigned I = 0; I != E; ++I) {
+          if (I != 0)
+            CS << ",";
+          printConstant(CF->getValueAPF(), CS, PrintZero);
+        }
+      } else {
+        CS << "?";
       }
     } else
       printConstant(CF->getValueAPF(), CS, PrintZero);
@@ -1928,6 +1941,17 @@ static void addConstantComments(const MachineInstr *MI,
 #define INSTR_CASE(Prefix, Instr, Suffix, Postfix)                             \
   case X86::Prefix##Instr##Suffix##rm##Postfix:
 
+#define CASE_AVX512_ARITH_RM(Instr)                                            \
+  INSTR_CASE(V, Instr, Z128, )                                                 \
+  INSTR_CASE(V, Instr, Z128, k)                                                \
+  INSTR_CASE(V, Instr, Z128, kz)                                               \
+  INSTR_CASE(V, Instr, Z256, )                                                 \
+  INSTR_CASE(V, Instr, Z256, k)                                                \
+  INSTR_CASE(V, Instr, Z256, kz)                                               \
+  INSTR_CASE(V, Instr, Z, )                                                    \
+  INSTR_CASE(V, Instr, Z, k)                                                   \
+  INSTR_CASE(V, Instr, Z, kz)
+
 #define CASE_ARITH_RM(Instr)                                                   \
   INSTR_CASE(, Instr, , )   /* SSE */                                          \
   INSTR_CASE(V, Instr, , )  /* AVX-128 */                                      \
@@ -1943,40 +1967,26 @@ static void addConstantComments(const MachineInstr *MI,
   INSTR_CASE(V, Instr, Z, kz)
 
     // TODO: Add additional instructions when useful.
-    CASE_ARITH_RM(PMADDUBSW) {
-      unsigned SrcIdx = getSrcIdx(MI, 1);
-      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        if (C->getType()->getScalarSizeInBits() == 8) {
-          std::string Comment;
-          raw_string_ostream CS(Comment);
-          unsigned VectorWidth =
-              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-          CS << "[";
-          printConstant(C, VectorWidth, CS);
-          CS << "]";
-          OutStreamer.AddComment(CS.str());
-        }
-      }
-      break;
-    }
-
+    CASE_ARITH_RM(PMADDUBSW)
     CASE_ARITH_RM(PMADDWD)
+    CASE_ARITH_RM(PMULDQ)
+    CASE_ARITH_RM(PMULUDQ)
+    CASE_ARITH_RM(PMULLD)
+    CASE_AVX512_ARITH_RM(PMULLQ)
     CASE_ARITH_RM(PMULLW)
     CASE_ARITH_RM(PMULHW)
     CASE_ARITH_RM(PMULHUW)
     CASE_ARITH_RM(PMULHRSW) {
       unsigned SrcIdx = getSrcIdx(MI, 1);
       if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        if (C->getType()->getScalarSizeInBits() == 16) {
-          std::string Comment;
-          raw_string_ostream CS(Comment);
-          unsigned VectorWidth =
-              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-          CS << "[";
-          printConstant(C, VectorWidth, CS);
-          CS << "]";
-          OutStreamer.AddComment(CS.str());
-        }
+        std::string Comment;
+        raw_string_ostream CS(Comment);
+        unsigned VectorWidth =
+            X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+        CS << "[";
+        printConstant(C, VectorWidth, CS);
+        CS << "]";
+        OutStreamer.AddComment(CS.str());
       }
       break;
     }
@@ -2529,6 +2539,12 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitSEHInstruction(MI);
     return;
 
+  case X86::SEH_SplitChainedAtEndOfBlock:
+    assert(!SplitChainedAtEndOfBlock &&
+           "Duplicate SEH_SplitChainedAtEndOfBlock in a current block");
+    SplitChainedAtEndOfBlock = true;
+    return;
+
   case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     EmitSEHInstruction(MI);
@@ -2607,6 +2623,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
     }
     break;
+
+  case X86::JCC_SELF:
+    MCSymbol *Sym = OutContext.createTempSymbol();
+    OutStreamer->emitLabel(Sym);
+    EmitAndCountInstruction(
+        MCInstBuilder(X86::JCC_1)
+            .addExpr(MCSymbolRefExpr::create(Sym, OutContext))
+            .addImm(MI->getOperand(0).getImm()));
+    return;
   }
 
   MCInst TmpInst;
@@ -2622,6 +2647,18 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   EmitAndCountInstruction(TmpInst);
+}
+
+void X86AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
+  if (MI) {
+    // If unwinding inline asm ends on a call, wineh may require insertion of
+    // a nop.
+    unsigned ExtraInfo = MI->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      maybeEmitNopAfterCallForWindowsEH(MI);
+  }
 }
 
 void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {

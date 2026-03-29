@@ -46,7 +46,7 @@ invoke2:
 ; CHECK:   call ptr @__cxa_begin_catch(ptr %exn)
 ; CHECK:   call void @use_val(i32 %val)
 ; CHECK:   call void @__cxa_end_catch()
-; CHECK:   call void @free(ptr %hdl)
+; CHECK:   call void @free(ptr %mem)
 ; CHECK:   ret void
 
 pad.with.phi:
@@ -65,7 +65,7 @@ cleanup:                                        ; preds = %invoke.cont15, %if.el
   br label %coro.ret
 
 coro.ret:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 
 unreach:
@@ -92,6 +92,6 @@ declare void @use_val(i32)
 declare void @__cxa_end_catch()
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare void @free(ptr)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)

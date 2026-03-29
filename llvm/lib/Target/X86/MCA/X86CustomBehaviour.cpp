@@ -20,27 +20,45 @@
 namespace llvm {
 namespace mca {
 
-void X86InstrPostProcess::setMemBarriers(std::unique_ptr<Instruction> &Inst,
-                                         const MCInst &MCI) {
+void X86InstrPostProcess::setMemBarriers(Instruction &Inst, const MCInst &MCI) {
   switch (MCI.getOpcode()) {
   case X86::MFENCE:
-    Inst->setLoadBarrier(true);
-    Inst->setStoreBarrier(true);
+    Inst.setLoadBarrier(true);
+    Inst.setStoreBarrier(true);
     break;
   case X86::LFENCE:
-    Inst->setLoadBarrier(true);
+    Inst.setLoadBarrier(true);
     break;
   case X86::SFENCE:
-    Inst->setStoreBarrier(true);
+    Inst.setStoreBarrier(true);
     break;
   }
 }
 
-void X86InstrPostProcess::postProcessInstruction(
-    std::unique_ptr<Instruction> &Inst, const MCInst &MCI) {
-  // Currently, we only modify certain instructions' IsALoadBarrier and
-  // IsAStoreBarrier flags.
+void X86InstrPostProcess::useStackEngine(Instruction &Inst, const MCInst &MCI) {
+  // TODO(boomanaiden154): We currently do not handle PUSHF/POPF because we
+  // have not done the necessary benchmarking to see if they are also
+  // optimized by the stack engine.
+  // TODO: We currently just remove all RSP writes from stack operations. This
+  // is not fully correct because we do not model sync uops which will
+  // delay subsequent rsp using non-stack instructions.
+  if (X86::isPOP(MCI.getOpcode()) || X86::isPUSH(MCI.getOpcode())) {
+    auto *StackRegisterDef =
+        llvm::find_if(Inst.getDefs(), [](const WriteState &State) {
+          return State.getRegisterID() == X86::RSP;
+        });
+    assert(
+        StackRegisterDef != Inst.getDefs().end() &&
+        "Expected push instruction to implicitly use stack pointer register.");
+    Inst.getDefs().erase(StackRegisterDef);
+  }
+}
+
+void X86InstrPostProcess::postProcessInstruction(Instruction &Inst,
+                                                 const MCInst &MCI) {
+  // Set IsALoadBarrier and IsAStoreBarrier flags.
   setMemBarriers(Inst, MCI);
+  useStackEngine(Inst, MCI);
 }
 
 } // namespace mca

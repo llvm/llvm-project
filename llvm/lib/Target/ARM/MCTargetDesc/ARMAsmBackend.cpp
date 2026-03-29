@@ -25,6 +25,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
@@ -427,7 +428,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // signed 16bit range.
   if ((Kind == ARM::fixup_arm_movw_lo16 || Kind == ARM::fixup_arm_movt_hi16 ||
        Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16) &&
-      (Addend < minIntN(16) || Addend > maxIntN(16))) {
+      !IsResolved && (Addend < minIntN(16) || Addend > maxIntN(16))) {
     Ctx.reportError(Fixup.getLoc(), "Relocation Not In Range");
     return 0;
   }
@@ -437,13 +438,14 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // Other relocation types don't want this bit though (branches couldn't encode
   // it if it *was* present, and no other relocations exist) and it can
   // interfere with checking valid expressions.
-  bool IsMachO = getContext().getObjectFileType() == MCContext::IsMachO;
-  if (const auto *SA = Target.getAddSym()) {
-    if (IsMachO && Asm.isThumbFunc(SA) && SA->isExternal() &&
-        (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
-         Kind == ARM::fixup_arm_movt_hi16 || Kind == ARM::fixup_t2_movw_lo16 ||
-         Kind == ARM::fixup_t2_movt_hi16))
-      Value |= 1;
+  if (getContext().getObjectFileType() == MCContext::IsMachO) {
+    if (auto *SA = static_cast<const MCSymbolMachO *>(Target.getAddSym())) {
+      if (Asm.isThumbFunc(SA) && SA->isExternal() &&
+          (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
+           Kind == ARM::fixup_arm_movt_hi16 ||
+           Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16))
+        Value |= 1;
+    }
   }
 
   switch (Kind) {
@@ -901,7 +903,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_bfcsel_else_target: {
     // If this is a fixup of a branch future's else target then it should be a
-    // constant MCExpr representing the distance between the branch targetted
+    // constant MCExpr representing the distance between the branch targeted
     // and the instruction after that same branch.
     Value = Target.getConstant();
 
@@ -935,17 +937,6 @@ bool ARMAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                           const MCValue &Target) {
   const MCSymbol *Sym = Target.getAddSym();
   const unsigned FixupKind = Fixup.getKind();
-  if (FixupKind == ARM::fixup_arm_thumb_bl) {
-    assert(Sym && "How did we resolve this?");
-
-    // If the symbol is external the linker will handle it.
-    // FIXME: Should we handle it as an optimization?
-
-    // If the symbol is out of range, produce a relocation and hope the
-    // linker can handle it. GNU AS produces an error in this case.
-    if (Sym->isExternal())
-      return true;
-  }
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
   if (needsInterworking(*Asm, Sym, Fixup.getKind()))
@@ -1180,13 +1171,20 @@ enum CompactUnwindEncodings {
 uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
     const MCDwarfFrameInfo *FI, const MCContext *Ctxt) const {
   DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "generateCU()\n");
+
   // Only armv7k uses CFI based unwinding.
   if (Subtype != MachO::CPU_SUBTYPE_ARM_V7K)
     return 0;
+
+  // Signal frames cannot be encoded in compact unwind.
+  if (FI->IsSignalFrame)
+    return CU::UNWIND_ARM_MODE_DWARF;
+
   // No .cfi directives means no frame.
   ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
   if (Instrs.empty())
     return 0;
+
   if (!isDarwinCanonicalPersonality(FI->Personality) &&
       !Ctxt->emitCompactUnwindNonCanonical())
     return CU::UNWIND_ARM_MODE_DWARF;
@@ -1229,7 +1227,7 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
       // Ignore
       break;
     default:
-      // Directive not convertable to compact unwind, bail out.
+      // Directive not convertible to compact unwind, bail out.
       DEBUG_WITH_TYPE("compact-unwind",
                       llvm::dbgs()
                           << "CFI directive not compatible with compact "
@@ -1247,7 +1245,7 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   // Verify standard frame (lr/r7) was used.
   if (CFARegister != ARM::R7) {
     DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "frame register is "
-                                                   << CFARegister
+                                                   << CFARegister.id()
                                                    << " instead of r7\n");
     return CU::UNWIND_ARM_MODE_DWARF;
   }

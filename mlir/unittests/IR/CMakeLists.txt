@@ -4,6 +4,7 @@ add_mlir_unittest(MLIRIRTests
   AffineMapTest.cpp
   AttributeTest.cpp
   AttrTypeReplacerTest.cpp
+  BuiltinDialectVersionTest.cpp
   Diagnostic.cpp
   DialectTest.cpp
   DistinctAttributeAllocatorTest.cpp
@@ -14,12 +15,14 @@ add_mlir_unittest(MLIRIRTests
   MemrefLayoutTest.cpp
   OperationSupportTest.cpp
   PatternMatchTest.cpp
+  RemarkTest.cpp  
   ShapedTypeTest.cpp
   SymbolTableTest.cpp
   TypeTest.cpp
   TypeAttrNamesTest.cpp
   OpPropertiesTest.cpp
   ValueTest.cpp
+  VerifierTest.cpp
   BlobManagerTest.cpp
 
   DEPENDS
@@ -27,4 +30,6 @@ add_mlir_unittest(MLIRIRTests
 )
 target_include_directories(MLIRIRTests PRIVATE "${MLIR_BINARY_DIR}/test/lib/Dialect/Test")
 mlir_target_link_libraries(MLIRIRTests PRIVATE MLIRIR)
+target_link_libraries(MLIRIRTests PRIVATE MLIRBytecodeWriter)
 target_link_libraries(MLIRIRTests PRIVATE MLIRTestDialect)
+target_link_libraries(MLIRIRTests PRIVATE MLIRRemarkStreamer)

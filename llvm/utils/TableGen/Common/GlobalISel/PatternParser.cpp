@@ -17,8 +17,9 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
-namespace llvm {
-namespace gi {
+using namespace llvm;
+using namespace gi;
+
 static constexpr StringLiteral MIFlagsEnumClassName = "MIFlagEnum";
 
 namespace {
@@ -112,7 +113,8 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
 
   std::unique_ptr<InstructionPattern> Pat;
   if (const DagInit *IP = getDagWithOperatorOfSubClass(Arg, "Instruction")) {
-    auto &Instr = CGT.getInstruction(IP->getOperatorAsDef(DiagLoc));
+    const CodeGenInstruction &Instr =
+        CGT.getInstruction(IP->getOperatorAsDef(DiagLoc));
     Pat =
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
   } else if (const DagInit *IP =
@@ -445,6 +447,3 @@ const PatFrag *PatternParser::parsePatFrag(const Record *Def) {
   SeenPatFrags.insert(Res);
   return Res;
 }
-
-} // namespace gi
-} // namespace llvm

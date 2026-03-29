@@ -242,7 +242,7 @@
 // CHECK-PHASES: 7: backend, {6}, assembler, (device-openmp, sm_52)
 // CHECK-PHASES: 8: assembler, {7}, object, (device-openmp, sm_52)
 // CHECK-PHASES: 9: offload, "device-openmp (nvptx64-nvidia-cuda:sm_52)" {8}, object
-// CHECK-PHASES: 10: clang-offload-packager, {9}, image
+// CHECK-PHASES: 10: llvm-offload-binary, {9}, image
 // CHECK-PHASES: 11: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {10}, ir
 // CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
 // CHECK-PHASES: 13: assembler, {12}, object, (host-openmp)
@@ -344,15 +344,21 @@
 // CHECK-XLINKER: -device-linker=a{{.*}}-device-linker=nvptx64-nvidia-cuda=b{{.*}}-device-linker=nvptx64-nvidia-cuda=c{{.*}}--
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
+// RUN:     -Xoffload-compiler a -Xoffload-compiler-nvptx64-nvidia-cuda b -Xoffload-compiler-nvptx64 c \
+// RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-XCOMPILER %s
+
+// CHECK-XCOMPILER: -device-compiler=a{{.*}}-device-compiler=nvptx64-nvidia-cuda=b{{.*}}-device-compiler=nvptx64-nvidia-cuda=c{{.*}}--
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-FEATURES %s
 
-// CHECK-LTO-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx{{[0-9]+}}
+// CHECK-LTO-FEATURES: llvm-offload-binary{{.*}}--image={{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx64 -foffload-lto %s 2>&1 \
 // RUN:    | FileCheck --check-prefix=CHECK-SET-FEATURES %s
 
-// CHECK-SET-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx64
+// CHECK-SET-FEATURES: llvm-offload-binary{{.*}}--image={{.*}}feature=+ptx64
 
 //
 // Check that `-Xarch_host` works for OpenMP offloading.
@@ -404,3 +410,21 @@
 // RUN:   | FileCheck --check-prefix=SHOULD-EXTRACT %s
 //
 // SHOULD-EXTRACT: clang-linker-wrapper{{.*}}"--should-extract=gfx906"
+
+//
+// Check that `-fprofile-generate` flags are forwarded to link in the runtime
+// only if present in the resource directory.
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=PROFILE %s
+//
+// PROFILE: clang-linker-wrapper{{.*}}--device-compiler=amdgcn-amd-amdhsa=-fprofile-generate
+// 
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NO-PROFILE %s
+//
+// NO-PROFILE-NOT: --device-compiler=amdgcn-amd-amdhsa=-fprofile-generate

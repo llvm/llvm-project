@@ -12,9 +12,9 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; SDAG-GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[6:7]
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; SDAG-GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[6:7]
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SDAG-GFX11-TRUE16-NEXT:    v_dot2_f16_f16 v0.l, s2, s3, v0.l
 ; SDAG-GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -25,9 +25,9 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; SDAG-GFX11-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; SDAG-GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[6:7]
 ; SDAG-GFX11-FAKE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; SDAG-GFX11-FAKE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; SDAG-GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[6:7]
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SDAG-GFX11-FAKE16-NEXT:    v_dot2_f16_f16 v1, s2, s3, v1
 ; SDAG-GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
@@ -38,9 +38,9 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; GISEL-GFX11-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GISEL-GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[6:7]
 ; GISEL-GFX11-TRUE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GISEL-GFX11-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; GISEL-GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[6:7]
 ; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GISEL-GFX11-TRUE16-NEXT:    v_dot2_f16_f16 v0.l, s2, s3, v0.l
 ; GISEL-GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -51,9 +51,9 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; GISEL-GFX11-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GISEL-GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[6:7]
 ; GISEL-GFX11-FAKE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GISEL-GFX11-FAKE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; GISEL-GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[6:7]
 ; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GISEL-GFX11-FAKE16-NEXT:    v_dot2_f16_f16 v1, s2, s3, v1
 ; GISEL-GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]

@@ -28,6 +28,7 @@
 #include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
+class MCSymbolGOFF;
 
 class SystemZHLASMAsmStreamer final : public MCStreamer {
   constexpr static size_t InstLimit = 80;
@@ -100,14 +101,13 @@ public:
 
   /// @name MCStreamer Interface
   /// @{
+  void visitUsedSymbol(const MCSymbol &Sym) override;
 
   void changeSection(MCSection *Section, uint32_t Subsection) override;
 
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc) override;
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return false;
-  }
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
@@ -122,7 +122,7 @@ public:
                           bool Parens = false);
   /// @}
 
-  void emitEnd();
+  void finishImpl() override;
 };
 } // namespace llvm
 

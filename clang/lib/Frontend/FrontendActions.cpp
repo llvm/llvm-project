@@ -9,19 +9,20 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Parse/ParseHLSLRootSignature.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
@@ -250,9 +251,9 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
       ModuleMapFile = InFile;
 
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
-    CI.getFrontendOpts().OutputFile =
-        HS.getCachedModuleFileName(CI.getLangOpts().CurrentModule,
-                                   ModuleMapFile);
+    ModuleFileName FileName = HS.getCachedModuleFileName(
+        CI.getLangOpts().CurrentModule, ModuleMapFile);
+    CI.getFrontendOpts().OutputFile = FileName.str();
   }
 
   // Because this is exposed via libclang we must disable RemoveFileOnSignal.
@@ -366,11 +367,9 @@ void VerifyPCHAction::ExecuteAction() {
       /*AllowConfigurationMismatch*/ true,
       /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
-  Reader->ReadAST(getCurrentFile(),
-                  Preamble ? serialization::MK_Preamble
-                           : serialization::MK_PCH,
-                  SourceLocation(),
-                  ASTReader::ARR_ConfigurationMismatch);
+  Reader->ReadAST(ModuleFileName::makeExplicit(getCurrentFile()),
+                  Preamble ? serialization::MK_Preamble : serialization::MK_PCH,
+                  SourceLocation(), ASTReader::ARR_ConfigurationMismatch);
 }
 
 namespace {
@@ -475,6 +474,10 @@ private:
       return "TypeAliasTemplateInstantiation";
     case CodeSynthesisContext::PartialOrderingTTP:
       return "PartialOrderingTTP";
+    case CodeSynthesisContext::SYCLKernelLaunchLookup:
+      return "SYCLKernelLaunchLookup";
+    case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution:
+      return "SYCLKernelLaunchOverloadResolution";
     }
     return "";
   }
@@ -618,9 +621,11 @@ namespace {
   /// file.
   class DumpModuleInfoListener : public ASTReaderListener {
     llvm::raw_ostream &Out;
+    FileManager &FileMgr;
 
   public:
-    DumpModuleInfoListener(llvm::raw_ostream &Out) : Out(Out) { }
+    DumpModuleInfoListener(llvm::raw_ostream &Out, FileManager &FileMgr)
+        : Out(Out), FileMgr(FileMgr) {}
 
 #define DUMP_BOOLEAN(Value, Text)                       \
     Out.indent(4) << Text << ": " << (Value? "Yes" : "No") << "\n"
@@ -711,8 +716,12 @@ namespace {
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                  StringRef ModuleFilename,
-                                 StringRef SpecificModuleCachePath,
+                                 StringRef ContextHash,
                                  bool Complain) override {
+      std::string SpecificModuleCachePath = createSpecificModuleCachePath(
+          FileMgr, HSOpts.ModuleCachePath, HSOpts.DisableModuleHash,
+          std::string(ContextHash));
+
       Out.indent(2) << "Header search options:\n";
       Out.indent(4) << "System root [-isysroot=]: '" << HSOpts.Sysroot << "'\n";
       Out.indent(4) << "Resource dir [ -resource-dir=]: '" << HSOpts.ResourceDir << "'\n";
@@ -795,9 +804,10 @@ namespace {
     /// Indicates that the AST file contains particular input file.
     ///
     /// \returns true to continue receiving the next input file, false to stop.
-    bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                        bool isSystem, bool isOverridden,
-                        bool isExplicitModule) override {
+    bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                   StringRef Filename, bool isSystem,
+                                   bool isOverridden, time_t StoredTime,
+                                   bool isExplicitModule) override {
 
       Out.indent(2) << "Input file: " << FilenameAsRequested;
 
@@ -820,6 +830,9 @@ namespace {
       }
 
       Out << "\n";
+
+      if (StoredTime > 0)
+        Out.indent(4) << "MTime: " << llvm::itostr(StoredTime) << "\n";
 
       return true;
     }
@@ -896,7 +909,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   Out << "  Module format: " << (IsRaw ? "raw" : "obj") << "\n";
 
   Preprocessor &PP = CI.getPreprocessor();
-  DumpModuleInfoListener Listener(Out);
+  DumpModuleInfoListener Listener(Out, CI.getFileManager());
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
@@ -969,14 +982,17 @@ void DumpModuleInfoAction::ExecuteAction() {
     // Emit the macro definitions in the module file so that we can know how
     // much definitions in the module file quickly.
     // TODO: Emit the macro definition bodies completely.
-    if (auto FilteredMacros = llvm::make_filter_range(
-            R->getPreprocessor().macros(),
-            [](const auto &Macro) { return Macro.first->isFromAST(); });
-        !FilteredMacros.empty()) {
-      Out << "   Macro Definitions:\n";
-      for (/*<IdentifierInfo *, MacroState> pair*/ const auto &Macro :
-           FilteredMacros)
-        Out << "     " << Macro.first->getName() << "\n";
+    {
+      std::vector<StringRef> MacroNames;
+      for (const auto &M : R->getPreprocessor().macros()) {
+        if (M.first->isFromAST())
+          MacroNames.push_back(M.first->getName());
+      }
+      llvm::sort(MacroNames);
+      if (!MacroNames.empty())
+        Out << "   Macro Definitions:\n";
+      for (StringRef Name : MacroNames)
+        Out << "     " << Name << "\n";
     }
 
     // Now let's print out any modules we did not see as part of the Primary.
@@ -1228,16 +1244,95 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
                                     llvm::outs());
 }
 
-void GetDependenciesByModuleNameAction::ExecuteAction() {
+//===----------------------------------------------------------------------===//
+// HLSL Specific Actions
+//===----------------------------------------------------------------------===//
+
+class InjectRootSignatureCallback : public PPCallbacks {
+private:
+  Sema &Actions;
+  StringRef RootSigName;
+  llvm::dxbc::RootSignatureVersion Version;
+
+  std::optional<StringLiteral *> processStringLiteral(ArrayRef<Token> Tokens) {
+    for (Token Tok : Tokens)
+      if (!tok::isStringLiteral(Tok.getKind()))
+        return std::nullopt;
+
+    ExprResult StringResult = Actions.ActOnUnevaluatedStringLiteral(Tokens);
+    if (StringResult.isInvalid())
+      return std::nullopt;
+
+    if (auto Signature = dyn_cast<StringLiteral>(StringResult.get()))
+      return Signature;
+
+    return std::nullopt;
+  }
+
+public:
+  void MacroDefined(const Token &MacroNameTok,
+                    const MacroDirective *MD) override {
+    if (RootSigName != MacroNameTok.getIdentifierInfo()->getName())
+      return;
+
+    const MacroInfo *MI = MD->getMacroInfo();
+    auto Signature = processStringLiteral(MI->tokens());
+    if (!Signature.has_value()) {
+      Actions.getDiagnostics().Report(MI->getDefinitionLoc(),
+                                      diag::err_expected_string_literal)
+          << /*in attributes...*/ 4 << "RootSignature";
+      return;
+    }
+
+    IdentifierInfo *DeclIdent =
+        hlsl::ParseHLSLRootSignature(Actions, Version, *Signature);
+    Actions.HLSL().SetRootSignatureOverride(DeclIdent);
+  }
+
+  InjectRootSignatureCallback(Sema &Actions, StringRef RootSigName,
+                              llvm::dxbc::RootSignatureVersion Version)
+      : PPCallbacks(), Actions(Actions), RootSigName(RootSigName),
+        Version(Version) {}
+};
+
+void HLSLFrontendAction::ExecuteAction() {
+  // Pre-requisites to invoke
   CompilerInstance &CI = getCompilerInstance();
+  if (!CI.hasASTContext() || !CI.hasPreprocessor())
+    return WrapperFrontendAction::ExecuteAction();
+
+  // InjectRootSignatureCallback requires access to invoke Sema to lookup/
+  // register a root signature declaration. The wrapped action is required to
+  // account for this by only creating a Sema if one doesn't already exist
+  // (like we have done, and, ASTFrontendAction::ExecuteAction)
+  if (!CI.hasSema())
+    CI.createSema(getTranslationUnitKind(),
+                  /*CodeCompleteConsumer=*/nullptr);
+  Sema &S = CI.getSema();
+
+  auto &TargetInfo = CI.getASTContext().getTargetInfo();
+  bool IsRootSignatureTarget =
+      TargetInfo.getTriple().getEnvironment() == llvm::Triple::RootSignature;
+  StringRef HLSLEntry = TargetInfo.getTargetOpts().HLSLEntry;
+
+  // Register HLSL specific callbacks
+  auto LangOpts = CI.getLangOpts();
+  StringRef RootSigName =
+      IsRootSignatureTarget ? HLSLEntry : LangOpts.HLSLRootSigOverride;
+
+  auto MacroCallback = std::make_unique<InjectRootSignatureCallback>(
+      S, RootSigName, LangOpts.HLSLRootSigVer);
+
   Preprocessor &PP = CI.getPreprocessor();
-  SourceManager &SM = PP.getSourceManager();
-  FileID MainFileID = SM.getMainFileID();
-  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<IdentifierLoc, 2> Path;
-  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.emplace_back(FileStart, ModuleID);
-  auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
-  PPCallbacks *CB = PP.getPPCallbacks();
-  CB->moduleImport(SourceLocation(), Path, ModResult);
+  PP.addPPCallbacks(std::move(MacroCallback));
+
+  // If we are targeting a root signature, invoke custom handling
+  if (IsRootSignatureTarget)
+    return hlsl::HandleRootSignatureTarget(S, HLSLEntry);
+  else // otherwise, invoke as normal
+    return WrapperFrontendAction::ExecuteAction();
 }
+
+HLSLFrontendAction::HLSLFrontendAction(
+    std::unique_ptr<FrontendAction> WrappedAction)
+    : WrapperFrontendAction(std::move(WrappedAction)) {}

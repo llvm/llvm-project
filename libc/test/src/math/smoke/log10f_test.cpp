@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -21,12 +22,19 @@ TEST_F(LlvmLibcLog10fTest, SpecialNumbers) {
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log10f(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log10f(inf));
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10f(neg_inf), FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
   EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log10f(0.0f),
                               FE_DIVBYZERO);
+  EXPECT_MATH_ERRNO(ERANGE);
   EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log10f(-0.0f),
                               FE_DIVBYZERO);
+  EXPECT_MATH_ERRNO(ERANGE);
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10f(-1.0f), FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log10f(1.0f));
 
   float x = 1.0f;

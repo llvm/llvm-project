@@ -958,7 +958,8 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
   for (unsigned Size = 2; Size <= MaxStoreSizeToForm; Size *= 2) {
     LLT Ty = LLT::scalar(Size);
     SmallVector<LegalityQuery::MemDesc, 2> MemDescrs(
-        {{Ty, Ty.getSizeInBits(), AtomicOrdering::NotAtomic}});
+        {{Ty, Ty.getSizeInBits(), AtomicOrdering::NotAtomic,
+          AtomicOrdering::NotAtomic}});
     SmallVector<LLT> StoreTys({Ty, PtrTy});
     LegalityQuery Q(TargetOpcode::G_STORE, StoreTys, MemDescrs);
     LegalizeActionStep ActionStep = LI.getAction(Q);
@@ -966,7 +967,7 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
       LegalSizes.set(Size);
   }
   assert(LegalSizes.any() && "Expected some store sizes to be legal!");
-  LegalStoreSizes[AddrSpace] = LegalSizes;
+  LegalStoreSizes[AddrSpace] = std::move(LegalSizes);
 }
 
 bool LoadStoreOpt::runOnMachineFunction(MachineFunction &MF) {

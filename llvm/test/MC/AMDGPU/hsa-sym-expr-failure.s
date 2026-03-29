@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefix=ASM %s
+// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a %s -filetype=null 2>&1 | FileCheck --check-prefix=ASM %s
 
 // Some expression currently require (immediately) solvable expressions, i.e.,
 // they don't depend on yet-unknown symbolic values.

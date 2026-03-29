@@ -263,6 +263,19 @@ func.func @tensor_cast_to_buffer(%arg0 : tensor<4x6x16x32xi8>) ->
 // CHECK-SAME: memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
 // CHECK:   return %[[M1]] : memref<?x?x16x32xi8>
 
+// CHECK-LABEL: func @tensor_cast_to_unranked_buffer
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<4x6x16x32xi8>
+func.func @tensor_cast_to_unranked_buffer(%arg0 : tensor<4x6x16x32xi8>) ->
+  memref<*xi8> {
+  %0 = tensor.cast %arg0 : tensor<4x6x16x32xi8> to tensor<*xi8>
+  %1 = bufferization.to_buffer %0 read_only : tensor<*xi8> to memref<*xi8>
+  return %1 : memref<*xi8>
+}
+// CHECK:   %[[M:.+]] = bufferization.to_buffer %[[ARG0]] read_only : tensor<4x6x16x32xi8>
+// CHECK:   %[[M1:.+]] = memref.cast %[[M]]
+// CHECK-SAME: memref<4x6x16x32xi8> to memref<*xi8>
+// CHECK:   return %[[M1]] : memref<*xi8>
+
 // -----
 
 // CHECK-LABEL: func @tensor_cast_to_buffer
@@ -281,11 +294,29 @@ func.func @tensor_cast_to_buffer_layout_and_memspace(%arg0 : tensor<4x6x16x32xi8
 
 // -----
 
+// Verify LoadOfToBuffer skips writable buffers
+// CHECK-LABEL: func @load_after_write_from_buffer_cast(
+func.func @load_after_write_from_buffer_cast(%arg0: index, %arg1: index,
+                            %arg2: tensor<?x?xf32>) -> f32 {
+  %0 = bufferization.to_buffer %arg2 : tensor<?x?xf32> to memref<?x?xf32>
+  linalg.ceil ins(%0 : memref<?x?xf32>) outs(%0 : memref<?x?xf32>)
+  %1 = memref.load %0[%arg0, %arg1] : memref<?x?xf32>
+  return %1 : f32
+}
+// CHECK-SAME: %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
+// CHECK-SAME: %[[TENSOR:[0-9a-z]+]]: tensor<?x?xf32>
+//      CHECK: %[[M:.+]] = bufferization.to_buffer %[[TENSOR]] : tensor<?x?xf32> to memref<?x?xf32>
+//      CHECK: linalg.ceil ins(%[[M]] : memref<?x?xf32>) outs(%[[M]] : memref<?x?xf32>)
+//      CHECK: %[[RES:.*]] = memref.load %[[M]][%[[IDX0]], %[[IDX1]]] : memref<?x?xf32>
+//      CHECK: return %[[RES]] : f32
+
+// -----
+
 // Folding of memref.load(to_buffer(%v, %idxs)) -> tensor.extract(%v, %idx)
 // CHECK-LABEL: func @load_from_buffer_cast(
 func.func @load_from_buffer_cast(%arg0: index, %arg1: index,
                             %arg2: tensor<?x?xf32>) -> f32 {
-  %0 = bufferization.to_buffer %arg2 : tensor<?x?xf32> to memref<?x?xf32>
+  %0 = bufferization.to_buffer %arg2 read_only : tensor<?x?xf32> to memref<?x?xf32>
   %1 = memref.load %0[%arg0, %arg1] : memref<?x?xf32>
   return %1 : f32
 }

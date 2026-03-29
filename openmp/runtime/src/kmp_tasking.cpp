@@ -1149,6 +1149,13 @@ void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
 // thread:  thread data structure corresponding to implicit task
 void __kmp_finish_implicit_task(kmp_info_t *thread) {
   kmp_taskdata_t *task = thread->th.th_current_task;
+#if ENABLE_LIBOMPTARGET
+  // Give an opportunity to the offload runtime to synchronize any unfinished
+  // target async regions before finishing the implicit task
+  if (UNLIKELY(kmp_target_sync_cb != NULL))
+    (*kmp_target_sync_cb)(NULL, thread->th.th_info.ds.ds_gtid,
+                          KMP_TASKDATA_TO_TASK(task), NULL);
+#endif // ENABLE_LIBOMPTARGET
   if (task->td_dephash) {
     int children;
     task->td_flags.complete = 1;
@@ -1498,6 +1505,18 @@ kmp_int32
 __kmpc_omp_reg_task_with_affinity(ident_t *loc_ref, kmp_int32 gtid,
                                   kmp_task_t *new_task, kmp_int32 naffins,
                                   kmp_task_affinity_info_t *affin_list) {
+  if (naffins > 0)
+    KMP_DEBUG_ASSERT(affin_list != NULL);
+
+  for (kmp_int32 i = 0; i < naffins; ++i) {
+    KA_TRACE(30, ("__kmpc_omp_reg_task_with_affinity: T#%d aff[%d] "
+                  "base_addr=0x%llx len=%zu flags={%d,%d,%d}\n",
+                  gtid, i, (unsigned long long)affin_list[i].base_addr,
+                  affin_list[i].len, (int)affin_list[i].flags.flag1,
+                  (int)affin_list[i].flags.flag2,
+                  (int)affin_list[i].flags.reserved));
+  }
+
   return 0;
 }
 
@@ -2019,6 +2038,14 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
       }
     }
 #endif // OMPT_SUPPORT && OMPT_OPTIONAL
+
+#if ENABLE_LIBOMPTARGET
+    // Give an opportunity to the offload runtime to make progress and create
+    // any necessary proxy tasks
+    if (UNLIKELY(kmp_target_sync_cb))
+      (*kmp_target_sync_cb)(loc_ref, gtid, KMP_TASKDATA_TO_TASK(taskdata),
+                            NULL);
+#endif // ENABLE_LIBOMPTARGET
 
 // Debugger: The taskwait is active. Store location and thread encountered the
 // taskwait.
@@ -2719,6 +2746,13 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
     }
 #endif
 
+#if ENABLE_LIBOMPTARGET
+    // Give an opportunity to the offload runtime to make progress and create
+    // any necessary proxy tasks
+    if (UNLIKELY(kmp_target_sync_cb))
+      (*kmp_target_sync_cb)(loc, gtid, KMP_TASKDATA_TO_TASK(taskdata), NULL);
+#endif // ENABLE_LIBOMPTARGET
+
     if (!taskdata->td_flags.team_serial ||
         (thread->th.th_task_team != NULL &&
          (thread->th.th_task_team->tt.tt_found_proxy_tasks ||
@@ -3162,6 +3196,13 @@ static inline int __kmp_execute_tasks_template(
   while (1) { // Outer loop keeps trying to find tasks in case of single thread
     // getting tasks from target constructs
     while (1) { // Inner loop to find a task and execute it
+#if ENABLE_LIBOMPTARGET
+      // Give an opportunity to the offload runtime to make progress
+      if (UNLIKELY(kmp_target_sync_cb))
+        (*kmp_target_sync_cb)(NULL, gtid, KMP_TASKDATA_TO_TASK(current_task),
+                              NULL);
+#endif // ENABLE_LIBOMPTARGET
+
       task = NULL;
       if (task_team->tt.tt_num_task_pri) { // get priority task first
         task = __kmp_get_priority_task(gtid, task_team, is_constrained);

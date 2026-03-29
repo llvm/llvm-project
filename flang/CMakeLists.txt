@@ -317,7 +317,7 @@ if (NOT ENABLE_LINKER_BUILD_ID)
   set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 endif()
 
-set(FLANG_DEFAULT_LINKER "" CACHE STRING
+set(FLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 
 set(FLANG_DEFAULT_RTLIB "" CACHE STRING
@@ -441,11 +441,6 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   if (BUILD_SHARED_LIBS AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-semantic-interposition")
   endif()
-
-  # GCC requires this flag in order for precompiled headers to work with ccache
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpch-preprocess")
-  endif()
 endif()
 
 # Clang on Darwin enables non-POSIX extensions by default, which allows the
@@ -454,11 +449,6 @@ endif()
 # Set _POSIX_C_SOURCE to avoid including these extensions.
 if (APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_POSIX_C_SOURCE=200809")
-endif()
-
-# Clang requires this flag in order for precompiled headers to work with ccache
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fno-pch-timestamp")
 endif()
 
 list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
@@ -495,6 +485,9 @@ endif()
 
 include(AddFlang)
 include(FlangCommon)
+include(GetClangResourceDir)
+
+get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 
 if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
@@ -575,8 +568,6 @@ endif()
 
 # Put ISO_Fortran_binding.h into the include files of the build area now
 # so that we can run tests before installing
-include(GetClangResourceDir)
-get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 configure_file(
   ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
   ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h COPYONLY)
@@ -592,6 +583,10 @@ get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
 install(
   FILES include/flang/ISO_Fortran_binding.h
   DESTINATION ${HEADER_INSTALL_DIR}
+  COMPONENT flang-fortran-binding)
+install(
+  FILES include/flang/ISO_Fortran_binding.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flang
   COMPONENT flang-fortran-binding)
 add_llvm_install_targets(install-flang-fortran-binding
   COMPONENT flang-fortran-binding)

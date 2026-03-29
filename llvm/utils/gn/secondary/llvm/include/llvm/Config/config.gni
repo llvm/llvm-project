@@ -1,4 +1,7 @@
 declare_args() {
   # Iterate unordered llvm containers in reverse.
   llvm_enable_reverse_iteration = false
+
+  # Iterate unordered llvm containers in reverse.
+  llvm_enable_ondisk_cas = false
 }

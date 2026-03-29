@@ -24,23 +24,23 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
                                    const MCTargetOptions &Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
-  MipsABIInfo ABI = MipsABIInfo::computeTargetABI(TheTriple, "", Options);
+  MipsABIInfo ABI =
+      MipsABIInfo::computeTargetABI(TheTriple, Options.getABIName());
 
   if (TheTriple.isMIPS64() && !ABI.IsN32())
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
   if (ABI.IsO32())
-    PrivateGlobalPrefix = "$";
+    InternalSymbolPrefix = "$";
   else if (ABI.IsN32() || ABI.IsN64())
-    PrivateGlobalPrefix = ".L";
-  PrivateLabelPrefix = PrivateGlobalPrefix;
+    InternalSymbolPrefix = ".L";
+  PrivateLabelPrefix = InternalSymbolPrefix;
 
   AlignmentIsInBytes          = false;
   Data16bitsDirective         = "\t.2byte\t";
   Data32bitsDirective         = "\t.4byte\t";
   Data64bitsDirective         = "\t.8byte\t";
   CommentString               = "#";
-  AllowDollarAtStartOfIdentifier = false;
   ZeroDirective               = "\t.space\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
@@ -56,7 +56,7 @@ MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
 
   ExceptionsType = ExceptionHandling::WinEH;
 
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
   AllowAtInName = true;
 }

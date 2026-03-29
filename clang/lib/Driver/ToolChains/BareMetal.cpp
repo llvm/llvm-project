@@ -18,7 +18,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/MultilibBuilder.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
@@ -49,6 +49,12 @@ static bool isRISCVBareMetal(const llvm::Triple &Triple) {
 static bool isPPCBareMetal(const llvm::Triple &Triple) {
   return Triple.isPPC() && Triple.getOS() == llvm::Triple::UnknownOS &&
          Triple.getEnvironment() == llvm::Triple::EABI;
+}
+
+/// Is the triple {ix86,x86_64}-*-none-elf?
+static bool isX86BareMetal(const llvm::Triple &Triple) {
+  return Triple.isX86() && Triple.getOS() == llvm::Triple::UnknownOS &&
+         Triple.getEnvironmentName() == "elf";
 }
 
 static bool findRISCVMultilibs(const Driver &D,
@@ -135,7 +141,7 @@ static std::string computeClangRuntimesSysRoot(const Driver &D,
 bool BareMetal::initGCCInstallation(const llvm::Triple &Triple,
                                     const llvm::opt::ArgList &Args) {
   if (Args.getLastArg(options::OPT_gcc_toolchain) ||
-      Args.getLastArg(clang::driver::options::OPT_gcc_install_dir_EQ)) {
+      Args.getLastArg(clang::options::OPT_gcc_install_dir_EQ)) {
     GCCInstallation.init(Triple, Args);
     return GCCInstallation.isValid();
   }
@@ -351,7 +357,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return arm::isARMEABIBareMetal(Triple) ||
          aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
-         isPPCBareMetal(Triple);
+         isPPCBareMetal(Triple) || isX86BareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
@@ -408,6 +414,8 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  const Driver &D = getDriver();
+
   if (std::optional<std::string> Path = getStdlibIncludePath())
     addSystemInclude(DriverArgs, CC1Args, *Path);
 
@@ -416,6 +424,12 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     for (const Multilib &M : getOrderedMultilibs()) {
       SmallString<128> Dir(SysRootDir);
       llvm::sys::path::append(Dir, M.includeSuffix());
+      llvm::sys::path::append(Dir, "include");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+    }
+    SmallString<128> Dir(SysRootDir);
+    llvm::sys::path::append(Dir, getTripleString());
+    if (D.getVFS().exists(Dir)) {
       llvm::sys::path::append(Dir, "include");
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
     }
@@ -498,7 +512,7 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
         addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
         break;
       }
-      // Add generic path if nothing else succeeded so far.
+      // Add generic paths if nothing else succeeded so far.
       llvm::sys::path::append(Dir, "include", "c++", "v1");
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
       break;
@@ -527,6 +541,17 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       break;
     }
     }
+  }
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx: {
+    SmallString<128> Dir(SysRootDir);
+    llvm::sys::path::append(Dir, Target, "include", "c++", "v1");
+    if (D.getVFS().exists(Dir))
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+    break;
+  }
+  case ToolChain::CST_Libstdcxx:
+    break;
   }
 }
 
@@ -586,11 +611,18 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = getToolChain().getDriver();
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  const bool IsStaticPIE = getStaticPIE(Args, TC);
 
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
   CmdArgs.push_back("-Bstatic");
+  if (IsStaticPIE) {
+    CmdArgs.push_back("-pie");
+    CmdArgs.push_back("--no-dynamic-linker");
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("text");
+  }
 
   if (const char *LDMOption = getLDMOption(TC.getTriple(), Args)) {
     CmdArgs.push_back("-m");
@@ -620,14 +652,18 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *CRTBegin, *CRTEnd;
   if (NeedCRTs) {
-    if (!Args.hasArg(options::OPT_r))
-      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
+    if (!Args.hasArg(options::OPT_r)) {
+      const char *crt = "crt0.o";
+      if (IsStaticPIE)
+        crt = "rcrt1.o";
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crt)));
+    }
     if (TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) {
       auto RuntimeLib = TC.GetRuntimeLibType(Args);
       switch (RuntimeLib) {
       case (ToolChain::RLT_Libgcc): {
-        CRTBegin = "crtbegin.o";
-        CRTEnd = "crtend.o";
+        CRTBegin = IsStaticPIE ? "crtbeginS.o" : "crtbegin.o";
+        CRTEnd = IsStaticPIE ? "crtendS.o" : "crtend.o";
         break;
       }
       case (ToolChain::RLT_CompilerRT): {
@@ -642,11 +678,10 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_u, options::OPT_T_Group,
-                   options::OPT_s, options::OPT_t, options::OPT_r});
-
+  Args.addAllArgs(CmdArgs, {options::OPT_L});
   TC.AddFilePathLibArgs(Args, CmdArgs);
+  Args.addAllArgs(CmdArgs, {options::OPT_u, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
@@ -703,7 +738,7 @@ SanitizerMask BareMetal::getSupportedSanitizers() const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
                          getTriple().getArch() == llvm::Triple::aarch64_be;
-  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  const bool IsRISCV64 = getTriple().isRISCV64();
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::KernelAddress;

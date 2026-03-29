@@ -1262,16 +1262,11 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
 
   std::optional<LexEmbedParametersResult> Params =
       this->LexEmbedParameters(Tok, /*ForHasEmbed=*/true);
-  assert((Params || Tok.is(tok::eod)) &&
-         "expected success or to be at the end of the directive");
 
   if (!Params)
     return EmbedResult::Invalid;
 
-  if (Params->UnrecognizedParams > 0)
-    return EmbedResult::NotFound;
-
-  if (!Tok.is(tok::r_paren)) {
+  if (Tok.isNot(tok::r_paren)) {
     Diag(this->getLocForEndOfToken(FilenameLoc), diag::err_pp_expected_after)
         << II << tok::r_paren;
     Diag(LParenLoc, diag::note_matching) << tok::l_paren;
@@ -1280,18 +1275,20 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     return EmbedResult::Invalid;
   }
 
+  if (Params->UnrecognizedParams > 0)
+    return EmbedResult::NotFound;
+
   SmallString<128> FilenameBuffer;
   StringRef Filename = this->getSpelling(FilenameTok, FilenameBuffer);
+  if (Filename.empty())
+    return EmbedResult::Empty;
+
   bool isAngled =
       this->GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  assert(!Filename.empty());
-  const FileEntry *LookupFromFile =
-      this->getCurrentFileLexer() ? *this->getCurrentFileLexer()->getFileEntry()
-                                  : static_cast<FileEntry *>(nullptr);
   OptionalFileEntryRef MaybeFileEntry =
-      this->LookupEmbedFile(Filename, isAngled, false, LookupFromFile);
+      this->LookupEmbedFile(Filename, isAngled, false);
   if (Callbacks) {
     Callbacks->HasEmbed(LParenLoc, Filename, isAngled, MaybeFileEntry);
   }
@@ -1364,7 +1361,7 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
 
   Token ResultTok;
   bool SuppressDiagnostic = false;
-  while (true) {
+  while (Tok.isNoneOf(tok::eod, tok::eof)) {
     // Parse next token.
     if (ExpandArgs)
       PP.Lex(Tok);
@@ -1443,7 +1440,7 @@ already_lexed:
       PP.Diag(LParenLoc, diag::note_matching) << tok::l_paren;
       SuppressDiagnostic = true;
     }
-  }
+}
 }
 
 /// Helper function to return the IdentifierInfo structure of a Token
@@ -1735,7 +1732,19 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       Diag(getLastFPEvalPragmaLocation(), diag::note_pragma_entered_here);
     }
   } else if (II == Ident__COUNTER__) {
-    // __COUNTER__ expands to a simple numeric value.
+    Diag(Tok.getLocation(),
+         getLangOpts().C2y ? diag::warn_counter : diag::ext_counter);
+    // __COUNTER__ expands to a simple numeric value that must be less than
+    // 2147483647.
+    constexpr uint32_t MaxPosValue = std::numeric_limits<int32_t>::max();
+    if (CounterValue > MaxPosValue) {
+      Diag(Tok.getLocation(), diag::err_counter_overflow);
+      // Retain the maximal value so we don't issue conversion-related
+      // diagnostics by overflowing into a long long. While this does produce
+      // a duplicate value, there's no way to ignore this error so there's no
+      // translation anyway.
+      CounterValue = MaxPosValue;
+    }
     OS << CounterValue++;
     Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__has_feature) {

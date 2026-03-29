@@ -170,7 +170,7 @@ let arguments = (ins
   OptionalAttr<DictArrayAttr>:$arg_attrs,
   OptionalAttr<DictArrayAttr>:$res_attrs
 );
-
+```
 
 We have already provided the definition in the `extraClassDeclaration`
 field of the `FuncOp` class:

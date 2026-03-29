@@ -154,7 +154,7 @@ def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
 
 // Auxiliary options related to balanced partition
 defm bp_compression_sort_startup_functions: BB<"bp-compression-sort-startup-functions",
-  "When --irpgo-profile is pecified, prioritize function similarity for compression in addition to startup time", "">;
+  "When --irpgo-profile is specified, prioritize function similarity for compression in addition to startup time", "">;
 def verbose_bp_section_orderer: FF<"verbose-bp-section-orderer">,
   HelpText<"Print information on balanced partitioning">;
 
@@ -388,6 +388,9 @@ defm pie: B<"pie",
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
     "Do not list removed unused sections (default)">;
+def print_gc_sections_eq: JJ<"print-gc-sections=">,
+  HelpText<"List removed unused sections to <file>">,
+  MetaVarName<"<file>">;
 
 defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
@@ -719,11 +722,14 @@ def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
   "ThinLTO backend compilations will be distributed">;
 defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
   "pass to the ThinLTO distributor">;
-def thinlto_compiler_eq: JJ<"thinlto-remote-compiler=">,
+def thinlto_remote_compiler_eq: JJ<"thinlto-remote-compiler=">,
   HelpText<"Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
-defm thinlto_compiler_arg: EEq<"thinlto-remote-compiler-arg", "Compiler "
-  "arguments for the ThinLTO distributor to pass for ThinLTO backend "
+defm thinlto_remote_compiler_prepend_arg: EEq<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
+defm thinlto_remote_compiler_arg: EEq<"thinlto-remote-compiler-arg",
+  "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
@@ -838,14 +844,10 @@ defm check_dynamic_relocations: BB<"check-dynamic-relocations",
 
 defm load_pass_plugins: EEq<"load-pass-plugin", "Load passes from plugin library">;
 
-// Hidden options, used by clang's -fsanitize=memtag-* options to emit an ELF
-// note to designate what kinds of memory (stack/heap) should be protected using
-// ARM's MTE on armv8.5+. A binary's desire for stack MTE can't be obtained
-// implicitly, so we have a specific bit in the note to signal to the loader to
-// remap the stack as PROT_MTE.
-defm android_memtag_stack: BB<"android-memtag-stack",
-    "Instruct the dynamic loader to prepare for MTE stack instrumentation", "">;
-defm android_memtag_heap: BB<"android-memtag-heap",
-    "Instruct the dynamic loader to enable MTE protection for the heap", "">;
-defm android_memtag_mode: EEq<"android-memtag-mode",
-    "Instruct the dynamic loader to start under MTE mode {async, sync, none}">;
+// Hidden option, used by clang's -fsanitize=memtag-* option to emit an ELF note
+// to designate what kinds of memory (stack/heap) should be protected using
+// ARM's MTE on armv8.5+. This note is Android-specific and it is used only in
+// older SDK versions.
+defm android_memtag_note
+    : BB<"android-memtag-note", "Emit the Android-specific legacy memtag note",
+         "">;

@@ -48,6 +48,7 @@ function(add_flang_nongtest_unittest test_name)
     llvm_map_components_to_libnames(llvm_libs Support)
   endif()
   target_link_libraries(${test_name}${suffix} ${llvm_libs} ${ARG_UNPARSED_ARGUMENTS})
+  set_unittest_link_flags(${test_name}${suffix})
 
   if(NOT ARG_SLOW_TEST)
     add_dependencies(FlangUnitTests ${test_name}${suffix})

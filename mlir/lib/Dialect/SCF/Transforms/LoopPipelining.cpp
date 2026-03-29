@@ -791,6 +791,11 @@ FailureOr<ForOp> mlir::scf::pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
                                             bool *modifiedIR) {
   if (modifiedIR)
     *modifiedIR = false;
+
+  // TODO: Add support for unsigned loops.
+  if (forOp.getUnsignedCmp())
+    return failure();
+
   LoopPipelinerInternal pipeliner;
   if (!pipeliner.initializeLoopInfo(forOp, options))
     return failure();

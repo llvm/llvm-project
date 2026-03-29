@@ -50,7 +50,9 @@ extern "C" void workshareloop_unsigned_static_chunked(float *a, float *b, float 
 // CHECK:       omp_loop.preheader:
 // CHECK-NEXT:    store i32 0, ptr [[P_LOWERBOUND]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[DOTCOUNT]], 1
-// CHECK-NEXT:    store i32 [[TMP3]], ptr [[P_UPPERBOUND]], align 4
+// CHECK-NEXT:    [[COUNTCOND:%.*]] = icmp eq i32 [[DOTCOUNT]], 0
+// CHECK-NEXT:    [[UPPERSEL:%.*]] = select i1 [[COUNTCOND]], i32 0, i32 [[TMP3]]
+// CHECK-NEXT:    store i32 [[UPPERSEL]], ptr [[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[P_STRIDE]], align 4
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 33, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 5)

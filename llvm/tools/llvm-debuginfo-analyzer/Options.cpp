@@ -44,7 +44,7 @@ LVOptions cmdline::ReaderOptions;
 //===----------------------------------------------------------------------===//
 cl::list<std::string>
     cmdline::InputFilenames(cl::desc("<input object files or .dSYM bundles>"),
-                            cl::Positional, cl::ZeroOrMore);
+                            cl::Positional);
 
 //===----------------------------------------------------------------------===//
 // '--attribute' options
@@ -140,8 +140,7 @@ cl::OptionCategory
 static cl::opt<bool, true>
     CompareContext("compare-context", cl::cat(CompareCategory),
                    cl::desc("Add the view as compare context."), cl::Hidden,
-                   cl::ZeroOrMore, cl::location(ReaderOptions.Compare.Context),
-                   cl::init(false));
+                   cl::location(ReaderOptions.Compare.Context));
 
 // --compare=<value>[,<value>,...]
 cl::list<LVCompareKind> cmdline::CompareElements(
@@ -171,14 +170,14 @@ cl::opt<std::string>
 static cl::opt<std::string, true>
     OutputFolder("output-folder", cl::cat(OutputCategory),
                  cl::desc("Folder name for view splitting."),
-                 cl::value_desc("pathname"), cl::Hidden, cl::ZeroOrMore,
+                 cl::value_desc("pathname"), cl::Hidden,
                  cl::location(ReaderOptions.Output.Folder));
 
 // --output-level=<level>
 static cl::opt<unsigned, true>
     OutputLevel("output-level", cl::cat(OutputCategory),
                 cl::desc("Only print to a depth of N elements."),
-                cl::value_desc("N"), cl::Hidden, cl::ZeroOrMore,
+                cl::value_desc("N"), cl::Hidden,
                 cl::location(ReaderOptions.Output.Level), cl::init(-1U));
 
 // --ouput=<value>[,<value>,...]
@@ -197,8 +196,11 @@ cl::list<LVOutputKind> cmdline::OutputOptions(
 static cl::opt<LVSortMode, true> OutputSort(
     "output-sort", cl::cat(OutputCategory),
     cl::desc("Primary key when ordering logical view (default: line)."),
-    cl::Hidden, cl::ZeroOrMore,
-    values(clEnumValN(LVSortMode::Kind, "kind", "Sort by element kind."),
+    cl::Hidden,
+    values(clEnumValN(LVSortMode::None, "none",
+                      "Unsorted output (i.e. as read from input)."),
+           clEnumValN(LVSortMode::ID, "id", "Sort by unique element ID."),
+           clEnumValN(LVSortMode::Kind, "kind", "Sort by element kind."),
            clEnumValN(LVSortMode::Line, "line", "Sort by element line number."),
            clEnumValN(LVSortMode::Name, "name", "Sort by element name."),
            clEnumValN(LVSortMode::Offset, "offset", "Sort by element offset.")),
@@ -271,17 +273,14 @@ cl::OptionCategory
 static cl::opt<bool, true>
     SelectIgnoreCase("select-nocase", cl::cat(SelectCategory),
                      cl::desc("Ignore case distinctions when searching."),
-                     cl::Hidden, cl::ZeroOrMore,
-                     cl::location(ReaderOptions.Select.IgnoreCase),
-                     cl::init(false));
+                     cl::Hidden, cl::location(ReaderOptions.Select.IgnoreCase));
 
 // --select-regex
 static cl::opt<bool, true> SelectUseRegex(
     "select-regex", cl::cat(SelectCategory),
     cl::desc("Treat any <pattern> strings as regular expressions when "
              "selecting instead of just as an exact string match."),
-    cl::Hidden, cl::ZeroOrMore, cl::location(ReaderOptions.Select.UseRegex),
-    cl::init(false));
+    cl::Hidden, cl::location(ReaderOptions.Select.UseRegex));
 
 // --select=<pattern>
 cl::list<std::string> cmdline::SelectPatterns(
@@ -294,7 +293,7 @@ OffsetOptionList cmdline::SelectOffsets("select-offsets",
                                         cl::cat(SelectCategory),
                                         cl::desc("Offset element to print."),
                                         cl::Hidden, cl::value_desc("offset"),
-                                        cl::CommaSeparated, cl::ZeroOrMore);
+                                        cl::CommaSeparated);
 
 // --select-elements=<value>[,<value>,...]
 cl::list<LVElementKind> cmdline::SelectElements(

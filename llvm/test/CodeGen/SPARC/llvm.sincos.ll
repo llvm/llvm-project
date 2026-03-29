@@ -10,74 +10,84 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; SPARC32-LABEL: test_sincos_f16:
 ; SPARC32:       ! %bb.0:
 ; SPARC32-NEXT:    save %sp, -104, %sp
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i0, %o0
 ; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    nop
-; SPARC32-NEXT:    st %f0, [%fp+-4]
-; SPARC32-NEXT:    ld [%fp+-4], %i0
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %f0, [%fp+-12]
+; SPARC32-NEXT:    ld [%fp+-12], %i0
 ; SPARC32-NEXT:    call sinf
 ; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; SPARC32-NEXT:    st %f0, [%fp+-8]
 ; SPARC32-NEXT:    call cosf
 ; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    fmovs %f0, %f1
-; SPARC32-NEXT:    ld [%fp+-8], %f0 ! 4-byte Folded Reload
+; SPARC32-NEXT:    st %f0, [%fp+-4]
+; SPARC32-NEXT:    call __truncsfhf2
+; SPARC32-NEXT:    ld [%fp+-8], %o0
+; SPARC32-NEXT:    mov %o0, %i0
+; SPARC32-NEXT:    call __truncsfhf2
+; SPARC32-NEXT:    ld [%fp+-4], %o0
 ; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
+; SPARC32-NEXT:    restore %g0, %o0, %o1
 ;
 ; SPARC64-LABEL: test_sincos_f16:
 ; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -192, %sp
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    st %f0, [%fp+2039] ! 4-byte Folded Spill
+; SPARC64-NEXT:    srl %i0, 0, %o0
+; SPARC64-NEXT:    st %f0, [%fp+2043] ! 4-byte Folded Spill
 ; SPARC64-NEXT:    fmovs %f0, %f1
 ; SPARC64-NEXT:    call sinf
 ; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    st %f0, [%fp+2043] ! 4-byte Folded Spill
-; SPARC64-NEXT:    call cosf
-; SPARC64-NEXT:    ld [%fp+2039], %f1
 ; SPARC64-NEXT:    fmovs %f0, %f1
-; SPARC64-NEXT:    ld [%fp+2043], %f0 ! 4-byte Folded Reload
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    mov %o0, %i0
+; SPARC64-NEXT:    call cosf
+; SPARC64-NEXT:    ld [%fp+2043], %f1
+; SPARC64-NEXT:    fmovs %f0, %f1
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; SPARC64-NEXT:    restore %g0, %o0, %o1
 ;
 ; GNU32-LABEL: test_sincos_f16:
 ; GNU32:       ! %bb.0:
-; GNU32-NEXT:    save %sp, -104, %sp
-; GNU32-NEXT:    call __truncsfhf2
-; GNU32-NEXT:    mov %i0, %o0
+; GNU32-NEXT:    save %sp, -112, %sp
 ; GNU32-NEXT:    call __extendhfsf2
-; GNU32-NEXT:    nop
+; GNU32-NEXT:    mov %i0, %o0
 ; GNU32-NEXT:    st %f0, [%fp+-12]
 ; GNU32-NEXT:    ld [%fp+-12], %o0
 ; GNU32-NEXT:    add %fp, -4, %o1
 ; GNU32-NEXT:    call sincosf
 ; GNU32-NEXT:    add %fp, -8, %o2
 ; GNU32-NEXT:    ld [%fp+-4], %f0
-; GNU32-NEXT:    ld [%fp+-8], %f1
+; GNU32-NEXT:    st %f0, [%fp+-20]
+; GNU32-NEXT:    ld [%fp+-8], %f0
+; GNU32-NEXT:    st %f0, [%fp+-16]
+; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    ld [%fp+-20], %o0
+; GNU32-NEXT:    mov %o0, %i0
+; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    ld [%fp+-16], %o0
 ; GNU32-NEXT:    ret
-; GNU32-NEXT:    restore
+; GNU32-NEXT:    restore %g0, %o0, %o1
 ;
 ; GNU64-LABEL: test_sincos_f16:
 ; GNU64:       ! %bb.0:
 ; GNU64-NEXT:    save %sp, -192, %sp
-; GNU64-NEXT:    call __truncsfhf2
-; GNU64-NEXT:    nop
 ; GNU64-NEXT:    call __extendhfsf2
-; GNU64-NEXT:    nop
+; GNU64-NEXT:    srl %i0, 0, %o0
 ; GNU64-NEXT:    add %fp, 2043, %o1
 ; GNU64-NEXT:    add %fp, 2039, %o2
 ; GNU64-NEXT:    fmovs %f0, %f1
 ; GNU64-NEXT:    call sincosf
 ; GNU64-NEXT:    nop
-; GNU64-NEXT:    ld [%fp+2043], %f0
+; GNU64-NEXT:    call __truncsfhf2
+; GNU64-NEXT:    ld [%fp+2043], %f1
+; GNU64-NEXT:    mov %o0, %i0
+; GNU64-NEXT:    call __truncsfhf2
 ; GNU64-NEXT:    ld [%fp+2039], %f1
 ; GNU64-NEXT:    ret
-; GNU64-NEXT:    restore
+; GNU64-NEXT:    restore %g0, %o0, %o1
   %result = call { half, half } @llvm.sincos.f16(half %a)
   ret { half, half } %result
 }
@@ -85,61 +95,63 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 define half @test_sincos_f16_only_use_sin(half %a) #0 {
 ; SPARC32-LABEL: test_sincos_f16_only_use_sin:
 ; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    save %sp, -104, %sp
 ; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    nop
-; SPARC32-NEXT:    st %f0, [%fp+-4]
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %f0, [%fp+-8]
 ; SPARC32-NEXT:    call sinf
+; SPARC32-NEXT:    ld [%fp+-8], %o0
+; SPARC32-NEXT:    st %f0, [%fp+-4]
+; SPARC32-NEXT:    call __truncsfhf2
 ; SPARC32-NEXT:    ld [%fp+-4], %o0
 ; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
+; SPARC32-NEXT:    restore %g0, %o0, %o0
 ;
 ; SPARC64-LABEL: test_sincos_f16_only_use_sin:
 ; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    srl %i0, 0, %o0
 ; SPARC64-NEXT:    fmovs %f0, %f1
 ; SPARC64-NEXT:    call sinf
 ; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    fmovs %f0, %f1
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; SPARC64-NEXT:    restore %g0, %o0, %o0
 ;
 ; GNU32-LABEL: test_sincos_f16_only_use_sin:
 ; GNU32:       ! %bb.0:
-; GNU32-NEXT:    save %sp, -104, %sp
-; GNU32-NEXT:    call __truncsfhf2
-; GNU32-NEXT:    mov %i0, %o0
+; GNU32-NEXT:    save %sp, -112, %sp
 ; GNU32-NEXT:    call __extendhfsf2
-; GNU32-NEXT:    nop
+; GNU32-NEXT:    mov %i0, %o0
 ; GNU32-NEXT:    st %f0, [%fp+-12]
 ; GNU32-NEXT:    ld [%fp+-12], %o0
 ; GNU32-NEXT:    add %fp, -4, %o1
 ; GNU32-NEXT:    call sincosf
 ; GNU32-NEXT:    add %fp, -8, %o2
 ; GNU32-NEXT:    ld [%fp+-4], %f0
+; GNU32-NEXT:    st %f0, [%fp+-16]
+; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    ld [%fp+-16], %o0
 ; GNU32-NEXT:    ret
-; GNU32-NEXT:    restore
+; GNU32-NEXT:    restore %g0, %o0, %o0
 ;
 ; GNU64-LABEL: test_sincos_f16_only_use_sin:
 ; GNU64:       ! %bb.0:
 ; GNU64-NEXT:    save %sp, -192, %sp
-; GNU64-NEXT:    call __truncsfhf2
-; GNU64-NEXT:    nop
 ; GNU64-NEXT:    call __extendhfsf2
-; GNU64-NEXT:    nop
+; GNU64-NEXT:    srl %i0, 0, %o0
 ; GNU64-NEXT:    add %fp, 2043, %o1
 ; GNU64-NEXT:    add %fp, 2039, %o2
 ; GNU64-NEXT:    fmovs %f0, %f1
 ; GNU64-NEXT:    call sincosf
 ; GNU64-NEXT:    nop
-; GNU64-NEXT:    ld [%fp+2043], %f0
+; GNU64-NEXT:    call __truncsfhf2
+; GNU64-NEXT:    ld [%fp+2043], %f1
 ; GNU64-NEXT:    ret
-; GNU64-NEXT:    restore
+; GNU64-NEXT:    restore %g0, %o0, %o0
   %result = call { half, half } @llvm.sincos.f16(half %a)
   %result.0 = extractvalue { half, half } %result, 0
   ret half %result.0
@@ -148,61 +160,63 @@ define half @test_sincos_f16_only_use_sin(half %a) #0 {
 define half @test_sincos_f16_only_use_cos(half %a) #0 {
 ; SPARC32-LABEL: test_sincos_f16_only_use_cos:
 ; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -96, %sp
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    save %sp, -104, %sp
 ; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    nop
-; SPARC32-NEXT:    st %f0, [%fp+-4]
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %f0, [%fp+-8]
 ; SPARC32-NEXT:    call cosf
+; SPARC32-NEXT:    ld [%fp+-8], %o0
+; SPARC32-NEXT:    st %f0, [%fp+-4]
+; SPARC32-NEXT:    call __truncsfhf2
 ; SPARC32-NEXT:    ld [%fp+-4], %o0
 ; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
+; SPARC32-NEXT:    restore %g0, %o0, %o0
 ;
 ; SPARC64-LABEL: test_sincos_f16_only_use_cos:
 ; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    srl %i0, 0, %o0
 ; SPARC64-NEXT:    fmovs %f0, %f1
 ; SPARC64-NEXT:    call cosf
 ; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    fmovs %f0, %f1
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; SPARC64-NEXT:    restore %g0, %o0, %o0
 ;
 ; GNU32-LABEL: test_sincos_f16_only_use_cos:
 ; GNU32:       ! %bb.0:
-; GNU32-NEXT:    save %sp, -104, %sp
-; GNU32-NEXT:    call __truncsfhf2
-; GNU32-NEXT:    mov %i0, %o0
+; GNU32-NEXT:    save %sp, -112, %sp
 ; GNU32-NEXT:    call __extendhfsf2
-; GNU32-NEXT:    nop
+; GNU32-NEXT:    mov %i0, %o0
 ; GNU32-NEXT:    st %f0, [%fp+-12]
 ; GNU32-NEXT:    ld [%fp+-12], %o0
 ; GNU32-NEXT:    add %fp, -4, %o1
 ; GNU32-NEXT:    call sincosf
 ; GNU32-NEXT:    add %fp, -8, %o2
 ; GNU32-NEXT:    ld [%fp+-8], %f0
+; GNU32-NEXT:    st %f0, [%fp+-16]
+; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    ld [%fp+-16], %o0
 ; GNU32-NEXT:    ret
-; GNU32-NEXT:    restore
+; GNU32-NEXT:    restore %g0, %o0, %o0
 ;
 ; GNU64-LABEL: test_sincos_f16_only_use_cos:
 ; GNU64:       ! %bb.0:
 ; GNU64-NEXT:    save %sp, -192, %sp
-; GNU64-NEXT:    call __truncsfhf2
-; GNU64-NEXT:    nop
 ; GNU64-NEXT:    call __extendhfsf2
-; GNU64-NEXT:    nop
+; GNU64-NEXT:    srl %i0, 0, %o0
 ; GNU64-NEXT:    add %fp, 2043, %o1
 ; GNU64-NEXT:    add %fp, 2039, %o2
 ; GNU64-NEXT:    fmovs %f0, %f1
 ; GNU64-NEXT:    call sincosf
 ; GNU64-NEXT:    nop
-; GNU64-NEXT:    ld [%fp+2039], %f0
+; GNU64-NEXT:    call __truncsfhf2
+; GNU64-NEXT:    ld [%fp+2039], %f1
 ; GNU64-NEXT:    ret
-; GNU64-NEXT:    restore
+; GNU64-NEXT:    restore %g0, %o0, %o0
   %result = call { half, half } @llvm.sincos.f16(half %a)
   %result.1 = extractvalue { half, half } %result, 1
   ret half %result.1
@@ -211,132 +225,157 @@ define half @test_sincos_f16_only_use_cos(half %a) #0 {
 define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) #0 {
 ; SPARC32-LABEL: test_sincos_v2f16:
 ; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -112, %sp
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i1, %o0
+; SPARC32-NEXT:    save %sp, -128, %sp
 ; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    nop
-; SPARC32-NEXT:    st %f0, [%fp+-12] ! 4-byte Folded Spill
-; SPARC32-NEXT:    call __truncsfhf2
-; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    call __extendhfsf2
-; SPARC32-NEXT:    nop
-; SPARC32-NEXT:    st %f0, [%fp+-8]
-; SPARC32-NEXT:    ld [%fp+-12], %f0 ! 4-byte Folded Reload
-; SPARC32-NEXT:    st %f0, [%fp+-4]
-; SPARC32-NEXT:    ld [%fp+-8], %i0
-; SPARC32-NEXT:    call sinf
-; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    st %f0, [%fp+-12] ! 4-byte Folded Spill
-; SPARC32-NEXT:    ld [%fp+-4], %i1
-; SPARC32-NEXT:    call sinf
 ; SPARC32-NEXT:    mov %i1, %o0
-; SPARC32-NEXT:    st %f0, [%fp+-16] ! 4-byte Folded Spill
+; SPARC32-NEXT:    st %f0, [%fp+-28]
+; SPARC32-NEXT:    call __extendhfsf2
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %f0, [%fp+-32]
+; SPARC32-NEXT:    ld [%fp+-28], %i0
 ; SPARC32-NEXT:    call cosf
 ; SPARC32-NEXT:    mov %i0, %o0
-; SPARC32-NEXT:    st %f0, [%fp+-20] ! 4-byte Folded Spill
+; SPARC32-NEXT:    st %f0, [%fp+-20]
+; SPARC32-NEXT:    ld [%fp+-32], %i1
 ; SPARC32-NEXT:    call cosf
 ; SPARC32-NEXT:    mov %i1, %o0
-; SPARC32-NEXT:    fmovs %f0, %f3
-; SPARC32-NEXT:    ld [%fp+-12], %f0 ! 4-byte Folded Reload
-; SPARC32-NEXT:    ld [%fp+-16], %f1 ! 4-byte Folded Reload
-; SPARC32-NEXT:    ld [%fp+-20], %f2 ! 4-byte Folded Reload
+; SPARC32-NEXT:    st %f0, [%fp+-12]
+; SPARC32-NEXT:    call sinf
+; SPARC32-NEXT:    mov %i0, %o0
+; SPARC32-NEXT:    st %f0, [%fp+-24]
+; SPARC32-NEXT:    call sinf
+; SPARC32-NEXT:    mov %i1, %o0
+; SPARC32-NEXT:    st %f0, [%fp+-16]
+; SPARC32-NEXT:    call __truncsfhf2
+; SPARC32-NEXT:    ld [%fp+-20], %o0
+; SPARC32-NEXT:    sethi 63, %i0
+; SPARC32-NEXT:    or %i0, 1023, %i0
+; SPARC32-NEXT:    and %o0, %i0, %i4
+; SPARC32-NEXT:    call __truncsfhf2
+; SPARC32-NEXT:    ld [%fp+-12], %o0
+; SPARC32-NEXT:    and %o0, %i0, %i2
+; SPARC32-NEXT:    call __truncsfhf2
+; SPARC32-NEXT:    ld [%fp+-24], %o0
+; SPARC32-NEXT:    and %o0, %i0, %i1
+; SPARC32-NEXT:    call __truncsfhf2
+; SPARC32-NEXT:    ld [%fp+-16], %o0
+; SPARC32-NEXT:    and %o0, %i0, %g2
+; SPARC32-NEXT:    mov %g2, %i0
+; SPARC32-NEXT:    ! kill: def $i2 killed $i2 killed $i2_i3
 ; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
+; SPARC32-NEXT:    restore %g0, %i4, %o3
 ;
 ; SPARC64-LABEL: test_sincos_v2f16:
 ; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -192, %sp
-; SPARC64-NEXT:    st %f1, [%fp+2039] ! 4-byte Folded Spill
-; SPARC64-NEXT:    fmovs %f3, %f1
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    srl %i0, 0, %o0
 ; SPARC64-NEXT:    st %f0, [%fp+2043] ! 4-byte Folded Spill
-; SPARC64-NEXT:    call __truncsfhf2
-; SPARC64-NEXT:    ld [%fp+2039], %f1
-; SPARC64-NEXT:    call __extendhfsf2
-; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    st %f0, [%fp+2031] ! 4-byte Folded Spill
 ; SPARC64-NEXT:    fmovs %f0, %f1
 ; SPARC64-NEXT:    call sinf
 ; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    fmovs %f0, %f1
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    mov %o0, %i0
+; SPARC64-NEXT:    call __extendhfsf2
+; SPARC64-NEXT:    srl %i1, 0, %o0
 ; SPARC64-NEXT:    st %f0, [%fp+2039] ! 4-byte Folded Spill
+; SPARC64-NEXT:    fmovs %f0, %f1
 ; SPARC64-NEXT:    call sinf
-; SPARC64-NEXT:    ld [%fp+2043], %f1
-; SPARC64-NEXT:    st %f0, [%fp+2035] ! 4-byte Folded Spill
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    fmovs %f0, %f1
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    mov %o0, %i1
 ; SPARC64-NEXT:    call cosf
-; SPARC64-NEXT:    ld [%fp+2031], %f1
-; SPARC64-NEXT:    st %f0, [%fp+2031] ! 4-byte Folded Spill
-; SPARC64-NEXT:    call cosf
 ; SPARC64-NEXT:    ld [%fp+2043], %f1
-; SPARC64-NEXT:    fmovs %f0, %f3
-; SPARC64-NEXT:    ld [%fp+2039], %f0 ! 4-byte Folded Reload
-; SPARC64-NEXT:    ld [%fp+2035], %f1 ! 4-byte Folded Reload
-; SPARC64-NEXT:    ld [%fp+2031], %f2 ! 4-byte Folded Reload
+; SPARC64-NEXT:    fmovs %f0, %f1
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:    mov %o0, %i2
+; SPARC64-NEXT:    call cosf
+; SPARC64-NEXT:    ld [%fp+2039], %f1
+; SPARC64-NEXT:    fmovs %f0, %f1
+; SPARC64-NEXT:    call __truncsfhf2
+; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore
+; SPARC64-NEXT:    restore %g0, %o0, %o3
 ;
 ; GNU32-LABEL: test_sincos_v2f16:
 ; GNU32:       ! %bb.0:
-; GNU32-NEXT:    save %sp, -120, %sp
-; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    save %sp, -144, %sp
+; GNU32-NEXT:    call __extendhfsf2
 ; GNU32-NEXT:    mov %i1, %o0
-; GNU32-NEXT:    call __extendhfsf2
-; GNU32-NEXT:    nop
-; GNU32-NEXT:    st %f0, [%fp+-28] ! 4-byte Folded Spill
-; GNU32-NEXT:    call __truncsfhf2
-; GNU32-NEXT:    mov %i0, %o0
-; GNU32-NEXT:    call __extendhfsf2
-; GNU32-NEXT:    nop
-; GNU32-NEXT:    st %f0, [%fp+-20]
-; GNU32-NEXT:    ld [%fp+-20], %o0
+; GNU32-NEXT:    st %f0, [%fp+-32]
+; GNU32-NEXT:    ld [%fp+-32], %o0
 ; GNU32-NEXT:    add %fp, -12, %o1
 ; GNU32-NEXT:    call sincosf
 ; GNU32-NEXT:    add %fp, -16, %o2
-; GNU32-NEXT:    ld [%fp+-28], %f0 ! 4-byte Folded Reload
-; GNU32-NEXT:    st %f0, [%fp+-24]
-; GNU32-NEXT:    ld [%fp+-24], %o0
-; GNU32-NEXT:    add %fp, -4, %o1
+; GNU32-NEXT:    call __extendhfsf2
+; GNU32-NEXT:    mov %i0, %o0
+; GNU32-NEXT:    st %f0, [%fp+-28]
+; GNU32-NEXT:    ld [%fp+-28], %o0
+; GNU32-NEXT:    add %fp, -20, %o1
 ; GNU32-NEXT:    call sincosf
-; GNU32-NEXT:    add %fp, -8, %o2
+; GNU32-NEXT:    add %fp, -24, %o2
+; GNU32-NEXT:    ld [%fp+-16], %f0
+; GNU32-NEXT:    st %f0, [%fp+-44]
+; GNU32-NEXT:    ld [%fp+-24], %f0
+; GNU32-NEXT:    st %f0, [%fp+-36]
 ; GNU32-NEXT:    ld [%fp+-12], %f0
-; GNU32-NEXT:    ld [%fp+-4], %f1
-; GNU32-NEXT:    ld [%fp+-16], %f2
-; GNU32-NEXT:    ld [%fp+-8], %f3
+; GNU32-NEXT:    st %f0, [%fp+-48]
+; GNU32-NEXT:    ld [%fp+-20], %f0
+; GNU32-NEXT:    st %f0, [%fp+-40]
+; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    ld [%fp+-44], %o0
+; GNU32-NEXT:    sethi 63, %i0
+; GNU32-NEXT:    or %i0, 1023, %i0
+; GNU32-NEXT:    and %o0, %i0, %i4
+; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    ld [%fp+-36], %o0
+; GNU32-NEXT:    and %o0, %i0, %i2
+; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    ld [%fp+-48], %o0
+; GNU32-NEXT:    and %o0, %i0, %i1
+; GNU32-NEXT:    call __truncsfhf2
+; GNU32-NEXT:    ld [%fp+-40], %o0
+; GNU32-NEXT:    and %o0, %i0, %g2
+; GNU32-NEXT:    mov %g2, %i0
+; GNU32-NEXT:    ! kill: def $i2 killed $i2 killed $i2_i3
 ; GNU32-NEXT:    ret
-; GNU32-NEXT:    restore
+; GNU32-NEXT:    restore %g0, %i4, %o3
 ;
 ; GNU64-LABEL: test_sincos_v2f16:
 ; GNU64:       ! %bb.0:
-; GNU64-NEXT:    save %sp, -208, %sp
-; GNU64-NEXT:    st %f1, [%fp+2023] ! 4-byte Folded Spill
-; GNU64-NEXT:    fmovs %f3, %f1
-; GNU64-NEXT:    call __truncsfhf2
-; GNU64-NEXT:    nop
+; GNU64-NEXT:    save %sp, -192, %sp
 ; GNU64-NEXT:    call __extendhfsf2
-; GNU64-NEXT:    nop
-; GNU64-NEXT:    st %f0, [%fp+2027] ! 4-byte Folded Spill
-; GNU64-NEXT:    call __truncsfhf2
-; GNU64-NEXT:    ld [%fp+2023], %f1
-; GNU64-NEXT:    call __extendhfsf2
-; GNU64-NEXT:    nop
+; GNU64-NEXT:    srl %i0, 0, %o0
 ; GNU64-NEXT:    add %fp, 2035, %o1
 ; GNU64-NEXT:    add %fp, 2031, %o2
 ; GNU64-NEXT:    fmovs %f0, %f1
 ; GNU64-NEXT:    call sincosf
 ; GNU64-NEXT:    nop
+; GNU64-NEXT:    call __extendhfsf2
+; GNU64-NEXT:    srl %i1, 0, %o0
 ; GNU64-NEXT:    add %fp, 2043, %o1
 ; GNU64-NEXT:    add %fp, 2039, %o2
+; GNU64-NEXT:    fmovs %f0, %f1
 ; GNU64-NEXT:    call sincosf
-; GNU64-NEXT:    ld [%fp+2027], %f1
-; GNU64-NEXT:    ld [%fp+2035], %f0
+; GNU64-NEXT:    nop
+; GNU64-NEXT:    call __truncsfhf2
+; GNU64-NEXT:    ld [%fp+2035], %f1
+; GNU64-NEXT:    mov %o0, %i0
+; GNU64-NEXT:    call __truncsfhf2
 ; GNU64-NEXT:    ld [%fp+2043], %f1
-; GNU64-NEXT:    ld [%fp+2031], %f2
-; GNU64-NEXT:    ld [%fp+2039], %f3
+; GNU64-NEXT:    mov %o0, %i1
+; GNU64-NEXT:    call __truncsfhf2
+; GNU64-NEXT:    ld [%fp+2031], %f1
+; GNU64-NEXT:    mov %o0, %i2
+; GNU64-NEXT:    call __truncsfhf2
+; GNU64-NEXT:    ld [%fp+2039], %f1
 ; GNU64-NEXT:    ret
-; GNU64-NEXT:    restore
+; GNU64-NEXT:    restore %g0, %o0, %o3
   %result = call { <2 x half>, <2 x half> } @llvm.sincos.v2f16(<2 x half> %a)
   ret { <2 x half>, <2 x half> } %result
 }
@@ -904,42 +943,38 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
 define void @test_sincos_f128(ptr sret({ fp128, fp128 }) %ret, ptr %in) #0 {
 ; SPARC32-LABEL: test_sincos_f128:
 ; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -168, %sp
+; SPARC32-NEXT:    save %sp, -184, %sp
 ; SPARC32-NEXT:    ld [%fp+64], %i1
 ; SPARC32-NEXT:    ldd [%i0], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-64]
-; SPARC32-NEXT:    std %f2, [%fp+-56] ! 16-byte Folded Spill
+; SPARC32-NEXT:    std %f0, [%fp+-88]
+; SPARC32-NEXT:    std %f2, [%fp+-80] ! 16-byte Folded Spill
 ; SPARC32-NEXT:    ldd [%i0+8], %f4
-; SPARC32-NEXT:    std %f4, [%fp+-48] ! 8-byte Folded Spill
-; SPARC32-NEXT:    add %fp, -32, %i0
+; SPARC32-NEXT:    std %f4, [%fp+-72] ! 8-byte Folded Spill
+; SPARC32-NEXT:    add %fp, -48, %i0
 ; SPARC32-NEXT:    st %i0, [%sp+64]
-; SPARC32-NEXT:    std %f4, [%sp+100]
+; SPARC32-NEXT:    std %f4, [%fp+-56]
+; SPARC32-NEXT:    add %fp, -64, %o0
 ; SPARC32-NEXT:    call sinl
-; SPARC32-NEXT:    std %f0, [%sp+92]
+; SPARC32-NEXT:    std %f0, [%fp+-64]
 ; SPARC32-NEXT:    unimp 16
 ; SPARC32-NEXT:    add %fp, -16, %i0
 ; SPARC32-NEXT:    st %i0, [%sp+64]
-; SPARC32-NEXT:    ldd [%fp+-48], %f0 ! 8-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%sp+100]
-; SPARC32-NEXT:    ldd [%fp+-64], %f0
-; SPARC32-NEXT:    ldd [%fp+-56], %f2 ! 16-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%sp+92]
-; SPARC32-NEXT:    ldd [%fp+-32], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-48]
-; SPARC32-NEXT:    std %f2, [%fp+-40] ! 16-byte Folded Spill
-; SPARC32-NEXT:    ldd [%fp+-24], %f0
+; SPARC32-NEXT:    ldd [%fp+-72], %f0 ! 8-byte Folded Reload
+; SPARC32-NEXT:    std %f0, [%fp+-24]
+; SPARC32-NEXT:    add %fp, -32, %o0
+; SPARC32-NEXT:    ldd [%fp+-88], %f0
+; SPARC32-NEXT:    ldd [%fp+-80], %f2 ! 16-byte Folded Reload
 ; SPARC32-NEXT:    call cosl
-; SPARC32-NEXT:    std %f0, [%fp+-64]
+; SPARC32-NEXT:    std %f0, [%fp+-32]
 ; SPARC32-NEXT:    unimp 16
 ; SPARC32-NEXT:    ldd [%fp+-8], %f0
 ; SPARC32-NEXT:    ldd [%fp+-16], %f4
+; SPARC32-NEXT:    ldd [%fp+-40], %f2
+; SPARC32-NEXT:    ldd [%fp+-48], %f8
 ; SPARC32-NEXT:    std %f0, [%i1+24]
 ; SPARC32-NEXT:    std %f4, [%i1+16]
-; SPARC32-NEXT:    ldd [%fp+-64], %f0 ! 8-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%i1+8]
-; SPARC32-NEXT:    ldd [%fp+-48], %f0
-; SPARC32-NEXT:    ldd [%fp+-40], %f2 ! 16-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%i1]
+; SPARC32-NEXT:    std %f2, [%i1+8]
+; SPARC32-NEXT:    std %f8, [%i1]
 ; SPARC32-NEXT:    jmp %i7+12
 ; SPARC32-NEXT:    restore %g0, %i1, %o0
 ;
@@ -967,15 +1002,16 @@ define void @test_sincos_f128(ptr sret({ fp128, fp128 }) %ret, ptr %in) #0 {
 ;
 ; GNU32-LABEL: test_sincos_f128:
 ; GNU32:       ! %bb.0:
-; GNU32-NEXT:    save %sp, -136, %sp
+; GNU32-NEXT:    save %sp, -144, %sp
 ; GNU32-NEXT:    ld [%fp+64], %i1
 ; GNU32-NEXT:    ldd [%i0], %f0
 ; GNU32-NEXT:    ldd [%i0+8], %f4
-; GNU32-NEXT:    std %f4, [%sp+100]
-; GNU32-NEXT:    add %fp, -16, %o0
-; GNU32-NEXT:    add %fp, -32, %o1
+; GNU32-NEXT:    std %f4, [%fp+-40]
+; GNU32-NEXT:    add %fp, -48, %o0
+; GNU32-NEXT:    add %fp, -16, %o1
+; GNU32-NEXT:    add %fp, -32, %o2
 ; GNU32-NEXT:    call sincosl
-; GNU32-NEXT:    std %f0, [%sp+92]
+; GNU32-NEXT:    std %f0, [%fp+-48]
 ; GNU32-NEXT:    ldd [%fp+-24], %f0
 ; GNU32-NEXT:    ldd [%fp+-32], %f4
 ; GNU32-NEXT:    ldd [%fp+-8], %f2
@@ -1018,85 +1054,71 @@ define void @test_sincos_f128(ptr sret({ fp128, fp128 }) %ret, ptr %in) #0 {
 define void @test_sincos_v2f128(ptr sret({ <2 x fp128>, <2 x fp128> }) %ret, ptr %in) #0 {
 ; SPARC32-LABEL: test_sincos_v2f128:
 ; SPARC32:       ! %bb.0:
-; SPARC32-NEXT:    save %sp, -248, %sp
+; SPARC32-NEXT:    save %sp, -272, %sp
 ; SPARC32-NEXT:    mov %i0, %i1
 ; SPARC32-NEXT:    ld [%fp+64], %i0
 ; SPARC32-NEXT:    ldd [%i1], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-80]
-; SPARC32-NEXT:    std %f2, [%fp+-72] ! 16-byte Folded Spill
+; SPARC32-NEXT:    std %f0, [%fp+-144]
+; SPARC32-NEXT:    std %f2, [%fp+-136] ! 16-byte Folded Spill
 ; SPARC32-NEXT:    ldd [%i1+8], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-88] ! 8-byte Folded Spill
+; SPARC32-NEXT:    std %f0, [%fp+-152] ! 8-byte Folded Spill
 ; SPARC32-NEXT:    ldd [%i1+16], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-120]
-; SPARC32-NEXT:    std %f2, [%fp+-112] ! 16-byte Folded Spill
+; SPARC32-NEXT:    std %f0, [%fp+-176]
+; SPARC32-NEXT:    std %f2, [%fp+-168] ! 16-byte Folded Spill
 ; SPARC32-NEXT:    ldd [%i1+24], %f4
-; SPARC32-NEXT:    std %f4, [%fp+-104] ! 8-byte Folded Spill
-; SPARC32-NEXT:    add %fp, -64, %i1
+; SPARC32-NEXT:    std %f4, [%fp+-160] ! 8-byte Folded Spill
+; SPARC32-NEXT:    add %fp, -112, %i1
 ; SPARC32-NEXT:    st %i1, [%sp+64]
-; SPARC32-NEXT:    std %f4, [%sp+100]
+; SPARC32-NEXT:    std %f4, [%fp+-120]
+; SPARC32-NEXT:    add %fp, -128, %o0
 ; SPARC32-NEXT:    call sinl
-; SPARC32-NEXT:    std %f0, [%sp+92]
+; SPARC32-NEXT:    std %f0, [%fp+-128]
 ; SPARC32-NEXT:    unimp 16
 ; SPARC32-NEXT:    add %fp, -16, %i1
 ; SPARC32-NEXT:    st %i1, [%sp+64]
-; SPARC32-NEXT:    ldd [%fp+-88], %f0 ! 8-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%sp+100]
-; SPARC32-NEXT:    ldd [%fp+-80], %f0
-; SPARC32-NEXT:    ldd [%fp+-72], %f2 ! 16-byte Folded Reload
+; SPARC32-NEXT:    ldd [%fp+-152], %f0 ! 8-byte Folded Reload
+; SPARC32-NEXT:    std %f0, [%fp+-24]
+; SPARC32-NEXT:    add %fp, -32, %o0
+; SPARC32-NEXT:    ldd [%fp+-144], %f0
+; SPARC32-NEXT:    ldd [%fp+-136], %f2 ! 16-byte Folded Reload
 ; SPARC32-NEXT:    call cosl
-; SPARC32-NEXT:    std %f0, [%sp+92]
-; SPARC32-NEXT:    unimp 16
-; SPARC32-NEXT:    add %fp, -32, %i1
-; SPARC32-NEXT:    st %i1, [%sp+64]
-; SPARC32-NEXT:    ldd [%fp+-88], %f0 ! 8-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%sp+100]
-; SPARC32-NEXT:    ldd [%fp+-80], %f0
-; SPARC32-NEXT:    ldd [%fp+-72], %f2 ! 16-byte Folded Reload
-; SPARC32-NEXT:    call sinl
-; SPARC32-NEXT:    std %f0, [%sp+92]
+; SPARC32-NEXT:    std %f0, [%fp+-32]
 ; SPARC32-NEXT:    unimp 16
 ; SPARC32-NEXT:    add %fp, -48, %i1
 ; SPARC32-NEXT:    st %i1, [%sp+64]
-; SPARC32-NEXT:    ldd [%fp+-104], %f0 ! 8-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%sp+100]
-; SPARC32-NEXT:    ldd [%fp+-120], %f0
-; SPARC32-NEXT:    ldd [%fp+-112], %f2 ! 16-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%sp+92]
-; SPARC32-NEXT:    ldd [%fp+-32], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-80]
-; SPARC32-NEXT:    std %f2, [%fp+-72] ! 16-byte Folded Spill
-; SPARC32-NEXT:    ldd [%fp+-24], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-88] ! 8-byte Folded Spill
-; SPARC32-NEXT:    ldd [%fp+-64], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-104]
-; SPARC32-NEXT:    std %f2, [%fp+-96] ! 16-byte Folded Spill
-; SPARC32-NEXT:    ldd [%fp+-56], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-120] ! 8-byte Folded Spill
-; SPARC32-NEXT:    ldd [%fp+-16], %f0
-; SPARC32-NEXT:    std %f0, [%fp+-136]
-; SPARC32-NEXT:    std %f2, [%fp+-128] ! 16-byte Folded Spill
-; SPARC32-NEXT:    ldd [%fp+-8], %f0
-; SPARC32-NEXT:    call cosl
-; SPARC32-NEXT:    std %f0, [%fp+-144]
+; SPARC32-NEXT:    ldd [%fp+-152], %f0 ! 8-byte Folded Reload
+; SPARC32-NEXT:    std %f0, [%fp+-56]
+; SPARC32-NEXT:    add %fp, -64, %o0
+; SPARC32-NEXT:    ldd [%fp+-144], %f0
+; SPARC32-NEXT:    ldd [%fp+-136], %f2 ! 16-byte Folded Reload
+; SPARC32-NEXT:    call sinl
+; SPARC32-NEXT:    std %f0, [%fp+-64]
 ; SPARC32-NEXT:    unimp 16
-; SPARC32-NEXT:    ldd [%fp+-40], %f0
-; SPARC32-NEXT:    ldd [%fp+-48], %f4
-; SPARC32-NEXT:    std %f0, [%i0+56]
-; SPARC32-NEXT:    std %f4, [%i0+48]
-; SPARC32-NEXT:    ldd [%fp+-144], %f0 ! 8-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%i0+40]
-; SPARC32-NEXT:    ldd [%fp+-136], %f0
-; SPARC32-NEXT:    ldd [%fp+-128], %f2 ! 16-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%i0+32]
-; SPARC32-NEXT:    ldd [%fp+-120], %f0 ! 8-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%i0+24]
-; SPARC32-NEXT:    ldd [%fp+-104], %f0
-; SPARC32-NEXT:    ldd [%fp+-96], %f2 ! 16-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%i0+16]
-; SPARC32-NEXT:    ldd [%fp+-88], %f0 ! 8-byte Folded Reload
-; SPARC32-NEXT:    std %f0, [%i0+8]
-; SPARC32-NEXT:    ldd [%fp+-80], %f0
-; SPARC32-NEXT:    ldd [%fp+-72], %f2 ! 16-byte Folded Reload
+; SPARC32-NEXT:    add %fp, -80, %i1
+; SPARC32-NEXT:    st %i1, [%sp+64]
+; SPARC32-NEXT:    ldd [%fp+-160], %f0 ! 8-byte Folded Reload
+; SPARC32-NEXT:    std %f0, [%fp+-88]
+; SPARC32-NEXT:    add %fp, -96, %o0
+; SPARC32-NEXT:    ldd [%fp+-176], %f0
+; SPARC32-NEXT:    ldd [%fp+-168], %f2 ! 16-byte Folded Reload
+; SPARC32-NEXT:    call cosl
+; SPARC32-NEXT:    std %f0, [%fp+-96]
+; SPARC32-NEXT:    unimp 16
+; SPARC32-NEXT:    ldd [%fp+-48], %f0
+; SPARC32-NEXT:    ldd [%fp+-40], %f8
+; SPARC32-NEXT:    ldd [%fp+-112], %f4
+; SPARC32-NEXT:    ldd [%fp+-104], %f10
+; SPARC32-NEXT:    ldd [%fp+-72], %f12
+; SPARC32-NEXT:    ldd [%fp+-80], %f16
+; SPARC32-NEXT:    ldd [%fp+-8], %f14
+; SPARC32-NEXT:    ldd [%fp+-16], %f20
+; SPARC32-NEXT:    std %f12, [%i0+56]
+; SPARC32-NEXT:    std %f16, [%i0+48]
+; SPARC32-NEXT:    std %f14, [%i0+40]
+; SPARC32-NEXT:    std %f20, [%i0+32]
+; SPARC32-NEXT:    std %f10, [%i0+24]
+; SPARC32-NEXT:    std %f4, [%i0+16]
+; SPARC32-NEXT:    std %f8, [%i0+8]
 ; SPARC32-NEXT:    std %f0, [%i0]
 ; SPARC32-NEXT:    jmp %i7+12
 ; SPARC32-NEXT:    restore
@@ -1147,37 +1169,39 @@ define void @test_sincos_v2f128(ptr sret({ <2 x fp128>, <2 x fp128> }) %ret, ptr
 ;
 ; GNU32-LABEL: test_sincos_v2f128:
 ; GNU32:       ! %bb.0:
-; GNU32-NEXT:    save %sp, -192, %sp
+; GNU32-NEXT:    save %sp, -216, %sp
 ; GNU32-NEXT:    mov %i0, %i1
 ; GNU32-NEXT:    ld [%fp+64], %i0
 ; GNU32-NEXT:    ldd [%i1+16], %f0
-; GNU32-NEXT:    std %f0, [%fp+-80]
-; GNU32-NEXT:    std %f2, [%fp+-72] ! 16-byte Folded Spill
+; GNU32-NEXT:    std %f0, [%fp+-112]
+; GNU32-NEXT:    std %f2, [%fp+-104] ! 16-byte Folded Spill
 ; GNU32-NEXT:    ldd [%i1+24], %f0
-; GNU32-NEXT:    std %f0, [%fp+-88] ! 8-byte Folded Spill
+; GNU32-NEXT:    std %f0, [%fp+-120] ! 8-byte Folded Spill
 ; GNU32-NEXT:    ldd [%i1], %f0
 ; GNU32-NEXT:    ldd [%i1+8], %f4
-; GNU32-NEXT:    std %f4, [%sp+100]
-; GNU32-NEXT:    add %fp, -48, %o0
+; GNU32-NEXT:    std %f4, [%fp+-88]
+; GNU32-NEXT:    add %fp, -96, %o0
 ; GNU32-NEXT:    add %fp, -64, %o1
+; GNU32-NEXT:    add %fp, -80, %o2
 ; GNU32-NEXT:    call sincosl
-; GNU32-NEXT:    std %f0, [%sp+92]
-; GNU32-NEXT:    ldd [%fp+-88], %f0 ! 8-byte Folded Reload
-; GNU32-NEXT:    std %f0, [%sp+100]
-; GNU32-NEXT:    add %fp, -16, %o0
-; GNU32-NEXT:    add %fp, -32, %o1
-; GNU32-NEXT:    ldd [%fp+-80], %f0
-; GNU32-NEXT:    ldd [%fp+-72], %f2 ! 16-byte Folded Reload
+; GNU32-NEXT:    std %f0, [%fp+-96]
+; GNU32-NEXT:    ldd [%fp+-120], %f0 ! 8-byte Folded Reload
+; GNU32-NEXT:    std %f0, [%fp+-40]
+; GNU32-NEXT:    add %fp, -48, %o0
+; GNU32-NEXT:    add %fp, -16, %o1
+; GNU32-NEXT:    add %fp, -32, %o2
+; GNU32-NEXT:    ldd [%fp+-112], %f0
+; GNU32-NEXT:    ldd [%fp+-104], %f2 ! 16-byte Folded Reload
 ; GNU32-NEXT:    call sincosl
-; GNU32-NEXT:    std %f0, [%sp+92]
-; GNU32-NEXT:    ldd [%fp+-48], %f0
-; GNU32-NEXT:    ldd [%fp+-40], %f8
+; GNU32-NEXT:    std %f0, [%fp+-48]
+; GNU32-NEXT:    ldd [%fp+-64], %f0
+; GNU32-NEXT:    ldd [%fp+-56], %f8
 ; GNU32-NEXT:    ldd [%fp+-16], %f4
 ; GNU32-NEXT:    ldd [%fp+-8], %f10
 ; GNU32-NEXT:    ldd [%fp+-24], %f12
 ; GNU32-NEXT:    ldd [%fp+-32], %f16
-; GNU32-NEXT:    ldd [%fp+-56], %f14
-; GNU32-NEXT:    ldd [%fp+-64], %f20
+; GNU32-NEXT:    ldd [%fp+-72], %f14
+; GNU32-NEXT:    ldd [%fp+-80], %f20
 ; GNU32-NEXT:    std %f12, [%i0+56]
 ; GNU32-NEXT:    std %f16, [%i0+48]
 ; GNU32-NEXT:    std %f14, [%i0+40]

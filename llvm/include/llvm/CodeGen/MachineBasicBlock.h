@@ -129,8 +129,10 @@ public:
     MCRegister PhysReg;
     LaneBitmask LaneMask;
 
-    RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
-        : PhysReg(PhysReg), LaneMask(LaneMask) {}
+    RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
+        : PhysReg(PhysReg), LaneMask(LaneMask) {
+      assert(PhysReg.isPhysical());
+    }
 
     bool operator==(const RegisterMaskPair &other) const {
       return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
@@ -186,6 +188,9 @@ private:
   /// Indicate that this MachineBasicBlock is referenced somewhere other than
   /// as predecessor/successor, a terminator MachineInstr, or a jump table.
   bool MachineBlockAddressTaken = false;
+
+  /// Relatively stable number used for analyses.
+  unsigned AnalysisNumber = 0;
 
   /// If this MachineBasicBlock corresponds to an IR-level "blockaddress"
   /// constant, this contains a pointer to that block.
@@ -505,6 +510,11 @@ public:
   LLVM_ABI void removeLiveIn(MCRegister Reg,
                              LaneBitmask LaneMask = LaneBitmask::getAll());
 
+  /// Remove the specified register from any overlapped live in. The method is
+  /// subreg-aware and removes Reg and its subregs from the live in set. It also
+  /// clears the corresponding bitmask from its live-in super registers.
+  LLVM_ABI void removeLiveInOverlappedWith(MCRegister Reg);
+
   /// Return true if the specified register is in the live in set.
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
@@ -542,8 +552,8 @@ public:
     using pointer = const RegisterMaskPair *;
     using reference = const RegisterMaskPair &;
 
-    liveout_iterator(const MachineBasicBlock &MBB, MCPhysReg ExceptionPointer,
-                     MCPhysReg ExceptionSelector, bool End)
+    liveout_iterator(const MachineBasicBlock &MBB, MCRegister ExceptionPointer,
+                     MCRegister ExceptionSelector, bool End)
         : ExceptionPointer(ExceptionPointer),
           ExceptionSelector(ExceptionSelector), BlockI(MBB.succ_begin()),
           BlockEnd(MBB.succ_end()) {
@@ -553,8 +563,8 @@ public:
         LiveRegI = (*BlockI)->livein_begin();
         if (!advanceToValidPosition())
           return;
-        if (LiveRegI->PhysReg == ExceptionPointer ||
-            LiveRegI->PhysReg == ExceptionSelector)
+        if ((*BlockI)->isEHPad() && (LiveRegI->PhysReg == ExceptionPointer ||
+                                     LiveRegI->PhysReg == ExceptionSelector))
           ++(*this);
       }
     }
@@ -608,7 +618,7 @@ public:
       return true;
     }
 
-    MCPhysReg ExceptionPointer, ExceptionSelector;
+    MCRegister ExceptionPointer, ExceptionSelector;
     const_succ_iterator BlockI;
     const_succ_iterator BlockEnd;
     livein_iterator LiveRegI;
@@ -1035,7 +1045,9 @@ public:
   /// Succ, can be split. If this returns true a subsequent call to
   /// SplitCriticalEdge is guaranteed to return a valid basic block if
   /// no changes occurred in the meantime.
-  LLVM_ABI bool canSplitCriticalEdge(const MachineBasicBlock *Succ) const;
+  LLVM_ABI bool
+  canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                       const MachineLoopInfo *MLI = nullptr) const;
 
   void pop_front() { Insts.pop_front(); }
   void pop_back() { Insts.pop_back(); }
@@ -1260,6 +1272,10 @@ public:
   int getNumber() const { return Number; }
   void setNumber(int N) { Number = N; }
 
+  /// For analyses, blocks have a more stable number.
+  int getAnalysisNumber() const { return AnalysisNumber; }
+  void setAnalysisNumber(int N) { AnalysisNumber = N; }
+
   /// Return the call frame size on entry to this basic block.
   unsigned getCallFrameSize() const { return CallFrameSize; }
   /// Set the call frame size on entry to this basic block.
@@ -1286,6 +1302,15 @@ public:
 
   // Helper function for MIRPrinter.
   LLVM_ABI bool canPredictBranchProbabilities() const;
+
+  /// Iterate over block PHI instructions and remove all incoming values for
+  /// PredMBB.
+  ///
+  /// Method does not erase PHI instructions even if they have single income or
+  /// do not have incoming values ar all. It is a caller responsibility to make
+  /// decision how to process PHI instructions after incoming values removal.
+  LLVM_ABI void
+  removePHIsIncomingValuesForPredecessor(const MachineBasicBlock &PredMBB);
 
 private:
   /// Return probability iterator corresponding to the I successor iterator.
@@ -1346,8 +1371,8 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 
   static unsigned getNumber(MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1363,8 +1388,8 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 
   static unsigned getNumber(const MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1389,8 +1414,8 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 
   static unsigned getNumber(MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 
@@ -1409,8 +1434,8 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 
   static unsigned getNumber(const MachineBasicBlock *BB) {
-    assert(BB->getNumber() >= 0 && "negative block number");
-    return BB->getNumber();
+    assert(BB->getAnalysisNumber() >= 0 && "negative block number");
+    return BB->getAnalysisNumber();
   }
 };
 

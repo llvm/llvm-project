@@ -306,8 +306,10 @@ BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
     // In Verilog, all strings are quoted by double quotes, joined by commas,
     // and wrapped in braces.  The comma is always before the newline.
     assert(QuoteStyle == DoubleQuotes);
-    LeftBraceQuote = Style.Cpp11BracedListStyle ? "{\"" : "{ \"";
-    RightBraceQuote = Style.Cpp11BracedListStyle ? "\"}" : "\" }";
+    LeftBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "{\"" : "{ \"";
+    RightBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "\"}" : "\" }";
     Postfix = "\",";
     Prefix = "\"";
   } else {
@@ -1040,38 +1042,40 @@ BreakableComment::Split BreakableLineCommentSection::getReflowSplit(
 
 void BreakableLineCommentSection::reflow(unsigned LineIndex,
                                          WhitespaceManager &Whitespaces) const {
-  if (LineIndex > 0 && Tokens[LineIndex] != Tokens[LineIndex - 1]) {
-    // Reflow happens between tokens. Replace the whitespace between the
-    // tokens by the empty string.
-    Whitespaces.replaceWhitespace(
-        *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
-        /*StartOfTokenColumn=*/StartColumn, /*IsAligned=*/true,
-        /*InPPDirective=*/false);
-  } else if (LineIndex > 0) {
-    // In case we're reflowing after the '\' in:
-    //
-    //   // line comment \
-    //   // line 2
-    //
-    // the reflow happens inside the single comment token (it is a single line
-    // comment with an unescaped newline).
-    // Replace the whitespace between the '\' and '//' with the empty string.
-    //
-    // Offset points to after the '\' relative to start of the token.
-    unsigned Offset = Lines[LineIndex - 1].data() +
-                      Lines[LineIndex - 1].size() -
-                      tokenAt(LineIndex - 1).TokenText.data();
-    // WhitespaceLength is the number of chars between the '\' and the '//' on
-    // the next line.
-    unsigned WhitespaceLength =
-        Lines[LineIndex].data() - tokenAt(LineIndex).TokenText.data() - Offset;
-    Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex], Offset,
-                                         /*ReplaceChars=*/WhitespaceLength,
-                                         /*PreviousPostfix=*/"",
-                                         /*CurrentPrefix=*/"",
-                                         /*InPPDirective=*/false,
-                                         /*Newlines=*/0,
-                                         /*Spaces=*/0);
+  if (LineIndex > 0) {
+    if (Tokens[LineIndex] != Tokens[LineIndex - 1]) {
+      // Reflow happens between tokens. Replace the whitespace between the
+      // tokens by the empty string.
+      Whitespaces.replaceWhitespace(
+          *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
+          /*StartOfTokenColumn=*/StartColumn, /*IsAligned=*/true,
+          /*InPPDirective=*/false);
+    } else {
+      // In case we're reflowing after the '\' in:
+      //
+      //   // line comment \
+      //   // line 2
+      //
+      // the reflow happens inside the single comment token (it is a single line
+      // comment with an unescaped newline).
+      // Replace the whitespace between the '\' and '//' with the empty string.
+      //
+      // Offset points to after the '\' relative to start of the token.
+      unsigned Offset = Lines[LineIndex - 1].data() +
+                        Lines[LineIndex - 1].size() -
+                        tokenAt(LineIndex - 1).TokenText.data();
+      // WhitespaceLength is the number of chars between the '\' and the '//' on
+      // the next line.
+      unsigned WhitespaceLength = Lines[LineIndex].data() -
+                                  tokenAt(LineIndex).TokenText.data() - Offset;
+      Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex], Offset,
+                                           /*ReplaceChars=*/WhitespaceLength,
+                                           /*PreviousPostfix=*/"",
+                                           /*CurrentPrefix=*/"",
+                                           /*InPPDirective=*/false,
+                                           /*Newlines=*/0,
+                                           /*Spaces=*/0);
+    }
   }
   // Replace the indent and prefix of the token with the reflow prefix.
   unsigned Offset =
@@ -1114,7 +1118,7 @@ void BreakableLineCommentSection::adaptStartOfLine(
                                   /*Newlines=*/1,
                                   /*Spaces=*/LineColumn,
                                   /*StartOfTokenColumn=*/LineColumn,
-                                  /*IsAligned=*/true,
+                                  /*IsAligned=*/tokenAt(0).NewlinesBefore == 0,
                                   /*InPPDirective=*/false);
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {

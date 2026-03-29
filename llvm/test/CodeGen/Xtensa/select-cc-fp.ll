@@ -103,8 +103,8 @@ define float @brcc_olt(float %a, float %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wfr f8, a3
 ; CHECK-NEXT:    wfr f9, a2
-; CHECK-NEXT:    ule.s b0, f8, f9
-; CHECK-NEXT:    bt b0, .LBB3_2
+; CHECK-NEXT:    olt.s b0, f9, f8
+; CHECK-NEXT:    bf b0, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %t1
 ; CHECK-NEXT:    l32r a8, .LCPI3_1
 ; CHECK-NEXT:    wfr f8, a8
@@ -135,8 +135,8 @@ define float @brcc_ole(float %a, float %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wfr f8, a3
 ; CHECK-NEXT:    wfr f9, a2
-; CHECK-NEXT:    ult.s b0, f8, f9
-; CHECK-NEXT:    bt b0, .LBB4_2
+; CHECK-NEXT:    ole.s b0, f9, f8
+; CHECK-NEXT:    bf b0, .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %t1
 ; CHECK-NEXT:    l32r a8, .LCPI4_1
 ; CHECK-NEXT:    wfr f8, a8
@@ -232,7 +232,7 @@ define float @brcc_ueq(float %a, float %b) nounwind {
 ; CHECK-NEXT:    wfr f8, a3
 ; CHECK-NEXT:    wfr f9, a2
 ; CHECK-NEXT:    ueq.s b0, f9, f8
-; CHECK-NEXT:    bt b0, .LBB7_2
+; CHECK-NEXT:    bf b0, .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %t1
 ; CHECK-NEXT:    l32r a8, .LCPI7_1
 ; CHECK-NEXT:    wfr f8, a8
@@ -327,8 +327,8 @@ define float @brcc_ult(float %a, float %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wfr f8, a3
 ; CHECK-NEXT:    wfr f9, a2
-; CHECK-NEXT:    ole.s b0, f8, f9
-; CHECK-NEXT:    bt b0, .LBB10_2
+; CHECK-NEXT:    ult.s b0, f9, f8
+; CHECK-NEXT:    bf b0, .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %t1
 ; CHECK-NEXT:    l32r a8, .LCPI10_1
 ; CHECK-NEXT:    wfr f8, a8
@@ -359,8 +359,8 @@ define float @brcc_ule(float %a, float %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wfr f8, a3
 ; CHECK-NEXT:    wfr f9, a2
-; CHECK-NEXT:    olt.s b0, f8, f9
-; CHECK-NEXT:    bt b0, .LBB11_2
+; CHECK-NEXT:    ule.s b0, f9, f8
+; CHECK-NEXT:    bf b0, .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %t1
 ; CHECK-NEXT:    l32r a8, .LCPI11_1
 ; CHECK-NEXT:    wfr f8, a8
@@ -451,6 +451,21 @@ exit:
 }
 
 define float @copysign_f32(float %a, float %b) {
+; CHECK-LABEL: copysign_f32:
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    l32r a8, .LCPI14_0
+; CHECK-NEXT:    and a8, a3, a8
+; CHECK-NEXT:    l32r a9, .LCPI14_1
+; CHECK-NEXT:    and a9, a2, a9
+; CHECK-NEXT:    wfr f8, a9
+; CHECK-NEXT:    movi a9, 0
+; CHECK-NEXT:    beq a8, a9, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    neg.s f8, f8
+; CHECK-NEXT:  .LBB14_2: # %entry
+; CHECK-NEXT:    rfr a2, f8
+; CHECK-NEXT:    ret
 entry:
   %c = call float @llvm.copysign.f32(float %a, float %b)
   ret float %c

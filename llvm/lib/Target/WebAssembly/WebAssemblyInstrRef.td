@@ -41,6 +41,11 @@ defm REF_TEST_FUNCREF : I<(outs I32:$res), (ins TypeIndex:$type, FUNCREF:$ref),
                           "ref.test\t$type, $ref", "ref.test $type", 0xfb14>,
                         Requires<[HasGC]>;
 
+defm REF_FUNC : I<(outs FUNCREF:$res), (ins function32_op:$func),
+                    (outs), (ins function32_op:$func), [],
+                    "ref.func\t$func", "ref.func $func", 0xd2>,
+                Requires<[HasReferenceTypes]>;
+
 defm "" : REF_I<FUNCREF, funcref, "func">;
 defm "" : REF_I<EXTERNREF, externref, "extern">;
 defm "" : REF_I<EXNREF, exnref, "exn">;

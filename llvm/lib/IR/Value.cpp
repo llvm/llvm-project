@@ -36,7 +36,7 @@
 
 using namespace llvm;
 
-cl::opt<bool> UseDerefAtPointSemantics(
+static cl::opt<bool> UseDerefAtPointSemantics(
     "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
     cl::desc("Deref attributes and metadata infer facts at definition only"));
 
@@ -356,20 +356,27 @@ void Value::setNameImpl(const Twine &NewName) {
   if (getSymTab(this, ST))
     return;  // Cannot set a name on this value (e.g. constant).
 
+  ValueName *NewValueName = nullptr;
   if (!ST) { // No symbol table to update?  Just do the change.
+    if (!NameRef.empty()) {
+      // Create the new name.
+      MallocAllocator Allocator;
+      NewValueName = ValueName::create(NameRef, Allocator);
+    }
     // NOTE: Could optimize for the case the name is shrinking to not deallocate
     // then reallocated.
     destroyValueName();
 
-    if (!NameRef.empty()) {
-      // Create the new name.
+    if (NewValueName) {
       assert(NeedNewName);
-      MallocAllocator Allocator;
-      setValueName(ValueName::create(NameRef, Allocator));
+      setValueName(NewValueName);
       getValueName()->setValue(this);
     }
     return;
   }
+
+  if (!NameRef.empty())
+    NewValueName = ST->createValueName(NameRef, this);
 
   // NOTE: Could optimize for the case the name is shrinking to not deallocate
   // then reallocated.
@@ -383,8 +390,8 @@ void Value::setNameImpl(const Twine &NewName) {
   }
 
   // Name is changing to something new.
-  assert(NeedNewName);
-  setValueName(ST->createValueName(NameRef, this));
+  assert(NeedNewName && NewValueName != nullptr);
+  setValueName(NewValueName);
 }
 
 void Value::setName(const Twine &NewName) {
@@ -551,7 +558,7 @@ void Value::replaceNonMetadataUsesWith(Value *New) {
   doRAUW(New, ReplaceMetadataUses::No);
 }
 
-void Value::replaceUsesWithIf(Value *New,
+bool Value::replaceUsesWithIf(Value *New,
                               llvm::function_ref<bool(Use &U)> ShouldReplace) {
   assert(New && "Value::replaceUsesWithIf(<null>) is invalid!");
   assert(New->getType() == getType() &&
@@ -560,9 +567,12 @@ void Value::replaceUsesWithIf(Value *New,
   SmallVector<TrackingVH<Constant>, 8> Consts;
   SmallPtrSet<Constant *, 8> Visited;
 
+  bool Changed = false;
   for (Use &U : llvm::make_early_inc_range(uses())) {
     if (!ShouldReplace(U))
       continue;
+    Changed = true;
+
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
     // constant because they are uniqued.
     if (auto *C = dyn_cast<Constant>(U.getUser())) {
@@ -580,6 +590,8 @@ void Value::replaceUsesWithIf(Value *New,
     //        not just the one passed to ShouldReplace
     Consts.pop_back_val()->handleOperandChange(this, New);
   }
+
+  return Changed;
 }
 
 /// Replace debug record uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
@@ -622,6 +634,7 @@ enum PointerStripKind {
   PSK_InBoundsConstantIndices,
   PSK_InBounds
 };
+} // end anonymous namespace
 
 template <PointerStripKind StripKind> static void NoopCallback(const Value *) {}
 
@@ -696,7 +709,6 @@ static const Value *stripPointerCastsAndOffsets(
 
   return V;
 }
-} // end anonymous namespace
 
 const Value *Value::stripPointerCasts() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndices>(this);
@@ -747,34 +759,28 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       // means when we construct GEPOffset, we need to use the size
       // of GEP's pointer type rather than the size of the original
       // pointer type.
-      unsigned CurBitWidth = DL.getIndexTypeSizeInBits(V->getType());
-      if (CurBitWidth == BitWidth) {
-        if (!GEP->accumulateConstantOffset(DL, Offset, ExternalAnalysis))
-          return V;
+      APInt GEPOffset(DL.getIndexTypeSizeInBits(V->getType()), 0);
+      if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
+        return V;
+
+      // Stop traversal if the pointer offset wouldn't fit in the bit-width
+      // provided by the Offset argument. This can happen due to AddrSpaceCast
+      // stripping.
+      if (GEPOffset.getSignificantBits() > BitWidth)
+        return V;
+
+      // External Analysis can return a result higher/lower than the value
+      // represents. We need to detect overflow/underflow.
+      APInt GEPOffsetST = GEPOffset.sextOrTrunc(BitWidth);
+      if (!ExternalAnalysis) {
+        Offset += GEPOffsetST;
       } else {
-        APInt GEPOffset(CurBitWidth, 0);
-        if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
+        bool Overflow = false;
+        APInt OldOffset = Offset;
+        Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
+        if (Overflow) {
+          Offset = std::move(OldOffset);
           return V;
-
-        // Stop traversal if the pointer offset wouldn't fit in the bit-width
-        // provided by the Offset argument. This can happen due to AddrSpaceCast
-        // stripping.
-        if (GEPOffset.getSignificantBits() > BitWidth)
-          return V;
-
-        // External Analysis can return a result higher/lower than the value
-        // represents. We need to detect overflow/underflow.
-        APInt GEPOffsetST = GEPOffset.sextOrTrunc(BitWidth);
-        if (!ExternalAnalysis) {
-          Offset += GEPOffsetST;
-        } else {
-          bool Overflow = false;
-          APInt OldOffset = Offset;
-          Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
-          if (Overflow) {
-            Offset = OldOffset;
-            return V;
-          }
         }
       }
       V = GEP->getPointerOperand();
@@ -841,6 +847,9 @@ bool Value::canBeFreed() const {
     if (F->doesNotFreeMemory() && F->hasNoSync())
       return false;
   }
+
+  if (isa<IntToPtrInst>(this) && getMetadata(LLVMContext::MD_nofree))
+    return false;
 
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))
@@ -938,9 +947,8 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       CanBeNull = true;
     }
   } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
-    if (!AI->isArrayAllocation()) {
-      DerefBytes =
-          DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinValue();
+    if (std::optional<TypeSize> Size = AI->getAllocationSize(DL)) {
+      DerefBytes = Size->getKnownMinValue();
       CanBeNull = false;
       CanBeFreed = false;
     }
@@ -1003,14 +1011,12 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
       return Align(CI->getLimitedValue());
     }
-  } else if (auto *CstPtr = dyn_cast<Constant>(this)) {
-    // Strip pointer casts to avoid creating unnecessary ptrtoint expression
-    // if the only "reduction" is combining a bitcast + ptrtoint.
-    CstPtr = CstPtr->stripPointerCasts();
-    if (auto *CstInt = dyn_cast_or_null<ConstantInt>(ConstantExpr::getPtrToInt(
-            const_cast<Constant *>(CstPtr), DL.getIntPtrType(getType()),
-            /*OnlyIfReduced=*/true))) {
-      size_t TrailingZeros = CstInt->getValue().countr_zero();
+  } else if (auto *CE = dyn_cast<ConstantExpr>(this)) {
+    // Determine the alignment of inttoptr(C).
+    if (CE->getOpcode() == Instruction::IntToPtr &&
+        isa<ConstantInt>(CE->getOperand(0))) {
+      ConstantInt *IntPtr = cast<ConstantInt>(CE->getOperand(0));
+      size_t TrailingZeros = IntPtr->getValue().countr_zero();
       // While the actual alignment may be large, elsewhere we have
       // an arbitrary upper alignmet limit, so let's clamp to it.
       return Align(TrailingZeros < Value::MaxAlignmentExponent
@@ -1100,8 +1106,6 @@ const Value *Value::DoPHITranslation(const BasicBlock *CurBB,
     return PN->getIncomingValueForBlock(PredBB);
   return this;
 }
-
-LLVMContext &Value::getContext() const { return VTy->getContext(); }
 
 void Value::reverseUseList() {
   if (!UseList || !UseList->Next)

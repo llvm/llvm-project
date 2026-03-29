@@ -168,7 +168,7 @@ define <2 x i64> @testDoubleword(<2 x i64> %a, i64 %b, i64 %idx) {
 ; CHECK-32-NEXT:    add 5, 6, 6
 ; CHECK-32-NEXT:    addi 7, 1, -32
 ; CHECK-32-NEXT:    stxv 34, -32(1)
-; CHECK-32-NEXT:    rlwinm 6, 5, 2, 28, 29
+; CHECK-32-NEXT:    rlwinm 6, 5, 2, 28, 28
 ; CHECK-32-NEXT:    stwx 3, 7, 6
 ; CHECK-32-NEXT:    addi 3, 5, 1
 ; CHECK-32-NEXT:    addi 5, 1, -16
@@ -750,25 +750,21 @@ entry:
 define <2 x double> @testDoubleImm1(<2 x double> %a, double %b) {
 ; CHECK-64-LABEL: testDoubleImm1:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-64-NEXT:    xxpermdi 34, 1, 34, 1
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testDoubleImm1:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-32-NEXT:    xxpermdi 34, 1, 34, 1
 ; CHECK-32-NEXT:    blr
 ;
 ; CHECK-64-P10-LABEL: testDoubleImm1:
 ; CHECK-64-P10:       # %bb.0: # %entry
-; CHECK-64-P10-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-64-P10-NEXT:    xxpermdi 34, 1, 34, 1
 ; CHECK-64-P10-NEXT:    blr
 ;
 ; CHECK-32-P10-LABEL: testDoubleImm1:
 ; CHECK-32-P10:       # %bb.0: # %entry
-; CHECK-32-P10-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-32-P10-NEXT:    xxpermdi 34, 1, 34, 1
 ; CHECK-32-P10-NEXT:    blr
 entry:

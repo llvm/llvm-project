@@ -9,16 +9,16 @@
 #ifndef __CLC_MISC_CLC_SHUFFLE_H__
 #define __CLC_MISC_CLC_SHUFFLE_H__
 
-#define FUNCTION __clc_shuffle
+#define __CLC_FUNCTION __clc_shuffle
 
 // Integer-type decls
-#define __CLC_BODY <clc/misc/shuffle_decl.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc/misc/shuffle_decl.inc"
+#include "clc/integer/gentype.inc"
 
 // Floating-point decls
-#define __CLC_BODY <clc/misc/shuffle_decl.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/misc/shuffle_decl.inc"
+#include "clc/math/gentype.inc"
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_MISC_CLC_SHUFFLE_H__

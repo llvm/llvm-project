@@ -39,7 +39,7 @@ class ModulePass;
   FunctionPass *createPPCLoopInstrFormPrepPass(PPCTargetMachine &TM);
   FunctionPass *createPPCTOCRegDepsPass();
   FunctionPass *createPPCEarlyReturnPass();
-  FunctionPass *createPPCVSXCopyPass();
+  FunctionPass *createPPCVSXWACCCopyPass();
   FunctionPass *createPPCVSXFMAMutatePass();
   FunctionPass *createPPCVSXSwapRemovalPass();
   FunctionPass *createPPCReduceCRLogicalsPass();
@@ -53,6 +53,7 @@ class ModulePass;
   FunctionPass *createPPCPreEmitPeepholePass();
   FunctionPass *createPPCExpandAtomicPseudoPass();
   FunctionPass *createPPCCTRLoopsPass();
+  ModulePass *createPPCPrepareIFuncsOnAIXPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
   bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
@@ -64,7 +65,7 @@ class ModulePass;
   void initializePPCLoopInstrFormPrepPass(PassRegistry&);
   void initializePPCTOCRegDepsPass(PassRegistry&);
   void initializePPCEarlyReturnPass(PassRegistry&);
-  void initializePPCVSXCopyPass(PassRegistry&);
+  void initializePPCVSXWACCCopyPass(PassRegistry &);
   void initializePPCVSXFMAMutatePass(PassRegistry&);
   void initializePPCVSXSwapRemovalPass(PassRegistry&);
   void initializePPCReduceCRLogicalsPass(PassRegistry&);
@@ -78,6 +79,7 @@ class ModulePass;
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
   void initializePPCDAGToDAGISelLegacyPass(PassRegistry &);
+  void initializePPCPrepareIFuncsOnAIXPass(PassRegistry &);
   void initializePPCLinuxAsmPrinterPass(PassRegistry &);
   void initializePPCAIXAsmPrinterPass(PassRegistry &);
 

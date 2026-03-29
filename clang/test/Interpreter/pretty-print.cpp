@@ -1,7 +1,7 @@
 // RUN: clang-repl "int i = 10;" 'extern "C" int printf(const char*,...);' \
 // RUN:            'auto r1 = printf("i = %d\n", i);' | FileCheck --check-prefix=CHECK-DRIVER %s
 // The test is flaky with asan https://github.com/llvm/llvm-project/pull/148701.
-// UNSUPPORTED: system-aix, asan
+// UNSUPPORTED: asan
 // CHECK-DRIVER: i = 10
 // RUN: cat %s | clang-repl -Xcc -std=c++11 -Xcc -fno-delayed-template-parsing | FileCheck %s
 extern "C" int printf(const char*,...);
@@ -59,6 +59,31 @@ F<7>::RET
 struct S5 { int foo() { return 42; }};
 &S5::foo
 // CHECK-NEXT: (int (S5::*)()) Function @0x{{[0-9a-f]+}}
+
+// Namespaced types deduced via auto
+namespace Outer { struct Foo {}; }
+auto x = Outer::Foo(); x
+// CHECK-NEXT: (Outer::Foo &) @0x{{[0-9a-f]+}}
+
+namespace Outer { template<class T> struct Bar {}; }
+auto y = Outer::Bar<int>(); y
+// CHECK-NEXT: (Outer::Bar<int> &) @0x{{[0-9a-f]+}}
+
+// Check that const is preserved
+const auto z = Outer::Foo(); z
+// CHECK-NEXT: (const Outer::Foo &) @0x{{[0-9a-f]+}}
+
+// Check printing of DecltypeTypes (this used to assert)
+namespace N { struct D {}; }
+decltype(N::D()) decl1; decl1
+// CHECK-NEXT: (N::D &) @0x{{[0-9a-f]+}}
+
+// double-nested DecltypeType
+decltype(decl1) decl2; decl2
+// CHECK-NEXT: (N::D &) @0x{{[0-9a-f]+}}
+
+const decltype(N::D()) decl3; decl3
+// CHECK-NEXT: (const N::D &) @0x{{[0-9a-f]+}}
 
 // int i = 12;
 // int &iref = i;

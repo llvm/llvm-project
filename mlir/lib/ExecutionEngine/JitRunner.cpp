@@ -202,6 +202,8 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
 
   auto engine = std::move(*expectedEngine);
 
+  engine->initialize();
+
   auto expectedFPtr = engine->lookupPacked(entryPoint);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
@@ -269,7 +271,7 @@ Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
   return Error::success();
 }
 template <typename Type>
-Error compileAndExecuteSingleReturnFunction(
+static Error compileAndExecuteSingleReturnFunction(
     Options &options, Operation *module, StringRef entryPoint,
     CompileAndExecuteConfig config, std::unique_ptr<llvm::TargetMachine> tm) {
   auto mainFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(

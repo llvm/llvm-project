@@ -326,8 +326,7 @@ const unsigned BBState::OverflowOccurredValue = 0xffffffff;
 
 namespace llvm {
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        BBState &BBState) LLVM_ATTRIBUTE_UNUSED;
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, BBState &BBState);
 
 } // end namespace llvm
 
@@ -1655,20 +1654,18 @@ ComputePostOrders(Function &F,
   BasicBlock *EntryBB = &F.getEntryBlock();
   BBState &MyStates = BBStates[EntryBB];
   MyStates.SetAsEntry();
-  Instruction *EntryTI = EntryBB->getTerminator();
-  SuccStack.push_back(std::make_pair(EntryBB, succ_iterator(EntryTI)));
+  SuccStack.push_back(std::make_pair(EntryBB, succ_begin(EntryBB)));
   Visited.insert(EntryBB);
   OnStack.insert(EntryBB);
   do {
   dfs_next_succ:
     BasicBlock *CurrBB = SuccStack.back().first;
-    succ_iterator SE(CurrBB->getTerminator(), false);
+    succ_iterator SE = succ_end(CurrBB->getTerminator());
 
     while (SuccStack.back().second != SE) {
       BasicBlock *SuccBB = *SuccStack.back().second++;
       if (Visited.insert(SuccBB).second) {
-        SuccStack.push_back(
-            std::make_pair(SuccBB, succ_iterator(SuccBB->getTerminator())));
+        SuccStack.push_back(std::make_pair(SuccBB, succ_begin(SuccBB)));
         BBStates[CurrBB].addSucc(SuccBB);
         BBState &SuccStates = BBStates[SuccBB];
         SuccStates.addPred(CurrBB);
@@ -2626,7 +2623,7 @@ void ObjCARCOpt::OptimizeAutoreleasePools(Function &F) {
       case ARCInstKind::Call:
         if (!MayAutorelease(cast<CallBase>(Inst)))
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ARCInstKind::Autorelease:
       case ARCInstKind::AutoreleaseRV:
       case ARCInstKind::FusedRetainAutorelease:

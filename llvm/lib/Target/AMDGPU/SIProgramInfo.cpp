@@ -73,6 +73,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
 
   NumSGPRsForWavesPerEU = ZeroExpr;
   NumVGPRsForWavesPerEU = ZeroExpr;
+  NamedBarCnt = ZeroExpr;
   Occupancy = ZeroExpr;
   DynamicCallStack = ZeroExpr;
   VCCUsed = ZeroExpr;
@@ -88,11 +89,10 @@ static uint64_t getComputePGMRSrc1Reg(const SIProgramInfo &ProgInfo,
                  S_00B848_MEM_ORDERED(ProgInfo.MemOrdered) |
                  S_00B848_FWD_PROGRESS(ProgInfo.FwdProgress);
 
-  if (ST.hasDX10ClampMode())
+  if (ST.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
     Reg |= S_00B848_DX10_CLAMP(ProgInfo.DX10Clamp);
-
-  if (ST.hasIEEEMode())
     Reg |= S_00B848_IEEE_MODE(ProgInfo.IEEEMode);
+  }
 
   if (ST.hasRrWGMode())
     Reg |= S_00B848_RR_WG_MODE(ProgInfo.RrWgMode);
@@ -107,11 +107,10 @@ static uint64_t getPGMRSrc1Reg(const SIProgramInfo &ProgInfo,
                  S_00B848_PRIV(ProgInfo.Priv) |
                  S_00B848_DEBUG_MODE(ProgInfo.DebugMode);
 
-  if (ST.hasDX10ClampMode())
+  if (ST.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
     Reg |= S_00B848_DX10_CLAMP(ProgInfo.DX10Clamp);
-
-  if (ST.hasIEEEMode())
     Reg |= S_00B848_IEEE_MODE(ProgInfo.IEEEMode);
+  }
 
   if (ST.hasRrWGMode())
     Reg |= S_00B848_RR_WG_MODE(ProgInfo.RrWgMode);

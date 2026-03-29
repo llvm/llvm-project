@@ -9,8 +9,10 @@
 #include "mlir/TableGen/Interfaces.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -25,11 +27,19 @@ using llvm::StringInit;
 // InterfaceMethod
 //===----------------------------------------------------------------------===//
 
-InterfaceMethod::InterfaceMethod(const Record *def) : def(def) {
+InterfaceMethod::InterfaceMethod(const Record *def, std::string uniqueName)
+    : def(def), uniqueName(uniqueName) {
   const DagInit *args = def->getValueAsDag("arguments");
   for (unsigned i = 0, e = args->getNumArgs(); i != e; ++i) {
-    arguments.push_back({cast<StringInit>(args->getArg(i))->getValue(),
-                         args->getArgNameStr(i)});
+    const Init *arg = args->getArg(i);
+    const auto *strArg = dyn_cast<StringInit>(arg);
+    if (!strArg)
+      llvm::PrintFatalError(
+          def->getLoc(),
+          "expected string type for interface method argument #" + Twine(i) +
+              " ('" + args->getArgNameStr(i) + "') in '" + def->getName() +
+              "', but got '" + arg->getAsString() + "'");
+    arguments.push_back({strArg->getValue(), args->getArgNameStr(i)});
   }
 }
 
@@ -42,9 +52,22 @@ StringRef InterfaceMethod::getName() const {
   return def->getValueAsString("name");
 }
 
+// Return the name of this method.
+StringRef InterfaceMethod::getUniqueName() const { return uniqueName; }
+
 // Return if this method is static.
 bool InterfaceMethod::isStatic() const {
   return def->isSubClassOf("StaticInterfaceMethod");
+}
+
+// Return if the method is a pure virtual one.
+bool InterfaceMethod::isPureVirtual() const {
+  return def->isSubClassOf("PureVirtualInterfaceMethod");
+}
+
+// Return if the method is only a declaration.
+bool InterfaceMethod::isDeclaration() const {
+  return def->isSubClassOf("InterfaceMethodDeclaration");
 }
 
 // Return the body for this method if it has one.
@@ -83,8 +106,19 @@ Interface::Interface(const Record *def) : def(def) {
 
   // Initialize the interface methods.
   auto *listInit = dyn_cast<ListInit>(def->getValueInit("methods"));
-  for (const Init *init : listInit->getElements())
-    methods.emplace_back(cast<DefInit>(init)->getDef());
+  // In case of overloaded methods, we need to find a unique name for each for
+  // the internal function pointer in the "vtable" we generate. This is an
+  // internal name, we could use a randomly generated name as long as there are
+  // no collisions.
+  StringSet<> uniqueNames;
+  for (const Init *init : listInit->getElements()) {
+    std::string name =
+        cast<DefInit>(init)->getDef()->getValueAsString("name").str();
+    while (!uniqueNames.insert(name).second) {
+      name = name + "_" + std::to_string(uniqueNames.size());
+    }
+    methods.emplace_back(cast<DefInit>(init)->getDef(), name);
+  }
 
   // Initialize the interface base classes.
   auto *basesInit = dyn_cast<ListInit>(def->getValueInit("baseInterfaces"));
@@ -192,4 +226,12 @@ bool OpInterface::classof(const Interface *interface) {
 
 bool TypeInterface::classof(const Interface *interface) {
   return interface->getDef().isSubClassOf("TypeInterface");
+}
+
+//===----------------------------------------------------------------------===//
+// DialectInterface
+//===----------------------------------------------------------------------===//
+
+bool DialectInterface::classof(const Interface *interface) {
+  return interface->getDef().isSubClassOf("DialectInterface");
 }

@@ -76,7 +76,7 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
   // remove duplicates
   Binding *NewEnd = llvm::unique(Bindings);
   if (NewEnd != Bindings.end())
-    Bindings.erase(NewEnd);
+    Bindings.erase(NewEnd, Bindings.end());
 
   BindingInfo Info;
 
@@ -131,9 +131,9 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
   return Info;
 }
 
-const BindingInfoBuilder::Binding &BindingInfoBuilder::findOverlapping(
-    const BindingInfoBuilder::Binding &ReportedBinding) const {
-  for (const BindingInfoBuilder::Binding &Other : Bindings)
+const Binding &
+BindingInfoBuilder::findOverlapping(const Binding &ReportedBinding) const {
+  for (const Binding &Other : Bindings)
     if (ReportedBinding.LowerBound <= Other.UpperBound &&
         Other.LowerBound <= ReportedBinding.UpperBound)
       return Other;

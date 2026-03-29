@@ -93,14 +93,23 @@ private:
   /// section allocations if found.
   void discoverBOLTReserved();
 
+  /// Check whether we should use DT_INIT or DT_INIT_ARRAY for instrumentation.
+  /// DT_INIT is preferred; DT_INIT_ARRAY is only used when no DT_INIT entry was
+  /// found.
+  Error discoverRtInitAddress();
+
   /// Check whether we should use DT_FINI or DT_FINI_ARRAY for instrumentation.
   /// DT_FINI is preferred; DT_FINI_ARRAY is only used when no DT_FINI entry was
   /// found.
   Error discoverRtFiniAddress();
 
+  /// If DT_INIT_ARRAY is used for instrumentation, update the relocation of its
+  /// first entry to point to the instrumentation library's init address.
+  Error updateRtInitReloc();
+
   /// If DT_FINI_ARRAY is used for instrumentation, update the relocation of its
   /// first entry to point to the instrumentation library's fini address.
-  void updateRtFiniReloc();
+  Error updateRtFiniReloc();
 
   /// Create and initialize metadata rewriters for this instance.
   void initializeMetadataManager();
@@ -139,6 +148,9 @@ private:
   void handleRelocation(const object::SectionRef &RelocatedSection,
                         const RelocationRef &Rel);
 
+  /// Collect functions that are specified to be bumped.
+  void selectFunctionsToPrint();
+
   /// Mark functions that are not meant for processing as ignored.
   void selectFunctionsToProcess();
 
@@ -174,9 +186,6 @@ private:
   /// addresses and link the object file, resolving all relocations and
   /// performing final relaxation.
   void emitAndLink();
-
-  /// Link additional runtime code to support instrumentation.
-  void linkRuntime();
 
   /// Process metadata in sections before functions are discovered.
   void processSectionMetadata();
@@ -218,6 +227,10 @@ private:
   /// disassembleFunctions(), also preserve the original version.
   void rewriteFile();
 
+  /// Rewrite functions in place by overwriting their original locations.
+  /// Used by non-relocation mode and for patched functions.
+  void rewriteFunctionsInPlace(raw_fd_ostream &OS);
+
   /// Return address of a function in the new binary corresponding to
   /// \p OldAddress address in the original binary.
   uint64_t getNewFunctionAddress(uint64_t OldAddress);
@@ -241,7 +254,7 @@ private:
 
   /// Adjust function sizes and set proper maximum size values after the whole
   /// symbol table has been processed.
-  void adjustFunctionBoundaries();
+  void adjustFunctionBoundaries(DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
 
   /// Make .eh_frame section relocatable.
   void relocateEHFrameSection();
@@ -249,12 +262,11 @@ private:
   /// Analyze relocation \p Rel.
   /// Return true if the relocation was successfully processed, false otherwise.
   /// The \p SymbolName, \p SymbolAddress, \p Addend and \p ExtractedValue
-  /// parameters will be set on success. The \p Skip argument indicates
-  /// that the relocation was analyzed, but it must not be processed.
+  /// parameters will be set on success.
   bool analyzeRelocation(const object::RelocationRef &Rel, uint32_t &RType,
                          std::string &SymbolName, bool &IsSectionRelocation,
                          uint64_t &SymbolAddress, int64_t &Addend,
-                         uint64_t &ExtractedValue, bool &Skip) const;
+                         uint64_t &ExtractedValue) const;
 
   /// Rewrite non-allocatable sections with modifications.
   void rewriteNoteSections();
@@ -393,6 +405,9 @@ public:
 
   /// Return true if the section holds debug information.
   static bool isDebugSection(StringRef SectionName);
+
+  /// Return true if a debug section is compressed (by SHF_COMPRESSED flag).
+  static bool isCompressedDebugSection(const object::SectionRef &Section);
 
   /// Adds Debug section to overwrite.
   static void addToDebugSectionsToOverwrite(const char *Section) {

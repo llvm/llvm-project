@@ -79,6 +79,7 @@ struct UnrollLoopOptions {
   const Instruction *Heart = nullptr;
   unsigned SCEVExpansionBudget;
   bool RuntimeUnrollMultiExit = false;
+  bool AddAdditionalAccumulators = false;
 };
 
 LLVM_ABI LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO,
@@ -96,7 +97,9 @@ LLVM_ABI bool UnrollRuntimeLoopRemainder(
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
-    Loop **ResultLoop = nullptr);
+    Loop **ResultLoop = nullptr,
+    std::optional<unsigned> OriginalTripCount = std::nullopt,
+    BranchProbability OriginalLoopProb = BranchProbability::getUnknown());
 
 LLVM_ABI LoopUnrollResult UnrollAndJamLoop(
     Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,
@@ -115,6 +118,21 @@ LLVM_ABI void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                       AAResults *AA = nullptr);
 
 LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
+
+// Returns the loop hint metadata node with the given name (for example,
+// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
+// returned.
+LLVM_ABI MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name);
+
+struct UnrollPragmaInfo {
+  UnrollPragmaInfo(const Loop *L);
+  const bool UserUnrollCount;
+  const bool PragmaFullUnroll;
+  const unsigned PragmaCount;
+  const bool PragmaEnableUnroll;
+  const bool PragmaRuntimeUnrollDisable;
+  const bool ExplicitUnroll;
+};
 
 LLVM_ABI TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
@@ -154,15 +172,19 @@ public:
                       unsigned CountOverwrite = 0) const;
 };
 
-LLVM_ABI bool computeUnrollCount(
-    Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
-    AssumptionCache *AC, ScalarEvolution &SE,
-    const SmallPtrSetImpl<const Value *> &EphValues,
-    OptimizationRemarkEmitter *ORE, unsigned TripCount, unsigned MaxTripCount,
-    bool MaxOrZero, unsigned TripMultiple, const UnrollCostEstimator &UCE,
-    TargetTransformInfo::UnrollingPreferences &UP,
-    TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound);
+LLVM_ABI void
+computeUnrollCount(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
+                   LoopInfo *LI, AssumptionCache *AC, ScalarEvolution &SE,
+                   const SmallPtrSetImpl<const Value *> &EphValues,
+                   OptimizationRemarkEmitter *ORE, unsigned TripCount,
+                   unsigned MaxTripCount, bool MaxOrZero, unsigned TripMultiple,
+                   const UnrollCostEstimator &UCE,
+                   TargetTransformInfo::UnrollingPreferences &UP,
+                   TargetTransformInfo::PeelingPreferences &PP);
 
+LLVM_ABI std::optional<RecurrenceDescriptor>
+canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
+                                     ScalarEvolution *SE);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_UNROLLLOOP_H

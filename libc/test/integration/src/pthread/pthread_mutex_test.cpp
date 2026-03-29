@@ -23,7 +23,7 @@ constexpr int MAX = 10000;
 pthread_mutex_t mutex;
 static int shared_int = START;
 
-void *counter(void *arg) {
+void *counter([[maybe_unused]] void *arg) {
   int last_count = START;
   while (true) {
     LIBC_NAMESPACE::pthread_mutex_lock(&mutex);
@@ -72,7 +72,7 @@ void relay_counter() {
 pthread_mutex_t start_lock, step_lock;
 bool started, step;
 
-void *stepper(void *arg) {
+void *stepper([[maybe_unused]] void *arg) {
   LIBC_NAMESPACE::pthread_mutex_lock(&start_lock);
   started = true;
   LIBC_NAMESPACE::pthread_mutex_unlock(&start_lock);

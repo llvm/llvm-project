@@ -128,7 +128,7 @@ private:
   /// ECValues, it just keeps the key as part of the value.
   DenseMap<ElemTy, ECValue *> TheMapping;
 
-  /// List of all members, used to provide a determinstic iteration order.
+  /// List of all members, used to provide a deterministic iteration order.
   SmallVector<const ECValue *> Members;
 
   mutable BumpPtrAllocator ECValueAllocator;
@@ -180,8 +180,8 @@ public:
   }
 
   /// Returns true if \p V is contained an equivalence class.
-  bool contains(const ElemTy &V) const {
-    return TheMapping.find(V) != TheMapping.end();
+  [[nodiscard]] bool contains(const ElemTy &V) const {
+    return TheMapping.contains(V);
   }
 
   /// getLeaderValue - Return the leader for the specified value that is in the
@@ -256,9 +256,11 @@ public:
       }
       if (!Next) {
         // If the current element is the last element(not leader), set the
-        // successor of the current element's predecessor to null, and set
-        // the 'Leader' field of the class leader to the predecessor element.
-        Pre->Next = nullptr;
+        // successor of the current element's predecessor to null while
+        // preserving the leader bit, and set the 'Leader' field of the class
+        // leader to the predecessor element.
+        Pre->Next = reinterpret_cast<const ECValue *>(
+            static_cast<intptr_t>(Pre->isLeader()));
         Leader->Leader = Pre;
       } else {
         // If the current element is in the middle of class, then simply
@@ -291,6 +293,23 @@ public:
   }
   member_iterator findLeader(const ECValue &ECV) const {
     return member_iterator(ECV.getLeader());
+  }
+
+  /// Erase the class containing \p V, i.e. erase all members of the class from
+  /// the set.
+  void eraseClass(const ElemTy &V) {
+    if (!TheMapping.contains(V))
+      return;
+    iterator_range<member_iterator> LeaderI = members(V);
+    for (member_iterator MI = LeaderI.begin(), ME = LeaderI.end(); MI != ME;) {
+      const ElemTy &ToErase = *MI;
+      ++MI;
+      const ECValue *Cur = TheMapping[ToErase];
+      TheMapping.erase(ToErase);
+      auto I = find(Members, Cur);
+      assert(I != Members.end() && "Can't find input in members!");
+      Members.erase(I);
+    }
   }
 
   /// union - Merge the two equivalence sets for the specified values, inserting

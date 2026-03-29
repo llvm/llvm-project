@@ -5,18 +5,22 @@ standards:
 merge_yaml_files:
   - stdlib-malloc.yaml
 macros:
-  - macro_name: NULL
+  - macro_name: "NULL"
     macro_header: null-macro.h
 types:
   - type_name: __atexithandler_t
   - type_name: __qsortcompare_t
   - type_name: __qsortrcompare_t
   - type_name: __search_compare_t
+  - type_name: constraint_handler_t
   - type_name: div_t
   - type_name: ldiv_t
   - type_name: lldiv_t
   - type_name: locale_t
+  - type_name: rsize_t
   - type_name: size_t
+  - type_name: wchar_t
+  - type_name: errno_t
 enums: []
 objects: []
 functions:
@@ -135,6 +139,22 @@ functions:
     arguments:
       - type: long long
       - type: long long
+  - name: mbstowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
+  - name: mbtowc
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
   - name: memalignment
     standards:
       - stdc
@@ -332,3 +352,18 @@ functions:
     return_type: int
     arguments:
       - type: const char *
+  - name: wctomb
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *
+      - type: wchar_t
+  - name: wcstombs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t

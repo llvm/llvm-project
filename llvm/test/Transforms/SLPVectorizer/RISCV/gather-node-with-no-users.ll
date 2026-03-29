@@ -9,8 +9,8 @@ define void @test(ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <8 x ptr> [[TMP1]], <8 x i64> <i64 222, i64 228, i64 276, i64 279, i64 282, i64 285, i64 288, i64 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <8 x ptr> [[TMP1]], <8 x i64> <i64 0, i64 345, i64 348, i64 351, i64 354, i64 357, i64 360, i64 363>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> [[TMP2]], i32 1, <8 x i1> splat (i1 true), <8 x i8> poison)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> [[TMP3]], i32 1, <8 x i1> splat (i1 true), <8 x i8> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 1 [[TMP2]], <8 x i1> splat (i1 true), <8 x i8> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 1 [[TMP3]], <8 x i1> splat (i1 true), <8 x i8> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i8> [[TMP5]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i8> [[TMP4]], <8 x i8> [[TMP5]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]

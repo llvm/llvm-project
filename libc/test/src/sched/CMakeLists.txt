@@ -14,6 +14,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -26,6 +27,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.sched.sched_yield
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -39,6 +41,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_get_priority_max
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -70,6 +73,7 @@ add_libc_unittest(
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_get_priority_max
     libc.src.unistd.getuid
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -87,6 +91,7 @@ add_libc_unittest(
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_rr_get_interval
     libc.src.unistd.getuid
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -104,5 +109,6 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sched.sched_getaffinity
     libc.src.sched.__sched_getcpucount
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

@@ -51,7 +51,7 @@ public:
     // Uses a 64-bit integer so we don't have to worry about the unlikely case
     // of overflowing a 32-bit counter.
     using ValTy = uint64_t;
-    static constexpr const ValTy InvalidVal = 0;
+    static constexpr ValTy InvalidVal = 0;
 
   private:
     // Default initialization results in an invalid ID.
@@ -178,8 +178,10 @@ protected:
   friend ExtractValueInst; // For createExtractValueInst()
   LLVM_ABI InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
   friend InsertValueInst; // For createInsertValueInst()
-  LLVM_ABI BranchInst *createBranchInst(llvm::BranchInst *I);
-  friend BranchInst; // For createBranchInst()
+  LLVM_ABI UncondBrInst *createUncondBrInst(llvm::UncondBrInst *UBI);
+  friend UncondBrInst; // For createUncondBrInst()
+  LLVM_ABI CondBrInst *createCondBrInst(llvm::CondBrInst *CBI);
+  friend CondBrInst; // For createCondBrInst()
   LLVM_ABI LoadInst *createLoadInst(llvm::LoadInst *LI);
   friend LoadInst; // For createLoadInst()
   LLVM_ABI StoreInst *createStoreInst(llvm::StoreInst *SI);

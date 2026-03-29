@@ -18,7 +18,6 @@ include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/SubsetOpInterface.td"
-include "mlir/Interfaces/CopyOpInterface.td"
 
 class Bufferization_Op<string mnemonic, list<Trait> traits = []>
     : Op<Bufferization_Dialect, mnemonic, traits>;
@@ -29,7 +28,8 @@ class Bufferization_Op<string mnemonic, list<Trait> traits = []>
 
 def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     [AttrSizedOperandSegments, BufferizableOpInterface,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+       "reifyResultShapes"]>]> {
   let summary = "allocate buffer for a tensor";
 
   let description = [{
@@ -171,7 +171,6 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 //===----------------------------------------------------------------------===//
 
 def Bufferization_CloneOp : Bufferization_Op<"clone", [
-    CopyOpInterface,
     MemoryEffectsOpInterface,
     DeclareOpInterfaceMethods<AllocationOpInterface, ["buildDealloc", "buildClone"]>
   ]> {
@@ -221,7 +220,8 @@ def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
         [AllElementTypesMatch<["source", "dest"]>,
          BufferizableOpInterface, DestinationStyleOpInterface,
-         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+           "reifyResultShapes"]>,
          DeclareOpInterfaceMethods<SubsetOpInterface,
             ["operatesOnEquivalentSubset", "operatesOnDisjointSubset"]>,
          DeclareOpInterfaceMethods<SubsetInsertionOpInterface,

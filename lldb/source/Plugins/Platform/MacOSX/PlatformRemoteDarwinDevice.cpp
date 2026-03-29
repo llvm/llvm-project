@@ -53,7 +53,7 @@ void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {
   if (sdk_directory)
     strm.Printf("  SDK Path: \"%s\"\n", sdk_directory);
   else
-    strm.PutCString("  SDK Path: error: unable to locate SDK\n");
+    strm.PutCString("  SDK Path: <unable to locate SDK>\n");
 
   const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
   for (uint32_t i = 0; i < num_sdk_infos; ++i) {
@@ -111,10 +111,8 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       local_file.SetFile(resolved_path, FileSpec::Style::native);
       FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file)) {
-        if (log) {
-          LLDB_LOGF(log, "Found a copy of %s in the DeviceSupport dir %s",
-                    platform_file_path, os_version_dir);
-        }
+        LLDB_LOGF(log, "Found a copy of %s in the DeviceSupport dir %s",
+                  platform_file_path, os_version_dir);
         return error;
       }
 
@@ -158,7 +156,6 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
 
 Status PlatformRemoteDarwinDevice::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   // For iOS, the SDK files are all cached locally on the host system. So first
   // we ask for the file in the cached SDK, then we attempt to get a shared
@@ -180,12 +177,12 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     // directory using the OS build.
     const uint32_t connected_sdk_idx = GetConnectedSDKIndex();
     if (connected_sdk_idx < num_sdk_infos) {
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
-                m_sdk_directory_infos[connected_sdk_idx].directory);
+      LLDB_LOG_VERBOSE(log, "Searching for {0} in sdk path {1}", platform_file,
+                       m_sdk_directory_infos[connected_sdk_idx].directory);
       if (GetFileInSDK(platform_file_path, connected_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
+        error = ResolveExecutable(platform_module_spec, module_sp);
         if (module_sp) {
           m_last_module_sdk_idx = connected_sdk_idx;
           error.Clear();
@@ -197,12 +194,12 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
     // Try the last SDK index if it is set as most files from an SDK will tend
     // to be valid in that same SDK.
     if (m_last_module_sdk_idx < num_sdk_infos) {
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
-                m_sdk_directory_infos[m_last_module_sdk_idx].directory);
+      LLDB_LOG_VERBOSE(log, "Searching for {0} in sdk path {1}", platform_file,
+                       m_sdk_directory_infos[m_last_module_sdk_idx].directory);
       if (GetFileInSDK(platform_file_path, m_last_module_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
+        error = ResolveExecutable(platform_module_spec, module_sp);
         if (module_sp) {
           error.Clear();
           return error;
@@ -219,12 +216,12 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
         GetSDKIndexBySDKDirectoryInfo(current_sdk_info);
     if (current_sdk_idx < num_sdk_infos &&
         current_sdk_idx != m_last_module_sdk_idx) {
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
-                m_sdk_directory_infos[current_sdk_idx].directory);
+      LLDB_LOG_VERBOSE(log, "Searching for {0} in sdk path {1}", platform_file,
+                       m_sdk_directory_infos[current_sdk_idx].directory);
       if (GetFileInSDK(platform_file_path, current_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
+        error = ResolveExecutable(platform_module_spec, module_sp);
         if (module_sp) {
           m_last_module_sdk_idx = current_sdk_idx;
           error.Clear();
@@ -239,13 +236,13 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
         // Skip the last module SDK index if we already searched it above
         continue;
       }
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
-                m_sdk_directory_infos[sdk_idx].directory);
+      LLDB_LOG_VERBOSE(log, "Searching for {0} in sdk path {1}", platform_file,
+                       m_sdk_directory_infos[sdk_idx].directory);
       if (GetFileInSDK(platform_file_path, sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         // printf ("sdk[%u]: '%s'\n", sdk_idx, local_file.GetPath().c_str());
 
-        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
+        error = ResolveExecutable(platform_module_spec, module_sp);
         if (module_sp) {
           // Remember the index of the last SDK that we found a file in in case
           // the wrong SDK was selected.
@@ -261,9 +258,8 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
 
   // This may not be an SDK-related module.  Try whether we can bring in the
   // thing to our local cache.
-  error = GetSharedModuleWithLocalCache(module_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
-                                        did_create_ptr);
+  error = GetSharedModuleWithLocalCache(module_spec, module_sp, old_modules,
+                                        did_create_ptr, process);
   if (error.Success())
     return error;
 
@@ -271,16 +267,13 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   // directories.
   if (!module_sp)
     error = PlatformDarwin::FindBundleBinaryInExecSearchPaths(
-        module_spec, process, module_sp, module_search_paths_ptr, old_modules,
-        did_create_ptr);
+        module_spec, process, module_sp, old_modules, did_create_ptr);
 
   if (error.Success())
     return error;
 
-  const bool always_create = false;
-  error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                      module_search_paths_ptr, old_modules,
-                                      did_create_ptr, always_create);
+  error = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
+                                      did_create_ptr);
 
   if (module_sp)
     module_sp->SetPlatformFileSpec(platform_file);

@@ -17,11 +17,14 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 #include <cstdint>
+#include <numeric>
 
 using namespace mlir;
 
@@ -97,6 +100,78 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   return resultTy;
 }
 
+static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
+                                           OpBuilder &builder) {
+  assert(isMemRefTypeLegalForEmitC(memrefType) &&
+         "incompatible memref type for EmitC conversion");
+  emitc::CallOpaqueOp elementSize = emitc::CallOpaqueOp::create(
+      builder, loc, emitc::SizeTType::get(builder.getContext()),
+      builder.getStringAttr("sizeof"), ValueRange{},
+      ArrayAttr::get(builder.getContext(),
+                     {TypeAttr::get(memrefType.getElementType())}));
+
+  IndexType indexType = builder.getIndexType();
+  int64_t numElements = llvm::product_of(memrefType.getShape());
+  emitc::ConstantOp numElementsValue = emitc::ConstantOp::create(
+      builder, loc, indexType, builder.getIndexAttr(numElements));
+
+  Type sizeTType = emitc::SizeTType::get(builder.getContext());
+  emitc::MulOp totalSizeBytes = emitc::MulOp::create(
+      builder, loc, sizeTType, elementSize.getResult(0), numElementsValue);
+
+  return totalSizeBytes.getResult();
+}
+
+static emitc::AddressOfOp
+createPointerFromEmitcArray(Location loc, OpBuilder &builder,
+                            TypedValue<emitc::ArrayType> arrayValue) {
+
+  emitc::ConstantOp zeroIndex = emitc::ConstantOp::create(
+      builder, loc, builder.getIndexType(), builder.getIndexAttr(0));
+
+  emitc::ArrayType arrayType = arrayValue.getType();
+  llvm::SmallVector<mlir::Value> indices(arrayType.getRank(), zeroIndex);
+  emitc::SubscriptOp subPtr =
+      emitc::SubscriptOp::create(builder, loc, arrayValue, ValueRange(indices));
+  emitc::AddressOfOp ptr = emitc::AddressOfOp::create(
+      builder, loc, emitc::PointerType::get(arrayType.getElementType()),
+      subPtr);
+
+  return ptr;
+}
+
+// If `v` is defined through an unrealized cast and the source of that cast
+// is `emitc.ptr`, return the pointer.
+static Value stripPointerUnrealizedCast(Value v) {
+  if (auto cast = v.getDefiningOp<UnrealizedConversionCastOp>())
+    if (cast.getNumOperands() == 1 &&
+        isa<emitc::PointerType>(cast.getOperand(0).getType()))
+      return cast.getOperand(0);
+  return Value();
+}
+
+static Value computeRowMajorLinearIndex(ImplicitLocOpBuilder &builder,
+                                        MemRefType memrefType,
+                                        ValueRange indices) {
+  ArrayRef<int64_t> shape = memrefType.getShape();
+
+  Type idxType =
+      indices.empty() ? builder.getIndexType() : indices[0].getType();
+
+  Value linearIndex =
+      indices.empty()
+          ? emitc::ConstantOp::create(builder, idxType, builder.getIndexAttr(0))
+          : indices[0];
+
+  for (auto [dim, idx] : llvm::zip(shape.drop_front(), indices.drop_front())) {
+    Value dimSize =
+        emitc::ConstantOp::create(builder, idxType, builder.getIndexAttr(dim));
+    linearIndex = emitc::MulOp::create(builder, idxType, linearIndex, dimSize);
+    linearIndex = emitc::AddOp::create(builder, idxType, linearIndex, idx);
+  }
+  return linearIndex;
+}
+
 struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -112,19 +187,21 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     Type sizeTType = emitc::SizeTType::get(rewriter.getContext());
     Type elementType = memrefType.getElementType();
     IndexType indexType = rewriter.getIndexType();
-    emitc::CallOpaqueOp sizeofElementOp = rewriter.create<emitc::CallOpaqueOp>(
-        loc, sizeTType, rewriter.getStringAttr("sizeof"), ValueRange{},
+    emitc::CallOpaqueOp sizeofElementOp = emitc::CallOpaqueOp::create(
+        rewriter, loc, sizeTType, rewriter.getStringAttr("sizeof"),
+        ValueRange{},
         ArrayAttr::get(rewriter.getContext(), {TypeAttr::get(elementType)}));
 
     int64_t numElements = 1;
     for (int64_t dimSize : memrefType.getShape()) {
       numElements *= dimSize;
     }
-    Value numElementsValue = rewriter.create<emitc::ConstantOp>(
-        loc, indexType, rewriter.getIndexAttr(numElements));
+    Value numElementsValue = emitc::ConstantOp::create(
+        rewriter, loc, indexType, rewriter.getIndexAttr(numElements));
 
-    Value totalSizeBytes = rewriter.create<emitc::MulOp>(
-        loc, sizeTType, sizeofElementOp.getResult(0), numElementsValue);
+    Value totalSizeBytes =
+        emitc::MulOp::create(rewriter, loc, sizeTType,
+                             sizeofElementOp.getResult(0), numElementsValue);
 
     emitc::CallOpaqueOp allocCall;
     StringAttr allocFunctionName;
@@ -132,8 +209,8 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     SmallVector<Value, 2> argsVec;
     if (allocOp.getAlignment()) {
       allocFunctionName = rewriter.getStringAttr(alignedAllocFunctionName);
-      alignmentValue = rewriter.create<emitc::ConstantOp>(
-          loc, sizeTType,
+      alignmentValue = emitc::ConstantOp::create(
+          rewriter, loc, sizeTType,
           rewriter.getIntegerAttr(indexType,
                                   allocOp.getAlignment().value_or(0)));
       argsVec.push_back(alignmentValue);
@@ -144,17 +221,58 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     argsVec.push_back(totalSizeBytes);
     ValueRange args(argsVec);
 
-    allocCall = rewriter.create<emitc::CallOpaqueOp>(
-        loc,
+    allocCall = emitc::CallOpaqueOp::create(
+        rewriter, loc,
         emitc::PointerType::get(
             emitc::OpaqueType::get(rewriter.getContext(), "void")),
         allocFunctionName, args);
 
     emitc::PointerType targetPointerType = emitc::PointerType::get(elementType);
-    emitc::CastOp castOp = rewriter.create<emitc::CastOp>(
-        loc, targetPointerType, allocCall.getResult(0));
+    emitc::CastOp castOp = emitc::CastOp::create(
+        rewriter, loc, targetPointerType, allocCall.getResult(0));
 
     rewriter.replaceOp(allocOp, castOp);
+    return success();
+  }
+};
+
+struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp copyOp, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = copyOp.getLoc();
+    MemRefType srcMemrefType = cast<MemRefType>(copyOp.getSource().getType());
+    MemRefType targetMemrefType =
+        cast<MemRefType>(copyOp.getTarget().getType());
+
+    if (!isMemRefTypeLegalForEmitC(srcMemrefType))
+      return rewriter.notifyMatchFailure(
+          loc, "incompatible source memref type for EmitC conversion");
+
+    if (!isMemRefTypeLegalForEmitC(targetMemrefType))
+      return rewriter.notifyMatchFailure(
+          loc, "incompatible target memref type for EmitC conversion");
+
+    auto srcArrayValue =
+        cast<TypedValue<emitc::ArrayType>>(operands.getSource());
+    emitc::AddressOfOp srcPtr =
+        createPointerFromEmitcArray(loc, rewriter, srcArrayValue);
+
+    auto targetArrayValue =
+        cast<TypedValue<emitc::ArrayType>>(operands.getTarget());
+    emitc::AddressOfOp targetPtr =
+        createPointerFromEmitcArray(loc, rewriter, targetArrayValue);
+
+    emitc::CallOpaqueOp memCpyCall = emitc::CallOpaqueOp::create(
+        rewriter, loc, TypeRange{}, "memcpy",
+        ValueRange{
+            targetPtr.getResult(), srcPtr.getResult(),
+            calculateMemrefTotalSizeBytes(loc, srcMemrefType, rewriter)});
+
+    rewriter.replaceOp(copyOp, memCpyCall.getResults());
+
     return success();
   }
 };
@@ -192,15 +310,19 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
           op.getLoc(),
           "only public and private visibility is currently supported");
     }
-    // We are explicit in specifing the linkage because the default linkage
+    // We are explicit in specifying the linkage because the default linkage
     // for constants is different in C and C++.
     bool staticSpecifier = visibility == SymbolTable::Visibility::Private;
     bool externSpecifier = !staticSpecifier;
 
     Attribute initialValue = operands.getInitialValueAttr();
     if (opTy.getRank() == 0) {
-      auto elementsAttr = llvm::cast<ElementsAttr>(*op.getInitialValue());
-      initialValue = elementsAttr.getSplatValue<Attribute>();
+      // special case for `variable : memref<i32> = dense<-1>`
+      if (std::optional<Attribute> initValueAttr = op.getInitialValue()) {
+        if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(*initValueAttr)) {
+          initialValue = elementsAttr.getSplatValue<Attribute>();
+        }
+      }
     }
     if (isa_and_present<UnitAttr>(initialValue))
       initialValue = {};
@@ -233,8 +355,8 @@ struct ConvertGetGlobal final
       emitc::GetGlobalOp globalLValue = emitc::GetGlobalOp::create(
           rewriter, op.getLoc(), lvalueType, operands.getNameAttr());
       emitc::PointerType pointerType = emitc::PointerType::get(resultTy);
-      rewriter.replaceOpWithNewOp<emitc::ApplyOp>(
-          op, pointerType, rewriter.getStringAttr("&"), globalLValue);
+      rewriter.replaceOpWithNewOp<emitc::AddressOfOp>(op, pointerType,
+                                                      globalLValue);
       return success();
     }
     rewriter.replaceOpWithNewOp<emitc::GetGlobalOp>(op, resultTy,
@@ -249,20 +371,33 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-
+    Location loc = op.getLoc();
     auto resultTy = getTypeConverter()->convertType(op.getType());
     if (!resultTy) {
-      return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
+      return rewriter.notifyMatchFailure(loc, "cannot convert type");
     }
 
     auto arrayValue =
         dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    if (!arrayValue) {
-      return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
+    Value strippedPtr = stripPointerUnrealizedCast(operands.getMemref());
+    if (!strippedPtr && arrayValue) {
+      auto subscript = emitc::SubscriptOp::create(rewriter, loc, arrayValue,
+                                                  operands.getIndices());
+
+      rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
+      return success();
     }
 
-    auto subscript = emitc::SubscriptOp::create(
-        rewriter, op.getLoc(), arrayValue, operands.getIndices());
+    if (!strippedPtr)
+      return rewriter.notifyMatchFailure(loc, "expected array or pointer type");
+    MemRefType opMemrefType = cast<MemRefType>(op.getMemref().getType());
+    ValueRange indices = operands.getIndices();
+
+    ImplicitLocOpBuilder b(loc, rewriter);
+    Value linearIndex = computeRowMajorLinearIndex(b, opMemrefType, indices);
+    auto typedPtr = cast<TypedValue<emitc::PointerType>>(strippedPtr);
+    auto subscript =
+        emitc::SubscriptOp::create(rewriter, loc, typedPtr, linearIndex);
 
     rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
     return success();
@@ -275,19 +410,35 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
     auto arrayValue =
         dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    if (!arrayValue) {
-      return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
+    Value strippedPtr = stripPointerUnrealizedCast(operands.getMemref());
+    if (!strippedPtr && arrayValue) {
+      auto subscript = emitc::SubscriptOp::create(rewriter, loc, arrayValue,
+                                                  operands.getIndices());
+      rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
+                                                   operands.getValue());
+      return success();
     }
 
-    auto subscript = emitc::SubscriptOp::create(
-        rewriter, op.getLoc(), arrayValue, operands.getIndices());
+    if (!strippedPtr)
+      return rewriter.notifyMatchFailure(loc, "expected array or pointer type");
+    MemRefType opMemrefType = cast<MemRefType>(op.getMemref().getType());
+    ValueRange indices = operands.getIndices();
+
+    ImplicitLocOpBuilder b(loc, rewriter);
+    Value linearIndex = computeRowMajorLinearIndex(b, opMemrefType, indices);
+    auto typedPtr = cast<TypedValue<emitc::PointerType>>(strippedPtr);
+    auto subscript =
+        emitc::SubscriptOp::create(rewriter, loc, typedPtr, linearIndex);
+
     rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
                                                  operands.getValue());
     return success();
   }
 };
+
 } // namespace
 
 void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
@@ -320,6 +471,7 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertAlloc, ConvertGlobal, ConvertGetGlobal,
-               ConvertLoad, ConvertStore>(converter, patterns.getContext());
+  patterns.add<ConvertAlloca, ConvertAlloc, ConvertCopy, ConvertGlobal,
+               ConvertGetGlobal, ConvertLoad, ConvertStore>(
+      converter, patterns.getContext());
 }

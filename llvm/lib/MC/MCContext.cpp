@@ -42,7 +42,6 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -204,33 +203,12 @@ MCInst *MCContext::createMCInst() {
 MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
-  if (NameRef.contains('\\')) {
-    NameSV = NameRef;
-    size_t S = 0;
-    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
-    // other characters following \\, which we do not implement due to code
-    // structure.
-    for (size_t I = 0, E = NameSV.size(); I != E; ++I) {
-      char C = NameSV[I];
-      if (C == '\\' && I + 1 != E) {
-        switch (NameSV[I + 1]) {
-        case '"':
-        case '\\':
-          C = NameSV[++I];
-          break;
-        }
-      }
-      NameSV[S++] = C;
-    }
-    NameSV.resize(S);
-    NameRef = NameSV;
-  }
 
   assert(!NameRef.empty() && "Normal symbols cannot be unnamed!");
 
   MCSymbolTableEntry &Entry = getSymbolTableEntry(NameRef);
   if (!Entry.second.Symbol) {
-    bool IsRenamable = NameRef.starts_with(MAI->getPrivateGlobalPrefix());
+    bool IsRenamable = NameRef.starts_with(MAI->getInternalSymbolPrefix());
     bool IsTemporary = IsRenamable && !SaveTempLabels;
     if (!Entry.second.Used) {
       Entry.second.Used = true;
@@ -245,19 +223,47 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   return Entry.second.Symbol;
 }
 
+MCSymbol *MCContext::parseSymbol(const Twine &Name) {
+  SmallString<128> SV;
+  StringRef NameRef = Name.toStringRef(SV);
+  if (NameRef.contains('\\')) {
+    SV = NameRef;
+    size_t S = 0;
+    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
+    // other characters following \\, which we do not implement due to code
+    // structure.
+    for (size_t I = 0, E = SV.size(); I != E; ++I) {
+      char C = SV[I];
+      if (C == '\\' && I + 1 != E) {
+        switch (SV[I + 1]) {
+        case '"':
+        case '\\':
+          C = SV[++I];
+          break;
+        }
+      }
+      SV[S++] = C;
+    }
+    SV.resize(S);
+    NameRef = SV;
+  }
+
+  return getOrCreateSymbol(NameRef);
+}
+
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,
                                                  unsigned Idx) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + FuncName +
+  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + FuncName +
                            "$frame_escape_" + Twine(Idx));
 }
 
 MCSymbol *MCContext::getOrCreateParentFrameOffsetSymbol(const Twine &FuncName) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + FuncName +
+  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + FuncName +
                            "$parent_frame_offset");
 }
 
 MCSymbol *MCContext::getOrCreateLSDASymbol(const Twine &FuncName) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + "__ehtable$" +
+  return getOrCreateSymbol(MAI->getInternalSymbolPrefix() + "__ehtable$" +
                            FuncName);
 }
 
@@ -327,7 +333,6 @@ MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
 
   // Ensure the original symbol is not emitted to the symbol table.
   Sym.IsTemporary = true;
-  Sym.setExternal(false);
   return NewSym;
 }
 
@@ -355,12 +360,12 @@ MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
 MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
   if (!UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, /*IsTemporary=*/true);
-  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name,
+  return createRenamableSymbol(MAI->getInternalSymbolPrefix() + Name,
                                AlwaysAddSuffix, /*IsTemporary=*/true);
 }
 
 MCSymbol *MCContext::createNamedTempSymbol(const Twine &Name) {
-  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name, true,
+  return createRenamableSymbol(MAI->getInternalSymbolPrefix() + Name, true,
                                /*IsTemporary=*/!SaveTempLabels);
 }
 
@@ -439,8 +444,12 @@ Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
   auto &SymEntry = getSymbolTableEntry(Section);
   MCSymbol *Sym = SymEntry.second.Symbol;
   if (Sym && Sym->isDefined() &&
-      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym))
+      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym)) {
     reportError(SMLoc(), "invalid symbol redefinition");
+    // Don't reuse the conflicting symbol (e.g. an equated symbol from `x=0`)
+    // as a section symbol, which would cause a crash in changeSection.
+    Sym = nullptr;
+  }
   // Use the symbol's index to track if it has been used as a section symbol.
   // Set to -1 to catch potential bugs if misused as a symbol index.
   if (Sym && Sym->getIndex() != -1u) {

@@ -69,7 +69,7 @@ public:
 /// Pattern to convert a kernel function in GPU dialect within a spirv.module.
 class GPUFuncOpConversion final : public OpConversionPattern<gpu::GPUFuncOp> {
 public:
-  using OpConversionPattern<gpu::GPUFuncOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp funcOp, OpAdaptor adaptor,
@@ -82,7 +82,7 @@ private:
 /// Pattern to convert a gpu.module to a spirv.module.
 class GPUModuleConversion final : public OpConversionPattern<gpu::GPUModuleOp> {
 public:
-  using OpConversionPattern<gpu::GPUModuleOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::GPUModuleOp moduleOp, OpAdaptor adaptor,
@@ -93,7 +93,7 @@ public:
 // TODO: This can go to DRR when GPU return has operands.
 class GPUReturnOpConversion final : public OpConversionPattern<gpu::ReturnOp> {
 public:
-  using OpConversionPattern<gpu::ReturnOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::ReturnOp returnOp, OpAdaptor adaptor,
@@ -103,7 +103,7 @@ public:
 /// Pattern to convert a gpu.barrier op into a spirv.ControlBarrier op.
 class GPUBarrierConversion final : public OpConversionPattern<gpu::BarrierOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::BarrierOp barrierOp, OpAdaptor adaptor,
@@ -113,7 +113,7 @@ public:
 /// Pattern to convert a gpu.shuffle op into a spirv.GroupNonUniformShuffle op.
 class GPUShuffleConversion final : public OpConversionPattern<gpu::ShuffleOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
@@ -123,16 +123,37 @@ public:
 /// Pattern to convert a gpu.rotate op into a spirv.GroupNonUniformRotateKHROp.
 class GPURotateConversion final : public OpConversionPattern<gpu::RotateOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::RotateOp rotateOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Pattern to convert a gpu.subgroup_broadcast op into a
+/// spirv.GroupNonUniformBroadcast op.
+class GPUSubgroupBroadcastConversion final
+    : public OpConversionPattern<gpu::SubgroupBroadcastOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+class GPUBallotConversion final : public OpConversionPattern<gpu::BallotOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(gpu::BallotOp ballotOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 class GPUPrintfConversion final : public OpConversionPattern<gpu::PrintfOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
@@ -543,6 +564,76 @@ LogicalResult GPURotateConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// Subgroup broadcast
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUSubgroupBroadcastConversion::matchAndRewrite(
+    gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  Value result;
+
+  switch (op.getBroadcastType()) {
+  case gpu::BroadcastType::specific_lane:
+    result = spirv::GroupNonUniformBroadcastOp::create(
+        rewriter, loc, scope, adaptor.getSrc(), adaptor.getLane());
+    break;
+  case gpu::BroadcastType::first_active_lane:
+    result = spirv::GroupNonUniformBroadcastFirstOp::create(
+        rewriter, loc, scope, adaptor.getSrc());
+    break;
+  }
+
+  rewriter.replaceOp(op, result);
+  return success();
+}
+
+LogicalResult GPUBallotConversion::matchAndRewrite(
+    gpu::BallotOp ballotOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = ballotOp.getLoc();
+  auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  auto int32Type = rewriter.getI32Type();
+  auto vec4i32Type = VectorType::get({4}, int32Type);
+
+  // SPIR-V ballot returns vector<4xi32> to support subgroups up to 128 lanes.
+  Value ballot = spirv::GroupNonUniformBallotOp::create(
+      rewriter, loc, vec4i32Type, scope, adaptor.getPredicate());
+
+  auto intType = cast<IntegerType>(ballotOp.getType());
+  unsigned width = intType.getWidth();
+
+  if (width == 32) {
+    Value result =
+        spirv::CompositeExtractOp::create(rewriter, loc, ballot, {0});
+    rewriter.replaceOp(ballotOp, result);
+  } else if (width == 64) {
+    // Combine first two vector elements: low 32 bits + (high 32 bits << 32).
+    Value low = spirv::CompositeExtractOp::create(rewriter, loc, ballot, {0});
+    Value high = spirv::CompositeExtractOp::create(rewriter, loc, ballot, {1});
+
+    auto int64Type = rewriter.getI64Type();
+    Value lowExt = spirv::UConvertOp::create(rewriter, loc, int64Type, low);
+    Value highExt = spirv::UConvertOp::create(rewriter, loc, int64Type, high);
+
+    Value shift32 = spirv::ConstantOp::create(
+        rewriter, loc, int64Type, rewriter.getIntegerAttr(int64Type, 32));
+    Value highShifted =
+        spirv::ShiftLeftLogicalOp::create(rewriter, loc, highExt, shift32);
+
+    Value result =
+        spirv::BitwiseOrOp::create(rewriter, loc, lowExt, highShifted);
+    rewriter.replaceOp(ballotOp, result);
+  } else {
+    return rewriter.notifyMatchFailure(
+        ballotOp, "only i32 and i64 result types are supported for SPIR-V");
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Group ops
 //===----------------------------------------------------------------------===//
 
@@ -653,7 +744,7 @@ createGroupReduceOp(OpBuilder &builder, Location loc, Value arg,
 class GPUAllReduceConversion final
     : public OpConversionPattern<gpu::AllReduceOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::AllReduceOp op, OpAdaptor adaptor,
@@ -680,7 +771,7 @@ public:
 class GPUSubgroupReduceConversion final
     : public OpConversionPattern<gpu::SubgroupReduceOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,
@@ -830,8 +921,9 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
 void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
-      GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
-      GPUReturnOpConversion, GPUShuffleConversion, GPURotateConversion,
+      GPUBarrierConversion, GPUBallotConversion, GPUFuncOpConversion,
+      GPUModuleConversion, GPUReturnOpConversion, GPUShuffleConversion,
+      GPURotateConversion, GPUSubgroupBroadcastConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,

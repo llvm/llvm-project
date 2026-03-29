@@ -147,6 +147,45 @@ transform::ForallToParallelOp::apply(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// ParallelForToNestedForOps
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::ParallelForToNestedForOps::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  auto payload = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(payload))
+    return emitSilenceableError() << "expected a single payload op";
+
+  auto target = dyn_cast<scf::ParallelOp>(*payload.begin());
+  if (!target) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "expected the payload to be scf.parallel";
+    diag.attachNote((*payload.begin())->getLoc()) << "payload op";
+    return diag;
+  }
+
+  if (getNumResults() != 1) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "op expects one result, given "
+                                       << getNumResults();
+    diag.attachNote(target.getLoc()) << "payload op";
+    return diag;
+  }
+
+  FailureOr<scf::LoopNest> loopNest =
+      scf::parallelForToNestedFors(rewriter, target);
+  if (failed(loopNest)) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "failed to convert parallel into nested fors";
+    return diag;
+  }
+
+  results.set(cast<OpResult>(getTransformed()[0]), {loopNest->loops.front()});
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOutlineOp
 //===----------------------------------------------------------------------===//
 
@@ -408,6 +447,52 @@ transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
                                        << "failed to coalesce";
     return diag;
   }
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopCoalesceNestedOp
+//===----------------------------------------------------------------------===//
+DiagnosedSilenceableFailure transform::LoopCoalesceNestedOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *op,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  auto forOp = dyn_cast<scf::ForOp>(op);
+  if (!forOp) {
+    return emitSilenceableError() << "expected scf.for operation";
+  }
+
+  // Collect nested loops (including imperfectly nested ones)
+  SmallVector<scf::ForOp> nestedLoops;
+  scf::ForOp currentLoop = forOp;
+
+  while (currentLoop) {
+    nestedLoops.push_back(currentLoop);
+    Block &body = currentLoop.getRegion().front();
+
+    // Look for the next nested loop
+    scf::ForOp nextLoop = nullptr;
+    for (Operation &bodyOp : body) {
+      if (auto innerFor = dyn_cast<scf::ForOp>(&bodyOp)) {
+        nextLoop = innerFor;
+        break;
+      }
+    }
+
+    currentLoop = nextLoop;
+  }
+
+  // Need at least 2 loops to coalesce
+  if (nestedLoops.size() < 2) {
+    return emitSilenceableError() << "need at least 2 nested loops to coalesce";
+  }
+
+  // Call coalesceLoops directly
+  if (failed(coalesceLoops(rewriter, nestedLoops))) {
+    return emitSilenceableError() << "failed to coalesce nested loops";
+  }
+
+  results.push_back(nestedLoops.front());
   return DiagnosedSilenceableFailure::success();
 }
 

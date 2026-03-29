@@ -7,7 +7,6 @@ define <4 x i32> @masked_load_v4i32(ptr %a, <4 x i1> %mask) nounwind {
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -23,7 +22,6 @@ define void @masked_store_v4i32(<4 x i32> %x, ptr %a, <4 x i1> %mask) nounwind {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    stnt1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -65,6 +63,26 @@ define void @masked_store_nxv4i32(<vscale x 4 x i32> %x, ptr %a, <vscale x 4 x i
 ; CHECK-NEXT:    stnt1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %x, ptr %a, i32 1, <vscale x 4 x i1> %mask), !nontemporal !0
+  ret void
+}
+
+define <vscale x 4 x i32> @all_active_load_nxv4i32(ptr %a) nounwind {
+; CHECK-LABEL: all_active_load_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %a, i32 1, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison), !nontemporal !0
+  ret <vscale x 4 x i32> %load
+}
+
+define void @all_active_store_nxv4i32(<vscale x 4 x i32> %x, ptr %a) nounwind {
+; CHECK-LABEL: all_active_store_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    stnt1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %x, ptr %a, i32 1, <vscale x 4 x i1> splat (i1 true)), !nontemporal !0
   ret void
 }
 

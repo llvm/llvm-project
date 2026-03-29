@@ -19,7 +19,7 @@
 __attribute__((visibility("hidden"))) void *__dso_handle = &__dso_handle;
 
 #ifdef EH_USE_FRAME_REGISTRY
-__extension__ static void *__EH_FRAME_LIST__[]
+__extension__ static void *const __EH_FRAME_LIST__[]
     __attribute__((section(".eh_frame"), aligned(sizeof(void *)))) = {};
 
 extern void __register_frame_info(const void *, void *) __attribute__((weak));
@@ -55,17 +55,9 @@ static void __attribute__((used)) __do_init(void) {
 
 #ifdef CRT_HAS_INITFINI_ARRAY
 # if __has_feature(ptrauth_init_fini)
-// TODO: use __ptrauth-qualified pointers when they are supported on clang side
-#  if __has_feature(ptrauth_init_fini_address_discrimination)
-__attribute__((section(".init_array"), used)) static void *__init =
-    ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
-                          ptrauth_blend_discriminator(
-                              &__init, __ptrauth_init_fini_discriminator));
-#  else
-__attribute__((section(".init_array"), used)) static void *__init =
-    ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
-                          __ptrauth_init_fini_discriminator);
-#  endif
+__attribute__((section(".init_array"),
+               used)) static void *__ptrauth_init_fini_pointer __init =
+    __do_init;
 # elif __has_feature(ptrauth_calls)
 #  ifdef __aarch64__
 // If ptrauth_init_fini feature is not present, compiler emits raw unsigned
@@ -137,17 +129,9 @@ static void __attribute__((used)) __do_fini(void) {
 
 #ifdef CRT_HAS_INITFINI_ARRAY
 # if __has_feature(ptrauth_init_fini)
-// TODO: use __ptrauth-qualified pointers when they are supported on clang side
-#  if __has_feature(ptrauth_init_fini_address_discrimination)
-__attribute__((section(".fini_array"), used)) static void *__fini =
-    ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
-                          ptrauth_blend_discriminator(
-                              &__fini, __ptrauth_init_fini_discriminator));
-#  else
-__attribute__((section(".fini_array"), used)) static void *__fini =
-    ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
-                          __ptrauth_init_fini_discriminator);
-#  endif
+__attribute__((section(".fini_array"),
+               used)) static void *__ptrauth_init_fini_pointer __fini =
+    __do_fini;
 # elif __has_feature(ptrauth_calls)
 #  ifdef __aarch64__
 // If ptrauth_init_fini feature is not present, compiler emits raw unsigned

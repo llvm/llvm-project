@@ -504,6 +504,14 @@ public:
                      unsigned extraCursorVal = 0)
       : SparseIterator(kind, *wrap, extraCursorVal), wrap(std::move(wrap)) {}
 
+  void setSparseEmitStrategy(SparseEmitStrategy strategy) override {
+    wrap->setSparseEmitStrategy(strategy);
+  }
+
+  SparseEmitStrategy getSparseEmitStrategy() const override {
+    return wrap->getSparseEmitStrategy();
+  }
+
   SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
     return wrap->getCursorValTypes(b);
   }
@@ -979,7 +987,7 @@ public:
 
 void SparseIterator::genInit(OpBuilder &b, Location l,
                              const SparseIterator *p) {
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     Operation *begin = b.create(l, b.getStringAttr(prefix + ".begin"), {},
                                 getCursorValTypes(b));
@@ -994,7 +1002,7 @@ void SparseIterator::genInit(OpBuilder &b, Location l,
 }
 
 Value SparseIterator::genNotEnd(OpBuilder &b, Location l) {
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     Operation *notEnd = b.create(l, b.getStringAttr(prefix + ".not_end"),
                                  getCursor(), b.getI1Type());
@@ -1005,7 +1013,7 @@ Value SparseIterator::genNotEnd(OpBuilder &b, Location l) {
 }
 
 void SparseIterator::locate(OpBuilder &b, Location l, Value crd) {
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     SmallVector<Value> args = getCursor();
     args.push_back(crd);
@@ -1019,7 +1027,7 @@ void SparseIterator::locate(OpBuilder &b, Location l, Value crd) {
 }
 
 Value SparseIterator::deref(OpBuilder &b, Location l) {
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     SmallVector<Value> args = getCursor();
     Operation *deref = b.create(l, b.getStringAttr(prefix + ".deref"),
@@ -1032,7 +1040,7 @@ Value SparseIterator::deref(OpBuilder &b, Location l) {
 
 ValueRange SparseIterator::forward(OpBuilder &b, Location l) {
   assert(!randomAccessible());
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     Operation *next = b.create(l, b.getStringAttr(prefix + ".next"),
                                getCursor(), getCursorValTypes(b));
