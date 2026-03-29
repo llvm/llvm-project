@@ -670,7 +670,8 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 /// VPReplicateRecipes are converted to single-scalar ones, branch-on-mask is
 /// converted into BranchOnCond and extracts are created as needed.
 static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
-                                                       VPBlockBase *Entry) {
+                                                       VPBlockBase *Entry,
+                                                       ElementCount VF) {
   VPValue *Idx0 = Plan.getZero(IdxTy);
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry)) {
     for (VPRecipeBase &OldR : make_early_inc_range(cast<VPBasicBlock>(*VPB))) {
@@ -685,6 +686,10 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         if ((isa_and_present<VPScalarIVStepsRecipe>(DefR) &&
              DefR->getParent() == VPB) ||
             vputils::isSingleScalar(Op))
+          continue;
+
+        // For scalar VF, operands are already scalar; no extraction needed.
+        if (VF.isScalar())
           continue;
 
         // Extract lane zero from values defined outside the region.
@@ -778,7 +783,7 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
 
   // Process the original blocks for lane 0: converting their recipes to
   // single-scalar.
-  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry);
+  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry, VF);
 
   // Clone converted blocks for remaining lanes and process each in reverse
   // order, connecting each lane's Exiting block to the subsequent lane's entry.
@@ -812,10 +817,10 @@ static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
   SmallVector<VPRegionBlock *> ReplicateRegions;
   for (VPRegionBlock *Region : VPBlockUtils::blocksOnly<VPRegionBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
-    // Skip regions with live-outs as packing scalar results back into vectors
-    // is not yet implemented.
+    // Skip regions with live-outs when vectorizing as packing scalar results
+    // back into vectors is not yet implemented.
     if (Region->isReplicator() &&
-        (!VF.isScalar() && Region->getExitingBasicBlock()->empty()))
+        (VF.isScalar() || Region->getExitingBasicBlock()->empty()))
       ReplicateRegions.push_back(Region);
   }
 
@@ -834,6 +839,8 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
 
   if (Plan.hasScalarVFOnly()) {
+    // When Plan is only unrolled by UF, replicating by VF amounts to dissolving
+    // replicate regions.
     replicateReplicateRegionsByVF(Plan, VF, IdxTy);
     return;
   }
