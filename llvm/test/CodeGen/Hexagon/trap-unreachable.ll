@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=hexagon -trap-unreachable < %s | FileCheck %s
 
-; Trap is implemented via a misaligned load.
-; CHECK: memd(##3134984174)
+; Trap is a 32-bit zero word that the processor decodes as an illegal duplex.
+; CHECK: .word 0
 
 define void @fred() #0 {
   unreachable

@@ -753,6 +753,15 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
   Hexagon_MC::verifyInstructionPredicates(MI->getOpcode(),
                                           getSubtargetInfo().getFeatureBits());
 
+  // Crash is emitted as a raw 32-bit zero, which the processor decodes as a
+  // duplex with both slots writing R0 -- an illegal packet that raises a
+  // hardware exception.  We bypass the normal MCInst path because the
+  // assembler would (correctly) reject the duplicate destination.
+  if (MI->getOpcode() == Hexagon::PS_crash) {
+    OutStreamer->emitInt32(0);
+    return;
+  }
+
   MCInst MCB;
   MCB.setOpcode(Hexagon::BUNDLE);
   MCB.addOperand(MCOperand::createImm(0));
