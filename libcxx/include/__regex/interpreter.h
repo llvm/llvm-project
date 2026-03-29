@@ -154,7 +154,7 @@ struct __local_execution_state {
   using __global_state = __global_execution_state<_CharT, _Traits>;
 
   const _CharT* __current_;
-  vector<sub_match<const _CharT*> > __sub_matches_;
+  vector<pair<const _CharT*, const _CharT*>> __sub_matches_;
   size_t __current_pos_;
   unique_ptr<size_t[]> __loop_values_;
   unique_ptr<const _CharT*[]> __loop_starts_;
@@ -497,8 +497,8 @@ struct __local_execution_state {
       } break;
 
       case __match_backref: {
-        sub_match<const _CharT*>& __match = __sub_matches_[__read_uleb(__code, __current_pos) - 1];
-        if (!__match.matched)
+        auto& __match = __sub_matches_[__read_uleb(__code, __current_pos) - 1];
+        if (__match.first == nullptr)
           return {false, __counter};
 
         auto __len = __match.second - __match.first;
@@ -509,8 +509,8 @@ struct __local_execution_state {
       } break;
 
       case __match_icase_backref: {
-        sub_match<const _CharT*>& __match = __sub_matches_[__read_uleb(__code, __current_pos) - 1];
-        if (!__match.matched)
+        auto& __match = __sub_matches_[__read_uleb(__code, __current_pos) - 1];
+        if (__match.first == nullptr)
           return {false, __counter};
 
         auto __len = __match.second - __match.first;
@@ -548,9 +548,8 @@ struct __local_execution_state {
       } break;
 
       case __marked_subexpression_end: {
-        auto __match                    = __read_uleb(__code, __current_pos);
-        __sub_matches_[__match].second  = __current;
-        __sub_matches_[__match].matched = true;
+        auto __match                   = __read_uleb(__code, __current_pos);
+        __sub_matches_[__match].second = __current;
       } break;
 
       case __match_word_boundary: {
@@ -805,9 +804,20 @@ public:
             vector<sub_match<const _CharT*>>& __sub_matches) const {
     using __local_state = __local_execution_state<_CharT, _Traits>;
 
+    auto __copy_to_submatches =
+        [&](const vector<pair<const _CharT*, const _CharT*>>& __from, vector<sub_match<const _CharT*>>& __to) {
+          std::transform(__from.begin(), __from.end(), __to.begin(), [&](pair<const _CharT*, const _CharT*> __v) {
+            sub_match<const _CharT*> __ret;
+            __ret.first   = __v.first ? __v.first : __last;
+            __ret.second  = __v.first ? __v.second : __last;
+            __ret.matched = __v.first;
+            return __ret;
+          });
+        };
+
     __local_state __base_state{
         .__current_     = __first,
-        .__sub_matches_ = std::move(__sub_matches),
+        .__sub_matches_ = vector<pair<const _CharT*, const _CharT*>>(__sub_matches.size()),
         .__current_pos_ = 0,
         .__loop_values_ = __initial_loop_values_.empty()
                             ? nullptr
@@ -836,7 +846,7 @@ public:
           if (!__found_match || __best_state.__current_ < __state.__current_)
             __best_state = std::move(__state);
           if (__best_state.__current_ == __last) {
-            __sub_matches = std::move(__best_state.__sub_matches_);
+            __copy_to_submatches(__best_state.__sub_matches_, __sub_matches);
             return {true, __best_state.__current_};
           }
           __found_match = true;
@@ -844,11 +854,11 @@ public:
       }
       if (!__found_match)
         return {false, {}};
-      __sub_matches = std::move(__best_state.__sub_matches_);
+      __copy_to_submatches(__best_state.__sub_matches_, __sub_matches);
       return {true, __best_state.__current_};
     } else {
       if (__base_state_matched) {
-        __sub_matches = std::move(__base_state.__sub_matches_);
+        __copy_to_submatches(__base_state.__sub_matches_, __sub_matches);
         return {true, __base_state.__current_};
       }
       while (!__gexec_state.__states_.empty()) {
@@ -857,7 +867,7 @@ public:
         auto __state = std::move(__gexec_state.__states_.back());
         __gexec_state.__states_.pop_back();
         if (auto [__success, __counter] = __state.__execute(__first, __last, __gexec_state); __success) {
-          __sub_matches = std::move(__state.__sub_matches_);
+          __copy_to_submatches(__state.__sub_matches_, __sub_matches);
           return {true, __state.__current_};
         } else {
           __gcounter += __counter;
