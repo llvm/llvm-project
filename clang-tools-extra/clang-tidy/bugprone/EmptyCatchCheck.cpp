@@ -89,6 +89,7 @@ void EmptyCatchCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxCatchStmt(unless(isInMacro()),
                    unless(hasCaughtType(IgnoredExceptionType)),
+                   unless(hasDeclContext(cxxDestructorDecl())),
                    hasHandler(compoundStmt(
                        statementCountIs(0),
                        unless(hasAnyTextFromList(IgnoreCatchWithKeywords)))))

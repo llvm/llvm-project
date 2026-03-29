@@ -208,6 +208,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by 
   correctly ignoring function templates.
 
+- Improved :doc:`bugprone-empty-catch
+  <clang-tidy/checks/bugprone/empty-catch>` check by allowing empty 
+  ``catch`` blocks in destructors.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
