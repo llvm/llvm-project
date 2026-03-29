@@ -3230,7 +3230,7 @@ bool SIInstrInfo::analyzeBranchImpl(MachineBasicBlock &MBB,
   if (Pred == IFORK_MASK_PASS) {
     Cond.push_back(I->getOperand(0));
   }
-  for (MachineOperand &ImpOp: I->implicit_operands()) {
+  for (MachineOperand &ImpOp : I->implicit_operands()) {
     Cond.push_back(ImpOp);
   }
 
@@ -3338,10 +3338,8 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   assert(TBB && Cond[0].isImm() && Cond.size() >= 2);
 
-  unsigned Opcode
-    = getBranchOpcode(static_cast<BranchPredicate>(Cond[0].getImm()));
-
-
+  unsigned Opcode =
+      getBranchOpcode(static_cast<BranchPredicate>(Cond[0].getImm()));
 
   MachineInstrBuilder CondBrBuilder = BuildMI(&MBB, DL, get(Opcode));
   if (Opcode == AMDGPU::S_CBRANCH_I_FORK)
