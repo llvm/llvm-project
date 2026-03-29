@@ -59,3 +59,14 @@ void test_15() {
   // expected-error-re@-1{{cannot initialize a member subobject of type 'void (template_test::S::*)(const int &){{( __attribute__\(\(thiscall\)\))?}}' with an rvalue of type 'void (S::*)(int){{( __attribute__\(\(thiscall\)\))?}}': type mismatch at 1st parameter ('const int &' vs 'int')}}
 }
 }
+
+void test_16() {
+  const int a = (void)0;
+  // expected-error@-1{{cannot initialize a constant of type 'int'}}
+
+  int* const c = (void)0;
+  // expected-error@-1{{cannot initialize a constant of type 'int *'}}
+
+  const int* b = (void)0;
+  // expected-error@-1{{cannot initialize a variable of type 'const int *'}}
+}
