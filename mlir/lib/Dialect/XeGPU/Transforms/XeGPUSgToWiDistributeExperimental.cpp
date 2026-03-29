@@ -1701,14 +1701,10 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       });
   target.addDynamicallyLegalOp<vector::CreateMaskOp, vector::ConstantMaskOp,
                                vector::TransposeOp, vector::BitCastOp,
-                               vector::ShapeCastOp, vector::StepOp>(
-      [=](Operation *op) -> bool {
-        return !xegpu::getTemporaryLayout(op->getOpResult(0));
-      });
-  target.addDynamicallyLegalOp<vector::BroadcastOp>(
-      [=](vector::BroadcastOp op) -> bool {
-        return !xegpu::getTemporaryLayout(op->getResult(0));
-      });
+                               vector::ShapeCastOp, vector::StepOp,
+                               vector::BroadcastOp>([=](Operation *op) -> bool {
+    return !xegpu::getTemporaryLayout(op->getOpResult(0));
+  });
   target.addDynamicallyLegalOp<vector::ExtractOp>(
       [=](vector::ExtractOp op) -> bool {
         if (!isa<VectorType>(op.getType()))
