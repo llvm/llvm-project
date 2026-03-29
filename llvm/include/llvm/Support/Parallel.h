@@ -17,6 +17,7 @@
 #include "llvm/Support/Threading.h"
 
 #include <algorithm>
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
