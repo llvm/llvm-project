@@ -190,6 +190,23 @@ add_header_library(
 )
 
 add_header_library(
+  asinpi
+  HDRS
+    asinpi.h
+  DEPENDS
+    .asin_utils
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
   asinpif
   HDRS
     asinpif.h
@@ -2779,6 +2796,24 @@ add_header_library(
     log10p1f16.h
   DEPENDS
     .exp10_float16_constants
+    .expxf16_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  log2p1f16
+  HDRS
+    log2p1f16.h
+  DEPENDS
     .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros

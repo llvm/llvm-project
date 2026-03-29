@@ -59,6 +59,7 @@ add_math_entrypoint_object(asinh)
 add_math_entrypoint_object(asinhf)
 add_math_entrypoint_object(asinhf16)
 
+add_math_entrypoint_object(asinpi)
 add_math_entrypoint_object(asinpif)
 add_math_entrypoint_object(asinpif16)
 
@@ -399,6 +400,7 @@ add_math_entrypoint_object(log1pf)
 add_math_entrypoint_object(log2)
 add_math_entrypoint_object(log2f)
 add_math_entrypoint_object(log2f16)
+add_math_entrypoint_object(log2p1f16)
 
 add_math_entrypoint_object(log)
 add_math_entrypoint_object(logf)
