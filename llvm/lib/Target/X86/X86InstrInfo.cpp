@@ -7538,13 +7538,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   //
   // Utilize the mapping NonNDD -> RMW for the NDD variant.
   unsigned NonNDOpc = Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U;
-  // Disable memory folding for NDD instructions.
-  if (NonNDOpc && !Subtarget.hasNDDM())
-    return nullptr;
+  // Utilize the mapping NonNDD if NDD memory variant is not preferred.
+  bool NoNDDM = NonNDOpc && !Subtarget.hasNDDM();
 
   const X86FoldTableEntry *I =
       IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
-                : lookupFoldTable(Opc, OpNum);
+                : lookupFoldTable(NoNDDM ? NonNDOpc : Opc, OpNum);
 
   MachineInstr *NewMI = nullptr;
   if (I) {
@@ -7590,6 +7589,21 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         NewMI->getOperand(0).setReg(RI.getSubReg(DstReg, X86::sub_32bit));
       else
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
+    }
+
+    if (NoNDDM) {
+      Register SrcReg = MI.getOperand(1).getReg();
+      if (MI.killsRegister(SrcReg, /*TRI=*/nullptr))
+        return NewMI;
+
+      const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
+      Register SubReg = MI.getOperand(1).getSubReg();
+      Register NewSrc = MF.getRegInfo().createVirtualRegister(&RC);
+      BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
+              get(TargetOpcode::COPY))
+          .addReg(NewSrc, RegState::Define, SubReg)
+          .addReg(SrcReg, getKillRegState(true), SubReg);
+      NewMI->getOperand(1).setReg(NewSrc);
     }
     return NewMI;
   }
