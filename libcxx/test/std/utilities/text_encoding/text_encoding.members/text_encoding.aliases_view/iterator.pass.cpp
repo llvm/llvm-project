@@ -16,6 +16,7 @@
 
 #include <cassert>
 #include <compare>
+#include <concepts>
 #include <string_view>
 #include <text_encoding>
 #include <type_traits>
