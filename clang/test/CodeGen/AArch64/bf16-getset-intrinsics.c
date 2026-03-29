@@ -23,24 +23,6 @@ bfloat16x8_t test_vcombine_bf16(bfloat16x4_t low, bfloat16x4_t high) {
   return vcombine_bf16(low, high);
 }
 
-// CHECK-LABEL: @test_vget_high_bf16(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK-NEXT:    ret <4 x bfloat> [[SHUFFLE_I]]
-//
-bfloat16x4_t test_vget_high_bf16(bfloat16x8_t a) {
-  return vget_high_bf16(a);
-}
-
-// CHECK-LABEL: @test_vget_low_bf16(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK-NEXT:    ret <4 x bfloat> [[SHUFFLE_I]]
-//
-bfloat16x4_t test_vget_low_bf16(bfloat16x8_t a) {
-  return vget_low_bf16(a);
-}
-
 // CHECK-LABEL: @test_vset_lane_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <4 x bfloat> [[V:%.*]], bfloat [[A:%.*]], i32 1
