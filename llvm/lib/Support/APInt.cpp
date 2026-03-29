@@ -1705,9 +1705,12 @@ APInt APInt::urem(const APInt &RHS) const {
   if (lhsWords == 1)
     // All high words are zero, just use native remainder
     return APInt(BitWidth, U.pVal[0] % RHS.U.pVal[0]);
-  if (RHS.isPowerOf2())
+  if (RHS.isPowerOf2()) {
     // X % 2^w ===> X & (2^w - 1)
-    return *this & (RHS - 1);
+    APInt Result(*this);
+    Result.clearHighBits(BitWidth - RHS.logBase2());
+    return Result;
+  }
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   APInt Remainder(BitWidth, 0);
