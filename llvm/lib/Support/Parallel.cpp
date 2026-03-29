@@ -177,8 +177,9 @@ private:
 
   JobserverClient *TheJobserver = nullptr;
 };
+} // namespace
 
-ThreadPoolExecutor *getDefaultExecutor() {
+static ThreadPoolExecutor *getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() on Windows. This is important to avoid various race
@@ -198,7 +199,6 @@ ThreadPoolExecutor *getDefaultExecutor() {
   return &Exec;
 #endif
 }
-} // namespace
 
 size_t parallel::getThreadCount() {
   return getDefaultExecutor()->getThreadCount();
