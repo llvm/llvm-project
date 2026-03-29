@@ -1116,6 +1116,10 @@ __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 
 #else
 
+#  if !defined(_LIBUNWIND_VERSION)
+extern "C" _Unwind_Reason_Code __gnu_unwind_frame(_Unwind_Exception*, _Unwind_Context*);
+#  endif
+
 // Helper function to unwind one frame.
 // ARM EHABI 7.3 and 7.4: If the personality function returns _URC_CONTINUE_UNWIND, the
 // personality routine should update the virtual register set (VRS) according to the
@@ -1134,9 +1138,9 @@ static _Unwind_Reason_Code continue_unwind(_Unwind_Exception* unwind_exception,
 }
 
 // ARM register names
-#if !defined(_LIBUNWIND_VERSION)
+#  if !defined(_LIBUNWIND_VERSION)
 static const uint32_t REG_UCB = 12;  // Register to save _Unwind_Control_Block
-#endif
+#  endif
 static const uint32_t REG_SP = 13;
 
 static void save_results_to_barrier_cache(_Unwind_Exception* unwind_exception,
@@ -1169,12 +1173,12 @@ __gxx_personality_v0(_Unwind_State state,
 
     bool native_exception = __isOurExceptionClass(unwind_exception);
 
-#if !defined(_LIBUNWIND_VERSION)
+#  if !defined(_LIBUNWIND_VERSION)
     // Copy the address of _Unwind_Control_Block to r12 so that
     // _Unwind_GetLanguageSpecificData() and _Unwind_GetRegionStart() can
     // return correct address.
     _Unwind_SetGR(context, REG_UCB, reinterpret_cast<uint32_t>(unwind_exception));
-#endif
+#  endif
 
     // Check the undocumented force unwinding behavior
     bool is_force_unwinding = state & _US_FORCE_UNWIND;
