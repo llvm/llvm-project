@@ -863,6 +863,10 @@ public:
     }
     return TT;
   }
+
+  static llvm::Triple getOpenMPTriple(const llvm::Triple &OrigTT) {
+    return getOpenMPTriple(OrigTT.str());
+  }
 };
 
 /// Set a ToolChain's effective triple. Reset it when the registration object
