@@ -2524,6 +2524,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpi_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinpi_test.cpp
+  DEPENDS
+    libc.src.math.asinpi
+)
+
+add_fp_unittest(
   asinpif_test
   NEED_MPFR
   SUITE
