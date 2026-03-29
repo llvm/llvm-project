@@ -24,7 +24,7 @@ CAST_FUNCTION(cast_or_null)
 CAST_FUNCTION(cast_if_present)
 CAST_FUNCTION(dyn_cast_or_null)
 CAST_FUNCTION(dyn_cast_if_present)
-}
+} // namespace llvm
 
 struct A {};
 struct B : A {};

@@ -3,9 +3,9 @@
 llvm-redundant-casting
 ======================
 
-Points out uses of ``cast<>``, ``dyn_cast<>`` and their ``or_null`` variants
-that are unnecessary because the argument already is of the target type, or a
-derived type thereof.
+Points out uses of ``cast<>``, ``dyn_cast<>``, ``isa<>`` and their ``or_null``
+variants that are unnecessary because the argument already is of the target
+type, or a derived type thereof.
 
 .. code-block:: c++
 
@@ -15,6 +15,9 @@ derived type thereof.
   A x = cast<A>(a);
   // replaced by:
   A x = a;
+
+  // Finds:
+  bool b = isa<A>(a) // always true
 
   struct B : public A {};
   B b;
@@ -30,3 +33,6 @@ Supported functions:
  - ``llvm::dyn_cast``
  - ``llvm::dyn_cast_or_null``
  - ``llvm::dyn_cast_if_present``
+ - ``llvm::isa``
+ - ``llvm::isa_and_nonnull``
+ - ``llvm::isa_and_present``

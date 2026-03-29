@@ -38,7 +38,8 @@ AST_MATCHER_P(OverloadExpr, hasAnyUnresolvedName, ArrayRef<StringRef>, Names) {
 
 static constexpr StringRef FunctionNames[] = {
     "cast",     "cast_or_null",     "cast_if_present",
-    "dyn_cast", "dyn_cast_or_null", "dyn_cast_if_present"};
+    "dyn_cast", "dyn_cast_or_null", "dyn_cast_if_present",
+    "isa",      "isa_and_nonnull",  "isa_and_present"};
 
 void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
   auto IsInLLVMNamespace = hasDeclContext(
@@ -93,12 +94,15 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &Nodes = Result.Nodes;
   const auto *Call = Nodes.getNodeAs<CallExpr>("call");
 
-  CanQualType RetTy;
+  TemplateArgument TArg;
   std::string FuncName;
   if (const auto *ResolvedCallee = Nodes.getNodeAs<DeclRefExpr>("callee")) {
     const auto *F = cast<FunctionDecl>(ResolvedCallee->getDecl());
-    RetTy = stripPointerOrReference(F->getReturnType())
-                ->getCanonicalTypeUnqualified();
+    const auto *TArgs = F->getTemplateSpecializationArgs();
+    if (TArgs->size() != 2)
+      return;
+
+    TArg = TArgs->get(0);
     FuncName = F->getName();
   } else if (const auto *UnresolvedCallee =
                  Nodes.getNodeAs<UnresolvedLookupExpr>("callee")) {
@@ -107,16 +111,17 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *CallerNS = Nodes.getNodeAs<NamedDecl>("llvm_ns");
     if (!IsExplicitlyLLVM && !CallerNS)
       return;
-    auto TArg = UnresolvedCallee->template_arguments()[0].getArgument();
-    if (TArg.getKind() != TemplateArgument::Type)
-      return;
 
-    RetTy = TArg.getAsType()->getCanonicalTypeUnqualified();
+    TArg = UnresolvedCallee->template_arguments()[0].getArgument();
     FuncName = UnresolvedCallee->getName().getAsString();
   } else {
-    llvm_unreachable("");
+    llvm_unreachable("unexpected callee kind");
   }
 
+  if (TArg.getKind() != TemplateArgument::Type)
+    return;
+
+  CanQualType RetTy = TArg.getAsType()->getCanonicalTypeUnqualified();
   const auto *Arg = Call->getArg(0);
   const QualType ArgTy = Arg->getType();
   const QualType ArgPointeeTy = stripPointerOrReference(ArgTy);
@@ -128,47 +133,53 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   if (FromTy != RetTy && !IsDerived)
     return;
 
-  QualType ParentTy;
-  if (const auto *ParentCast = Nodes.getNodeAs<Expr>("parent_cast")) {
-    ParentTy = ParentCast->getType();
+  const bool IsIsa = StringRef(FuncName).starts_with("isa");
+  if (IsIsa) {
+    diag(Call->getExprLoc(), "call to '%0' always succeeds")
+        << FuncName;
   } else {
-    // IgnoreUnlessSpelledInSource prevents matching implicit casts
-    const TraversalKindScope TmpTraversalKind(*Result.Context, TK_AsIs);
-    for (const DynTypedNode Parent : Result.Context->getParents(*Call)) {
-      if (const auto *ParentCastExpr = Parent.get<CastExpr>()) {
-        ParentTy = ParentCastExpr->getType();
-        break;
+    QualType ParentTy;
+    if (const auto *ParentCast = Nodes.getNodeAs<Expr>("parent_cast")) {
+      ParentTy = ParentCast->getType();
+    } else {
+      // IgnoreUnlessSpelledInSource prevents matching implicit casts
+      const TraversalKindScope TmpTraversalKind(*Result.Context, TK_AsIs);
+      for (const DynTypedNode Parent : Result.Context->getParents(*Call)) {
+        if (const auto *ParentCastExpr = Parent.get<CastExpr>()) {
+          ParentTy = ParentCastExpr->getType();
+          break;
+        }
       }
     }
-  }
-  if (!ParentTy.isNull()) {
-    const CXXRecordDecl *ParentDecl = ParentTy->getAsCXXRecordDecl();
-    if (FromDecl && ParentDecl) {
-      CXXBasePaths Paths(/*FindAmbiguities=*/true,
-                         /*RecordPaths=*/false,
-                         /*DetectVirtual=*/false);
-      const bool IsDerivedFromParent =
-          FromDecl && ParentDecl && FromDecl->isDerivedFrom(ParentDecl, Paths);
-      // For the following case a direct `cast<A>(d)` would be ambiguous:
-      //   struct A {};
-      //   struct B : A {};
-      //   struct C : A {};
-      //   struct D : B, C {};
-      // So we should not warn for `A *a = cast<C>(d)`.
-      if (IsDerivedFromParent &&
-          Paths.isAmbiguous(ParentTy->getCanonicalTypeUnqualified()))
-        return;
+    if (!ParentTy.isNull()) {
+      const CXXRecordDecl *ParentDecl = ParentTy->getAsCXXRecordDecl();
+      if (FromDecl && ParentDecl) {
+        CXXBasePaths Paths(/*FindAmbiguities=*/true,
+                           /*RecordPaths=*/false,
+                           /*DetectVirtual=*/false);
+        const bool IsDerivedFromParent =
+            FromDecl && ParentDecl && FromDecl->isDerivedFrom(ParentDecl, Paths);
+        // For the following case a direct `cast<A>(d)` would be ambiguous:
+        //   struct A {};
+        //   struct B : A {};
+        //   struct C : A {};
+        //   struct D : B, C {};
+        // So we should not warn for `A *a = cast<C>(d)`.
+        if (IsDerivedFromParent &&
+            Paths.isAmbiguous(ParentTy->getCanonicalTypeUnqualified()))
+          return;
+      }
     }
-  }
 
-  auto GetText = [&](SourceRange R) {
-    return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
-                                *Result.SourceManager, getLangOpts());
-  };
-  StringRef ArgText = GetText(Arg->getSourceRange());
-  diag(Call->getExprLoc(), "redundant use of '%0'")
-      << FuncName
-      << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
+    auto GetText = [&](SourceRange R) {
+      return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
+                                  *Result.SourceManager, getLangOpts());
+    };
+    StringRef ArgText = GetText(Arg->getSourceRange());
+    diag(Call->getExprLoc(), "redundant use of '%0'")
+        << FuncName
+        << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
+  }
   // printing the canonical type for a template parameter prints as e.g.
   // 'type-parameter-0-0'
   const QualType DiagFromTy(ArgPointeeTy->getUnqualifiedDesugaredType(), 0);
