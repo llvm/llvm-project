@@ -5303,6 +5303,8 @@ SwiftASTContext::ReconstructType(ConstString mangled_typename) {
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- not cached, searching",
              mangled_cstr);
 
+  // Avoid type reconstruction compiling additional implicit modules.
+  DisableImplicitImportsRAII no_imports(*this);
   found_type = swift::Demangle::getTypeForMangling(
                    **ast_ctx, mangled_typename.GetStringRef())
                    .getPointer();
