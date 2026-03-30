@@ -92,13 +92,6 @@ void PreferSingleCharOverloadsCheck::check(
                                "efficient overload accepting a character")
       << FindFunc
       << FixItHint::CreateReplacement(Literal->getSourceRange(), *Replacement);
-
-  if (getID() == "performance-faster-string-find")
-    diag(Literal->getBeginLoc(),
-         "performance-faster-string-find is deprecated and will be removed in "
-         "future release, consider using "
-         "performance-prefer-single-char-overloads",
-         DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::performance
