@@ -242,6 +242,16 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Add the offset from the instruction.
   int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
 
+  // If AP is used as the base register, add it to this block's liveins.
+  // AP is defined in the entry block and may be used in other blocks for
+  // stack access. Liveness must be accurate for the verifier.
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  Register AP = HMFI.getStackAlignBaseReg();
+  if (AP.isValid() && BP == AP) {
+    if (!MB.isLiveIn(AP))
+      MB.addLiveIn(AP);
+  }
+
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
     case Hexagon::PS_fia:
