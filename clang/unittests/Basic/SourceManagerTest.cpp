@@ -10,6 +10,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -22,6 +23,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -37,6 +39,41 @@ public:
 } // namespace clang
 
 namespace {
+
+#ifndef _WIN32
+
+class FakeStatCache : public FileSystemStatCache {
+  llvm::StringMap<llvm::vfs::Status, llvm::BumpPtrAllocator> StatCalls;
+
+public:
+  void InjectFile(StringRef Path, ino_t INode) {
+    StatCalls[Path] = llvm::vfs::Status(
+        Path, llvm::sys::fs::UniqueID(1, INode), /*MTime=*/{},
+        /*User=*/0, /*Group=*/0, /*Size=*/0,
+        llvm::sys::fs::file_type::regular_file,
+        llvm::sys::fs::perms::all_all);
+  }
+
+  void InjectDirectory(StringRef Path, ino_t INode) {
+    StatCalls[Path] = llvm::vfs::Status(
+        Path, llvm::sys::fs::UniqueID(1, INode), /*MTime=*/{},
+        /*User=*/0, /*Group=*/0, /*Size=*/0,
+        llvm::sys::fs::file_type::directory_file,
+        llvm::sys::fs::perms::all_all);
+  }
+
+  std::error_code getStat(StringRef Path, llvm::vfs::Status &Status,
+                          bool isFile, std::unique_ptr<llvm::vfs::File> *F,
+                          llvm::vfs::FileSystem &FS) override {
+    auto It = StatCalls.find(Path);
+    if (It == StatCalls.end())
+      return std::make_error_code(std::errc::no_such_file_or_directory);
+    Status = It->second;
+    return std::error_code();
+  }
+};
+
+#endif
 
 // The test fixture.
 class SourceManagerTest : public ::testing::Test {
@@ -416,6 +453,41 @@ TEST_F(SourceManagerTest, getLineNumber) {
 
   ASSERT_NO_FATAL_FAILURE(SourceMgr.getLineNumber(mainFileID, 1, nullptr));
 }
+
+#ifndef _WIN32
+
+TEST_F(SourceManagerTest, aliasedFilesKeepRequestedNamesPerFileID) {
+  auto StatCache = std::make_unique<FakeStatCache>();
+  StatCache->InjectDirectory("dir", 40);
+  StatCache->InjectFile("dir/foo.h", 41);
+  StatCache->InjectFile("dir/bar.h", 41);
+  FileMgr.setStatCache(std::move(StatCache));
+
+  auto FooOrErr = FileMgr.getFileRef("dir/foo.h");
+  auto BarOrErr = FileMgr.getFileRef("dir/bar.h");
+  ASSERT_TRUE(static_cast<bool>(FooOrErr));
+  ASSERT_TRUE(static_cast<bool>(BarOrErr));
+
+  FileEntryRef Foo = *FooOrErr;
+  FileEntryRef Bar = *BarOrErr;
+  EXPECT_FALSE(Foo.isSameRef(Bar));
+  EXPECT_EQ(Foo, Bar);
+
+  SourceMgr.overrideFileContents(Foo, llvm::MemoryBuffer::getMemBuffer("x\n"));
+
+  FileID FooID = SourceMgr.createFileID(Foo, SourceLocation(), SrcMgr::C_User);
+  FileID BarID = SourceMgr.createFileID(Bar, SourceLocation(), SrcMgr::C_User);
+
+  SourceLocation FooLoc = SourceMgr.getLocForStartOfFile(FooID);
+  SourceLocation BarLoc = SourceMgr.getLocForStartOfFile(BarID);
+
+  EXPECT_EQ("dir/foo.h", SourceMgr.getFilename(FooLoc));
+  EXPECT_EQ("dir/bar.h", SourceMgr.getFilename(BarLoc));
+  EXPECT_STREQ("dir/foo.h", SourceMgr.getPresumedLoc(FooLoc).getFilename());
+  EXPECT_STREQ("dir/bar.h", SourceMgr.getPresumedLoc(BarLoc).getFilename());
+}
+
+#endif
 
 struct FakeExternalSLocEntrySource : ExternalSLocEntrySource {
   bool ReadSLocEntry(int ID) override { return {}; }
