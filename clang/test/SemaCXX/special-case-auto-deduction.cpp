@@ -1,6 +1,12 @@
-// RUN: %clangxx -std=c++20 -fsyntax-only -Xclang -verify %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 
-#include <initializer_list>
+namespace std {
+template <typename T>
+struct initializer_list {
+  const T *begin;
+  const T *end;
+};
+}
 
 
 // Plain auto tests
@@ -185,6 +191,14 @@ Animal2 *ap5 = nullptr;
 auto *ap6 = ap5;
 static_assert(__is_same(decltype(ap6), Animal2 *));
 
+volatile int *vp2 = nullptr;
+const auto *cp5 = vp2;
+static_assert(__is_same(decltype(cp5), const volatile int *));
+
+const volatile int *cvp = nullptr;
+const auto *cp6 = cvp;
+static_assert(__is_same(decltype(cp6), const volatile int *));
+
 
 // const auto *
 
@@ -233,7 +247,6 @@ auto ilist = {1, 2, 3};
 static_assert(__is_same(decltype(ilist), std::initializer_list<int>));
 
 // untouched case
-
 
 int x = 0;
 auto *bad = x; // expected-error {{variable 'bad' with type 'auto *' has incompatible initializer of type 'int'}}

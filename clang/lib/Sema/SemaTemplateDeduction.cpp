@@ -5256,6 +5256,10 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
       !Init->getType()->isSpecificBuiltinType(BuiltinType::Overload) &&
       !getLangOpts().ObjC && !getLangOpts().OpenCL;
 
+#ifndef NDEBUG
+  bool FastPathUsed = false;
+#endif
+
   QualType DeducedType;
   // If this is a 'decltype(auto)' specifier, do the decltype dance.
   if (AT->isDecltypeAuto()) {
@@ -5274,13 +5278,14 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     // cv-qualifiers. For single-level `auto*` declarators, the deduced type
     // is the pointee type of the processed initializer type.
 
-    QualType TypeTy = Type.getType();
+    QualType DeclaredTy = Type.getType();
     bool IsPlainOrTopLevelCvAuto = Context.hasSameType(
-        TypeTy.getLocalUnqualifiedType(), Context.getAutoDeductType());
+        DeclaredTy.getLocalUnqualifiedType(), Context.getAutoDeductType());
     bool IsSimpleAutoStar =
-        TypeTy->isPointerType() &&
-        Context.hasSameType(TypeTy->getPointeeType().getLocalUnqualifiedType(),
-                            Context.getAutoDeductType());
+        DeclaredTy->isPointerType() &&
+        Context.hasSameType(
+            DeclaredTy->getPointeeType().getLocalUnqualifiedType(),
+            Context.getAutoDeductType());
 
     QualType ProcessedInitTy = Init->getType().getNonReferenceType();
     if (ProcessedInitTy->isArrayType() || ProcessedInitTy->isFunctionType())
@@ -5292,15 +5297,32 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
 
     if (IsPlainOrTopLevelCvAuto) {
       DeducedType = ProcessedInitTy;
-      assert(!DeducedType.isNull());
+#ifndef NDEBUG
+      FastPathUsed = true;
+#endif
     } else if (CanUsePointerFastPath) {
       DeducedType = ProcessedInitTy->getPointeeType();
-      assert(!DeducedType.isNull());
+      Qualifiers ProcessedInitQuals = DeducedType.getLocalQualifiers();
+      Qualifiers TypeQuals = DeclaredTy->getPointeeType().getLocalQualifiers();
+      ProcessedInitQuals.removeCVRQualifiers(TypeQuals.getCVRQualifiers());
+      DeducedType = Context.getQualifiedType(
+          DeducedType.getLocalUnqualifiedType(), ProcessedInitQuals);
+#ifndef NDEBUG
+      FastPathUsed = true;
+#endif
     }
   }
 
   // Auto deduction with template
+  // When assertions are enabled, check that the fast path deduces the same
+  // canonical type as the slow path.
+#ifndef NDEBUG
+  if (DeducedType.isNull() || FastPathUsed) {
+    QualType FastPathDeducedType = DeducedType;
+#else
   if (DeducedType.isNull()) {
+#endif
+
     LocalInstantiationScope InstScope(*this);
 
     // Build template<class TemplParam> void Func(FuncParam);
@@ -5368,6 +5390,28 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     if (Deduced[0].getKind() != TemplateArgument::Type)
       return TemplateDeductionResult::Incomplete;
     DeducedType = Deduced[0].getAsType();
+
+#ifndef NDEBUG
+    if (FastPathUsed) {
+      // Ignore differences due only to QualType sugar.
+      if (FastPathDeducedType.getCanonicalType() !=
+          DeducedType.getCanonicalType()) {
+        llvm::errs() << "Deducing: ";
+        Type.dump();
+        Init->dump();
+        llvm::errs() << "Fast-path deduced type: ";
+        FastPathDeducedType.dump();
+
+        llvm::errs() << "Slow-path deduced type: ";
+        DeducedType.dump();
+      }
+
+      assert(FastPathDeducedType.getCanonicalType() ==
+                 DeducedType.getCanonicalType() &&
+             "fast path auto deduction produced a different deduced type than "
+             "the template-deduction path");
+    }
+#endif
 
     if (InitList) {
       DeducedType = BuildStdInitializerList(DeducedType, Loc);

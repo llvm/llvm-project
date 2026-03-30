@@ -169,6 +169,11 @@ Non-comprehensive list of changes in this release
 
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
+- Improved the performance of ``auto`` deduction by adding the fast path
+  for additional simple cases, including non-canonical initializer types,
+  top-level-cv-qualified ``auto``, and single-level ``auto*`` declarators in
+  supported language modes.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
