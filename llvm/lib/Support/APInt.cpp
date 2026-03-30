@@ -782,7 +782,7 @@ APInt APInt::reverseBits() const {
     break;
   }
   // Special case for all widths less than 64 and non-power-of-2
-  if (BitWidth < 64)
+  if (isSingleWord())
     return APInt(BitWidth,
                  llvm::reverseBits<uint64_t>(U.VAL) >> (64 - BitWidth));
 
