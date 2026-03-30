@@ -267,12 +267,17 @@ void testDynCastNonLLVM(A& value) {
   (void)a26;
 }
 
-// FIXME: don't trigger if not in llvm:: ns
 template<typename T>
 void testCastNonLLVMUnresolved(T& value) {
   T& a27 = cast<T>(value);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:20: note: source expression has type 'T'
-  // CHECK-FIXES: T& a27 = value;
   (void)a27;
 }
+
+// FIXME: llvm namespace doesn't need to be explicit
+namespace llvm {
+template<typename T>
+void testCastImplicitlyLLVMUnresolved(T& value) {
+  T& a28 = cast<T>(value);
+  (void)a28;
+}
+} // namespace llvm

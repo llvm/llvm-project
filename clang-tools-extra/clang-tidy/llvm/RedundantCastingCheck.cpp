@@ -9,6 +9,7 @@
 #include "RedundantCastingCheck.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -62,6 +63,17 @@ static QualType stripPointerOrReference(QualType Ty) {
   return Pointee;
 }
 
+static bool isLLVMNamespace(NestedNameSpecifier NNS) {
+  if (NNS.getKind() != NestedNameSpecifier::Kind::Namespace)
+    return false;
+  auto Pair = NNS.getAsNamespaceAndPrefix();
+  if (Pair.Namespace->getNamespace()->getName() != "llvm")
+    return false;
+  const NestedNameSpecifier::Kind Kind = Pair.Prefix.getKind();
+  return Kind == NestedNameSpecifier::Kind::Null ||
+         Kind == NestedNameSpecifier::Kind::Global;
+}
+
 void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &Nodes = Result.Nodes;
   const auto *Call = Nodes.getNodeAs<CallExpr>("call");
@@ -78,6 +90,9 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *UnresolvedCallee =
                  Nodes.getNodeAs<UnresolvedLookupExpr>("callee")) {
     if (UnresolvedCallee->getNumTemplateArgs() != 1)
+      return;
+    const bool IsExplicitlyLLVM = isLLVMNamespace(UnresolvedCallee->getQualifier());
+    if (!IsExplicitlyLLVM)
       return;
     auto TArg = UnresolvedCallee->template_arguments()[0].getArgument();
     if (TArg.getKind() != TemplateArgument::Type)
