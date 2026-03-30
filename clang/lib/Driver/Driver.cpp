@@ -997,12 +997,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
       return {};
     }
 
-    llvm::StringRef TripleStr =
+    llvm::Triple Triple =
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
-    if (TripleStr.empty())
-      continue;
-
-    llvm::Triple Triple = ToolChain::normalizeOffloadTriple(TripleStr);
 
     // Make a new argument that dispatches this argument to the appropriate
     // toolchain. This is required when we infer it and create potentially
