@@ -39,33 +39,16 @@ llvm::Error HeaderV2::checkForError() const {
   if (Version != GSYM_VERSION_2)
     return createStringError(std::errc::invalid_argument,
                              "unsupported GSYM version %u", Version);
-  switch (AddrOffSize) {
-  case 1:
-  case 2:
-  case 4:
-  case 8:
-    break;
-  default:
+  if (AddrOffSize < 1 || AddrOffSize > 8)
     return createStringError(std::errc::invalid_argument,
                              "invalid address offset size %u", AddrOffSize);
-  }
-  switch (AddrInfoOffSize) {
-  case 4:
-  case 8:
-    break;
-  default:
+  if (AddrInfoOffSize < 1 || AddrInfoOffSize > 8)
     return createStringError(std::errc::invalid_argument,
                              "invalid address info offset size %u",
                              AddrInfoOffSize);
-  }
-  switch (StrpSize) {
-  case 4:
-  case 8:
-    break;
-  default:
+  if (StrpSize < 1 || StrpSize > 8)
     return createStringError(std::errc::invalid_argument,
                              "invalid strp size %u", StrpSize);
-  }
   if (Padding != 0)
     return createStringError(std::errc::invalid_argument,
                              "padding must be zero, got %u", Padding);
