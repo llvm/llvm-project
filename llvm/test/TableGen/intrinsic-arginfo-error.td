@@ -2,7 +2,7 @@
 
 include "llvm/IR/Intrinsics.td"
 
-// CHECK: error: Expected record in list!
+// CHECK: error: expected record type for the element with index 2 in list {{.*}}
 def int_test : DefaultAttrsIntrinsic<
     [llvm_anyint_ty],
     [llvm_anyint_ty,
