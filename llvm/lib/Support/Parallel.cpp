@@ -96,6 +96,15 @@ public:
     static void call(void *Ptr) { ((ThreadPoolExecutor *)Ptr)->stop(); }
   };
 
+  struct WorkItem {
+    std::function<void()> F;
+    std::reference_wrapper<parallel::detail::Latch> L;
+    void operator()() {
+      F();
+      L.get().dec();
+    }
+  };
+
   void add(std::function<void()> F, parallel::detail::Latch &L) {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
@@ -112,17 +121,22 @@ public:
       std::unique_lock<std::mutex> Lock(Mutex);
       if (WorkStack.empty())
         return;
-      auto Item = std::move(WorkStack.back());
-      WorkStack.pop_back();
-      Lock.unlock();
-      Item.F();
-      Item.L.get().dec();
+      popAndRun(Lock);
     }
   }
 
   size_t getThreadCount() const { return ThreadCount; }
 
 private:
+  // Pop one task from the queue and run it. Must be called with Lock held;
+  // releases Lock before executing the task.
+  void popAndRun(std::unique_lock<std::mutex> &Lock) {
+    auto Item = std::move(WorkStack.back());
+    WorkStack.pop_back();
+    Lock.unlock();
+    Item();
+  }
+
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
@@ -163,30 +177,17 @@ private:
             return;
           if (WorkStack.empty())
             break;
-          auto Item = std::move(WorkStack.back());
-          WorkStack.pop_back();
-          Lock.unlock();
-          Item.F();
-          Item.L.get().dec();
+          popAndRun(Lock);
         }
       } else {
         std::unique_lock<std::mutex> Lock(Mutex);
         Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
         if (Stop)
           break;
-        auto Item = std::move(WorkStack.back());
-        WorkStack.pop_back();
-        Lock.unlock();
-        Item.F();
-        Item.L.get().dec();
+        popAndRun(Lock);
       }
     }
   }
-
-  struct WorkItem {
-    std::function<void()> F;
-    std::reference_wrapper<parallel::detail::Latch> L;
-  };
 
   std::atomic<bool> Stop{false};
   std::vector<WorkItem> WorkStack;
