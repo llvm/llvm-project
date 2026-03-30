@@ -235,7 +235,7 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
 }
 
 KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
-                                   bool IsIEEELikeFP, const KnownBits &Bits) {
+                                   const KnownBits &Bits) {
   assert(FltSemantics.sizeInBits == Bits.getBitWidth() &&
          "Bitcast operand has incorrect bit width");
   KnownFPClass Known;
@@ -246,7 +246,7 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
   else if (Bits.isNegative())
     Known.signBitMustBeOne();
 
-  if (IsIEEELikeFP) {
+  if (APFloat::isIEEELikeFP(FltSemantics)) {
     // IEEE floats are NaN when all bits of the exponent plus at least one of
     // the fraction bits are 1. This means:
     //   - If we assume unknown bits are 0 and the value is NaN, it will

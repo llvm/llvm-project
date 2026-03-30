@@ -226,10 +226,7 @@ struct KnownFPClass {
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
   /// Report known values for a bitcast into a float with provided semantics.
-  /// Set \p IsIEEELikeFP if the FP type has IEEE-compatible layout, and does
-  /// not have non-IEEE values, such as x86_fp80's unnormal values.
   LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
-                                       bool IsIEEELikeFP,
                                        const KnownBits &Bits);
 
   /// Report known values for fadd

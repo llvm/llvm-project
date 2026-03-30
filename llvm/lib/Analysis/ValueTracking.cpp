@@ -6045,8 +6045,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownBits Bits(EltTy->getPrimitiveSizeInBits());
     computeKnownBits(Src, DemandedElts, Bits, Q, Depth + 1);
 
-    Known = KnownFPClass::bitcast(EltTy->getFltSemantics(),
-                                  EltTy->isIEEELikeFPTy(), Bits);
+    Known = KnownFPClass::bitcast(EltTy->getFltSemantics(), Bits);
     break;
   }
   default:
