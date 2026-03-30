@@ -57,8 +57,6 @@ public:
 
   /// Returns true if the attached MachineMemOperand  has the atomic flag set.
   bool isAtomic() const { return getMMO().isAtomic(); }
-  /// Returns true if this atomic memory operation has elementwise semantics.
-  bool isElementwiseAtomic() const { return getMMO().isElementwiseAtomic(); }
   /// Returns true if the attached MachineMemOpeand as the volatile flag set.
   bool isVolatile() const { return getMMO().isVolatile(); }
   /// Returns true if the memory operation is neither atomic or volatile.

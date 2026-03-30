@@ -2786,8 +2786,6 @@ TargetLoweringBase::getAtomicMemOperandFlags(const Instruction &AI,
   if (const AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(&AI)) {
     if (RMW->isVolatile())
       Flags |= MachineMemOperand::MOVolatile;
-    if (RMW->isElementwise())
-      Flags |= MachineMemOperand::MOElementwiseAtomic;
   } else if (const AtomicCmpXchgInst *CmpX = dyn_cast<AtomicCmpXchgInst>(&AI)) {
     if (CmpX->isVolatile())
       Flags |= MachineMemOperand::MOVolatile;

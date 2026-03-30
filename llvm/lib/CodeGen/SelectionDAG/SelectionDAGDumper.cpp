@@ -947,7 +947,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     interleaveComma(M->memoperands(), OS, [&](const MachineMemOperand *MMO) {
       printMemOperand(OS, *MMO, G);
     });
-    if (auto *A = dyn_cast<AtomicSDNode>(M))
+    if (auto *A = dyn_cast<AtomicSDNode>(M)) {
       if (A->getOpcode() == ISD::ATOMIC_LOAD) {
         bool doExt = true;
         switch (A->getExtensionType()) {
@@ -959,6 +959,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
         if (doExt)
           OS << " from " << A->getMemoryVT();
       }
+      if (A->isElementwiseAtomic())
+        OS << ", elementwise";
+    }
     OS << ">";
   } else if (const BlockAddressSDNode *BA =
                dyn_cast<BlockAddressSDNode>(this)) {
