@@ -3772,7 +3772,11 @@ void X86InstrInfo::replaceBranchWithTailCall(
   unsigned Opc = TailCall.getOpcode() == X86::TCRETURNdi ? X86::TCRETURNdicc
                                                          : X86::TCRETURNdi64cc;
 
-  auto MIB = BuildMI(MBB, I, MBB.findDebugLoc(I), get(Opc));
+  DebugLoc BranchDL = MBB.findDebugLoc(I);
+  DebugLoc TailCallDL = TailCall.getDebugLoc();
+  auto MIB = BuildMI(
+      MBB, I, DILocation::getMergedLocation(BranchDL.get(), TailCallDL.get()),
+      get(Opc));
   MIB->addOperand(TailCall.getOperand(0)); // Destination.
   MIB.addImm(0);                           // Stack offset (not used).
   MIB->addOperand(BranchCond[0]);          // Condition.
