@@ -3862,7 +3862,8 @@ static void reportOriginalDsa(Sema &SemaRef, const DSAStackTy *Stack,
 
 static OpenMPMapClauseKind
 getMapClauseKindFromModifier(OpenMPDefaultmapClauseModifier M,
-                             bool IsAggregateOrDeclareTarget) {
+                             bool IsAggregateOrDeclareTarget,
+                             bool HasConstQualifier) {
   OpenMPMapClauseKind Kind = OMPC_MAP_unknown;
   switch (M) {
   case OMPC_DEFAULTMAP_MODIFIER_alloc:
@@ -3897,13 +3898,46 @@ getMapClauseKindFromModifier(OpenMPDefaultmapClauseModifier M,
     // 1. the implicit behavior for aggregate is tofrom
     // 2. it's a declare target link
     if (IsAggregateOrDeclareTarget) {
-      Kind = OMPC_MAP_tofrom;
+      if (HasConstQualifier)
+        Kind = OMPC_MAP_to;
+      else
+        Kind = OMPC_MAP_tofrom;
       break;
     }
     llvm_unreachable("Unexpected defaultmap implicit behavior");
   }
   assert(Kind != OMPC_MAP_unknown && "Expect map kind to be known");
   return Kind;
+}
+
+static bool hasNoMutableFields(const CXXRecordDecl *RD) {
+  for (const auto *FD : RD->fields()) {
+    if (FD->isMutable())
+      return false;
+    QualType FT = FD->getType();
+    while (FT->isArrayType())
+      FT = FT->getAsArrayTypeUnsafe()->getElementType();
+    if (const auto *NestedRD = FT->getAsCXXRecordDecl())
+      if (!hasNoMutableFields(NestedRD))
+        return false;
+  }
+  return true;
+}
+
+static bool hasConstQualifiedMappingType(QualType T) {
+  while (T->isArrayType())
+    T = T->getAsArrayTypeUnsafe()->getElementType();
+  if (!T.isConstQualified())
+    return false;
+  if (const auto *RD = T->getAsCXXRecordDecl())
+    // TODO : Per OpenMP 6.0 p299 lines 3-4, non-mutable members of a
+    // const-qualified struct should also be ignored for 'from'. This
+    // requires per-member mapping granularity via compiler-generated
+    // default mappers and a mechanism to ensure constness to the mapper.
+    // For now we conservatively treat any struct with mutable members as
+    // requiring full 'tofrom'.
+    return hasNoMutableFields(RD);
+  return true;
 }
 
 namespace {
@@ -4128,7 +4162,8 @@ public:
               ImpInfo.Privates.insert(E);
             } else {
               OpenMPMapClauseKind Kind = getMapClauseKindFromModifier(
-                  M, ClauseKind == OMPC_DEFAULTMAP_aggregate || Res);
+                  M, ClauseKind == OMPC_DEFAULTMAP_aggregate || Res,
+                  hasConstQualifiedMappingType(E->getType()));
               ImpInfo.Mappings[ClauseKind][Kind].insert(E);
             }
           }
@@ -4225,7 +4260,8 @@ public:
         OpenMPDefaultmapClauseKind ClauseKind =
             getVariableCategoryFromDecl(SemaRef.getLangOpts(), FD);
         OpenMPMapClauseKind Kind = getMapClauseKindFromModifier(
-            Modifier, /*IsAggregateOrDeclareTarget=*/true);
+            Modifier, /*IsAggregateOrDeclareTarget=*/true,
+            /*HasConstQualifier=*/false);
         ImpInfo.Mappings[ClauseKind][Kind].insert(E);
         return;
       }
@@ -4473,12 +4509,12 @@ static SmallVector<SemaOpenMP::CapturedParamNameType>
 getTargetRegionParams(Sema &SemaRef) {
   ASTContext &Context = SemaRef.getASTContext();
   SmallVector<SemaOpenMP::CapturedParamNameType> Params;
-  if (SemaRef.getLangOpts().OpenMPIsTargetDevice) {
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-    Params.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
-  }
   // __context with shared vars
   Params.push_back(std::make_pair(StringRef(), QualType()));
+  // Implicit dyn_ptr argument, appended as the last parameter. Present on both
+  // host and device so argument counts match without runtime manipulation.
+  QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
+  Params.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
   return Params;
 }
 
@@ -23498,6 +23534,16 @@ OMPClause *SemaOpenMP::ActOnOpenMPMapClause(
   }
 
   MappableVarListInfo MVLI(VarList);
+  // Per OpenMP 6.0 p299 lines 3-4, a list item with the const specifier and
+  // no mutable members is ignored for 'from' clauses. A const-qualified
+  // variable cannot be modified on the device, so copying back to the host
+  // is unnecessary and potentially unsafe. Strip the FROM component:
+  // map(tofrom:) -> map(to:), map(from:) -> map(alloc:).
+  for (auto *E : VarList) {
+    if ((MapType == OMPC_MAP_from || MapType == OMPC_MAP_tofrom) &&
+        hasConstQualifiedMappingType(E->getType()))
+      MapType = (MapType == OMPC_MAP_tofrom) ? OMPC_MAP_to : OMPC_MAP_alloc;
+  }
   checkMappableExpressionList(SemaRef, DSAStack, OMPC_map, MVLI, Locs.StartLoc,
                               MapperIdScopeSpec, MapperId, UnresolvedMappers,
                               MapType, Modifiers, IsMapTypeImplicit,
@@ -24453,6 +24499,14 @@ void SemaOpenMP::ActOnOpenMPDeclareTargetName(
   if (getLangOpts().HIP)
     Diag(Loc, diag::warn_hip_omp_target_directives);
 
+  // 'local' is incompatible with 'device_type(host)' because 'local'
+  // variables exist only on the device.
+  if (MT == OMPDeclareTargetDeclAttr::MT_Local &&
+      DTCI.DT == OMPDeclareTargetDeclAttr::DT_Host) {
+    Diag(Loc, diag::err_omp_declare_target_local_host_only);
+    return;
+  }
+
   // Explicit declare target lists have precedence.
   const unsigned Level = -1;
 
@@ -24469,7 +24523,11 @@ void SemaOpenMP::ActOnOpenMPDeclareTargetName(
   }
   if (ActiveAttr && (*ActiveAttr)->getMapType() != MT &&
       (*ActiveAttr)->getLevel() == Level) {
-    Diag(Loc, diag::err_omp_declare_target_to_and_link) << ND;
+    Diag(Loc, diag::err_omp_declare_target_var_in_both_clauses)
+        << ND
+        << OMPDeclareTargetDeclAttr::ConvertMapTypeTyToStr(
+               (*ActiveAttr)->getMapType())
+        << OMPDeclareTargetDeclAttr::ConvertMapTypeTyToStr(MT);
     return;
   }
 
@@ -24483,6 +24541,11 @@ void SemaOpenMP::ActOnOpenMPDeclareTargetName(
     if (!IndirectE)
       IsIndirect = true;
   }
+  // FIXME: 'local' clause is not yet implemented in CodeGen. For now, it is
+  // treated as 'enter'. For host compilation, 'local' is a no-op.
+  if (MT == OMPDeclareTargetDeclAttr::MT_Local &&
+      getLangOpts().OpenMPIsTargetDevice)
+    Diag(Loc, diag::warn_omp_declare_target_local_not_implemented);
   auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
       getASTContext(), MT, DTCI.DT, IndirectE, IsIndirect, Level,
       SourceRange(Loc, Loc));
@@ -24508,7 +24571,8 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
        SemaRef.getCurBlock() || SemaRef.getCurCapturedRegion()) &&
       VD->hasGlobalStorage()) {
     if (!MapTy || (*MapTy != OMPDeclareTargetDeclAttr::MT_To &&
-                   *MapTy != OMPDeclareTargetDeclAttr::MT_Enter)) {
+                   *MapTy != OMPDeclareTargetDeclAttr::MT_Enter &&
+                   *MapTy != OMPDeclareTargetDeclAttr::MT_Local)) {
       // OpenMP 5.0, 2.12.7 declare target Directive, Restrictions
       // If a lambda declaration and definition appears between a
       // declare target directive and the matching end declare target
@@ -24559,8 +24623,11 @@ void SemaOpenMP::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD);
-    if (IdLoc.isValid() && Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
-      Diag(IdLoc, diag::err_omp_function_in_link_clause);
+    if (IdLoc.isValid() && Res &&
+        (*Res == OMPDeclareTargetDeclAttr::MT_Link ||
+         *Res == OMPDeclareTargetDeclAttr::MT_Local)) {
+      Diag(IdLoc, diag::err_omp_function_in_target_clause_list)
+          << OMPDeclareTargetDeclAttr::ConvertMapTypeTyToStr(*Res);
       Diag(FD->getLocation(), diag::note_defined_here) << FD;
       return;
     }

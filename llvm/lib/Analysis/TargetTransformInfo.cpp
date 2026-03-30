@@ -817,6 +817,16 @@ const char *TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
   return TTIImpl->getRegisterClassName(ClassID);
 }
 
+InstructionCost TargetTransformInfo::getRegisterClassSpillCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassSpillCost(ClassID, CostKind);
+}
+
+InstructionCost TargetTransformInfo::getRegisterClassReloadCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassReloadCost(ClassID, CostKind);
+}
+
 TypeSize TargetTransformInfo::getRegisterBitWidth(
     TargetTransformInfo::RegisterKind K) const {
   return TTIImpl->getRegisterBitWidth(K);
@@ -1045,6 +1055,22 @@ TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
   if (auto *Cast = dyn_cast<CastInst>(I))
     return getPartialReductionExtendKind(Cast->getOpcode());
   return PR_None;
+}
+
+Instruction::CastOps
+TargetTransformInfo::getOpcodeForPartialReductionExtendKind(
+    TargetTransformInfo::PartialReductionExtendKind Kind) {
+  switch (Kind) {
+  case TargetTransformInfo::PR_ZeroExtend:
+    return Instruction::CastOps::ZExt;
+  case TargetTransformInfo::PR_SignExtend:
+    return Instruction::CastOps::SExt;
+  case TargetTransformInfo::PR_FPExtend:
+    return Instruction::CastOps::FPExt;
+  default:
+    break;
+  }
+  llvm_unreachable("Unhandled partial reduction extend kind");
 }
 
 TargetTransformInfo::PartialReductionExtendKind
@@ -1539,6 +1565,11 @@ void TargetTransformInfo::collectKernelLaunchBounds(
 
 bool TargetTransformInfo::allowVectorElementIndexingUsingGEP() const {
   return TTIImpl->allowVectorElementIndexingUsingGEP();
+}
+
+bool TargetTransformInfo::isUniform(const Instruction *I,
+                                    const SmallBitVector &UniformArgs) const {
+  return TTIImpl->isUniform(I, UniformArgs);
 }
 
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;

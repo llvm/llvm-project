@@ -517,18 +517,30 @@ define <4 x i32> @combine_bitwise_ops_test2c(<4 x i32> %a, <4 x i32> %b, <4 x i3
 }
 
 define <4 x i32> @combine_bitwise_ops_test3c(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
-; SSE-LABEL: combine_bitwise_ops_test3c:
-; SSE:       # %bb.0:
-; SSE-NEXT:    xorps %xmm1, %xmm0
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[2,3]
-; SSE-NEXT:    retq
+; SSE2-LABEL: combine_bitwise_ops_test3c:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm1, %xmm0
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[2,3]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: combine_bitwise_ops_test3c:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    xorps %xmm1, %xmm0
+; SSSE3-NEXT:    xorps %xmm1, %xmm1
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[2,3]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_bitwise_ops_test3c:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    xorps %xmm1, %xmm0
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: combine_bitwise_ops_test3c:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
 ; AVX-NEXT:    retq
   %shuf1 = shufflevector <4 x i32> %a, <4 x i32> %c, <4 x i32><i32 0, i32 2, i32 5, i32 7>
   %shuf2 = shufflevector <4 x i32> %b, <4 x i32> %c, <4 x i32><i32 0, i32 2, i32 5, i32 7>
@@ -575,19 +587,32 @@ define <4 x i32> @combine_bitwise_ops_test5c(<4 x i32> %a, <4 x i32> %b, <4 x i3
 }
 
 define <4 x i32> @combine_bitwise_ops_test6c(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
-; SSE-LABEL: combine_bitwise_ops_test6c:
-; SSE:       # %bb.0:
-; SSE-NEXT:    xorps %xmm1, %xmm0
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[1,3]
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: combine_bitwise_ops_test6c:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm1, %xmm0
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[1,3]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: combine_bitwise_ops_test6c:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    xorps %xmm1, %xmm0
+; SSSE3-NEXT:    xorps %xmm1, %xmm1
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[1,3]
+; SSSE3-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_bitwise_ops_test6c:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    xorps %xmm1, %xmm0
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = zero,zero,xmm0[1,3]
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: combine_bitwise_ops_test6c:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[1,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,zero,xmm0[1,3]
 ; AVX-NEXT:    retq
   %shuf1 = shufflevector <4 x i32> %c, <4 x i32> %a, <4 x i32><i32 0, i32 2, i32 5, i32 7>
   %shuf2 = shufflevector <4 x i32> %c, <4 x i32> %b, <4 x i32><i32 0, i32 2, i32 5, i32 7>
@@ -2473,8 +2498,7 @@ define <8 x i32> @combine_unneeded_subvector2(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[2,3]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
 ; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; AVX1-NEXT:    retq
 ;

@@ -135,7 +135,7 @@ execution using `mlir-runner`. Alternatively, it can be translated into
 LLVM, expanding its utility within the system.
 
 ```
-mlir-opt example.mlir -gpu-lower-to-nvvm-pipeline = "cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"
+mlir-opt example.mlir -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"
 ```
 
 ### Module serialization

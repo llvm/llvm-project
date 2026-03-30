@@ -1231,6 +1231,10 @@ void TargetLoweringBase::initActions() {
     // Only some target support this vector operation. Most need to expand it.
     setOperationAction(ISD::VECTOR_COMPRESS, VT, Expand);
 
+    // cttz.elts defaults to expand.
+    setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
+                       Expand);
+
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
     setOperationAction(ISD::SDOPC, VT, Expand);
@@ -1935,6 +1939,13 @@ void TargetLoweringBase::computeRegisterProperties(
     RepRegClassForVT[i] = RRC;
     RepRegClassCostForVT[i] = Cost;
   }
+
+  // Compute minimum known-legal store size.
+  MaximumLegalStoreInBits = 0;
+  for (MVT VT : MVT::all_valuetypes())
+    if (VT != MVT::Other && isTypeLegal(VT) &&
+        VT.getSizeInBits().getKnownMinValue() >= MaximumLegalStoreInBits)
+      MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
 }
 
 EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,

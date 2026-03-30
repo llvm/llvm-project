@@ -88,5 +88,21 @@ info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType) {
   }
 }
 
+ol_alloc_type_t getOlAllocType(usm::alloc USMKind) {
+  switch (USMKind) {
+  case usm::alloc::host:
+    return OL_ALLOC_TYPE_HOST;
+  case usm::alloc::device:
+    return OL_ALLOC_TYPE_DEVICE;
+  case usm::alloc::shared:
+    return OL_ALLOC_TYPE_MANAGED;
+  case usm::alloc::unknown:
+    // usm::alloc::unknown can be returned to user from get_pointer_type but it
+    // can't be converted to a valid backend type.
+    throw exception(sycl::make_error_code(sycl::errc::runtime),
+                    "USM kind is not supported");
+  }
+}
+
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

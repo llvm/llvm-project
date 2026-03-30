@@ -27,12 +27,14 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "CIRGenFunctionInfo.h"
 #include "TargetInfo.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -235,6 +237,13 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
       alignment = CharUnits::fromQuantity(maxAlign);
   }
   return alignment;
+}
+
+CharUnits
+CIRGenModule::getNaturalPointeeTypeAlignment(QualType t,
+                                             LValueBaseInfo *baseInfo) {
+  return getNaturalTypeAlignment(t->getPointeeType(), baseInfo,
+                                 /*forPointeeType=*/true);
 }
 
 const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
@@ -608,10 +617,11 @@ mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
   return mlir::SymbolTable::lookupSymbolIn(theModule, name);
 }
 
-cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
-                                           mlir::Location loc, StringRef name,
-                                           mlir::Type t, bool isConstant,
-                                           mlir::Operation *insertPoint) {
+cir::GlobalOp
+CIRGenModule::createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
+                             StringRef name, mlir::Type t, bool isConstant,
+                             mlir::ptr::MemorySpaceAttrInterface addrSpace,
+                             mlir::Operation *insertPoint) {
   cir::GlobalOp g;
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
@@ -631,7 +641,7 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
         builder.setInsertionPointToStart(cgm.getModule().getBody());
     }
 
-    g = cir::GlobalOp::create(builder, loc, name, t, isConstant);
+    g = cir::GlobalOp::create(builder, loc, name, t, isConstant, addrSpace);
     if (!insertPoint)
       cgm.lastGlobalOp = g;
 
@@ -659,7 +669,7 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
   assert(!cir::MissingFeatures::opFuncSection());
 
-  assert(!cir::MissingFeatures::setTargetAttributes());
+  getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
 }
 
 std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
@@ -680,6 +690,39 @@ std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
   return std::nullopt;
 }
 
+LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
+  if (langOpts.OpenCL) {
+    LangAS as = d ? d->getType().getAddressSpace() : LangAS::opencl_global;
+    assert(as == LangAS::opencl_global || as == LangAS::opencl_global_device ||
+           as == LangAS::opencl_global_host || as == LangAS::opencl_constant ||
+           as == LangAS::opencl_local || as >= LangAS::FirstTargetAddressSpace);
+    return as;
+  }
+
+  if (langOpts.SYCLIsDevice &&
+      (!d || d->getType().getAddressSpace() == LangAS::Default))
+    errorNYI("SYCL global address space");
+
+  if (langOpts.CUDA && langOpts.CUDAIsDevice) {
+    if (d) {
+      if (d->hasAttr<CUDAConstantAttr>())
+        return LangAS::cuda_constant;
+      if (d->hasAttr<CUDASharedAttr>())
+        return LangAS::cuda_shared;
+      if (d->hasAttr<CUDADeviceAttr>())
+        return LangAS::cuda_device;
+      if (d->getType().isConstQualified())
+        return LangAS::cuda_constant;
+    }
+    return LangAS::cuda_device;
+  }
+
+  if (langOpts.OpenMP)
+    errorNYI("OpenMP global address space");
+
+  return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
+}
+
 static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
   // Set linkage and visibility in case we never see a definition.
   LinkageInfo lv = nd->getLinkageAndVisibility();
@@ -689,6 +732,92 @@ static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
   if (isExternallyVisible(lv.getLinkage()) &&
       (nd->hasAttr<WeakAttr>() || nd->isWeakImported()))
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+}
+
+static llvm::SmallVector<int64_t> indexesOfArrayAttr(mlir::ArrayAttr indexes) {
+  llvm::SmallVector<int64_t> inds;
+  for (mlir::Attribute i : indexes) {
+    auto ind = mlir::cast<mlir::IntegerAttr>(i);
+    inds.push_back(ind.getValue().getSExtValue());
+  }
+  return inds;
+}
+
+static bool isViewOnGlobal(cir::GlobalOp glob, cir::GlobalViewAttr view) {
+  return view.getSymbol().getValue() == glob.getSymName();
+}
+
+static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
+                                               cir::GlobalOp newGlob,
+                                               cir::GlobalViewAttr attr,
+                                               mlir::Type oldTy) {
+  // If the attribute does not require indexes or it is not a global view on
+  // the global we're replacing, keep the original attribute.
+  if (!attr.getIndices() || !isViewOnGlobal(newGlob, attr))
+    return attr;
+
+  llvm::SmallVector<int64_t> oldInds = indexesOfArrayAttr(attr.getIndices());
+  llvm::SmallVector<int64_t> newInds;
+  CIRGenBuilderTy &bld = cgm.getBuilder();
+  const cir::CIRDataLayout &layout = cgm.getDataLayout();
+  mlir::Type newTy = newGlob.getSymType();
+
+  uint64_t offset =
+      bld.computeOffsetFromGlobalViewIndices(layout, oldTy, oldInds);
+  bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout, newInds);
+  cir::PointerType newPtrTy;
+
+  if (isa<cir::RecordType>(oldTy))
+    newPtrTy = cir::PointerType::get(newTy);
+  else if (isa<cir::ArrayType>(oldTy))
+    newPtrTy = cast<cir::PointerType>(attr.getType());
+
+  if (newPtrTy)
+    return bld.getGlobalViewAttr(newPtrTy, newGlob, newInds);
+
+  // This may be unreachable in practice, but keep it as errorNYI while CIR
+  // is still under development.
+  cgm.errorNYI("Unhandled type in createNewGlobalView");
+  return {};
+}
+
+static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
+                                       mlir::Type oldTy,
+                                       mlir::Attribute oldInit) {
+  if (auto oldView = mlir::dyn_cast<cir::GlobalViewAttr>(oldInit))
+    return createNewGlobalView(cgm, newGlob, oldView, oldTy);
+
+  auto getNewInitElements =
+      [&](mlir::ArrayAttr oldElements) -> mlir::ArrayAttr {
+    llvm::SmallVector<mlir::Attribute> newElements;
+    for (mlir::Attribute elt : oldElements) {
+      if (auto view = mlir::dyn_cast<cir::GlobalViewAttr>(elt))
+        newElements.push_back(createNewGlobalView(cgm, newGlob, view, oldTy));
+      else if (mlir::isa<cir::ConstArrayAttr, cir::ConstRecordAttr>(elt))
+        newElements.push_back(getNewInitValue(cgm, newGlob, oldTy, elt));
+      else
+        newElements.push_back(elt);
+    }
+    return mlir::ArrayAttr::get(cgm.getBuilder().getContext(), newElements);
+  };
+
+  if (auto oldArray = mlir::dyn_cast<cir::ConstArrayAttr>(oldInit)) {
+    mlir::Attribute newElements =
+        getNewInitElements(mlir::cast<mlir::ArrayAttr>(oldArray.getElts()));
+    return cgm.getBuilder().getConstArray(
+        newElements, mlir::cast<cir::ArrayType>(oldArray.getType()));
+  }
+  if (auto oldRecord = mlir::dyn_cast<cir::ConstRecordAttr>(oldInit)) {
+    mlir::ArrayAttr newMembers = getNewInitElements(oldRecord.getMembers());
+    auto recordTy = mlir::cast<cir::RecordType>(oldRecord.getType());
+    return cgm.getBuilder().getConstRecordOrZeroAttr(
+        newMembers, recordTy.getPacked(), recordTy.getPadded(), recordTy);
+  }
+
+  // This may be unreachable in practice, but keep it as errorNYI while CIR
+  // is still under development.
+  cgm.errorNYI("Unhandled type in getNewInitValue");
+  return {};
 }
 
 // We want to replace a global value, but because of CIR's typed pointers,
@@ -724,8 +853,19 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
       mlir::Value cast =
           builder.createBitcast(getGlobalOp->getLoc(), useOpResultValue, ptrTy);
       useOpResultValue.replaceAllUsesExcept(cast, cast.getDefiningOp());
-    } else {
-      errorNYI(userOp->getLoc(), "Replace global op use in global view attr");
+    } else if (auto glob = dyn_cast<cir::GlobalOp>(userOp)) {
+      if (auto init = glob.getInitialValue()) {
+        mlir::Attribute nw = getNewInitValue(*this, newGV, oldTy, init.value());
+        glob.setInitialValueAttr(nw);
+      }
+    } else if (auto c = dyn_cast<cir::ConstantOp>(userOp)) {
+      mlir::Attribute init = getNewInitValue(*this, newGV, oldTy, c.getValue());
+      auto typedAttr = mlir::cast<mlir::TypedAttr>(init);
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(c);
+      auto newUser = cir::ConstantOp::create(builder, c.getLoc(), typedAttr);
+      c.replaceAllUsesWith(newUser.getOperation());
+      c.erase();
     }
   }
 
@@ -760,13 +900,13 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   }
 
   if (entry) {
-    assert(!cir::MissingFeatures::addressSpace());
     assert(!cir::MissingFeatures::opGlobalWeakRef());
 
     assert(!cir::MissingFeatures::setDLLStorageClass());
     assert(!cir::MissingFeatures::openMP());
 
-    if (entry.getSymType() == ty)
+    if (entry.getSymType() == ty &&
+        (cir::isMatchingAddressSpace(entry.getAddrSpaceAttr(), langAS)))
       return entry;
 
     // If there are two attempts to define the same mangled name, issue an
@@ -802,11 +942,14 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
         astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/!needsDtor);
   }
 
+  mlir::ptr::MemorySpaceAttrInterface declCIRAS =
+      cir::toCIRAddressSpaceAttr(getMLIRContext(), getGlobalVarAddressSpace(d));
+
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
-  cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty, isConstant,
-                                   /*insertPoint=*/entry.getOperation());
+  cir::GlobalOp gv = CIRGenModule::createGlobalOp(
+      *this, loc, mangledName, ty, isConstant, declCIRAS,
+      /*insertPoint=*/entry.getOperation());
 
   // If we already created a global with the same mangled name (but different
   // type) before, remove it from its parent.
@@ -892,7 +1035,7 @@ CIRGenModule::getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
     ty = getTypes().convertTypeForMem(astTy);
 
   StringRef mangledName = getMangledName(d);
-  return getOrCreateCIRGlobal(mangledName, ty, astTy.getAddressSpace(), d,
+  return getOrCreateCIRGlobal(mangledName, ty, getGlobalVarAddressSpace(d), d,
                               isForDefinition);
 }
 
@@ -911,7 +1054,7 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
 
   bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
-  mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
+  mlir::Type ptrTy = builder.getPointerTo(g.getSymType(), g.getAddrSpaceAttr());
   return cir::GetGlobalOp::create(
       builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
       tlsAccess,
@@ -923,8 +1066,8 @@ cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
   mlir::Type ty = getTypes().convertTypeForMem(d->getType());
 
   cir::GlobalOp globalOp = getOrCreateCIRGlobal(d, ty, NotForDefinition);
-  assert(!cir::MissingFeatures::addressSpace());
-  cir::PointerType ptrTy = builder.getPointerTo(globalOp.getSymType());
+  cir::PointerType ptrTy =
+      builder.getPointerTo(globalOp.getSymType(), globalOp.getAddrSpaceAttr());
   return builder.getGlobalViewAttr(ptrTy, globalOp);
 }
 
@@ -962,18 +1105,26 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   std::optional<ConstantEmitter> emitter;
 
-  assert(!cir::MissingFeatures::cudaSupport());
-
   // CUDA E.2.4.1 "__shared__ variables cannot have an initialization
   // as part of their declaration."  Sema has already checked for
-  // error cases, so we just need to set Init to UndefValue.
+  // error cases, so we just need to set Init to PoisonValue.
   bool isCUDASharedVar =
       getLangOpts().CUDAIsDevice && vd->hasAttr<CUDASharedAttr>();
-  // TODO(cir): implement isCUDAShadowVar and isCUDADeviceShadowVar, reference:
-  // OGCG
+  // Shadows of initialized device-side global variables are also left
+  // undefined.
+  // Managed Variables should be initialized on both host side and device side.
+  bool isCUDAShadowVar =
+      !getLangOpts().CUDAIsDevice && !vd->hasAttr<HIPManagedAttr>() &&
+      (vd->hasAttr<CUDAConstantAttr>() || vd->hasAttr<CUDADeviceAttr>() ||
+       vd->hasAttr<CUDASharedAttr>());
+  bool isCUDADeviceShadowVar =
+      getLangOpts().CUDAIsDevice && !vd->hasAttr<HIPManagedAttr>() &&
+      (vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+       vd->getType()->isCUDADeviceBuiltinTextureType());
 
-  if (getLangOpts().CUDA && isCUDASharedVar) {
-    init = cir::UndefAttr::get(&getMLIRContext(), convertType(vd->getType()));
+  if (getLangOpts().CUDA &&
+      (isCUDASharedVar || isCUDAShadowVar || isCUDADeviceShadowVar)) {
+    init = cir::PoisonAttr::get(convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(),
              "emitGlobalVarDefinition: loader uninitialized attribute");
@@ -1714,6 +1865,17 @@ void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
          "emitExplicitCastExprType");
 }
 
+mlir::TypedAttr CIRGenModule::emitNullMemberAttr(QualType destTy,
+                                                 const MemberPointerType *mpt) {
+  if (mpt->isMemberFunctionPointerType()) {
+    auto ty = mlir::cast<cir::MethodType>(convertType(destTy));
+    return builder.getNullMethodAttr(ty);
+  }
+
+  auto ty = mlir::cast<cir::DataMemberType>(convertType(destTy));
+  return builder.getNullDataMemberAttr(ty);
+}
+
 mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   assert(!cir::MissingFeatures::cxxABI());
 
@@ -1728,7 +1890,10 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
       return cir::ConstantOp::create(
           builder, loc, getCXXABI().buildVirtualMethodAttr(ty, methodDecl));
 
-    cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl);
+    const CIRGenFunctionInfo &fi =
+        getTypes().arrangeCXXMethodDeclaration(methodDecl);
+    cir::FuncType funcTy = getTypes().getFunctionType(fi);
+    cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl, funcTy);
     return cir::ConstantOp::create(builder, loc,
                                    builder.getMethodAttr(ty, methodFuncOp));
   }
@@ -2395,12 +2560,15 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // represent them in dedicated ops. The correct attributes are ensured during
   // translation to LLVM. Thus, we don't need to check for them here.
 
+  const auto *funcDecl = cast<FunctionDecl>(globalDecl.getDecl());
+
   if (!isIncompleteFunction)
     setCIRFunctionAttributes(globalDecl,
                              getTypes().arrangeGlobalDeclaration(globalDecl),
                              func, isThunk);
 
-  assert(!cir::MissingFeatures::setTargetAttributes());
+  if (!isIncompleteFunction && func.isDeclaration())
+    getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
 
   // TODO(cir): This needs a lot of work to better match CodeGen. That
   // ultimately ends up in setGlobalVisibility, which already has the linkage of
@@ -2412,17 +2580,16 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   }
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
-  const auto *fd = cast<FunctionDecl>(globalDecl.getDecl());
-  if (fd->isInlineBuiltinDeclaration()) {
+  if (funcDecl->isInlineBuiltinDeclaration()) {
     const FunctionDecl *fdBody;
-    bool hasBody = fd->hasBody(fdBody);
+    bool hasBody = funcDecl->hasBody(fdBody);
     (void)hasBody;
     assert(hasBody && "Inline builtin declarations should always have an "
                       "available body!");
     assert(!cir::MissingFeatures::attributeNoBuiltin());
   }
 
-  if (fd->isReplaceableGlobalAllocationFunction()) {
+  if (funcDecl->isReplaceableGlobalAllocationFunction()) {
     // A replaceable global allocation function does not act like a builtin by
     // default, only if it is invoked by a new-expression or delete-expression.
     func->setAttr(cir::CIRDialect::getNoBuiltinAttrName(),
@@ -2430,10 +2597,32 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   }
 }
 
+/// Determines whether the language options require us to model
+/// unwind exceptions.  We treat -fexceptions as mandating this
+/// except under the fragile ObjC ABI with only ObjC exceptions
+/// enabled.  This means, for example, that C with -fexceptions
+/// enables this.
+static bool hasUnwindExceptions(const LangOptions &langOpts) {
+  // If exceptions are completely disabled, obviously this is false.
+  if (!langOpts.Exceptions)
+    return false;
+  // If C++ exceptions are enabled, this is true.
+  if (langOpts.CXXExceptions)
+    return true;
+  // If ObjC exceptions are enabled, this depends on the ABI.
+  if (langOpts.ObjCExceptions)
+    return langOpts.ObjCRuntime.hasUnwindExceptions();
+  return true;
+}
+
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
     const clang::FunctionDecl *decl, cir::FuncOp f) {
   assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
   assert(!cir::MissingFeatures::stackProtector());
+
+  if (!hasUnwindExceptions(langOpts))
+    f->setAttr(cir::CIRDialect::getNoThrowAttrName(),
+               mlir::UnitAttr::get(&getMLIRContext()));
 
   std::optional<cir::InlineKind> existingInlineKind = f.getInlineKind();
   bool isNoInline =
@@ -2878,6 +3067,10 @@ void CIRGenModule::release() {
   theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
                      builder.getArrayAttr(globalScopeAsm));
 
+  if (getTriple().isAMDGPU() ||
+      (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD))
+    emitAMDGPUMetadata();
+
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
 }
@@ -3052,10 +3245,15 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
          "not a global temporary");
   const auto *varDecl = cast<VarDecl>(mte->getExtendingDecl());
 
-  // If we're not materializing a subobject of the temporary, keep the
-  // cv-qualifiers from the type of the MaterializeTemporaryExpr.
+  // Use the MaterializeTemporaryExpr's type if it has the same unqualified
+  // base type as Init. This preserves cv-qualifiers (e.g. const from a
+  // constexpr or const-ref binding) that skipRValueSubobjectAdjustments may
+  // have dropped via NoOp casts, while correctly falling back to Init's type
+  // when a real subobject adjustment changed the type (e.g. member access or
+  // base-class cast in C++98), where E->getType() reflects the reference type,
+  // not the actual storage type.
   QualType materializedType = init->getType();
-  if (init == mte->getSubExpr())
+  if (getASTContext().hasSameUnqualifiedType(mte->getType(), materializedType))
     materializedType = mte->getType();
 
   CharUnits align = getASTContext().getTypeAlignInChars(materializedType);

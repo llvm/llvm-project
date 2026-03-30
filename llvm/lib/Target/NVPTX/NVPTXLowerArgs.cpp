@@ -138,6 +138,7 @@
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
@@ -154,7 +155,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
-#include <queue>
+#include "llvm/Support/NVVMAttributes.h"
 
 #define DEBUG_TYPE "nvptx-lower-args"
 
@@ -225,12 +226,13 @@ static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
       return NewGEP;
     }
     if (auto *BC = dyn_cast<BitCastInst>(OldInst)) {
-      auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
+      auto *NewBCType =
+          PointerType::get(BC->getContext(), ADDRESS_SPACE_ENTRY_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
                                  BC->getName(), BC->getIterator());
     }
     if (auto *ASC = dyn_cast<AddrSpaceCastInst>(OldInst)) {
-      assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM);
+      assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_ENTRY_PARAM);
       (void)ASC;
       // Just pass through the argument, the old ASC is no longer needed.
       return I.NewParam;
@@ -285,95 +287,20 @@ static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
     I->eraseFromParent();
 }
 
-static Align setByValParamAlign(Argument *Arg) {
-  Function *F = Arg->getParent();
-  Type *ByValType = Arg->getParamByValType();
-  const DataLayout &DL = F->getDataLayout();
-
-  const Align OptimizedAlign = getFunctionParamOptimizedAlign(F, ByValType, DL);
-  const Align CurrentAlign = Arg->getParamAlign().valueOrOne();
-
-  if (CurrentAlign >= OptimizedAlign)
-    return CurrentAlign;
-
-  LLVM_DEBUG(dbgs() << "Try to use alignment " << OptimizedAlign.value()
-                    << " instead of " << CurrentAlign.value() << " for " << *Arg
-                    << '\n');
-
-  Arg->removeAttr(Attribute::Alignment);
-  Arg->addAttr(Attribute::getWithAlignment(F->getContext(), OptimizedAlign));
-
-  return OptimizedAlign;
-}
-
-// Adjust alignment of arguments passed byval in .param address space. We can
-// increase alignment of such arguments in a way that ensures that we can
-// effectively vectorize their loads. We should also traverse all loads from
-// byval pointer and adjust their alignment, if those were using known offset.
-// Such alignment changes must be conformed with parameter store and load in
-// NVPTXTargetLowering::LowerCall.
-static void propagateAlignmentToLoads(Value *Val, Align NewAlign,
-                                      const DataLayout &DL) {
-  struct Load {
-    LoadInst *Inst;
-    uint64_t Offset;
-  };
-
-  struct LoadContext {
-    Value *InitialVal;
-    uint64_t Offset;
-  };
-
-  SmallVector<Load> Loads;
-  std::queue<LoadContext> Worklist;
-  Worklist.push({Val, 0});
-
-  while (!Worklist.empty()) {
-    LoadContext Ctx = Worklist.front();
-    Worklist.pop();
-
-    for (User *CurUser : Ctx.InitialVal->users()) {
-      if (auto *I = dyn_cast<LoadInst>(CurUser))
-        Loads.push_back({I, Ctx.Offset});
-      else if (isa<BitCastInst>(CurUser) || isa<AddrSpaceCastInst>(CurUser))
-        Worklist.push({cast<Instruction>(CurUser), Ctx.Offset});
-      else if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
-        APInt OffsetAccumulated =
-            APInt::getZero(DL.getIndexSizeInBits(ADDRESS_SPACE_PARAM));
-
-        if (!I->accumulateConstantOffset(DL, OffsetAccumulated))
-          continue;
-
-        uint64_t OffsetLimit = -1;
-        uint64_t Offset = OffsetAccumulated.getLimitedValue(OffsetLimit);
-        assert(Offset != OffsetLimit && "Expect Offset less than UINT64_MAX");
-
-        Worklist.push({I, Ctx.Offset + Offset});
-      }
-    }
-  }
-
-  for (Load &CurLoad : Loads) {
-    Align NewLoadAlign = commonAlignment(NewAlign, CurLoad.Offset);
-    Align CurLoadAlign = CurLoad.Inst->getAlign();
-    CurLoad.Inst->setAlignment(std::max(NewLoadAlign, CurLoadAlign));
-  }
-}
-
 // Create a call to the nvvm_internal_addrspace_wrap intrinsic and set the
 // alignment of the return value based on the alignment of the argument.
 static CallInst *createNVVMInternalAddrspaceWrap(IRBuilder<> &IRB,
                                                  Argument &Arg) {
-  CallInst *ArgInParam =
-      IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
-                          {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg.getType()},
-                          &Arg, {}, Arg.getName() + ".param");
+  CallInst *ArgInParam = IRB.CreateIntrinsic(
+      Intrinsic::nvvm_internal_addrspace_wrap,
+      {IRB.getPtrTy(ADDRESS_SPACE_ENTRY_PARAM), Arg.getType()}, &Arg, {},
+      Arg.getName() + ".param");
 
   if (MaybeAlign ParamAlign = Arg.getParamAlign())
     ArgInParam->addRetAttr(
         Attribute::getWithAlignment(ArgInParam->getContext(), *ParamAlign));
 
-  Arg.addAttr(Attribute::get(Arg.getContext(), "nvvm.grid_constant"));
+  Arg.addAttr(Attribute::get(Arg.getContext(), NVVMAttr::GridConstant));
   Arg.addAttr(Attribute::ReadOnly);
 
   return ArgInParam;
@@ -429,7 +356,7 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
 
   void visitAddrSpaceCastInst(AddrSpaceCastInst &ASC) {
     // ASC to param space are no-ops and do not need a copy
-    if (ASC.getDestAddressSpace() != ADDRESS_SPACE_PARAM)
+    if (ASC.getDestAddressSpace() != ADDRESS_SPACE_ENTRY_PARAM)
       return PI.setEscapedAndAborted(&ASC);
     Base::visitAddrSpaceCastInst(ASC);
   }
@@ -502,8 +429,6 @@ static void lowerKernelByValParam(Argument *Arg, Function &F,
   if (argIsProcessed(Arg))
     return;
 
-  const Align NewArgAlign = setByValParamAlign(Arg);
-
   // (1) First check the easy case, if were able to trace through all the uses
   // and we can convert them all to param AS, then we'll do this.
   ArgUseChecker AUC(DL);
@@ -516,8 +441,6 @@ static void lowerKernelByValParam(Argument *Arg, Function &F,
     Value *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, *Arg);
     for (Use *U : UsesToUpdate)
       convertToParamAS(U, ArgInParamAS);
-
-    propagateAlignmentToLoads(ArgInParamAS, NewArgAlign, DL);
     return;
   }
 
@@ -550,7 +473,10 @@ static void lowerKernelByValParam(Argument *Arg, Function &F,
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
+static bool processFunction(Function &F, NVPTXTargetMachine &TM) {
+  if (!isKernelFunction(F))
+    return false;
+
   const NVPTXSubtarget *ST = TM.getSubtargetImpl(F);
   const bool HasCvtaParam = ST->hasCvtaParam();
 
@@ -563,28 +489,6 @@ static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
     }
 
   return Changed;
-}
-
-// Device functions only need to copy byval args into local memory.
-static bool runOnDeviceFunction(Function &F) {
-  LLVM_DEBUG(dbgs() << "Lowering function args of " << F.getName() << "\n");
-
-  const DataLayout &DL = F.getDataLayout();
-
-  bool Changed = false;
-  for (Argument &Arg : F.args())
-    if (Arg.hasByValAttr()) {
-      const Align NewArgAlign = setByValParamAlign(&Arg);
-      propagateAlignmentToLoads(&Arg, NewArgAlign, DL);
-      Changed = true;
-    }
-
-  return Changed;
-}
-
-static bool processFunction(Function &F, NVPTXTargetMachine &TM) {
-  return isKernelFunction(F) ? runOnKernelFunction(TM, F)
-                             : runOnDeviceFunction(F);
 }
 
 bool NVPTXLowerArgsLegacyPass::runOnFunction(Function &F) {

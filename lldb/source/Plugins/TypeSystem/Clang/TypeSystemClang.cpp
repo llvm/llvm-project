@@ -3169,6 +3169,15 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   return IsTypeImpl(type, isMemberFunctionPointerType);
 }
 
+bool TypeSystemClang::IsMemberDataPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberDataPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberDataPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberDataPointerType);
+}
+
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
   auto isFunctionPointerType = [](clang::QualType qual_type) {
     return qual_type->isFunctionPointerType();
@@ -3632,6 +3641,13 @@ bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
   return GetCanonicalQualType(type)->isVoidType();
+}
+
+bool TypeSystemClang::HasPointerAuthQualifier(
+    lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+  return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {

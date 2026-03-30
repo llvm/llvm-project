@@ -2620,65 +2620,141 @@ static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  SPIRVTypeInst PtrType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
-  assert(PtrType->getOpcode() == SPIRV::OpTypePointer &&
-         PtrType->getOperand(2).isReg());
-  Register TypeReg = PtrType->getOperand(2).getReg();
-  SPIRVTypeInst StructType = GR->getSPIRVTypeForVReg(TypeReg);
+  // The OpenCL ndrange_*D functions are overloaded and support 1D, 2D, and 3D
+  // variants, accepting 1 to 3 arguments:
+  //   (global_work_size)
+  //   (global_work_size, local_work_size)
+  //   (global_work_offset, global_work_size, local_work_size)
+  // Note: When all three arguments are provided, they are reordered compared
+  // to the one- or two-argument form.
+  //
+  // The function may return data through an sret argument at position 0 (with
+  // a void function return type). When present, all other argument indices are
+  // adjusted accordingly.
+  //
+  // SPIR-V's OpBuildNDRange requires all three arguments (GlobalWorkSize,
+  // LocalWorkSize, GlobalWorkOffset). For 1D kernels, the values are scalars;
+  // for 2D/3D kernels, they are arrays of 2 or 3 elements. Missing arguments
+  // default to zero.
+  //
+  // Calculate argument indices based on the number of arguments and presence
+  // of sret:
+  const unsigned NumCallArgs = Call->Arguments.size();
+  const unsigned MaxCallArgs = Call->Builtin->MaxNumArgs;
+  const unsigned IncorrectArgIdx = MaxCallArgs + 1;
+
+  const Type *RetTy = GR->getTypeForSPIRVType(Call->ReturnType);
+  bool HasSRetArg = RetTy->isVoidTy();
+
+  const unsigned SRetArgIdx = HasSRetArg ? 0 : IncorrectArgIdx;
+  const unsigned ArgBase = HasSRetArg ? 1 : 0;
+  const unsigned MaxNDRangeArgs = 3;
+  const unsigned NumNDRangeArgs = NumCallArgs - ArgBase;
+
+  const unsigned GlobalWorkSizeArgIdx =
+      NumNDRangeArgs < MaxNDRangeArgs ? ArgBase : ArgBase + 1;
+  const unsigned LocalWorkSizeArgIdx =
+      (NumNDRangeArgs == 1)
+          ? IncorrectArgIdx
+          : (NumNDRangeArgs == MaxNDRangeArgs ? ArgBase + 2 : ArgBase + 1);
+  const unsigned GlobalWorkOffsetArgIdx =
+      NumNDRangeArgs == MaxNDRangeArgs ? ArgBase : IncorrectArgIdx;
+
+  // Each nd_range field is an array of <Dimension> integers matching the
+  // address model width (32 or 64 bits).
+  const unsigned AddressModelBits = GR->getPointerSize();
+  assert(AddressModelBits == 64 || AddressModelBits == 32);
+
+  // The dimension is encoded in the function name as "ndrange_XD" where X is
+  // 1, 2, or 3.
+  unsigned Dimension = 0;
+  Call->Builtin->Name.substr(8, 1).getAsInteger(10, Dimension);
+  assert(Dimension <= 3 && Dimension >= 1);
+
+  // Determine the work size type based on the dimension. For missing arguments,
+  // create a zero constant of the appropriate type.
   MachineFunction &MF = MIRBuilder.getMF();
-  Register TmpReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
-  GR->assignSPIRVTypeToVReg(StructType, TmpReg, MF);
-  // Skip the first arg, it's the destination pointer. OpBuildNDRange takes
-  // three other arguments, so pass zero constant on absence.
-  unsigned NumArgs = Call->Arguments.size();
-  assert(NumArgs >= 2);
-  Register GlobalWorkSize = Call->Arguments[NumArgs < 4 ? 1 : 2];
-  Register LocalWorkSize =
-      NumArgs == 2 ? Register(0) : Call->Arguments[NumArgs < 4 ? 2 : 3];
-  Register GlobalWorkOffset = NumArgs <= 3 ? Register(0) : Call->Arguments[1];
-  if (NumArgs < 4) {
-    Register Const;
-    SPIRVTypeInst SpvTy = GR->getSPIRVTypeForVReg(GlobalWorkSize);
-    if (SpvTy->getOpcode() == SPIRV::OpTypePointer) {
-      MachineInstr *DefInstr = MRI->getUniqueVRegDef(GlobalWorkSize);
-      assert(DefInstr && isSpvIntrinsic(*DefInstr, Intrinsic::spv_gep) &&
-             DefInstr->getOperand(3).isReg());
-      Register GWSPtr = DefInstr->getOperand(3).getReg();
-      // TODO: Maybe simplify generation of the type of the fields.
-      unsigned Size = Call->Builtin->Name == "ndrange_3D" ? 3 : 2;
-      unsigned BitWidth = GR->getPointerSize() == 64 ? 64 : 32;
-      Type *BaseTy = IntegerType::get(MF.getFunction().getContext(), BitWidth);
-      Type *FieldTy = ArrayType::get(BaseTy, Size);
-      SPIRVTypeInst SpvFieldTy = GR->getOrCreateSPIRVType(
-          FieldTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
-      GlobalWorkSize = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
-      GR->assignSPIRVTypeToVReg(SpvFieldTy, GlobalWorkSize, MF);
-      MIRBuilder.buildInstr(SPIRV::OpLoad)
-          .addDef(GlobalWorkSize)
-          .addUse(GR->getSPIRVTypeID(SpvFieldTy))
-          .addUse(GWSPtr);
-      const SPIRVSubtarget &ST =
-          cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-      Const = GR->getOrCreateConstIntArray(0, Size, *MIRBuilder.getInsertPt(),
-                                           SpvFieldTy, *ST.getInstrInfo());
-    } else {
-      Const = GR->buildConstantInt(0, MIRBuilder, SpvTy, true);
+  SPIRVTypeInst SpvFieldTy;
+  Register ConstZero;
+  if (Dimension == 1) {
+    SpvFieldTy = GR->getSPIRVTypeForVReg(Call->Arguments[GlobalWorkSizeArgIdx]);
+    assert(SpvFieldTy && SpvFieldTy->getOpcode() == SPIRV::OpTypeInt &&
+           "Expected scalar integer type");
+
+    if (NumNDRangeArgs < MaxNDRangeArgs)
+      ConstZero = GR->buildConstantInt(0, MIRBuilder, SpvFieldTy, true);
+  } else {
+    Type *BaseTy =
+        IntegerType::get(MF.getFunction().getContext(), AddressModelBits);
+    Type *FieldTy = ArrayType::get(BaseTy, Dimension);
+    SpvFieldTy = GR->getOrCreateSPIRVType(
+        FieldTy, MIRBuilder, SPIRV::AccessQualifier::ReadOnly, true);
+
+    if (NumNDRangeArgs < MaxNDRangeArgs) {
+      auto InsertIt = MIRBuilder.getInsertPt();
+      MachineBasicBlock &MBB = MIRBuilder.getMBB();
+      MachineInstr &InsertMI = (InsertIt != MBB.end()) ? *InsertIt : MBB.back();
+      const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(MF.getSubtarget());
+      ConstZero = GR->getOrCreateConstIntArray(0, Dimension, InsertMI,
+                                               SpvFieldTy, *ST.getInstrInfo());
     }
-    if (!LocalWorkSize.isValid())
-      LocalWorkSize = Const;
-    if (!GlobalWorkOffset.isValid())
-      GlobalWorkOffset = Const;
   }
-  assert(LocalWorkSize.isValid() && GlobalWorkOffset.isValid());
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+
+  auto CreateDataRegister = [&](unsigned Idx) -> Register {
+    Register Reg = (Idx == IncorrectArgIdx) ? ConstZero : Call->Arguments[Idx];
+
+    if (GR->getSPIRVTypeForVReg(Reg) == SpvFieldTy) {
+      // Already has the correct type.
+      return Reg;
+    }
+
+    assert(GR->getSPIRVTypeForVReg(Reg)->getOpcode() == SPIRV::OpTypePointer &&
+           "Only pointer types are supported for loading values");
+
+    Register Ptr = Reg;
+
+    Reg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+    GR->assignSPIRVTypeToVReg(SpvFieldTy, Reg, MF);
+
+    MIRBuilder.buildInstr(SPIRV::OpLoad)
+        .addDef(Reg)
+        .addUse(GR->getSPIRVTypeID(SpvFieldTy))
+        .addUse(Ptr);
+    return Reg;
+  };
+
+  Register GlobalWorkSize = CreateDataRegister(GlobalWorkSizeArgIdx);
+  Register LocalWorkSize = CreateDataRegister(LocalWorkSizeArgIdx);
+  Register GlobalWorkOffset = CreateDataRegister(GlobalWorkOffsetArgIdx);
+
+  if (!HasSRetArg) {
+    return MIRBuilder.buildInstr(SPIRV::OpBuildNDRange)
+        .addDef(Call->ReturnRegister)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(GlobalWorkSize)
+        .addUse(LocalWorkSize)
+        .addUse(GlobalWorkOffset);
+  }
+
+  // When sret is used, store nd_range struct through the pointer in the first
+  // argument.
+  Register SRetReg = Call->Arguments[SRetArgIdx];
+  SPIRVTypeInst SRetPtrType = GR->getSPIRVTypeForVReg(SRetReg);
+  SPIRVTypeInst SRetType = GR->getPointeeType(SRetPtrType);
+
+  Register TmpReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  GR->assignSPIRVTypeToVReg(SRetType, TmpReg, MF);
+
   MIRBuilder.buildInstr(SPIRV::OpBuildNDRange)
       .addDef(TmpReg)
-      .addUse(TypeReg)
+      .addUse(GR->getSPIRVTypeID(SRetType))
       .addUse(GlobalWorkSize)
       .addUse(LocalWorkSize)
       .addUse(GlobalWorkOffset);
   return MIRBuilder.buildInstr(SPIRV::OpStore)
-      .addUse(Call->Arguments[0])
+      .addUse(Call->Arguments[SRetArgIdx])
       .addUse(TmpReg);
 }
 

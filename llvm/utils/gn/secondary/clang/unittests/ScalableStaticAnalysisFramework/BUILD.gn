@@ -7,7 +7,9 @@ unittest("ClangScalableAnalysisTests") {
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
+    "//clang/lib/ScalableStaticAnalysisFramework/Analyses",
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
+    "//clang/lib/ScalableStaticAnalysisFramework/Frontend",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
     "//llvm/lib/Frontend/OpenMP",
@@ -16,8 +18,8 @@ unittest("ClangScalableAnalysisTests") {
   ]
   include_dirs = [ "." ]
   sources = [
-    "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
     "ASTEntityMappingTest.cpp",
+    "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
     "BuildNamespaceTest.cpp",
     "EntityIdTableTest.cpp",
     "EntityIdTest.cpp",
@@ -25,6 +27,7 @@ unittest("ClangScalableAnalysisTests") {
     "EntityLinkerTest.cpp",
     "EntityNameTest.cpp",
     "ErrorBuilderTest.cpp",
+    "Frontend/TUSummaryExtractorFrontendActionTest.cpp",
     "ModelStringConversionsTest.cpp",
     "Registries/FancyAnalysisData.cpp",
     "Registries/MockSerializationFormat.cpp",
@@ -37,7 +40,8 @@ unittest("ClangScalableAnalysisTests") {
     "Serialization/JSONFormatTest/TUSummaryTest.cpp",
     "SummaryData/SummaryDataTest.cpp",
     "SummaryNameTest.cpp",
-    "TestFixture.cpp",
     "TUSummaryBuilderTest.cpp",
+    "TestFixture.cpp",
+    "WholeProgramAnalysis/AnalysisDriverTest.cpp",
   ]
 }

@@ -8,6 +8,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   EntityLinkerTest.cpp
   EntityNameTest.cpp
   ErrorBuilderTest.cpp
+  Frontend/TUSummaryExtractorFrontendActionTest.cpp
   ModelStringConversionsTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
@@ -22,13 +23,16 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   SummaryNameTest.cpp
   TestFixture.cpp
   TUSummaryBuilderTest.cpp
+  WholeProgramAnalysis/AnalysisDriverTest.cpp
 
   CLANG_LIBS
   clangAST
   clangASTMatchers
   clangBasic
   clangFrontend
+  clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
+  clangScalableStaticAnalysisFrameworkFrontend
   clangSerialization
   clangTooling
 

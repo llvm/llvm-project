@@ -739,10 +739,11 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
       constantCount.erase();
   } else {
     // Otherwise, emit the check.
-    cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXAggrConstructorCall: dynamic-length array expression");
   }
 
-  // Tradional LLVM codegen emits a loop here. CIR lowers to a loop as part of
+  // Traditional LLVM codegen emits a loop here. CIR lowers to a loop as part of
   // LoweringPrepare.
 
   // The alignment of the base, adjusted by the size of a single element,
@@ -754,10 +755,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CanQualType type = getContext().getCanonicalTagType(ctor->getParent());
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
-
-  // Zero initialize the storage, if requested.
-  if (zeroInitialize)
-    emitNullInitialization(*currSrcLoc, arrayBase, type);
 
   // C++ [class.temporary]p4:
   // There are two contexts in which temporaries are destroyed at a different
@@ -786,6 +783,11 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
               b.getInsertionBlock()->addArgument(ptrToElmType, loc);
           Address curAddr = Address(arg, elementType, eltAlignment);
           assert(!cir::MissingFeatures::sanitizers());
+          // Zero-initialize each element before invoking its constructor,
+          // matching CGClass::EmitCXXAggrConstructorCall which does per-element
+          // zero-init inside the array ctor loop.
+          if (zeroInitialize)
+            emitNullInitialization(loc, curAddr, type);
           auto currAVS = AggValueSlot::forAddr(
               curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
               AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
@@ -793,7 +795,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
           emitCXXConstructorCall(ctor, Ctor_Complete,
                                  /*ForVirtualBase=*/false,
                                  /*Delegating=*/false, currAVS, e);
-          cir::YieldOp::create(builder, loc);
+          cir::YieldOp::create(b, loc);
         });
   }
 }

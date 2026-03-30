@@ -81,6 +81,7 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
+    "libclc": {"libclc"},
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
@@ -146,6 +147,7 @@ PROJECT_CHECK_TARGETS = {
     "flang": "check-flang",
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
+    "libclc": "check-libclc",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",
@@ -154,7 +156,15 @@ PROJECT_CHECK_TARGETS = {
     "lit": "check-lit",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
+RUNTIMES = {
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
+    "compiler-rt",
+    "libc",
+    "flang-rt",
+    "libclc",
+}
 
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path

@@ -561,7 +561,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::f16, LibCall);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-    setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
+
     for (auto Op : {ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN})
       setOperationAction(Op, MVT::f16, Legal);
   }
@@ -7116,8 +7116,6 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
     TDCMask |= SystemZ::TDCMASK_ZERO_MINUS;
   SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i64);
 
-  if (Arg.getSimpleValueType() == MVT::f16)
-    Arg = DAG.getFPExtendOrRound(Arg, SDLoc(Arg), MVT::f32);
   SDValue Intr = DAG.getNode(SystemZISD::TDC, DL, ResultVT, Arg, TDCMaskV);
   return getCCResult(DAG, Intr);
 }
