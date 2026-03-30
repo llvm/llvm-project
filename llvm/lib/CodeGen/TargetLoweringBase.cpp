@@ -1943,7 +1943,7 @@ void TargetLoweringBase::computeRegisterProperties(
   // Compute minimum known-legal store size.
   MaximumLegalStoreInBits = 0;
   for (MVT VT : MVT::all_valuetypes())
-    if (EVT(VT).isSimple() && VT != MVT::Other && isTypeLegal(EVT(VT)) &&
+    if (VT != MVT::Other && isTypeLegal(VT) &&
         VT.getSizeInBits().getKnownMinValue() >= MaximumLegalStoreInBits)
       MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
 }
