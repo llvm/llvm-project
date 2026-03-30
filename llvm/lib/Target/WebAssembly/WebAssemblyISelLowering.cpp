@@ -3537,6 +3537,32 @@ struct MaskReduceInfo {
   bool Invert;
 };
 
+static SDValue combineSmallMaskReduction(SDNode *N, EVT FromVT,
+                                         unsigned NumElts,
+                                         const MaskReduceInfo &Info,
+                                         SelectionDAG &DAG) {
+  EVT VecVT = FromVT.changeVectorElementType(
+      *DAG.getContext(), MVT::getIntegerVT(128 / NumElts));
+
+  switch (Info.Kind) {
+  case MaskReduceKind::AnyTrue:
+    if (!Info.Invert)
+      return TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
+          N, VecVT, DAG);
+    return TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(
+        N, VecVT, DAG);
+
+  case MaskReduceKind::AllTrue:
+    if (!Info.Invert)
+      return TryMatchTrue<-1, ISD::SETEQ, false, Intrinsic::wasm_alltrue>(
+          N, VecVT, DAG);
+    return TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(
+        N, VecVT, DAG);
+  }
+
+  llvm_unreachable("unexpected mask reduction kind");
+}
+
 static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
   auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!C)
@@ -3561,32 +3587,6 @@ static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
     return MaskReduceInfo{MaskReduceKind::AllTrue, true};
 
   return std::nullopt;
-}
-
-static SDValue combineMaskReduction(SDNode *N, EVT FromVT,
-                                         unsigned NumElts,
-                                         const MaskReduceInfo &Info,
-                                         SelectionDAG &DAG) {
-  EVT VecVT = FromVT.changeVectorElementType(
-      *DAG.getContext(), MVT::getIntegerVT(128 / NumElts));
-
-  switch (Info.Kind) {
-  case MaskReduceKind::AnyTrue:
-    if (!Info.Invert)
-      return TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
-          N, VecVT, DAG);
-    return TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(
-        N, VecVT, DAG);
-
-  case MaskReduceKind::AllTrue:
-    if (!Info.Invert)
-      return TryMatchTrue<-1, ISD::SETEQ, false, Intrinsic::wasm_alltrue>(
-          N, VecVT, DAG);
-    return TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(
-        N, VecVT, DAG);
-  }
-
-  llvm_unreachable("unexpected mask reduction kind");
 }
 
 /// Try to convert a i128 comparison to a v16i8 comparison before type
@@ -3664,7 +3664,7 @@ static SDValue performSETCCCombine(SDNode *N,
 
   auto &DAG = DCI.DAG;
   if (NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16)
-    return combineMaskReduction(N, FromVT, NumElts, *Info, DAG);
+    return combineSmallMaskReduction(N, FromVT, NumElts, *Info, DAG);
 
   return SDValue();
 }
