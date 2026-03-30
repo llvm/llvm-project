@@ -450,6 +450,9 @@ LLVM_ABI void getLoopAnalysisUsage(AnalysisUsage &AU);
 /// to assess the legality of duplicating atomic loads.  Generally, this is
 /// true when moving out of loop and not true when moving into loops.
 /// If \p ORE is set use it to emit optimization remarks.
+/// When hoisting (as indicated by LICMFlags), calls that may throw are allowed
+/// since the caller checks that the instruction is guaranteed to execute and
+/// that there are no memory writes before it.
 LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
                                  DominatorTree *DT, Loop *CurLoop,
                                  MemorySSAUpdater &MSSAU,

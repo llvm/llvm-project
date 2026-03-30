@@ -48,17 +48,18 @@ loop:                                         ; preds = %entry, %for.inc
   call void @use(i64 %div)
   br label %loop
 }
-
-define void @throw_header_after_rec(ptr %xp, ptr %yp, ptr %cond) {
+; The may-throw call (readwrite) cannot be hoisted, but the loads and udiv
+; before it are guaranteed to execute and can hoist past it.
+define void @throw_header_after_rec(ptr noalias %xp, ptr noalias %yp, ptr %cond) {
 ; CHECK-LABEL: define void @throw_header_after_rec(
-; CHECK-SAME: ptr [[XP:%.*]], ptr [[YP:%.*]], ptr [[COND:%.*]]) {
+; CHECK-SAME: ptr noalias [[XP:%.*]], ptr noalias [[YP:%.*]], ptr [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[XP]], align 4
 ; CHECK-NEXT:    [[Y:%.*]] = load i64, ptr [[YP]], align 4
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[X]], [[Y]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    call void @use(i64 [[DIV]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @use(i64 [[DIV]])
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
 entry:
@@ -68,7 +69,7 @@ loop:                                         ; preds = %entry, %for.inc
   %x = load i64, ptr %xp
   %y = load i64, ptr %yp
   %div = udiv i64 %x, %y
-  call void @use(i64 %div) readonly
+  call void @use(i64 %div)
   br label %loop
 }
 
@@ -85,7 +86,7 @@ define void @throw_header_after_nonfirst(ptr %xp, ptr %yp, ptr %cond) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[XP]], i64 [[IV]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[DIV]] = udiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i64 [[DIV]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @use(i64 [[DIV]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
 entry:
