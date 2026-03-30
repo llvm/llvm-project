@@ -16481,10 +16481,12 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   WorklistRemover DeadNodes(*this);
   DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
 
-  // If we looked through a freeze, re-wrap the narrowed load in freeze.
+  // If we looked through a freeze, rewrap the narrowed result in freeze.
   SDValue Result = Load;
   if (FreezeNode)
     Result = DAG.getNode(ISD::FREEZE, DL, VT, Result);
+
+  // Shift the result left, if we've swallowed a left shift.
   if (ShLeftAmt != 0) {
     // If the shift amount is as large as the result size (but, presumably,
     // no larger than the source) then the useful bits of the result are
