@@ -137,8 +137,8 @@ private:
   void expandAtomicLoadToLibcall(LoadInst *LI);
   void expandAtomicStoreToLibcall(StoreInst *LI);
   void expandAtomicRMWToLibcall(AtomicRMWInst *I);
-  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I, const Twine &AtomicOpName,
-                                Instruction *DiagnosticInst);
+  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I, const Twine &AtomicOpName = "cmpxchg",
+                                Instruction *DiagnosticInst = nullptr);
 
   bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                 CreateCmpXchgInstFun CreateCmpXchg);
@@ -349,7 +349,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
   } else if (CASI) {
     if (!atomicSizeSupported(TLI, CASI)) {
-      expandAtomicCASToLibcall(CASI, "cmpxchg", nullptr);
+      expandAtomicCASToLibcall(CASI);
       return true;
     }
 
