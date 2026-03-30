@@ -1363,14 +1363,19 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
 // Can determine iteration for splitting.
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
-                                         const SCEV *SrcConst,
-                                         const SCEV *DstConst,
-                                         const Loop *CurSrcLoop,
-                                         const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
+                                         const SCEVAddRecExpr *Dst,
+                                         unsigned Level,
                                          FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
+
+  const SCEV *Coeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstConst = Dst->getStart();
+
+  assert(Coeff == SE->getNegativeSCEV(Dst->getStepRecurrence(*SE)) &&
+         "Unexpected input for weakCrossingSIVtest");
 
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
@@ -1421,6 +1426,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
 
   // We're certain that Delta > 0 and ConstCoeff > 0.
   // Check Delta/(2*ConstCoeff) against upper loop bound
+  const Loop *CurSrcLoop = Src->getLoop();
   if (const SCEV *UpperBound =
           collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
@@ -2062,38 +2068,31 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
   if (SrcAddRec && DstAddRec) {
-    const SCEV *SrcConst = SrcAddRec->getStart();
-    const SCEV *DstConst = DstAddRec->getStart();
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
-    const Loop *CurDstLoop = DstAddRec->getLoop();
+    [[maybe_unused]] const Loop *CurDstLoop = DstAddRec->getLoop();
     assert(haveSameSD(CurSrcLoop, CurDstLoop) &&
            "Loops in the SIV test should have the same iteration space and "
            "depth");
     Level = mapSrcLoop(CurSrcLoop);
-    bool disproven;
+    bool disproven = false;
     if (SrcCoeff == DstCoeff)
       disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
                                 UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
-      disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                                      CurDstLoop, Level, Result);
-    else
-      disproven = exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
-    return disproven || gcdMIVtest(Src, Dst, Result);
+      disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
+    return disproven || exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
   }
   if (SrcAddRec) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
-    return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result) ||
-           gcdMIVtest(Src, Dst, Result);
+    return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result);
   }
   if (DstAddRec) {
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
-    return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result) ||
-           gcdMIVtest(Src, Dst, Result);
+    return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
   llvm_unreachable("SIV test expected at least one AddRec");
   return false;
