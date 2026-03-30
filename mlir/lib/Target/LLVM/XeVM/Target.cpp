@@ -475,10 +475,19 @@ XeVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   auto xeTarget = cast<XeVMTargetAttr>(attribute);
   SmallVector<NamedAttribute, 2> properties;
-  if (format == gpu::CompilationTarget::Assembly)
+  if (format == gpu::CompilationTarget::Assembly) {
     properties.push_back(
         builder.getNamedAttr("O", builder.getI32IntegerAttr(xeTarget.getO())));
-
+    // If the object is serialized from a SPIR-V target, attach bool attribute
+    // "requires_null_terminator=false". Since, SPIR-V is a binary format it
+    // does not require a null terminator.
+    if (xeTarget.getTriple().starts_with("spirv")) {
+      properties.push_back(builder.getNamedAttr(
+          "requires_null_terminator",
+          builder.getBoolAttr(
+              false /*SPIR-V binary does not need null terminator*/)));
+    }
+  }
   DictionaryAttr objectProps;
   if (!properties.empty())
     objectProps = builder.getDictionaryAttr(properties);
