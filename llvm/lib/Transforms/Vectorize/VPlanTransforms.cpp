@@ -5721,8 +5721,8 @@ static VPWidenIntOrFpInductionRecipe *getExpressionIV(VPValue *V) {
   return dyn_cast<VPWidenIntOrFpInductionRecipe>(WidenIVCandidate);
 }
 
-/// Create a scalar version of \p BinOp and place it after \p ScalarIV's
-/// defining recipe, replacing \p WidenIV with \p ScalarIV.
+/// Create a scalar version of \p BinOp, with its \p WidenIV operand replaced
+/// by \p ScalarIV, and place it after \p ScalarIV's defining recipe.
 static VPValue *cloneBinOpForScalarIV(VPWidenRecipe *BinOp, VPValue *ScalarIV,
                                       VPWidenIntOrFpInductionRecipe *WidenIV) {
   assert(Instruction::isBinaryOp(BinOp->getOpcode()) &&
@@ -5745,21 +5745,19 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
   VPRegionBlock *VectorLoopRegion = Plan.getVectorLoopRegion();
 
   // Helper lambda to check if the IV range excludes the sentinel value. Try
-  // signed first, then unsigned.
-  auto CheckSentinel =
-      [&SE](const SCEV *IVSCEV,
-            bool UseMax) -> std::optional<std::pair<APInt, bool>> {
+  // signed first, then unsigned. Return an excluded sentinel if found,
+  // otherwise return null.
+  auto CheckSentinel = [&SE](const SCEV *IVSCEV,
+                             bool UseMax) -> std::optional<APSInt> {
     unsigned BW = IVSCEV->getType()->getScalarSizeInBits();
     for (bool Signed : {true, false}) {
-      APInt Sentinel = UseMax ? (Signed ? APInt::getSignedMinValue(BW)
-                                        : APInt::getMinValue(BW))
-                              : (Signed ? APInt::getSignedMaxValue(BW)
-                                        : APInt::getMaxValue(BW));
+      APSInt Sentinel = UseMax ? APSInt::getMinValue(BW, !Signed)
+                               : APSInt::getMaxValue(BW, !Signed);
 
       ConstantRange IVRange =
           Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
       if (!IVRange.contains(Sentinel))
-        return std::make_pair(Sentinel, Signed);
+        return Sentinel;
     }
     return std::nullopt;
   };
@@ -5796,7 +5794,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       continue;
 
     // Check if FindLastExpression is a simple expression of a widened IV. If
-    // so, we can track the underlying IV and instead sink the expression.
+    // so, we can track the underlying IV instead and sink the expression.
     auto *SinkExpressionIV = getExpressionIV(FindLastExpression);
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(
         SinkExpressionIV ? SinkExpressionIV : FindLastExpression, PSE, &L);
@@ -5817,10 +5815,10 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // UMin/SMin otherwise.
     bool UseMax = SE.isKnownPositive(Step);
     bool UseSigned;
-    std::optional<APInt> SentinelVal;
+    std::optional<APSInt> SentinelVal;
     if (auto Sentinel = CheckSentinel(IVSCEV, UseMax)) {
-      SentinelVal = Sentinel->first;
-      UseSigned = Sentinel->second;
+      SentinelVal = *Sentinel;
+      UseSigned = Sentinel->isSigned();
     }
 
     // Sinking the expression may enable or disable a sentinel (e.g., if the
@@ -5833,9 +5831,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
           vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
       if (match(FindLastExpressionSCEV,
                 m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
-        if (auto Sentinel = CheckSentinel(FindLastExpressionSCEV, UseMax)) {
-          SentinelVal = Sentinel->first;
-          UseSigned = Sentinel->second;
+        bool NewUseMax = SE.isKnownPositive(Step);
+        if (auto Sentinel = CheckSentinel(FindLastExpressionSCEV, NewUseMax)) {
+          SentinelVal = *Sentinel;
+          UseSigned = Sentinel->isSigned();
+          UseMax = NewUseMax;
           // We can use the sentinel value with the original expression, reset
           // IVSCEV and clear SinkExpressionIV.
           IVSCEV = FindLastExpressionSCEV;
@@ -5868,12 +5868,15 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       VPBuilder LoopBuilder(OrigSelectR);
       auto DL = OrigSelectR->getDebugLoc();
       VPValue *Cond = OrigSelectR->getOperand(0);
-      if (OrigSelectR->getOperand(1) == PhiR)
+      if (OrigSelectR->getOperand(1) == PhiR) {
         FindLastSelect =
             LoopBuilder.createSelect(Cond, PhiR, SinkExpressionIV, DL);
-      else
+      } else {
+        assert(OrigSelectR->getOperand(2) == PhiR &&
+               "PhiR expected as operand 1 or 2");
         FindLastSelect =
             LoopBuilder.createSelect(Cond, SinkExpressionIV, PhiR, DL);
+      }
     }
 
     // Create the reduction result in the middle block using sentinel directly.
