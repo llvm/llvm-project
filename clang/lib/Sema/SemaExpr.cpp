@@ -64,7 +64,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeSize.h"
@@ -17537,7 +17536,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   case AssignConvertType::IncompatiblePointerDiscardsQualifiers: {
     // Perform decay if necessary.
-    if (SrcType->isArrayType() || SrcType->isFunctionType())
+    if (SrcType->canDecayToPointerType())
       SrcType = Context.getDecayedType(SrcType);
 
     isInvalid = true;
