@@ -234,6 +234,9 @@ public:
 
 class UseFact : public Fact {
   const Expr *UseExpr;
+  // For reference writes, handleAssignment narrows this to a single OriginID
+  // for the outer origin (a Read of the reference binding) and creates a
+  // separate Write UseFact for the inner origins.
   std::variant<const OriginList *, OriginID> Origins;
   // True if this use is a write operation (e.g., left-hand side of assignment).
   // Write operations are exempted from use-after-free checks.
