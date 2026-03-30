@@ -121,34 +121,38 @@ std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
 Expected<uint64_t>
 GsymReader::getAddressIndex(const uint64_t Addr) const {
   const uint64_t BaseAddress = getBaseAddress();
-  if (Addr >= BaseAddress) {
-    const uint64_t AddrOffset = Addr - BaseAddress;
-    std::optional<uint64_t> AddrOffsetIndex;
-    const uint64_t AddressOffsetByteSize = getAddressOffsetByteSize();
-    switch (AddressOffsetByteSize) {
-    case 1:
-      AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
-      break;
-    case 2:
-      AddrOffsetIndex = getAddressOffsetIndex<uint16_t>(AddrOffset);
-      break;
-    case 4:
-      AddrOffsetIndex = getAddressOffsetIndex<uint32_t>(AddrOffset);
-      break;
-    case 8:
-      AddrOffsetIndex = getAddressOffsetIndex<uint64_t>(AddrOffset);
-      break;
-    default:
-      return createStringError(std::errc::invalid_argument,
-                               "unsupported address offset size %" PRIu64,
-                               AddressOffsetByteSize);
-    }
-    if (AddrOffsetIndex)
-      return *AddrOffsetIndex;
-  }
-  return createStringError(std::errc::invalid_argument,
-                           "address 0x%" PRIx64 " is not in GSYM", Addr);
+  if (Addr < BaseAddress)
+    return createStringError(std::errc::invalid_argument,
+                             "address 0x%" PRIx64 " is not in GSYM", Addr);
 
+  const uint64_t AddrOffset = Addr - BaseAddress;
+  const uint8_t ByteSize = getAddressOffsetByteSize();
+  const size_t NumAddrs = getNumAddresses();
+  AddrOffsetIterator Begin(AddrOffsets, ByteSize, 0);
+  AddrOffsetIterator End(AddrOffsets, ByteSize, NumAddrs);
+  auto Iter = std::lower_bound(Begin, End, AddrOffset);
+
+  // Watch for addresses that fall between the base address and the first
+  // address offset.
+  if (Iter == Begin && AddrOffset < *Begin)
+    return createStringError(std::errc::invalid_argument,
+                             "address 0x%" PRIx64 " is not in GSYM", Addr);
+  if (Iter == End || AddrOffset < *Iter)
+    --Iter;
+
+  // GSYM files have sorted function infos with the most information (line
+  // table and/or inline info) first in the array of function infos, so
+  // always backup as much as possible as long as the address offset is the
+  // same as the previous entry.
+  while (Iter != Begin) {
+    auto Prev = Iter - 1;
+    if (*Prev == *Iter)
+      Iter = Prev;
+    else
+      break;
+  }
+
+  return Iter.getIndex();
 }
 
 llvm::Expected<DataExtractor>

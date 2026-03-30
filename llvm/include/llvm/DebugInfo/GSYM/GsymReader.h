@@ -316,43 +316,56 @@ protected:
     return DE.getUnsigned(&Offset, ElementByteSize);
   }
 
-  /// Lookup an address offset in the AddrOffsets table.
-  ///
-  /// Given an address offset, look it up using a binary search of the
-  /// AddrOffsets table.
-  ///
-  /// \param AddrOffset An address offset, that has already been computed by
-  /// subtracting the base address.
-  /// \returns The matching address offset index. This index will be used to
-  /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
-  template <class T>
-  std::optional<uint64_t>
-  getAddressOffsetIndex(const uint64_t AddrOffset) const {
-    ArrayRef<T> AIO = getAddrOffsets<T>();
-    const auto Begin = AIO.begin();
-    const auto End = AIO.end();
-    auto Iter = std::lower_bound(Begin, End, AddrOffset);
-    // Watch for addresses that fall between the base address and the first
-    // address offset.
-    if (Iter == Begin && AddrOffset < *Begin)
-      return std::nullopt;
-    if (Iter == End || AddrOffset < *Iter)
-      --Iter;
+  /// A random access iterator over a byte array of fixed-size unsigned
+  /// integers. Supports any element byte size from 1 to 8, enabling
+  /// std::lower_bound() to binary search address offset tables without
+  /// requiring power-of-two element sizes.
+  class AddrOffsetIterator {
+    ArrayRef<uint8_t> Data;
+    uint8_t ByteSize;
+    size_t Index;
 
-    // GSYM files have sorted function infos with the most information (line
-    // table and/or inline info) first in the array of function infos, so
-    // always backup as much as possible as long as the address offset is the
-    // same as the previous entry.
-    while (Iter != Begin) {
-      auto Prev = Iter - 1;
-      if (*Prev == *Iter)
-        Iter = Prev;
-      else
-        break;
+  public:
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = uint64_t;
+    using difference_type = int64_t;
+    using pointer = const uint64_t *;
+    using reference = uint64_t;
+
+    AddrOffsetIterator(ArrayRef<uint8_t> Data, uint8_t ByteSize, size_t Index)
+        : Data(Data), ByteSize(ByteSize), Index(Index) {}
+
+    uint64_t operator*() const {
+      return getUnsigned(Data, ByteSize, Index).value_or(0);
     }
+    uint64_t operator[](difference_type N) const {
+      return getUnsigned(Data, ByteSize, Index + N).value_or(0);
+    }
+    AddrOffsetIterator &operator++() { ++Index; return *this; }
+    AddrOffsetIterator operator++(int) { auto T = *this; ++Index; return T; }
+    AddrOffsetIterator &operator--() { --Index; return *this; }
+    AddrOffsetIterator operator--(int) { auto T = *this; --Index; return T; }
+    AddrOffsetIterator &operator+=(difference_type N) { Index += N; return *this; }
+    AddrOffsetIterator &operator-=(difference_type N) { Index -= N; return *this; }
+    AddrOffsetIterator operator+(difference_type N) const {
+      return AddrOffsetIterator(Data, ByteSize, Index + N);
+    }
+    AddrOffsetIterator operator-(difference_type N) const {
+      return AddrOffsetIterator(Data, ByteSize, Index - N);
+    }
+    difference_type operator-(const AddrOffsetIterator &RHS) const {
+      return static_cast<difference_type>(Index) -
+             static_cast<difference_type>(RHS.Index);
+    }
+    bool operator==(const AddrOffsetIterator &RHS) const { return Index == RHS.Index; }
+    bool operator!=(const AddrOffsetIterator &RHS) const { return Index != RHS.Index; }
+    bool operator<(const AddrOffsetIterator &RHS) const { return Index < RHS.Index; }
+    bool operator>(const AddrOffsetIterator &RHS) const { return Index > RHS.Index; }
+    bool operator<=(const AddrOffsetIterator &RHS) const { return Index <= RHS.Index; }
+    bool operator>=(const AddrOffsetIterator &RHS) const { return Index >= RHS.Index; }
 
-    return std::distance(Begin, Iter);
-  }
+    size_t getIndex() const { return Index; }
+  };
 
   /// Given an address, find the address index.
   ///
