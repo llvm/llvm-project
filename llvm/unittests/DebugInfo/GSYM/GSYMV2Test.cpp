@@ -277,8 +277,8 @@ TEST(GSYMV2Test, TestCreatorV2AddrOffSize8Byte) {
 /// AddrInfoOffsets verification
 
 TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
-  // Verify that each AddrInfoOffset entry points to a valid location within
-  // the FunctionInfo section.
+  // Verify that each AddrInfoOffset entry (relative to FunctionInfo section)
+  // points to a valid location within the FunctionInfo section.
   GsymCreatorV2 GC;
   const uint32_t Func1Name = GC.insertString("func_a");
   const uint32_t Func2Name = GC.insertString("func_b");
@@ -294,44 +294,48 @@ TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   StringRef Data = *Result;
 
+  // Decode header to get AddrInfoOffSize.
+  auto HdrOrErr = decodeHeaderV2(Data, llvm::endianness::little);
+  ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
+  const HeaderV2 &Hdr = *HdrOrErr;
+  uint8_t AddrInfoOffSize = Hdr.AddrInfoOffSize;
+
   // Find the AddrInfoOffsets and FunctionInfo sections from GlobalData.
   uint64_t Offset = 24;
-  uint64_t AIOffsetsOffset = 0, AIOffsetsSize = 0;
-  uint64_t FIOffset = 0, FISize = 0;
+  uint64_t AIOffsetsOffset = 0;
+  uint64_t FISize = 0;
   while (Offset < Data.size()) {
     GlobalData GD = decodeGlobalDataEntry(Data, Offset, llvm::endianness::little);
     if (GD.Type == GlobalInfoType::AddrInfoOffsets) {
       AIOffsetsOffset = GD.FileOffset;
-      AIOffsetsSize = GD.FileSize;
     } else if (GD.Type == GlobalInfoType::FunctionInfo) {
-      FIOffset = GD.FileOffset;
       FISize = GD.FileSize;
     } else if (GD.Type == GlobalInfoType::EndOfList) {
       break;
     }
   }
   ASSERT_GT(AIOffsetsOffset, 0u);
-  ASSERT_GT(FIOffset, 0u);
+  ASSERT_GT(FISize, 0u);
 
-  // Each AddrInfoOffset should point within [FIOffset, FIOffset + FISize).
+  // Each AddrInfoOffset is relative to the FunctionInfo section and should
+  // be within [0, FISize).
   DataExtractor DE(Data, /*IsLittleEndian=*/true, 8);
   uint64_t AIOffset = AIOffsetsOffset;
   for (uint32_t I = 0; I < 3; ++I) {
-    uint32_t FuncOffset = DE.getU32(&AIOffset);
-    EXPECT_GE(FuncOffset, FIOffset)
-        << "AddrInfoOffset[" << I << "] before FunctionInfo section";
-    EXPECT_LT(FuncOffset, FIOffset + FISize)
+    uint64_t RelOff = DE.getUnsigned(&AIOffset, AddrInfoOffSize);
+    EXPECT_LT(RelOff, FISize)
         << "AddrInfoOffset[" << I << "] beyond FunctionInfo section";
   }
 
-  // Offsets should be strictly increasing (sorted functions, no overlap).
+  // Relative offsets should be strictly increasing (sorted functions).
   AIOffset = AIOffsetsOffset;
-  uint32_t PrevOffset = DE.getU32(&AIOffset);
+  uint64_t PrevOff = DE.getUnsigned(&AIOffset, AddrInfoOffSize);
+  EXPECT_EQ(PrevOff, 0u) << "First AddrInfoOffset should be 0";
   for (uint32_t I = 1; I < 3; ++I) {
-    uint32_t CurOffset = DE.getU32(&AIOffset);
-    EXPECT_GT(CurOffset, PrevOffset)
+    uint64_t CurOff = DE.getUnsigned(&AIOffset, AddrInfoOffSize);
+    EXPECT_GT(CurOff, PrevOff)
         << "AddrInfoOffset[" << I << "] not strictly increasing";
-    PrevOffset = CurOffset;
+    PrevOff = CurOff;
   }
 }
 
@@ -507,7 +511,6 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
     (void)OffOrErr;
   }
   const uint64_t FuncInfoSize = FIBuf.size();
-  const uint64_t AddrInfoOffset = FuncInfoOff; // Points to start of FI section.
 
   // Write header.
   FW.writeU32(GSYM_MAGIC);           // Magic
@@ -537,10 +540,10 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   assert(FW.tell() == AddrOffsetsOff);
   FW.writeU8(0); // Offset from BaseAddr = 0 for first function.
 
-  // Pad to AddrInfoOffsets.
+  // Pad to AddrInfoOffsets. Values are relative to FunctionInfo section.
   FW.alignTo(4);
   assert(FW.tell() == AddrInfoOffsetsOff);
-  FW.writeU32(static_cast<uint32_t>(AddrInfoOffset));
+  FW.writeU32(0); // RelOff = 0 (first and only FunctionInfo).
 
   // FileTable.
   FW.alignTo(4);

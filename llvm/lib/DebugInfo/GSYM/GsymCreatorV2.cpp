@@ -81,20 +81,9 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const uint64_t AddrOffsetsSize = Funcs.size() * AddrOffSize;
   CurOffset += AddrOffsetsSize;
 
-  // Determine AddrInfoOffSize.
-  uint8_t AddrInfoOffSize = 4;
-  {
-    uint64_t Est = CurOffset;
-    Est = llvm::alignTo(Est, 4);
-    Est += Funcs.size() * 4;
-    Est = llvm::alignTo(Est, 4);
-    Est += 4 + Files.size() * sizeof(FileEntry);
-    Est += StringTableSize;
-    Est = llvm::alignTo(Est, 4);
-    Est += FISectionSize;
-    if (Est > UINT32_MAX)
-      AddrInfoOffSize = 8;
-  }
+  // Determine AddrInfoOffSize based on FunctionInfo section size, since
+  // AddrInfoOffsets stores offsets relative to the FunctionInfo section start.
+  uint8_t AddrInfoOffSize = (FISectionSize > UINT32_MAX) ? 8 : 4;
 
   // AddrInfoOffsets section.
   CurOffset = llvm::alignTo(CurOffset, AddrInfoOffSize);
@@ -157,20 +146,11 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   assert(O.tell() == AddrOffsetsOffset);
   encodeAddrOffsets(O, AddrOffSize, *BaseAddr);
 
-  // Write AddrInfoOffsets section.
+  // Write AddrInfoOffsets section. Values are relative to FunctionInfo section.
   O.alignTo(AddrInfoOffSize);
   assert(O.tell() == AddrInfoOffsetsOffset);
-  for (uint64_t RelOff : FIRelativeOffsets) {
-    uint64_t AbsOff = FISectionOffset + RelOff;
-    if (AddrInfoOffSize == 4) {
-      if (AbsOff > UINT32_MAX)
-        return createStringError(std::errc::invalid_argument,
-                                 "addr info offset exceeded 32-bit max");
-      O.writeU32(static_cast<uint32_t>(AbsOff));
-    } else {
-      O.writeU64(AbsOff);
-    }
-  }
+  for (uint64_t RelOff : FIRelativeOffsets)
+    O.writeUnsigned(RelOff, AddrInfoOffSize);
 
   // Write FileTable section.
   O.alignTo(4);

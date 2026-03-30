@@ -43,6 +43,7 @@ public:
 
   LLVM_ABI const Header &getHeader() const;
 
+  // Header accessors
   uint64_t getBaseAddress() const override { return getHeader().BaseAddress; }
   uint64_t getNumAddresses() const override { return getHeader().NumAddresses; }
   uint64_t getAddressOffsetByteSize() const override { return getHeader().AddrOffSize; }

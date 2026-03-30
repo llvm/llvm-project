@@ -51,10 +51,9 @@ GsymReaderV2::create(std::unique_ptr<MemoryBuffer> &MB) {
 }
 
 /// Helper to parse GlobalData entries from a GSYM V2 file.
-static llvm::Expected<std::map<GlobalInfoType, GlobalData>>
-parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset,
-                       uint64_t BufSize) {
-  std::map<GlobalInfoType, GlobalData> Sections;
+static llvm::Error
+parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset, uint64_t BufSize,
+                       std::map<GlobalInfoType, GlobalData> &Sections) {
   while (Offset + sizeof(GlobalData) <= BufSize) {
     auto GDOrErr = GlobalData::decode(DE, Offset);
     if (!GDOrErr)
@@ -62,7 +61,7 @@ parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset,
     const GlobalData &GD = *GDOrErr;
 
     if (GD.Type == GlobalInfoType::EndOfList)
-      return Sections;
+      return Error::success();
 
     if (GD.FileOffset + GD.FileSize > BufSize)
       return createStringError(std::errc::invalid_argument,
@@ -121,28 +120,22 @@ llvm::Error GsymReaderV2::parse() {
 
   // Parse GlobalData entries to find section locations.
   uint64_t Offset = sizeof(HeaderV2);
-  auto SectionsOrErr = parseGlobalDataEntries(DE, Offset, BufSize);
-  if (!SectionsOrErr)
-    return SectionsOrErr.takeError();
-  auto &Sections = *SectionsOrErr;
+  if (auto Err = parseGlobalDataEntries(DE, Offset, BufSize,
+                                        GlobalDataSections))
+    return Err;
 
-  if (!Sections.count(GlobalInfoType::AddrOffsets))
-    return createStringError(std::errc::invalid_argument,
-                             "missing AddrOffsets section");
-  if (!Sections.count(GlobalInfoType::AddrInfoOffsets))
-    return createStringError(std::errc::invalid_argument,
-                             "missing AddrInfoOffsets section");
-  if (!Sections.count(GlobalInfoType::StringTable))
-    return createStringError(std::errc::invalid_argument,
-                             "missing StringTable section");
-  if (!Sections.count(GlobalInfoType::FileTable))
-    return createStringError(std::errc::invalid_argument,
-                             "missing FileTable section");
+  for (auto Type : {GlobalInfoType::AddrOffsets, GlobalInfoType::AddrInfoOffsets,
+                     GlobalInfoType::StringTable, GlobalInfoType::FileTable,
+                     GlobalInfoType::FunctionInfo})
+    if (!GlobalDataSections.count(Type))
+      return createStringError(std::errc::invalid_argument,
+                               "missing required section type %u",
+                               static_cast<uint32_t>(Type));
 
-  const GlobalData &AddrOffsetsGD = Sections[GlobalInfoType::AddrOffsets];
-  const GlobalData &AddrInfoOffsetsGD = Sections[GlobalInfoType::AddrInfoOffsets];
-  const GlobalData &StringTableGD = Sections[GlobalInfoType::StringTable];
-  const GlobalData &FileTableGD = Sections[GlobalInfoType::FileTable];
+  const GlobalData &AddrOffsetsGD = GlobalDataSections[GlobalInfoType::AddrOffsets];
+  const GlobalData &AddrInfoOffsetsGD = GlobalDataSections[GlobalInfoType::AddrInfoOffsets];
+  const GlobalData &StringTableGD = GlobalDataSections[GlobalInfoType::StringTable];
+  const GlobalData &FileTableGD = GlobalDataSections[GlobalInfoType::FileTable];
 
   if (AddrOffsetsGD.FileSize !=
       static_cast<uint64_t>(Hdr->NumAddresses) * Hdr->AddrOffSize)
@@ -167,7 +160,8 @@ llvm::Error GsymReaderV2::parse() {
           Hdr->NumAddresses);
     } else {
       return createStringError(std::errc::not_supported,
-                               "8-byte AddrInfoOffsets not yet supported");
+                               "non-4-byte AddrInfoOffsets not yet supported "
+                               "in non-swap path");
     }
 
     if (FileTableGD.FileSize < 4)
@@ -228,7 +222,8 @@ llvm::Error GsymReaderV2::parse() {
       AddrInfoOffsets = ArrayRef<uint32_t>(Swap->AddrInfoOffsets);
     } else {
       return createStringError(std::errc::not_supported,
-                               "8-byte AddrInfoOffsets not yet supported");
+                               "non-4-byte AddrInfoOffsets not yet supported "
+                               "in swap path");
     }
 
     uint64_t FTOff = FileTableGD.FileOffset;
@@ -252,6 +247,13 @@ const HeaderV2 &GsymReaderV2::getHeader() const {
   return *Hdr;
 }
 
+std::optional<uint64_t> GsymReaderV2::getAddressInfoOffset(size_t Index) const {
+  if (Index < AddrInfoOffsets.size())
+    return AddrInfoOffsets[Index] +
+           GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
+  return std::nullopt;
+}
+
 void GsymReaderV2::dump(raw_ostream &OS) {
   const auto &Header = getHeader();
   OS << Header << "\n";
@@ -272,8 +274,10 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "\nAddress Info Offsets:\n";
   OS << "INDEX  Offset\n";
   OS << "====== ==========\n";
-  for (uint32_t I = 0; I < getNumAddresses(); ++I)
-    OS << format("[%4u] ", I) << HEX32(AddrInfoOffsets[I]) << "\n";
+  for (uint32_t I = 0; I < getNumAddresses(); ++I) {
+    auto Off = getAddressInfoOffset(I);
+    OS << format("[%4u] ", I) << HEX32(Off.value_or(0)) << "\n";
+  }
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
   OS << "====== ========== ========== ==============================\n";
@@ -286,7 +290,8 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "\n" << StrTab << "\n";
 
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
-    OS << "FunctionInfo @ " << HEX32(AddrInfoOffsets[I]) << ": ";
+    auto Off = getAddressInfoOffset(I);
+    OS << "FunctionInfo @ " << HEX32(Off.value_or(0)) << ": ";
     if (auto FI = getFunctionInfoAtIndex(I))
       dump(OS, *FI);
     else

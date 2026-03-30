@@ -386,14 +386,14 @@ void GsymCreator::encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
   O.alignTo(AddrOffSize);
   for (const auto &FI : Funcs) {
     uint64_t AddrOffset = FI.startAddress() - BaseAddr;
+    // Make sure we calculated the address offsets byte size correctly by
+    // verifying the current address offset is within ranges. We have seen bugs
+    // introduced when the code changes that can cause problems here so it is
+    // good to catch this during testing.
     assert(AddrOffset <= MaxAddressOffset);
+    // Suppress unused variable warning in release builds.
     (void)MaxAddressOffset;
-    switch (AddrOffSize) {
-    case 1: O.writeU8(static_cast<uint8_t>(AddrOffset)); break;
-    case 2: O.writeU16(static_cast<uint16_t>(AddrOffset)); break;
-    case 4: O.writeU32(static_cast<uint32_t>(AddrOffset)); break;
-    case 8: O.writeU64(AddrOffset); break;
-    }
+    O.writeUnsigned(AddrOffset, AddrOffSize);
   }
 }
 
