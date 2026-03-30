@@ -23,10 +23,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE static ErrorOr<size_t> mbsnrtowcs(wchar_t *__restrict dst,
-                                              const char **__restrict src,
-                                              size_t max_src_bytes, size_t max_dst_chars,
-                                              mbstate *__restrict ps) {
+LIBC_INLINE static ErrorOr<size_t>
+mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
+           size_t max_src_bytes, size_t max_dst_chars, mbstate *__restrict ps) {
   LIBC_CRASH_ON_NULLPTR(src);
   CharacterConverter char_conv(ps);
   if (!char_conv.isValidState())

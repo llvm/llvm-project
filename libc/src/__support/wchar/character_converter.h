@@ -42,7 +42,8 @@ private:
   static constexpr int MAX_UTF8_LENGTH = 4;
 
 public:
-  explicit LIBC_INLINE CharacterConverter(mbstate *state_ptr) : state(state_ptr) {}
+  explicit LIBC_INLINE CharacterConverter(mbstate *state_ptr)
+      : state(state_ptr) {}
 
   LIBC_INLINE void clear() {
     state->partial = 0;
