@@ -1,596 +1,389 @@
-// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm -verify
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
+// RUN:   dxil-pc-shadermodel6.6-compute %s -emit-llvm -verify
 
 //==============================================================
-// COMPREHENSIVE LOCAL RESOURCE VARIABLE TEST SUITE
-//
-// Structure
-//   PASS TESTS
-//   ENTRYPOINT
-//
-// Goal
-//   Exhaustively document legal and illegal uses of HLSL
-//   resource variables declared in local scope.
-//
+// GLOBAL RESOURCES
 //==============================================================
 
-//--------------------------------------------------------------
-// Global resources
-//--------------------------------------------------------------
+RWByteAddressBuffer gBuf0 : register(u0);
+RWByteAddressBuffer gBuf1 : register(u1);
+RWByteAddressBuffer gBuf2 : register(u2);
 
-Texture2D<float4> gTex0 : register(t0);
-Texture2D<float4> gTex1 : register(t1);
-Texture2D<float4> gTex2 : register(t2);
+RWByteAddressBuffer gOut  : register(u3);
 
-SamplerState gSampler : register(s0);
+RWByteAddressBuffer gBufArray[4] : register(u10);
 
-RWTexture2D<float4> gOut : register(u0);
 
-StructuredBuffer<float4> gSB : register(t3);
-RWStructuredBuffer<float4> gRW : register(u1);
+//==============================================================
+// HELPERS
+//==============================================================
 
-Texture2D<float4> gTexArray[4] : register(t10);
+uint DoStore(RWByteAddressBuffer buf, uint offset, uint value)
+{
+    buf.Store(offset, value);
+    return value;
+}
 
 
 //==============================================================
 // PASS TESTS
 //==============================================================
 
-
-//--------------------------------------------------------------
 // PASS 0
-//--------------------------------------------------------------
+groupshared RWByteAddressBuffer sharedBuf;
 
-groupshared Texture2D<float4> sharedTex;
-
-float4 Use_SharedTex(float2 uv)
+uint Use_Shared(uint idx)
 {
-    return gTex0.Sample(gSampler, uv);
+    return DoStore(gBuf0, idx * 4, 1);
 }
 
-//--------------------------------------------------------------
 // PASS 1
-//--------------------------------------------------------------
-
-float4 Fail_TernaryInit(bool cond, float2 uv)
+uint Pass_TernaryInit(bool cond, uint idx)
 {
-    Texture2D<float4> tex = cond ? gTex0 : gTex1;
-
-    return tex.Sample(gSampler, uv);
+    // expected-warning@+1{{assignment of 'cond ? gBuf0 : gBuf1' to local resource 'buf' is not to the same unique global resource}}
+    RWByteAddressBuffer buf = cond ? gBuf0 : gBuf1;
+    return DoStore(buf, idx * 4, 2);
 }
-//--------------------------------------------------------------
-// PASS 2
-//--------------------------------------------------------------
 
-void Fail_LoopVar()
+// PASS 2
+void Pass_LoopVar()
 {
-    for(Texture2D<float4> tex = gTex0; false;)
+    for(RWByteAddressBuffer buf = gBuf0; false;)
     {
     }
 }
 
-//--------------------------------------------------------------
 // PASS 3
-//--------------------------------------------------------------
-
-float4 Fail_ExpressionInit(float2 uv)
+uint Pass_ExpressionInit(uint idx)
 {
-    Texture2D<float4> tex = (true ? gTex0 : gTex1);
-    return tex.Sample(gSampler, uv);
+    RWByteAddressBuffer buf = (true ? gBuf0 : gBuf1);
+    return DoStore(buf, idx * 4, 3);
 }
-//--------------------------------------------------------------
+
 // PASS 4
-//--------------------------------------------------------------
+struct PassBufStruct { RWByteAddressBuffer buf; };
 
-struct FailSharedStruct
+groupshared PassBufStruct sharedStruct;
+
+uint Use_PassSharedStruct(uint idx)
 {
-    Texture2D<float4> tex;
-};
-
-groupshared FailSharedStruct sharedStruct;
-
-float4 Use_FailSharedStruct(float2 uv)
-{
-    return gTex0.Sample(gSampler, uv);
+    return DoStore(gBuf0, idx * 4, 4);
 }
 
-//--------------------------------------------------------------
 // PASS 5
-//--------------------------------------------------------------
-
-struct FailStruct
+uint Pass_StructArray(uint idx)
 {
-    Texture2D<float4> tex;
-};
-
-float4 Fail_StructArray(float2 uv)
-{
-    FailStruct s[2];
-
-    s[0].tex = gTex0;
-    return s[0].tex.Sample(gSampler, uv);
+    PassBufStruct s[2];
+    s[0].buf = gBuf0;
+    return DoStore(s[0].buf, idx * 4, 5);
 }
 
-//--------------------------------------------------------------
 // PASS 6
-//--------------------------------------------------------------
-groupshared Texture2D<float4> Fail_Shared;
+groupshared RWByteAddressBuffer Pass_Shared;
 
-float4 Use_Fail_Shared(float2 uv)
+uint Use_Pass_Shared(uint idx)
 {
-    return gTex0.Sample(gSampler, uv);
+    return DoStore(gBuf0, idx * 4, 6);
 }
 
-//--------------------------------------------------------------
 // PASS 7
-//--------------------------------------------------------------
-Texture2D<float4> Fail_ReturnLocal_Uninitialized() 
+RWByteAddressBuffer Pass_ReturnLocal_Uninitialized()
 {
-  Texture2D<float4> tex; // uninitialized local resource 
-  return tex;
+    RWByteAddressBuffer buf;
+    return buf;
 }
 
-//--------------------------------------------------------------
 // PASS 8
-//--------------------------------------------------------------
-Texture2D<float4> Fail_ReturnLocal() 
+RWByteAddressBuffer Pass_ReturnLocal()
 {
-  Texture2D<float4> tex = gTex0; 
-  return tex; 
+    RWByteAddressBuffer buf = gBuf0;
+    return buf;
 }
 
-
-//--------------------------------------------------------------
 // PASS 9
-//--------------------------------------------------------------
-struct S { Texture2D<float4> arr[2]; };
-float4 Pass_StructArray(float2 uv)
+struct S { RWByteAddressBuffer arr[2]; };
+
+uint Pass_StructArrayAssignment(uint idx)
 {
     S s;
-    s.arr[0] = gTex0;
-    return s.arr[0].Sample(gSampler, uv);
+    s.arr[0] = gBuf0;
+    return DoStore(s.arr[0], idx * 4, 9);
 }
 
-//--------------------------------------------------------------
 // PASS 10
-//--------------------------------------------------------------
-
-float4 Pass_LocalArray(float2 uv)
+uint Pass_LocalArray(uint idx)
 {
-    Texture2D<float4> arr[2];
-
-    arr[0] = gTex0;
-    return arr[0].Sample(gSampler, uv);
+    RWByteAddressBuffer arr[2];
+    arr[0] = gBuf0;
+    return DoStore(arr[0], idx * 4, 10);
 }
 
-//--------------------------------------------------------------
 // PASS 11
-// Uninitialized use
-//--------------------------------------------------------------
-
-float4 Pass_Uninitialized(float2 uv)
+uint Pass_Uninitialized(uint idx)
 {
-    Texture2D<float4> tex; 
-    
-
-    return tex.Sample(gSampler, uv);
+    RWByteAddressBuffer buf;
+    return DoStore(buf, idx * 4, 11);
 }
 
-//--------------------------------------------------------------
 // PASS 12
-// Simple local alias
-//--------------------------------------------------------------
-
-float4 Pass_Alias(float2 uv)
+uint Pass_Alias(uint idx)
 {
-    Texture2D<float4> tex = gTex0;
-    return tex.Sample(gSampler, uv);
+    RWByteAddressBuffer buf = gBuf0;
+    return DoStore(buf, idx * 4, 12);
 }
 
-
-//--------------------------------------------------------------
 // PASS 13
-// Reassignment
-//--------------------------------------------------------------
-
-float4 Pass_Reassign(float2 uv)
+uint Pass_Reassign(uint idx)
 {
-    Texture2D<float4> tex = gTex0;
-    tex = gTex1;
-    return tex.Sample(gSampler, uv);
+    // expected-note@+1{{variable 'buf' is declared here}}
+    RWByteAddressBuffer buf = gBuf0;
+    // expected-warning@+1{{assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource}}
+    buf = gBuf1;
+    return DoStore(buf, idx * 4, 13);
 }
 
-
-//--------------------------------------------------------------
 // PASS 14
-// Control flow aliasing
-//--------------------------------------------------------------
-
-float4 Pass_IfAlias(bool cond, float2 uv)
+uint Pass_IfAlias(bool cond, uint idx)
 {
-    Texture2D<float4> tex;
-
-    if (cond)
-        tex = gTex0;
-    else
-        tex = gTex1;
-
-    return tex.Sample(gSampler, uv);
+    RWByteAddressBuffer buf;
+    // expected-warning@+1{{assignment of 'cond ? gBuf0 : gBuf1' to local resource 'buf' is not to the same unique global resource}}
+    buf = cond ? gBuf0 : gBuf1;
+    return DoStore(buf, idx * 4, 14);
 }
 
-
-//--------------------------------------------------------------
 // PASS 15
-// Loop aliasing
-//--------------------------------------------------------------
-
-float4 Pass_Loop(float2 uv)
+uint Pass_Loop(uint idx)
 {
-    float4 sum = 0;
-
-    for(int i=0;i<4;i++)
-    {
-        Texture2D<float4> tex = gTexArray[i];
-        sum += tex.Sample(gSampler, uv);
+    uint sum = 0;
+    for(unsigned int i=0;i<4;i++)
+    {    
+        RWByteAddressBuffer buf = gBufArray[i];
+        sum += DoStore(buf, idx * 4 + i * 4, 15);
     }
-
     return sum;
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 16
-// Struct containing resource
-//--------------------------------------------------------------
-
 struct PassStruct
 {
-    Texture2D<float4> tex;
-    SamplerState samp;
+    RWByteAddressBuffer buf;
 };
 
-float4 Pass_Struct(float2 uv)
+uint Pass_Struct(uint idx)
 {
     PassStruct s;
-    s.tex = gTex0;
-    s.samp = gSampler;
-
-    return s.tex.Sample(s.samp, uv);
+    s.buf = gBuf0;
+    return DoStore(s.buf, idx * 4, 16);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 17
-// Passing resource through multiple functions
-//--------------------------------------------------------------
-
-float4 Pass_Level2(Texture2D<float4> tex, float2 uv)
+uint Pass_Level2(RWByteAddressBuffer buf, uint idx)
 {
-    return tex.Sample(gSampler, uv);
+    return DoStore(buf, idx * 4, 17);
 }
 
-float4 Pass_Level1(Texture2D<float4> tex, float2 uv)
+uint Pass_Level1(RWByteAddressBuffer buf, uint idx)
 {
-    return Pass_Level2(tex, uv);
+    return Pass_Level2(buf, idx);
 }
 
-float4 Pass_FunctionForward(float2 uv)
+uint Pass_FunctionForward(uint idx)
 {
-    Texture2D<float4> tex = gTex1;
-    return Pass_Level1(tex, uv);
+    RWByteAddressBuffer buf = gBuf1;
+    return Pass_Level1(buf, idx);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 18
-// Resource merge via conditional assignments
-// (SSA-style PHI equivalent)
-//--------------------------------------------------------------
-
-float4 Pass_PhiMerge(bool cond, float2 uv)
+uint Pass_PhiMerge(bool cond, uint idx)
 {
-    Texture2D<float4> tex;
-
-    if(cond)
-        tex = gTex0;
-    else
-        tex = gTex2;
-
-    return tex.Sample(gSampler, uv);
+    RWByteAddressBuffer buf;
+    // expected-warning@+1{{assignment of 'cond ? gBuf0 : gBuf2' to local resource 'buf' is not to the same unique global resource}}
+    buf = cond ? gBuf0 : gBuf2;
+    return DoStore(buf, idx * 4, 18);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 19
-// Nested scope shadowing
-//--------------------------------------------------------------
-
-float4 Pass_Shadow(float2 uv)
+uint Pass_Shadow(uint idx)
 {
-    Texture2D<float4> tex = gTex0;
-
+    RWByteAddressBuffer buf = gBuf0;
     {
-        Texture2D<float4> tex = gTex1;
-        return tex.Sample(gSampler, uv);
+        RWByteAddressBuffer buf = gBuf1;
+        return DoStore(buf, idx * 4, 19);
     }
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 20
-// Resource in switch
-//--------------------------------------------------------------
-
-float4 Pass_Switch(int v, float2 uv)
+uint Pass_Switch(int v, uint idx)
 {
-    Texture2D<float4> tex = gTex0;
+    // expected-note@+2{{variable 'buf' is declared here}}
+    // expected-note@+1{{variable 'buf' is declared here}}
+    RWByteAddressBuffer buf = gBuf0;
 
     switch(v)
     {
-        case 1: tex = gTex1; break;
-        case 2: tex = gTex2; break;
+        // expected-warning@+1{{assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource}}
+        case 1: buf = gBuf1; break;
+        // expected-warning@+1{{assignment of 'gBuf2' to local resource 'buf' is not to the same unique global resource}}
+        case 2: buf = gBuf2; break;
     }
 
-    return tex.Sample(gSampler, uv);
+    return DoStore(buf, idx * 4, 20);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 21
-// Bindless descriptor indexing
-//--------------------------------------------------------------
-
-float4 Pass_Bindless(uint idx, float2 uv)
+uint Pass_Bindless(uint idx)
 {
-    Texture2D<float4> tex = gTexArray[idx];
-    return tex.Sample(gSampler, uv);
+    RWByteAddressBuffer buf = gBufArray[idx & 3];
+    return DoStore(buf, idx * 4, 21);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 22
-// Resource with wave operations
-//--------------------------------------------------------------
-
-float4 Pass_WaveUse(float2 uv)
+uint Pass_WaveUse(uint idx)
 {
-    Texture2D<float4> tex = gTex0;
-
-    float4 v = tex.Sample(gSampler, uv);
-
+    RWByteAddressBuffer buf = gBuf0;
     uint active = WaveActiveCountBits(true);
-
-    return v * active;
+    return DoStore(buf, idx * 4, active);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 23
-// Resource alias used inside nested loops
-//--------------------------------------------------------------
-
-float4 Pass_NestedLoops(float2 uv)
+uint Pass_NestedLoops(uint idx)
 {
-    float4 sum = 0;
-
-    for(int i=0;i<2;i++)
-    for(int j=0;j<2;j++)
-    {
-        Texture2D<float4> tex = gTexArray[i+j];
-        sum += tex.Sample(gSampler, uv);
+    uint sum = 0;
+    for(unsigned int i=0;i<2;i++)
+    for(unsigned int j=0;j<2;j++)
+    {        
+        RWByteAddressBuffer buf = gBufArray[i+j];
+        sum += DoStore(buf, idx * 4 + (i+j)*4, 23);
     }
-
     return sum;
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 24
-// Resource lifetime across blocks
-//--------------------------------------------------------------
-
-float4 Pass_BlockLifetime(float2 uv)
+uint Pass_BlockLifetime(uint idx)
 {
-    Texture2D<float4> tex;
-
+    RWByteAddressBuffer buf;
     {
-        tex = gTex1;
+        buf = gBuf1;
     }
-
-    return tex.Sample(gSampler, uv);
+    return DoStore(buf, idx * 4, 24);
 }
 
-
-//--------------------------------------------------------------
 // PASS 25
-// Deep nested PHI merges
-//--------------------------------------------------------------
-
-float4 Pass_DeepPhi(bool a, bool b, float2 uv)
+uint Pass_DeepPhi(bool a, bool b, uint idx)
 {
-    Texture2D<float4> tex;
+    RWByteAddressBuffer buf;
 
     if(a)
-    {
-        if(b)
-            tex = gTex0;
-        else
-            tex = gTex1;
-    }
+        // expected-warning@+1{{assignment of 'b ? gBuf0 : gBuf1' to local resource 'buf' is not to the same unique global resource}}
+        buf = b ? gBuf0 : gBuf1;
     else
-    {
-        tex = gTex2;
-    }
+        buf = gBuf2;
 
-    return tex.Sample(gSampler, uv);
+    return DoStore(buf, idx * 4, 25);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 26
-// Loop-carried resource value
-//--------------------------------------------------------------
-
-float4 Pass_LoopCarried(int iterations, float2 uv)
+uint Pass_LoopCarried(int iterations, uint idx)
 {
-    Texture2D<float4> tex = gTex0;
+    // expected-note@+1{{variable 'buf' is declared here}}
+    RWByteAddressBuffer buf = gBuf0;
 
     for(int i=0;i<iterations;i++)
-    {
-        tex = gTexArray[i & 3];
-    }
+        // expected-warning@+1{{assignment of 'gBufArray[i & 3]' to local resource 'buf' is not to the same unique global resource}}
+        buf = gBufArray[i & 3];
 
-    return tex.Sample(gSampler, uv);
+    return DoStore(buf, idx * 4, 26);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 27
-// Resource alias chain
-//--------------------------------------------------------------
-
-float4 Pass_AliasChain(float2 uv)
+uint Pass_AliasChain(uint idx)
 {
-    Texture2D<float4> a = gTex0;
-    Texture2D<float4> b = a;
-    Texture2D<float4> c = b;
+    RWByteAddressBuffer a = gBuf0;
+    RWByteAddressBuffer b = a;
+    RWByteAddressBuffer c = b;
 
-    return c.Sample(gSampler, uv);
+    return DoStore(c, idx * 4, 27);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 28
-// Resource inside nested structs
-//--------------------------------------------------------------
+struct PassNestedInner { RWByteAddressBuffer buf; };
+struct PassNestedOuter { PassNestedInner inner; };
 
-struct PassNestedInner
-{
-    Texture2D<float4> tex;
-};
-
-struct PassNestedOuter
-{
-    PassNestedInner inner;
-};
-
-float4 Pass_NestedStruct(float2 uv)
+uint Pass_NestedStruct(uint idx)
 {
     PassNestedOuter s;
-
-    s.inner.tex = gTex1;
-
-    return s.inner.tex.Sample(gSampler, uv);
+    s.inner.buf = gBuf1;
+    return DoStore(s.inner.buf, idx * 4, 28);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 29
-// Resource forwarded through multiple struct layers
-//--------------------------------------------------------------
-
-struct PassForwardA { Texture2D<float4> tex; };
+struct PassForwardA { RWByteAddressBuffer buf; };
 struct PassForwardB { PassForwardA a; };
 
-float4 Pass_ForwardStructLayers(float2 uv)
+uint Pass_ForwardStructLayers(uint idx)
 {
     PassForwardB b;
-    b.a.tex = gTex2;
-
-    return b.a.tex.Sample(gSampler, uv);
+    b.a.buf = gBuf2;
+    return DoStore(b.a.buf, idx * 4, 29);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 30
-// Resource alias inside switch fallthrough
-//--------------------------------------------------------------
-
-float4 Pass_SwitchFallthrough(int v, float2 uv)
+uint Pass_SwitchFallthrough(int v, uint idx)
 {
-    Texture2D<float4> tex = gTex0;
+    // expected-note@+2{{variable 'buf' is declared here}}
+    // expected-note@+1{{variable 'buf' is declared here}}
+    RWByteAddressBuffer buf = gBuf0;
 
     switch(v)
     {
-        case 0:
-            tex = gTex1;
-        case 1:
-            tex = gTex2;
-            break;
+        // expected-warning@+1{{assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource}}
+        case 0: buf = gBuf1;
+        // expected-warning@+1{{assignment of 'gBuf2' to local resource 'buf' is not to the same unique global resource}}
+        case 1: buf = gBuf2; break;
     }
 
-    return tex.Sample(gSampler, uv);
+    return DoStore(buf, idx * 4, 30);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 31
-// Resource used after early-return path merge
-//--------------------------------------------------------------
-
-float4 Pass_EarlyReturn(bool cond, float2 uv)
+uint Pass_EarlyReturn(bool cond, uint idx)
 {
-    Texture2D<float4> tex = gTex0;
+    // expected-note@+1{{variable 'buf' is declared here}}
+    RWByteAddressBuffer buf = gBuf0;
 
     if(cond)
-        return tex.Sample(gSampler, uv);
-
-    tex = gTex1;
-
-    return tex.Sample(gSampler, uv);
+        return DoStore(buf, idx * 4, 31);
+    // expected-warning@+1{{assignment of 'gBuf1' to local resource 'buf' is not to the same unique global resource}}
+    buf = gBuf1;
+    return DoStore(buf, idx * 4, 31);
 }
 
-
-//--------------------------------------------------------------
 // PASS 32
-// Resource alias across nested blocks
-//--------------------------------------------------------------
-
-float4 Pass_NestedBlocks(float2 uv)
+uint Pass_NestedBlocks(uint idx)
 {
-    Texture2D<float4> tex;
+    // expected-note@+1{{variable 'buf' is declared here}}
+    RWByteAddressBuffer buf;
 
     {
-        tex = gTex1;
-
+        buf = gBuf1;
         {
-            tex = gTex2;
+            // expected-warning@+1{{assignment of 'gBuf2' to local resource 'buf' is not to the same unique global resource}}
+            buf = gBuf2;
         }
     }
 
-    return tex.Sample(gSampler, uv);
+    return DoStore(buf, idx * 4, 32);
 }
 
-
-
-//--------------------------------------------------------------
 // PASS 33
-// Resource assigned via bindless selection
-//--------------------------------------------------------------
-
-float4 Pass_BindlessSelection(uint a, uint b, float2 uv)
+uint Pass_BindlessSelection(uint a, uint b, uint idx)
 {
-    Texture2D<float4> tex;
+    RWByteAddressBuffer buf;
 
-    tex = gTexArray[a];
-    tex = gTexArray[b];
+    buf = gBufArray[a & 3];
+    buf = gBufArray[b & 3];
 
-    return tex.Sample(gSampler, uv);
+    return DoStore(buf, idx * 4, 33);
 }
 
 
@@ -598,46 +391,46 @@ float4 Pass_BindlessSelection(uint a, uint b, float2 uv)
 // ENTRY POINT
 //==============================================================
 
-
 [numthreads(8,8,1)]
 void main(uint3 tid : SV_DispatchThreadID)
 {
-    float2 uv = float2(tid.xy)/256.0;
+    uint idx = tid.x + tid.y * 8;
 
-    float4 r = 0;
-    r += Pass_TernaryInit(true, uv);
+    uint r = 0;
+
+    r += Pass_TernaryInit(true, idx);
     Pass_LoopVar();
-    r += Pass_ExpressionInit(uv);
-    r += Use_FailSharedStruct(uv);
-    r += Pass_StructArray(uv);
-    r += Use_Fail_Shared(uv);
-    Texture2D<float4> mytex = Fail_ReturnLocal_Uninitialized();
-    Texture2D<float4> mytex2 = Fail_ReturnLocal();
-    r += Pass_StructArray(uv);
-    r += Pass_LocalArray(uv);
-    r += Pass_Uninitialized(uv);
-    r += Pass_Alias(uv);
-    r += Pass_Reassign(uv);
-    r += Pass_IfAlias(true,uv);
-    r += Pass_Loop(uv);
-    r += Pass_Struct(uv);
-    r += Pass_FunctionForward(uv);
-    r += Pass_PhiMerge(true,uv);
-    r += Pass_Shadow(uv);
-    r += Pass_Switch(1,uv);
-    r += Pass_Bindless(0,uv);
-    r += Pass_WaveUse(uv);
-    r += Pass_NestedLoops(uv);
-    r += Pass_BlockLifetime(uv);
-    r += Pass_DeepPhi(true, false, uv);
-    r += Pass_LoopCarried(15, uv);
-    r += Pass_AliasChain(uv);
-    r += Pass_NestedStruct(uv);
-    r += Pass_ForwardStructLayers(uv);
-    r += Pass_SwitchFallthrough(0, uv);
-    r += Pass_EarlyReturn(true, uv);
-    r += Pass_NestedBlocks(uv);
-    r += Pass_BindlessSelection(2, 3, uv);
+    r += Pass_ExpressionInit(idx);
+    r += Use_PassSharedStruct(idx);
+    r += Pass_StructArray(idx);
+    r += Use_Pass_Shared(idx);
+    RWByteAddressBuffer tmp0 = Pass_ReturnLocal_Uninitialized();
+    RWByteAddressBuffer tmp1 = Pass_ReturnLocal();
+    r += Pass_StructArray(idx);
+    r += Pass_LocalArray(idx);
+    r += Pass_Uninitialized(idx);
+    r += Pass_Alias(idx);
+    r += Pass_Reassign(idx);
+    r += Pass_IfAlias(true, idx);
+    r += Pass_Loop(idx);
+    r += Pass_Struct(idx);
+    r += Pass_FunctionForward(idx);
+    r += Pass_PhiMerge(true, idx);
+    r += Pass_Shadow(idx);
+    r += Pass_Switch(1, idx);
+    r += Pass_Bindless(idx);
+    r += Pass_WaveUse(idx);
+    r += Pass_NestedLoops(idx);
+    r += Pass_BlockLifetime(idx);
+    r += Pass_DeepPhi(true, false, idx);
+    r += Pass_LoopCarried(15, idx);
+    r += Pass_AliasChain(idx);
+    r += Pass_NestedStruct(idx);
+    r += Pass_ForwardStructLayers(idx);
+    r += Pass_SwitchFallthrough(0, idx);
+    r += Pass_EarlyReturn(true, idx);
+    r += Pass_NestedBlocks(idx);
+    r += Pass_BindlessSelection(2, 3, idx);
 
-    gOut[tid.xy] = r;
+    gOut.Store(idx * 4, r);
 }
