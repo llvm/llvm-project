@@ -35,14 +35,19 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   synchronization/clc_sub_group_barrier.cl
   synchronization/clc_work_group_barrier.cl
   workitem/clc_get_enqueued_local_size.cl
+  workitem/clc_get_enqueued_num_sub_groups.cl
   workitem/clc_get_global_offset.cl
   workitem/clc_get_global_size.cl
   workitem/clc_get_group_id.cl
   workitem/clc_get_local_id.cl
   workitem/clc_get_local_size.cl
+  workitem/clc_get_max_sub_group_size.cl
   workitem/clc_get_num_groups.cl
-  workitem/clc_get_work_dim.cl
-  workitem/clc_workitem_sub_group.cl)
+  workitem/clc_get_num_sub_groups.cl
+  workitem/clc_get_sub_group_id.cl
+  workitem/clc_get_sub_group_local_id.cl
+  workitem/clc_get_sub_group_size.cl
+  workitem/clc_get_work_dim.cl)
 
 libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
   math/clc_native_exp.cl

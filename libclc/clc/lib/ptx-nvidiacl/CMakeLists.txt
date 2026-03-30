@@ -11,6 +11,7 @@ libclc_configure_source_list(CLC_PTX_NVIDIACL_SOURCES
   workitem/clc_get_group_id.cl
   workitem/clc_get_local_id.cl
   workitem/clc_get_local_size.cl
+  workitem/clc_get_max_sub_group_size.cl
   workitem/clc_get_num_groups.cl
-  workitem/clc_workitem_sub_group.cl
+  workitem/clc_get_sub_group_local_id.cl
 )

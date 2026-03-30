@@ -204,7 +204,9 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   workitem/clc_get_global_id.cl
   workitem/clc_get_global_linear_id.cl
   workitem/clc_get_local_linear_id.cl
-  workitem/clc_workitem_sub_group.cl
+  workitem/clc_get_num_sub_groups.cl
+  workitem/clc_get_sub_group_id.cl
+  workitem/clc_get_sub_group_size.cl
 )
 
 libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
