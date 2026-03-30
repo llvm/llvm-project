@@ -75,7 +75,7 @@ set -ex
     -DLLVM_ENABLE_LIBEDIT=FORCE_ON \
     -DLLVM_ENABLE_LIBXML2=FORCE_ON \
     -DLLVM_BUILD_UTILS=TRUE \
-    -DLLVM_ENABLE_PROJECTS="clang;lldb" \
+    -DLLVM_ENABLE_PROJECTS="clang;lldb;lld" \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
     -DLLVM_OPTIMIZED_TABLEGEN:BOOL=TRUE \
     -DLLVM_TARGETS_TO_BUILD=Native \

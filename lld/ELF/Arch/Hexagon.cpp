@@ -48,6 +48,7 @@ public:
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
+  uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -387,11 +388,20 @@ bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_HEX_LD_PLT_B22_PCREL:
   case R_HEX_B15_PCREL:
   case R_HEX_B13_PCREL:
-  case R_HEX_B9_PCREL:
-    return !ctx.target->inBranchRange(type, branchAddr, s.getVA(ctx, a));
+  case R_HEX_B9_PCREL: {
+    uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(ctx, a);
+    return !ctx.target->inBranchRange(type, branchAddr, dst);
+  }
   default:
     return false;
   }
+}
+
+uint32_t Hexagon::getThunkSectionSpacing() const {
+  // B22_PCREL has a range of +/- 8 MiB (22-bit signed offset * 4).
+  // Pre-create ThunkSections at intervals below this to leave room for
+  // thunk growth.
+  return 0x800000 - 0x30000;
 }
 
 void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
