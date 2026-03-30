@@ -37,9 +37,9 @@ multiclass TABLE<WebAssemblyRegClass rc, string suffix, WebAssemblyRegClass inde
                          "table.set\t$table",
                          0x26>;
 
-  defm TABLE_GROW_#rc#addrmodesuffix : I<(outs I32:$sz), (ins table32_op:$table, rc:$val, index_rc:$n),
+  defm TABLE_GROW_#rc#addrmodesuffix : I<(outs index_rc:$sz), (ins table32_op:$table, rc:$val, index_rc:$n),
                           (outs), (ins table32_op:$table),
-                          [(set I32:$sz, (!cast<Intrinsic>("int_wasm_table_grow_" # suffix) (WebAssemblyWrapper tglobaladdr:$table), rc:$val, index_rc:$n))],
+                          [(set index_rc:$sz, (!cast<Intrinsic>("int_wasm_table_grow_" # suffix) (WebAssemblyWrapper tglobaladdr:$table), rc:$val, index_rc:$n))],
                           "table.grow\t$sz, $table, $val, $n",
                           "table.grow\t$table",
                           0xfc0f>;

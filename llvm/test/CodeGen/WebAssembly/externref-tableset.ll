@@ -1,5 +1,5 @@
-; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s  -DiPTR=i32
-; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s  -DiPTR=i64
+; RUN: sed 's/iX/i32/g' < %s > %t && llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types < %t | FileCheck %t
+; RUN: sed 's/iX/i64/g' < %s > %t && llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types < %t | FileCheck %t
 
 
 %externref = type target("wasm.externref")
@@ -10,7 +10,7 @@ declare void @llvm.wasm.table.set.externref(ptr addrspace(1), iX, %externref) no
 
 define void @set_externref_table(%externref %g, iX %i) {
 ; CHECK-LABEL: set_externref_table:
-; CHECK-NEXT:  .functype       set_externref_table (externref, [[iPTR]]) -> ()
+; CHECK-NEXT:  .functype       set_externref_table (externref, iX) -> ()
 ; CHECK-NEXT:  local.get      1
 ; CHECK-NEXT:  local.get      0
 ; CHECK-NEXT:  table.set     externref_table
@@ -24,7 +24,7 @@ define void @set_externref_table(%externref %g, iX %i) {
 define void @set_externref_table_const(%externref %g) {
 ; CHECK-LABEL: set_externref_table_const:
 ; CHECK-NEXT:  .functype      set_externref_table_const (externref) -> ()
-; CHECK-NEXT:  [[iPTR]].const      0
+; CHECK-NEXT:  iX.const      0
 ; CHECK-NEXT:  local.get      0
 ; CHECK-NEXT:  table.set      externref_table
 ; CHECK-NEXT:  end_function
@@ -34,10 +34,10 @@ define void @set_externref_table_const(%externref %g) {
 
 define void @set_externref_table_with_offset(%externref %g, iX %i) {
 ; CHECK-LABEL: set_externref_table_with_offset:
-; CHECK-NEXT:  .functype       set_externref_table_with_offset (externref, [[iPTR]]) -> ()
+; CHECK-NEXT:  .functype       set_externref_table_with_offset (externref, iX) -> ()
 ; CHECK-NEXT:  local.get       1
-; CHECK-NEXT:  [[iPTR]].const  2
-; CHECK-NEXT:  [[iPTR]].add
+; CHECK-NEXT:  iX.const  2
+; CHECK-NEXT:  iX.add
 ; CHECK-NEXT:  local.get       0
 ; CHECK-NEXT:  table.set       externref_table
 ; CHECK-NEXT:  end_function
@@ -48,10 +48,10 @@ define void @set_externref_table_with_offset(%externref %g, iX %i) {
 
 define void @set_externref_table_with_var_offset(%externref %g, iX %i, iX %j) {
 ; CHECK-LABEL: set_externref_table_with_var_offset:
-; CHECK-NEXT:  .functype       set_externref_table_with_var_offset (externref, [[iPTR]], [[iPTR]]) -> ()
+; CHECK-NEXT:  .functype       set_externref_table_with_var_offset (externref, iX, iX) -> ()
 ; CHECK-NEXT:  local.get       1
 ; CHECK-NEXT:  local.get       2
-; CHECK-NEXT:  [[iPTR]].add
+; CHECK-NEXT:  iX.add
 ; CHECK-NEXT:  local.get       0
 ; CHECK-NEXT:  table.set       externref_table
 ; CHECK-NEXT:  end_function
@@ -64,10 +64,10 @@ declare iX @set_offset()
 
 define void @set_externref_table_with_var_offset2(%externref %g, iX %i) {
 ; CHECK-LABEL: set_externref_table_with_var_offset2:
-; CHECK-NEXT:  .functype       set_externref_table_with_var_offset2 (externref, [[iPTR]]) -> ()
+; CHECK-NEXT:  .functype       set_externref_table_with_var_offset2 (externref, iX) -> ()
 ; CHECK-NEXT:  local.get       1
 ; CHECK-NEXT:  call    set_offset
-; CHECK-NEXT:  [[iPTR]].add
+; CHECK-NEXT:  iX.add
 ; CHECK-NEXT:  local.get       0
 ; CHECK-NEXT:  table.set       externref_table
 ; CHECK-NEXT:  end_function

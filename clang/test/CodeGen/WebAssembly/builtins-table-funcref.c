@@ -65,10 +65,10 @@ size_t test_builtin_wasm_table_size() {
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_grow
 // CHECK-SAME: (target("wasm.funcref") noundef [[REF:%.*]], [[iPTR]] noundef [[NELEM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.wasm.table.grow.funcref.[[iPTR]](ptr addrspace(1) @table, target("wasm.funcref") [[REF]], [[iPTR]] [[NELEM]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call [[iPTR]] @llvm.wasm.table.grow.funcref.[[iPTR]](ptr addrspace(1) @table, target("wasm.funcref") [[REF]], [[iPTR]] [[NELEM]])
+// CHECK-NEXT:    ret [[iPTR]] [[TMP0]]
 //
-int test_builtin_wasm_table_grow(funcref_t ref, size_t nelem) {
+size_t test_builtin_wasm_table_grow(funcref_t ref, size_t nelem) {
   return __builtin_wasm_table_grow(table, ref, nelem);
 }
 

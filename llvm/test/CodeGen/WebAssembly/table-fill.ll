@@ -1,5 +1,5 @@
-; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i32
-; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i64
+; RUN: sed 's/iX/i32/g' < %s > %t && llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types < %t | FileCheck %t
+; RUN: sed 's/iX/i64/g' < %s > %t && llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types < %t | FileCheck %t
 
 %externref = type target("wasm.externref")
 
@@ -9,7 +9,7 @@ declare void @llvm.wasm.table.fill.externref(ptr addrspace(1), iX, %externref, i
 
 define void @table_fill(iX %start, iX %len, %externref %val) {
 ; CHECK-LABEL: table_fill:
-; CHECK-NEXT:  .functype	table_fill ([[iPTR]], [[iPTR]], externref) -> ()
+; CHECK-NEXT:  .functype	table_fill (iX, iX, externref) -> ()
 ; CHECK-NEXT:  local.get    0
 ; CHECK-NEXT:  local.get    2
 ; CHECK-NEXT:  local.get    1

@@ -89,14 +89,14 @@ def int_wasm_table_copy :
                         [llvm_table_ty, llvm_table_ty, llvm_anyint_ty, LLVMMatchType<0>,
                          LLVMMatchType<0>], []>;
 def int_wasm_table_grow_externref :
-  DefaultAttrsIntrinsic<[llvm_i32_ty],
-                        [llvm_table_ty, llvm_externref_ty, llvm_anyint_ty], []>;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                        [llvm_table_ty, llvm_externref_ty, LLVMMatchType<0>], []>;
 def int_wasm_table_grow_funcref :
-  DefaultAttrsIntrinsic<[llvm_i32_ty],
-                        [llvm_table_ty, llvm_funcref_ty, llvm_anyint_ty], []>;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                        [llvm_table_ty, llvm_funcref_ty, LLVMMatchType<0>], []>;
 def int_wasm_table_grow_exnref :
-  DefaultAttrsIntrinsic<[llvm_i32_ty],
-                        [llvm_table_ty, llvm_exnref_ty, llvm_anyint_ty], []>;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                        [llvm_table_ty, llvm_exnref_ty, LLVMMatchType<0>], []>;
 def int_wasm_table_fill_externref :
   DefaultAttrsIntrinsic<[],
                         [llvm_table_ty, llvm_anyint_ty, llvm_externref_ty,

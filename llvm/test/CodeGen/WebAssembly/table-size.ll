@@ -1,5 +1,5 @@
-; RUN: sed 's/iX/i32/g' < %s | llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i32
-; RUN: sed 's/iX/i64/g' < %s | llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s -DiPTR=i64
+; RUN: sed 's/iX/i32/g' < %s > %t && llc --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types < %t | FileCheck %t
+; RUN: sed 's/iX/i64/g' < %s > %t && llc --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types < %t | FileCheck %t
 
 %externref = type target("wasm.externref")
 
@@ -9,7 +9,7 @@ declare iX @llvm.wasm.table.size(ptr addrspace(1)) nounwind readonly
 
 define iX @table_size() {
 ; CHECK-LABEL: table_size:
-; CHECK-NEXT: .functype       table_size () -> ([[iPTR]])
+; CHECK-NEXT: .functype       table_size () -> (iX)
 ; CHECK-NEXT:  table.size      externref_table
 ; CHECK-NEXT:  end_function
   %sz = call iX @llvm.wasm.table.size(ptr addrspace(1) @externref_table)
