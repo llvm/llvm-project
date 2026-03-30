@@ -94,6 +94,11 @@ def get_amd_smi_static_numa():
     except AmdSmiException as e:
       printr(f"Error executing amd-smi: {e}")
 
+    if len(gpu_affinity) == 0:
+      gpu_affinity.append(None)
+      gpu_affinity[0] = 0
+
+    if debug_numa > 2: print("parse_rocm_smi_toponuma:" , gpu_affinity, numa_node, hip_uuid)
     return gpu_affinity, numa_node, hip_uuid
 
 def parse_rocm_smi_toponuma():
@@ -171,6 +176,12 @@ def parse_rocm_smi_toponuma():
 
             #use previous gpu_affinity
             gpu_affinity[gpu_id] = affinity
+
+    if len(gpu_affinity) == 0:
+      gpu_affinity.append(None)
+      gpu_affinity[0] = 0
+
+    if debug_numa > 2: print("parse_rocm_smi_toponuma:" , gpu_affinity, numa_node, hip_uuid)
     return gpu_affinity, numa_node, hip_uuid
 
 
