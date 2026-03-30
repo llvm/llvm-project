@@ -172,10 +172,7 @@ private:
         Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
         if (Stop)
           break;
-        auto Item = std::move(WorkStack.back());
-        WorkStack.pop_back();
-        Lock.unlock();
-        Item();
+        popAndRun(Lock);
       }
     }
   }

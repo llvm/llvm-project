@@ -73,6 +73,7 @@ public:
   // destroy the Latch while dec() is still running.
   void dec() {
     std::lock_guard<std::mutex> lock(Mutex);
+    // fetch_sub returns the previous value; == 1 means Count is now 0.
     if (Count.fetch_sub(1, std::memory_order_acq_rel) == 1)
       Cond.notify_all();
   }
