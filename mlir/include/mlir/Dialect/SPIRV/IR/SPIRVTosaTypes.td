@@ -38,6 +38,7 @@ class TensorArmRankOf<list<Type> allowedTypes, list<int> ranks>
       [HasAnyRankOfPred<ranks>],
       !interleave(!foreach(rank, ranks, rank # "D"), "/") # " tensorArm">;
 
+def SPIRV_Int32_TensorArm2D : TensorArmRankOf<[SPIRV_Int32], [2]>;
 def SPIRV_Float32_TensorArm3D: TensorArmRankOf<[SPIRV_Float32], [3]>;
 def SPIRV_TosaInteger_TensorArm1D : TensorArmRankOf<[SPIRV_TosaInteger], [1]>;
 def SPIRV_TosaNumerical_TensorArm1D : TensorArmRankOf<[SPIRV_TosaNumerical], [1]>;
@@ -65,6 +66,9 @@ class SPIRV_1DTensorArmOfLengthAndType<list<int> allowedLengths, list<Type> allo
     "rank 1 tensorArm of length " # !interleave(allowedLengths, "/"),
     "::mlir::spirv::TensorArmType">;
 
+def SPIRV_Int32_1DTensorArmOfLength2 : SPIRV_1DTensorArmOfLengthAndType<[2], [SPIRV_Int32]>;
+def SPIRV_Int32_1DTensorArmOfLength4 : SPIRV_1DTensorArmOfLengthAndType<[4], [SPIRV_Int32]>;
+
 def SPIRV_Int32_1DTensorArmOfLength1To6 : SPIRV_1DTensorArmOfLengthAndType<[1, 2, 3, 4, 5, 6], [SPIRV_Int32]>;
 def SPIRV_Int32_1DTensorArmOfEvenLength2To12 : SPIRV_1DTensorArmOfLengthAndType<[2, 4, 6, 8, 10, 12], [SPIRV_Int32]>;
 
@@ -77,6 +81,15 @@ def SPIRV_Int32_1DTensorArmOfLength3Attr : ConfinedAttr<RankedI32ElementsAttr<[3
 def SPIRV_Int32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
 def SPIRV_Int32_1DTensorArmOfLength5Attr : ConfinedAttr<RankedI32ElementsAttr<[5]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
 def SPIRV_Int32_1DTensorArmOfLength6Attr : ConfinedAttr<RankedI32ElementsAttr<[6]>, [SPIRV_DenseElementAttrsWithTensorArmType]>;
+
+class Is1DTensorArmAttrOfLength<list<int> allowedLengths> :
+  AttrConstraint<And<[CPred<[{::llvm::cast<::mlir::spirv::TensorArmType>(::llvm::cast<::mlir::DenseElementsAttr>($_self).getType()).getShape().size() == 1 }]>,
+    Or<!foreach(allowedlength, allowedLengths,
+      CPred<[{::llvm::cast<::mlir::spirv::TensorArmType>(::llvm::cast<::mlir::DenseElementsAttr>($_self).getType()).getShape()[0] == }]
+              # allowedlength>)>]>>;
+
+def SPIRV_Int32_1DTensorArmOfLength1To6Attr : ConfinedAttr<
+  I32ElementsAttr, [SPIRV_DenseElementAttrsWithTensorArmType, Is1DTensorArmAttrOfLength<[1, 2, 3, 4, 5, 6]>]>;
 
 def SPIRV_Int8_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_Int8]>;
 def SPIRV_TosaNumerical_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_TosaNumerical]>;
@@ -137,6 +150,27 @@ class MatchBroadcastableShapes<string input1, string input2, string output>:
     "   return dynamic || (broadcastableInputs && broacastDimMatchesOutputDim);" #
     "})">]>
   >;
+
+class SameDimsOrDynamicPred<string lhs, int lhsDim, string rhs, int rhsDim> :
+  CPred<"[](::mlir::ShapedType lhsType, ::mlir::ShapedType rhsType) { "
+        "  int64_t lhsSize = lhsType.getDimSize(" # lhsDim # "); "
+        "  int64_t rhsSize = rhsType.getDimSize(" # rhsDim # "); "
+        "  return ::mlir::ShapedType::isDynamic(lhsSize) || "
+        "         ::mlir::ShapedType::isDynamic(rhsSize) || lhsSize == rhsSize; "
+        "}("
+        "::llvm::cast<::mlir::ShapedType>($" # lhs # ".getType()), "
+        "::llvm::cast<::mlir::ShapedType>($" # rhs # ".getType()))">;
+
+class ValuesIndicesShapesMatch<string values, string indices, string tensor>:
+  PredOpTrait<"shapes of " # values # ", " # indices # ", and " # tensor #
+                  " must satisfy [N,K,C], [N,W], [N,W,C]",
+    And<[
+      SameDimsOrDynamicPred<values, 0, indices, 0>,
+      SameDimsOrDynamicPred<values, 0, tensor, 0>,
+      SameDimsOrDynamicPred<indices, 0, tensor, 0>,
+      SameDimsOrDynamicPred<indices, 1, tensor, 1>,
+      SameDimsOrDynamicPred<values, 2, tensor, 2>
+    ]>>;
 
 class TableSizeConstraint<string input, Type type, int size>:
   PredOpTrait<"table must have size " # size # " if " # input # " has element type " # type.summary,

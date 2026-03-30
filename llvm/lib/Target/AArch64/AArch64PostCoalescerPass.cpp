@@ -10,6 +10,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -33,8 +34,10 @@ struct AArch64PostCoalescer : public MachineFunctionPass {
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
+    AU.setPreservesCFG();
     AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
