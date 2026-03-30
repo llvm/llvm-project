@@ -763,7 +763,7 @@ struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 ///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
 ///   %mask = vector.create_mask %m0 : vector<16xi1>
 /// For lane k, computeDistributedCoords gives coord = [k], so:
-///   %in_bounds = arith.cmpi slt, %k, %m0  →  i1
+///   %in_bounds = arith.cmpi slt, %coord, %m0  →  i1
 ///   %mask = vector.broadcast %in_bounds : i1 to vector<1xi1>
 ///
 /// Example (2D):
