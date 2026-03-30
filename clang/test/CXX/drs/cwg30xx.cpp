@@ -21,3 +21,5 @@ void f(
 }
 
 } // namespace cwg3005
+
+// cwg3088 is in cwg3088.cpp
