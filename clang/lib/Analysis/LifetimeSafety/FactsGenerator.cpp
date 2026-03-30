@@ -371,9 +371,19 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
 }
 
+void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
+  if (Expr *RHS = BO->getRHS(); RHS->getType()->isPointerType()) {
+    flowOrigin(*BO, *RHS);
+    return;
+  }
+  Expr *LHS = BO->getLHS();
+  assert(LHS->getType()->isPointerType() && "Unexpected operand was found");
+  flowOrigin(*BO, *LHS);
+}
+
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
-  // TODO: Handle pointer arithmetic (e.g., `p + 1` or `1 + p`) where the
-  // result should have the same loans as the pointer operand.
+  if (BO->getType()->isPointerType() && BO->isAdditiveOp())
+    handlePointerArithmetic(BO);
   if (BO->isCompoundAssignmentOp())
     return;
   handleUse(BO->getRHS());
