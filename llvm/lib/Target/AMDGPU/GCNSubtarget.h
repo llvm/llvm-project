@@ -1071,6 +1071,8 @@ public:
   bool useVMulU64Inst() const {
     return hasVMulU64Inst() && !hasSlowMaxMinMulI64Insts();
   }
+
+  bool isGloballyAddressableScratchEnabled() const;
 };
 
 class GCNUserSGPRUsageInfo {

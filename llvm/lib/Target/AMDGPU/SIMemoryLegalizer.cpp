@@ -1049,7 +1049,7 @@ bool SICacheControl::enableCPolBits(const MachineBasicBlock::iterator MI,
 }
 
 bool SICacheControl::canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const {
-  assert((!ST.hasGloballyAddressableScratch() ||
+  assert((!ST.isGloballyAddressableScratchEnabled() ||
           any(AS & SIAtomicAddrSpace::GLOBAL) ||
           !(AS & SIAtomicAddrSpace::SCRATCH)) &&
          "scratch instructions should already be replaced by flat "
