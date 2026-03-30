@@ -403,6 +403,24 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
   return Plugin::success();
 }
 
+Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                                      AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  if (!l0Context.zeCommandListAppendHostFunction)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "enqueueHostCallImpl not supported");
+
+  auto CmdListOrErr = getImmCmdList();
+  if (!CmdListOrErr)
+    return CmdListOrErr.takeError();
+  ze_command_list_handle_t ImmCmdList = *CmdListOrErr;
+
+  CALL_ZE_RET_ERROR(l0Context.zeCommandListAppendHostFunction, ImmCmdList,
+                    reinterpret_cast<void *>(Callback), UserData, nullptr,
+                    nullptr, 0, nullptr);
+
+  return Plugin::success();
+}
+
 Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
                                       TargetAllocTy Kind) {
   return dataAlloc(Size, /*Align=*/0, Kind,

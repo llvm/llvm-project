@@ -38,6 +38,14 @@ Error L0ContextTy::init() {
     cleanupOnError();
     return Err;
   }
+
+  ze_result_t RC;
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeCommandListAppendHostFunction",
+          (void **)&zeCommandListAppendHostFunction);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeCommandListAppendHostFunction = nullptr;
+
   return Plugin::success();
 }
 
