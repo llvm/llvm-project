@@ -4065,6 +4065,19 @@ bool TargetLowering::canCreateUndefOrPoisonForTargetNode(
   return true;
 }
 
+void TargetLowering::computeKnownFPClassForTargetNode(const SDValue Op,
+                                                      KnownFPClass &Known,
+                                                      const APInt &DemandedElts,
+                                                      const SelectionDAG &DAG,
+                                                      unsigned Depth) const {
+  assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
+          Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_VOID) &&
+         "Should use computeKnownFPClass if you don't know whether Op"
+         " is a target node!");
+}
+
 bool TargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
                                                   const APInt &DemandedElts,
                                                   const SelectionDAG &DAG,
