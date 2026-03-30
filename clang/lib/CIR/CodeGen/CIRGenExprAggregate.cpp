@@ -508,6 +508,9 @@ public:
     assert(arrayType && "std::initializer_list constructed from non-array");
 
     auto *record = e->getType()->castAsRecordDecl();
+    assert(record->getNumFields() == 2 &&
+           "Expected std::initializer_list to only have two fields");
+
     RecordDecl::field_iterator field = record->field_begin();
     assert(field != record->field_end() &&
            ctx.hasSameType(field->getType()->getPointeeType(),
@@ -533,13 +536,14 @@ public:
       // Length.
       cgf.emitStoreThroughLValue(RValue::get(size), endOrLength);
     } else {
-      cgf.cgm.errorNYI(
-          "Aggregate VisitCXXStdInitializerListExpr: field type != sizeTy");
-      return;
+      // End pointer.
+      assert(field->getType()->isPointerType() &&
+             ctx.hasSameType(field->getType()->getPointeeType(),
+                             arrayType->getElementType()) &&
+             "Expected std::initializer_list second field to be const E *");
+      mlir::Value arrayEnd = builder.createPtrStride(loc, arrayStart, size);
+      cgf.emitStoreThroughLValue(RValue::get(arrayEnd), endOrLength);
     }
-
-    assert(++field == record->field_end() &&
-           "Expected std::initializer_list to only have two fields");
   }
 
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {

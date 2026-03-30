@@ -92,6 +92,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // Wave Active Op Variants
   case Intrinsic::dx_wave_reduce_or:
   case Intrinsic::dx_wave_reduce_xor:
+  case Intrinsic::dx_wave_reduce_and:
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_usum:
   case Intrinsic::dx_wave_product:
@@ -107,6 +108,16 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_uproduct:
     // Quad Op Variants
   case Intrinsic::dx_quad_read_across_x:
+  case Intrinsic::dx_quad_read_across_y:
+    return true;
+  }
+}
+
+static bool checkDoubleExtensionOps(Intrinsic::ID IID) {
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::fma:
     return true;
   }
 }
@@ -228,7 +239,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
-      if (RTI.isTyped())
+      if (RTI.isTyped() && RTI.isUAV())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
       if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
         CSF.TiledResources = true;
@@ -248,9 +259,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     if (FunctionFlags.contains(CF))
       CSF.merge(FunctionFlags[CF]);
 
-    // TODO: Set DX11_1_DoubleExtensions if I is a call to DXIL intrinsic
-    // DXIL::Opcode::Fma https://github.com/llvm/llvm-project/issues/114554
-
+    CSF.DX11_1_DoubleExtensions |=
+        checkDoubleExtensionOps(CI->getIntrinsicID());
     CSF.WaveOps |= checkWaveOps(CI->getIntrinsicID());
   }
 }

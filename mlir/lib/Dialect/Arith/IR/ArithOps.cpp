@@ -42,8 +42,8 @@ static IntegerAttr
 applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
                     Attribute rhs,
                     function_ref<APInt(const APInt &, const APInt &)> binFn) {
-  APInt lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
-  APInt rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
+  const APInt &lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
+  const APInt &rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
   APInt value = binFn(lhsVal, rhsVal);
   return IntegerAttr::get(res.getType(), value);
 }
@@ -931,6 +931,10 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
+Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
+  return getDivUISpeculatability(getRhs());
+}
+
 //===----------------------------------------------------------------------===//
 // RemSIOp
 //===----------------------------------------------------------------------===//
@@ -952,6 +956,15 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
                                                });
 
   return div0 ? Attribute() : result;
+}
+
+Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
+  // X % 0 => UB
+  // X % -1 is well-defined (always 0), unlike X / -1 which can overflow.
+  if (matchPattern(getRhs(), m_IntRangeWithoutZeroS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1697,6 +1710,55 @@ bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
 LogicalResult arith::TruncFOp::verify() {
   return verifyTruncateOp<FloatType>(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ConvertFOp::fold(FoldAdaptor adaptor) {
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
+  return constFoldCastOp<FloatAttr, FloatAttr>(
+      adaptor.getOperands(), getType(),
+      [this, &targetSemantics](const APFloat &a, bool &castStatus) {
+        RoundingMode roundingMode =
+            getRoundingmode().value_or(RoundingMode::to_nearest_even);
+        llvm::RoundingMode llvmRoundingMode =
+            convertArithRoundingModeToLLVMIR(roundingMode);
+        FailureOr<APFloat> result =
+            convertFloatValue(a, targetSemantics, llvmRoundingMode);
+        if (failed(result)) {
+          castStatus = false;
+          return a;
+        }
+        return *result;
+      });
+}
+
+bool arith::ConvertFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (!areValidCastInputsAndOutputs(inputs, outputs))
+    return false;
+  auto srcType = getTypeIfLike<FloatType>(inputs.front());
+  auto dstType = getTypeIfLike<FloatType>(outputs.front());
+  if (!srcType || !dstType)
+    return false;
+  return srcType != dstType &&
+         srcType.getIntOrFloatBitWidth() == dstType.getIntOrFloatBitWidth();
+}
+
+LogicalResult arith::ConvertFOp::verify() {
+  auto srcType = cast<FloatType>(getElementTypeOrSelf(getIn().getType()));
+  auto dstType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  if (srcType == dstType)
+    return emitError("result element type ")
+           << dstType << " must be different from operand element type "
+           << srcType;
+  if (srcType.getWidth() != dstType.getWidth())
+    return emitError("result element type ")
+           << dstType << " must have the same bitwidth as operand element type "
+           << srcType;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -44,7 +44,6 @@ class VPPhiAccessors;
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
-  friend class VPlan;
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
   friend class VPRecipeValue;

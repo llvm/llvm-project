@@ -706,16 +706,14 @@ private:
     Limit = limitConsideringMacros(I + 1, E, Limit);
 
     const auto LinesToBeMerged = OpenBraceWrapped + 2;
-    if (!nextNLinesFitInto(I, I + LinesToBeMerged, Limit))
-      return 0;
 
     // Check if it's a namespace inside a namespace, and call recursively if so.
     // '3' is the sizes of the whitespace and closing brace for " _inner_ }".
     if (L1.First->is(tok::kw_namespace)) {
       if (L1.Last->is(tok::comment) || !Style.CompactNamespaces)
         return 0;
-
-      assert(Limit >= L1.Last->TotalLength + 3);
+      if (Limit < L1.Last->TotalLength + 3)
+        return 0;
       const auto InnerLimit = Limit - L1.Last->TotalLength - 3;
       const auto MergedLines =
           tryMergeNamespace(BraceOpenLine + 1, E, InnerLimit);
@@ -724,7 +722,7 @@ private:
       const auto N = MergedLines + LinesToBeMerged;
       // Check if there is even a line after the inner result.
       if (auto Distance = std::distance(I, E);
-          static_cast<decltype(N)>(Distance) <= N) {
+          static_cast<std::remove_const_t<decltype(N)>>(Distance) <= N) {
         return 0;
       }
       // Check that the line after the inner result starts with a closing brace
@@ -749,7 +747,9 @@ private:
     if (L2.First->isNot(TT_NamespaceRBrace) || L2.First->MustBreakBefore)
       return 0;
 
-    // If so, merge all lines.
+    if (!nextTwoLinesFitInto(I, Limit))
+      return 0;
+
     return LinesToBeMerged;
   }
 
@@ -988,8 +988,10 @@ private:
         if (I[1]->Last->is(TT_LineComment))
           return 0;
         do {
-          if (Tok->is(tok::l_brace) && Tok->isNot(BK_BracedInit))
+          if (Tok->isOneOf(tok::l_brace, tok::r_brace) &&
+              Tok->isNot(BK_BracedInit)) {
             return 0;
+          }
           Tok = Tok->Next;
         } while (Tok);
 

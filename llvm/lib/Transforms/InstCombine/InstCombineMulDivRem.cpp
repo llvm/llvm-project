@@ -1090,6 +1090,15 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     return replaceInstUsesWith(I, Sin);
   }
 
+  // X * ldexp(1.0, Y) -> ldexp(X, Y)
+  if (match(&I, m_AllowReassoc(m_c_FMul(
+                    m_Value(X),
+                    m_AllowReassoc(m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
+                        m_FPOne(), m_Value(Y))))))))
+    return replaceInstUsesWith(
+        I, Builder.CreateIntrinsic(Intrinsic::ldexp,
+                                   {X->getType(), Y->getType()}, {X, Y}, &I));
+
   if (SimplifyDemandedInstructionFPClass(I))
     return &I;
 

@@ -1091,5 +1091,471 @@ define i128 @isolate_msb_i128_load(ptr %p0, i128 %idx) nounwind {
   ret i128 %res
 }
 
+define i128 @bswap_i128(i128 %a0) nounwind {
+; CHECK-LABEL: bswap_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    bswapq %rax
+; CHECK-NEXT:    bswapq %rdi
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    retq
+  %res = call i128 @llvm.bswap.i128(i128 %a0)
+  ret i128 %res
+}
+
+define i128 @bswap_i128_vector(<2 x i64> %v0) nounwind {
+; SSE2-LABEL: bswap_i128_vector:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    bswapq %rdx
+; SSE2-NEXT:    bswapq %rax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: bswap_i128_vector:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movq %xmm0, %rdx
+; SSE42-NEXT:    pextrq $1, %xmm0, %rax
+; SSE42-NEXT:    bswapq %rax
+; SSE42-NEXT:    bswapq %rdx
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: bswap_i128_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq %xmm0, %rdx
+; AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX-NEXT:    bswapq %rax
+; AVX-NEXT:    bswapq %rdx
+; AVX-NEXT:    retq
+  %a0 = bitcast <2 x i64> %v0 to i128
+  %res = call i128 @llvm.bswap.i128(i128 %a0)
+  ret i128 %res
+}
+
+define i128 @bswap_i128_load(ptr %p0) nounwind {
+; SSE-LABEL: bswap_i128_load:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq (%rdi), %rdx
+; SSE-NEXT:    movq 8(%rdi), %rax
+; SSE-NEXT:    bswapq %rax
+; SSE-NEXT:    bswapq %rdx
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: bswap_i128_load:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movbeq 8(%rdi), %rax
+; AVX-NEXT:    movbeq (%rdi), %rdx
+; AVX-NEXT:    retq
+  %a0 = load i128, ptr %p0
+  %res = call i128 @llvm.bswap.i128(i128 %a0)
+  ret i128 %res
+}
+
+define i128 @bitreverse_i128(i128 %a0) nounwind {
+; SSE2-LABEL: bitreverse_i128:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    bswapq %rsi
+; SSE2-NEXT:    movq %rsi, %rax
+; SSE2-NEXT:    shrq $4, %rax
+; SSE2-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
+; SSE2-NEXT:    andq %rdx, %rax
+; SSE2-NEXT:    andq %rdx, %rsi
+; SSE2-NEXT:    shlq $4, %rsi
+; SSE2-NEXT:    orq %rax, %rsi
+; SSE2-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; SSE2-NEXT:    movq %rsi, %rax
+; SSE2-NEXT:    andq %rcx, %rax
+; SSE2-NEXT:    shrq $2, %rsi
+; SSE2-NEXT:    andq %rcx, %rsi
+; SSE2-NEXT:    leaq (%rsi,%rax,4), %rax
+; SSE2-NEXT:    movabsq $6148914691236517205, %rsi # imm = 0x5555555555555555
+; SSE2-NEXT:    movq %rax, %r8
+; SSE2-NEXT:    andq %rsi, %r8
+; SSE2-NEXT:    shrq %rax
+; SSE2-NEXT:    andq %rsi, %rax
+; SSE2-NEXT:    leaq (%rax,%r8,2), %rax
+; SSE2-NEXT:    bswapq %rdi
+; SSE2-NEXT:    movq %rdi, %r8
+; SSE2-NEXT:    shrq $4, %r8
+; SSE2-NEXT:    andq %rdx, %r8
+; SSE2-NEXT:    andq %rdx, %rdi
+; SSE2-NEXT:    shlq $4, %rdi
+; SSE2-NEXT:    orq %r8, %rdi
+; SSE2-NEXT:    movq %rdi, %rdx
+; SSE2-NEXT:    andq %rcx, %rdx
+; SSE2-NEXT:    shrq $2, %rdi
+; SSE2-NEXT:    andq %rcx, %rdi
+; SSE2-NEXT:    leaq (%rdi,%rdx,4), %rcx
+; SSE2-NEXT:    movq %rcx, %rdx
+; SSE2-NEXT:    andq %rsi, %rdx
+; SSE2-NEXT:    shrq %rcx
+; SSE2-NEXT:    andq %rsi, %rcx
+; SSE2-NEXT:    leaq (%rcx,%rdx,2), %rdx
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: bitreverse_i128:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movq %rdi, %xmm0
+; SSE42-NEXT:    movq %rsi, %xmm1
+; SSE42-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE42-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE42-NEXT:    movdqa %xmm1, %xmm2
+; SSE42-NEXT:    pand %xmm0, %xmm2
+; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; SSE42-NEXT:    pshufb %xmm2, %xmm3
+; SSE42-NEXT:    psrlw $4, %xmm1
+; SSE42-NEXT:    pand %xmm0, %xmm1
+; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; SSE42-NEXT:    pshufb %xmm1, %xmm0
+; SSE42-NEXT:    por %xmm3, %xmm0
+; SSE42-NEXT:    movq %xmm0, %rax
+; SSE42-NEXT:    pextrq $1, %xmm0, %rdx
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: bitreverse_i128:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %rdi, %xmm0
+; AVX2-NEXT:    vmovq %rsi, %xmm1
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX2-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX2-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: bitreverse_i128:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovq %rdi, %xmm0
+; AVX512F-NEXT:    vmovq %rsi, %xmm1
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512F-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512F-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX512F-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: bitreverse_i128:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovq %rdi, %xmm0
+; AVX512VL-NEXT:    vmovq %rsi, %xmm1
+; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512VL-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
+; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VL-NEXT:    retq
+;
+; AVX512VBMI-LABEL: bitreverse_i128:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vmovq %rdi, %xmm0
+; AVX512VBMI-NEXT:    vmovq %rsi, %xmm1
+; AVX512VBMI-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VBMI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; AVX512VBMI-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512VBMI-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512VBMI-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512VBMI-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; AVX512VBMI-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VBMI-NEXT:    vmovq %xmm0, %rax
+; AVX512VBMI-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VBMI-NEXT:    retq
+  %res = call i128 @llvm.bitreverse.i128(i128 %a0)
+  ret i128 %res
+}
+
+define i128 @bitreverse_i128_vector(<2 x i64> %v0) nounwind {
+; SSE2-LABEL: bitreverse_i128_vector:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    bswapq %rdx
+; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    movq %rdx, %rcx
+; SSE2-NEXT:    shrq $4, %rcx
+; SSE2-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
+; SSE2-NEXT:    andq %rsi, %rcx
+; SSE2-NEXT:    andq %rsi, %rdx
+; SSE2-NEXT:    shlq $4, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; SSE2-NEXT:    movq %rdx, %rdi
+; SSE2-NEXT:    andq %rcx, %rdi
+; SSE2-NEXT:    shrq $2, %rdx
+; SSE2-NEXT:    andq %rcx, %rdx
+; SSE2-NEXT:    leaq (%rdx,%rdi,4), %rdx
+; SSE2-NEXT:    movabsq $6148914691236517205, %rdi # imm = 0x5555555555555555
+; SSE2-NEXT:    movq %rdx, %r8
+; SSE2-NEXT:    andq %rdi, %r8
+; SSE2-NEXT:    shrq %rdx
+; SSE2-NEXT:    andq %rdi, %rdx
+; SSE2-NEXT:    leaq (%rdx,%r8,2), %rdx
+; SSE2-NEXT:    bswapq %rax
+; SSE2-NEXT:    movq %rax, %r8
+; SSE2-NEXT:    shrq $4, %r8
+; SSE2-NEXT:    andq %rsi, %r8
+; SSE2-NEXT:    andq %rsi, %rax
+; SSE2-NEXT:    shlq $4, %rax
+; SSE2-NEXT:    orq %r8, %rax
+; SSE2-NEXT:    movq %rax, %rsi
+; SSE2-NEXT:    andq %rcx, %rsi
+; SSE2-NEXT:    shrq $2, %rax
+; SSE2-NEXT:    andq %rcx, %rax
+; SSE2-NEXT:    leaq (%rax,%rsi,4), %rax
+; SSE2-NEXT:    movq %rax, %rcx
+; SSE2-NEXT:    andq %rdi, %rcx
+; SSE2-NEXT:    shrq %rax
+; SSE2-NEXT:    andq %rdi, %rax
+; SSE2-NEXT:    leaq (%rax,%rcx,2), %rax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: bitreverse_i128_vector:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE42-NEXT:    movdqa %xmm0, %xmm2
+; SSE42-NEXT:    pand %xmm1, %xmm2
+; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; SSE42-NEXT:    pshufb %xmm2, %xmm3
+; SSE42-NEXT:    psrlw $4, %xmm0
+; SSE42-NEXT:    pand %xmm1, %xmm0
+; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; SSE42-NEXT:    pshufb %xmm0, %xmm1
+; SSE42-NEXT:    por %xmm3, %xmm1
+; SSE42-NEXT:    movq %xmm1, %rax
+; SSE42-NEXT:    pextrq $1, %xmm1, %rdx
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: bitreverse_i128_vector:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX2-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX2-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: bitreverse_i128_vector:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512F-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512F-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX512F-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: bitreverse_i128_vector:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512VL-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
+; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VL-NEXT:    retq
+;
+; AVX512VBMI-LABEL: bitreverse_i128_vector:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512VBMI-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512VBMI-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512VBMI-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512VBMI-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; AVX512VBMI-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VBMI-NEXT:    vmovq %xmm0, %rax
+; AVX512VBMI-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VBMI-NEXT:    retq
+  %a0 = bitcast <2 x i64> %v0 to i128
+  %res = call i128 @llvm.bitreverse.i128(i128 %a0)
+  ret i128 %res
+}
+
+define i128 @bitreverse_i128_load(ptr %p0) nounwind {
+; SSE2-LABEL: bitreverse_i128_load:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq 8(%rdi), %rax
+; SSE2-NEXT:    bswapq %rax
+; SSE2-NEXT:    movq (%rdi), %rcx
+; SSE2-NEXT:    movq %rax, %rdx
+; SSE2-NEXT:    shrq $4, %rdx
+; SSE2-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
+; SSE2-NEXT:    andq %rsi, %rdx
+; SSE2-NEXT:    andq %rsi, %rax
+; SSE2-NEXT:    shlq $4, %rax
+; SSE2-NEXT:    orq %rdx, %rax
+; SSE2-NEXT:    movabsq $3689348814741910323, %rdx # imm = 0x3333333333333333
+; SSE2-NEXT:    movq %rax, %rdi
+; SSE2-NEXT:    andq %rdx, %rdi
+; SSE2-NEXT:    shrq $2, %rax
+; SSE2-NEXT:    andq %rdx, %rax
+; SSE2-NEXT:    leaq (%rax,%rdi,4), %rax
+; SSE2-NEXT:    movabsq $6148914691236517205, %rdi # imm = 0x5555555555555555
+; SSE2-NEXT:    movq %rax, %r8
+; SSE2-NEXT:    andq %rdi, %r8
+; SSE2-NEXT:    shrq %rax
+; SSE2-NEXT:    andq %rdi, %rax
+; SSE2-NEXT:    leaq (%rax,%r8,2), %rax
+; SSE2-NEXT:    bswapq %rcx
+; SSE2-NEXT:    movq %rcx, %r8
+; SSE2-NEXT:    shrq $4, %r8
+; SSE2-NEXT:    andq %rsi, %r8
+; SSE2-NEXT:    andq %rsi, %rcx
+; SSE2-NEXT:    shlq $4, %rcx
+; SSE2-NEXT:    orq %r8, %rcx
+; SSE2-NEXT:    movq %rcx, %rsi
+; SSE2-NEXT:    andq %rdx, %rsi
+; SSE2-NEXT:    shrq $2, %rcx
+; SSE2-NEXT:    andq %rdx, %rcx
+; SSE2-NEXT:    leaq (%rcx,%rsi,4), %rcx
+; SSE2-NEXT:    movq %rcx, %rdx
+; SSE2-NEXT:    andq %rdi, %rdx
+; SSE2-NEXT:    shrq %rcx
+; SSE2-NEXT:    andq %rdi, %rcx
+; SSE2-NEXT:    leaq (%rcx,%rdx,2), %rdx
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: bitreverse_i128_load:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movdqa (%rdi), %xmm0
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE42-NEXT:    movdqa %xmm0, %xmm2
+; SSE42-NEXT:    pand %xmm1, %xmm2
+; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; SSE42-NEXT:    pshufb %xmm2, %xmm3
+; SSE42-NEXT:    psrlw $4, %xmm0
+; SSE42-NEXT:    pand %xmm1, %xmm0
+; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; SSE42-NEXT:    pshufb %xmm0, %xmm1
+; SSE42-NEXT:    por %xmm3, %xmm1
+; SSE42-NEXT:    movq %xmm1, %rax
+; SSE42-NEXT:    pextrq $1, %xmm1, %rdx
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: bitreverse_i128_load:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX2-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX2-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: bitreverse_i128_load:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512F-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512F-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512F-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX512F-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: bitreverse_i128_load:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512VL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512VL-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
+; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VL-NEXT:    retq
+;
+; AVX512VBMI-LABEL: bitreverse_i128_load:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512VBMI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512VBMI-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; AVX512VBMI-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX512VBMI-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512VBMI-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; AVX512VBMI-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VBMI-NEXT:    vmovq %xmm0, %rax
+; AVX512VBMI-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VBMI-NEXT:    retq
+  %a0 = load i128, ptr %p0
+  %res = call i128 @llvm.bitreverse.i128(i128 %a0)
+  ret i128 %res
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; AVX512: {{.*}}
