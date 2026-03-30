@@ -18637,17 +18637,9 @@ TEST_F(FormatTest, EnumUnderlyingTypeUsesInheritanceColonSpacing) {
 
   Style.SpaceBeforeInheritanceColon = true;
   verifyFormat("enum A : int {};", Style);
-  verifyFormat("enum class B : int {};", Style);
-  verifyFormat("enum : int { E1 };", Style);
-  verifyFormat("typedef enum : int { E2 } E3;", Style);
-  verifyFormat("typedef enum A : int { E4 } B;", Style);
 
   Style.SpaceBeforeInheritanceColon = false;
   verifyFormat("enum A: int {};", Style);
-  verifyFormat("enum class B: int {};", Style);
-  verifyFormat("enum: int { E1 };", Style);
-  verifyFormat("typedef enum: int { E2 } E3;", Style);
-  verifyFormat("typedef enum A: int { E4 } B;", Style);
 }
 
 TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {

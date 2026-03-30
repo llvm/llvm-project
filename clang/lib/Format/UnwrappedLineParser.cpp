@@ -3839,7 +3839,7 @@ bool UnwrappedLineParser::parseEnum() {
                             tok::greater, tok::comma, tok::question,
                             tok::l_square)) {
     if (FormatTok->is(tok::colon))
-      FormatTok->setType(TT_EnumUnderlyingTypeColon);
+      FormatTok->setFinalizedType(TT_EnumUnderlyingTypeColon);
     if (Style.isVerilog()) {
       FormatTok->setFinalizedType(TT_VerilogDimensionedTypeName);
       nextToken();

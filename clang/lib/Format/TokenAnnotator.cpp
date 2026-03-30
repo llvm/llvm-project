@@ -1443,8 +1443,10 @@ private:
                  (Prev->is(TT_StartOfName) && !Scopes.empty() &&
                   Scopes.back() == ST_Class)) {
         Tok->setType(TT_BitFieldColon);
-      } else if (Contexts.size() == 1 && Line.getFirstNonComment()->isNoneOf(
-                                             tok::kw_case, tok::kw_default)) {
+      } else if (Contexts.size() == 1 &&
+                 Line.getFirstNonComment()->isNoneOf(tok::kw_enum, tok::kw_case,
+                                                     tok::kw_default) &&
+                 !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept) ||
             Prev->ClosesRequiresClause) {
           Tok->setType(TT_CtorInitializerColon);
@@ -1456,12 +1458,7 @@ private:
           if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept))
             Tok->setType(TT_CtorInitializerColon);
         } else {
-          if (Line.startsWith(tok::kw_enum) ||
-              Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
-            Tok->setType(TT_EnumUnderlyingTypeColon);
-          } else {
-            Tok->setType(TT_InheritanceColon);
-          }
+          Tok->setType(TT_InheritanceColon);
           if (Prev->isAccessSpecifierKeyword())
             Line.Type = LT_AccessModifier;
         }
