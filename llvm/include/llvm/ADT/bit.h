@@ -238,6 +238,9 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 template <typename T> [[nodiscard]] constexpr int countl_zero_constexpr(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
+  if (!Val)
+    return std::numeric_limits<T>::digits;
+
   unsigned ZeroBits = 0;
   for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
     T Tmp = Val >> Shift;
