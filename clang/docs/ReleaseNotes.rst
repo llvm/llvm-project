@@ -203,6 +203,14 @@ New Compiler Flags
   Control Flow Guard (CFG) is enabled by other options, it will instruct Clang
   to emit the CFG metadata, but disable adding checks.
 
+- New option ``-fdiagnostics-show-inlining-chain`` added to show inlining chain
+  notes for ``[[gnu::warning]]`` and ``[[gnu::error]]`` diagnostics. When a
+  function with these attributes is called from an inlined context, Clang can
+  now show which functions were inlined to reach the call. When debug info is
+  available (``-gline-directives-only`` (implicitly enabled at ``-g1``) or
+  higher), accurate source locations are used; otherwise, a heuristic fallback
+  is used with a note suggesting how to enable debug info for better accuracy.
+
 Deprecated Compiler Flags
 -------------------------
 

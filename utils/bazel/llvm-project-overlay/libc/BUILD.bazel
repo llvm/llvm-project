@@ -129,10 +129,6 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "endian",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "errno",
         has_def_template = True,
     ),
@@ -141,27 +137,11 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "features",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "float",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "inttypes",
         has_def_template = True,
     ),
     libc_header_info(
-        "limits",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "link",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "locale",
         has_def_template = True,
     ),
     libc_header_info(
@@ -189,15 +169,7 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "stdckdint",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "stdfix",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "stdint",
         has_def_template = True,
     ),
     libc_header_info(
@@ -209,43 +181,7 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "sys/auxv",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/epoll",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/ioctl",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/mman",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "sys/prctl",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/random",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/resource",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/select",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/socket",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/stat",
         has_def_template = True,
     ),
     libc_header_info(
@@ -253,49 +189,50 @@ LLVM_LIBC_HEADERS = [
         has_def_template = True,
     ),
     libc_header_info(
-        "sys/time",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/types",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "sys/wait",
-        has_def_template = True,
-    ),
-    libc_header_info(
         "termios",
-        has_def_template = True,
-    ),
-    libc_header_info(
-        "time",
         has_def_template = True,
     ),
     libc_header_info(
         "unistd",
         has_def_template = True,
     ),
-    libc_header_info(
-        "wchar",
-        has_def_template = True,
-    ),
     libc_header_info("ctype"),
     libc_header_info("dirent"),
     libc_header_info("dlfcn"),
+    libc_header_info("endian"),
+    libc_header_info("features"),
     libc_header_info("fenv"),
+    libc_header_info("float"),
+    libc_header_info("limits"),
+    libc_header_info("locale"),
     libc_header_info("nl_types"),
     libc_header_info("pthread"),
     libc_header_info("search"),
     libc_header_info("setjmp"),
     libc_header_info("spawn"),
+    libc_header_info("stdckdint"),
+    libc_header_info("stdint"),
     libc_header_info("string"),
     libc_header_info("strings"),
+    libc_header_info("sys/auxv"),
+    libc_header_info("sys/epoll"),
+    libc_header_info("sys/ioctl"),
     libc_header_info("sys/ipc"),
+    libc_header_info("sys/mman"),
+    libc_header_info("sys/random"),
+    libc_header_info("sys/resource"),
+    libc_header_info("sys/select"),
+    libc_header_info("sys/socket"),
+    libc_header_info("sys/stat"),
     libc_header_info("sys/statvfs"),
+    libc_header_info("sys/time"),
+    libc_header_info("sys/types"),
     libc_header_info("sys/utsname"),
+    libc_header_info("sys/wait"),
     libc_header_info("threads"),
+    libc_header_info("time"),
     libc_header_info("uchar"),
+    libc_header_info("wchar"),
     libc_header_info("wctype"),
     libc_header_info(
         "stdlib",
@@ -3249,6 +3186,25 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_math_acoshf_utils",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_asinpi",
+    hdrs = ["src/__support/math/asinpi.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_double_double",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_asin_utils",
     ],
 )
 
@@ -6626,6 +6582,13 @@ libc_math_function(
     name = "asinhf16",
     additional_deps = [
         ":__support_math_asinhf16",
+    ],
+)
+
+libc_math_function(
+    name = "asinpi",
+    additional_deps = [
+        ":__support_math_asinpi",
     ],
 )
 
