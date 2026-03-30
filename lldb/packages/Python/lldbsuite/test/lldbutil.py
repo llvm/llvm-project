@@ -1689,19 +1689,13 @@ def wait_for_file_on_target(testcase, file_path, max_attempts=6):
     for i in range(max_attempts):
         command = f"ls {file_path}"
         err, retcode, msg = testcase.run_platform_command(command)
-        if testcase.TraceOn():
-            testcase.trace(f"Ran command: {command}")
-            testcase.trace(f"Retcode: {retcode}")
-            testcase.trace(f"Output: {msg}")
-            testcase.trace(f"Error: {err.description}")
-
         if err.Success() and retcode == 0:
             break
         if i < max_attempts:
             # Exponential backoff!
             import time
 
-            time.sleep(pow(2, i) * 0.25)
+            time.sleep(pow(2, i))
     else:
         testcase.fail(
             "File %s not found even after %d attempts." % (file_path, max_attempts)
