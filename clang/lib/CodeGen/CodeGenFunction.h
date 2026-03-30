@@ -2012,7 +2012,7 @@ public:
                                 llvm::BasicBlock &FiniBB, llvm::Function *Fn,
                                 ArrayRef<llvm::Value *> Args) {
       llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
-      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminator())
+      if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminatorOrNull())
         CodeGenIPBBTI->eraseFromParent();
 
       CGF.Builder.SetInsertPoint(CodeGenIPBB);
