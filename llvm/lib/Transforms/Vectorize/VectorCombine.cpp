@@ -3724,16 +3724,16 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         if (DstTy && SrcTy &&
             SrcTy->getNumElements() == DstTy->getNumElements()) {
           Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                                &cast<Instruction>(FrontV)->getOperandUse(0));
+                                &BitCast->getOperandUse(0));
           continue;
         }
-      } else if (isa<SelectInst>(FrontV)) {
+      } else if (auto *Sel = dyn_cast<SelectInst>(FrontV)) {
         Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &cast<Instruction>(FrontV)->getOperandUse(0));
+                              &Sel->getOperandUse(0));
         Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
-                              &cast<Instruction>(FrontV)->getOperandUse(1));
+                              &Sel->getOperandUse(1));
         Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 2),
-                              &cast<Instruction>(FrontV)->getOperandUse(2));
+                              &Sel->getOperandUse(2));
         continue;
       } else if (auto *II = dyn_cast<IntrinsicInst>(FrontV);
                  II && isTriviallyVectorizable(II->getIntrinsicID()) &&
