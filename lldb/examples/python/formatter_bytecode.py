@@ -94,7 +94,8 @@ sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
-sig_update = 5
+sig_get_value = 5
+sig_update = 6
 
 SIGNATURES = {
     "summary": sig_summary,
@@ -102,6 +103,7 @@ SIGNATURES = {
     "get_num_children": sig_get_num_children,
     "get_child_index": sig_get_child_index,
     "get_child_at_index": sig_get_child_at_index,
+    "get_value": sig_get_value,
     "update": sig_update,
 }
 
@@ -889,6 +891,13 @@ class Compiler(ast.NodeVisitor):
 
     def _compile_method(self, node: ast.FunctionDef) -> None:
         self.current_sig = _METHOD_SIGS[node.name]
+
+        return_type = node.returns.id if isinstance(node.returns, ast.Name) else None
+        if node.name == "update" and return_type != "bool":
+            raise CompilerError(
+                "update must be declared to return bool: def update(self) -> bool:",
+                node,
+            )
 
         # Strip 'self' (and 'internal_dict' for __init__) from the arg list;
         # the remaining args become the initial locals.

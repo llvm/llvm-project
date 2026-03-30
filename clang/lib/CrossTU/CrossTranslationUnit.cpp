@@ -379,22 +379,23 @@ CrossTranslationUnitContext::getCrossTUDefinition(const VarDecl *VD,
                                   DisplayCTUProgress);
 }
 
-void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
+void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
+                                                         SourceLocation Loc) {
   switch (IE.getCode()) {
   case index_error_code::missing_index_file:
-    Context.getDiagnostics().Report(diag::err_ctu_error_opening)
+    Context.getDiagnostics().Report(Loc, diag::err_ctu_error_opening)
         << IE.getFileName();
     return;
   case index_error_code::invalid_index_format:
-    Context.getDiagnostics().Report(diag::err_extdefmap_parsing)
+    Context.getDiagnostics().Report(Loc, diag::err_extdefmap_parsing)
         << IE.getFileName() << IE.getLineNum();
     return;
   case index_error_code::multiple_definitions:
-    Context.getDiagnostics().Report(diag::err_multiple_def_index)
+    Context.getDiagnostics().Report(Loc, diag::err_multiple_def_index)
         << IE.getLineNum();
     return;
   case index_error_code::triple_mismatch:
-    Context.getDiagnostics().Report(diag::warn_ctu_incompat_triple)
+    Context.getDiagnostics().Report(Loc, diag::warn_ctu_incompat_triple)
         << IE.getFileName() << IE.getTripleToName() << IE.getTripleFromName();
     return;
   case index_error_code::success:
