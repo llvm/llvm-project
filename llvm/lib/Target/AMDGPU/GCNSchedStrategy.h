@@ -656,7 +656,7 @@ private:
     Printable print() const;
 #endif
 
-  private:    
+  private:
     // The three members below are the scoring components, top to bottom from
     // most important to least important when comparing candidates.
 

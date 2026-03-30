@@ -2911,8 +2911,8 @@ bool PreRARematStage::ScoredRemat::maybeBeneficial(
 }
 
 void PreRARematStage::ScoredRemat::insertMI(unsigned RegionIdx,
-                                          MachineInstr *RematMI,
-                                          GCNScheduleDAGMILive &DAG) const {
+                                            MachineInstr *RematMI,
+                                            GCNScheduleDAGMILive &DAG) const {
   RegionBoundaries &Bounds = DAG.Regions[RegionIdx];
   if (Bounds.first == std::next(MachineBasicBlock::iterator(RematMI)))
     Bounds.first = RematMI;
@@ -2990,9 +2990,9 @@ PreRARematStage::ScoredRemat::ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
 }
 
 bool PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
-                                        ArrayRef<GCNRPTarget> RPTargets,
-                                        const FreqInfo &FreqInfo,
-                                        bool ReduceSpill) {
+                                          ArrayRef<GCNRPTarget> RPTargets,
+                                          const FreqInfo &FreqInfo,
+                                          bool ReduceSpill) {
   MaxFreq = 0;
   RegionImpact = 0;
   for (unsigned I : TargetRegions.set_bits()) {
