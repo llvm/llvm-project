@@ -2215,7 +2215,7 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // Compute running GCD and record source constant.
 // Because we're looking for the constant at the end of the chain,
 // we can't quit the loop just because the GCD == 1.
-const SCEV* analyzeCoefficientsForGCD(const SCEV *Coefficients, 
+const SCEV* analyzeCoefficientsForGCD(const SCEV *Coefficients,
                                       APInt &RunningGCD, ScalarEvolution *SE) {
   while (const SCEVAddRecExpr *AddRec =
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
