@@ -152,6 +152,36 @@ inline int_pred_ty<is_zero_int> m_ZeroInt() {
 /// For vectors, this includes constants with undefined elements.
 inline int_pred_ty<is_one> m_One() { return int_pred_ty<is_one>(); }
 
+/// Match a floating-point constant if Pred::isValue returns true for the
+/// APFloat.
+template <typename Pred> struct fp_pred_ty {
+  Pred P;
+
+  fp_pred_ty(Pred P) : P(std::move(P)) {}
+  fp_pred_ty() : P() {}
+
+  bool match(const VPValue *VPV) const {
+    auto *VPI = dyn_cast<VPInstruction>(VPV);
+    if (VPI && VPI->getOpcode() == VPInstruction::Broadcast)
+      VPV = VPI->getOperand(0);
+    auto *VPIRV = dyn_cast<VPIRValue>(VPV);
+    if (!VPIRV)
+      return false;
+    auto *CFP = dyn_cast<ConstantFP>(VPIRV->getValue());
+    if (!CFP)
+      return false;
+    return P.isValue(CFP->getValueAPF());
+  }
+};
+struct is_neg_zero_fp {
+  bool isValue(const APFloat &C) const { return C.isNegZero(); }
+};
+
+/// Match a floating-point negative zero.
+inline fp_pred_ty<is_neg_zero_fp> m_NegZeroFP() {
+  return fp_pred_ty<is_neg_zero_fp>();
+}
+
 struct bind_apint {
   const APInt *&Res;
 

@@ -762,8 +762,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
           // For sub-recurrences, each part's reduction variable is already
           // negative, we need to do: reduce.add(-acc_uf0 + -acc_uf1)
           Instruction::BinaryOps Opcode =
-              RK == RecurKind::Sub
-                  ? Instruction::Add
+              (RK == RecurKind::Sub) ? Instruction::Add
+              : (RK == RecurKind::FSub)
+                  ? Instruction::FAdd
                   : (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
           ReducedPartRdx =
               Builder.CreateBinOp(Opcode, RdxPart, ReducedPartRdx, "bin.rdx");

@@ -8034,17 +8034,30 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
           // Partial sub-reductions always start at 0 and account for the
           // reduction start value in a final subtraction. Update it to use the
           // resume value from the main vector loop.
-          if (PhiR->getVFScaleFactor() > 1 &&
-              PhiR->getRecurrenceKind() == RecurKind::Sub) {
+          if ((PhiR->getVFScaleFactor() > 1 &&
+               PhiR->getRecurrenceKind() == RecurKind::Sub) ||
+              PhiR->getRecurrenceKind() == RecurKind::FSub) {
             auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
-            assert(Sub->getOpcode() == Instruction::Sub && "Unexpected opcode");
+            assert((Sub->getOpcode() == Instruction::Sub ||
+                    Sub->getOpcode() == Instruction::FSub) &&
+                   "Unexpected opcode");
             assert(isa<VPIRValue>(Sub->getOperand(0)) &&
                    "Expected operand to match the original start value of the "
                    "reduction");
-            assert(VPlanPatternMatch::match(VPI->getOperand(0),
-                                            VPlanPatternMatch::m_ZeroInt()) &&
-                   "Expected start value for partial sub-reduction to start at "
-                   "zero");
+            // For integer sub-reductions, verify start value is zero.
+            // For FP sub-reductions, verify start value is negative zero.
+            if (PhiR->getRecurrenceKind() == RecurKind::Sub) {
+              assert(VPlanPatternMatch::match(VPI->getOperand(0),
+                                              VPlanPatternMatch::m_ZeroInt()) &&
+                     "Expected start value for partial sub-reduction to start "
+                     "at zero");
+            } else if (PhiR->getRecurrenceKind() == RecurKind::FSub) {
+              assert(
+                  VPlanPatternMatch::match(VPI->getOperand(0),
+                                           VPlanPatternMatch::m_NegZeroFP()) &&
+                  "Expected start value for partial sub-reduction to start "
+                  "at negative zero");
+            }
             Sub->setOperand(0, StartVal);
           } else
             VPI->setOperand(0, StartVal);

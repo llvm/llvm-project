@@ -46,6 +46,7 @@ enum class RecurKind {
   UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
   UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
   FAdd,     ///< Sum of floats.
+  FSub,     ///< Subtraction of floats.
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
   FMax,     ///< FP max implemented in terms of select(cmp()).

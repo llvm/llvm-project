@@ -1007,13 +1007,16 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
     return InstDesc(Kind == RecurKind::FMul, I,
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::FSub:
+    return InstDesc(Kind == RecurKind::FSub, I,
+                    I->hasAllowReassoc() ? nullptr : I);
   case Instruction::FAdd:
     return InstDesc(Kind == RecurKind::FAdd, I,
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::Select:
-    if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul ||
-        Kind == RecurKind::Add || Kind == RecurKind::Mul ||
-        Kind == RecurKind::Sub || Kind == RecurKind::AddChainWithSubs)
+    if (Kind == RecurKind::FAdd || Kind == RecurKind::FSub ||
+        Kind == RecurKind::FMul || Kind == RecurKind::Add ||
+        Kind == RecurKind::Mul || Kind == RecurKind::Sub ||
+        Kind == RecurKind::AddChainWithSubs)
       return isConditionalRdxPattern(I);
     if (isFindRecurrenceKind(Kind) && SE)
       return isFindPattern(L, OrigPhi, I, *SE);
@@ -1100,6 +1103,10 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   }
   if (AddReductionVar(Phi, RecurKind::FMul, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::FSub, TheLoop, RedDes, DB, AC, DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found an FSub reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::FAdd, TheLoop, RedDes, DB, AC, DT, SE)) {
