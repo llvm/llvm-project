@@ -51,7 +51,7 @@ void bar(const char * __null_terminated * __single);
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP11:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null
-// CHECK-NEXT:    br i1 [[TMP11]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT2:%.*]],
+// CHECK-NEXT:    br i1 [[TMP11]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[BOUNDSCHECK_NULL:%.*]],
 // CHECK:       boundscheck.notnull:
 // CHECK-NEXT:    [[TMP12:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]]
 // CHECK-NEXT:    br i1 [[TMP12]], label [[CONT:%.*]], label [[TRAP:%.*]]
@@ -60,11 +60,13 @@ void bar(const char * __null_terminated * __single);
 // CHECK-NEXT:    unreachable
 // CHECK:       cont:
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]]
-// CHECK-NEXT:    br i1 [[TMP13]], label [[CONT2]], label [[TRAP1:%.*]]
+// CHECK-NEXT:    br i1 [[TMP13]], label [[CONT2:%.*]], label [[TRAP1:%.*]]
 // CHECK:       trap1:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]]
 // CHECK-NEXT:    unreachable
 // CHECK:       cont2:
+// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL]]
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR]], ptr [[SPP]], align 8
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[SPP]], align 8
 // CHECK-NEXT:    store ptr [[TMP14]], ptr [[NTPP]], align 8

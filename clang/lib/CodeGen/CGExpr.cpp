@@ -141,16 +141,17 @@ void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
   assert(TrapCtx != BoundsSafetyTrapCtx::UNKNOWN);
 
   // rdar://109574814: opt-remarks could be added here.
-  llvm::BranchInst *NullCheckBranch = nullptr;
+  llvm::BasicBlock *NullBB = nullptr;
   if (AcceptNullPtr) {
     // Test that the pointer is not NULL before testing that it's in bounds,
     // if AcceptNullPtr is specified.
     BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_NEQ_NULL);
     llvm::BasicBlock *NotNull = createBasicBlock("boundscheck.notnull");
+    NullBB = createBasicBlock("boundscheck.null");
 
     llvm::Value *Null = llvm::Constant::getNullValue(Ptr->getType());
     llvm::Value *PtrIsNull = Builder.CreateICmpNE(Ptr, Null);
-    NullCheckBranch = Builder.CreateCondBr(PtrIsNull, NotNull, nullptr);
+    Builder.CreateCondBr(PtrIsNull, NotNull, NullBB);
     EmitBlock(NotNull);
   }
 
@@ -241,8 +242,8 @@ void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
     EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_PTR_LT_LOWER_BOUND, TrapCtx,
                               PD ? &LowerBoundTR : nullptr);
   }
-  if (NullCheckBranch)
-    NullCheckBranch->setSuccessor(1, Builder.GetInsertBlock());
+  if (NullBB)
+    EmitBlock(NullBB);
 }
 
 void CodeGenFunction::EmitBoundsSafetyRangeCheck(llvm::Value *LowerBound,
@@ -1639,17 +1640,18 @@ void CodeGenFunction::EmitFlexibleArrayCountCheck(
   llvm::Value *Ptr = EmitWideToRawPtr(BasePtr, /*BoundsCheck*/ false, TrapCtx,
                                       /*LowerOnlyCheck*/ false, &Upper, &Lower);
 
-  llvm::BranchInst *NullCheckBranch = nullptr;
+  llvm::BasicBlock *NullBB = nullptr;
   // Deref doesn't survive with null.
   if (E->getKind() != BoundsCheckKind::FlexibleArrayCountDeref) {
     CodeGenFunction::BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_NEQ_NULL);
 
     llvm::BasicBlock *NonnullBB = createBasicBlock("flex.base.nonnull");
+    NullBB = createBasicBlock("flex.base.null");
 
     llvm::Value *Null = llvm::Constant::getNullValue(Ptr->getType());
     llvm::Value *PtrNonnull =
         Builder.CreateICmpNE(Ptr, Null, "flex.base.null.check");
-    NullCheckBranch = Builder.CreateCondBr(PtrNonnull, NonnullBB, nullptr);
+    Builder.CreateCondBr(PtrNonnull, NonnullBB, NullBB);
     EmitBlock(NonnullBB);
   }
 
@@ -1726,8 +1728,8 @@ void CodeGenFunction::EmitFlexibleArrayCountCheck(
     EmitBoundsSafetyTrapCheck(CountCheck, BNS_TRAP_FLEX_COUNT_GT_BOUNDS);
   }
 
-  if (NullCheckBranch)
-    NullCheckBranch->setSuccessor(1, Builder.GetInsertBlock());
+  if (NullBB)
+    EmitBlock(NullBB);
 }
 
 void CodeGenFunction::EmitBoundsSafetyTrapCheck(const Expr *Cond,

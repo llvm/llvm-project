@@ -74,12 +74,12 @@ char access(struct Outer *bar, int index) {
 // CHECK-NEXT:    br i1 [[OR_COND51]], label [[BOUNDSCHECK_NOTNULL45:%.*]], label [[TRAP]], !prof [[PROF21]], !annotation [[META19]]
 // CHECK:       boundscheck.cont.thread:
 // CHECK-NEXT:    store i32 [[LEN]], ptr inttoptr (i64 4 to ptr), align 4, !tbaa [[TBAA6]]
-// CHECK-NEXT:    br label [[CONT48:%.*]]
-// CHECK:       boundscheck.notnull45:
+// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL:%.*]]
+// CHECK:       {{boundscheck.notnull[0-9]+}}:
 // CHECK-NEXT:    [[LEN32:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 4
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN32]], align 4, !tbaa [[TBAA6]]
-// CHECK-NEXT:    br label [[CONT48]]
-// CHECK:       cont48:
+// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL]]
+// CHECK:       {{boundscheck.null[0-9]+}}:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]]
 //
 struct Outer * assign(void * __bidi_indexable bar, int len) {

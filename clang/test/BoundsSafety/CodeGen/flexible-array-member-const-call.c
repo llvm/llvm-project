@@ -53,7 +53,7 @@ struct struct_flex {
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB9:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR8]], align 8
 // CHECK-NEXT:    [[FLEX_BASE_NULL_CHECK:%.*]] = icmp ne ptr [[WIDE_PTR_PTR5]], null, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[FLEX_BASE_NULL_CHECK]], label %[[FLEX_BASE_NONNULL:.*]], label %[[CONT28:.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[FLEX_BASE_NULL_CHECK]], label %[[FLEX_BASE_NONNULL:.*]], label %[[FLEX_BASE_NULL:.*]], {{!annotation ![0-9]+}}
 // CHECK:       [[FLEX_BASE_NONNULL]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_STRUCT_FLEX:%.*]], ptr [[WIDE_PTR_PTR5]], i64 1
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp ule ptr [[WIDE_PTR_PTR5]], [[TMP3]], {{!annotation ![0-9]+}}
@@ -109,11 +109,13 @@ struct struct_flex {
 // CHECK-NEXT:    [[FLEX_AVAIL_COUNT_DIV:%.*]] = sdiv exact i64 [[FLEX_AVAIL_COUNT]], 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[FLEX_COUNT_INTPTR:%.*]] = zext i32 [[CALL]] to i64, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[FLEX_COUNT_CHECK:%.*]] = icmp ule i64 [[FLEX_COUNT_INTPTR]], [[FLEX_AVAIL_COUNT_DIV]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[FLEX_COUNT_CHECK]], label %[[CONT28]], label %[[TRAP27:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[FLEX_COUNT_CHECK]], label %[[CONT28:.*]], label %[[TRAP27:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
 // CHECK:       [[TRAP27]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT28]]:
+// CHECK-NEXT:    br label %[[FLEX_BASE_NULL]]
+// CHECK:       flex.base.null:
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR29:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR30:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR29]], align 8
@@ -122,7 +124,7 @@ struct struct_flex {
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR33:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB34:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR33]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = icmp ne ptr [[WIDE_PTR_PTR30]], null, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP10]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT40:.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP10]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], {{!annotation ![0-9]+}}
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[STRUCT_STRUCT_FLEX]], ptr [[WIDE_PTR_PTR30]], i64 1, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP12:%.*]] = icmp ule ptr [[TMP11]], [[WIDE_PTR_UB32]], {{!annotation ![0-9]+}}
@@ -138,11 +140,13 @@ struct struct_flex {
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT38]]:
 // CHECK-NEXT:    [[TMP14:%.*]] = icmp uge ptr [[WIDE_PTR_PTR30]], [[WIDE_PTR_LB34]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT40]], label %[[TRAP39:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT40:.*]], label %[[TRAP39:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
 // CHECK:       [[TRAP39]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT40]]:
+// CHECK-NEXT:    br label %[[BOUNDSCHECK_NULL]]
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR30]], ptr [[FLEX_ADDR]], align 8
 // CHECK-NEXT:    ret void
 //

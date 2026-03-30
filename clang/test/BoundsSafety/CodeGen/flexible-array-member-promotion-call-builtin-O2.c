@@ -37,8 +37,8 @@ typedef struct {
 // CHECK-NEXT:    [[DOTNOT88:%.*]] = icmp ne ptr [[FLEX]], null, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT89:%.*]] = icmp eq i32 [[SIZE]], 0, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND90:%.*]] = and i1 [[DOTNOT88]], [[DOTNOT89]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND90]], label [[TRAP]], label [[CONT87:%.*]], {{!annotation ![0-9]+}}
-// CHECK:       cont87:
+// CHECK-NEXT:    br i1 [[OR_COND90:%.*]], label [[TRAP]], label [[BOUNDSCHECK_NULL:%.*]], {{!annotation ![0-9]+}}
+// CHECK:       {{boundscheck.null[0-9]+}}:
 // CHECK-NEXT:    ret ptr [[FLEX]]
 //
 void *set(flex_t *flex, unsigned size) {
@@ -90,8 +90,8 @@ void *set(flex_t *flex, unsigned size) {
 // CHECK-NEXT:    [[DOTNOT188:%.*]] = icmp ne ptr [[DEST]], null, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT189:%.*]] = icmp eq i32 [[SIZE]], 0, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND192:%.*]] = and i1 [[DOTNOT188]], [[DOTNOT189]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND192]], label [[TRAP]], label [[CONT185:%.*]], {{!annotation ![0-9]+}}
-// CHECK:       cont185:
+// CHECK-NEXT:    br i1 [[OR_COND192:%.*]], label [[TRAP]], label [[BOUNDSCHECK_NULL:%.*]], {{!annotation ![0-9]+}}
+// CHECK:       {{boundscheck.null[0-9]+}}:
 // CHECK-NEXT:    ret ptr [[DEST]]
 //
 void *cpy(flex_t *dest, const flex_t *src, unsigned size) {
@@ -192,8 +192,8 @@ void *__unsafe_indexable pcpy(flex_t *dest, const flex_t *src, unsigned size) {
 // CHECK-NEXT:    [[DOTNOT188:%.*]] = icmp ne ptr [[DEST]], null, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT189:%.*]] = icmp eq i32 [[SIZE]], 0, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND192:%.*]] = and i1 [[DOTNOT188]], [[DOTNOT189]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND192]], label [[TRAP]], label [[CONT185:%.*]], {{!annotation ![0-9]+}}
-// CHECK:       cont185:
+// CHECK-NEXT:    br i1 [[OR_COND192:%.*]], label [[TRAP]], label [[BOUNDSCHECK_NULL:%.*]], {{!annotation ![0-9]+}}
+// CHECK:       {{boundscheck.null[0-9]+}}:
 // CHECK-NEXT:    ret ptr [[DEST]]
 //
 void *move(flex_t *dest, const flex_t *src, unsigned size) {

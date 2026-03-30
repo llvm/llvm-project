@@ -53,7 +53,7 @@ typedef struct {
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP3]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB9:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR8]], align 8
 // CHECK-NEXT:    [[FLEX_BASE_NULL_CHECK:%.*]] = icmp ne ptr [[WIDE_PTR_PTR5]], null, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[FLEX_BASE_NULL_CHECK]], label [[FLEX_BASE_NONNULL:%.*]], label [[CONT29:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[FLEX_BASE_NULL_CHECK]], label [[FLEX_BASE_NONNULL:%.*]], label [[FLEX_BASE_NULL:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       flex.base.nonnull:
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S:%.*]], ptr [[WIDE_PTR_PTR5]], i64 1
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp ule ptr [[WIDE_PTR_PTR5]], [[TMP6]], {{!annotation ![0-9]+}}
@@ -106,11 +106,13 @@ typedef struct {
 // CHECK-NEXT:    [[FLEX_AVAIL_COUNT:%.*]] = sub nuw i64 [[UPPER_INTPTR]], [[FAM_INTPTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[FLEX_AVAIL_COUNT_DIV:%.*]] = sdiv exact i64 [[FLEX_AVAIL_COUNT]], 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[FLEX_COUNT_CHECK:%.*]] = icmp ule i64 9, [[FLEX_AVAIL_COUNT_DIV]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[FLEX_COUNT_CHECK]], label [[CONT29]], label [[TRAP28:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[FLEX_COUNT_CHECK]], label [[CONT29:%.*]], label [[TRAP28:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap28:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont29:
+// CHECK-NEXT:    br label [[FLEX_BASE_NULL]]
+// CHECK:       flex.base.null:
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR30:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP2]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR31:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR30]], align 8
@@ -119,7 +121,7 @@ typedef struct {
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR34:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP2]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB35:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR34]], align 8
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp ne ptr [[WIDE_PTR_PTR31]], null, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP13]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT39:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP13]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[BOUNDSCHECK_NULL:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       boundscheck.notnull:
 // CHECK-NEXT:    [[TMP14:%.*]] = icmp ult ptr [[WIDE_PTR_PTR31]], [[WIDE_PTR_UB33]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[TMP14]], label [[CONT37:%.*]], label [[TRAP36:%.*]], {{!annotation ![0-9]+}}
@@ -128,11 +130,13 @@ typedef struct {
 // CHECK-NEXT:    unreachable
 // CHECK:       cont37:
 // CHECK-NEXT:    [[TMP15:%.*]] = icmp uge ptr [[WIDE_PTR_PTR31]], [[WIDE_PTR_LB35]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP15]], label [[CONT39]], label [[TRAP38:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP15]], label [[CONT39:%.*]], label [[TRAP38:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap38:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
 // CHECK:       cont39:
+// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL]]
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR31]], ptr [[S_ADDR]], align 8
 // CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // CHECK-NEXT:    [[OFFS:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP16]], i32 0, i32 1

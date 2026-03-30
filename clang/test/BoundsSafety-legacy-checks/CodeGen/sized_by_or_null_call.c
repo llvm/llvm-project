@@ -765,7 +765,7 @@ void caller_9(int *__sized_by(*len) *out, int *len){
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP2]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP8]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT4:.*]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP8]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[TMP9:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]], !annotation [[META6:![0-9]+]]
 // CHECK-NEXT:    br i1 [[TMP9]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF2]], !annotation [[META6]]
@@ -774,11 +774,13 @@ void caller_9(int *__sized_by(*len) *out, int *len){
 // CHECK-NEXT:    unreachable, !annotation [[META6]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[TMP10:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], !annotation [[META7:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP10]], label %[[CONT4]], label %[[TRAP3:.*]], !prof [[PROF2]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[TMP10]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !prof [[PROF2]], !annotation [[META7]]
 // CHECK:       [[TRAP3]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META7]]
 // CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       [[CONT4]]:
+// CHECK-NEXT:    br label %[[BOUNDSCHECK_NULL]]
+// CHECK:       [[BOUNDSCHECK_NULL]]:
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP5]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP5]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR7:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR6]], align 8
@@ -787,7 +789,7 @@ void caller_9(int *__sized_by(*len) *out, int *len){
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP5]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB11:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR10]], align 8
 // CHECK-NEXT:    [[TMP11:%.*]] = icmp ne ptr [[WIDE_PTR_PTR7]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP11]], label %[[BOUNDSCHECK_NOTNULL12:.*]], label %[[CONT16:.*]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP11]], label %[[BOUNDSCHECK_NOTNULL12:.*]], label %[[BOUNDSCHECK_NULL2:.*]], !annotation [[META4]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL12]]:
 // CHECK-NEXT:    [[TMP12:%.*]] = icmp ult ptr [[WIDE_PTR_PTR7]], [[WIDE_PTR_UB9]], !annotation [[META6]]
 // CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT14:.*]], label %[[TRAP13:.*]], !prof [[PROF2]], !annotation [[META6]]
@@ -796,11 +798,13 @@ void caller_9(int *__sized_by(*len) *out, int *len){
 // CHECK-NEXT:    unreachable, !annotation [[META6]]
 // CHECK:       [[CONT14]]:
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp uge ptr [[WIDE_PTR_PTR7]], [[WIDE_PTR_LB11]], !annotation [[META7]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT16]], label %[[TRAP15:.*]], !prof [[PROF2]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT16:.*]], label %[[TRAP15:.*]], !prof [[PROF2]], !annotation [[META7]]
 // CHECK:       [[TRAP15]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META7]]
 // CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       [[CONT16]]:
+// CHECK-NEXT:    br label %[[BOUNDSCHECK_NULL2]]
+// CHECK:       [[BOUNDSCHECK_NULL2]]:
 // CHECK-NEXT:    call void @bar(ptr noundef [[WIDE_PTR_PTR]], ptr noundef [[WIDE_PTR_PTR7]])
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[COUNT]], align 4

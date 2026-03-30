@@ -16,15 +16,15 @@ void use(int *, int);
 // CHECK-NEXT:    [[LEN:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN]], align 8, !tbaa [[TBAA5:![0-9]+]]
 // CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], 2
-// CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[CONT13:%.*]]
-// CHECK:       cont13:
+// CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[BOUNDSCHECK_NULL:%.*]]
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4, !tbaa [[TBAA1:![0-9]+]]
 // CHECK-NEXT:    tail call void @use(ptr noundef [[BOUND_PTR_ARITH]], i32 noundef [[TMP2]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    br label [[CLEANUP]]
 // CHECK:       cleanup:
-// CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[CONT13]] ], [ -1, [[ENTRY:%.*]] ]
+// CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[BOUNDSCHECK_NULL]] ], [ -1, [[ENTRY:%.*]] ]
 // CHECK-NEXT:    ret i32 [[RETVAL_0]]
 //
 int access1(S *p) {
@@ -57,18 +57,18 @@ int access1(S *p) {
 // CHECK-NEXT:    [[BOUND_PTR_ARITH16:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[BOUND_PTR_ARITH]], align 4, !tbaa [[TBAA1]]
 // CHECK-NEXT:    [[DOTNOT47:%.*]] = icmp eq ptr [[BOUND_PTR_ARITH16]], null, !annotation [[META11:![0-9]+]]
-// CHECK-NEXT:    br i1 [[DOTNOT47]], label [[CONT36:%.*]], label [[BOUNDSCHECK_NOTNULL33:%.*]], !annotation [[META11]]
+// CHECK-NEXT:    br i1 [[DOTNOT47]], label [[BOUNDSCHECK_NULL37:%.*]], label [[BOUNDSCHECK_NOTNULL33:%.*]], !annotation [[META11]]
 // CHECK:       boundscheck.notnull33:
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP1]], i64 12, !annotation [[META12:![0-9]+]]
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[ADD_PTR]], !annotation [[META12]]
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[BOUND_PTR_ARITH16]], [[TMP4]], !annotation [[META12]]
 // CHECK-NEXT:    [[OR_COND43:%.*]] = and i1 [[TMP5]], [[TMP6]], !annotation [[META12]]
-// CHECK-NEXT:    br i1 [[OR_COND43]], label [[CONT36]], label [[TRAP:%.*]], !prof [[PROF13:![0-9]+]], !annotation [[META12]]
-// CHECK:       cont36:
+// CHECK-NEXT:    br i1 [[OR_COND43:%.*]], label [[BOUNDSCHECK_NULL37]], label [[TRAP:%.*]], !prof [[PROF13:![0-9]+]], !annotation [[META12]]
+// CHECK:       {{boundscheck.null[0-9]+}}:
 // CHECK-NEXT:    tail call void @use(ptr noundef [[BOUND_PTR_ARITH16]], i32 noundef [[TMP3]]) #[[ATTR3]]
 // CHECK-NEXT:    br label [[CLEANUP]]
 // CHECK:       cleanup:
-// CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[CONT36]] ], [ -1, [[ENTRY:%.*]] ]
+// CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[BOUNDSCHECK_NULL37]] ], [ -1, [[ENTRY:%.*]] ]
 // CHECK-NEXT:    ret i32 [[RETVAL_0]]
 //
 int access2(S *p) {

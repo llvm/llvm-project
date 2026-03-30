@@ -117,9 +117,9 @@ int consume(int* __bidi_indexable ptr, int* __bidi_indexable ptr2, int idx) {
 //
 //
 //.
-// CHECK: attributes #[[ATTR0]] = { alwaysinline nounwind memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR0]] = { alwaysinline nounwind memory(read, inaccessiblemem: write, target_mem: none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// CHECK: attributes #[[ATTR2]] = { nounwind memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR2]] = { nounwind memory(read, inaccessiblemem: write, target_mem: none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
 //.
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

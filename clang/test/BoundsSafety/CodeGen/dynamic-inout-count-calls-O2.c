@@ -51,11 +51,11 @@ void pass_out_len(int *__counted_by(*out_len) arr, int *out_len) {
 // CHECK-LABEL: @pass_addr_of_len(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[LEN:%.*]], 0, !annotation [[META7]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[CONT79:%.*]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[BOUNDSCHECK_NULL:%.*]], !annotation [[META7]]
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
-// CHECK:       cont79:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    ret void
 //
 void pass_addr_of_len(int *__counted_by(len) arr, int len) {

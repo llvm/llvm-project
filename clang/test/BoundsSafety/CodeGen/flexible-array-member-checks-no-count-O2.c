@@ -15,17 +15,17 @@ typedef struct {
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR7:[0-9]+]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 -1
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[BOUND_PTR_ARITH]], null, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label [[CONT9:%.*]], label [[BOUNDSCHECK_NOTNULL:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[BOUNDSCHECK_NULL:%.*]], label [[BOUNDSCHECK_NOTNULL:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       boundscheck.notnull:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 3, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], [[ARR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND10:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND10]], label [[CONT9]], label [[TRAP:%.*]], !prof [[PROF5:![0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND10]], label [[BOUNDSCHECK_NULL]], label [[TRAP:%.*]], !prof [[PROF5:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR8:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont9:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
 // CHECK-NEXT:    ret void
 //
@@ -121,11 +121,11 @@ void test_over_base_fail2() {
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARR]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT9:%.*]], label [[TRAP:%.*]], !prof [[PROF5]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[BOUNDSCHECK_NULL:%.*]], label [[TRAP:%.*]], !prof [[PROF5]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR8]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont9:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
 // CHECK-NEXT:    ret void
 //
@@ -203,11 +203,11 @@ void test_count_from_buf_ok2(flex_t *flex) {
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARR]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT9:%.*]], label [[TRAP:%.*]], !prof [[PROF5]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[BOUNDSCHECK_NULL:%.*]], label [[TRAP:%.*]], !prof [[PROF5]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR8]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont9:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
 // CHECK-NEXT:    ret void
 //
@@ -302,11 +302,11 @@ void test_flex_init_list_ok() {
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[BUF]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT10:%.*]], label [[TRAP:%.*]], !prof [[PROF5]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[BOUNDSCHECK_NULL:%.*]], label [[TRAP:%.*]], !prof [[PROF5]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR8]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont10:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BUF]]) #[[ATTR7]]
 // CHECK-NEXT:    ret void
 //
@@ -342,11 +342,11 @@ void test_flex_argument_ok() {
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[BUF]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT10:%.*]], label [[TRAP:%.*]], !prof [[PROF5]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[BOUNDSCHECK_NULL:%.*]], label [[TRAP:%.*]], !prof [[PROF5]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR8]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont10:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    call void @sink(ptr noundef nonnull [[BUF]]) #[[ATTR7]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BUF]]) #[[ATTR7]]
 // CHECK-NEXT:    ret void

@@ -177,7 +177,7 @@ void caller_9(int *__counted_by(*len) *out, int *len){
 // CHECK-NEXT:    [[CMP57:%.*]] = icmp sgt i32 [[LEN]], -1, !annotation [[META7]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP57]], [[CMP54]]
 // CHECK-NEXT:    br i1 [[SPEC_SELECT]], label [[CONT60]], label [[TRAP]], !prof [[PROF13]], !annotation [[META7]]
-// CHECK:       cont60:
+// CHECK:       {{cont[0-9]+}}:
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COUNT]]) #[[ATTR5]]
 // CHECK-NEXT:    ret ptr [[TMP0]]

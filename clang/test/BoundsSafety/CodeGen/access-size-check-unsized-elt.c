@@ -38,21 +38,23 @@ void receive(fn_t);
 // ACCESS-SIZE-NEXT:    [[WIDE_PTR_UB5:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR4]], align 8
 // ACCESS-SIZE-NEXT:    [[WIDE_PTR_LB_ADDR6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 2
 // ACCESS-SIZE-NEXT:    [[WIDE_PTR_LB7:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR6]], align 8
-// ACCESS-SIZE-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[WIDE_PTR_PTR3]], null, !annotation [[META2:![0-9]+]]
-// ACCESS-SIZE-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT9:.*]], !annotation [[META2]]
+// ACCESS-SIZE-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[WIDE_PTR_PTR3]], null, !annotation [[META1:![0-9]+]]
+// ACCESS-SIZE-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META1]]
 // ACCESS-SIZE:       [[BOUNDSCHECK_NOTNULL]]:
-// ACCESS-SIZE-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[WIDE_PTR_PTR3]], [[WIDE_PTR_UB5]], !annotation [[META3:![0-9]+]]
-// ACCESS-SIZE-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF4:![0-9]+]], !annotation [[META3]]
+// ACCESS-SIZE-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[WIDE_PTR_PTR3]], [[WIDE_PTR_UB5]], !annotation [[META2:![0-9]+]]
+// ACCESS-SIZE-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // ACCESS-SIZE:       [[TRAP]]:
-// ACCESS-SIZE-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META3]]
-// ACCESS-SIZE-NEXT:    unreachable, !annotation [[META3]]
+// ACCESS-SIZE-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META2]]
+// ACCESS-SIZE-NEXT:    unreachable, !annotation [[META2]]
 // ACCESS-SIZE:       [[CONT]]:
-// ACCESS-SIZE-NEXT:    [[TMP5:%.*]] = icmp uge ptr [[WIDE_PTR_PTR3]], [[WIDE_PTR_LB7]], !annotation [[META5:![0-9]+]]
-// ACCESS-SIZE-NEXT:    br i1 [[TMP5]], label %[[CONT9]], label %[[TRAP8:.*]], !prof [[PROF4]], !annotation [[META5]]
+// ACCESS-SIZE-NEXT:    [[TMP5:%.*]] = icmp uge ptr [[WIDE_PTR_PTR3]], [[WIDE_PTR_LB7]], !annotation [[META4:![0-9]+]]
+// ACCESS-SIZE-NEXT:    br i1 [[TMP5]], label %[[CONT9:.*]], label %[[TRAP8:.*]], !prof [[PROF3]], !annotation [[META4]]
 // ACCESS-SIZE:       [[TRAP8]]:
-// ACCESS-SIZE-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META5]]
-// ACCESS-SIZE-NEXT:    unreachable, !annotation [[META5]]
+// ACCESS-SIZE-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META4]]
+// ACCESS-SIZE-NEXT:    unreachable, !annotation [[META4]]
 // ACCESS-SIZE:       [[CONT9]]:
+// ACCESS-SIZE-NEXT:    br label %[[BOUNDSCHECK_NULL]]
+// ACCESS-SIZE:       [[BOUNDSCHECK_NULL]]:
 // ACCESS-SIZE-NEXT:    store ptr [[WIDE_PTR_PTR3]], ptr [[F]], align 8
 // ACCESS-SIZE-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[F]], align 8
 // ACCESS-SIZE-NEXT:    call void @receive(ptr noundef [[TMP6]])
@@ -71,8 +73,8 @@ void borked(void)
   receive(f);
 }
 //.
-// ACCESS-SIZE: [[META2]] = !{!"bounds-safety-check-ptr-neq-null"}
-// ACCESS-SIZE: [[META3]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// ACCESS-SIZE: [[PROF4]] = !{!"branch_weights", i32 1048575, i32 1}
-// ACCESS-SIZE: [[META5]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// ACCESS-SIZE: [[META1]] = !{!"bounds-safety-check-ptr-neq-null"}
+// ACCESS-SIZE: [[META2]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
+// ACCESS-SIZE: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// ACCESS-SIZE: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

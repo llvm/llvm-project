@@ -14,11 +14,11 @@ struct foo {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[F:%.*]], i64 8
 // CHECK-NEXT:    [[DOTNOT4:%.*]] = icmp ugt ptr [[F]], [[TMP0]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT4]], label [[TRAP:%.*]], label [[CONT2:%.*]], !prof [[PROF3:![0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT4]], label [[TRAP:%.*]], label [[BOUNDSCHECK_NULL:%.*]], !prof [[PROF3:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont2:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    ret ptr [[F]]
 //
 char **addrof_single_ptr_to_single(struct foo *f) {
@@ -30,11 +30,11 @@ char **addrof_single_ptr_to_single(struct foo *f) {
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F:%.*]], i64 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[F]], i64 12
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT2:%.*]], !prof [[PROF6:![0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[BOUNDSCHECK_NULL:%.*]], !prof [[PROF6:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont2:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 int *addrof_single_i_to_single(struct foo *f) {
@@ -46,11 +46,11 @@ int *addrof_single_i_to_single(struct foo *f) {
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F:%.*]], i64 16
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[F]], i64 24
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT2:%.*]], !prof [[PROF6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[BOUNDSCHECK_NULL:%.*]], !prof [[PROF6]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont2:
+// CHECK:       boundscheck.null:
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 long *addrof_single_l_to_single(struct foo *f) {

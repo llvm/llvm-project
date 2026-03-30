@@ -47,17 +47,18 @@ struct struct_1 * access_struct_1_all_checks_removable(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[SIZE:%.*]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[SRC:%.*]], i64 [[IDX_EXT]]
-// CHECK-NEXT:    br label [[FOR_COND:%.*]]
+// CHECK-NEXT:    [[EXITCOND_NOT35:%.*]] = icmp eq i32 [[SIZE]], 0
+// CHECK-NEXT:    br i1 [[EXITCOND_NOT35]], label [[CLEANUP14:%.*]], label [[FOR_BODY:%.*]]
 // CHECK:       for.cond:
-// CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[CONT1:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-// CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], [[IDX_EXT]]
-// CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[CLEANUP14:%.*]], label [[FOR_BODY:%.*]]
+// CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT:%.*]], [[IDX_EXT]]
+// CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[CLEANUP14]], label [[FOR_BODY]]
 // CHECK:       for.body:
-// CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+// CHECK-NEXT:    [[INDVARS_IV36:%.*]] = phi i64 [ [[INDVARS_IV_NEXT]], [[FOR_COND:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+// CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV36]], 1
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [8 x i8], ptr [[SRC]], i64 [[INDVARS_IV_NEXT]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BOUND_PTR_ARITH]], i64 8
 // CHECK-NEXT:    [[DOTNOT27:%.*]] = icmp ugt ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT27]], label [[TRAP:%.*]], label [[CONT1]], !prof [[PROF11:![0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT27]], label [[TRAP:%.*]], label [[CONT1:%.*]], !prof [[PROF11:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -69,7 +70,7 @@ struct struct_1 * access_struct_1_all_checks_removable(
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP]], label [[CLEANUP14]], !prof [[PROF14:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cleanup14:
-// CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[BOUND_PTR_ARITH]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[FOR_COND]] ]
+// CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[BOUND_PTR_ARITH]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[ENTRY]] ], [ null, [[FOR_COND]] ]
 // CHECK-NEXT:    ret ptr [[TMP2]]
 //
 struct struct_1 * access_struct_1_checks_needed(

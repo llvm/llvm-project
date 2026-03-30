@@ -27,7 +27,7 @@ void bar(const unsigned	*pointer);
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT4:.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], {{!annotation ![0-9]+}}
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[WIDE_PTR_PTR]], i64 1, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
@@ -43,11 +43,13 @@ void bar(const unsigned	*pointer);
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT2]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT4]], label %[[TRAP3:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
 // CHECK:       [[TRAP3]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT4]]:
+// CHECK-NEXT:    br label %[[BOUNDSCHECK_NULL]]
+// CHECK:       [[BOUNDSCHECK_NULL]]:
 // CHECK-NEXT:    call void @bar(ptr noundef [[WIDE_PTR_PTR]])
 // CHECK-NEXT:    ret void
 //

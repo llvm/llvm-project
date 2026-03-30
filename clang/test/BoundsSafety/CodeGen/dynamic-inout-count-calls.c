@@ -170,7 +170,7 @@ void f_inout_count(int *__counted_by(*out_len) buf, int *out_len) {}
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR78:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP73]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB79:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR78]], align 8
 // CHECK-NEXT:    [[TMP19:%.*]] = icmp ne ptr [[WIDE_PTR_PTR75]], null, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP19]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT85:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP19]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[BOUNDSCHECK_NULL:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       boundscheck.notnull:
 // CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[WIDE_PTR_PTR75]], i64 1, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP21:%.*]] = icmp ule ptr [[TMP20]], [[WIDE_PTR_UB77]], {{!annotation ![0-9]+}}
@@ -186,11 +186,13 @@ void f_inout_count(int *__counted_by(*out_len) buf, int *out_len) {}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont83:
 // CHECK-NEXT:    [[TMP23:%.*]] = icmp uge ptr [[WIDE_PTR_PTR75]], [[WIDE_PTR_LB79]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP23]], label [[CONT85]], label [[TRAP84:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP23]], label [[CONT85:%.*]], label [[TRAP84:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // CHECK:       trap84:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont85:
+// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL]]
+// CHECK:       {{boundscheck.null[0-9]*}}:
 // CHECK-NEXT:    call void @f_inout_count(ptr noundef [[WIDE_PTR_PTR68]], ptr noundef [[WIDE_PTR_PTR75]])
 // CHECK-NEXT:    ret void
 //

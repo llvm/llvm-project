@@ -1318,7 +1318,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_sbon* ptr,
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR59:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP47]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB60:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR59]], align 8
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp ne ptr [[WIDE_PTR_PTR56]], null, !annotation [[META5:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT64:.*]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[TMP14:%.*]] = icmp ult ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_UB58]], !annotation [[META6:![0-9]+]]
 // CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT62:.*]], label %[[TRAP61:.*]], !prof [[PROF3]], !annotation [[META6]]
@@ -1327,11 +1327,13 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_sbon* ptr,
 // CHECK-NEXT:    unreachable, !annotation [[META6]]
 // CHECK:       [[CONT62]]:
 // CHECK-NEXT:    [[TMP15:%.*]] = icmp uge ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_LB60]], !annotation [[META7:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT64]], label %[[TRAP63:.*]], !prof [[PROF3]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT64:.*]], label %[[TRAP63:.*]], !prof [[PROF3]], !annotation [[META7]]
 // CHECK:       [[TRAP63]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META7]]
 // CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       [[CONT64]]:
+// CHECK-NEXT:    br label %[[BOUNDSCHECK_NULL]]
+// CHECK:       [[BOUNDSCHECK_NULL]]:
 // CHECK-NEXT:    call void @consume_sbon_arr(ptr noundef [[WIDE_PTR_PTR56]])
 // CHECK-NEXT:    ret void
 //
@@ -3126,7 +3128,7 @@ void assign_via_ptr_nested_v2_from_sbon(struct nested_sbon* ptr,
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR59:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP47]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB60:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR59]], align 8
 // CHECK-NEXT:    [[TMP22:%.*]] = icmp ne ptr [[WIDE_PTR_PTR56]], null, !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[TMP22]], label %[[BOUNDSCHECK_NOTNULL61:.*]], label %[[CONT65:.*]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP22]], label %[[BOUNDSCHECK_NOTNULL61:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL61]]:
 // CHECK-NEXT:    [[TMP23:%.*]] = icmp ult ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_UB58]], !annotation [[META6]]
 // CHECK-NEXT:    br i1 [[TMP23]], label %[[CONT63:.*]], label %[[TRAP62:.*]], !prof [[PROF3]], !annotation [[META6]]
@@ -3135,11 +3137,13 @@ void assign_via_ptr_nested_v2_from_sbon(struct nested_sbon* ptr,
 // CHECK-NEXT:    unreachable, !annotation [[META6]]
 // CHECK:       [[CONT63]]:
 // CHECK-NEXT:    [[TMP24:%.*]] = icmp uge ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_LB60]], !annotation [[META7]]
-// CHECK-NEXT:    br i1 [[TMP24]], label %[[CONT65]], label %[[TRAP64:.*]], !prof [[PROF3]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[TMP24]], label %[[CONT65:.*]], label %[[TRAP64:.*]], !prof [[PROF3]], !annotation [[META7]]
 // CHECK:       [[TRAP64]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META7]]
 // CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       [[CONT65]]:
+// CHECK-NEXT:    br label %[[BOUNDSCHECK_NULL]]
+// CHECK:       [[BOUNDSCHECK_NULL]]:
 // CHECK-NEXT:    call void @consume_sbon_arr(ptr noundef [[WIDE_PTR_PTR56]])
 // CHECK-NEXT:    ret void
 //

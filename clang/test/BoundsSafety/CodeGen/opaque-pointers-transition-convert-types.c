@@ -32,7 +32,7 @@ struct s1 {
 // NOPQ-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // NOPQ-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // NOPQ-NEXT:    [[TMP6:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, {{!annotation ![0-9]+}}
-// NOPQ-NEXT:    br i1 [[TMP6]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT2:%.*]], {{!annotation ![0-9]+}}
+// NOPQ-NEXT:    br i1 [[TMP6]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[BOUNDSCHECK_NULL:%.*]], {{!annotation ![0-9]+}}
 // NOPQ:       boundscheck.notnull:
 // NOPQ-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
 // NOPQ-NEXT:    br i1 [[TMP7]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
@@ -41,11 +41,13 @@ struct s1 {
 // NOPQ-NEXT:    unreachable
 // NOPQ:       cont:
 // NOPQ-NEXT:    [[TMP8:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// NOPQ-NEXT:    br i1 [[TMP8]], label [[CONT2]], label [[TRAP1:%.*]], {{!annotation ![0-9]+}}
+// NOPQ-NEXT:    br i1 [[TMP8]], label [[CONT2:%.*]], label [[TRAP1:%.*]], {{!annotation ![0-9]+}}
 // NOPQ:       trap1:
 // NOPQ-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // NOPQ-NEXT:    unreachable
 // NOPQ:       cont2:
+// NOPQ-NEXT:    br label [[BOUNDSCHECK_NULL]]
+// NOPQ:       boundscheck.null:
 // NOPQ-NEXT:    ret ptr [[WIDE_PTR_PTR]]
 //
 // OPQ-LABEL: @f1(
@@ -69,7 +71,7 @@ struct s1 {
 // OPQ-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // OPQ-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // OPQ-NEXT:    [[TMP6:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, {{!annotation ![0-9]+}}
-// OPQ-NEXT:    br i1 [[TMP6]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT2:%.*]], {{!annotation ![0-9]+}}
+// OPQ-NEXT:    br i1 [[TMP6]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[BOUNDSCHECK_NULL:%.*]], {{!annotation ![0-9]+}}
 // OPQ:       boundscheck.notnull:
 // OPQ-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
 // OPQ-NEXT:    br i1 [[TMP7]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
@@ -78,11 +80,13 @@ struct s1 {
 // OPQ-NEXT:    unreachable
 // OPQ:       cont:
 // OPQ-NEXT:    [[TMP8:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// OPQ-NEXT:    br i1 [[TMP8]], label [[CONT2]], label [[TRAP1:%.*]], {{!annotation ![0-9]+}}
+// OPQ-NEXT:    br i1 [[TMP8]], label [[CONT2:%.*]], label [[TRAP1:%.*]], {{!annotation ![0-9]+}}
 // OPQ:       trap1:
 // OPQ-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // OPQ-NEXT:    unreachable
 // OPQ:       cont2:
+// OPQ-NEXT:    br label [[BOUNDSCHECK_NULL]]
+// OPQ:       boundscheck.null:
 // OPQ-NEXT:    ret ptr [[WIDE_PTR_PTR]]
 //
 _Bool *f1(struct s1 *p) {
