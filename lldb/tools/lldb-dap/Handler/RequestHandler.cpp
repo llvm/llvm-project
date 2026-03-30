@@ -118,7 +118,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
-
+  // We need to wait for the client to connect to the pipe.
+  comm_file->Connect();
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
   else

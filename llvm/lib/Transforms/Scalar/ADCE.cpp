@@ -105,7 +105,7 @@ class AggressiveDeadCodeElimination {
   SmallVector<BlockInfoType> BlockInfo;
 
   /// Set of live instructions.
-  DenseSet<Instruction *> LiveInst;
+  SmallPtrSet<Instruction *, 32> LiveInst;
   bool isLive(Instruction *I) { return LiveInst.contains(I); }
 
   /// Instructions known to be live where we need to mark
