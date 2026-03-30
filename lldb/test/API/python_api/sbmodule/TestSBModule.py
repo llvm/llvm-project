@@ -163,9 +163,7 @@ class SBModuleAPICase(TestBase):
         fullpath = str(spec0.GetFileSpec())
         if fullpath:
             found = specs[fullpath]
-            self.assertIsNotNone(
-                found, "Should find spec by full path '%s'" % fullpath
-            )
+            self.assertIsNotNone(found, "Should find spec by full path '%s'" % fullpath)
 
         # String indexing: missing basename returns None
         self.assertIsNone(
