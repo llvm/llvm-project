@@ -4706,7 +4706,7 @@ ConstantRange SelectionDAG::computeConstantRangeIncludingKnownBits(
     unsigned Depth) const {
   KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
   ConstantRange CR1 = ConstantRange::fromKnownBits(Known, ForSigned);
-  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, Depth);
+  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, ForSigned, Depth);
   ConstantRange::PreferredRangeType RangeType =
       ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
   return CR1.intersectWith(CR2, RangeType);
