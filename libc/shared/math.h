@@ -25,6 +25,7 @@
 #include "math/asinhf16.h"
 #include "math/asinpi.h"
 #include "math/asinpif.h"
+#include "math/asinpibf16.h"
 #include "math/asinpif16.h"
 #include "math/atan.h"
 #include "math/atan2.h"

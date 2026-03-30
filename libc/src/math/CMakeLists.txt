@@ -60,6 +60,7 @@ add_math_entrypoint_object(asinhf)
 add_math_entrypoint_object(asinhf16)
 
 add_math_entrypoint_object(asinpi)
+add_math_entrypoint_object(asinpibf16)
 add_math_entrypoint_object(asinpif)
 add_math_entrypoint_object(asinpif16)
 

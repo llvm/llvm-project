@@ -4048,6 +4048,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  asinpibf16
+  SRCS
+    asinpibf16.cpp
+  HDRS
+    ../asinpibf16.h
+  DEPENDS
+    libc.src.__support.math.asinpibf16
+)
+
+add_entrypoint_object(
   asinpif
   SRCS
     asinpif.cpp

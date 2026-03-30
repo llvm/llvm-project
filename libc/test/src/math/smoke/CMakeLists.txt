@@ -4770,6 +4770,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpibf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinpibf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.asinpibf16
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   asinpif_test
   SUITE
     libc-math-smoke-tests
