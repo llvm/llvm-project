@@ -36,7 +36,7 @@ enum class Group;
 enum {
   DIAG_SIZE_COMMON = 300,
   DIAG_SIZE_DRIVER = 400,
-  DIAG_SIZE_FRONTEND = 205, // 5 extra downstream
+  DIAG_SIZE_FRONTEND = 211, // 5 extra downstream
   DIAG_SIZE_SERIALIZATION = 120,
   DIAG_SIZE_LEX = 500,
   DIAG_SIZE_PARSE = 800,
