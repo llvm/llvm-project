@@ -281,6 +281,23 @@ public:
   /// or std::nullopt if Index is out of bounds.
   LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
+  /// Get an unsigned integer of any byte size 1-8 from a byte array.
+  ///
+  /// \param Data The raw byte array in the correct endianness.
+  /// \param ElementByteSize The size in bytes of each element (1-8).
+  /// \param Index The element index to extract.
+  /// \returns The element value, or std::nullopt if Index is out of bounds.
+  static std::optional<uint64_t>
+  getUnsigned(ArrayRef<uint8_t> Data, uint8_t ElementByteSize, size_t Index) {
+    uint64_t Offset = Index * ElementByteSize;
+    if (Offset + ElementByteSize > Data.size())
+      return std::nullopt;
+    DataExtractor DE(StringRef(reinterpret_cast<const char *>(Data.data()),
+                               Data.size()),
+                     llvm::endianness::native == llvm::endianness::little, 8);
+    return DE.getUnsigned(&Offset, ElementByteSize);
+  }
+
 protected:
 
   /// Get an appropriate address info offsets array.
@@ -297,23 +314,6 @@ protected:
   getAddrOffsets() const {
     return ArrayRef<T>(reinterpret_cast<const T *>(AddrOffsets.data()),
                        AddrOffsets.size()/sizeof(T));
-  }
-
-  /// Get an unsigned integer of any byte size 1-8 from a byte array.
-  ///
-  /// \param Data The raw byte array in the correct endianness.
-  /// \param ElementByteSize The size in bytes of each element (1-8).
-  /// \param Index The element index to extract.
-  /// \returns The element value, or std::nullopt if Index is out of bounds.
-  static std::optional<uint64_t>
-  getUnsigned(ArrayRef<uint8_t> Data, uint8_t ElementByteSize, size_t Index) {
-    uint64_t Offset = Index * ElementByteSize;
-    if (Offset + ElementByteSize > Data.size())
-      return std::nullopt;
-    DataExtractor DE(StringRef(reinterpret_cast<const char *>(Data.data()),
-                               Data.size()),
-                     llvm::endianness::native == llvm::endianness::little, 8);
-    return DE.getUnsigned(&Offset, ElementByteSize);
   }
 
   /// A random access iterator over a byte array of fixed-size unsigned
