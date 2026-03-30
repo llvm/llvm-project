@@ -234,3 +234,47 @@ func.func private @test_alloc_with_multiple_results() -> () {
   memref.dealloc %alloc2 : memref<64xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL:   func.func private @test_alloc_no_non_dealloc_users() {
+// CHECK:           %[[ALLOC:.*]] = memref.alloc() {alignment = 64 : i64} : memref<32xf32>
+// CHECK-NEXT:      memref.dealloc %[[ALLOC]] : memref<32xf32>
+// CHECK-NEXT:      return
+
+// The pass finds no last user when an alloc has only a dealloc as its user.
+// Verify the IR stays unchanged.
+func.func private @test_alloc_no_non_dealloc_users() {
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<32xf32>
+  memref.dealloc %alloc : memref<32xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func private @test_dynamic_dimensions(
+// CHECK-SAME:                                               %[[N:.*]]: index) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ALLOC:.*]] = memref.alloc(%[[N]]) {alignment = 64 : i64} : memref<?xf32>
+// CHECK:           memref.load %[[ALLOC]][%[[C0]]]
+// CHECK:           memref.dealloc %[[ALLOC]] : memref<?xf32>
+// CHECK:           %[[ALLOC1:.*]] = memref.alloc() {alignment = 64 : i64} : memref<32xf32>
+// CHECK:           arith.constant
+// CHECK:           memref.store {{.*}}, %[[ALLOC1]][%[[C0]]]
+// CHECK:           memref.dealloc %[[ALLOC1]] : memref<32xf32>
+// CHECK:           return
+
+// The pass moves the dealloc of a dynamic alloc to right after its last user.
+// %alloc starts with its dealloc at the end of the block. The pass moves it
+// to right after the memref.load, which is the last use of %alloc.
+func.func private @test_dynamic_dimensions(%n: index) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc(%n) {alignment = 64 : i64} : memref<?xf32>
+  %val = memref.load %alloc[%c0] : memref<?xf32>
+  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<32xf32>
+  %cf0 = arith.constant 0.0 : f32
+  memref.store %cf0, %alloc_1[%c0] : memref<32xf32>
+  memref.dealloc %alloc : memref<?xf32>
+  memref.dealloc %alloc_1 : memref<32xf32>
+  return
+}
