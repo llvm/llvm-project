@@ -882,14 +882,73 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         RetTy, CGM.getHLSLRuntime().getNonUniformResourceIndexIntrinsic(),
         ArrayRef<Value *>{IndexOp});
   }
-  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_xy:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x_float:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_xy_float:
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy_float: {
     Value *Handle = EmitScalarExpr(E->getArg(0));
-    LValue Dim = EmitLValue(E->getArg(1));
+    bool HasLod =
+        BuiltinID ==
+            Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy ||
+        BuiltinID ==
+            Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy_float;
+    unsigned IntrinsicID;
+    unsigned NumRetComps;
+
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_hlsl_resource_getdimensions_x:
+    case Builtin::BI__builtin_hlsl_resource_getdimensions_x_float:
+      IntrinsicID = CGM.getHLSLRuntime().getGetDimensionsXIntrinsic();
+      NumRetComps = 1;
+      break;
+    case Builtin::BI__builtin_hlsl_resource_getdimensions_xy:
+    case Builtin::BI__builtin_hlsl_resource_getdimensions_xy_float:
+      IntrinsicID = CGM.getHLSLRuntime().getGetDimensionsXYIntrinsic();
+      NumRetComps = 2;
+      break;
+    case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy:
+    case Builtin::BI__builtin_hlsl_resource_getdimensions_levels_xy_float:
+      IntrinsicID = CGM.getHLSLRuntime().getGetDimensionsLevelsXYIntrinsic();
+      NumRetComps = 3;
+      break;
+    default:
+      llvm_unreachable("Unknown GetDimensions builtin");
+    }
+
     llvm::Type *RetTy = llvm::Type::getInt32Ty(getLLVMContext());
-    Value *DimValue = Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getGetDimensionsXIntrinsic(),
-        ArrayRef<Value *>{Handle});
-    return Builder.CreateStore(DimValue, Dim.getAddress());
+    if (NumRetComps > 1) {
+      RetTy = llvm::FixedVectorType::get(RetTy, NumRetComps);
+    }
+
+    SmallVector<Value *> Args{Handle};
+    if (HasLod) {
+      Args.push_back(EmitScalarExpr(E->getArg(1)));
+    }
+
+    Value *DimValue =
+        Builder.CreateIntrinsic(IntrinsicID, {Handle->getType()}, Args);
+
+    Value *LastStore = nullptr;
+    unsigned ArgIndex = HasLod ? 2 : 1;
+    for (unsigned i = 0; i < NumRetComps; ++i) {
+      LValue DimOut = EmitLValue(E->getArg(ArgIndex++));
+      Value *Elem = DimValue;
+      if (NumRetComps > 1) {
+        Elem = Builder.CreateExtractElement(DimValue, i);
+      }
+
+      // Handle float casting if needed
+      QualType OutTy = E->getArg(ArgIndex - 1)->getType();
+      if (OutTy->isFloatingType()) {
+        Elem = Builder.CreateUIToFP(Elem,
+                                    llvm::Type::getFloatTy(getLLVMContext()));
+      }
+
+      LastStore = Builder.CreateStore(Elem, DimOut.getAddress());
+    }
+    return LastStore;
   }
   case Builtin::BI__builtin_hlsl_resource_getstride: {
     LValue Stride = EmitLValue(E->getArg(1));
