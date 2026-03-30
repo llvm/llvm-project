@@ -35,10 +35,21 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-rewrite-agpr-copy-mfma"
+
+static cl::opt<bool> DisableRewriteAGPRCopyMFMA(
+    "amdgpu-disable-rewrite-agpr-copy-mfma", cl::Hidden,
+    cl::desc("Disable the post-RA AGPR copy MFMA rewriting pass."),
+    cl::init(false));
+
+static cl::opt<unsigned> RewriteAGPRCopyMFMALimit(
+    "amdgpu-rewrite-agpr-copy-mfma-limit", cl::Hidden,
+    cl::desc("Maximum number of MFMA instructions to rewrite to AGPR form."),
+    cl::init(~0U));
 
 namespace {
 
@@ -59,6 +70,7 @@ class AMDGPURewriteAGPRCopyMFMAImpl {
   LiveIntervals &LIS;
   LiveStacks &LSS;
   const RegisterClassInfo &RegClassInfo;
+  mutable unsigned NumRewritesPerformed = 0;
 
   bool attemptReassignmentsToAGPR(SmallSetVector<Register, 4> &InterferingRegs,
                                   MCPhysReg PrefPhysReg) const;
@@ -267,7 +279,9 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
     LRM.unassign(LI);
   }
 
-  if (!attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
+  if (NumRewritesPerformed + RewriteCandidates.size() >
+          RewriteAGPRCopyMFMALimit ||
+      !attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
     // Roll back the register assignments to the original state.
     for (auto [LI, OldAssign] : TentativeReassignments) {
       if (VRM.hasPhys(LI->reg()))
@@ -291,6 +305,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
         AMDGPU::getMFMASrcCVDstAGPROp(RewriteCandidate->getOpcode());
     RewriteCandidate->setDesc(TII.get(NewMFMAOp));
     ++NumMFMAsRewrittenToAGPR;
+    ++NumRewritesPerformed;
   }
 
   return true;
@@ -556,6 +571,9 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 }
 
 bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
+  if (DisableRewriteAGPRCopyMFMA)
+    return false;
+
   // This only applies on subtargets that have a configurable AGPR vs. VGPR
   // allocation.
   if (!ST.hasGFX90AInsts())
@@ -584,8 +602,11 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
   // If we've successfully rewritten some MFMAs, we've alleviated some VGPR
   // pressure. See if we can eliminate some spills now that those registers are
   // more available.
-  if (MadeChange)
+  if (MadeChange) {
+    LLVM_DEBUG(dbgs() << "Number of MFMA instructions rewritten to AGPR form: "
+                      << NumRewritesPerformed << '\n');
     eliminateSpillsOfReassignedVGPRs();
+  }
 
   return MadeChange;
 }
