@@ -706,7 +706,7 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   if (Invocation == InvocationList->end())
     return llvm::make_error<IndexError>(
         index_error_code::invocation_list_lookup_unsuccessful,
-        std::string(SourceFilePath));
+        SourceFilePath.str());
 
   const InvocationListTy::mapped_type &InvocationCommand = Invocation->second;
 
@@ -744,7 +744,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
   };
   auto wrongFormat = [&](const llvm::yaml::Node *N) {
     return llvm::make_error<IndexError>(
-        index_error_code::invocation_list_wrong_format, std::string(FilePath),
+        index_error_code::invocation_list_wrong_format, FilePath.str(),
         getLine(N));
   };
 
@@ -786,7 +786,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
     if (InvocationList.contains(InvocationKey))
       return llvm::make_error<IndexError>(
           index_error_code::invocation_list_ambiguous,
-          std::string(InvocationKey));
+          InvocationKey.str());
 
     /// The values should be sequences of strings, each representing a part of
     /// the invocation.
@@ -823,7 +823,7 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
       CI.getVirtualFileSystem().getBufferForFile(InvocationListFilePath);
   if (!FileContent) {
     PreviousError = IndexError(index_error_code::invocation_list_file_not_found,
-                               std::string(InvocationListFilePath));
+                               InvocationListFilePath.str());
     return llvm::make_error<IndexError>(*PreviousError);
   }
   std::unique_ptr<llvm::MemoryBuffer> ContentBuffer = std::move(*FileContent);
