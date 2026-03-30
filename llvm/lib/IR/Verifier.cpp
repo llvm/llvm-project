@@ -6955,26 +6955,25 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.speculative.load type must have a power-of-2 size", &Call);
 
     unsigned NumArgs = Call.arg_size();
-    Check(NumArgs >= 2, "llvm.speculative.load requires at least 2 arguments",
+    Check(NumArgs >= 3, "llvm.speculative.load requires at least 3 arguments",
           &Call);
 
-    Value *SecondArg = Call.getArgOperand(1);
-    if (SecondArg->getType()->isIntegerTy(64)) {
-      // Direct form: (ptr, i64 num_accessible_bytes)
-      Check(NumArgs == 2,
-            "llvm.speculative.load direct form requires exactly 2 arguments",
-            &Call);
-      if (auto *CI = dyn_cast<ConstantInt>(SecondArg)) {
+    Value *PayloadArg = Call.getArgOperand(2);
+    if (PayloadArg->getType()->isIntegerTy(64)) {
+      // Direct form: (ptr, i1 from_end, i64 num_accessible_bytes)
+      Check(NumArgs == 3,
+            "llvm.speculative.load direct form has too many arguments", &Call);
+      if (auto *CI = dyn_cast<ConstantInt>(PayloadArg)) {
         Check(Size.isScalable() || CI->getZExtValue() <= Size.getFixedValue(),
               "llvm.speculative.load num_accessible_bytes must not exceed "
               "the result size in bytes",
               &Call);
       }
     } else {
-      // Oracle form: (ptr, oracle_fn_ptr, args...)
-      auto *OracleFn = dyn_cast<Function>(SecondArg);
+      // Oracle form: (ptr, i1 from_end, oracle_fn_ptr, args...)
+      auto *OracleFn = dyn_cast<Function>(PayloadArg);
       Check(OracleFn,
-            "llvm.speculative.load second argument must be i64 or a direct "
+            "llvm.speculative.load third argument must be i64 or a direct "
             "reference to an oracle function",
             &Call);
 
@@ -6986,13 +6985,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       FunctionType *FTy = OracleFn->getFunctionType();
       Check(FTy->getReturnType()->isIntegerTy(64),
             "llvm.speculative.load oracle function must return i64", &Call);
-      unsigned NumOracleArgs = NumArgs - 2;
+
+      unsigned OracleArgsStart = 3;
+      unsigned NumOracleArgs = NumArgs - OracleArgsStart;
       Check(FTy->isVarArg() ? NumOracleArgs >= FTy->getNumParams()
                             : NumOracleArgs == FTy->getNumParams(),
             "llvm.speculative.load oracle function argument count mismatch",
             &Call);
       for (unsigned I = 0, E = FTy->getNumParams(); I < E; ++I) {
-        Check(FTy->getParamType(I) == Call.getArgOperand(I + 2)->getType(),
+        Check(FTy->getParamType(I) ==
+                  Call.getArgOperand(I + OracleArgsStart)->getType(),
               "llvm.speculative.load oracle function argument type mismatch",
               &Call);
       }

@@ -5167,7 +5167,7 @@ void SelectionDAGBuilder::visitSpeculativeLoad(const CallInst &I) {
   MachineMemOperand::Flags MMOFlags = MachineMemOperand::MOLoad;
   LocationSize LocSize = StoreSize.isScalable()
                              ? LocationSize::beforeOrAfterPointer()
-                             : LocationSize::precise(StoreSize);
+                             : LocationSize::upperBound(StoreSize);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags, LocSize, Alignment, AAInfo);
 
