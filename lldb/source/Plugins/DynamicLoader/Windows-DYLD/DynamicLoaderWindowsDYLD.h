@@ -12,8 +12,6 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/lldb-forward.h"
 
-#include <map>
-
 namespace lldb_private {
 
 class DynamicLoaderWindowsDYLD : public DynamicLoader {
@@ -44,9 +42,15 @@ public:
 protected:
   lldb::addr_t GetLoadAddress(lldb::ModuleSP executable);
 
-private:
-  std::map<lldb::ModuleWP, lldb::addr_t, std::owner_less<lldb::ModuleWP>>
-      m_loaded_modules;
+  /// Maps load addresses to their corresponding modules.
+  ///
+  /// Weak pointers are used intentionally: on Windows, a Module holds a
+  /// memory-mapped view of the DLL file, and an open memory mapping locks
+  /// the file on disk. Holding a strong reference (ModuleSP) here would
+  /// prevent the mapping from being released even after the Target drops
+  /// its own reference, keeping the file locked and blocking recompilation
+  /// during an active debug session.
+  llvm::DenseMap<lldb::addr_t, lldb::ModuleWP> m_loaded_modules;
 };
 
 } // namespace lldb_private
