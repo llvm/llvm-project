@@ -8257,7 +8257,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       if (isDeclExternC(NewVD)) {
         NewVD->addAttr(I->second);
         ExtnameUndeclaredIdentifiers.erase(I);
-      } else
+      } else if (NewVD->getDeclContext()
+                     ->getRedeclContext()
+                     ->isTranslationUnit())
         Diag(NewVD->getLocation(), diag::warn_redefine_extname_not_applied)
             << /*Variable*/ 1 << NewVD;
     }
@@ -10562,7 +10564,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       if (isDeclExternC(NewFD)) {
         NewFD->addAttr(I->second);
         ExtnameUndeclaredIdentifiers.erase(I);
-      } else
+      } else if (NewFD->getDeclContext()
+                     ->getRedeclContext()
+                     ->isTranslationUnit())
         Diag(NewFD->getLocation(), diag::warn_redefine_extname_not_applied)
             << /*Variable*/0 << NewFD;
     }
