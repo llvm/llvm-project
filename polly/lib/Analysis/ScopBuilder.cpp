@@ -1388,6 +1388,7 @@ void ScopBuilder::addUserAssumptions(
       NewParams.insert(Param);
     }
 
+    size_t NumAssumptions = RecordedAssumptions.size();
     SmallVector<isl_set *, 2> ConditionSets;
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
     BasicBlock *BB = InScop ? CI->getParent() : R.getEntry();
@@ -1427,9 +1428,19 @@ void ScopBuilder::addUserAssumptions(
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "UserAssumption", CI)
              << "Use user assumption: "
              << stringFromIslObj(AssumptionCtx, "null"));
-    isl::set newContext =
-        scop->getContext().intersect(isl::manage(AssumptionCtx));
-    scop->setContext(newContext);
+
+    // scop->setContext is used to gist AssumedContext and InvalidContext. Both
+    // add RTCs, so using setContext would remove the RTC that would ensure the
+    // correctness of AssumptionCtx. Using DefinedBehaviorContext which does not
+    // gist the other contexts.
+    // TODO: Use recordAssumption() for adding context/assumptions
+    if (NumAssumptions == RecordedAssumptions.size()) {
+      isl::set newContext =
+          scop->getContext().intersect(isl::manage(AssumptionCtx));
+      scop->setContext(newContext);
+    } else {
+      scop->intersectDefinedBehavior(isl::manage(AssumptionCtx), AS_ASSUMPTION);
+    }
   }
 }
 

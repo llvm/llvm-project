@@ -9,6 +9,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 
@@ -144,6 +145,22 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
   if (Result == std::end(ArchNames))
     return OffloadArch::Unknown;
   return Result->Arch;
+}
+
+llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
+                                 OffloadArch ID) {
+  if (ID == OffloadArch::AMDGCNSPIRV)
+    return llvm::Triple("spirv64-amd-amdhsa");
+
+  if (IsNVIDIAOffloadArch(ID))
+    return DefaultToolchainTriple.isArch64Bit()
+               ? llvm::Triple("nvptx64-nvidia-cuda")
+               : llvm::Triple("nvptx-nvidia-cuda");
+
+  if (IsAMDOffloadArch(ID))
+    return llvm::Triple("amdgcn-amd-amdhsa");
+
+  return {};
 }
 
 } // namespace clang

@@ -1353,9 +1353,9 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
 
   const ModuleSpec module_spec(actual_module_path_spec, arch);
 
-  ModuleSpecList module_specs;
-  if (!ObjectFile::GetModuleSpecifications(actual_module_path_spec, file_offset,
-                                           file_size, module_specs))
+  ModuleSpecList module_specs = ObjectFile::GetModuleSpecifications(
+      actual_module_path_spec, file_offset, file_size);
+  if (module_specs.GetSize() == 0)
     return ModuleSpec();
 
   ModuleSpec matched_module_spec;

@@ -827,17 +827,17 @@ ObjectFile *ObjectFileMachO::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileMachO::GetModuleSpecifications(
+ModuleSpecList ObjectFileMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+    lldb::offset_t file_offset, lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
-    return initial_count;
+    return {};
 
+  ModuleSpecList specs;
   if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
                                        extractor_sp->GetByteSize())) {
     llvm::MachO::mach_header header;
+    offset_t data_offset = 0;
     if (ParseHeader(extractor_sp, &data_offset, header)) {
       size_t header_and_load_cmds =
           header.sizeofcmds + MachHeaderSizeFromMagic(header.magic);
@@ -857,7 +857,7 @@ size_t ObjectFileMachO::GetModuleSpecifications(
       }
     }
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
 ConstString ObjectFileMachO::GetSegmentNameTEXT() {
@@ -3522,10 +3522,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                 // Copy the address, because often the N_GSYM
                                 // address has an invalid address of zero
                                 // when the global is a common symbol
-                                sym[GSYM_sym_idx].GetAddressRef().SetSection(
-                                    symbol_section);
-                                sym[GSYM_sym_idx].GetAddressRef().SetOffset(
-                                    symbol_value);
+                                sym[GSYM_sym_idx].GetAddressRef() =
+                                    Address(symbol_section, symbol_value);
                                 add_symbol_addr(sym[GSYM_sym_idx]
                                                     .GetAddress()
                                                     .GetFileAddress());
@@ -3546,8 +3544,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                       sym[sym_idx].SetID(nlist_idx);
                       sym[sym_idx].SetType(type);
                       if (set_value) {
-                        sym[sym_idx].GetAddressRef().SetSection(symbol_section);
-                        sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
+                        sym[sym_idx].GetAddressRef() =
+                            Address(symbol_section, symbol_value);
                         add_symbol_addr(
                             sym[sym_idx].GetAddress().GetFileAddress());
                       }
@@ -4259,8 +4257,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                 m_nlist_idx_to_sym_idx[nlist_idx] = GSYM_sym_idx;
                 // Copy the address, because often the N_GSYM address has an
                 // invalid address of zero when the global is a common symbol.
-                sym[GSYM_sym_idx].GetAddressRef().SetSection(symbol_section);
-                sym[GSYM_sym_idx].GetAddressRef().SetOffset(symbol_value);
+                sym[GSYM_sym_idx].GetAddressRef() =
+                    Address(symbol_section, symbol_value);
                 add_symbol_addr(
                     sym[GSYM_sym_idx].GetAddress().GetFileAddress());
                 // We just need the flags from the linker symbol, so put these
@@ -4278,8 +4276,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       sym[sym_idx].SetID(nlist_idx);
       sym[sym_idx].SetType(type);
       if (set_value) {
-        sym[sym_idx].GetAddressRef().SetSection(symbol_section);
-        sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
+        sym[sym_idx].GetAddressRef() = Address(symbol_section, symbol_value);
         if (symbol_section)
           add_symbol_addr(sym[sym_idx].GetAddress().GetFileAddress());
       }
@@ -5171,10 +5168,8 @@ lldb_private::Address ObjectFileMachO::GetBaseAddress() {
   if (section_list) {
     SectionSP text_segment_sp(
         section_list->FindSectionByName(GetSegmentNameTEXT()));
-    if (text_segment_sp) {
-      header_addr.SetSection(text_segment_sp);
-      header_addr.SetOffset(0);
-    }
+    if (text_segment_sp)
+      header_addr = Address(text_segment_sp, /*offset=*/0);
   }
   return header_addr;
 }

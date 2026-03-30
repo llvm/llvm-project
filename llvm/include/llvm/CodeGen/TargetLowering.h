@@ -4010,6 +4010,11 @@ public:
 
   bool isPositionIndependent() const;
 
+  // If set to true, SelectionDAG nodes will be consistently processed in
+  // topological order. This is a temporary hook until sorting can be
+  // enabled globally.
+  virtual bool useTopologicalSorting() const { return false; }
+
   virtual bool isSDNodeSourceOfDivergence(const SDNode *N,
                                           FunctionLoweringInfo *FLI,
                                           UniformityInfo *UA) const {
@@ -4442,6 +4447,15 @@ public:
   /// This method returns the constant pool value that will be loaded by LD.
   /// NOTE: You must check for implicit extensions of the constant by LD.
   virtual const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const;
+
+  /// Determine floating-point class information for a target node. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  virtual void computeKnownFPClassForTargetNode(const SDValue Op,
+                                                KnownFPClass &Known,
+                                                const APInt &DemandedElts,
+                                                const SelectionDAG &DAG,
+                                                unsigned Depth = 0) const;
 
   /// If \p SNaN is false, \returns true if \p Op is known to never be any
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling

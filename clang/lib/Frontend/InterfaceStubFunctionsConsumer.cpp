@@ -70,9 +70,9 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
             !Instance.getLangOpts().GNUInline)
           return true;
         if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
-          if (const auto *RC = dyn_cast<CXXRecordDecl>(MD->getParent()))
-            if (isa<ClassTemplateDecl>(RC->getParent()) || !isVisible(RC))
-              return true;
+          const CXXRecordDecl *RC = MD->getParent();
+          if (isa<ClassTemplateDecl>(RC->getParent()) || !isVisible(RC))
+            return true;
           if (MD->isDependentContext() || !MD->hasBody())
             return true;
         }
@@ -151,13 +151,13 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
   void HandleTemplateSpecializations(const FunctionTemplateDecl &FTD,
                                      MangledSymbols &Symbols, int RDO) {
     for (const auto *D : FTD.specializations())
-      HandleNamedDecl(dyn_cast<NamedDecl>(D), Symbols, RDO);
+      HandleNamedDecl(D, Symbols, RDO);
   }
 
   void HandleTemplateSpecializations(const ClassTemplateDecl &CTD,
                                      MangledSymbols &Symbols, int RDO) {
     for (const auto *D : CTD.specializations())
-      HandleNamedDecl(dyn_cast<NamedDecl>(D), Symbols, RDO);
+      HandleNamedDecl(D, Symbols, RDO);
   }
 
   bool HandleNamedDecl(const NamedDecl *ND, MangledSymbols &Symbols, int RDO) {
