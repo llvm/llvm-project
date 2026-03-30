@@ -73,7 +73,7 @@ void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
       return;
   }
 
-  m_loaded_modules[module_addr] = lldb::ModuleWP(module_sp);
+  m_loaded_modules.insert({module_addr, lldb::ModuleWP(module_sp)});
   UpdateLoadedSectionsCommon(module_sp, module_addr, false);
   ModuleList module_list;
   module_list.Append(module_sp);
@@ -126,7 +126,7 @@ lldb::addr_t DynamicLoaderWindowsDYLD::GetLoadAddress(ModuleSP executable) {
       m_process->GetFileLoadAddress(file_spec, is_loaded, load_addr);
   // Servers other than lldb server could respond with a bogus address.
   if (status.Success() && is_loaded && load_addr != LLDB_INVALID_ADDRESS) {
-    m_loaded_modules[load_addr] = lldb::ModuleWP(executable);
+    m_loaded_modules.insert({load_addr, lldb::ModuleWP(executable)});
     return load_addr;
   }
 
