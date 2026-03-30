@@ -1578,6 +1578,7 @@ def hlsl_wave_active_all_equal_16bit :
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, Int16Ty, UInt16Ty];
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1702,6 +1703,7 @@ def hlsl_wave_active_max :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1714,6 +1716,7 @@ def hlsl_wave_active_min :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1727,6 +1730,7 @@ def hlsl_wave_active_product :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1739,6 +1743,7 @@ def hlsl_wave_active_sum :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1801,6 +1806,7 @@ def hlsl_wave_prefix_product :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1813,6 +1819,7 @@ def hlsl_wave_prefix_sum :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1828,5 +1835,6 @@ the specified wave.
   let Args = [Varying, UIntTy];
   let VaryingTypes = AllTypesWithBool;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
