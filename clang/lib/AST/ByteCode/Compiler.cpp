@@ -5293,7 +5293,7 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
         VD->getType().isVolatileQualified(), ScopeKind::Block,
         IsConstexprUnknown);
 
-    if (!Init)
+    if (!Init || Init->getType()->isVoidType())
       return true;
 
     // If this is a toplevel declaration, create a scope for the
