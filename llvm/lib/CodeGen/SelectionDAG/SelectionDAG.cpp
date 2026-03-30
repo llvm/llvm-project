@@ -6323,13 +6323,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
       return true;
     return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
   }
-  default:
-    if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
-        Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
-      return TLI->isKnownNeverNaNForTargetNode(Op, DemandedElts, *this, SNaN,
-                                               Depth);
-    }
-
+  case ISD::BITCAST: {
     // Try to infer NaN from known bits, but only for detecting signaling or
     // nonsignaling NaNs
     EVT VT = Op.getValueType();
@@ -6359,6 +6353,14 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
           break;
         }
       }
+    }
+    return false;
+  }
+  default:
+    if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
+        Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
+      return TLI->isKnownNeverNaNForTargetNode(Op, DemandedElts, *this, SNaN,
+                                               Depth);
     }
     return false;
   }
