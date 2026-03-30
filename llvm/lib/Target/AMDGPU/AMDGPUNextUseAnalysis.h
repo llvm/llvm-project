@@ -52,7 +52,7 @@ public:
   constexpr static NextUseDistance fromLoopDepth(unsigned Depth) {
     constexpr int64_t LoopWeight = 1000;
     // FIXME: Is 24 a realistic limit?
-    assert(Depth < 24 && "Loop depth exceeds limit (24)");
+    Depth = std::min(Depth, 24U);
     int64_t v = LoopWeight * (1 << (2 * Depth));
     return NextUseDistance(v);
   }
@@ -216,12 +216,16 @@ public:
   CompatibilityMode getCompatibilityMode();
   void setCompatibilityMode(CompatibilityMode);
 
-  /// \Returns the next-use distance for \p LiveReg.
+  void getReachableUses(unsigned Register, LaneBitmask LaneMask,
+                        const MachineInstr &MI,
+                        SmallVector<const MachineOperand *> &Uses);
+
+  /// \Returns the shortest next-use distance from \p CurMI for \p LiveReg.
   std::optional<NextUseDistance>
-  getNextUseDistance(Register LiveReg, const MachineInstr &CurMI,
-                     const SmallVector<const MachineOperand *> &Uses,
-                     SmallVector<NextUseDistance> *Distances = nullptr,
-                     const MachineOperand **UseOut = nullptr);
+  getShortestDistance(Register LiveReg, const MachineInstr &CurMI,
+                      const SmallVector<const MachineOperand *> &Uses,
+                      const MachineOperand **ShortestUseOut = nullptr,
+                      SmallVector<NextUseDistance> *Distances = nullptr);
 
   struct UseDistancePair {
     const MachineOperand *Use = nullptr;
@@ -236,9 +240,6 @@ public:
                            UseDistancePair *FurthestSubreg = nullptr,
                            DenseMap<const MachineOperand *, UseDistancePair>
                                *RelevantUses = nullptr) const;
-
-  void getUses(unsigned Register, LaneBitmask LaneMask, const MachineInstr &MI,
-               SmallVector<const MachineOperand *> &Uses);
 };
 
 //==============================================================================

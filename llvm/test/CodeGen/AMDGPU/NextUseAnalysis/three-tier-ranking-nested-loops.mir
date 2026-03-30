@@ -77,7 +77,7 @@ body:             |
 ...
 
 
-# CHECK-GX-JSON: {
+# CHECK-GX-JSON:      {
 # CHECK-GX-JSON-NEXT:  "next-use-analysis": {
 # CHECK-GX-JSON-NEXT:    "furthest-distances": {
 # CHECK-GX-JSON-NEXT:      "bb.0": [
@@ -96,20 +96,20 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%0": 5
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%0": 5
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%0",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 5
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%0",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 5
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%0",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 5
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%0",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 5
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "%2:sgpr_32 = S_MOV_B32 0",
@@ -117,21 +117,21 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%0": 4
-# CHECK-GX-JSON-DAG:            "%1": 11
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%0": 4
+# CHECK-GX-JSON-DAG:             "%1": 11
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%1",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 11
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%1",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 11
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%1",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 11
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%1",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 11
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "%3:sgpr_32 = S_MOV_B32 999",
@@ -139,22 +139,22 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%0": 3
-# CHECK-GX-JSON-DAG:            "%1": 10
-# CHECK-GX-JSON-DAG:            "%2": 2
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%0": 3
+# CHECK-GX-JSON-DAG:             "%1": 10
+# CHECK-GX-JSON-DAG:             "%2": 2
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%1",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 10
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%1",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 10
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%1",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 10
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%1",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 10
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_BRANCH %bb.1",
@@ -162,23 +162,23 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%0": 2
-# CHECK-GX-JSON-DAG:            "%1": 9
-# CHECK-GX-JSON-DAG:            "%2": 1
-# CHECK-GX-JSON-DAG:            "%3": 16001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%0": 2
+# CHECK-GX-JSON-DAG:             "%1": 9
+# CHECK-GX-JSON-DAG:             "%2": 1
+# CHECK-GX-JSON-DAG:             "%3": 16001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 16001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 16001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 16001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 16001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ],
 # CHECK-GX-JSON-NEXT:      "bb.1": [
@@ -188,22 +188,22 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%0": 1
-# CHECK-GX-JSON-DAG:            "%1": 8
-# CHECK-GX-JSON-DAG:            "%3": 32001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%0": 1
+# CHECK-GX-JSON-DAG:             "%1": 8
+# CHECK-GX-JSON-DAG:             "%3": 32001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 32001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 32001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 32001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 32001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_CMP_LT_I32 %4, %0, implicit-def $scc",
@@ -211,23 +211,23 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%0": 0
-# CHECK-GX-JSON-DAG:            "%1": 7
-# CHECK-GX-JSON-DAG:            "%3": 32001
-# CHECK-GX-JSON-DAG:            "%4": 0
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%0": 0
+# CHECK-GX-JSON-DAG:             "%1": 7
+# CHECK-GX-JSON-DAG:             "%3": 32001
+# CHECK-GX-JSON-DAG:             "%4": 0
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 32001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 32001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 32001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 32001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_CBRANCH_SCC1 %bb.2, implicit $scc",
@@ -235,22 +235,22 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 6
-# CHECK-GX-JSON-DAG:            "%3": 32001
-# CHECK-GX-JSON-DAG:            "%4": 24004
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%1": 6
+# CHECK-GX-JSON-DAG:             "%3": 32001
+# CHECK-GX-JSON-DAG:             "%4": 24004
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 32001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 32001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 32001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 32001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_BRANCH %bb.5",
@@ -258,22 +258,22 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 5
-# CHECK-GX-JSON-DAG:            "%3": 32001
-# CHECK-GX-JSON-DAG:            "%4": 24003
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%1": 5
+# CHECK-GX-JSON-DAG:             "%3": 32001
+# CHECK-GX-JSON-DAG:             "%4": 24003
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 32001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 32001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 32001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 32001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ],
 # CHECK-GX-JSON-NEXT:      "bb.2": [
@@ -283,21 +283,21 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 4
-# CHECK-GX-JSON-DAG:            "%4": 24002
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%1": 4
+# CHECK-GX-JSON-DAG:             "%4": 24002
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24002
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24002
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24002
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24002
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_BRANCH %bb.3",
@@ -305,22 +305,22 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 3
-# CHECK-GX-JSON-DAG:            "%4": 24001
-# CHECK-GX-JSON-DAG:            "%6": 1
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%1": 3
+# CHECK-GX-JSON-DAG:             "%4": 24001
+# CHECK-GX-JSON-DAG:             "%6": 1
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ],
 # CHECK-GX-JSON-NEXT:      "bb.3": [
@@ -330,21 +330,21 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 2
-# CHECK-GX-JSON-DAG:            "%4": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%1": 2
+# CHECK-GX-JSON-DAG:             "%4": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_NOP 0",
@@ -352,22 +352,22 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 1
-# CHECK-GX-JSON-DAG:            "%4": 24001
-# CHECK-GX-JSON-DAG:            "%7": 1
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%1": 1
+# CHECK-GX-JSON-DAG:             "%4": 24001
+# CHECK-GX-JSON-DAG:             "%7": 1
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_CMP_LT_I32 %7, %1, implicit-def $scc",
@@ -375,22 +375,22 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 0
-# CHECK-GX-JSON-DAG:            "%4": 24001
-# CHECK-GX-JSON-DAG:            "%7": 0
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%1": 0
+# CHECK-GX-JSON-DAG:             "%4": 24001
+# CHECK-GX-JSON-DAG:             "%7": 0
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "%8:sgpr_32 = S_ADD_U32 %7, 1, implicit-def $scc",
@@ -398,21 +398,21 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%4": 24001
-# CHECK-GX-JSON-DAG:            "%7": 0
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%4": 24001
+# CHECK-GX-JSON-DAG:             "%7": 0
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_CBRANCH_SCC1 %bb.3, implicit $scc",
@@ -420,20 +420,20 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%4": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%4": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_BRANCH %bb.4",
@@ -441,20 +441,20 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%4": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%4": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 24001
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 24001
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ],
 # CHECK-GX-JSON-NEXT:      "bb.4": [
@@ -464,20 +464,20 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%4": 0
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%4": 0
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 0
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 0
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%4",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 0
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%4",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 0
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_BRANCH %bb.1",
@@ -496,21 +496,21 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%3": 0
-# CHECK-GX-JSON-DAG:            "%4": 0
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "%3": 0
+# CHECK-GX-JSON-DAG:             "%4": 0
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 0
-# CHECK-GX-JSON:          },
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 0
+# CHECK-GX-JSON:               },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
-# CHECK-GX-JSON-DAG:            "register": "%3",
-# CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 0
-# CHECK-GX-JSON:          }
+# CHECK-GX-JSON-DAG:             "register": "%3",
+# CHECK-GX-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-GX-JSON-DAG:             "distance": 0
+# CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
 # CHECK-GX-JSON-NEXT:          "instr": "S_ENDPGM 0",
@@ -523,14 +523,20 @@ body:             |
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ]
 # CHECK-GX-JSON-NEXT:    },
-# CHECK-GX-JSON:  "paths": [
-# CHECK-GX-JSON:  ]
+# CHECK-GX-JSON-NEXT:    "paths": [
+# CHECK-GX-JSON:         ],
+# CHECK-GX-JSON-NEXT:    "metrics": {
+# CHECK-GX-JSON-NEXT:        "distance-cache": {
+# CHECK-GX-JSON-NEXT:            "hits": {{[0-9]+}},
+# CHECK-GX-JSON-NEXT:            "misses": {{[0-9]+}}
+# CHECK-GX-JSON-NEXT:        }
+# CHECK-GX-JSON-NEXT:    }
 # CHECK-GX-JSON-NEXT:  },
-# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.wall": {{[0-9.e+-]+}},
-# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.user": {{[0-9.e+-]+}},
-# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.sys": {{[0-9.e+-]+}}
-# CHECK-GX-JSON:}
-# CHECK-CP-JSON: {
+# CHECK-GX-JSON-DAG:   "time.amdgpu-next-use-analysis-json.json.wall": {{[0-9.e+-]+}},
+# CHECK-GX-JSON-DAG:   "time.amdgpu-next-use-analysis-json.json.user": {{[0-9.e+-]+}},
+# CHECK-GX-JSON-DAG:   "time.amdgpu-next-use-analysis-json.json.sys": {{[0-9.e+-]+}}
+# CHECK-GX-JSON:      }
+# CHECK-CP-JSON:      {
 # CHECK-CP-JSON-NEXT:  "next-use-analysis": {
 # CHECK-CP-JSON-NEXT:    "furthest-distances": {
 # CHECK-CP-JSON-NEXT:      "bb.0": [
@@ -549,20 +555,20 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 3
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 3
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%0",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 3
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%0",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 3
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%0",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 3
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%0",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 3
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "%2:sgpr_32 = S_MOV_B32 0",
@@ -570,21 +576,21 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 2
-# CHECK-CP-JSON-DAG:            "%1": 2
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 2
+# CHECK-CP-JSON-DAG:             "%1": 2
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%0",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 2
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%0",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 2
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%0",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 2
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%0",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 2
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "%3:sgpr_32 = S_MOV_B32 999",
@@ -592,22 +598,22 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 1
-# CHECK-CP-JSON-DAG:            "%1": 1
-# CHECK-CP-JSON-DAG:            "%2": 1
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 1
+# CHECK-CP-JSON-DAG:             "%1": 1
+# CHECK-CP-JSON-DAG:             "%2": 1
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%0",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 1
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%0",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 1
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%0",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 1
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%0",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 1
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_BRANCH %bb.1",
@@ -615,23 +621,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 0
-# CHECK-CP-JSON-DAG:            "%1": 0
-# CHECK-CP-JSON-DAG:            "%2": 0
-# CHECK-CP-JSON-DAG:            "%3": 4
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 0
+# CHECK-CP-JSON-DAG:             "%1": 0
+# CHECK-CP-JSON-DAG:             "%2": 0
+# CHECK-CP-JSON-DAG:             "%3": 4
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 4
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 4
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 4
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 4
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ],
 # CHECK-CP-JSON-NEXT:      "bb.1": [
@@ -641,22 +647,22 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 0
-# CHECK-CP-JSON-DAG:            "%1": 4
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 0
+# CHECK-CP-JSON-DAG:             "%1": 4
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_CMP_LT_I32 %4, %0, implicit-def $scc",
@@ -664,23 +670,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 0
-# CHECK-CP-JSON-DAG:            "%1": 4
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 0
+# CHECK-CP-JSON-DAG:             "%1": 4
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_CBRANCH_SCC1 %bb.2, implicit $scc",
@@ -688,23 +694,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20009
-# CHECK-CP-JSON-DAG:            "%1": 4
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20004
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20009
+# CHECK-CP-JSON-DAG:             "%1": 4
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20004
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_BRANCH %bb.5",
@@ -712,23 +718,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20008
-# CHECK-CP-JSON-DAG:            "%1": 4
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20003
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20008
+# CHECK-CP-JSON-DAG:             "%1": 4
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20003
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ],
 # CHECK-CP-JSON-NEXT:      "bb.2": [
@@ -738,23 +744,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20004
-# CHECK-CP-JSON-DAG:            "%1": 1
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20002
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20004
+# CHECK-CP-JSON-DAG:             "%1": 1
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20002
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_BRANCH %bb.3",
@@ -762,24 +768,24 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20003
-# CHECK-CP-JSON-DAG:            "%1": 1
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20001
-# CHECK-CP-JSON-DAG:            "%6": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20003
+# CHECK-CP-JSON-DAG:             "%1": 1
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20001
+# CHECK-CP-JSON-DAG:             "%6": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ],
 # CHECK-CP-JSON-NEXT:      "bb.3": [
@@ -789,23 +795,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20003
-# CHECK-CP-JSON-DAG:            "%1": 1
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20003
+# CHECK-CP-JSON-DAG:             "%1": 1
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_NOP 0",
@@ -813,24 +819,24 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20003
-# CHECK-CP-JSON-DAG:            "%1": 1
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20001
-# CHECK-CP-JSON-DAG:            "%7": 1
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20003
+# CHECK-CP-JSON-DAG:             "%1": 1
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20001
+# CHECK-CP-JSON-DAG:             "%7": 1
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_CMP_LT_I32 %7, %1, implicit-def $scc",
@@ -838,24 +844,24 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20003
-# CHECK-CP-JSON-DAG:            "%1": 0
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20001
-# CHECK-CP-JSON-DAG:            "%7": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20003
+# CHECK-CP-JSON-DAG:             "%1": 0
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20001
+# CHECK-CP-JSON-DAG:             "%7": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "%8:sgpr_32 = S_ADD_U32 %7, 1, implicit-def $scc",
@@ -863,24 +869,24 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20003
-# CHECK-CP-JSON-DAG:            "%1": 14
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20001
-# CHECK-CP-JSON-DAG:            "%7": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20003
+# CHECK-CP-JSON-DAG:             "%1": 14
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20001
+# CHECK-CP-JSON-DAG:             "%7": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_CBRANCH_SCC1 %bb.3, implicit $scc",
@@ -888,24 +894,24 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20003
-# CHECK-CP-JSON-DAG:            "%1": 13
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20001
-# CHECK-CP-JSON-DAG:            "%8": 1
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20003
+# CHECK-CP-JSON-DAG:             "%1": 13
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20001
+# CHECK-CP-JSON-DAG:             "%8": 1
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_BRANCH %bb.4",
@@ -913,24 +919,24 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 20003
-# CHECK-CP-JSON-DAG:            "%1": 12
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 20001
-# CHECK-CP-JSON-DAG:            "%8": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 20003
+# CHECK-CP-JSON-DAG:             "%1": 12
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 20001
+# CHECK-CP-JSON-DAG:             "%8": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ],
 # CHECK-CP-JSON-NEXT:      "bb.4": [
@@ -940,23 +946,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 2
-# CHECK-CP-JSON-DAG:            "%1": 6
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%4": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 2
+# CHECK-CP-JSON-DAG:             "%1": 6
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%4": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_BRANCH %bb.1",
@@ -964,23 +970,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 1
-# CHECK-CP-JSON-DAG:            "%1": 6
-# CHECK-CP-JSON-DAG:            "%3": 24001
-# CHECK-CP-JSON-DAG:            "%5": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%0": 1
+# CHECK-CP-JSON-DAG:             "%1": 6
+# CHECK-CP-JSON-DAG:             "%3": 24001
+# CHECK-CP-JSON-DAG:             "%5": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 24001
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 24001
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ],
 # CHECK-CP-JSON-NEXT:      "bb.5": [
@@ -990,21 +996,21 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%3": 0
-# CHECK-CP-JSON-DAG:            "%4": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "%3": 0
+# CHECK-CP-JSON-DAG:             "%4": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 0
-# CHECK-CP-JSON:          },
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 0
+# CHECK-CP-JSON:               },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
-# CHECK-CP-JSON-DAG:            "register": "%3",
-# CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 0
-# CHECK-CP-JSON:          }
+# CHECK-CP-JSON-DAG:             "register": "%3",
+# CHECK-CP-JSON-DAG:             "use": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "use-mi": "{{[^"]+}}",
+# CHECK-CP-JSON-DAG:             "distance": 0
+# CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
 # CHECK-CP-JSON-NEXT:          "instr": "S_ENDPGM 0",
@@ -1017,10 +1023,16 @@ body:             |
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ]
 # CHECK-CP-JSON-NEXT:    },
-# CHECK-CP-JSON:  "paths": [
-# CHECK-CP-JSON:  ]
+# CHECK-CP-JSON-NEXT:    "paths": [
+# CHECK-CP-JSON:         ],
+# CHECK-CP-JSON-NEXT:    "metrics": {
+# CHECK-CP-JSON-NEXT:        "distance-cache": {
+# CHECK-CP-JSON-NEXT:            "hits": {{[0-9]+}},
+# CHECK-CP-JSON-NEXT:            "misses": {{[0-9]+}}
+# CHECK-CP-JSON-NEXT:        }
+# CHECK-CP-JSON-NEXT:    }
 # CHECK-CP-JSON-NEXT:  },
-# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.wall": {{[0-9.e+-]+}},
-# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.user": {{[0-9.e+-]+}},
-# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.sys": {{[0-9.e+-]+}}
-# CHECK-CP-JSON:}
+# CHECK-CP-JSON-DAG:   "time.amdgpu-next-use-analysis-json.json.wall": {{[0-9.e+-]+}},
+# CHECK-CP-JSON-DAG:   "time.amdgpu-next-use-analysis-json.json.user": {{[0-9.e+-]+}},
+# CHECK-CP-JSON-DAG:   "time.amdgpu-next-use-analysis-json.json.sys": {{[0-9.e+-]+}}
+# CHECK-CP-JSON:      }
