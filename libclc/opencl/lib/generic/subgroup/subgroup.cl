@@ -7,6 +7,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/subgroup/clc_subgroup.h"
+#include "clc/workitem/clc_get_enqueued_num_sub_groups.h"
+#include "clc/workitem/clc_get_max_sub_group_size.h"
+#include "clc/workitem/clc_get_num_sub_groups.h"
+#include "clc/workitem/clc_get_sub_group_id.h"
+#include "clc/workitem/clc_get_sub_group_local_id.h"
+#include "clc/workitem/clc_get_sub_group_size.h"
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint get_sub_group_size(void) {
+  return __clc_get_sub_group_size();
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint get_max_sub_group_size(void) {
+  return __clc_get_max_sub_group_size();
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint get_num_sub_groups(void) {
+  return __clc_get_num_sub_groups();
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint get_enqueued_num_sub_groups(void) {
+  return __clc_get_enqueued_num_sub_groups();
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint get_sub_group_id(void) {
+  return __clc_get_sub_group_id();
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint get_sub_group_local_id(void) {
+  return __clc_get_sub_group_local_id();
+}
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST int sub_group_all(int x) {
   return __clc_sub_group_all(x);
