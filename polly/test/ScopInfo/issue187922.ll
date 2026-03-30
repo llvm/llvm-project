@@ -2,9 +2,9 @@
 ;
 ; https://github.com/llvm/llvm-project/issues/187922
 ;
-; The assumption 'p_2_loaded_from_var_0 <= 91' is invalid if 'p_2_loaded_from_var_0 >= 128'.
+; The assumption 'p_2_loaded_from_var_0 <= 91' only holds if not 'p_2_loaded_from_var_0 >= 128'. Translation: if (trunc i64 %1 to i8) does not truncate any 1 bits, then we know that %1 <= 91.
 ; 'p_2_loaded_from_var_0 >= 128' must be in Invalid Context so we generate a RTC for it.
-; 'p_2_loaded_from_var_0 <= 91' can only be in DefinedBehaviorContext, but not in "Context:" because "Context:" is used to gist AssumedContext and InvalidContext which would remove the required RTC.
+; 'p_2_loaded_from_var_0 <= 91' can only be in DefinedBehaviorContext, but not in "Context:" because "Context:" is used to gist AssumedContext and InvalidContext which would remove the required RTC: because %1 <= 91, the check if %1 >= 128 must not be optimized away.
 
 ; CHECK:      Context:
 ; CHECK-NEXT:   [p_0_loaded_from_var_3, p_1, p_2_loaded_from_var_0, p_3_loaded_from_var_7] ->  {  : -2147483648 <= p_0_loaded_from_var_3 <= 2147483647 and -1 <= p_1 <= 0 and -9223372036854775808 <= p_2_loaded_from_var_0 <= 9223372036854775807 and 0 <= p_3_loaded_from_var_7 <= 1 }
