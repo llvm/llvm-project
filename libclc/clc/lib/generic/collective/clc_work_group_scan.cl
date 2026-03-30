@@ -17,7 +17,6 @@
 #include "clc/shared/clc_min.h"
 
 #include "clc/subgroup/clc_sub_group_scan.h"
-#include "clc/subgroup/clc_subgroup.h"
 #include "clc/synchronization/clc_work_group_barrier.h"
 #include "clc/workitem/clc_get_num_sub_groups.h"
 #include "clc/workitem/clc_get_sub_group_id.h"
