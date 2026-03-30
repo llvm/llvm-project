@@ -911,7 +911,9 @@ public:
       return;
     }
 
-    if (TT.isAMDGPU()) {
+    if (TT.isAMDGCN()) {
+      // Fixup legacy "amdgcn" triples to "amdgpu"
+      TT.setArch(llvm::Triple::amdgpu, TT.getSubArch());
       if (TT.getVendor() == llvm::Triple::UnknownVendor)
         TT.setVendor(llvm::Triple::AMD);
       if (TT.getOS() == llvm::Triple::UnknownOS)

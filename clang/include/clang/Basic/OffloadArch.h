@@ -9,12 +9,8 @@
 #ifndef LLVM_CLANG_BASIC_OFFLOADARCH_H
 #define LLVM_CLANG_BASIC_OFFLOADARCH_H
 
-#include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <tuple>
-
-namespace llvm {
-class Triple;
-} // namespace llvm
 
 namespace clang {
 
@@ -164,6 +160,9 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // Convert a string to an OffloadArch enum value. Returns
 // OffloadArch::Unknown if the string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
+
+OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch);
+llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID);
 
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID);

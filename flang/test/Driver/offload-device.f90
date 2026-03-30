@@ -14,7 +14,7 @@
 
 ! Compiled as OpenMP, device-code is compiled after host-code compilation,
 ! once for each --offload-arch argument
-! OPENMP: {{(^|[\\/])flang(-[0-9]+)?(-bolt\.inst)?(\.exe)?}}" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OPENMP: {{(^|[\\/])flang(-[0-9]+)?(-bolt\.inst)?(\.exe)?}}" "-fc1" "-triple" "amdgpu9.01-amd-amdhsa"
 ! OPENMP-SAME: "-foffload-device"
 ! OPENMP: {{(^|[\\/])flang(-[0-9]+)?(-bolt\.inst)?(\.exe)?}}" "-fc1" "-triple" "nvptx64-nvidia-cuda"
 ! OPENMP-SAME: "-foffload-device"

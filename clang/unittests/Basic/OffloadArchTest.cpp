@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/OffloadArch.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -33,4 +34,25 @@ TEST(OffloadArchTest, basic) {
   EXPECT_FALSE(IsNVIDIAOffloadArch(OffloadArch::Generic));
   EXPECT_FALSE(IsAMDOffloadArch(OffloadArch::Generic));
   EXPECT_FALSE(IsIntelOffloadArch(OffloadArch::Generic));
+}
+
+// Every AMDGPU gfx OffloadArch must round-trip through its subarch and
+// back. This guards against adding a GPU to the OffloadArch enum but forgetting
+// to update either getOffloadArchSubArch or the getSubArchOffloadArch table
+// (the two are position-sensitive and easy to leave out of sync).
+TEST(OffloadArchTest, AMDGPUSubArchRoundTrip) {
+  for (int I = static_cast<int>(OffloadArch::GFX600);
+       I < static_cast<int>(OffloadArch::AMDGCNSPIRV); ++I) {
+    OffloadArch Arch = static_cast<OffloadArch>(I);
+    EXPECT_TRUE(IsAMDOffloadArch(Arch));
+
+    llvm::Triple::SubArchType SubArch = getOffloadArchSubArch(Arch);
+    EXPECT_NE(SubArch, llvm::Triple::NoSubArch)
+        << "missing subarch mapping for " << OffloadArchToString(Arch);
+    EXPECT_EQ(getSubArchOffloadArch(SubArch), Arch)
+        << "subarch round-trip failed for " << OffloadArchToString(Arch);
+  }
+
+  EXPECT_EQ(getOffloadArchSubArch(OffloadArch::AMDGCNSPIRV),
+            llvm::Triple::NoSubArch);
 }

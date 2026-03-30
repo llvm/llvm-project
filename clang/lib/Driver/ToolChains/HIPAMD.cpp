@@ -383,6 +383,9 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
       return {};
     }
 
+    StringRef GpuArch = getGPUArch(DriverArgs);
+    assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
+
     // Add common device libraries like ocml etc.
     for (auto N : getCommonDeviceLibNames(DriverArgs, BA.ArchName, GpuArch,
                                           DeviceOffloadingKind))
