@@ -195,13 +195,30 @@ void AArch64PointerAuth::authenticateLR(
       assert(PACSym && "No PAC instruction to refer to");
       emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
       if (FPDiff != 0) {
+        // Use AUTIA171615/AUTIB171615: x17=LR, x16=entry_SP, x15=signing_PC.
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
+            .addReg(AArch64::XZR)
+            .addReg(AArch64::LR)
+            .addImm(0)
+            .setMIFlag(MachineInstr::FrameDestroy);
         emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
                         StackOffset::getFixed(-FPDiff), TII,
                         MachineInstr::FrameDestroy);
-        unsigned AutOpc = UseBKey ? AArch64::AUTIB : AArch64::AUTIA;
-        BuildMI(MBB, MBBI, DL, TII->get(AutOpc), AArch64::LR)
-            .addUse(AArch64::LR)
-            .addUse(AArch64::X16)
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADRP), AArch64::X15)
+            .addSym(PACSym, AArch64II::MO_PAGE)
+            .setMIFlag(MachineInstr::FrameDestroy);
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X15)
+            .addReg(AArch64::X15)
+            .addSym(PACSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
+            .addImm(0)
+            .setMIFlag(MachineInstr::FrameDestroy);
+        unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
+        BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+            .setMIFlag(MachineInstr::FrameDestroy);
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
+            .addReg(AArch64::XZR)
+            .addReg(AArch64::X17)
+            .addImm(0)
             .setMIFlag(MachineInstr::FrameDestroy);
       } else {
         BuildMI(MBB, MBBI, DL,
@@ -216,7 +233,7 @@ void AArch64PointerAuth::authenticateLR(
             .setMIFlag(MachineInstr::FrameDestroy);
         emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
       }
-      if (FPDiff != 0) {
+      if (FPDiff != 0 && !MFnI->branchProtectionPAuthLR()) {
         emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
                         StackOffset::getFixed(-FPDiff), TII,
                         MachineInstr::FrameDestroy);

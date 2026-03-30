@@ -3,18 +3,18 @@
 ;
 ; When a tail call has FPDiff != 0 and PAuthLR is enabled, the SP-based
 ; autiasppc instruction uses the wrong SP value (adjusted for the tail
-; call's stack args). The fix computes entry SP into x16 and uses
-; explicit autia instead.
+; call's stack args). The fix uses autia171615 with entry SP in x16 and
+; the signing PC in x15.
 
 declare swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64, i64, i64, i64, i64, i64, i64, i64, i64)
 declare swifttailcc void @callee_no_stack_args(ptr swiftasync %ctx)
 
-; FPDiff != 0 with PAuthLR: must use explicit autia, not autiasppc.
+; FPDiff != 0 with PAuthLR: must use autia171615, not autiasppc.
 define swifttailcc void @test_pauthlr_fpdiff(ptr swiftasync %ctx) #0 {
 ; CHECK-LABEL: test_pauthlr_fpdiff:
 ; CHECK:         paciasppc
 ; CHECK-NOT:     autiasppc
-; CHECK:         autia x30, x16
+; CHECK:         autia171615
 ; CHECK:         b callee_stack_args
   musttail call swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
@@ -25,7 +25,7 @@ define swifttailcc void @test_pauthlr_no_fpdiff(ptr swiftasync %ctx) #0 {
 ; CHECK-LABEL: test_pauthlr_no_fpdiff:
 ; CHECK:         paciasppc
 ; CHECK:         autiasppc
-; CHECK-NOT:     autia x30, x16
+; CHECK-NOT:     autia171615
 ; CHECK:         b callee_no_stack_args
   musttail call swifttailcc void @callee_no_stack_args(ptr swiftasync %ctx)
   ret void
