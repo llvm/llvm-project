@@ -1306,7 +1306,7 @@ LogicalResult DsBarrierArriveOp::verify() {
 // GlobalPrefetchOp
 //===----------------------------------------------------------------------===//
 
-int32_t GlobalPrefetchOp::getLLVMEncoding(amdgpu::TemporalHint hint,
+int32_t GlobalPrefetchOp::getLLVMEncoding(amdgpu::LoadTemporalHint hint,
                                           amdgpu::Scope scope,
                                           bool isSpeculative) {
   int32_t immArg = static_cast<int32_t>(hint);
@@ -1316,7 +1316,7 @@ int32_t GlobalPrefetchOp::getLLVMEncoding(amdgpu::TemporalHint hint,
   // operate only in the speculative mode and, therefore, do not require
   // toggling the least significant bit for mode changes
   // Temporal hint is encoded in lower bits - i.e. [2:0]
-  if (llvm::is_contained({TemporalHint::RT, TemporalHint::HT}, hint))
+  if (llvm::is_contained({LoadTemporalHint::RT, LoadTemporalHint::HT}, hint))
     immArg = isSpeculative ? immArg : immArg | 1;
 
   // Prefetch scope level is encoded in upper bits - i.e., [4:3]
@@ -1338,7 +1338,7 @@ LogicalResult GlobalPrefetchOp::verify() {
     return this->emitOpError(
         "the number of indices must match the source shape size");
 
-  const TemporalHint temporalHint = getTemporalHint();
+  const LoadTemporalHint temporalHint = getTemporalHint();
   const bool isSpeculative = getSpeculative();
 
   // Note that temporal hints are shared between load, store,
@@ -1347,12 +1347,13 @@ LogicalResult GlobalPrefetchOp::verify() {
   // documentation. In case of global prefetch, non-temporal (NT)
   // and last-use (LU) hints are not used. The extra bits of encoding
   // are used to encode speculative or non-speculative instruction behavior
-  if (llvm::is_contained({TemporalHint::NT, TemporalHint::LU}, temporalHint))
+  if (llvm::is_contained({LoadTemporalHint::NT, LoadTemporalHint::LU},
+                         temporalHint))
     return this->emitOpError("does not support NT and LU modes");
 
-  if (llvm::is_contained(
-          {TemporalHint::NT_RT, TemporalHint::RT_NT, TemporalHint::NT_HT},
-          temporalHint) &&
+  if (llvm::is_contained({LoadTemporalHint::NT_RT, LoadTemporalHint::RT_NT,
+                          LoadTemporalHint::NT_HT},
+                         temporalHint) &&
       !isSpeculative) {
     return this->emitOpError("operates only in the speculative mode");
   }
