@@ -221,11 +221,22 @@ public:
       return rewriter.notifyMatchFailure(
           maskingOp, "Can't lower passthru to vector.transfer_read");
 
+    // The nested transfer often has in_bounds=true because vectorization set
+    // it when the read lived under vector.mask. After peeling the mask onto
+    // the transfer_read's mask operand, keeping in_bounds=true is misleading:
+    // masked-out lanes rely on padding for out-of-bounds semantics, and
+    // foldTransferFullMask + in_bounds can collapse to an unmasked read that
+    // assumes a full in-bounds super-vector load. Use out-of-bounds defaults
+    // here; canonicalization can still promote dims later when provably safe
+    // after the mask is folded away.
+    auto inBoundsAttr = rewriter.getBoolArrayAttr(
+        SmallVector<bool>(readOp.getVectorType().getRank(), false));
+
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<TransferReadOp>(
         maskingOp.getOperation(), readOp.getVectorType(), readOp.getBase(),
         readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
-        maskingOp.getMask(), readOp.getInBounds());
+        maskingOp.getMask(), inBoundsAttr);
     return success();
   }
 };
@@ -243,11 +254,16 @@ public:
     Type resultType =
         writeOp.getResult() ? writeOp.getResult().getType() : Type();
 
+    // See MaskedTransferReadOpPattern: do not preserve in_bounds from the
+    // region body once the mask becomes a transfer operand.
+    auto inBoundsAttr = rewriter.getBoolArrayAttr(
+        SmallVector<bool>(writeOp.getVectorType().getRank(), false));
+
     // Replace the `vector.mask` operation.
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
         writeOp.getBase(), writeOp.getIndices(), writeOp.getPermutationMap(),
-        maskingOp.getMask(), writeOp.getInBounds());
+        maskingOp.getMask(), inBoundsAttr);
     return success();
   }
 };

@@ -75,7 +75,35 @@ func.func @vector_gather(%arg0: tensor<64xf32>, %arg1: tensor<3xf32>) -> tensor<
 // CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_6:.*]] = vector.create_mask %[[VAL_5]] : vector<4xi1>
 // CHECK:           %[[VAL_7:.*]] = vector.gather %[[VAL_0]][%[[VAL_4]]] [%[[VAL_3]]], %[[VAL_6]], %[[VAL_2]] : tensor<64xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
-// CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_7]], %[[VAL_1]][%[[VAL_4]]], %[[VAL_6]] {in_bounds = [true]} : vector<4xf32>, tensor<3xf32>
+// CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_7]], %[[VAL_1]][%[[VAL_4]]], %[[VAL_6]] : vector<4xf32>, tensor<3xf32>
+
+// -----
+
+// Like linalg vectorization of a reduction tile: `tensor<8x?xf32>` with a
+// `vector.create_mask` over the dynamic minor dim and `vector.mask` around a
+// 2-D `vector.transfer_read` (same shape as the IREE 1600x625 / 8-wide tail repro).
+//
+// CHECK-LABEL: func.func @masked_2d_transfer_read_dynamic_minor_dim
+// CHECK-SAME:      %[[TILE:.*]]: tensor<8x?xf32>) -> vector<8x8xf32>
+// CHECK-NOT:       vector.mask
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[TILE]], %{{.*}} : tensor<8x?xf32>
+// CHECK:           %[[MASK:.*]] = vector.create_mask %{{.*}}, %[[DIM]] : vector<8x8xi1>
+// CHECK:           %{{.*}} = vector.transfer_read %[[TILE]]{{\[}}%{{.*}}, %{{.*}}], %{{.*}}, %[[MASK]]{{.*}} : tensor<8x?xf32>, vector<8x8xf32>
+// CHECK:           return %{{.*}} : vector<8x8xf32>
+// CHECK:         }
+func.func @masked_2d_transfer_read_dynamic_minor_dim(%tile: tensor<8x?xf32>) -> vector<8x8xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %cst = arith.constant 0.0 : f32
+  %dim1 = tensor.dim %tile, %c1 : tensor<8x?xf32>
+  %mask = vector.create_mask %c8, %dim1 : vector<8x8xi1>
+  %v = vector.mask %mask {
+    vector.transfer_read %tile[%c0, %c0], %cst {in_bounds = [true, true]}
+      : tensor<8x?xf32>, vector<8x8xf32>
+  } : vector<8x8xi1> -> vector<8x8xf32>
+  return %v : vector<8x8xf32>
+}
 
 // -----
 

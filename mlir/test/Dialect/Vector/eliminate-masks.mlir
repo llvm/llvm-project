@@ -169,3 +169,23 @@ func.func @negative_value_bounds_scalable_dim_not_all_true(%tensor: tensor<2x100
   "test.some_use"(%mask) : (vector<3x[4]xi1>) -> ()
   return
 }
+
+// -----
+
+// tensor.dim of a dynamic extent can match the vector lane count on some paths
+// but not others; LB-only analysis may incorrectly treat create_mask as
+// all-true. Require matching LB and UB before folding to constant_mask.
+//
+// CHECK-LABEL: @negative_dynamic_extent_dim_not_provably_constant
+// CHECK-NOT: vector.constant_mask
+// CHECK: %[[MASK:.*]] = vector.create_mask
+// CHECK: "test.some_use"(%[[MASK]]) : (vector<8x8xi1>) -> ()
+func.func @negative_dynamic_extent_dim_not_provably_constant(%t : tensor<8x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %dim = tensor.dim %t, %c1 : tensor<8x?xf32>
+  %mask = vector.create_mask %c8, %dim : vector<8x8xi1>
+  "test.some_use"(%mask) : (vector<8x8xi1>) -> ()
+  return
+}

@@ -52,28 +52,50 @@ LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
   }
 
   for (auto [i, dimSize] : unknownDims) {
-    // Compute the lower bound for the unknown dimension (i.e. the smallest
-    // value it could be).
+    // Compute lower and upper bounds for the unknown dimension. We need both
+    // to agree (same constant or same scalable expression) before treating the
+    // mask as all-true: using only a lower bound is unsound when the value can
+    // vary at runtime (e.g. tensor.dim of a dynamic slice that is full-sized
+    // on most iterations but partial on the last). The lower bound analysis
+    // may then report the full size even though the upper bound analysis (or
+    // the differing tight range) shows the dimension is not a single constant.
     FailureOr<ConstantOrScalableBound> dimLowerBound =
         vector::ScalableValueBoundsConstraintSet::computeScalableBound(
             dimSize, {}, vscaleRange.vscaleMin, vscaleRange.vscaleMax,
             presburger::BoundType::LB);
     if (failed(dimLowerBound))
       return failure();
-    auto dimLowerBoundSize = dimLowerBound->getSize();
+    FailureOr<ConstantOrScalableBound::BoundSize> dimLowerBoundSize =
+        dimLowerBound->getSize();
     if (failed(dimLowerBoundSize))
       return failure();
+
+    FailureOr<ConstantOrScalableBound> dimUpperBound =
+        vector::ScalableValueBoundsConstraintSet::computeScalableBound(
+            dimSize, {}, vscaleRange.vscaleMin, vscaleRange.vscaleMax,
+            presburger::BoundType::UB);
+    if (failed(dimUpperBound))
+      return failure();
+    FailureOr<ConstantOrScalableBound::BoundSize> dimUpperBoundSize =
+        dimUpperBound->getSize();
+    if (failed(dimUpperBoundSize))
+      return failure();
+
+    if (dimLowerBoundSize->scalable != dimUpperBoundSize->scalable ||
+        dimLowerBoundSize->baseSize != dimUpperBoundSize->baseSize)
+      return failure();
+
     if (dimLowerBoundSize->scalable) {
-      // 1. The lower bound, LB, is scalable. If LB is < the mask dim size then
-      // this dim is not all-true.
+      // 1. The bound is scalable. If it is < the mask dim size then this dim
+      // is not all-true.
       if (dimLowerBoundSize->baseSize < maskTypeDimSizes[i])
         return failure();
     } else {
-      // 2. The lower bound, LB, is a constant.
+      // 2. The bound is a constant.
       // - If the mask dim size is scalable then this dim is not all-true.
       if (maskTypeDimScalableFlags[i])
         return failure();
-      // - If LB < the _fixed-size_ mask dim size then this dim is not all-true.
+      // - If the constant < the _fixed-size_ mask dim size then not all-true.
       if (dimLowerBoundSize->baseSize < maskTypeDimSizes[i])
         return failure();
     }
