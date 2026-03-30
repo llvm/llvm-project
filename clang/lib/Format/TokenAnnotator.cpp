@@ -1456,7 +1456,12 @@ private:
           if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept))
             Tok->setType(TT_CtorInitializerColon);
         } else {
-          Tok->setType(TT_InheritanceColon);
+          if (Line.startsWith(tok::kw_enum) ||
+              Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
+            Tok->setType(TT_EnumUnderlyingTypeColon);
+          } else {
+            Tok->setType(TT_InheritanceColon);
+          }
           if (Prev->isAccessSpecifierKeyword())
             Line.Type = LT_AccessModifier;
         }
@@ -5549,6 +5554,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Style.SpaceBeforeCtorInitializerColon;
   if (Right.is(TT_InheritanceColon) && !Style.SpaceBeforeInheritanceColon)
     return false;
+  if (Right.is(TT_EnumUnderlyingTypeColon) &&
+      !Style.SpaceBeforeInheritanceColon) {
+    return false;
+  }
   if (Right.is(TT_RangeBasedForLoopColon) &&
       !Style.SpaceBeforeRangeBasedForLoopColon) {
     return false;
