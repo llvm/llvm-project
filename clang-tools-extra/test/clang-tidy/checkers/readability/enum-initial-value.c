@@ -34,6 +34,16 @@ enum EAll {
   EAll_c = 4,
 };
 
+enum ERef {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1:  warning: initial values in enum 'ERef' are not consistent
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'ERef' are not consistent
+  ERef_a,
+  // CHECK-FIXES: ERef_a = 0,
+  ERef_b,
+  // CHECK-FIXES: ERef_b = 1,
+  ERef_last = ERef_b,
+};
+
 #define ENUMERATOR_1 EMacro1_b
 enum EMacro1 {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EMacro1' are not consistent, consider explicit initialization of all, none or only the first enumerator
