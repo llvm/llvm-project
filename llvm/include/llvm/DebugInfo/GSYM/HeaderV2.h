@@ -26,7 +26,7 @@ class FileWriter;
 constexpr uint32_t GSYM_VERSION_2 = 2;
 
 /// Encoding format for the string table.
-enum class StrTableEncodingType : uint8_t {
+enum class StringTableEncoding : uint8_t {
   /// A list of NULL-terminated strings (same as V1). The first string at
   /// offset zero must be the empty C string.
   Default = 0,
@@ -90,7 +90,7 @@ struct HeaderV2 {
   /// and other data structures within GlobalData.
   uint8_t StrpSize;
   /// String table encoding. Allows for future encoding for string table.
-  uint8_t StrTableEncoding;
+  StringTableEncoding StrTableEncoding;
   // The GlobalData array immediately follows the header at offset
   // sizeof(HeaderV2). Each GlobalData entry describes a section in the GSYM
   // file (e.g. AddrOffsets, FunctionInfo, UUID, StringTable). The array is

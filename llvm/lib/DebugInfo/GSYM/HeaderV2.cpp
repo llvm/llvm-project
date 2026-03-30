@@ -69,13 +69,13 @@ llvm::Error HeaderV2::checkForError() const {
   if (Padding != 0)
     return createStringError(std::errc::invalid_argument,
                              "padding must be zero, got %u", Padding);
-  switch (static_cast<StrTableEncodingType>(StrTableEncoding)) {
-  case StrTableEncodingType::Default:
+  switch (StrTableEncoding) {
+  case StringTableEncoding::Default:
     break;
   default:
     return createStringError(std::errc::invalid_argument,
                              "unsupported string table encoding %u",
-                             StrTableEncoding);
+                             static_cast<uint8_t>(StrTableEncoding));
   }
   return Error::success();
 }
@@ -99,7 +99,7 @@ llvm::Expected<HeaderV2> HeaderV2::decode(DataExtractor &Data) {
   H.AddrOffSize = Data.getU8(&Offset);
   H.AddrInfoOffSize = Data.getU8(&Offset);
   H.StrpSize = Data.getU8(&Offset);
-  H.StrTableEncoding = Data.getU8(&Offset);
+  H.StrTableEncoding = static_cast<StringTableEncoding>(Data.getU8(&Offset));
   if (llvm::Error Err = H.checkForError())
     return std::move(Err);
   return H;
@@ -116,7 +116,7 @@ llvm::Error HeaderV2::encode(FileWriter &O) const {
   O.writeU8(AddrOffSize);
   O.writeU8(AddrInfoOffSize);
   O.writeU8(StrpSize);
-  O.writeU8(StrTableEncoding);
+  O.writeU8(static_cast<uint8_t>(StrTableEncoding));
   return Error::success();
 }
 

@@ -127,8 +127,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   Hdr.AddrOffSize = AddrOffSize;
   Hdr.AddrInfoOffSize = AddrInfoOffSize;
   Hdr.StrpSize = StrpSize;
-  Hdr.StrTableEncoding =
-      static_cast<uint8_t>(StrTableEncodingType::Default);
+  Hdr.StrTableEncoding = StringTableEncoding::Default;
   if (auto Err = Hdr.encode(O))
     return Err;
 

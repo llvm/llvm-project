@@ -138,7 +138,7 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
   EXPECT_EQ(Hdr.AddrOffSize, ExpectedAddrOffSize);
   EXPECT_EQ(Hdr.AddrInfoOffSize, 4u); // Small file, should be 4 bytes.
   EXPECT_EQ(Hdr.StrpSize, 4u);        // Small string table, should be 4 bytes.
-  EXPECT_EQ(Hdr.StrTableEncoding, 0u);
+  EXPECT_EQ(Hdr.StrTableEncoding, StringTableEncoding::Default);
 
   // Decode GlobalData entries starting at offset 24 (after fixed header).
   uint64_t Offset = 24;
