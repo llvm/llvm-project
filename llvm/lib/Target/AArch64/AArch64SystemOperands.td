@@ -880,14 +880,16 @@ class TLBIEntry<string name, bits<3> op1, bits<4> crm, bits<3> op2, bit nxs,
   : TLBICommon<name, op1, crm, op2, nxs, reguse>;
 
 class TLBIPEntry<string name, bits<3> op1, bits<4> crm, bits<3> op2, bit nxs,
-                RegValue reguse>
-  : TLBICommon<name, op1, crm, op2, nxs, reguse>;
+                 RegValue reguse, bit allowWithTLBID>
+  : TLBICommon<name, op1, crm, op2, nxs, reguse> {
+  bit AllowWithTLBID = allowWithTLBID;
+}
 
-multiclass TLBITableBase {
+multiclass TLBITableBase<list<string> fields> {
   def NAME # Table : GenericTable {
     let FilterClass = NAME # "Entry";
     let CppTypeName = NAME;
-    let Fields = ["Name", "Encoding", "RegUse", "RequiresStr"];
+    let Fields = fields;
     string TypeOf_RegUse = "SysAliasRegUse";
     let PrimaryKey = ["Encoding"];
     let PrimaryKeyName = "lookup" # NAME # "ByEncoding";
@@ -898,25 +900,10 @@ multiclass TLBITableBase {
   }
 }
 
-multiclass TLBITableBase<list<string> fields> {
-  def NAME # Table : GenericTable {
-    let FilterClass = NAME # "Entry";
-    let CppTypeName = NAME;
-    let Fields = fields;
-    let PrimaryKey = ["Encoding"];
-    let PrimaryKeyName = "lookup" # NAME # "ByEncoding";
-  }
-  def lookup # NAME # ByName : SearchIndex {
-    let Table = !cast<GenericTable>(NAME # "Table");
-    let Key = ["Name"];
-  }
-}
-
 defm TLBI : TLBITableBase<
-    ["Name", "Encoding", "NeedsReg", "OptionalReg", "RequiresStr"]>;
+    ["Name", "Encoding", "RegUse", "RequiresStr"]>;
 defm TLBIP : TLBITableBase<
-    ["Name", "Encoding", "NeedsReg", "OptionalReg", "RequiresStr",
-     "d128orTLBID"]>;
+    ["Name", "Encoding", "RegUse", "RequiresStr", "AllowWithTLBID"]>;
 
 class TLBI<string name, bits<3> op1, bits<4> crm, bits<3> op2,
            RegValue reguse, bit hasTLBIP = 0> {
@@ -972,10 +959,12 @@ foreach I = TLBIBase in {
   }
 
   if I.HasTLBIP then {
-    let Requires = ["AArch64::FeatureD128"] in {
-      def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
-      def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1, I.RegUse>;
-    }
+    // These TLBIP aliases accept either FEAT_D128 or FEAT_TLBID.
+    defvar AllowWithTLBID = !match(I.Name, ".*E[12][IO]S.*");
+    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse,
+                     AllowWithTLBID>;
+    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1,
+                     I.RegUse, AllowWithTLBID>;
   }
 }
 
@@ -1040,10 +1029,11 @@ foreach I = TLBIRMI in {
   }
 
   if I.HasTLBIP then {
-    let Requires = ["AArch64::FeatureD128"] in {
-      def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
-      def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1, I.RegUse>;
-    }
+    defvar AllowWithTLBID = !match(I.Name, ".*E[12][IO]S.*");
+    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse,
+                     AllowWithTLBID>;
+    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1,
+                     I.RegUse, AllowWithTLBID>;
   }
 }
 
