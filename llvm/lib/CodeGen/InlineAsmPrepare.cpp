@@ -439,12 +439,6 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
 //                           Process CallBrInsts
 //===----------------------------------------------------------------------===//
 
-/// The Use is in the same BasicBlock as the intrinsic call.
-static bool isInSameBasicBlock(const Use &U, const BasicBlock *BB) {
-  const auto *I = dyn_cast<Instruction>(U.getUser());
-  return I && I->getParent() == BB;
-}
-
 #ifndef NDEBUG
 static void printDebugDomInfo(const DominatorTree &DT, const Use &U,
                               const BasicBlock *BB, bool IsDefaultDest) {
@@ -456,6 +450,12 @@ static void printDebugDomInfo(const DominatorTree &DT, const Use &U,
                       << (IsDefaultDest ? "in" : "") << "direct)\n");
 }
 #endif
+
+/// The Use is in the same BasicBlock as the intrinsic call.
+static bool isInSameBasicBlock(const Use &U, const BasicBlock *BB) {
+  const auto *I = dyn_cast<Instruction>(U.getUser());
+  return I && I->getParent() == BB;
+}
 
 static void updateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
                       SSAUpdater &SSAUpdate) {

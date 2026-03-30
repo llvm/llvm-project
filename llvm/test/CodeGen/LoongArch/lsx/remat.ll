@@ -8,32 +8,28 @@ declare <16 x i8> @llvm.loongarch.lsx.vreplgr2vr.b(i32)
 define <16 x i8> @vreplgr2vr() nounwind {
 ; LA32-LABEL: vreplgr2vr:
 ; LA32:       # %bb.0: # %start
-; LA32-NEXT:    addi.w $sp, $sp, -32
-; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
-; LA32-NEXT:    vreplgr2vr.b $vr0, $zero
-; LA32-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    move $a0, $zero
 ; LA32-NEXT:    jirl $ra, $zero, 0
 ; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
+; LA32-NEXT:    vreplgr2vr.b $vr1, $zero
 ; LA32-NEXT:    vseq.b $vr0, $vr0, $vr1
-; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 32
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vreplgr2vr:
 ; LA64:       # %bb.0: # %start
-; LA64-NEXT:    addi.d $sp, $sp, -32
-; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
-; LA64-NEXT:    vreplgr2vr.b $vr0, $zero
-; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    move $a0, $zero
 ; LA64-NEXT:    jirl $ra, $zero, 0
 ; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
+; LA64-NEXT:    vreplgr2vr.b $vr1, $zero
 ; LA64-NEXT:    vseq.b $vr0, $vr0, $vr1
-; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 32
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
 start:
   %tmp = tail call <16 x i8> @llvm.loongarch.lsx.vreplgr2vr.b(i32 0)

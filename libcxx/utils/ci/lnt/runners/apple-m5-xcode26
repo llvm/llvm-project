@@ -5,25 +5,40 @@
 #
 
 if [ -z "${1}" ] || [ ! -d "${1}" ]; then
-    echo "usage: ${0} <path-to-llvm-monorepo>"
+    echo "usage: ${0} <path-to-llvm-monorepo> [-- commit ...]"
     echo "error: Please provide a valid path to the LLVM monorepo."
     exit 1
 fi
 
 MONOREPO_DIR=$(cd "${1}" && pwd)
+shift
+if [ "${1}" = "--" ]; then
+    shift
+fi
+COMMITS=("$@")
 
-while true; do
-    ${MONOREPO_DIR}/libcxx/utils/ci/lnt/commit-watch --git-repo ${MONOREPO_DIR}                                 \
-        --lnt-url http://lnt.llvm.org --test-suite libcxx2 --machine apple-m5-xcode26 |                         \
-        while read commit; do                                                                                   \
-            ${MONOREPO_DIR}/libcxx/utils/ci/lnt/run-benchmarks                                                  \
-                --test-suite-commit 0eefb2682bf8c04954c46e91916b5164d8424702                                    \
-                --git-repo ${MONOREPO_DIR}                                                                      \
-                --lnt-url http://lnt.llvm.org                                                                   \
-                --test-suite libcxx2                                                                            \
-                --machine apple-m5-xcode26                                                                      \
-                --compiler clang++                                                                              \
-                --benchmark-commit ${commit};                                                                   \
-        done
-    sleep 60 # To avoid busy looping in case something goes really wrong
-done
+run_benchmarks() {
+    ${MONOREPO_DIR}/libcxx/utils/ci/lnt/run-benchmarks                                                          \
+        --test-suite-commit 0eefb2682bf8c04954c46e91916b5164d8424702                                            \
+        --git-repo ${MONOREPO_DIR}                                                                              \
+        --lnt-url http://lnt.llvm.org                                                                           \
+        --test-suite libcxx2                                                                                    \
+        --machine apple-m5-xcode26                                                                              \
+        --compiler clang++                                                                                      \
+        --benchmark-commit ${1}
+}
+
+if [ ${#COMMITS[@]} -gt 0 ]; then
+    for commit in "${COMMITS[@]}"; do
+        run_benchmarks ${commit}
+    done
+else
+    while true; do
+        ${MONOREPO_DIR}/libcxx/utils/ci/lnt/commit-watch --git-repo ${MONOREPO_DIR}                             \
+            --lnt-url http://lnt.llvm.org --test-suite libcxx2 --machine apple-m5-xcode26 |                     \
+            while read commit; do                                                                               \
+                run_benchmarks ${commit}
+            done
+        sleep 60 # To avoid busy looping in case something goes really wrong
+    done
+fi

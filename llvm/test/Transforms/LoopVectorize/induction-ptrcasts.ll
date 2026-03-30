@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S %s | FileCheck --check-prefix=VF1 %s
 ; RUN: opt -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S %s | FileCheck --check-prefix=VF2 %s
 
-@f = external dso_local global i32, align 4
+@f = external global i32, align 4
 
 define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF1-LABEL: define void @int_iv_based_on_pointer_iv(

@@ -3052,11 +3052,12 @@ protected:
   };
 
   bool PrivateStateThreadIsRunning() const {
-    if (!m_current_private_state_thread ||
-        !m_current_private_state_thread->IsRunning())
+    if (!m_current_private_state_thread_sp ||
+        !m_current_private_state_thread_sp->IsRunning())
       return false;
 
-    lldb::StateType state = m_current_private_state_thread->GetPrivateState();
+    lldb::StateType state =
+        m_current_private_state_thread_sp->GetPrivateState();
     return state != lldb::eStateInvalid && state != lldb::eStateDetached &&
            state != lldb::eStateExited;
   }
@@ -3185,15 +3186,11 @@ protected:
   /// private state thread that we spin up when we need to run an expression on
   /// the private state thread.
   struct PrivateStateThread {
-    PrivateStateThread(
-        Process &process, lldb::StateType public_state,
-        lldb::StateType private_state,
-        bool is_secondary_thread, // FIXME: Can I get rid of this?
-        llvm::StringRef thread_name)
+    PrivateStateThread(Process &process, lldb::StateType public_state,
+                       lldb::StateType private_state,
+                       llvm::StringRef thread_name)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state),
-          m_is_secondary_thread(is_secondary_thread),
-          m_thread_name(thread_name) {}
+          m_private_state(private_state), m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
     bool StartupThread();
@@ -3280,67 +3277,62 @@ protected:
     ProcessRunLock m_public_run_lock;
     ProcessRunLock m_private_run_lock;
     bool m_is_running = false;
-    /// If we need to run an expression modally in the private state thread, we
-    /// have to spin up a secondary private state thread to manage the events
-    /// that drive that interaction.  This will be true if this is a modal
-    /// private state thread.
-    bool m_is_secondary_thread;
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
     std::string m_thread_name;
   };
 
   bool SetPrivateRunLockToStopped() {
-    assert(m_current_private_state_thread);
-    if (m_current_private_state_thread)
-      return m_current_private_state_thread->SetPrivateRunLockToStopped();
+    assert(m_current_private_state_thread_sp);
+    if (m_current_private_state_thread_sp)
+      return m_current_private_state_thread_sp->SetPrivateRunLockToStopped();
     return false;
   }
   bool SetPrivateRunLockToRunning() {
-    assert(m_current_private_state_thread);
-    if (m_current_private_state_thread)
-      return m_current_private_state_thread->SetPrivateRunLockToStopped();
+    assert(m_current_private_state_thread_sp);
+    if (m_current_private_state_thread_sp)
+      return m_current_private_state_thread_sp->SetPrivateRunLockToStopped();
     return false;
   }
   bool SetPublicRunLockToStopped() {
-    assert(m_current_private_state_thread);
-    if (m_current_private_state_thread)
-      return m_current_private_state_thread->SetPublicRunLockToStopped();
+    assert(m_current_private_state_thread_sp);
+    if (m_current_private_state_thread_sp)
+      return m_current_private_state_thread_sp->SetPublicRunLockToStopped();
     return false;
   }
   bool SetPublicRunLockToRunning() {
-    assert(m_current_private_state_thread);
-    if (m_current_private_state_thread)
-      return m_current_private_state_thread->SetPublicRunLockToRunning();
+    assert(m_current_private_state_thread_sp);
+    if (m_current_private_state_thread_sp)
+      return m_current_private_state_thread_sp->SetPublicRunLockToRunning();
     return false;
   }
 
   std::recursive_mutex &GetPrivateStateMutex() {
-    assert(m_current_private_state_thread);
-    return m_current_private_state_thread->GetPrivateStateMutex();
+    assert(m_current_private_state_thread_sp);
+    return m_current_private_state_thread_sp->GetPrivateStateMutex();
   }
 
   lldb::StateType GetPublicState() const {
-    if (!m_current_private_state_thread)
+    if (!m_current_private_state_thread_sp)
       return lldb::eStateUnloaded;
-    return m_current_private_state_thread->GetPublicState();
+    return m_current_private_state_thread_sp->GetPublicState();
   }
 
   lldb::StateType GetPrivateState() const {
-    if (!m_current_private_state_thread)
+    if (!m_current_private_state_thread_sp)
       return lldb::eStateUnloaded;
-    return m_current_private_state_thread->GetPrivateState();
+    return m_current_private_state_thread_sp->GetPrivateState();
   }
 
   lldb::StateType GetPrivateStateNoLock() const {
-    if (!m_current_private_state_thread)
+    if (!m_current_private_state_thread_sp)
       return lldb::eStateUnloaded;
-    return m_current_private_state_thread->GetPrivateStateNoLock();
+    return m_current_private_state_thread_sp->GetPrivateStateNoLock();
   }
 
   void SetPrivateStateNoLock(lldb::StateType new_state) {
-    assert(m_current_private_state_thread);
-    m_current_private_state_thread->SetPrivateStateNoLock(new_state);
+    assert(m_current_private_state_thread_sp);
+    m_current_private_state_thread_sp->SetPrivateStateNoLock(new_state);
   }
 
   // Member variables
@@ -3355,12 +3347,12 @@ protected:
                                                    // private state thread.
   lldb::ListenerSP m_private_state_listener_sp; // This is the listener for the
                                                 // private state thread.
-  ///< This is filled on construction with the "main" private state which will
-  ///< be exposed to clients of this process.  It won't have a running private
-  ///< state thread until you call StartupThread.  This needs to be a pointer
-  ///< so I can transparently swap it out for the modal one, but there will
-  ///< always be a private state thread in this slot.
-  PrivateStateThread *m_current_private_state_thread;
+  /// This is filled on construction with the "main" private state which will
+  /// be exposed to clients of this process.  It won't have a running private
+  /// state thread until you call StartupThread.  This needs to be a pointer
+  /// so I can transparently swap it out for the modal one, but there will
+  /// always be a private state thread in this slot.
+  std::shared_ptr<PrivateStateThread> m_current_private_state_thread_sp;
 
   ProcessModID m_mod_id; ///< Tracks the state of the process over stops and
                          ///other alterations.
@@ -3507,10 +3499,15 @@ protected:
   void SetPrivateState(lldb::StateType state);
 
   // Starts the private state thread and assigns it to
-  // m_current_private_state_thread.  Clients who are making a secondary thread
-  // for now have to manage backing that up by hand.
-  bool StartPrivateStateThread(lldb::StateType state, bool run_lock_is_running,
-                               bool is_secondary_thread = false);
+  // m_current_private_state_thread_sp.  If backup_ptr is non-null, this is
+  // a "secondary" thread, and the current thread will be backed up into
+  // backup_ptr before being replaced by the new thread. Pass a non-null
+  // backup_ptr in the case where you have to temporarily spin up a secondary
+  // state thread to handle events from a hand-called function on the primary
+  // private state thread.
+  bool StartPrivateStateThread(
+      lldb::StateType state, bool run_lock_is_running,
+      std::shared_ptr<PrivateStateThread> *backup_ptr = nullptr);
 
   void StopPrivateStateThread();
 
@@ -3519,10 +3516,8 @@ protected:
   void ResumePrivateStateThread();
 
 private:
-  // The starts up the private state thread that will watch for events from the
-  // debugee. Pass true for is_secondary_thread in the case where you have to
-  // temporarily spin up a secondary state thread to handle events from a hand-
-  // called function on the primary private state thread.
+  // Starts up the private state thread that will watch for events from the
+  // debugee.
 
   lldb::thread_result_t RunPrivateStateThread();
 

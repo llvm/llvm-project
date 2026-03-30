@@ -12,11 +12,11 @@ define ptr @main() {
 ; CHECK-NEXT:    br label %[[IF_END_I:.*]]
 ; CHECK:       [[IF_THEN_I]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load target("dx.RawBuffer", half, 1, 0), ptr null, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) [[TMP0]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t.i32(target("dx.RawBuffer", half, 1, 0) [[TMP0]], i32 0)
 ; CHECK-NEXT:    br label %[[IF_END_I]]
 ; CHECK:       [[IF_END_I]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load target("dx.RawBuffer", half, 1, 0), ptr null, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) [[TMP2]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t.i32(target("dx.RawBuffer", half, 1, 0) [[TMP2]], i32 0)
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
 entry:
@@ -24,11 +24,11 @@ entry:
 
 if.then.i:                                        ; preds = %entry
   %0 = load target("dx.RawBuffer", half, 1, 0), ptr null, align 4
-  %1 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) %0, i32 0)
+  %1 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t.i32(target("dx.RawBuffer", half, 1, 0) %0, i32 0)
   br label %if.end.i
 
 if.end.i:                                         ; preds = %if.then.i, %entry
   %2 = load target("dx.RawBuffer", half, 1, 0), ptr null, align 4
-  %3 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) %2, i32 0)
+  %3 = tail call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t.i32(target("dx.RawBuffer", half, 1, 0) %2, i32 0)
   ret ptr %3
 }
