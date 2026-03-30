@@ -66,7 +66,7 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
 
   SetCanJIT(false);
   StartPrivateStateThread(lldb::eStateStopped, false);
-  if (!m_current_private_state_thread) {
+  if (!m_current_private_state_thread_sp) {
     LLDB_LOG(GetLog(LLDBLog::Process), "ProcessTrace: failed to start private "
                                        "state thread.");
     return;

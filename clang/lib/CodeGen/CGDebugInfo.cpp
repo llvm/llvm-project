@@ -5979,15 +5979,14 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
-    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
-      if (!ED->getIdentifier()) {
-        Reconstitutable = false;
-        return false;
-      }
-      if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
-        Reconstitutable = false;
-        return false;
-      }
+    const EnumDecl *ED = ET->getDecl();
+    if (!ED->getIdentifier()) {
+      Reconstitutable = false;
+      return false;
+    }
+    if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
+      Reconstitutable = false;
+      return false;
     }
     return true;
   }

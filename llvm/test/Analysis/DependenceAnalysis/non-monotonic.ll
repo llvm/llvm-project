@@ -46,7 +46,7 @@ define void @f(ptr %A) {
 ; DISABLE-CHECK-NEXT:  Src: store i8 1, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.0, align 1
 ; DISABLE-CHECK-NEXT:    da analyze - none!
 ; DISABLE-CHECK-NEXT:  Src: store i8 1, ptr %idx.0, align 1 --> Dst: store i8 2, ptr %idx.1, align 1
-; DISABLE-CHECK-NEXT:    da analyze - output [<>]!
+; DISABLE-CHECK-NEXT:    da analyze - output [*|<]!
 ; DISABLE-CHECK-NEXT:  Src: store i8 2, ptr %idx.1, align 1 --> Dst: store i8 2, ptr %idx.1, align 1
 ; DISABLE-CHECK-NEXT:    da analyze - output [*]!
 ;

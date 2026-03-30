@@ -394,8 +394,7 @@ void DataAggregator::parsePreAggregated() {
   Line = 1;
 
   // When processing a shared object, filter pre-aggregated entries by buildid.
-  if (BC && !BC->HasFixedLoadAddress &&
-      BC->getFilename().ends_with(".so")) {
+  if (BC && !BC->HasFixedLoadAddress && BC->getFilename().ends_with(".so")) {
     if (auto FileBID = BC->getFileBuildID()) {
       FilterBuildID = *FileBID;
       outs() << "PERF2BOLT: filtering pre-aggregated data for buildid "
@@ -748,8 +747,6 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     processBasicEvents();
   else
     processBranchEvents();
-
-  printDSODiagnostics();
 
   processMemEvents();
 
@@ -1454,17 +1451,6 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return std::error_code();
   }
 
-  int64_t Count = Counters[0];
-  int64_t Mispreds = Counters[1];
-
-  if (Addr[0]) {
-    // Per-DSO sample count
-    DSOSamples[Addr[0]->Name] += Count;
-    // Cross-DSO branch count
-    if (Addr[1] && Addr[1]->Name != Addr[0]->Name)
-      CrossDSOSamples[{Addr[0]->Name, Addr[1]->Name}] += Count;
-  }
-
   // Reset external addresses.
   for (std::optional<Location> &Loc : Addr)
     if (Loc && Loc->Name != FilterBuildID)
@@ -1474,6 +1460,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
   if (FromFunc)
     FromFunc->setHasProfileAvailable();
+
+  int64_t Count = Counters[0];
+  int64_t Mispreds = Counters[1];
 
   /// Record basic IP sample into \p BasicSamples and return.
   if (Type == SAMPLE) {
@@ -1689,70 +1678,6 @@ void DataAggregator::printBranchStacksDiagnostics(
   if (printColoredPct(IgnoredSamples, NumTotalSamples, 20, 50) > 50)
     errs() << "PERF2BOLT-WARNING: less than 50% of all recorded samples "
               "were attributed to the input binary\n";
-}
-
-void DataAggregator::printDSODiagnostics() const {
-  // No buildids (except main binary).
-  if (DSOSamples.size() == 1)
-    return;
-
-  // Main binary: show DSOs covering 95th percentile of sample count.
-  if (FilterBuildID.empty()) {
-    // Sort DSOs by sample count.
-    std::vector<std::pair<std::string, uint64_t>> DSOs;
-    DSOs.reserve(DSOSamples.size());
-    for (const auto &[DSO, Count] : DSOSamples)
-      DSOs.emplace_back(DSO, Count);
-    llvm::sort(DSOs, llvm::less_second());
-
-    outs() << "PERF2BOLT: DSOs covering 95th percentile by samples:\n";
-    uint64_t CumulativeCount = 0;
-    for (auto &[DSO, Count] : llvm::reverse(DSOs)) {
-      CumulativeCount += Count;
-      if (DSO.empty())
-        DSO = "(binary)";
-      outs() << "\t" << DSO << ": " << Count << " samples, "
-             << format("%.1f%%", Count * 100.0f / NumTotalSamples)
-             << " of total, "
-             << format("%.1f%%", CumulativeCount * 100.0f / NumTotalSamples)
-             << " cumulative\n";
-      if (CumulativeCount * 100 >= NumTotalSamples * 95)
-        break;
-    }
-  }
-
-  // Cross-DSO branches: show DSO pairs covering 95th percentile of branch count.
-  if (CrossDSOSamples.size() > 1) {
-    // Sort DSO pairs by branch count.
-    std::vector<std::pair<std::pair<std::string, std::string>, uint64_t>>
-        XDSOs;
-    XDSOs.reserve(CrossDSOSamples.size());
-    // For main binary, include all DSOs. For FilterBuildID case, only include
-    // branches belonging to that DSO.
-    uint64_t NumTotalBranches = 0;
-    for (const auto &[FromTo, Count] : CrossDSOSamples) {
-      bool ShouldInclude = FilterBuildID.empty() || FromTo.first == FilterBuildID;
-      if (!ShouldInclude)
-        continue;
-      NumTotalBranches += Count;
-      XDSOs.emplace_back(FromTo, Count);
-    }
-    llvm::sort(XDSOs, llvm::less_second());
-
-    outs() << "PERF2BOLT: DSO pairs covering 95th percentile of branches:\n";
-    uint64_t CumulativeCount = 0;
-    for (auto &[FromTo, Count] : llvm::reverse(XDSOs)) {
-      CumulativeCount += Count;
-      outs() << "\t" << FromTo.first << " -> " << FromTo.second << ": " << Count
-             << " branches, "
-             << format("%.1f%%", Count * 100.0f / NumTotalBranches)
-             << " of total, "
-             << format("%.1f%%", CumulativeCount * 100.0f / NumTotalBranches)
-             << " cumulative\n";
-      if (CumulativeCount * 100 >= NumTotalBranches * 95)
-        break;
-    }
-  }
 }
 
 std::error_code DataAggregator::parseBranchEvents() {

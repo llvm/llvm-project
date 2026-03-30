@@ -283,6 +283,9 @@ public:
   /// Get the kind of extension that a cast opcode represents.
   LLVM_ABI static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction::CastOps CastOpc);
+  /// Get the cast opcode for an extension kind.
+  LLVM_ABI static Instruction::CastOps
+  getOpcodeForPartialReductionExtendKind(PartialReductionExtendKind Kind);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.

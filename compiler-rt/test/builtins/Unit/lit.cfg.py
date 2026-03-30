@@ -109,8 +109,8 @@ else:
     else:
         config.substitutions.append(("%librt ", base_lib + " -lc -lm "))
 
-builtins_build_crt = get_required_attr(config, "builtins_build_crt")
-if builtins_build_crt:
+builtins_test_crt = get_required_attr(config, "builtins_test_crt")
+if builtins_test_crt:
     base_obj = os.path.join(
         config.compiler_rt_libdir, "clang_rt.%%s%s.o" % config.target_suffix
     )

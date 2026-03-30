@@ -741,9 +741,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
     IntrinsicInst *IntII, SmallSetVector<Instruction *, 32> &DeadInsts) {
   if (!IntII->hasOneUse())
     return false;
-  Instruction *StoredBy = dyn_cast<Instruction>(IntII->user_back());
-  if (!StoredBy)
-    return false;
+  Instruction *StoredBy = IntII->user_back();
   auto *SI = dyn_cast<StoreInst>(StoredBy);
   auto *II = dyn_cast<IntrinsicInst>(StoredBy);
   if (!SI && !II)

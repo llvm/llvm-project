@@ -202,4 +202,40 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFailsOnMissingSymbol) {
   cantFail(ES.endSession());
 }
 
+TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromExecutionSession) {
+  // Verify that Create(ExecutionSession&) looks up symbols in the bootstrap
+  // JITDylib using the default SimpleNativeMemoryMap symbol names.
+  class EPCWithBootstrapSymbols : public UnsupportedExecutorProcessControl {
+  public:
+    EPCWithBootstrapSymbols(std::shared_ptr<SymbolStringPool> SSP,
+                            StringMap<ExecutorAddr> BS)
+        : UnsupportedExecutorProcessControl(std::move(SSP)) {
+      this->BootstrapSymbols = std::move(BS);
+    }
+  };
+
+  auto &SNs =
+      EPCGenericJITLinkMemoryManager::orc_rt_SimpleNativeMemoryMapSPSSymbols;
+
+  ExecutorAddr AllocatorAddr(1), ReserveAddr(2), InitAddr(3), DeinitAddr(4),
+      ReleaseAddr(5);
+
+  StringMap<ExecutorAddr> BootstrapSyms;
+  BootstrapSyms[SNs.AllocatorName] = AllocatorAddr;
+  BootstrapSyms[SNs.ReserveName] = ReserveAddr;
+  BootstrapSyms[SNs.InitializeName] = InitAddr;
+  BootstrapSyms[SNs.DeinitializeName] = DeinitAddr;
+  BootstrapSyms[SNs.ReleaseName] = ReleaseAddr;
+
+  auto SSP = std::make_shared<SymbolStringPool>();
+  auto EPC =
+      std::make_unique<EPCWithBootstrapSymbols>(SSP, std::move(BootstrapSyms));
+  ExecutionSession ES(std::move(EPC));
+
+  auto Result = EPCGenericJITLinkMemoryManager::Create(ES, SNs);
+  EXPECT_THAT_EXPECTED(Result, Succeeded());
+
+  cantFail(ES.endSession());
+}
+
 } // namespace
