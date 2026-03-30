@@ -368,6 +368,28 @@ function(add_compiler_rt_runtime name type)
         set_property(TARGET ${libname} PROPERTY CXX_STANDARD ${LIB_CXX_STANDARD})
       endif()
       set_target_output_directories(${libname} ${output_dir_${libname}})
+      if(COMPILER_RT_GPU_BUILD)
+        find_program(LLVM_LINK_EXE
+                     NAMES llvm-link
+                     PATHS ${LLVM_TOOLS_BINARY_DIR}
+                     NO_DEFAULT_PATH)
+        file(GENERATE
+             OUTPUT ${CMAKE_BINARY_DIR}/${libname}.rsp
+             CONTENT "$<JOIN:$<TARGET_OBJECTS:${libname}>,\n>")
+        if(LLVM_LINK_EXE)
+          set(compiler_rt_bc_file ${output_dir_${libname}}/lib${output_name_${libname}}.bc)
+          add_custom_target(${libname}_bc
+            COMMAND ${LLVM_LINK_EXE} -o ${compiler_rt_bc_file} @${CMAKE_BINARY_DIR}/${libname}.rsp)
+          add_dependencies(${libname}_bc ${libname})
+	  if(LIB_PARENT_TARGET)
+            add_dependencies(${LIB_PARENT_TARGET} ${libname}_bc)
+	  endif()
+          install(FILES ${compiler_rt_bc_file}
+                  DESTINATION ${install_dir_${libname}}
+                  ${COMPONENT_OPTION})
+        endif()
+      endif()
+
       install(TARGETS ${libname}
         ARCHIVE DESTINATION ${install_dir_${libname}}
                 ${COMPONENT_OPTION}
