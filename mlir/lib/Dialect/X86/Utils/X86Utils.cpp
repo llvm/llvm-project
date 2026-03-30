@@ -125,7 +125,7 @@ inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc, bool isInt8Avx2) {
   static constexpr int64_t maskLo8[] = {0, 8, 1, 9, 2, 10, 3, 11};
   static constexpr int64_t maskHi8[] = {4, 12, 5, 13, 6, 14, 7, 15};
 
-  // Do interleaving between two <8xf32> targeting AVX2.
+  // Do interleaving between two <8xi32> targeting AVX2.
   static constexpr int64_t maskLo8_avx2_int8[] = {0, 1, 2, 3, 8, 9, 10, 11};
   static constexpr int64_t maskHi8_avx2_int8[] = {4, 5, 6, 7, 12, 13, 14, 15};
 

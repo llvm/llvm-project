@@ -126,12 +126,12 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
       4,  20, 36, 52, 5,  21, 37, 53, 6,  22, 38, 54, 7,  23, 39, 55,
       12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63};
 
-  static constexpr int64_t maskLo_int8[] = {
+  static constexpr int64_t maskLo_int8_avx10[] = {
       0,  32, 64, 96,  1,  33, 65, 97,  2,  34, 66, 98,  3,  35, 67, 99,
       8,  40, 72, 104, 9,  41, 73, 105, 10, 42, 74, 106, 11, 43, 75, 107,
       16, 48, 80, 112, 17, 49, 81, 113, 18, 50, 82, 114, 19, 51, 83, 115,
       24, 56, 88, 120, 25, 57, 89, 121, 26, 58, 90, 122, 27, 59, 91, 123};
-  static constexpr int64_t maskHi_int8[] = {
+  static constexpr int64_t maskHi_int8_avx10[] = {
       4,  36, 68, 100, 5,  37, 69, 101, 6,  38, 70, 102, 7,  39, 71, 103,
       12, 44, 76, 108, 13, 45, 77, 109, 14, 46, 78, 110, 15, 47, 79, 111,
       20, 52, 84, 116, 21, 53, 85, 117, 22, 54, 86, 118, 23, 55, 87, 119,
@@ -141,8 +141,8 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
   mlir::DenseI64ArrayAttr maskHi = rewriter.getDenseI64ArrayAttr(maskHi_bf16);
 
   if (elemTy.isSignlessInteger(8)) {
-    maskLo = rewriter.getDenseI64ArrayAttr(maskLo_int8);
-    maskHi = rewriter.getDenseI64ArrayAttr(maskHi_int8);
+    maskLo = rewriter.getDenseI64ArrayAttr(maskLo_int8_avx10);
+    maskHi = rewriter.getDenseI64ArrayAttr(maskHi_int8_avx10);
 
     if (nonUnitDimAcc == 32) {
       maskLo = rewriter.getDenseI64ArrayAttr(maskLo_int8_avx2);
