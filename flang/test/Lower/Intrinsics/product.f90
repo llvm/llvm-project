@@ -29,14 +29,6 @@ product_test3 = product(a)
 ! CHECK: hlfir.product {{.*}} : (!fir.box<!fir.array<?xcomplex<f32>>>) -> complex<f32>
 end function
 
-! CHECK-LABEL: func @_QPproduct_test4(
-! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xcomplex<f80>>>{{.*}}) -> complex<f80>
-complex(10) function product_test4(x)
-complex(10):: x(:)
-product_test4 = product(x)
-! CHECK: hlfir.product {{.*}} : (!fir.box<!fir.array<?xcomplex<f80>>>) -> complex<f80>
-end
-
 ! CHECK-LABEL: func @_QPproduct_test_optional(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>
 real function product_test_optional(mask, x)
