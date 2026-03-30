@@ -1308,7 +1308,7 @@ setInsertPointForPossiblyEmptyBlock(llvm::IRBuilderBase &builder,
   if (block == nullptr)
     block = builder.GetInsertBlock();
 
-  if (block->empty() || block->getTerminator() == nullptr)
+  if (!block->hasTerminator())
     builder.SetInsertPoint(block);
   else
     builder.SetInsertPoint(block->getTerminator());

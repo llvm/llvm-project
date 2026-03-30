@@ -7895,7 +7895,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
   // if what we are checking for includes undef and the value is not an integer.
   if (!includesUndef(Kind) || V->getType()->isIntegerTy())
     while (Dominator) {
-      auto *TI = Dominator->getBlock()->getTerminator();
+      auto *TI = Dominator->getBlock()->getTerminatorOrNull();
 
       Value *Cond = nullptr;
       if (auto BI = dyn_cast_or_null<CondBrInst>(TI)) {
