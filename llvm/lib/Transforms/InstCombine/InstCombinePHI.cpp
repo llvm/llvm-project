@@ -568,19 +568,16 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
          !GEP->hasAllConstantIndices()))
       AllBasePointersAreAllocas = false;
 
-    // Compare the operand lists.
+    // Don't merge two GEPs if the GEP indices a struct, because struct
+    // indices must be constant.
     gep_type_iterator TypeIter = gep_type_begin(GEP);
+    if (GEP->getNumIndices() == 1 && TypeIter.isStruct())
+      return nullptr;
+
+    // Compare the operand lists.
     for (unsigned Op = 0, E = FirstInst->getNumOperands(); Op != E; ++Op) {
       if (FirstInst->getOperand(Op) == GEP->getOperand(Op))
         continue;
-
-      // Don't merge two GEPs if the GEP indices a struct, because struct
-      // indices must be constant.
-      if (Op > 0) { // skip pointer operand
-        if (TypeIter.isStruct())
-          return nullptr;
-        ++TypeIter;
-      }
 
       // Don't merge if there is a mixture of constant and variable indices for
       // the same operand. If all the indices are constant, the chance is higher

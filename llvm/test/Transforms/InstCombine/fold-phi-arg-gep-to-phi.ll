@@ -14,11 +14,11 @@ define <16 x ptr> @test(i1 %tobool, i1 %end, <16 x i64> %varidx) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x ptr> [ [[MM_VECTORGEP11:%.*]], %[[F0:.*]] ], [ [[MM_VECTORGEP22:%.*]], %[[F1:.*]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[F1]], label %[[F0]]
 ; CHECK:       [[F0]]:
-; CHECK-NEXT:    [[MM_VECTORGEP11_SPLIT:%.*]] = getelementptr inbounds [[FOO]], <16 x ptr> [[LANE_15]], <16 x i64> [[VARIDX]]
+; CHECK-NEXT:    [[MM_VECTORGEP11_SPLIT:%.*]] = getelementptr inbounds [6 x i8], <16 x ptr> [[LANE_15]], <16 x i64> [[VARIDX]]
 ; CHECK-NEXT:    [[MM_VECTORGEP11]] = getelementptr inbounds i8, <16 x ptr> [[MM_VECTORGEP11_SPLIT]], i64 2
 ; CHECK-NEXT:    br i1 [[END]], label %[[LOOP]], label %[[MERGE:.*]]
 ; CHECK:       [[F1]]:
-; CHECK-NEXT:    [[MM_VECTORGEP22_SPLIT:%.*]] = getelementptr inbounds [[FOO]], <16 x ptr> [[LANE_15]], <16 x i64> [[VARIDX]]
+; CHECK-NEXT:    [[MM_VECTORGEP22_SPLIT:%.*]] = getelementptr inbounds [6 x i8], <16 x ptr> [[LANE_15]], <16 x i64> [[VARIDX]]
 ; CHECK-NEXT:    [[MM_VECTORGEP22]] = getelementptr inbounds i8, <16 x ptr> [[MM_VECTORGEP22_SPLIT]], i64 4
 ; CHECK-NEXT:    br i1 [[END]], label %[[LOOP]], label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
