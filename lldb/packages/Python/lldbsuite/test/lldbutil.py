@@ -1688,8 +1688,8 @@ def read_file_from_process_wd(test, name):
 def wait_for_file_on_target(testcase, file_path):
     import time
 
-    MAX_ATTEMPTS = 10
-    timeout_seconds = 10 if "ASAN_OPTIONS" in os.environ else 5
+    MAX_ATTEMPTS = 60
+    timeout_seconds = 20 if "ASAN_OPTIONS" in os.environ else 2
     for i in range(MAX_ATTEMPTS):
         command = f"ls {file_path}"
         err, retcode, msg = testcase.run_platform_command(command)
