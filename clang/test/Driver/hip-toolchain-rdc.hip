@@ -75,7 +75,7 @@
 
 // emit objects for host side path
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" [[HOST:"x86_64-[^"]+"]]
-// CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
+// CHECK-SAME: "-aux-triple" "amdgpu-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fgpu-rdc"
@@ -83,7 +83,7 @@
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" [[HOST]]
-// CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
+// CHECK-SAME: "-aux-triple" "amdgpu-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fgpu-rdc"
@@ -91,7 +91,7 @@
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
 // generate image for device side path on gfx803
-// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG]] "-cc1" "-triple" "amdgpu8.03-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST:"x86_64-[^"]+"]]
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: "-flto=full" "-flto-unit"
@@ -104,7 +104,7 @@
 // CHECK-SAME: {{.*}} "-o" [[A_BC1:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
-// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG]] "-cc1" "-triple" "amdgpu8.03-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: "-flto=full" "-flto-unit"
@@ -125,7 +125,7 @@
 // CHECK-SAME: "-o" "[[IMG_DEV1:.*.out]]" [[A_BC1]] [[B_BC1]]
 
 // generate image for device side path on gfx900
-// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG]] "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: "-flto=full" "-flto-unit"
@@ -136,7 +136,7 @@
 // CHECK-SAME: {{.*}} "-o" [[A_BC2:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
-// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG]] "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: "-flto=full" "-flto-unit"
@@ -159,7 +159,7 @@
 // combine images generated into hip fat binary object
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // CHECK-SAME: "-bundle-align=4096"
-// CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
+// CHECK-SAME: "-targets={{.*}},hipv4-amdgpu8.03-amd-amdhsa--gfx803,hipv4-amdgpu9.00-amd-amdhsa--gfx900"
 // CHECK-SAME: "-input={{.*}}" "-input=[[IMG_DEV1]]" "-input=[[IMG_DEV2]]" "-output=[[BUNDLE]]"
 
 // CHECK: [[MC:".*clang.*"]] "-target" [[HOST]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
@@ -178,7 +178,7 @@
 // RUN: %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc --offload-new-driver \
 // RUN:   -L. -foffload-lto %s 2>&1 | FileCheck -check-prefix=LTO_DEFAULT_NEW %s
 // LTO_DEFAULT_NEW: clang-linker-wrapper
-// LTO_DEFAULT_NEW-NOT: "--device-compiler=amdgcn-amd-amdhsa=-flto-partitions=
+// LTO_DEFAULT_NEW-NOT: "--device-compiler=amdgpu-amd-amdhsa=-flto-partitions=
 
 // RUN: %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc --no-offload-new-driver \
 // RUN:   -L. -foffload-lto -flto-partitions=42 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS %s

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
+#include "clang/Basic/OffloadArch.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Options/Options.h"
@@ -39,8 +41,16 @@ const unsigned HIPCodeObjectAlign = 4096;
 } // namespace
 
 // Constructs a triple string for clang offload bundler.
-static std::string normalizeForBundler(const llvm::Triple &T,
-                                       bool HasTargetID) {
+static std::string normalizeForBundler(const llvm::Triple &OrigT,
+                                       StringRef BoundArch) {
+  llvm::Triple T(OrigT);
+  bool HasTargetID = !BoundArch.empty();
+  if (T.getSubArch() == llvm::Triple::NoSubArch && HasTargetID) {
+    llvm::Triple::SubArchType SubArch = getOffloadArchSubArch(
+        StringToOffloadArch(getProcessorFromTargetID(T, BoundArch)));
+    T.setArch(T.getArch(), SubArch);
+  }
+
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
@@ -311,10 +321,9 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
     BoundArch BA = A->getOffloadingArch();
     BundlerTargetArg += ',' + OffloadKind + '-';
     if (BA.ArchName == "amdgcnspirv")
-      BundlerTargetArg +=
-          normalizeForBundler(llvm::Triple("spirv64-amd-amdhsa"), true);
+      BundlerTargetArg += "spirv64-amd-amdhsa-";
     else
-      BundlerTargetArg += normalizeForBundler(InputTriple, !BA.empty());
+      BundlerTargetArg += normalizeForBundler(InputTriple, BA.ArchName);
     if (BA)
       BundlerTargetArg += '-' + BA.ArchName.str();
   }

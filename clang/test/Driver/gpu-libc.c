@@ -17,7 +17,7 @@
 // RUN:   %clang -### -fopenmp=libomp --target=x86_64-unknown-linux-gnu \
 // RUN:     --offload-arch=gfx908 --rocm-path=%S/Inputs/rocm --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin %s 2>&1 | FileCheck %s --check-prefix=OPENMP-AMDGPU
-// OPENMP-AMDGPU: clang-linker-wrapper{{.*}}"--device-linker=amdgcn-amd-amdhsa=-lc"
+// OPENMP-AMDGPU: clang-linker-wrapper{{.*}}"--device-linker=amdgpu-amd-amdhsa=-lc"
 // RUN:   %clang -### -fopenmp=libomp --target=x86_64-unknown-linux-gnu -foffload-lto \
 // RUN:     --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin %s 2>&1 | FileCheck %s --check-prefix=OPENMP-NVPTX
