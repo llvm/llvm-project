@@ -38,7 +38,10 @@
 
 // preserve_none is supported on aarch64, but causes problems when asan is
 // enabled. See https://github.com/llvm/llvm-project/issues/177519.
+// preserve_none also causes problems on clang <= 19 if asan is enabled.
 #if !defined(__aarch64__) && !defined(__i386__) &&                             \
+    !(defined(__clang_major__) && __clang_major__ <= 19 &&                     \
+      __has_feature(address_sanitizer)) &&                                     \
     __has_cpp_attribute(clang::preserve_none)
 #define PRESERVE_NONE [[clang::preserve_none]]
 #else
@@ -720,7 +723,7 @@ bool Neg(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    assert(isIntegerType(Name) &&
+    assert((isIntegerType(Name) || Name == PT_FixedPoint) &&
            "don't expect other types to fail at constexpr negation");
     S.Stk.push<T>(Result);
 

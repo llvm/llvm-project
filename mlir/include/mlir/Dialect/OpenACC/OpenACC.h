@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACC_H_
 #define MLIR_DIALECT_OPENACC_OPENACC_H_
 
+#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"

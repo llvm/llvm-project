@@ -1196,6 +1196,7 @@ def skipUnlessCompilerSupports(flag):
 
     return skipTestIfFn(does_compiler_support_flag)
 
+
 def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""
     return skipTestIfFn(is_running_under_asan)(func)
@@ -1344,6 +1345,12 @@ def skipUnlessArm64eSupported(func):
         # Need debugserver built with arm64e support.
         if not configuration.arm64e_debugserver:
             return "debugserver not built with arm64e support"
+
+        # Technically ASan is supported, but we need an arm64e sanitizer
+        # runtime and we assume that's not the case unless we run the whole
+        # test suite as arm64e.
+        if is_running_under_asan():
+            return "Sanitizer runtime may not support arm64e"
 
         return None
 

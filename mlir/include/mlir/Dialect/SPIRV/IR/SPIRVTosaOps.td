@@ -2462,4 +2462,190 @@ def SPIRV_TosaTransposeOp : SPIRV_TosaOpWithResult<"Transpose", 60, [Pure,
 }
 
 
+def SPIRV_TosaGatherOp : SPIRV_TosaOpWithResult<"Gather", 61, [NoMemoryEffect,
+  AllElementTypesMatch<["values", "output"]>,
+  ValuesIndicesShapesMatch<"values", "indices", "output">]> {
+  let summary = "Gather operation.";
+
+  let description = [{
+    Generate a tensor for which each element in the output is a subtensor of the
+    values tensor based on the indices. Undefined behaviour may occur if the
+    specified indices are out of range.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_gather
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_gather
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Gather %values, %indices : !spirv.arm.tensor<31x11x45xi32>, !spirv.arm.tensor<31x15xi32> -> !spirv.arm.tensor<31x15x45xi32>
+    %0 = spirv.Tosa.Gather %values, %indices : !spirv.arm.tensor<59x61x19xf32>, !spirv.arm.tensor<59x65xi32> -> !spirv.arm.tensor<59x65x19xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm3D: $values,
+    SPIRV_Int32_TensorArm2D: $indices
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm3D: $output
+  );
+
+  let assemblyFormat = [{
+    $values `,`
+    $indices
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getValuesType() {
+      return cast<::mlir::spirv::TensorArmType>(getValues().getType());
+    }
+    ::mlir::spirv::TensorArmType getIndicesType() {
+      return cast<::mlir::spirv::TensorArmType>(getIndices().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaScatterOp : SPIRV_TosaOpWithResult<"Scatter", 62, [NoMemoryEffect,
+  AllElementTypesMatch<["values_in", "input", "values_out"]>,
+  AllTypesMatch<["values_in", "values_out"]>,
+  ValuesIndicesShapesMatch<"values_in", "indices", "input">]> {
+  let summary = "Scatter operation.";
+
+  let description = [{
+    The values_out tensor is set to the values_in tensor with data modified as
+    follows: data from the input tensor is inserted at the positions specified
+    by the indices tensor. In use cases that require multiple updates to the
+    same output position, these must be decomposed into multiple scatter
+    operations.  Undefined behaviour may occur if the specified indices are
+    out of range or duplicate indices are provided.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_scatter
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_scatter
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Scatter %values_in, %indices, %arg0 : !spirv.arm.tensor<34x28x54xi32>, !spirv.arm.tensor<34x18xi32>, !spirv.arm.tensor<34x18x54xi32> -> !spirv.arm.tensor<34x28x54xi32>
+    %0 = spirv.Tosa.Scatter %values_in, %indices, %arg0 : !spirv.arm.tensor<18x34x25xf16>, !spirv.arm.tensor<18x20xi32>, !spirv.arm.tensor<18x20x25xf16> -> !spirv.arm.tensor<18x34x25xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm3D: $values_in,
+    SPIRV_Int32_TensorArm2D: $indices,
+    SPIRV_TosaNumerical_TensorArm3D: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm3D: $values_out
+  );
+
+  let assemblyFormat = [{
+    $values_in `,`
+    $indices `,`
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getValuesInType() {
+      return cast<::mlir::spirv::TensorArmType>(getValuesIn().getType());
+    }
+    ::mlir::spirv::TensorArmType getIndicesType() {
+      return cast<::mlir::spirv::TensorArmType>(getIndices().getType());
+    }
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
+  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
+  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
+  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
+  TypeConstraintImplicationOn<"input", I8, "output", [I8, I32]>,
+  TypeConstraintImplicationOn<"input", I16, "output", [I16, I64]>]> {
+  let summary = "Resize operation, supports various resize/upsample modes.";
+
+  let description = [{
+    Resizes a tensor. Resize is only allowed in the H and W dimensions, given the input
+    shape = [N,H,W,C].
+
+    The height dimension (H) is scaled by factor ($ scale_y_n/scale_y_d $). The width
+    dimension (W) is scaled by factor ($ scale_x_n/scale_x_d $).
+
+    The NearestNeighbor mode returns the value of the input tensor closest to
+    the calculated sample position for both floating-point and integer data
+    formats.
+
+    Floating-point Bilinear mode returns a bilinearly interpolated output value
+    based on the four closest input sample positions.
+
+    For integer Bilinear interpolation mode, the output value must be scaled by
+    $ 1/(scale_y_n * scale_x_n) $ in a following operation to complete the
+    interpolation (for example with a rescale operator).
+
+    The output dimensions can be derived from the input dimensions by inverting
+    the scale. The [border_y, border_x] values adjust the output size to allow
+    fractional sampling beyond integer input position (H - 1,W - 1).
+
+    The limit MAX_SCALE=256 is applied to each scale ratio after reduction of the
+    ratio. Individual scale numerator and denominator values are allowed to be
+    larger than MAX_SCALE.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_resize
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_resize
+
+    #### Example:
+    ```mlir
+    %4 = spirv.Tosa.Resize mode = <NearestNeighbor>, %arg0, %scale, %offset, %border : !spirv.arm.tensor<1x1x31x55xi8>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x1x278x55xi8>
+    %4 = spirv.Tosa.Resize mode = <Bilinear>, %arg0, %scale, %offset, %border : !spirv.arm.tensor<1x48x33x63xf32>, !spirv.arm.tensor<4xi32>, !spirv.arm.tensor<2xi32>, !spirv.arm.tensor<2xi32> -> !spirv.arm.tensor<1x753x297x63xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaExtResizeModeAttr: $mode,
+    SPIRV_TosaNumerical_TensorArm4D: $input,
+    SPIRV_Int32_1DTensorArmOfLength4: $scale,
+    SPIRV_Int32_1DTensorArmOfLength2: $offset,
+    SPIRV_Int32_1DTensorArmOfLength2: $border
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm4D: $output
+  );
+
+  let assemblyFormat = [{
+    `mode` `=` $mode `,`
+    $input `,`
+    $scale `,`
+    $offset `,`
+    $border
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+    ::mlir::spirv::TensorArmType getScaleType() {
+      return cast<::mlir::spirv::TensorArmType>(getScale().getType());
+    }
+    ::mlir::spirv::TensorArmType getOffsetType() {
+      return cast<::mlir::spirv::TensorArmType>(getOffset().getType());
+    }
+    ::mlir::spirv::TensorArmType getBorderType() {
+      return cast<::mlir::spirv::TensorArmType>(getBorder().getType());
+    }
+  }];
+}
+
+
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_OPS
