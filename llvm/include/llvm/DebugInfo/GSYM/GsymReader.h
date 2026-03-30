@@ -283,12 +283,12 @@ protected:
 
   /// Get an appropriate address info offsets array.
   ///
-  /// The address table in the GSYM file is stored as array of 1, 2, 4 or 8
-  /// byte offsets from the base address. The table is stored internally as a
-  /// array of bytes that are in the correct endianness. When we access this
-  /// table we must get an array that matches those sizes. This templatized
-  /// helper function is used when accessing address offsets in the AddrOffsets
-  /// member variable.
+  /// The address table in the GSYM file is stored as array of 1-8 byte offsets
+  /// from the base address. The table is stored internally as an array of
+  /// bytes that are in the correct endianness. When we access this table we
+  /// must get an array that matches those sizes. This templatized helper
+  /// function is used when accessing address offsets in the AddrOffsets member
+  /// variable.
   ///
   /// \returns An ArrayRef of an appropriate address offset size.
   template <class T> ArrayRef<T>
@@ -299,12 +299,11 @@ protected:
 
   /// Get an appropriate address from the address table.
   ///
-  /// The address table in the GSYM file is stored as array of 1, 2, 4 or 8
-  /// byte address offsets from the base address. The table is stored
-  /// internally as a array of bytes that are in the correct endianness. In
-  /// order to extract an address from the address table we must access the
-  /// address offset using the correct size and then add it to the base
-  /// address.
+  /// The address table in the GSYM file is stored as array of 1-8 byte address
+  /// offsets from the base address. The table is stored internally as a array
+  /// of bytes that are in the correct endianness. In order to extract an
+  /// address from the address table we must access the address offset using
+  /// the correct size and then add it to the base address.
   ///
   /// \param Index An index into the AddrOffsets array.
   /// \returns An virtual address that matches the original object file for the

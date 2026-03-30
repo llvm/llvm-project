@@ -27,7 +27,8 @@ constexpr uint32_t GSYM_VERSION_2 = 2;
 
 /// Encoding format for the string table.
 enum class StrTableEncodingType : uint8_t {
-  /// A list of NULL-terminated strings (same as V1).
+  /// A list of NULL-terminated strings (same as V1). The first string at
+  /// offset zero must be the empty C string.
   Default = 0,
 };
 

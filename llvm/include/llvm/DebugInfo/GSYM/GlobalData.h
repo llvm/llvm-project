@@ -22,11 +22,10 @@ class FileWriter;
 enum class GlobalInfoType : uint32_t {
   EndOfList = 0u,
   // The address offsets table. It's a list of function addresses subtracted by
-  // HeaderV2::BaseAddress, hence "offset".
+  // the base address, hence "offset".
   //
-  // This table and the address
-  // info offsets table (see below) have the same number of items. The items are
-  // 1-1 mapped.
+  // This table and the address info offsets table (see below) have the same
+  // number of items. The items are 1-1 mapped.
   //
   // Given an address, this table is used to do a binary search to find the
   // index into the address info offsets table, where the location of the
