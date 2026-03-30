@@ -175,4 +175,3 @@ void testCastConstPointer(const A* value) {
   // CHECK-FIXES: const A* a18 = value;
   (void)a18;
 }
-
