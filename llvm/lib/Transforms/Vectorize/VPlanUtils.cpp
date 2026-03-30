@@ -610,7 +610,8 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
 }
 
 SmallVector<VPBasicBlock *>
-VPBlockUtils::blocksChainBetween(VPBasicBlock *FirstBB, VPBasicBlock *LastBB) {
+VPBlockUtils::blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                                  VPBasicBlock *LastBB) {
   assert(FirstBB->getParent() == LastBB->getParent() &&
          "FirstBB and LastBB from different regions");
 #ifndef NDEBUG
