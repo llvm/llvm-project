@@ -50,9 +50,8 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
                                              const CallGraphNode *N) {
   const FunctionDecl *Definition = N->getDefinition();
 
-  // Ignore templates for now.
-  if (Definition->isTemplated())
-    return;
+  // CallGraph does not work for primary templates.
+  assert(!Definition->isTemplated());
 
   auto CallerName = getEntityName(Definition);
   if (!CallerName)
@@ -69,31 +68,28 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
 
   for (const auto &Record : N->callees()) {
     const Decl *CalleeDecl = Record.Callee->getDecl();
-    if (!CalleeDecl) {
-      FnSummary->HasIndirectCalls = true;
-      continue;
-    }
+
+    // FIXME: `clang::CallGraph` does not consider indirect calls, thus this is
+    // never null.
+    assert(CalleeDecl);
+
+    // FIXME: `clang::CallGraph` does not consider ObjCMessageExprs as calls.
+    // Consequently, they don't appear as a Callee.
+    assert(!isa<ObjCMethodDecl>(CalleeDecl));
+
+    // FIXME: `clang::CallGraph` does not create entries for primary templates.
     assert(!CalleeDecl->isTemplated());
-
-    // Objective-C methods might be replaced at runtime, so they are effectively
-    // indirect calls.
-    if (isa<ObjCMethodDecl>(CalleeDecl)) {
-      FnSummary->HasIndirectCalls = true;
-      continue;
-    }
-
-    // Treat virtual functions as indirect calls for now.
-    if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CalleeDecl);
-        MD && MD->isVirtual()) {
-      FnSummary->HasIndirectCalls = true;
-      continue;
-    }
 
     auto CalleeName = getEntityName(CalleeDecl);
     if (!CalleeName)
       continue;
 
     EntityId CalleeId = SummaryBuilder.addEntity(*CalleeName);
+    if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CalleeDecl);
+        MD && MD->isVirtual()) {
+      FnSummary->VirtualCallees.insert(CalleeId);
+      continue;
+    }
     FnSummary->DirectCallees.insert(CalleeId);
   }
 

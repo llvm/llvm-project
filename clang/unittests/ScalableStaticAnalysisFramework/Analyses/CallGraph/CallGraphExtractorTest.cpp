@@ -21,13 +21,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
 
 using namespace clang;
 using namespace ssaf;
-
-using llvm::Succeeded;
 
 namespace {
 AST_MATCHER(FunctionDecl, isPrimaryTemplate) {
@@ -35,21 +34,91 @@ AST_MATCHER(FunctionDecl, isPrimaryTemplate) {
 }
 } // namespace
 
-static llvm::Expected<const FunctionDecl *> findFn(ASTContext &Ctx,
-                                                   StringRef FnName) {
+static llvm::Expected<const NamedDecl *> findDecl(ASTContext &Ctx,
+                                                  StringRef FnName) {
   using namespace ast_matchers;
   auto Matcher =
       functionDecl(hasName(FnName), unless(isPrimaryTemplate())).bind("decl");
   auto Matches = match(Matcher, Ctx);
   if (Matches.empty())
-    return llvm::createStringError(
-        "No FunctionDecl definition was found with name '" + FnName + "'");
-  auto *FD = Matches[0].getNodeAs<FunctionDecl>("decl");
-  assert(FD);
-  return FD->getCanonicalDecl();
+    return llvm::createStringError("No definition was found with name '" +
+                                   FnName + "'");
+  auto *ND = Matches[0].template getNodeAs<NamedDecl>("decl");
+  assert(ND);
+  return cast<NamedDecl>(ND->getCanonicalDecl());
 }
 
+// ============================================================================
+// PrintTo overload for readable failure messages.
+// Must live in the same namespace as Location (clang::ssaf) for ADL.
+// ============================================================================
+
+namespace clang::ssaf {
+void PrintTo(const CallGraphSummary::Location &Loc, std::ostream *OS) {
+  *OS << Loc.File << ":" << Loc.Line << ":" << Loc.Column;
+}
+void PrintTo(const CallGraphSummary &S, std::ostream *OS) {
+  *OS << "CallGraphSummary { PrettyName: '" << S.PrettyName << "'"
+      << ", Definition: ";
+  PrintTo(S.Definition, OS);
+  *OS << ", DirectCallees: " << S.DirectCallees.size()
+      << ", VirtualCallees: " << S.VirtualCallees.size() << " }";
+}
+} // namespace clang::ssaf
+
 namespace {
+
+MATCHER_P3(DefinedAt, File, Line, Column,
+           std::string(negation ? "is not" : "is") + " defined at " +
+               std::string(File) + ":" + testing::PrintToString(Line) + ":" +
+               testing::PrintToString(Column)) {
+  const auto &D = arg.Definition;
+  if (D.File != File || D.Line != Line || D.Column != Column) {
+    *result_listener << "defined at " << D.File << ":" << D.Line << ":"
+                     << D.Column;
+    return false;
+  }
+  return true;
+}
+
+MATCHER_P(HasPrettyName, Name,
+          std::string(negation ? "doesn't have" : "has") + " pretty name '" +
+              testing::PrintToString(Name) + "'") {
+  if (arg.PrettyName != std::string(Name)) {
+    *result_listener << "has pretty name '" << arg.PrettyName << "'";
+    return false;
+  }
+  return true;
+}
+
+MATCHER(HasNoDirectCallees,
+        std::string(negation ? "has" : "has no") + " direct callees") {
+  if (!arg.DirectCallees.empty()) {
+    *result_listener << "has " << arg.DirectCallees.size()
+                     << " direct callee(s)";
+    return false;
+  }
+  return true;
+}
+
+MATCHER(HasNoVirtualCallees,
+        std::string(negation ? "has" : "has no") + " virtual callees") {
+  if (!arg.VirtualCallees.empty()) {
+    *result_listener << "has " << arg.VirtualCallees.size()
+                     << " virtual callee(s)";
+    return false;
+  }
+  return true;
+}
+
+template <typename... Matchers> auto hasSummaryThat(const Matchers &...Ms) {
+  using namespace testing;
+  return llvm::HasValue(Pointee(AllOf(std::move(Ms)...)));
+}
+
+// ============================================================================
+// Test fixture
+// ============================================================================
 
 struct CallGraphExtractorTest : ssaf::TestFixture {
   TUSummary Summary =
@@ -58,8 +127,8 @@ struct CallGraphExtractorTest : ssaf::TestFixture {
 
   /// Creates the AST and extractor, then extracts the summaries from the AST.
   /// This will update the \c AST \c Builder and \c Summary data members.
-  void runExtractor(StringRef Code) {
-    AST = tooling::buildASTFromCode(Code);
+  void runExtractor(StringRef Code, ArrayRef<std::string> Args = {}) {
+    AST = tooling::buildASTFromCodeWithArgs(Code, Args);
     auto Consumer = makeTUSummaryExtractor("CallGraph", Builder);
     Consumer->HandleTranslationUnit(AST->getASTContext());
   }
@@ -68,29 +137,63 @@ struct CallGraphExtractorTest : ssaf::TestFixture {
   llvm::Expected<const CallGraphSummary *>
   findSummary(llvm::StringRef FnName) const;
 
-  /// Collects the USRs of all direct callees in CallGraphSummary \p S.
-  std::set<std::string> getDirectCalleeUSRs(const CallGraphSummary *S) const;
+  /// Matcher factory: matches a summary whose direct callees are exactly the
+  /// given set of function names (resolved to USRs via the entity table).
+  /// Uses \c testing::ResultOf to transform the summary's EntityId set into
+  /// USR strings before comparing with \c testing::ContainerEq.
+  auto hasDirectCallees(llvm::ArrayRef<StringRef> Names)
+      -> testing::Matcher<const CallGraphSummary &> {
+    auto MaybeUSRs = asUSRs(Names);
+    if (!MaybeUSRs) {
+      ADD_FAILURE() << "Failed to resolve callee names to USRs: "
+                    << llvm::toString(MaybeUSRs.takeError());
+      return testing::An<const CallGraphSummary &>();
+    }
+    std::set<std::string> ExpectedUSRs = std::move(*MaybeUSRs);
+    return testing::ResultOf(
+        "direct callees",
+        [this](const CallGraphSummary &S) {
+          return getUSRsForCallees(S.DirectCallees);
+        },
+        testing::ContainerEq(ExpectedUSRs));
+  }
 
-  /// Looks up the Decls for \p FnNames, and then transforms those into USRs.
-  llvm::Expected<std::set<std::string>>
-  asUSRs(llvm::ArrayRef<StringRef> FnNames);
-
-  /// Creates a GTest matcher selecting the direct callees of summary \p S.
-  auto matchCalleeUSRs(const CallGraphSummary *S) const {
-    return llvm::HasValue(testing::Eq(getDirectCalleeUSRs(S)));
+  /// Matcher factory: same as \c hasDirectCallees but for virtual callees.
+  auto hasVirtualCallees(llvm::ArrayRef<StringRef> Names)
+      -> testing::Matcher<const CallGraphSummary &> {
+    auto MaybeUSRs = asUSRs(Names);
+    if (!MaybeUSRs) {
+      ADD_FAILURE() << "Failed to resolve callee names to USRs: "
+                    << llvm::toString(MaybeUSRs.takeError());
+      return testing::A<const CallGraphSummary &>();
+    }
+    std::set<std::string> ExpectedUSRs = std::move(*MaybeUSRs);
+    return testing::ResultOf(
+        "virtual callees",
+        [this](const CallGraphSummary &S) {
+          return getUSRsForCallees(S.VirtualCallees);
+        },
+        testing::ContainerEq(ExpectedUSRs));
   }
 
 private:
   std::unique_ptr<ASTUnit> AST;
+
+  std::set<std::string>
+  getUSRsForCallees(const std::set<EntityId> &Callees) const;
+
+  /// Looks up the Decls for \p FnNames, and then transforms those into USRs.
+  llvm::Expected<std::set<std::string>>
+  asUSRs(llvm::ArrayRef<StringRef> FnNames);
 };
 
 llvm::Expected<const CallGraphSummary *>
 CallGraphExtractorTest::findSummary(llvm::StringRef FnName) const {
-  auto MaybeFD = findFn(AST->getASTContext(), FnName);
-  if (!MaybeFD)
-    return MaybeFD.takeError();
+  auto MaybeDecl = findDecl(AST->getASTContext(), FnName);
+  if (!MaybeDecl)
+    return MaybeDecl.takeError();
 
-  std::optional<EntityName> EntName = getEntityName(*MaybeFD);
+  std::optional<EntityName> EntName = getEntityName(*MaybeDecl);
   if (!EntName.has_value()) {
     return llvm::createStringError("Failed to create an entity name for '" +
                                    FnName + "'");
@@ -116,17 +219,16 @@ CallGraphExtractorTest::findSummary(llvm::StringRef FnName) const {
   return static_cast<const CallGraphSummary *>(EntityIt->second.get());
 }
 
-std::set<std::string>
-CallGraphExtractorTest::getDirectCalleeUSRs(const CallGraphSummary *S) const {
-  const std::set<EntityId> &DirectCallees = S->DirectCallees;
+std::set<std::string> CallGraphExtractorTest::getUSRsForCallees(
+    const std::set<EntityId> &Callees) const {
   std::set<std::string> USRs;
 
   auto GatherCalleeUSRs = [&](const EntityName &Name, EntityId Id) {
-    if (llvm::is_contained(DirectCallees, Id))
+    if (llvm::is_contained(Callees, Id))
       USRs.insert(TestFixture::getUSR(Name));
   };
   TestFixture::getIdTable(Summary).forEach(GatherCalleeUSRs);
-  assert(DirectCallees.size() == USRs.size());
+  assert(Callees.size() == USRs.size());
   return USRs;
 }
 
@@ -135,10 +237,10 @@ CallGraphExtractorTest::asUSRs(llvm::ArrayRef<StringRef> FnNames) {
   std::set<std::string> USRs;
   ASTContext &Ctx = AST->getASTContext();
   for (StringRef FnName : FnNames) {
-    auto MaybeFD = findFn(Ctx, FnName);
-    if (!MaybeFD)
-      return MaybeFD.takeError();
-    std::optional<EntityName> Name = getEntityName(MaybeFD.get());
+    auto MaybeDecl = findDecl(Ctx, FnName);
+    if (!MaybeDecl)
+      return MaybeDecl.takeError();
+    std::optional<EntityName> Name = getEntityName(MaybeDecl.get());
     if (!Name.has_value()) {
       return llvm::createStringError("Failed to get the USR of '" + FnName +
                                      "'");
@@ -148,6 +250,10 @@ CallGraphExtractorTest::asUSRs(llvm::ArrayRef<StringRef> FnNames) {
   assert(USRs.size() == FnNames.size());
   return USRs;
 }
+
+// ============================================================================
+// Tests
+// ============================================================================
 
 TEST_F(CallGraphExtractorTest, SimpleFunctionCalls) {
   runExtractor(R"cpp(
@@ -161,10 +267,9 @@ TEST_F(CallGraphExtractorTest, SimpleFunctionCalls) {
     }
   )cpp");
 
-  const CallGraphSummary *S;
-  ASSERT_THAT_ERROR(findSummary("calls_a_and_b").moveInto(S), Succeeded());
-  EXPECT_FALSE(S->HasIndirectCalls);
-  EXPECT_THAT_EXPECTED(asUSRs({"a", "b"}), matchCalleeUSRs(S));
+  ASSERT_THAT_EXPECTED(
+      findSummary("calls_a_and_b"),
+      hasSummaryThat(hasDirectCallees({"a", "b"}), HasNoVirtualCallees()));
 }
 
 TEST_F(CallGraphExtractorTest, NoCallees) {
@@ -172,10 +277,9 @@ TEST_F(CallGraphExtractorTest, NoCallees) {
     void leaf() {}
   )cpp");
 
-  const CallGraphSummary *S;
-  ASSERT_THAT_ERROR(findSummary("leaf").moveInto(S), Succeeded());
-  EXPECT_FALSE(S->HasIndirectCalls);
-  EXPECT_TRUE(S->DirectCallees.empty());
+  ASSERT_THAT_EXPECTED(
+      findSummary("leaf"),
+      hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees()));
 }
 
 TEST_F(CallGraphExtractorTest, TransitiveCalls) {
@@ -185,26 +289,17 @@ TEST_F(CallGraphExtractorTest, TransitiveCalls) {
     void a() { b(); }
   )cpp");
 
-  { // a calls b (not c — we only record direct callees).
-    const CallGraphSummary *SA;
-    ASSERT_THAT_ERROR(findSummary("a").moveInto(SA), Succeeded());
-    EXPECT_FALSE(SA->HasIndirectCalls);
-    EXPECT_THAT_EXPECTED(asUSRs({"b"}), matchCalleeUSRs(SA));
-  }
+  // a calls b (not c — we only record direct callees).
+  ASSERT_THAT_EXPECTED(findSummary("a"), hasSummaryThat(hasDirectCallees({"b"}),
+                                                        HasNoVirtualCallees()));
 
-  { // b calls c.
-    const CallGraphSummary *SB;
-    ASSERT_THAT_ERROR(findSummary("b").moveInto(SB), Succeeded());
-    EXPECT_FALSE(SB->HasIndirectCalls);
-    EXPECT_THAT_EXPECTED(asUSRs({"c"}), matchCalleeUSRs(SB));
-  }
+  // b calls c.
+  ASSERT_THAT_EXPECTED(findSummary("b"), hasSummaryThat(hasDirectCallees({"c"}),
+                                                        HasNoVirtualCallees()));
 
-  { // c calls nothing.
-    const CallGraphSummary *SC;
-    ASSERT_THAT_ERROR(findSummary("c").moveInto(SC), Succeeded());
-    EXPECT_FALSE(SC->HasIndirectCalls);
-    EXPECT_TRUE(SC->DirectCallees.empty());
-  }
+  // c calls nothing.
+  ASSERT_THAT_EXPECTED(findSummary("c"), hasSummaryThat(HasNoDirectCallees(),
+                                                        HasNoVirtualCallees()));
 }
 
 TEST_F(CallGraphExtractorTest, VirtualCallsAreImprecise) {
@@ -219,14 +314,10 @@ TEST_F(CallGraphExtractorTest, VirtualCallsAreImprecise) {
       Obj.virt();
     }
   )cpp");
-  const CallGraphSummary *S;
-  ASSERT_THAT_ERROR(findSummary("caller").moveInto(S), Succeeded());
 
-  // Virtual calls are treated as indirect calls.
-  EXPECT_TRUE(S->HasIndirectCalls);
-
-  // Virtual calls should not appear in DirectCallees.
-  EXPECT_THAT_EXPECTED(asUSRs({}), matchCalleeUSRs(S));
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(HasNoDirectCallees(), hasVirtualCallees({"Base::virt"})));
 }
 
 TEST_F(CallGraphExtractorTest, MixedDirectAndVirtualCalls) {
@@ -241,10 +332,9 @@ TEST_F(CallGraphExtractorTest, MixedDirectAndVirtualCalls) {
     }
   )cpp");
 
-  const CallGraphSummary *S;
-  ASSERT_THAT_ERROR(findSummary("caller").moveInto(S), Succeeded());
-  EXPECT_TRUE(S->HasIndirectCalls);
-  EXPECT_THAT_EXPECTED(asUSRs({"direct_target"}), matchCalleeUSRs(S));
+  ASSERT_THAT_EXPECTED(findSummary("caller"),
+                       hasSummaryThat(hasDirectCallees({"direct_target"}),
+                                      hasVirtualCallees({"Base::virt"})));
 }
 
 TEST_F(CallGraphExtractorTest, DeclarationsOnlyNoSummary) {
@@ -266,12 +356,10 @@ TEST_F(CallGraphExtractorTest, DuplicateCallees) {
     }
   )cpp");
 
-  const CallGraphSummary *S;
-  ASSERT_THAT_ERROR(findSummary("caller").moveInto(S), Succeeded());
-  EXPECT_FALSE(S->HasIndirectCalls);
-
   // Despite three calls, there's only one unique callee.
-  EXPECT_THAT_EXPECTED(asUSRs({"target"}), matchCalleeUSRs(S));
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(hasDirectCallees({"target"}), HasNoVirtualCallees()));
 }
 
 TEST_F(CallGraphExtractorTest, NonVirtualMethodCalls) {
@@ -285,10 +373,9 @@ TEST_F(CallGraphExtractorTest, NonVirtualMethodCalls) {
     }
   )cpp");
 
-  const CallGraphSummary *S;
-  ASSERT_THAT_ERROR(findSummary("caller").moveInto(S), Succeeded());
-  EXPECT_FALSE(S->HasIndirectCalls);
-  EXPECT_THAT_EXPECTED(asUSRs({"method"}), matchCalleeUSRs(S));
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(hasDirectCallees({"method"}), HasNoVirtualCallees()));
 }
 
 TEST_F(CallGraphExtractorTest, StaticMethodCalls) {
@@ -301,10 +388,38 @@ TEST_F(CallGraphExtractorTest, StaticMethodCalls) {
     }
   )cpp");
 
-  const CallGraphSummary *S;
-  ASSERT_THAT_ERROR(findSummary("caller").moveInto(S), Succeeded());
-  EXPECT_FALSE(S->HasIndirectCalls);
-  EXPECT_THAT_EXPECTED(asUSRs({"staticMethod"}), matchCalleeUSRs(S));
+  ASSERT_THAT_EXPECTED(findSummary("caller"),
+                       hasSummaryThat(hasDirectCallees({"staticMethod"}),
+                                      HasNoVirtualCallees()));
+}
+
+TEST_F(CallGraphExtractorTest, FunctionPtrCall) {
+  runExtractor(R"cpp(
+    void caller(int (&fptr)()) {
+      fptr();
+    }
+  )cpp");
+
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees()));
+}
+
+TEST_F(CallGraphExtractorTest, ObjCMessageExprs) {
+  runExtractor(R"cpp(
+    @interface NSString
+    - (id)stringByAppendingString:(id)str;
+    @end
+
+    void caller(void) {
+        id msg = [@"Hello" stringByAppendingString:@", World!"];
+    }
+  )cpp",
+               {"-x", "objective-c"});
+
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees()));
 }
 
 TEST_F(CallGraphExtractorTest, DefinitionLocation) {
@@ -319,29 +434,16 @@ TEST_F(CallGraphExtractorTest, DefinitionLocation) {
     }
   )cpp");
 
-  {
-    const CallGraphSummary *S;
-    ASSERT_THAT_ERROR(findSummary("caller").moveInto(S), Succeeded());
-    EXPECT_FALSE(S->HasIndirectCalls);
-    EXPECT_THAT_EXPECTED(
-        asUSRs({"caller", "callee_with_def", "callee_without_def"}),
-        matchCalleeUSRs(S));
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(
+          hasDirectCallees({"caller", "callee_with_def", "callee_without_def"}),
+          HasNoVirtualCallees(), DefinedAt("input.cc", 4U, 10U)));
 
-    EXPECT_EQ(S->Definition.File, "input.cc");
-    EXPECT_EQ(S->Definition.Line, 4U);
-    EXPECT_EQ(S->Definition.Column, 10U);
-  }
-
-  {
-    const CallGraphSummary *S;
-    ASSERT_THAT_ERROR(findSummary("callee_with_def").moveInto(S), Succeeded());
-    EXPECT_FALSE(S->HasIndirectCalls);
-    EXPECT_TRUE(S->DirectCallees.empty());
-
-    EXPECT_EQ(S->Definition.File, "input.cc");
-    EXPECT_EQ(S->Definition.Line, 2U);
-    EXPECT_EQ(S->Definition.Column, 10U);
-  }
+  ASSERT_THAT_EXPECTED(findSummary("callee_with_def"),
+                       hasSummaryThat(HasNoDirectCallees(),
+                                      HasNoVirtualCallees(),
+                                      DefinedAt("input.cc", 2U, 10U)));
 }
 
 TEST_F(CallGraphExtractorTest, PrettyName) {
@@ -353,23 +455,16 @@ TEST_F(CallGraphExtractorTest, PrettyName) {
     }
   )cpp");
 
-  {
-    const CallGraphSummary *S;
-    ASSERT_THAT_ERROR(findSummary("caller").moveInto(S), Succeeded());
-    EXPECT_FALSE(S->HasIndirectCalls);
-    EXPECT_THAT_EXPECTED(asUSRs({"templated_function"}), matchCalleeUSRs(S));
-    EXPECT_EQ(S->PrettyName, "caller(int)");
-  }
+  ASSERT_THAT_EXPECTED(findSummary("caller"),
+                       hasSummaryThat(hasDirectCallees({"templated_function"}),
+                                      HasNoVirtualCallees(),
+                                      HasPrettyName("caller(int)")));
 
-  {
-    const CallGraphSummary *S;
-    ASSERT_THAT_ERROR(findSummary("templated_function").moveInto(S),
-                      Succeeded());
-    EXPECT_FALSE(S->HasIndirectCalls);
-    EXPECT_TRUE(S->DirectCallees.empty());
-    // FIXME: The template arguments are not spelled here.
-    EXPECT_EQ(S->PrettyName, "templated_function(int *)");
-  }
+  // FIXME: The template arguments are not spelled here.
+  ASSERT_THAT_EXPECTED(
+      findSummary("templated_function"),
+      hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees(),
+                     HasPrettyName("templated_function(int *)")));
 }
 
 } // namespace

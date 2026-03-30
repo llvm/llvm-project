@@ -19,6 +19,10 @@ namespace clang::ssaf {
 /// Summary of direct call-graph edges for a single function entity.
 ///
 /// Represents a function definition, and information about its callees.
+///
+/// \bug Indirect calls (e.g. function pointers) are not represented.
+/// \bug ObjCMessageExprs are not represented.
+/// \bug Primary template functions are not represented.
 struct CallGraphSummary final : public EntitySummary {
   struct Location {
     std::string File;
@@ -36,14 +40,12 @@ struct CallGraphSummary final : public EntitySummary {
   /// The set of direct callees of this function.
   std::set<EntityId> DirectCallees;
 
+  /// The set of virtual callees of this function.
+  std::set<EntityId> VirtualCallees;
+
   /// A human-readable name of the function.
   /// This is not guaranteed to be accurate or unique.
   std::string PrettyName;
-
-  /// Whether this function contains calls that could not be resolved to a
-  /// direct callee.
-  /// E.g. virtual method calls, or calls through function pointers.
-  bool HasIndirectCalls = false;
 };
 
 } // namespace clang::ssaf
