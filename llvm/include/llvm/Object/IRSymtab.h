@@ -351,7 +351,9 @@ public:
     read();
   }
 
+#ifndef __swift__
   bool operator==(const SymbolRef &Other) const { return SymI == Other.SymI; }
+#endif
 };
 
 inline Reader::symbol_range Reader::symbols() const {
