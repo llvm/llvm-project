@@ -599,8 +599,8 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   if (Cache->ContentsEntry->isNamedPipe())
     (void)Cache->getBufferOrNone(Diag, getFileManager(), SourceLocation());
 
-  return createFileIDImpl(*Cache, Filename, IncludePos, FileCharacter,
-                          LoadedID, LoadedOffset);
+  return createFileIDImpl(*Cache, Filename, IncludePos, FileCharacter, LoadedID,
+                          LoadedOffset);
 }
 
 /// Create a new FileID that represents the specified memory buffer.
