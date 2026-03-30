@@ -27925,7 +27925,7 @@ Arguments:
 """"""""""
 
 The argument is either a pointer to an ``alloca`` instruction or an
-``llvm.structured.alloca`` instrinsic, or a ``poison`` value.
+``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
@@ -27966,7 +27966,7 @@ Arguments:
 """"""""""
 
 The argument is either a pointer to an ``alloca`` instruction or an
-``llvm.structured.alloca`` instrinsic, or a ``poison`` value.
+``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
