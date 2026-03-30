@@ -620,6 +620,15 @@ public:
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
 
+  /// Add a new check block before the vector preheader to \p Plan to check
+  /// if the main vector loop should be executed (TC >= VF * UF).
+  void addIterationCountCheckBlock(VPlan &Plan, ElementCount VF,
+                                   unsigned UF) const;
+
+  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           bool HasBranchWeights) const;
+
   /// Update loop metadata and profile info for both the scalar remainder loop
   /// and \p VectorLoop, if it exists. Keeps all loop hints from the original
   /// loop on the vector loop and replaces vectorizer-specific metadata. The
@@ -671,10 +680,6 @@ private:
   void addReductionResultComputation(VPlanPtr &Plan,
                                      VPRecipeBuilder &RecipeBuilder,
                                      ElementCount MinVF);
-
-  /// Attach the runtime checks of \p RTChecks to \p Plan.
-  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
-                           bool HasBranchWeights) const;
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans
