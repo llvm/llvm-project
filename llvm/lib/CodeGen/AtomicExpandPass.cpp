@@ -137,7 +137,8 @@ private:
   void expandAtomicLoadToLibcall(LoadInst *LI);
   void expandAtomicStoreToLibcall(StoreInst *LI);
   void expandAtomicRMWToLibcall(AtomicRMWInst *I);
-  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I, const Twine &AtomicOpName = "cmpxchg",
+  void expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
+                                const Twine &AtomicOpName = "cmpxchg",
                                 Instruction *DiagnosticInst = nullptr);
 
   bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
