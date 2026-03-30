@@ -333,6 +333,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
   };
+  auto checkDependIteratorModifier = [&todo](auto op, LogicalResult &result) {
+    if (!op.getDependIterated().empty() ||
+        (op.getDependIteratedKinds() && !op.getDependIteratedKinds()->empty()))
+      result = todo("depend with iterator modifier");
+  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -405,6 +410,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
+        checkDependIteratorModifier(op, result);
         checkInReduction(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
@@ -439,6 +445,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
+        checkDependIteratorModifier(op, result);
         checkInReduction(op, result);
         checkThreadLimit(op, result);
       })
