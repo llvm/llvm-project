@@ -47,9 +47,8 @@ using llvm::MemoryBuffer;
 
 #define DEBUG_TYPE "source-manager"
 
-static SrcMgr::ContentCache *
-cloneContentCache(llvm::BumpPtrAllocator &Alloc,
-                  const ContentCache &Other) {
+static SrcMgr::ContentCache *cloneContentCache(llvm::BumpPtrAllocator &Alloc,
+                                               const ContentCache &Other) {
   auto *Clone = new (Alloc.Allocate<ContentCache>()) ContentCache;
   Clone->OrigEntry = Other.OrigEntry;
   Clone->ContentsEntry = Other.ContentsEntry;

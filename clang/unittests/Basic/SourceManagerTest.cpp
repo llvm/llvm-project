@@ -50,16 +50,15 @@ public:
     StatCalls[Path] = llvm::vfs::Status(
         Path, llvm::sys::fs::UniqueID(1, INode), /*MTime=*/{},
         /*User=*/0, /*Group=*/0, /*Size=*/0,
-        llvm::sys::fs::file_type::regular_file,
-        llvm::sys::fs::perms::all_all);
+        llvm::sys::fs::file_type::regular_file, llvm::sys::fs::perms::all_all);
   }
 
   void InjectDirectory(StringRef Path, ino_t INode) {
-    StatCalls[Path] = llvm::vfs::Status(
-        Path, llvm::sys::fs::UniqueID(1, INode), /*MTime=*/{},
-        /*User=*/0, /*Group=*/0, /*Size=*/0,
-        llvm::sys::fs::file_type::directory_file,
-        llvm::sys::fs::perms::all_all);
+    StatCalls[Path] =
+        llvm::vfs::Status(Path, llvm::sys::fs::UniqueID(1, INode), /*MTime=*/{},
+                          /*User=*/0, /*Group=*/0, /*Size=*/0,
+                          llvm::sys::fs::file_type::directory_file,
+                          llvm::sys::fs::perms::all_all);
   }
 
   std::error_code getStat(StringRef Path, llvm::vfs::Status &Status,
