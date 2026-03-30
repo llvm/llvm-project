@@ -44,8 +44,8 @@ lowfat_base = ["-fsanitize=lowfat"]
 # safe mode (fast mode is the default)
 lowfat_safe = lowfat_base + ["-mllvm", "-lowfat-mode=safe"]
 
-# right-align mode: allocations placed at slot_base+(class_size-requested_size)
-# so the object's right edge coincides with the slot boundary.
+# right-align mode: allocations are biased toward the high end of the slot
+# while preserving the platform's default malloc alignment.
 lowfat_right_align = lowfat_base + ["-mllvm", "-lowfat-mode=right-align"]
 
 config.substitutions.append(("%clangxx_lowfat ", build_invocation(lowfat_base)))

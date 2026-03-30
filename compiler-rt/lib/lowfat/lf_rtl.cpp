@@ -23,6 +23,7 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include <stddef.h>
 
 using namespace __sanitizer;
 
@@ -36,11 +37,14 @@ bool lowfat_inited = false;
 bool lowfat_recover = false;
 
 // Set to true when -lowfat-mode=right-align is active. Instructs Allocate()
-// to right-align objects within their size-class slot so the object's right
-// edge coincides with the slot boundary. This makes off-by-one overflows
-// detectable (right OOB is caught) at the cost of a left-side blind spot of
-// (class_size - requested_size) bytes.
+// to bias objects toward the high end of their size-class slot while still
+// preserving the default malloc alignment guarantee. This can improve detection
+// of some right-side overflows, but the object's right edge does not always
+// coincide exactly with the slot boundary once alignment is enforced.
 bool lowfat_right_align = false;
+
+// malloc() must return a pointer suitably aligned for any object type.
+static constexpr uptr kMallocAlignment = alignof(max_align_t);
 
 // Maximum number of size classes across both modes.
 // In POW2-only mode kNumSizeClasses=27; with a custom config it can be up to
@@ -192,8 +196,8 @@ static bool InitMemoryRegions() {
 // First checks the free list, then falls back to bump allocation.
 // Thread-safe: protected by per-size-class spin mutex.
 //
-// In right-align mode, returns slot_base + (class_size - requested_size) so
-// the object's right edge coincides with the slot boundary. The bounds check
+// In right-align mode, returns the highest malloc-aligned address within the
+// slot that still leaves room for the requested object. The bounds check
 // (ptr - GetBase(ptr)) < class_size is still correct: GetBase() recovers
 // slot_base via mask/magic since slot_base is always class-aligned, and any
 // access past slot_base+class_size fails the check.
@@ -236,10 +240,13 @@ void *Allocate(uptr size) {
     slot_base = addr;
   }
 
-  // In right-align mode shift the returned pointer so the object's right
-  // edge sits at the slot boundary, making overflows immediately detectable.
-  if (lowfat_right_align)
-    return (void *)(slot_base + (alloc_size - size));
+  // In right-align mode, preserve malloc alignment by rounding the available
+  // slack down to the nearest alignment boundary before shifting the pointer.
+  if (lowfat_right_align) {
+    uptr slack = alloc_size - size;
+    uptr aligned_offset = RoundDownTo(slack, kMallocAlignment);
+    return (void *)(slot_base + aligned_offset);
+  }
   return (void *)slot_base;
 }
 

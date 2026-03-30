@@ -35,11 +35,13 @@ SANITIZER_INTERFACE_ATTRIBUTE void __lf_init();
 // -fsanitize-recover=lowfat to the runtime interceptors.
 SANITIZER_INTERFACE_ATTRIBUTE void __lf_set_recover(int recover);
 
-// Called from a compiler-generated module constructor when -lowfat-mode=right-align
-// is active. Instructs the allocator to right-align objects within their size-class
-// slot so the object's right edge coincides with the slot boundary, turning any
-// off-by-one overflow into a detectable OOB. The trade-off is a blind spot on the
-// left (underflow) side of (class_size - requested_size) bytes.
+// Called from a compiler-generated module constructor when
+// -lowfat-mode=right-align is active. Instructs the allocator to bias objects
+// toward the high end of their size-class slot while preserving the default
+// malloc alignment. This can improve detection of some small rightward
+// overflows, but the alignment constraint means the object will not always end
+// exactly at the slot boundary. The trade-off is a possible blind spot on the
+// left side when the shifted pointer still remains within the same slot.
 SANITIZER_INTERFACE_ATTRIBUTE void __lf_set_right_align(int right_align);
 
 SANITIZER_INTERFACE_ATTRIBUTE void __lf_report_oob(uptr ptr, uptr base,

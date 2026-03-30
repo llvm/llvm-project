@@ -110,8 +110,8 @@ INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
       if (old_class_size < copy_size)
         copy_size = old_class_size;
     }
-    // In right-align mode the returned pointer is offset within its slot:
-    //   ptr = slot_base + (class_size - requested_size)
+    // In right-align mode the returned pointer may be shifted within its slot
+    // to the highest malloc-aligned address that still fits the object.
     // Copying 'copy_size' bytes from 'ptr' would read past the slot end.
     // Instead copy from the slot base so we stay within the mapped region.
     // The user data starts at ptr, but copying from the base is safe since
