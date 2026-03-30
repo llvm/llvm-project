@@ -8,11 +8,17 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-unknown-linux-gnu -ffreestanding \
 // RUN:   -fvisibility=hidden | FileCheck --check-prefix=X86_64 %s
 
-// AMDGCN-LABEL: define hidden void @fe1a(
-// AMDGCN-SAME: ) #[[ATTR0:[0-9]+]] {
-// AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    fence syncscope("workgroup") release
-// AMDGCN-NEXT:    ret void
+// AMDGCN_CL_DEF-LABEL: define hidden void @fe1a(
+// AMDGCN_CL_DEF-SAME: ) #[[ATTR0:[0-9]+]] {
+// AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("workgroup") release
+// AMDGCN_CL_DEF-NEXT:    ret void
+//
+// AMDGCN_CL_20-LABEL: define hidden void @fe1a(
+// AMDGCN_CL_20-SAME: ) #[[ATTR0:[0-9]+]] {
+// AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_20-NEXT:    fence syncscope("workgroup-one-as") release
+// AMDGCN_CL_20-NEXT:    ret void
 //
 // SPIRV-LABEL: define hidden spir_func void @fe1a(
 // SPIRV-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -30,34 +36,63 @@ void fe1a() {
   __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_WRKGRP);
 }
 
-// AMDGCN-LABEL: define hidden void @fe1b(
-// AMDGCN-SAME: i32 noundef [[ORD:%.*]]) #[[ATTR0]] {
-// AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[ORD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN-NEXT:    [[ORD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ORD_ADDR]] to ptr
-// AMDGCN-NEXT:    store i32 [[ORD]], ptr [[ORD_ADDR_ASCAST]], align 4
-// AMDGCN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ORD_ADDR_ASCAST]], align 4
-// AMDGCN-NEXT:    switch i32 [[TMP0]], label %[[ATOMIC_SCOPE_CONTINUE:.*]] [
-// AMDGCN-NEXT:      i32 1, label %[[ACQUIRE:.*]]
-// AMDGCN-NEXT:      i32 2, label %[[ACQUIRE]]
-// AMDGCN-NEXT:      i32 3, label %[[RELEASE:.*]]
-// AMDGCN-NEXT:      i32 4, label %[[ACQREL:.*]]
-// AMDGCN-NEXT:      i32 5, label %[[SEQCST:.*]]
-// AMDGCN-NEXT:    ]
-// AMDGCN:       [[ATOMIC_SCOPE_CONTINUE]]:
-// AMDGCN-NEXT:    ret void
-// AMDGCN:       [[ACQUIRE]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") acquire
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[RELEASE]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") release
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[ACQREL]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") acq_rel
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[SEQCST]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") seq_cst
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF-LABEL: define hidden void @fe1b(
+// AMDGCN_CL_DEF-SAME: i32 noundef [[ORD:%.*]]) #[[ATTR0]] {
+// AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_DEF-NEXT:    [[ORD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_DEF-NEXT:    [[ORD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ORD_ADDR]] to ptr
+// AMDGCN_CL_DEF-NEXT:    store i32 [[ORD]], ptr [[ORD_ADDR_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ORD_ADDR_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    switch i32 [[TMP0]], label %[[ATOMIC_SCOPE_CONTINUE:.*]] [
+// AMDGCN_CL_DEF-NEXT:      i32 1, label %[[ACQUIRE:.*]]
+// AMDGCN_CL_DEF-NEXT:      i32 2, label %[[ACQUIRE]]
+// AMDGCN_CL_DEF-NEXT:      i32 3, label %[[RELEASE:.*]]
+// AMDGCN_CL_DEF-NEXT:      i32 4, label %[[ACQREL:.*]]
+// AMDGCN_CL_DEF-NEXT:      i32 5, label %[[SEQCST:.*]]
+// AMDGCN_CL_DEF-NEXT:    ]
+// AMDGCN_CL_DEF:       [[ATOMIC_SCOPE_CONTINUE]]:
+// AMDGCN_CL_DEF-NEXT:    ret void
+// AMDGCN_CL_DEF:       [[ACQUIRE]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("workgroup") acquire
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF:       [[RELEASE]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("workgroup") release
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF:       [[ACQREL]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("workgroup") acq_rel
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF:       [[SEQCST]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("workgroup") seq_cst
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+//
+// AMDGCN_CL_20-LABEL: define hidden void @fe1b(
+// AMDGCN_CL_20-SAME: i32 noundef [[ORD:%.*]]) #[[ATTR0]] {
+// AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_20-NEXT:    [[ORD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_20-NEXT:    [[ORD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ORD_ADDR]] to ptr
+// AMDGCN_CL_20-NEXT:    store i32 [[ORD]], ptr [[ORD_ADDR_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ORD_ADDR_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    switch i32 [[TMP0]], label %[[ATOMIC_SCOPE_CONTINUE:.*]] [
+// AMDGCN_CL_20-NEXT:      i32 1, label %[[ACQUIRE:.*]]
+// AMDGCN_CL_20-NEXT:      i32 2, label %[[ACQUIRE]]
+// AMDGCN_CL_20-NEXT:      i32 3, label %[[RELEASE:.*]]
+// AMDGCN_CL_20-NEXT:      i32 4, label %[[ACQREL:.*]]
+// AMDGCN_CL_20-NEXT:      i32 5, label %[[SEQCST:.*]]
+// AMDGCN_CL_20-NEXT:    ]
+// AMDGCN_CL_20:       [[ATOMIC_SCOPE_CONTINUE]]:
+// AMDGCN_CL_20-NEXT:    ret void
+// AMDGCN_CL_20:       [[ACQUIRE]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("workgroup-one-as") acquire
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_20:       [[RELEASE]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("workgroup-one-as") release
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_20:       [[ACQREL]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("workgroup-one-as") acq_rel
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_20:       [[SEQCST]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("workgroup") seq_cst
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //
 // SPIRV-LABEL: define hidden spir_func void @fe1b(
 // SPIRV-SAME: i32 noundef [[ORD:%.*]]) #[[ATTR0]] {
@@ -119,41 +154,77 @@ void fe1b(int ord) {
   __scoped_atomic_thread_fence(ord, __MEMORY_SCOPE_WRKGRP);
 }
 
-// AMDGCN-LABEL: define hidden void @fe1c(
-// AMDGCN-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
-// AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[SCOPE_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN-NEXT:    [[SCOPE_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SCOPE_ADDR]] to ptr
-// AMDGCN-NEXT:    store i32 [[SCOPE]], ptr [[SCOPE_ADDR_ASCAST]], align 4
-// AMDGCN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SCOPE_ADDR_ASCAST]], align 4
-// AMDGCN-NEXT:    switch i32 [[TMP0]], label %[[ATOMIC_SCOPE_CONTINUE:.*]] [
-// AMDGCN-NEXT:      i32 0, label %[[SYSTEM_SCOPE:.*]]
-// AMDGCN-NEXT:      i32 1, label %[[DEVICE_SCOPE:.*]]
-// AMDGCN-NEXT:      i32 2, label %[[WORKGROUP_SCOPE:.*]]
-// AMDGCN-NEXT:      i32 5, label %[[CLUSTER_SCOPE:.*]]
-// AMDGCN-NEXT:      i32 3, label %[[WAVEFRONT_SCOPE:.*]]
-// AMDGCN-NEXT:      i32 4, label %[[SINGLE_SCOPE:.*]]
-// AMDGCN-NEXT:    ]
-// AMDGCN:       [[ATOMIC_SCOPE_CONTINUE]]:
-// AMDGCN-NEXT:    ret void
-// AMDGCN:       [[SYSTEM_SCOPE]]:
-// AMDGCN-NEXT:    fence release
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[DEVICE_SCOPE]]:
-// AMDGCN-NEXT:    fence syncscope("agent") release
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[WORKGROUP_SCOPE]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") release
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[CLUSTER_SCOPE]]:
-// AMDGCN-NEXT:    fence syncscope("cluster") release
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[WAVEFRONT_SCOPE]]:
-// AMDGCN-NEXT:    fence syncscope("wavefront") release
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[SINGLE_SCOPE]]:
-// AMDGCN-NEXT:    fence syncscope("singlethread") release
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF-LABEL: define hidden void @fe1c(
+// AMDGCN_CL_DEF-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
+// AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_DEF-NEXT:    [[SCOPE_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_DEF-NEXT:    [[SCOPE_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SCOPE_ADDR]] to ptr
+// AMDGCN_CL_DEF-NEXT:    store i32 [[SCOPE]], ptr [[SCOPE_ADDR_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SCOPE_ADDR_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    switch i32 [[TMP0]], label %[[ATOMIC_SCOPE_CONTINUE:.*]] [
+// AMDGCN_CL_DEF-NEXT:      i32 0, label %[[SYSTEM_SCOPE:.*]]
+// AMDGCN_CL_DEF-NEXT:      i32 1, label %[[DEVICE_SCOPE:.*]]
+// AMDGCN_CL_DEF-NEXT:      i32 2, label %[[WORKGROUP_SCOPE:.*]]
+// AMDGCN_CL_DEF-NEXT:      i32 5, label %[[CLUSTER_SCOPE:.*]]
+// AMDGCN_CL_DEF-NEXT:      i32 3, label %[[WAVEFRONT_SCOPE:.*]]
+// AMDGCN_CL_DEF-NEXT:      i32 4, label %[[SINGLE_SCOPE:.*]]
+// AMDGCN_CL_DEF-NEXT:    ]
+// AMDGCN_CL_DEF:       [[ATOMIC_SCOPE_CONTINUE]]:
+// AMDGCN_CL_DEF-NEXT:    ret void
+// AMDGCN_CL_DEF:       [[SYSTEM_SCOPE]]:
+// AMDGCN_CL_DEF-NEXT:    fence release
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF:       [[DEVICE_SCOPE]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("agent") release
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF:       [[WORKGROUP_SCOPE]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("workgroup") release
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF:       [[CLUSTER_SCOPE]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("cluster") release
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF:       [[WAVEFRONT_SCOPE]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("wavefront") release
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_DEF:       [[SINGLE_SCOPE]]:
+// AMDGCN_CL_DEF-NEXT:    fence syncscope("singlethread") release
+// AMDGCN_CL_DEF-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+//
+// AMDGCN_CL_20-LABEL: define hidden void @fe1c(
+// AMDGCN_CL_20-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
+// AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_20-NEXT:    [[SCOPE_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_20-NEXT:    [[SCOPE_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SCOPE_ADDR]] to ptr
+// AMDGCN_CL_20-NEXT:    store i32 [[SCOPE]], ptr [[SCOPE_ADDR_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SCOPE_ADDR_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    switch i32 [[TMP0]], label %[[ATOMIC_SCOPE_CONTINUE:.*]] [
+// AMDGCN_CL_20-NEXT:      i32 0, label %[[SYSTEM_SCOPE:.*]]
+// AMDGCN_CL_20-NEXT:      i32 1, label %[[DEVICE_SCOPE:.*]]
+// AMDGCN_CL_20-NEXT:      i32 2, label %[[WORKGROUP_SCOPE:.*]]
+// AMDGCN_CL_20-NEXT:      i32 5, label %[[CLUSTER_SCOPE:.*]]
+// AMDGCN_CL_20-NEXT:      i32 3, label %[[WAVEFRONT_SCOPE:.*]]
+// AMDGCN_CL_20-NEXT:      i32 4, label %[[SINGLE_SCOPE:.*]]
+// AMDGCN_CL_20-NEXT:    ]
+// AMDGCN_CL_20:       [[ATOMIC_SCOPE_CONTINUE]]:
+// AMDGCN_CL_20-NEXT:    ret void
+// AMDGCN_CL_20:       [[SYSTEM_SCOPE]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("one-as") release
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_20:       [[DEVICE_SCOPE]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("agent-one-as") release
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_20:       [[WORKGROUP_SCOPE]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("workgroup-one-as") release
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_20:       [[CLUSTER_SCOPE]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("cluster") release
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_20:       [[WAVEFRONT_SCOPE]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("wavefront-one-as") release
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// AMDGCN_CL_20:       [[SINGLE_SCOPE]]:
+// AMDGCN_CL_20-NEXT:    fence syncscope("singlethread-one-as") release
+// AMDGCN_CL_20-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //
 // SPIRV-LABEL: define hidden spir_func void @fe1c(
 // SPIRV-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
@@ -230,7 +301,7 @@ void fe1c(int scope) {
 }
 
 // AMDGCN-LABEL: define hidden void @fe2a(
-// AMDGCN-SAME: ) #[[ATTR0]] {
+// AMDGCN-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    ret void
 //
@@ -248,11 +319,17 @@ void fe2a() {
   __scoped_atomic_thread_fence(999, __MEMORY_SCOPE_SYSTEM);
 }
 
-// AMDGCN-LABEL: define hidden void @fe2b(
-// AMDGCN-SAME: ) #[[ATTR0]] {
-// AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    fence release
-// AMDGCN-NEXT:    ret void
+// AMDGCN_CL_DEF-LABEL: define hidden void @fe2b(
+// AMDGCN_CL_DEF-SAME: ) #[[ATTR0]] {
+// AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_DEF-NEXT:    fence release
+// AMDGCN_CL_DEF-NEXT:    ret void
+//
+// AMDGCN_CL_20-LABEL: define hidden void @fe2b(
+// AMDGCN_CL_20-SAME: ) #[[ATTR0]] {
+// AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_20-NEXT:    fence syncscope("one-as") release
+// AMDGCN_CL_20-NEXT:    ret void
 //
 // SPIRV-LABEL: define hidden spir_func void @fe2b(
 // SPIRV-SAME: ) #[[ATTR0]] {
@@ -269,6 +346,3 @@ void fe2a() {
 void fe2b() {
   __scoped_atomic_thread_fence(__ATOMIC_RELEASE, 999);
 }
-//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-// AMDGCN_CL_20: {{.*}}
-// AMDGCN_CL_DEF: {{.*}}

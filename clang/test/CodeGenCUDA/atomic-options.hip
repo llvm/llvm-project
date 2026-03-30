@@ -37,7 +37,7 @@
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.no.remote.memory [[META4]]
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3:![0-9]+]], !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.no.remote.memory [[META4]]
 // DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    ret void
@@ -55,7 +55,7 @@
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4:![0-9]+]], !amdgpu.ignore.denormal.mode [[META4]]
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3:![0-9]+]], !amdgpu.no.remote.memory [[META4:![0-9]+]], !amdgpu.ignore.denormal.mode [[META4]]
 // OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    ret void
@@ -92,7 +92,7 @@ __device__ __host__ void test_default(float *a) {
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    ret void
@@ -110,7 +110,7 @@ __device__ __host__ void test_default(float *a) {
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
 // OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    ret void
@@ -149,7 +149,7 @@ __device__ __host__ void test_one(float *a) {
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
 // DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    ret void
@@ -167,7 +167,7 @@ __device__ __host__ void test_one(float *a) {
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META4]]
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.ignore.denormal.mode [[META4]]
 // OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    ret void
@@ -206,7 +206,7 @@ __device__ __host__ void test_two(float *a) {
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]]
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.remote.memory [[META4]]
 // DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    ret void
@@ -224,7 +224,7 @@ __device__ __host__ void test_two(float *a) {
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]]
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.remote.memory [[META4]]
 // OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    ret void
@@ -263,7 +263,7 @@ __device__ __host__ void test_three(float *a) {
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]]
 // DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    ret void
@@ -281,7 +281,7 @@ __device__ __host__ void test_three(float *a) {
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META4]]
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.ignore.denormal.mode [[META4]]
 // OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    ret void
@@ -356,25 +356,25 @@ __device__ __host__ void test_multiple_attrs(float *a) {
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // DEV-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 2.000000e+00, ptr [[DOTATOMICTMP1_ASCAST]], align 4
 // DEV-NEXT:    [[TMP5:%.*]] = load float, ptr [[DOTATOMICTMP1_ASCAST]], align 4
-// DEV-NEXT:    [[TMP6:%.*]] = atomicrmw fmax ptr [[TMP4]], float [[TMP5]] syncscope("agent") seq_cst, align 4
+// DEV-NEXT:    [[TMP6:%.*]] = atomicrmw fmax ptr [[TMP4]], float [[TMP5]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META3]]
 // DEV-NEXT:    store float [[TMP6]], ptr [[ATOMIC_TEMP2_ASCAST]], align 4
 // DEV-NEXT:    [[TMP7:%.*]] = load float, ptr [[ATOMIC_TEMP2_ASCAST]], align 4
 // DEV-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 3.000000e+00, ptr [[DOTATOMICTMP3_ASCAST]], align 4
 // DEV-NEXT:    [[TMP9:%.*]] = load float, ptr [[DOTATOMICTMP3_ASCAST]], align 4
-// DEV-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !amdgpu.no.remote.memory [[META4]]
+// DEV-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !noalias.addrspace [[META3]], !amdgpu.no.remote.memory [[META4]]
 // DEV-NEXT:    store float [[TMP10]], ptr [[ATOMIC_TEMP4_ASCAST]], align 4
 // DEV-NEXT:    [[TMP11:%.*]] = load float, ptr [[ATOMIC_TEMP4_ASCAST]], align 4
 // DEV-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    store float 4.000000e+00, ptr [[DOTATOMICTMP5_ASCAST]], align 4
 // DEV-NEXT:    [[TMP13:%.*]] = load float, ptr [[DOTATOMICTMP5_ASCAST]], align 4
-// DEV-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr [[TMP12]], float [[TMP13]] syncscope("wavefront") release, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// DEV-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr [[TMP12]], float [[TMP13]] syncscope("wavefront") release, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]]
 // DEV-NEXT:    store float [[TMP14]], ptr [[ATOMIC_TEMP6_ASCAST]], align 4
 // DEV-NEXT:    [[TMP15:%.*]] = load float, ptr [[ATOMIC_TEMP6_ASCAST]], align 4
 // DEV-NEXT:    ret void
@@ -404,25 +404,25 @@ __device__ __host__ void test_multiple_attrs(float *a) {
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
 // OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
 // OPT-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 2.000000e+00, ptr [[DOTATOMICTMP1_ASCAST]], align 4
 // OPT-NEXT:    [[TMP5:%.*]] = load float, ptr [[DOTATOMICTMP1_ASCAST]], align 4
-// OPT-NEXT:    [[TMP6:%.*]] = atomicrmw fmax ptr [[TMP4]], float [[TMP5]] syncscope("agent") seq_cst, align 4
+// OPT-NEXT:    [[TMP6:%.*]] = atomicrmw fmax ptr [[TMP4]], float [[TMP5]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META3]]
 // OPT-NEXT:    store float [[TMP6]], ptr [[ATOMIC_TEMP2_ASCAST]], align 4
 // OPT-NEXT:    [[TMP7:%.*]] = load float, ptr [[ATOMIC_TEMP2_ASCAST]], align 4
 // OPT-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 3.000000e+00, ptr [[DOTATOMICTMP3_ASCAST]], align 4
 // OPT-NEXT:    [[TMP9:%.*]] = load float, ptr [[DOTATOMICTMP3_ASCAST]], align 4
-// OPT-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !amdgpu.no.remote.memory [[META4]]
+// OPT-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !noalias.addrspace [[META3]], !amdgpu.no.remote.memory [[META4]]
 // OPT-NEXT:    store float [[TMP10]], ptr [[ATOMIC_TEMP4_ASCAST]], align 4
 // OPT-NEXT:    [[TMP11:%.*]] = load float, ptr [[ATOMIC_TEMP4_ASCAST]], align 4
 // OPT-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    store float 4.000000e+00, ptr [[DOTATOMICTMP5_ASCAST]], align 4
 // OPT-NEXT:    [[TMP13:%.*]] = load float, ptr [[DOTATOMICTMP5_ASCAST]], align 4
-// OPT-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr [[TMP12]], float [[TMP13]] syncscope("wavefront") release, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// OPT-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr [[TMP12]], float [[TMP13]] syncscope("wavefront") release, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]]
 // OPT-NEXT:    store float [[TMP14]], ptr [[ATOMIC_TEMP6_ASCAST]], align 4
 // OPT-NEXT:    [[TMP15:%.*]] = load float, ptr [[ATOMIC_TEMP6_ASCAST]], align 4
 // OPT-NEXT:    ret void
@@ -459,7 +459,9 @@ template<typename T> __device__ __host__ void test_template(T *a) {
 template __device__ __host__ void test_template<float>(float *a);
 
 //.
+// DEV: [[META3]] = !{i32 5, i32 6}
 // DEV: [[META4]] = !{}
 //.
+// OPT: [[META3]] = !{i32 5, i32 6}
 // OPT: [[META4]] = !{}
 //.

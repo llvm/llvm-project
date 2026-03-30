@@ -497,9 +497,8 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
 
   // OpenCL assumes by default that atomic scopes are per-address space for
   // non-sequentially consistent operations.
-  bool IsOneAs = (Scope >= SyncScope::OpenCLWorkGroup &&
-                  Scope <= SyncScope::OpenCLSubGroup &&
-                  Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
+  bool IsOneAs = LangOpts.OpenCL &&
+                 Ordering != llvm::AtomicOrdering::SequentiallyConsistent;
 
   switch (Scope) {
   case SyncScope::HIPSingleThread:
@@ -511,7 +510,6 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
     return IsOneAs ? "wavefront-one-as" : "wavefront";
   case SyncScope::HIPCluster:
   case SyncScope::ClusterScope:
-    assert(!IsOneAs && "OpenCL does not have cluster scope");
     return "cluster";
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
@@ -543,7 +541,9 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
   if (((RMW && RMW->getPointerAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS) ||
        (CmpX &&
         CmpX->getPointerAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
-      AE && AE->threadPrivateMemoryAtomicsAreUndefined()) {
+      AE &&
+      AE->threadPrivateMemoryAtomicsAreUndefined(
+          CGF.getContext().getLangOpts())) {
     llvm::MDBuilder MDHelper(CGF.getLLVMContext());
     llvm::MDNode *ASRange = MDHelper.createRange(
         llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),

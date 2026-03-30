@@ -1148,7 +1148,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     // The OpenCL atomic library functions only accept pointer arguments to
     // generic address space.
     auto CastToGenericAddrSpace = [&](llvm::Value *V, QualType PT) {
-      if (!E->isOpenCL())
+      if (!CGM.getLangOpts().OpenCL)
         return V;
       auto AS = PT->castAs<PointerType>()->getPointeeType().getAddressSpace();
       if (AS == LangAS::opencl_generic)
@@ -1301,7 +1301,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       llvm_unreachable("Integral atomic operations always become atomicrmw!");
     }
 
-    if (E->isOpenCL()) {
+    if (CGM.getLangOpts().OpenCL) {
       LibCallName =
           std::string("__opencl") + StringRef(LibCallName).drop_front(1).str();
     }
@@ -1316,7 +1316,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     // Order is always the last parameter.
     Args.add(RValue::get(Order),
              getContext().IntTy);
-    if (E->isOpenCL())
+    if (CGM.getLangOpts().OpenCL)
       Args.add(RValue::get(Scope), getContext().IntTy);
 
     RValue Res = emitAtomicLibcall(*this, LibCallName, RetTy, Args);
