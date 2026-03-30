@@ -309,9 +309,9 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
 
   llvm::ArrayRef<const char *> args_arr = llvm::ArrayRef(argv, argc);
-  auto wcommandLineOrErr =
+  auto wcommand_line_or_err =
       lldb_private::GetFlattenedWindowsCommandStringW(args_arr);
-  if (!wcommandLineOrErr)
+  if (!wcommand_line_or_err)
     return notifyError(comm_channel, "Failed to process arguments");
 
   STARTUPINFOEXW startupinfoex = {};
@@ -369,7 +369,7 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   // Start the process in a suspended state, while we attach the debugger.
   BOOL result = CreateProcessW(
-      /*lpApplicationName=*/NULL, /*lpCommandLine=*/&(*wcommandLineOrErr)[0],
+      /*lpApplicationName=*/NULL, /*lpCommandLine=*/&(*wcommand_line_or_err)[0],
       /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
       /*bInheritHandles=*/!inherited_handles.empty(),
       /*dwCreationFlags=*/CREATE_SUSPENDED, /*lpEnvironment=*/NULL,
@@ -380,7 +380,7 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   if (!result)
     return notifyError(comm_channel, "Failed to launch target process");
 
-  auto cleanupAndReturn = [&](llvm::Error err) -> llvm::Expected<int> {
+  auto cleanup_and_return = [&](llvm::Error err) -> llvm::Expected<int> {
     if (pi.hProcess)
       TerminateProcess(pi.hProcess, 1);
     if (pi.hThread)
@@ -393,22 +393,22 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   // Notify the pid of the process to debug to the debugger. It will attach to
   // the newly created process.
   if (llvm::Error err = comm_channel.NotifyPid(pi.dwProcessId))
-    return cleanupAndReturn(std::move(err));
+    return cleanup_and_return(std::move(err));
 
   if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
           std::chrono::milliseconds(timeout_in_ms)))
-    return cleanupAndReturn(std::move(err));
+    return cleanup_and_return(std::move(err));
 
   // The debugger attached to the process. We can resume it.
   if (ResumeThread(pi.hThread) == (DWORD)-1)
-    return cleanupAndReturn(
+    return cleanup_and_return(
         notifyError(comm_channel, "Failed to resume the target process"));
 
   // Wait for child to complete to match POSIX behavior.
   WaitForSingleObject(pi.hProcess, INFINITE);
   DWORD code = 0;
   if (!::GetExitCodeProcess(pi.hProcess, &code))
-    return cleanupAndReturn(notifyError(
+    return cleanup_and_return(notifyError(
         comm_channel, "Failed to get the target's process return code"));
 
   CloseHandle(pi.hThread);
