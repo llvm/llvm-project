@@ -136,8 +136,10 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
   EXPECT_EQ(Hdr.BaseAddress, BaseAddr);
   EXPECT_EQ(Hdr.NumAddresses, ExpectedNumAddresses);
   EXPECT_EQ(Hdr.AddrOffSize, ExpectedAddrOffSize);
-  EXPECT_EQ(Hdr.AddrInfoOffSize, 4u); // Small file, should be 4 bytes.
-  EXPECT_EQ(Hdr.StrpSize, 4u);        // Small string table, should be 4 bytes.
+  EXPECT_LE(Hdr.AddrInfoOffSize, 8u);
+  EXPECT_GE(Hdr.AddrInfoOffSize, 1u);
+  EXPECT_LE(Hdr.StrpSize, 8u);
+  EXPECT_GE(Hdr.StrpSize, 1u);
   EXPECT_EQ(Hdr.StrTableEncoding, StringTableEncoding::Default);
 
   // Decode GlobalData entries starting at offset 24 (after fixed header).
@@ -166,7 +168,8 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
       FoundAddrOffsets = true;
       break;
     case GlobalInfoType::AddrInfoOffsets:
-      EXPECT_EQ(GD.FileSize, ExpectedNumAddresses * 4u); // AddrInfoOffSize=4
+      EXPECT_EQ(GD.FileSize,
+                ExpectedNumAddresses * (uint64_t)Hdr.AddrInfoOffSize);
       EXPECT_GT(GD.FileOffset, 0u);
       FoundAddrInfoOffsets = true;
       break;
@@ -266,12 +269,12 @@ TEST(GSYMV2Test, TestCreatorV2AddrOffSize2Byte) {
   TestV2AddrOffSize(0x1000, 0x200, 2);
 }
 
-TEST(GSYMV2Test, TestCreatorV2AddrOffSize4Byte) {
-  TestV2AddrOffSize(0x1000, 0x20000, 4);
+TEST(GSYMV2Test, TestCreatorV2AddrOffSize3Byte) {
+  TestV2AddrOffSize(0x1000, 0x20000, 3);
 }
 
-TEST(GSYMV2Test, TestCreatorV2AddrOffSize8Byte) {
-  TestV2AddrOffSize(0x1000, 0x100000000ULL, 8);
+TEST(GSYMV2Test, TestCreatorV2AddrOffSize5Byte) {
+  TestV2AddrOffSize(0x1000, 0x100000000ULL, 5);
 }
 
 /// AddrInfoOffsets verification
@@ -403,7 +406,7 @@ TEST(GSYMV2Test, TestCreatorV2SectionAlignment) {
   auto HdrOrErr = decodeHeaderV2(Data, llvm::endianness::little);
   ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
   const HeaderV2 &Hdr = *HdrOrErr;
-  EXPECT_EQ(Hdr.AddrOffSize, 8u);
+  EXPECT_EQ(Hdr.AddrOffSize, 5u);
 
   // Decode GlobalData entries and verify alignment for each section.
   uint64_t Offset = 24;
@@ -807,7 +810,7 @@ TEST(GSYMV2Test, TestRoundTripAddressTable) {
 }
 
 TEST(GSYMV2Test, TestRoundTripLargeAddressOffsets) {
-  // Test with address offsets that require 4-byte AddrOffSize.
+  // Test with address offsets that require 3-byte AddrOffSize.
   GsymCreatorV2 GC;
   const uint32_t N1 = GC.insertString("near");
   const uint32_t N2 = GC.insertString("far");
@@ -817,7 +820,7 @@ TEST(GSYMV2Test, TestRoundTripLargeAddressOffsets) {
   auto GR = createAndReadV2(GC);
   ASSERT_THAT_EXPECTED(GR, Succeeded());
 
-  EXPECT_EQ(GR->getHeader().AddrOffSize, 4u);
+  EXPECT_EQ(GR->getHeader().AddrOffSize, 3u);
   EXPECT_EQ(GR->getNumAddresses(), 2u);
 
   auto FI1 = GR->getFunctionInfo(0x1000);

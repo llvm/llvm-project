@@ -22,6 +22,7 @@ class GsymCreatorV2 : public GsymCreator {
 public:
   GsymCreatorV2(bool Quiet = false) : GsymCreator(Quiet) {}
 
+  uint8_t getAddressOffsetSize() const override;
   LLVM_ABI llvm::Error encode(FileWriter &O) const override;
 };
 

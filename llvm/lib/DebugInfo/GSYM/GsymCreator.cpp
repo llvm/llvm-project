@@ -337,29 +337,10 @@ std::optional<uint64_t> GsymCreator::getBaseAddress() const {
 }
 
 uint64_t GsymCreator::getMaxAddressOffset() const {
-  switch (getAddressOffsetSize()) {
-    case 1: return UINT8_MAX;
-    case 2: return UINT16_MAX;
-    case 4: return UINT32_MAX;
-    case 8: return UINT64_MAX;
-  }
-  llvm_unreachable("invalid address offset");
-}
-
-uint8_t GsymCreator::getAddressOffsetSize() const {
-  const std::optional<uint64_t> BaseAddress = getBaseAddress();
-  const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
-  if (BaseAddress && LastFuncAddr) {
-    const uint64_t AddrDelta = *LastFuncAddr - *BaseAddress;
-    if (AddrDelta <= UINT8_MAX)
-      return 1;
-    else if (AddrDelta <= UINT16_MAX)
-      return 2;
-    else if (AddrDelta <= UINT32_MAX)
-      return 4;
-    return 8;
-  }
-  return 1;
+  const uint8_t Size = getAddressOffsetSize();
+  if (Size >= 8)
+    return UINT64_MAX;
+  return (static_cast<uint64_t>(1) << (Size * 8)) - 1;
 }
 
 llvm::Error GsymCreator::validateForEncoding(

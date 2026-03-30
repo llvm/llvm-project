@@ -249,13 +249,8 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "====== =============================== \n";
   for (uint32_t I = 0; I < getNumAddresses(); ++I) {
     OS << format("[%4u] ", I);
-    switch (getAddressOffsetByteSize()) {
-    case 1: OS << HEX8(getAddrOffsets<uint8_t>()[I]); break;
-    case 2: OS << HEX16(getAddrOffsets<uint16_t>()[I]); break;
-    case 4: OS << HEX32(getAddrOffsets<uint32_t>()[I]); break;
-    case 8: OS << HEX32(getAddrOffsets<uint64_t>()[I]); break;
-    default: break;
-    }
+    auto AddrOff = getUnsigned(AddrOffsets, getAddressOffsetByteSize(), I);
+    OS << format_hex(AddrOff.value_or(0), getAddressOffsetByteSize() * 2 + 2);
     OS << " (" << HEX64(*getAddress(I)) << ")\n";
   }
   OS << "\nAddress Info Offsets:\n";

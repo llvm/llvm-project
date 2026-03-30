@@ -18,6 +18,22 @@ std::unique_ptr<GsymCreator> GsymCreatorV1::createNew(bool Quiet) const {
   return std::make_unique<GsymCreatorV1>(Quiet);
 }
 
+uint8_t GsymCreatorV1::getAddressOffsetSize() const {
+  const std::optional<uint64_t> BaseAddress = getBaseAddress();
+  const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
+  if (BaseAddress && LastFuncAddr) {
+    const uint64_t AddrDelta = *LastFuncAddr - *BaseAddress;
+    if (AddrDelta <= UINT8_MAX)
+      return 1;
+    else if (AddrDelta <= UINT16_MAX)
+      return 2;
+    else if (AddrDelta <= UINT32_MAX)
+      return 4;
+    return 8;
+  }
+  return 1;
+}
+
 uint64_t GsymCreatorV1::calculateHeaderAndTableSize() const {
   uint64_t Size = sizeof(Header);
   const size_t NumFuncs = Funcs.size();

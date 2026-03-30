@@ -16,8 +16,30 @@
 using namespace llvm;
 using namespace gsym;
 
+/// Return the minimum number of bytes (1-8) needed to hold the value.
+static uint8_t bytesRequiredForUnsigned(uint64_t Value) {
+  if (Value == 0)
+    return 1;
+  uint8_t Bytes = 0;
+  while (Value > 0) {
+    ++Bytes;
+    Value >>= 8;
+  }
+  return Bytes;
+}
+
 std::unique_ptr<GsymCreator> GsymCreatorV2::createNew(bool Quiet) const {
   return std::make_unique<GsymCreatorV2>(Quiet);
+}
+
+uint8_t GsymCreatorV2::getAddressOffsetSize() const {
+  const std::optional<uint64_t> BaseAddress = getBaseAddress();
+  const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
+  if (BaseAddress && LastFuncAddr) {
+    const uint64_t AddrDelta = *LastFuncAddr - *BaseAddress;
+    return bytesRequiredForUnsigned(AddrDelta);
+  }
+  return 1;
 }
 
 uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
@@ -83,7 +105,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
 
   // Determine AddrInfoOffSize based on FunctionInfo section size, since
   // AddrInfoOffsets stores offsets relative to the FunctionInfo section start.
-  uint8_t AddrInfoOffSize = (FISectionSize > UINT32_MAX) ? 8 : 4;
+  uint8_t AddrInfoOffSize = bytesRequiredForUnsigned(FISectionSize);
 
   // AddrInfoOffsets section.
   CurOffset = llvm::alignTo(CurOffset, AddrInfoOffSize);

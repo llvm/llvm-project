@@ -182,7 +182,7 @@ protected:
   /// on the current contents of the GSYM file.
   ///
   /// \returns The size in byets of the address offsets.
-  uint8_t getAddressOffsetSize() const;
+  virtual uint8_t getAddressOffsetSize() const = 0;
 
   /// Get the maximum address offset for the current address offset size.
   ///
