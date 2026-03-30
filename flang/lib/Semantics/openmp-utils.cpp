@@ -418,7 +418,7 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
   }
 };
 
-std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr) {
+std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr) {
   return DesignatorCollector{}(expr);
 }
 
@@ -480,7 +480,7 @@ static bool HasCommonTopLevelDesignators(
   // Compare designators directly as expressions. This will ensure
   // that x(y) and x(y+1) are not flagged as overlapping, whereas
   // the symbol vectors for both of these would be identical.
-  std::vector<SomeExpr> otherDsgs{GetAllDesignators(other)};
+  std::vector<SomeExpr> otherDsgs{GetTopLevelDesignators(other)};
 
   for (auto &s : baseDsgs) {
     if (llvm::any_of(otherDsgs, [&](auto &&t) { return s == t; })) {
@@ -493,7 +493,7 @@ static bool HasCommonTopLevelDesignators(
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs) {
   evaluate::SymbolVector baseSyms{evaluate::GetSymbolVector(base)};
-  std::vector<SomeExpr> baseDsgs{GetAllDesignators(base)};
+  std::vector<SomeExpr> baseDsgs{GetTopLevelDesignators(base)};
 
   for (const SomeExpr &expr : exprs) {
     if (!HasCommonDesignatorSymbols(baseSyms, expr)) {

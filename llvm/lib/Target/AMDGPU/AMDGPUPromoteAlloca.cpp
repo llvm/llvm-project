@@ -90,7 +90,7 @@ static cl::opt<unsigned>
 // VarIndex is A, VarMul is stride, VarShift is shift and ConstIndex is B. All
 // parts are optional.
 struct GEPToVectorIndex {
-  Value *VarIndex = nullptr;         // defaults to 0
+  WeakTrackingVH VarIndex = nullptr; // defaults to 0
   ConstantInt *VarMul = nullptr;     // defaults to 1
   ConstantInt *VarShift = nullptr;   // defaults to 0
   ConstantInt *ConstIndex = nullptr; // defaults to 0

@@ -1882,6 +1882,21 @@ public:
     if (AA->isNoAlias(LoadLoc, StoreLoc))
       return Load->getPointerOperand();
 
+    // If the pointers are in different address spaces, we cannot compare them
+    // at runtime. Conservatively copy the load operand to a new buffer.
+    if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
+      IRBuilder<> Builder(MatMul);
+      auto *VT = cast<FixedVectorType>(Load->getType());
+      auto *ArrayTy =
+          ArrayType::get(VT->getElementType(), VT->getNumElements());
+      AllocaInst *Alloca =
+          Builder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+      Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
+                           Load->getPointerOperand(), Load->getAlign(),
+                           LoadLoc.Size.getValue());
+      return Alloca;
+    }
+
     // Create code to check if the memory locations of the Load and Store
     // overlap and if they do, copy Load's operand to a new buffer.
 
@@ -2139,7 +2154,7 @@ public:
   LowerMatrixMultiplyFused(CallInst *MatMul,
                            SmallPtrSetImpl<Instruction *> &FusedInsts,
                            SmallVector<IntrinsicInst *, 16> &LifetimeEnds) {
-    if (!FuseMatrix || !DT)
+    if (!FuseMatrix || !DT || TileSize == 0)
       return;
 
     assert(AA && LI && "Analyses should be available");

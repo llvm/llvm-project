@@ -2213,121 +2213,186 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-SSE2-LABEL: pr51133:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movq %rdi, %rax
-; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm5
-; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5 # [9,u,0,u,41,u,183,u,1,u,1,u,161,u,221,u]
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; CHECK-SSE2-NEXT:    pand %xmm4, %xmm5
-; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm6
-; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [171,u,103,u,183,u,171,u,61,u,1,u,127,u,183,u]
-; CHECK-SSE2-NEXT:    pand %xmm4, %xmm6
-; CHECK-SSE2-NEXT:    packuswb %xmm5, %xmm6
-; CHECK-SSE2-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
-; CHECK-SSE2-NEXT:    movdqa %xmm6, %xmm5
-; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm6[8],xmm5[9],xmm6[9],xmm5[10],xmm6[10],xmm5[11],xmm6[11],xmm5[12],xmm6[12],xmm5[13],xmm6[13],xmm5[14],xmm6[14],xmm5[15],xmm6[15]
-; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5 # [128,1,128,1,128,32,1,1]
-; CHECK-SSE2-NEXT:    psrlw $8, %xmm5
-; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [1,1,1,128,64,2,1,32]
-; CHECK-SSE2-NEXT:    psrlw $8, %xmm6
-; CHECK-SSE2-NEXT:    packuswb %xmm5, %xmm6
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [84,2,36,42,2,1,2,4,2,255,4,36,127,31,2,2]
-; CHECK-SSE2-NEXT:    pminub %xmm6, %xmm7
-; CHECK-SSE2-NEXT:    pcmpeqb %xmm6, %xmm7
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; CHECK-SSE2-NEXT:    pandn %xmm5, %xmm7
-; CHECK-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm4
+; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [0,u,1,u,0,u,1,u,1,u,1,u,0,u,1,u]
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
+; CHECK-SSE2-NEXT:    pand %xmm5, %xmm4
+; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm7
+; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [0,u,0,u,1,u,0,u,0,u,255,u,0,u,1,u]
+; CHECK-SSE2-NEXT:    pand %xmm5, %xmm7
+; CHECK-SSE2-NEXT:    packuswb %xmm4, %xmm7
+; CHECK-SSE2-NEXT:    pxor %xmm4, %xmm4
+; CHECK-SSE2-NEXT:    pxor %xmm8, %xmm8
+; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm8 = xmm8[8],xmm1[8],xmm8[9],xmm1[9],xmm8[10],xmm1[10],xmm8[11],xmm1[11],xmm8[12],xmm1[12],xmm8[13],xmm1[13],xmm8[14],xmm1[14],xmm8[15],xmm1[15]
+; CHECK-SSE2-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm8 # [0,9,0,0,0,41,0,147,0,129,0,129,0,85,0,141]
+; CHECK-SSE2-NEXT:    psrlw $8, %xmm8
 ; CHECK-SSE2-NEXT:    pxor %xmm6, %xmm6
-; CHECK-SSE2-NEXT:    pcmpgtb %xmm6, %xmm1
-; CHECK-SSE2-NEXT:    pandn %xmm1, %xmm5
-; CHECK-SSE2-NEXT:    por %xmm7, %xmm5
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [223,u,223,u,205,u,183,u,161,u,1,u,171,u,239,u]
-; CHECK-SSE2-NEXT:    pand %xmm4, %xmm1
-; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [197,u,205,u,27,u,241,u,1,u,1,u,1,u,163,u]
-; CHECK-SSE2-NEXT:    pand %xmm4, %xmm0
-; CHECK-SSE2-NEXT:    packuswb %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
-; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [128,128,1,1,1,128,1,64]
-; CHECK-SSE2-NEXT:    psrlw $8, %xmm1
-; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,1,1,128,128,32,128,32]
-; CHECK-SSE2-NEXT:    psrlw $8, %xmm0
-; CHECK-SSE2-NEXT:    packuswb %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [19,51,13,7,128,32,128,3,5,5,51,37,3,128,85,5]
-; CHECK-SSE2-NEXT:    pmaxub %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    pcmpeqb %xmm6, %xmm3
-; CHECK-SSE2-NEXT:    pandn %xmm5, %xmm3
-; CHECK-SSE2-NEXT:    pcmpeqb %xmm6, %xmm2
-; CHECK-SSE2-NEXT:    pandn %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    pmovmskb %xmm2, %ecx
-; CHECK-SSE2-NEXT:    pmovmskb %xmm3, %edx
-; CHECK-SSE2-NEXT:    shll $16, %edx
+; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm1[0],xmm6[1],xmm1[1],xmm6[2],xmm1[2],xmm6[3],xmm1[3],xmm6[4],xmm1[4],xmm6[5],xmm1[5],xmm6[6],xmm1[6],xmm6[7],xmm1[7]
+; CHECK-SSE2-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [0,86,0,95,0,147,0,43,0,49,0,127,0,65,0,147]
+; CHECK-SSE2-NEXT:    psrlw $8, %xmm6
+; CHECK-SSE2-NEXT:    packuswb %xmm8, %xmm6
+; CHECK-SSE2-NEXT:    paddb %xmm7, %xmm6
+; CHECK-SSE2-NEXT:    movdqa %xmm6, %xmm7
+; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8],xmm6[8],xmm7[9],xmm6[9],xmm7[10],xmm6[10],xmm7[11],xmm6[11],xmm7[12],xmm6[12],xmm7[13],xmm6[13],xmm7[14],xmm6[14],xmm7[15],xmm6[15]
+; CHECK-SSE2-NEXT:    psraw $8, %xmm7
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [64,256,32,64,256,64,8,4]
+; CHECK-SSE2-NEXT:    psrlw $8, %xmm7
+; CHECK-SSE2-NEXT:    movdqa %xmm6, %xmm8
+; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm6[0],xmm8[1],xmm6[1],xmm8[2],xmm6[2],xmm8[3],xmm6[3],xmm8[4],xmm6[4],xmm8[5],xmm6[5],xmm8[6],xmm6[6],xmm8[7],xmm6[7]
+; CHECK-SSE2-NEXT:    psraw $8, %xmm8
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm8 # [256,8,64,256,16,4,8,8]
+; CHECK-SSE2-NEXT:    psrlw $8, %xmm8
+; CHECK-SSE2-NEXT:    packuswb %xmm7, %xmm8
+; CHECK-SSE2-NEXT:    psrlw $7, %xmm6
+; CHECK-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
+; CHECK-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
+; CHECK-SSE2-NEXT:    paddb %xmm8, %xmm6
+; CHECK-SSE2-NEXT:    movdqa %xmm6, %xmm7
+; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [114,u,1,u,50,u,7,u,2,u,8,u,97,u,117,u]
+; CHECK-SSE2-NEXT:    pand %xmm5, %xmm7
+; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [3,u,87,u,7,u,6,u,84,u,128,u,127,u,56,u]
+; CHECK-SSE2-NEXT:    pand %xmm5, %xmm6
+; CHECK-SSE2-NEXT:    packuswb %xmm7, %xmm6
+; CHECK-SSE2-NEXT:    psubb %xmm6, %xmm1
+; CHECK-SSE2-NEXT:    pxor %xmm6, %xmm6
+; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm0[8],xmm6[9],xmm0[9],xmm6[10],xmm0[10],xmm6[11],xmm0[11],xmm6[12],xmm0[12],xmm6[13],xmm0[13],xmm6[14],xmm0[14],xmm6[15],xmm0[15]
+; CHECK-SSE2-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [0,133,0,133,0,103,0,147,0,85,0,129,0,86,0,137]
+; CHECK-SSE2-NEXT:    psrlw $8, %xmm6
+; CHECK-SSE2-NEXT:    pxor %xmm7, %xmm7
+; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm0[0],xmm7[1],xmm0[1],xmm7[2],xmm0[2],xmm7[3],xmm0[3],xmm7[4],xmm0[4],xmm7[5],xmm0[5],xmm7[6],xmm0[6],xmm7[7],xmm0[7]
+; CHECK-SSE2-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [0,79,0,103,0,27,0,121,0,129,0,129,0,129,0,47]
+; CHECK-SSE2-NEXT:    psrlw $8, %xmm7
+; CHECK-SSE2-NEXT:    packuswb %xmm6, %xmm7
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [0,0,0,0,255,255,255,0,255,255,0,255,0,255,0,255]
+; CHECK-SSE2-NEXT:    pand %xmm0, %xmm6
+; CHECK-SSE2-NEXT:    paddb %xmm7, %xmm6
+; CHECK-SSE2-NEXT:    movdqa %xmm6, %xmm7
+; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8],xmm6[8],xmm7[9],xmm6[9],xmm7[10],xmm6[10],xmm7[11],xmm6[11],xmm7[12],xmm6[12],xmm7[13],xmm6[13],xmm7[14],xmm6[14],xmm7[15],xmm6[15]
+; CHECK-SSE2-NEXT:    psraw $8, %xmm7
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [8,8,128,64,8,256,256,8]
+; CHECK-SSE2-NEXT:    psrlw $8, %xmm7
+; CHECK-SSE2-NEXT:    pxor %xmm8, %xmm8
+; CHECK-SSE2-NEXT:    pcmpgtb %xmm6, %xmm8
+; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-SSE2-NEXT:    psraw $8, %xmm6
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [64,128,128,16,256,64,256,16]
+; CHECK-SSE2-NEXT:    psrlw $8, %xmm6
+; CHECK-SSE2-NEXT:    packuswb %xmm7, %xmm6
+; CHECK-SSE2-NEXT:    psubb %xmm8, %xmm6
+; CHECK-SSE2-NEXT:    movdqa %xmm6, %xmm7
+; CHECK-SSE2-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [62,u,62,u,5,u,7,u,97,u,2,u,3,u,60,u]
+; CHECK-SSE2-NEXT:    pand %xmm5, %xmm7
+; CHECK-SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [13,u,5,u,19,u,34,u,2,u,8,u,2,u,88,u]
+; CHECK-SSE2-NEXT:    pand %xmm5, %xmm6
+; CHECK-SSE2-NEXT:    packuswb %xmm7, %xmm6
+; CHECK-SSE2-NEXT:    psubb %xmm6, %xmm0
+; CHECK-SSE2-NEXT:    pcmpeqb %xmm4, %xmm1
+; CHECK-SSE2-NEXT:    pcmpeqb %xmm4, %xmm0
+; CHECK-SSE2-NEXT:    pcmpeqb %xmm4, %xmm2
+; CHECK-SSE2-NEXT:    por %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pcmpeqb %xmm4, %xmm3
+; CHECK-SSE2-NEXT:    por %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pmovmskb %xmm3, %ecx
+; CHECK-SSE2-NEXT:    notl %ecx
+; CHECK-SSE2-NEXT:    shll $16, %ecx
+; CHECK-SSE2-NEXT:    pmovmskb %xmm2, %edx
+; CHECK-SSE2-NEXT:    xorl $65535, %edx # imm = 0xFFFF
 ; CHECK-SSE2-NEXT:    orl %ecx, %edx
 ; CHECK-SSE2-NEXT:    movl %edx, (%rdi)
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-SSE41-LABEL: pr51133:
 ; CHECK-SSE41:       # %bb.0:
-; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm4
 ; CHECK-SSE41-NEXT:    movq %rdi, %rax
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [171,103,183,171,61,1,127,183,9,0,41,183,1,1,161,221]
-; CHECK-SSE41-NEXT:    pmullw %xmm1, %xmm0
-; CHECK-SSE41-NEXT:    pmovzxbw {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
-; CHECK-SSE41-NEXT:    pand %xmm5, %xmm0
-; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm6
-; CHECK-SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [0,103,0,171,0,1,0,183,0,0,0,183,0,1,0,221]
-; CHECK-SSE41-NEXT:    psllw $8, %xmm6
-; CHECK-SSE41-NEXT:    por %xmm0, %xmm6
-; CHECK-SSE41-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
-; CHECK-SSE41-NEXT:    movdqa %xmm6, %xmm0
-; CHECK-SSE41-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm6[8],xmm0[9],xmm6[9],xmm0[10],xmm6[10],xmm0[11],xmm6[11],xmm0[12],xmm6[12],xmm0[13],xmm6[13],xmm0[14],xmm6[14],xmm0[15],xmm6[15]
-; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [128,1,128,1,128,32,1,1]
-; CHECK-SSE41-NEXT:    psrlw $8, %xmm0
+; CHECK-SSE41-NEXT:    pxor %xmm4, %xmm4
+; CHECK-SSE41-NEXT:    pxor %xmm5, %xmm5
+; CHECK-SSE41-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm0[8],xmm5[9],xmm0[9],xmm5[10],xmm0[10],xmm5[11],xmm0[11],xmm5[12],xmm0[12],xmm5[13],xmm0[13],xmm5[14],xmm0[14],xmm5[15],xmm0[15]
+; CHECK-SSE41-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5 # [0,133,0,133,0,103,0,147,0,85,0,129,0,86,0,137]
+; CHECK-SSE41-NEXT:    psrlw $8, %xmm5
+; CHECK-SSE41-NEXT:    pxor %xmm7, %xmm7
+; CHECK-SSE41-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm0[0],xmm7[1],xmm0[1],xmm7[2],xmm0[2],xmm7[3],xmm0[3],xmm7[4],xmm0[4],xmm7[5],xmm0[5],xmm7[6],xmm0[6],xmm7[7],xmm0[7]
+; CHECK-SSE41-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [0,79,0,103,0,27,0,121,0,129,0,129,0,129,0,47]
+; CHECK-SSE41-NEXT:    psrlw $8, %xmm7
+; CHECK-SSE41-NEXT:    packuswb %xmm5, %xmm7
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [0,0,0,0,255,255,255,0,255,255,0,255,0,255,0,255]
+; CHECK-SSE41-NEXT:    pand %xmm0, %xmm6
+; CHECK-SSE41-NEXT:    paddb %xmm7, %xmm6
+; CHECK-SSE41-NEXT:    movdqa %xmm6, %xmm5
+; CHECK-SSE41-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm6[8],xmm5[9],xmm6[9],xmm5[10],xmm6[10],xmm5[11],xmm6[11],xmm5[12],xmm6[12],xmm5[13],xmm6[13],xmm5[14],xmm6[14],xmm5[15],xmm6[15]
+; CHECK-SSE41-NEXT:    psraw $8, %xmm5
+; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5 # [8,8,128,64,8,256,256,8]
+; CHECK-SSE41-NEXT:    psrlw $8, %xmm5
+; CHECK-SSE41-NEXT:    pxor %xmm7, %xmm7
+; CHECK-SSE41-NEXT:    pcmpgtb %xmm6, %xmm7
 ; CHECK-SSE41-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [1,1,1,128,64,2,1,32]
+; CHECK-SSE41-NEXT:    psraw $8, %xmm6
+; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [64,128,128,16,256,64,256,16]
 ; CHECK-SSE41-NEXT:    psrlw $8, %xmm6
-; CHECK-SSE41-NEXT:    packuswb %xmm0, %xmm6
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [84,2,36,42,2,1,2,4,2,255,4,36,127,31,2,2]
-; CHECK-SSE41-NEXT:    pminub %xmm6, %xmm0
-; CHECK-SSE41-NEXT:    pcmpeqb %xmm6, %xmm0
-; CHECK-SSE41-NEXT:    pcmpeqd %xmm7, %xmm7
-; CHECK-SSE41-NEXT:    pxor %xmm0, %xmm7
-; CHECK-SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE41-NEXT:    packuswb %xmm5, %xmm6
+; CHECK-SSE41-NEXT:    psubb %xmm7, %xmm6
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [13,5,19,34,2,8,2,88,62,62,5,7,97,2,3,60]
+; CHECK-SSE41-NEXT:    pmullw %xmm6, %xmm7
+; CHECK-SSE41-NEXT:    pmovzxbw {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
+; CHECK-SSE41-NEXT:    pand %xmm5, %xmm7
+; CHECK-SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [0,5,0,34,0,8,0,88,0,62,0,7,0,2,0,60]
+; CHECK-SSE41-NEXT:    psllw $8, %xmm6
+; CHECK-SSE41-NEXT:    por %xmm7, %xmm6
+; CHECK-SSE41-NEXT:    psubb %xmm6, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm6, %xmm6
-; CHECK-SSE41-NEXT:    pcmpgtb %xmm6, %xmm1
-; CHECK-SSE41-NEXT:    movaps {{.*#+}} xmm0 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; CHECK-SSE41-NEXT:    pblendvb %xmm0, %xmm7, %xmm1
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [197,205,27,241,1,1,1,163,223,223,205,183,161,1,171,239]
-; CHECK-SSE41-NEXT:    pmullw %xmm4, %xmm0
-; CHECK-SSE41-NEXT:    pand %xmm5, %xmm0
-; CHECK-SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [0,205,0,241,0,1,0,163,0,223,0,183,0,1,0,239]
-; CHECK-SSE41-NEXT:    psllw $8, %xmm4
-; CHECK-SSE41-NEXT:    por %xmm0, %xmm4
-; CHECK-SSE41-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
-; CHECK-SSE41-NEXT:    movdqa %xmm4, %xmm0
-; CHECK-SSE41-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm4[8],xmm0[9],xmm4[9],xmm0[10],xmm4[10],xmm0[11],xmm4[11],xmm0[12],xmm4[12],xmm0[13],xmm4[13],xmm0[14],xmm4[14],xmm0[15],xmm4[15]
-; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [128,128,1,1,1,128,1,64]
-; CHECK-SSE41-NEXT:    psrlw $8, %xmm0
-; CHECK-SSE41-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [1,1,1,128,128,32,128,32]
-; CHECK-SSE41-NEXT:    psrlw $8, %xmm4
-; CHECK-SSE41-NEXT:    packuswb %xmm0, %xmm4
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [19,51,13,7,128,32,128,3,5,5,51,37,3,128,85,5]
-; CHECK-SSE41-NEXT:    pmaxub %xmm4, %xmm0
+; CHECK-SSE41-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm1[8],xmm6[9],xmm1[9],xmm6[10],xmm1[10],xmm6[11],xmm1[11],xmm6[12],xmm1[12],xmm6[13],xmm1[13],xmm6[14],xmm1[14],xmm6[15],xmm1[15]
+; CHECK-SSE41-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [0,9,0,0,0,41,0,147,0,129,0,129,0,85,0,141]
+; CHECK-SSE41-NEXT:    psrlw $8, %xmm6
+; CHECK-SSE41-NEXT:    pxor %xmm7, %xmm7
+; CHECK-SSE41-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm1[0],xmm7[1],xmm1[1],xmm7[2],xmm1[2],xmm7[3],xmm1[3],xmm7[4],xmm1[4],xmm7[5],xmm1[5],xmm7[6],xmm1[6],xmm7[7],xmm1[7]
+; CHECK-SSE41-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [0,86,0,95,0,147,0,43,0,49,0,127,0,65,0,147]
+; CHECK-SSE41-NEXT:    psrlw $8, %xmm7
+; CHECK-SSE41-NEXT:    packuswb %xmm6, %xmm7
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [0,0,1,0,0,255,0,1,0,1,0,1,1,1,0,1]
+; CHECK-SSE41-NEXT:    pmullw %xmm1, %xmm8
+; CHECK-SSE41-NEXT:    pand %xmm5, %xmm8
+; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm6
+; CHECK-SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [0,0,0,0,0,255,0,1,0,1,0,1,0,1,0,1]
+; CHECK-SSE41-NEXT:    psllw $8, %xmm6
+; CHECK-SSE41-NEXT:    por %xmm8, %xmm6
+; CHECK-SSE41-NEXT:    paddb %xmm7, %xmm6
+; CHECK-SSE41-NEXT:    movdqa %xmm6, %xmm7
+; CHECK-SSE41-NEXT:    punpckhbw {{.*#+}} xmm7 = xmm7[8],xmm6[8],xmm7[9],xmm6[9],xmm7[10],xmm6[10],xmm7[11],xmm6[11],xmm7[12],xmm6[12],xmm7[13],xmm6[13],xmm7[14],xmm6[14],xmm7[15],xmm6[15]
+; CHECK-SSE41-NEXT:    psraw $8, %xmm7
+; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm7 # [64,256,32,64,256,64,8,4]
+; CHECK-SSE41-NEXT:    psrlw $8, %xmm7
+; CHECK-SSE41-NEXT:    movdqa %xmm6, %xmm8
+; CHECK-SSE41-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0],xmm6[0],xmm8[1],xmm6[1],xmm8[2],xmm6[2],xmm8[3],xmm6[3],xmm8[4],xmm6[4],xmm8[5],xmm6[5],xmm8[6],xmm6[6],xmm8[7],xmm6[7]
+; CHECK-SSE41-NEXT:    psraw $8, %xmm8
+; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm8 # [256,8,64,256,16,4,8,8]
+; CHECK-SSE41-NEXT:    psrlw $8, %xmm8
+; CHECK-SSE41-NEXT:    packuswb %xmm7, %xmm8
+; CHECK-SSE41-NEXT:    psrlw $7, %xmm6
+; CHECK-SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
+; CHECK-SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
+; CHECK-SSE41-NEXT:    paddb %xmm8, %xmm6
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [3,87,7,6,84,128,127,56,114,1,50,7,2,8,97,117]
+; CHECK-SSE41-NEXT:    pmullw %xmm6, %xmm7
+; CHECK-SSE41-NEXT:    pand %xmm5, %xmm7
+; CHECK-SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6 # [0,87,0,6,0,128,0,56,0,1,0,7,0,8,0,117]
+; CHECK-SSE41-NEXT:    psllw $8, %xmm6
+; CHECK-SSE41-NEXT:    por %xmm7, %xmm6
+; CHECK-SSE41-NEXT:    psubb %xmm6, %xmm1
+; CHECK-SSE41-NEXT:    pcmpeqb %xmm4, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqb %xmm4, %xmm0
-; CHECK-SSE41-NEXT:    pcmpeqb %xmm6, %xmm3
-; CHECK-SSE41-NEXT:    pandn %xmm1, %xmm3
-; CHECK-SSE41-NEXT:    pcmpeqb %xmm6, %xmm2
-; CHECK-SSE41-NEXT:    pandn %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pcmpeqb %xmm4, %xmm3
+; CHECK-SSE41-NEXT:    por %xmm1, %xmm3
+; CHECK-SSE41-NEXT:    pcmpeqb %xmm4, %xmm2
+; CHECK-SSE41-NEXT:    por %xmm0, %xmm2
 ; CHECK-SSE41-NEXT:    pmovmskb %xmm2, %ecx
+; CHECK-SSE41-NEXT:    xorl $65535, %ecx # imm = 0xFFFF
 ; CHECK-SSE41-NEXT:    pmovmskb %xmm3, %edx
+; CHECK-SSE41-NEXT:    notl %edx
 ; CHECK-SSE41-NEXT:    shll $16, %edx
 ; CHECK-SSE41-NEXT:    orl %ecx, %edx
 ; CHECK-SSE41-NEXT:    movl %edx, (%rdi)
@@ -2488,4 +2553,123 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
   %cmp4 = icmp ne <32 x i8> %y, zeroinitializer
   %cmpres = and <32 x i1> %cmp4, %cmp
   ret <32 x i1> %cmpres
+}
+
+; One one divisor in even divisor
+define <2 x i64> @test_srem_even_one_i64(<2 x i64> %X) nounwind {
+; CHECK-SSE2-LABEL: test_srem_even_one_i64:
+; CHECK-SSE2:       # %bb.0:
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-SSE2-NEXT:    psrlq $32, %xmm3
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1840700269,1840700269]
+; CHECK-SSE2-NEXT:    paddq %xmm3, %xmm0
+; CHECK-SSE2-NEXT:    psllq $32, %xmm0
+; CHECK-SSE2-NEXT:    paddq %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-SSE2-NEXT:    psllq $63, %xmm1
+; CHECK-SSE2-NEXT:    psrlq $1, %xmm0
+; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; CHECK-SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pand %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    retq
+;
+; CHECK-SSE41-LABEL: test_srem_even_one_i64:
+; CHECK-SSE41:       # %bb.0:
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-SSE41-NEXT:    psrlq $32, %xmm3
+; CHECK-SSE41-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE41-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1840700269,1840700269]
+; CHECK-SSE41-NEXT:    paddq %xmm3, %xmm0
+; CHECK-SSE41-NEXT:    psllq $32, %xmm0
+; CHECK-SSE41-NEXT:    paddq %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-SSE41-NEXT:    psllq $63, %xmm1
+; CHECK-SSE41-NEXT:    psrlq $1, %xmm0
+; CHECK-SSE41-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; CHECK-SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE41-NEXT:    pand %xmm2, %xmm1
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    por %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    retq
+;
+; CHECK-AVX1-LABEL: test_srem_even_one_i64:
+; CHECK-AVX1:       # %bb.0:
+; CHECK-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-AVX1-NEXT:    # xmm1 = mem[0,0]
+; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; CHECK-AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; CHECK-AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1840700269,1840700269]
+; CHECK-AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; CHECK-AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: test_srem_even_one_i64:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; CHECK-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; CHECK-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; CHECK-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1840700269,1840700269]
+; CHECK-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; CHECK-AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsllq $63, %xmm0, %xmm1
+; CHECK-AVX2-NEXT:    vpsrlq $1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-AVX512VL-LABEL: test_srem_even_one_i64:
+; CHECK-AVX512VL:       # %bb.0:
+; CHECK-AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7905747460161236407,7905747460161236407]
+; CHECK-AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; CHECK-AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; CHECK-AVX512VL-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpsllq $32, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vprorq $1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; CHECK-AVX512VL-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    retq
+  %srem = srem <2 x i64> %X, <i64 1, i64 14>
+  %cmp = icmp eq <2 x i64> %srem, <i64 0, i64 0>
+  %ret = zext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %ret
 }

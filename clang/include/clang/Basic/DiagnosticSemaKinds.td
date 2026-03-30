@@ -3638,6 +3638,12 @@ def err_invalid_collection_element : Error<
 def err_box_literal_collection : Error<
   "%select{string|character|boolean|numeric}0 literal must be prefixed by '@' "
   "in a collection">;
+def err_objc_literal_nonconstant_at_file_scope : Error<
+  "%select{an array|a dictionary|a numeric literal|a boxed expression|}0 "
+  "literal can only be used at file scope if %select{its contents are all "
+  "also constant literals|its contents are all also constant literals and "
+  "its keys are string literals|constant|constant}0">;
+
 def warn_objc_literal_comparison : Warning<
   "direct comparison of %select{an array literal|a dictionary literal|"
   "a numeric literal|a boxed expression|}0 has undefined behavior">,
@@ -4249,6 +4255,8 @@ def warn_at_available_unchecked_use : Warning<
 def warn_availability_invalid_os_version
     : Warning<"invalid %1 version '%0' in availability attribute">, InGroup<DiagGroup<"invalid-version-availability">>;
 def note_availability_invalid_os_version_adjusted: Note<"implicitly treating version as '%0'">;
+def err_availability_invalid_anyappleos_version
+    : Error<"invalid anyAppleOS version '%0' in availability attribute">;
 
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
@@ -13276,6 +13284,9 @@ def err_builtin_invalid_arg_type: Error<
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
+
+def err_builtin_requires_double_type: Error<
+  "%ordinal0 argument must be a scalar, vector, or matrix of double type (was %1)">;
 
 def err_bswapg_invalid_bit_width : Error<
   "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;

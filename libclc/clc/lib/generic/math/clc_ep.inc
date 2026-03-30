@@ -461,7 +461,7 @@ __clc_ep_exp_extended(__CLC_EP_PAIR x) {
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_GENTYPE a) {
   __CLC_INTN a_exp;
   __CLC_GENTYPE m = __clc_frexp(a, &a_exp);
-  __CLC_INTN b = m < (2.0f / 3.0f);
+  __CLC_INTN b = m < (2.0f / 3.0f) ? 1 : 0;
   m = __clc_ldexp(m, b);
   __CLC_INTN e = a_exp - b;
 
@@ -490,7 +490,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_FLOATN __clc_ep_ln_hi(__CLC_EP_PAIR a,
                                                               __CLC_INTN ea) {
   __CLC_INTN a_hi_exp;
   __CLC_FLOATN a_hi_m = __clc_frexp(a.hi, &a_hi_exp);
-  __CLC_INTN b = a_hi_m < (2.0f / 3.0f);
+  __CLC_INTN b = a_hi_m < (2.0f / 3.0f) ? 1 : 0;
   __CLC_INTN e = a_hi_exp - b;
   __CLC_EP_PAIR m = __clc_ep_ldexp(a, -e);
   __CLC_EP_PAIR x =
@@ -563,7 +563,7 @@ __clc_ep_exp_extended(__CLC_EP_PAIR x) {
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_DOUBLEN a) {
   __CLC_INTN a_exp;
   __CLC_DOUBLEN m = __clc_frexp(a, &a_exp);
-  __CLC_INTN b = __CLC_CONVERT_INTN(m < __CLC_FP_LIT(2.0 / 3.0));
+  __CLC_INTN b = __CLC_CONVERT_INTN(m < __CLC_FP_LIT(2.0 / 3.0)) ? 1 : 0;
   m = __clc_ldexp(m, b);
   __CLC_INTN e = a_exp - b;
 
@@ -597,8 +597,8 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_DOUBLEN __clc_ep_ln_hi(__CLC_EP_PAIR a,
   __CLC_INTN a_hi_exp;
   __CLC_DOUBLEN m_hi = __clc_frexp(a.hi, &a_hi_exp);
 
-  __CLC_LONGN b = m_hi < (2.0 / 3.0);
-  __CLC_INTN e = a_hi_exp - __CLC_CONVERT_INTN(b);
+  __CLC_INTN b = __CLC_CONVERT_INTN(m_hi < (2.0 / 3.0)) ? 1 : 0;
+  __CLC_INTN e = a_hi_exp - b;
   __CLC_EP_PAIR m = __clc_ep_ldexp(a, -e);
   __CLC_EP_PAIR x =
       __clc_ep_div(__clc_ep_fast_add(-1.0, m), __clc_ep_fast_add(1.0, m));
