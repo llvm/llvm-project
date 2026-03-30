@@ -436,12 +436,9 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         // Only 1 successor: the indirect goto dispatch block.
         assert(B->succ_size() == 1);
         ExplodedNodeSet Dst;
-        IndirectGotoNodeBuilder Builder(
-            Dst, ExprEng.getBuilderContext(),
-            cast<IndirectGotoStmt>(Term)->getTarget(), *(B->succ_begin()));
-
-        ExprEng.processIndirectGoto(Builder, Pred);
-        // Enqueue the new frontier onto the worklist.
+        ExprEng.processIndirectGoto(Dst,
+                                    cast<IndirectGotoStmt>(Term)->getTarget(),
+                                    *(B->succ_begin()), Pred);
         enqueue(Dst);
         return;
       }
@@ -692,7 +689,7 @@ ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
   Frontier.erase(FromN);
   ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
 
-  Frontier.Add(N);
+  Frontier.insert(N);
 
   return N;
 }
@@ -709,13 +706,6 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
       BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
   ExplodedNode *Succ = NodeBuilder::generateNode(Loc, State, NodePred);
   return Succ;
-}
-
-ExplodedNode *IndirectGotoNodeBuilder::generateNode(const CFGBlock *Block,
-                                                    ProgramStateRef St,
-                                                    ExplodedNode *Pred) {
-  BlockEdge BE(C.getBlock(), Block, Pred->getLocationContext());
-  return generateNode(BE, St, Pred);
 }
 
 ExplodedNode *SwitchNodeBuilder::generateCaseStmtNode(const CFGBlock *Block,

@@ -67,9 +67,8 @@ public:
   Status ResolveSymbolFile(Target &target, const ModuleSpec &sym_spec,
                            FileSpec &sym_file) override;
 
-  FileSpecList
-  LocateExecutableScriptingResources(Target *target, Module &module,
-                                     Stream &feedback_stream) override;
+  FileSpecList LocateExecutableScriptingResourcesForPlatform(
+      Target *target, Module &module_spec, Stream &feedback_stream) override;
 
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,

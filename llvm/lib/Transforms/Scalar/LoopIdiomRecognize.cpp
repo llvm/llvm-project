@@ -2377,10 +2377,7 @@ bool LoopIdiomRecognize::isProfitableToInsertFFS(Intrinsic::ID IntrinID,
   const Value *Args[] = {InitX,
                          ConstantInt::getBool(InitX->getContext(), ZeroCheck)};
 
-  // @llvm.dbg doesn't count as they have no semantic effect.
-  auto InstWithoutDebugIt = CurLoop->getHeader()->instructionsWithoutDebug();
-  uint32_t HeaderSize =
-      std::distance(InstWithoutDebugIt.begin(), InstWithoutDebugIt.end());
+  uint32_t HeaderSize = CurLoop->getHeader()->size();
 
   IntrinsicCostAttributes Attrs(IntrinID, InitX->getType(), Args);
   InstructionCost Cost = TTI->getIntrinsicInstrCost(

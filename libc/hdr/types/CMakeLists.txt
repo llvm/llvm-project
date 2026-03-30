@@ -136,6 +136,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  rsize_t
+  HDRS
+    rsize_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.rsize_t
+)
+
+add_proxy_header_library(
   size_t
   HDRS
     size_t.h
@@ -160,6 +168,22 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.mode_t
     libc.include.fcntl
+)
+
+add_proxy_header_library(
+  constraint_handler_t
+  HDRS
+    constraint_handler_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.constraint_handler_t
+)
+
+add_proxy_header_library(
+  errno_t
+  HDRS
+    errno_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.errno_t
 )
 
 add_proxy_header_library(
@@ -496,6 +520,33 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_rlimit
     libc.include.sys_resource
+)
+
+add_proxy_header_library(
+  struct_semid_ds
+  HDRS
+    struct_semid_ds.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_semid_ds
+    libc.include.sys_sem
+)
+
+add_proxy_header_library(
+  struct_sembuf
+  HDRS
+    struct_sembuf.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sembuf
+    libc.include.sys_sem
+)
+
+add_proxy_header_library(
+  struct_seminfo
+  HDRS
+    struct_seminfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_seminfo
+    libc.include.sys_sem
 )
 
 add_proxy_header_library(

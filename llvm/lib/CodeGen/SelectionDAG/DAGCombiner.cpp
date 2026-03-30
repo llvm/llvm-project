@@ -151,6 +151,10 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
+static cl::opt<bool> EnableTopologicalSorting(
+    "combiner-topological-sorting", cl::Hidden, cl::init(false),
+    cl::desc("DAG combiner nodes consistently processed in topological order"));
+
 static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
                                      cl::init(false),
                                      cl::desc("Disable the DAG combiner"));
@@ -256,15 +260,6 @@ namespace {
       ForCodeSize = DAG.shouldOptForSize();
       DisableGenericCombines =
           DisableCombines || (STI && STI->disableGenericCombines(OptLevel));
-
-      MaximumLegalStoreInBits = 0;
-      // We use the minimum store size here, since that's all we can guarantee
-      // for the scalable vector types.
-      for (MVT VT : MVT::all_valuetypes())
-        if (EVT(VT).isSimple() && VT != MVT::Other &&
-            TLI.isTypeLegal(EVT(VT)) &&
-            VT.getSizeInBits().getKnownMinValue() >= MaximumLegalStoreInBits)
-          MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
     }
 
     void ConsiderForPruning(SDNode *N) {
@@ -340,8 +335,6 @@ namespace {
     void CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO);
 
   private:
-    unsigned MaximumLegalStoreInBits;
-
     /// Check the specified integer node value to see if it can be simplified or
     /// if things it uses can be simplified by bit propagation.
     /// If so, return true.
@@ -1820,7 +1813,14 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
+  bool UseTopologicalSorting = EnableTopologicalSorting.getNumOccurrences() > 0
+                                   ? EnableTopologicalSorting
+                                   : TLI.useTopologicalSorting();
+
   WorklistInserter AddNodes(*this);
+
+  if (UseTopologicalSorting)
+    DAG.AssignTopologicalOrder();
 
   // Add all the dag nodes to the worklist.
   //
@@ -1828,8 +1828,13 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   // nodes which can be deleted are those which have no uses and all other nodes
   // which would otherwise be added to the worklist by the first call to
   // getNextWorklistEntry are already present in it.
-  for (SDNode &Node : DAG.allnodes())
-    AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
+  if (UseTopologicalSorting) {
+    for (SDNode &Node : reverse(DAG.allnodes()))
+      AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
+  } else {
+    for (SDNode &Node : DAG.allnodes())
+      AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
+  }
 
   // Create a dummy node (which is not added to allnodes), that adds a reference
   // to the root node, preventing it from being deleted, and tracking any
@@ -5636,7 +5641,7 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   // fold (mulhu x, (1 << c)) -> x >> (bitwidth - c)
   if (isConstantOrConstantVector(N1, /*NoOpaques=*/true,
                                  /*AllowTruncation=*/true) &&
-      hasOperation(ISD::SRL, VT)) {
+      (!LegalOperations || hasOperation(ISD::SRL, VT))) {
     if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
       unsigned NumEltBits = VT.getScalarSizeInBits();
       SDValue SRLAmt = DAG.getNode(
@@ -6324,13 +6329,10 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   }
 
   // If we know the range of vscale, see if we can fold it given a constant.
-  // TODO: Generalize this to other nodes by adding computeConstantRange
   if (N0.getOpcode() == ISD::VSCALE) {
     if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
-      const Function &F = DAG.getMachineFunction().getFunction();
-      ConstantRange Range =
-          getVScaleRange(&F, VT.getScalarSizeInBits())
-              .multiply(ConstantRange(N0.getConstantOperandAPInt(0)));
+      bool ForSigned = (Opcode == ISD::SMAX || Opcode == ISD::SMIN);
+      ConstantRange Range = DAG.computeConstantRange(N0, ForSigned);
 
       const APInt &C1V = C1->getAPIntValue();
       if ((Opcode == ISD::UMAX && Range.getUnsignedMax().ule(C1V)) ||
@@ -12442,7 +12444,6 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
     return SDValue();
 
   if (CondVT != MVT::i1 || LegalOperations) {
-    // fold (select Cond, 0, 1) -> (xor Cond, 1)
     // We can't do this reliably if integer based booleans have different contents
     // to floating point based booleans. This is because we can't tell whether we
     // have an integer-based boolean or a floating-point-based boolean unless we
@@ -12455,13 +12456,19 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
         TLI.getBooleanContents(/*isVec*/false, /*isFloat*/true) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         TLI.getBooleanContents(/*isVec*/false, /*isFloat*/false) ==
-            TargetLowering::ZeroOrOneBooleanContent &&
-        C1->isZero() && C2->isOne()) {
-      SDValue NotCond =
-          DAG.getNode(ISD::XOR, DL, CondVT, Cond, DAG.getConstant(1, DL, CondVT));
-      if (VT.bitsEq(CondVT))
-        return NotCond;
-      return DAG.getZExtOrTrunc(NotCond, DL, VT);
+            TargetLowering::ZeroOrOneBooleanContent) {
+      // fold (select Cond, 0, 1) -> (xor Cond, 1)
+      if (C1->isZero() && C2->isOne()) {
+        SDValue NotCond = DAG.getNode(ISD::XOR, DL, CondVT, Cond,
+                                      DAG.getConstant(1, DL, CondVT));
+        if (VT.bitsEq(CondVT))
+          return NotCond;
+        return DAG.getZExtOrTrunc(NotCond, DL, VT);
+      }
+
+      // fold (select Cond, 1, 0) -> Cond
+      if (C1->isOne() && C2->isZero() && CondVT == VT)
+        return Cond;
     }
 
     return SDValue();
@@ -20236,8 +20243,8 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
     // Ideally this should be folded into SimplifySetCC and not
     // here. For now, grab a handle to N so we don't lose it from
     // replacements interal to the visit.
-    HandleSDNode XORHandle(N);
     while (N.getOpcode() == ISD::XOR) {
+      HandleSDNode XORHandle(N);
       SDValue Tmp = visitXOR(N.getNode());
       // No simplification done.
       if (!Tmp.getNode())
@@ -22701,7 +22708,7 @@ bool DAGCombiner::tryStoreMergeOfConstants(
       unsigned IsFast = 0;
 
       // Break early when size is too large to be legal.
-      if (StoreTy.getSizeInBits() > MaximumLegalStoreInBits)
+      if (StoreTy.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
         break;
 
       if (TLI.isTypeLegal(StoreTy) &&
@@ -22809,7 +22816,7 @@ bool DAGCombiner::tryStoreMergeOfExtracts(
       unsigned IsFast = 0;
 
       // Break early when size is too large to be legal.
-      if (Ty.getSizeInBits() > MaximumLegalStoreInBits)
+      if (Ty.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
         break;
 
       if (TLI.isTypeLegal(Ty) &&
@@ -22956,7 +22963,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       EVT StoreTy = EVT::getVectorVT(Context, MemVT.getScalarType(), Elts);
 
       // Break early when size is too large to be legal.
-      if (StoreTy.getSizeInBits() > MaximumLegalStoreInBits)
+      if (StoreTy.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
         break;
 
       unsigned IsFastSt = 0;
@@ -23176,7 +23183,8 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   EVT MemVT = St->getMemoryVT();
   if (MemVT.isScalableVT())
     return false;
-  if (!MemVT.isSimple() || MemVT.getSizeInBits() * 2 > MaximumLegalStoreInBits)
+  if (!MemVT.isSimple() ||
+      MemVT.getSizeInBits() * 2 > TLI.getMaximumLegalStoreInBits())
     return false;
 
   // This function cannot currently deal with non-byte-sized memory sizes.
@@ -26996,9 +27004,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   // Combine an extract of an extract into a single extract_subvector.
   // ext (ext X, C), 0 --> ext X, C
   if (ExtIdx == 0 && V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
-    // The index has to be a multiple of the new result type's known minimum
-    // vector length.
-    if (V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0 &&
+    // Both indices must have the same scaling factor and C has to be a
+    // multiple of the new result type's known minimum vector length.
+    if (V.getValueType().isScalableVector() == NVT.isScalableVector() &&
+        V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0 &&
         TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
                                     V.getConstantOperandVal(1)) &&
         TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {

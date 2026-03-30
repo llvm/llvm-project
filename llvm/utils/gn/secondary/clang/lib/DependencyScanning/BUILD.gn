@@ -4,13 +4,11 @@ static_library("DependencyScanning") {
   deps = [
     "//clang/lib/AST",
     "//clang/lib/Basic",
-    "//clang/lib/Driver",
     "//clang/lib/Frontend",
     "//clang/lib/Lex",
     "//llvm/lib/IR",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
-    "//llvm/lib/Target:TargetsToBuild",
     "//llvm/lib/TargetParser",
   ]
   sources = [

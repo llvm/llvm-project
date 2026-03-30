@@ -135,7 +135,27 @@ uint64_t DataExtractor::getUnsigned(uint64_t *offset_ptr, uint32_t byte_size,
   case 8:
     return getU64(offset_ptr, Err);
   }
-  llvm_unreachable("getUnsigned unhandled case!");
+
+  // For any other byte size, read the bytes and swap/shift if necessary.
+  ErrorAsOutParameter ErrAsOut(Err);
+  uint64_t val = 0;
+  if (isError(Err))
+    return val;
+  uint64_t offset = *offset_ptr;
+  if (!prepareRead(offset, byte_size, Err))
+    return val;
+  std::memcpy(&val, &Data.data()[offset], byte_size);
+  if (sys::IsLittleEndianHost != IsLittleEndian)
+    // Say byte_size is 3.
+    //                high                low
+    // Read bytes:    00 00 00 00 00 AA BB CC
+    // Swapped bytes: CC BB AA 00 00 00 00 00
+    // Shifted bytes: 00 00 00 00 00 CC BB AA
+    val = sys::getSwappedBytes(val) >> (8 * (8 - byte_size));
+
+  // Advance the offset
+  *offset_ptr += byte_size;
+  return val;
 }
 
 int64_t

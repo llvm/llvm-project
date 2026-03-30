@@ -477,10 +477,12 @@ struct CodeCompletionBuilder {
     BundledEntry &S = Bundled.back();
     bool IsConcept = false;
     if (C.SemaResult) {
-      getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix, C.SemaResult->Kind,
-                   C.SemaResult->CursorKind,
-                   /*IncludeFunctionArguments=*/C.SemaResult->FunctionCanBeCall,
-                   /*RequiredQualifiers=*/&Completion.RequiredQualifier);
+      getSignature(
+          *SemaCCS, &S.Signature, &S.SnippetSuffix, C.SemaResult->Kind,
+          C.SemaResult->CursorKind,
+          /*IncludeFunctionArguments=*/C.SemaResult->FunctionCanBeCall ||
+              C.SemaResult->DeclaringEntity,
+          /*RequiredQualifiers=*/&Completion.RequiredQualifier);
       S.ReturnType = getReturnType(*SemaCCS);
       if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
         if (const auto *D = C.SemaResult->getDeclaration())

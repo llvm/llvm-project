@@ -328,9 +328,9 @@ void multiple_expiry_of_same_loan(bool cond) {
     if (cond) {
       p = &unsafe;    // expected-warning {{does not live long enough}}
       if (cond)
-        break;
+        break;        // expected-note {{destroyed here}}
     }
-  }                   // expected-note {{destroyed here}}
+  }
   (void)*p;           // expected-note {{later used here}}
 
   p = &safe;
@@ -349,8 +349,8 @@ void multiple_expiry_of_same_loan(bool cond) {
     if (cond)
       p = &unsafe;    // expected-warning {{does not live long enough}}
     if (cond)
-      break;          
-  }                   // expected-note {{destroyed here}}
+      break;          // expected-note {{destroyed here}}
+  }
   (void)*p;           // expected-note {{later used here}}
 }
 
@@ -717,12 +717,12 @@ View uar_before_uaf(const MyObj& safe, bool c) {
   View p;
   {
     MyObj local_obj; 
-    p = local_obj;  // expected-warning {{object whose reference is captured does not live long enough}}
+    p = local_obj;  // expected-warning {{ddress of stack memory is returned later}}
     if (c) {
-      return p;
+      return p;     // expected-note {{returned here}}
     }
-  }         // expected-note {{destroyed here}}
-  p.use();  // expected-note {{later used here}}
+  }
+  p.use();
   p = safe;
   return p;
 }
@@ -2102,3 +2102,27 @@ void pointer_in_array_use_after_scope() {
 }
 
 } // namespace array
+
+namespace static_call_operator {
+// https://github.com/llvm/llvm-project/issues/187426
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++23-extensions"
+
+struct S {
+  static S operator()(int, int&&);
+  static S& operator()(std::string&&,
+                       const int& a [[clang::lifetimebound]],
+                       const int& b [[clang::lifetimebound]]);
+};
+
+void indexing_with_static_operator() {
+  S()(1, 2);
+  S& x = S()("1",
+             2,  // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+             3); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+
+  (void)x; // expected-note 2 {{later used here}}
+
+}
+} // namespace static_call_operator

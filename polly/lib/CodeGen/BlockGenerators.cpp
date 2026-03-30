@@ -624,7 +624,7 @@ void BlockGenerator::generateConditionalExecution(
   DomTreeUpdater DTU(GenDT, DomTreeUpdater::UpdateStrategy::Eager);
   SplitBlockAndInsertIfThen(Cond, Builder.GetInsertPoint(), false, nullptr,
                             &DTU, GenLI);
-  BranchInst *Branch = cast<BranchInst>(HeadBlock->getTerminator());
+  CondBrInst *Branch = cast<CondBrInst>(HeadBlock->getTerminator());
   BasicBlock *ThenBlock = Branch->getSuccessor(0);
   BasicBlock *TailBlock = Branch->getSuccessor(1);
 

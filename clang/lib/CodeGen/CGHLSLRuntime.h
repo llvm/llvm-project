@@ -149,6 +149,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitOr, wave_reduce_or)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitXor, wave_reduce_xor)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitAnd, wave_reduce_and)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMax, wave_reduce_max)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMax, wave_reduce_umax)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMin, wave_reduce_min)
@@ -157,6 +158,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossY, quad_read_across_y)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitLow, firstbitlow)
@@ -186,6 +189,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(NonUniformResourceIndex,
                                    resource_nonuniformindex)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrier, group_memory_barrier)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
