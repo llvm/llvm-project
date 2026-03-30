@@ -1104,7 +1104,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           << C.getInputArgs()
                  .getLastArg(options::OPT_offload_targets_EQ)
                  ->getAsString(C.getInputArgs());
-  } else if (Kinds.size() > 0) {
+  } else {
     for (Action::OffloadKind Kind : Kinds)
       Triples = inferOffloadToolchains(C, Kind);
   }
