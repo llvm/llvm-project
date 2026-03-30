@@ -101,6 +101,16 @@ void testDowncast(A& value) {
   (void)a9;
 }
 
+struct C : B {};
+
+void testUpcastTransitive(C& value) {
+  A& a10 = llvm::cast<A>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'C', which is a subtype of 'A'
+  // CHECK-FIXES: A& a10 = value;
+  (void)a10;
+}
+
 namespace llvm {
 void testCastInLLVM(A& value) {
   A& a11 = cast<A>(value);
@@ -122,8 +132,6 @@ void testCastPointer(A* value) {
 template <typename T>
 void testCastTemplateIgnore(T* value) {
   A *a13 = llvm::cast<A>(value);
-  // CHECK-MESSAGES-NOT: warning
-  // CHECK-FIXES-NOT: A *a13 = value;
   (void)a13;
 }
 template void testCastTemplateIgnore<A>(A *value);
@@ -132,8 +140,6 @@ template <typename T>
 struct testCastTemplateIgnoreStruct {
   void method(T* value) {
     A *a14 = llvm::cast<A>(value);
-    // CHECK-MESSAGES-NOT: warning
-    // CHECK-FIXES-NOT: A *a14 = value;
     (void)a14;
   }
 };
@@ -174,4 +180,76 @@ void testCastConstPointer(const A* value) {
   // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has pointee type 'A'
   // CHECK-FIXES: const A* a18 = value;
   (void)a18;
+}
+
+void testCastExplicitDowncastImplicitUpcast(const A* value) {
+  const A* a19 = llvm::cast<C>(value);
+  (void)a19;
+}
+
+struct D : A {};
+struct E {};
+struct F : D, E {};
+
+void testCastUpcastMultipleInheritance(F& value) {
+  E& a20 = llvm::cast<E>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'F', which is a subtype of 'E'
+  // CHECK-FIXES: E& a20 = value;
+  (void)a20;
+}
+
+struct G : D, C {};
+
+// FIXME: applying both changes results in ambiguous conversion
+void testCastUpcastDiamondExplicit(G& value) {
+  A& a21 = llvm::cast<A>(llvm::cast<C>(value));
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'C', which is a subtype of 'A'
+  // CHECK-MESSAGES: :[[@LINE-3]]:26: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-4]]:40: note: source expression has type 'G', which is a subtype of 'C'
+  // CHECK-FIXES: A& a21 = llvm::cast<C>(value);
+  (void)a21;
+}
+
+// FIXME: the end result is ambiguous
+void testCastUpcastDiamondImplicit(G& value) {
+  A& a22 = llvm::cast<C>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'G', which is a subtype of 'C'
+  // CHECK-FIXES: A& a22 = value;
+  (void)a22;
+}
+
+void testCastUpcastDiamondSingleSide(G& value) {
+  C& a23 = llvm::cast<C>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'G', which is a subtype of 'C'
+  // CHECK-FIXES: C& a23 = value;
+  (void)a23;
+}
+
+struct H : virtual A {};
+struct I : virtual A {};
+struct J : H, I {};
+
+void testCastUpcastDiamondVirtual(J& value) {
+  A& a24 = llvm::cast<I>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'J', which is a subtype of 'I'
+  // CHECK-FIXES: A& a24 = value;
+  (void)a24;
+}
+
+template<typename T>
+struct K {};
+
+struct L : K<L> {};
+
+void testCastCRTPUpcast(L& value) {
+  K<L>& a24 = llvm::cast<K<L>>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has type 'L', which is a subtype of 'K<L>'
+  // CHECK-FIXES: K<L>& a24 = value;
+  (void)a24;
 }
