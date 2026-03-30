@@ -6,11 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clc/workitem/clc_get_local_linear_id.h"
 #include "clc/workitem/clc_get_local_size.h"
 #include "clc/workitem/clc_get_max_sub_group_size.h"
 #include "clc/workitem/clc_get_num_sub_groups.h"
 #include "clc/workitem/clc_get_sub_group_id.h"
+#include "clc/workitem/clc_get_sub_group_local_id.h"
 #include "clc/workitem/clc_get_sub_group_size.h"
+
+_CLC_OVERLOAD _CLC_DEF uint __clc_get_max_sub_group_size() {
+  return __nvvm_read_ptx_sreg_warpsize();
+}
+
+_CLC_OVERLOAD _CLC_DEF uint __clc_get_num_sub_groups() {
+  size_t linear_size = __clc_get_local_size(0) * __clc_get_local_size(1) *
+                       __clc_get_local_size(2);
+  uint sg_size = __clc_get_max_sub_group_size();
+  return (uint)((linear_size + sg_size - 1) / sg_size);
+}
+
+_CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_id(void) {
+  return __clc_get_local_linear_id() / __clc_get_max_sub_group_size();
+}
+
+_CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_local_id() {
+  return __nvvm_read_ptx_sreg_laneid();
+}
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_size() {
   if (__clc_get_sub_group_id() != __clc_get_num_sub_groups() - 1) {
