@@ -30,6 +30,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -59,6 +60,26 @@ static SrcMgr::ContentCache *cloneContentCache(llvm::BumpPtrAllocator &Alloc,
   Clone->IsBufferInvalid = Other.IsBufferInvalid;
   Clone->setUnownedBuffer(Other.getBufferIfLoaded());
   return Clone;
+}
+
+static SmallString<128> normalizeFilePathForComparison(const FileManager &FM,
+                                                       StringRef Name) {
+  SmallString<128> Path(Name);
+  FM.makeAbsolutePath(Path, /*Canonicalize=*/true);
+  llvm::sys::path::native(Path);
+  return Path;
+}
+
+static bool referencesDistinctFilePaths(const FileManager &FM, FileEntryRef LHS,
+                                        FileEntryRef RHS) {
+  SmallString<128> LHSPath = normalizeFilePathForComparison(FM, LHS.getName());
+  SmallString<128> RHSPath = normalizeFilePathForComparison(FM, RHS.getName());
+  StringRef LHSRef(LHSPath);
+  StringRef RHSRef(RHSPath);
+
+  if (llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
+    return !LHSRef.equals_insensitive(RHSRef);
+  return LHSRef != RHSRef;
 }
 
 // Reaching a limit of 2^31 results in a hard error. This metric allows to track
@@ -560,11 +581,17 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
   SrcMgr::ContentCache *Cache = &IR;
+  StringRef Filename = SourceFile.getName();
 
   if (IR.OrigEntry && !IR.OrigEntry->isSameRef(SourceFile)) {
-    Cache = cloneContentCache(ContentCacheAlloc, IR);
-    Cache->OrigEntry = SourceFile;
-    FileIDContentCaches.push_back(Cache);
+    if (referencesDistinctFilePaths(getFileManager(), *IR.OrigEntry,
+                                    SourceFile)) {
+      Cache = cloneContentCache(ContentCacheAlloc, IR);
+      Cache->OrigEntry = SourceFile;
+      FileIDContentCaches.push_back(Cache);
+    } else {
+      Filename = IR.OrigEntry->getName();
+    }
   }
 
   // If this is a named pipe, immediately load the buffer to ensure subsequent
@@ -572,8 +599,8 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   if (Cache->ContentsEntry->isNamedPipe())
     (void)Cache->getBufferOrNone(Diag, getFileManager(), SourceLocation());
 
-  return createFileIDImpl(*Cache, SourceFile.getName(), IncludePos,
-                          FileCharacter, LoadedID, LoadedOffset);
+  return createFileIDImpl(*Cache, Filename, IncludePos, FileCharacter,
+                          LoadedID, LoadedOffset);
 }
 
 /// Create a new FileID that represents the specified memory buffer.
