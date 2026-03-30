@@ -1223,8 +1223,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Functions that never return don't need to save and restore the FP or BP.
   const Function &F = MF.getFunction();
-  bool SavesStackRegs = !(F.hasFnAttribute(Attribute::NoReturn) ||
-                          AMDGPU::isChainCC(F.getCallingConv()));
+  bool SavesStackRegs =
+      !F.hasFnAttribute(Attribute::NoReturn) && !FuncInfo->isChainFunction();
 
   if (TRI.hasStackRealignment(MF))
     HasFP = true;
