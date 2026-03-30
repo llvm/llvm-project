@@ -22,6 +22,7 @@
 #include "clc/workitem/clc_get_num_sub_groups.h"
 #include "clc/workitem/clc_get_sub_group_id.h"
 #include "clc/workitem/clc_get_sub_group_local_id.h"
+#include "clc/workitem/clc_get_sub_group_size.h"
 
 #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
 

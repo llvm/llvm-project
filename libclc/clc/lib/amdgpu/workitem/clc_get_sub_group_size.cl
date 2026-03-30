@@ -9,6 +9,7 @@
 #include "clc/amdgpu/amdgpu_utils.h"
 #include "clc/shared/clc_min.h"
 #include "clc/workitem/clc_get_local_linear_id.h"
+#include "clc/workitem/clc_get_sub_group_size.h"
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST uint __clc_get_sub_group_size(void) {
   uint wavesize = __builtin_amdgcn_wavefrontsize();

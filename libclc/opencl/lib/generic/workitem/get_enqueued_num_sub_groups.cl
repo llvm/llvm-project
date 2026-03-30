@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
-#define __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
+#include "clc/workitem/clc_get_enqueued_num_sub_groups.h"
 
-#include "clc/internal/clc.h"
-
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_sub_group_local_id(void);
-
-#endif // __CLC_WORKITEM_CLC_GET_SUB_GROUP_LOCAL_ID_H__
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint get_enqueued_num_sub_groups(void) {
+  return __clc_get_enqueued_num_sub_groups();
+}

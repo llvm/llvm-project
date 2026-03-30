@@ -14,6 +14,7 @@
 #include "clc/subgroup/clc_sub_group_broadcast.h"
 #include "clc/subgroup/clc_sub_group_scan.h"
 #include "clc/subgroup/clc_subgroup.h"
+#include "clc/workitem/clc_get_sub_group_local_id.h"
 
 #define QUAD_PERM (1 << 15)
 

@@ -215,6 +215,7 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   synchronization/sub_group_barrier.cl
   synchronization/work_group_barrier.cl
   workitem/get_enqueued_local_size.cl
+  workitem/get_enqueued_num_sub_groups.cl
   workitem/get_global_id.cl
   workitem/get_global_linear_id.cl
   workitem/get_global_offset.cl
@@ -223,7 +224,12 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   workitem/get_local_id.cl
   workitem/get_local_linear_id.cl
   workitem/get_local_size.cl
+  workitem/get_max_sub_group_size.cl
   workitem/get_num_groups.cl
+  workitem/get_num_sub_groups.cl
+  workitem/get_sub_group_id.cl
+  workitem/get_sub_group_local_id.cl
+  workitem/get_sub_group_size.cl
   workitem/get_work_dim.cl
 )
 
