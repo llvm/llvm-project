@@ -2768,7 +2768,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, waitOperands);
   addOperands(operands, operandSegments, dataClauseOperands);
 
-  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent)
+  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent &&
+      !eval.lowerAsUnstructured())
     return;
 
   auto dataOp = createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
@@ -4564,6 +4565,35 @@ void Fortran::lower::genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &builder,
   mlir::Value yieldValue =
       builder.createIntegerConstant(loc, builder.getI1Type(), 1);
   mlir::acc::YieldOp::create(builder, loc, yieldValue);
+}
+
+bool Fortran::lower::genOpenACCRegionExitBranch(fir::FirOpBuilder &builder,
+                                                mlir::Location loc,
+                                                mlir::Block *targetBlock) {
+  mlir::Block *currentBlock = builder.getBlock();
+  if (!currentBlock || !targetBlock)
+    return false;
+  mlir::Region *curRegion = currentBlock->getParent();
+  mlir::Region *targetRegion = targetBlock->getParent();
+  if (curRegion == targetRegion)
+    return false;
+
+  // Check all regions between the current region and the target for ACC ops.
+  for (mlir::Region *r = curRegion; r && r != targetRegion;
+       r = r->getParentRegion()) {
+    mlir::Operation *op = r->getParentOp();
+    if (op &&
+        mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS, ACC_DATA_CONSTRUCT_STRUCTURED_OPS,
+                  mlir::acc::LoopOp>(op)) {
+      if (targetRegion == r->getParentRegion()) {
+        genOpenACCTerminator(builder, op, loc);
+        return true;
+      }
+      TODO(loc, "GOTO exiting OpenACC region");
+    }
+  }
+
+  return false;
 }
 
 uint64_t Fortran::lower::getLoopCountForCollapseAndTile(
