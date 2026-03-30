@@ -107,28 +107,12 @@ multiclass VPatVUNZIPIntrinsic<string intrinsic_name, string instruction_name> {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<wti>.Predicates, [HasStdExtZvzip]) in {
-      def : Pat<(vti.Vector (!cast<Intrinsic>(intrinsic_name)
-                              (vti.Vector vti.RegClass:$passthru),
-                              (wti.Vector wti.RegClass:$rs2),
-                              VLOpFrag)),
-                (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX)
-                  vti.RegClass:$passthru,
-                  wti.RegClass:$rs2,
-                  GPR:$vl,
-                  vti.Log2SEW,
-                  TAIL_AGNOSTIC)>;
-      def : Pat<(vti.Vector (!cast<Intrinsic>(intrinsic_name # "_mask")
-                              (vti.Vector vti.RegClass:$passthru),
-                              (wti.Vector wti.RegClass:$rs2),
-                              (vti.Mask VMV0:$vm),
-                              VLOpFrag, (XLenVT timm:$policy))),
-                (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX#"_MASK")
-                  vti.RegClass:$passthru,
-                  wti.RegClass:$rs2,
-                  (vti.Mask VMV0:$vm),
-                  GPR:$vl,
-                  vti.Log2SEW,
-                  timm:$policy)>;
+      def : VPatUnaryNoMask<intrinsic_name, instruction_name, "V",
+                            vti.Vector, wti.Vector, vti.Log2SEW,
+                            vti.LMul, vti.RegClass, wti.RegClass>;
+      def : VPatUnaryMask<intrinsic_name, instruction_name, "V",
+                          vti.Vector, wti.Vector, vti.Mask, vti.Log2SEW,
+                          vti.LMul, vti.RegClass, wti.RegClass>;
     }
   }
 }
