@@ -230,3 +230,67 @@ func.func @dev_routine_declare() attributes {acc.specialized_routine = #acc.spec
   acc.declare_exit token(%t) dataOperands(%c : memref<f32>)
   return
 }
+
+//===----------------------------------------------------------------------===//
+// acc_on_device folding in specialized routines
+//===----------------------------------------------------------------------===//
+
+func.func private @acc_on_device(i32) -> i32 attributes {fir.bindc_name = "acc_on_device"}
+acc.routine @acc_routine_on_device_decl func(@acc_on_device) seq
+
+acc.routine @acc_routine_on_device_host func(@on_device_host) seq
+// CHECK-LABEL: func.func @on_device_host
+// CHECK-NOT:   call @acc_on_device
+// CHECK:       %[[FALSE:.*]] = arith.constant false
+// CHECK:       return %[[FALSE]] : i1
+func.func @on_device_host() -> i1 attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_on_device_host, <seq>, "on_device_host">} {
+  %c2 = arith.constant 2 : i32
+  %0 = func.call @acc_on_device(%c2) : (i32) -> i32
+  %1 = arith.trunci %0 : i32 to i1
+  return %1 : i1
+}
+
+acc.routine @acc_routine_on_device_not_host func(@on_device_not_host) seq
+// CHECK-LABEL: func.func @on_device_not_host
+// CHECK-NOT:   call @acc_on_device
+// CHECK:       %[[TRUE:.*]] = arith.constant true
+// CHECK:       return %[[TRUE]] : i1
+func.func @on_device_not_host() -> i1 attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_on_device_not_host, <seq>, "on_device_not_host">} {
+  %c3 = arith.constant 3 : i32
+  %0 = func.call @acc_on_device(%c3) : (i32) -> i32
+  %1 = arith.trunci %0 : i32 to i1
+  return %1 : i1
+}
+
+acc.routine @acc_routine_on_device_nvidia func(@on_device_nvidia) seq
+// CHECK-LABEL: func.func @on_device_nvidia
+// CHECK-NOT:   call @acc_on_device
+// CHECK:       %[[TRUE:.*]] = arith.constant true
+// CHECK:       return %[[TRUE]] : i1
+func.func @on_device_nvidia() -> i1 attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_on_device_nvidia, <seq>, "on_device_nvidia">} {
+  %c4 = arith.constant 4 : i32
+  %0 = func.call @acc_on_device(%c4) : (i32) -> i32
+  %1 = arith.trunci %0 : i32 to i1
+  return %1 : i1
+}
+
+//===----------------------------------------------------------------------===//
+// acc_on_device folding inside compute constructs
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @on_device_in_kernels
+// CHECK:       acc.kernels
+// CHECK-NOT:   call @acc_on_device
+// CHECK:       %[[FALSE:.*]] = arith.constant false
+// CHECK:       arith.select %[[FALSE]]
+func.func @on_device_in_kernels(%arg0 : memref<i32>) {
+  %c2 = arith.constant 2 : i32
+  acc.kernels {
+    %0 = func.call @acc_on_device(%c2) : (i32) -> i32
+    %1 = arith.trunci %0 : i32 to i1
+    %2 = arith.select %1, %c2, %c2 : i32
+    memref.store %2, %arg0[] : memref<i32>
+    acc.terminator
+  }
+  return
+}
