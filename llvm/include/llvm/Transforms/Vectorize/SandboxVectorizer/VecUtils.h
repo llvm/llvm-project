@@ -305,25 +305,25 @@ public:
                                      WhereIt, Ctx, "Unpack");
   }
 
-  /// Iterate over all lanes and Value pairs commulatively.
+  /// Iterate over all lanes and Value pairs.
   // For example, given a range: {i32 %v0, <2 x i32> %v1, i32 %v2} we get:
   //  Lane Elm
   //   0   %v0
   //   1   %v1
   //   3   %v2
-  template <typename RangeT, typename RangeIteratorT>
-  class LaneValueEnumerator {
-    const RangeT &Range;
-    /// Cummulative Lane count.
-    unsigned Lane;
+  template <typename RangeIteratorT> class LaneValueEnumerator {
     /// Points to current element.
     RangeIteratorT It;
     RangeIteratorT ItE;
+    /// Accumulator of lanes.
+    unsigned Lane;
 
   public:
-    LaneValueEnumerator(const RangeT &Range, unsigned Lane, RangeIteratorT It,
-                        RangeIteratorT ItE)
-        : Range(Range), Lane(Lane), It(It), ItE(ItE) {}
+    // Note that We can start counting from a non-zero BeginLane, though the
+    // user must make sure it corresponds to the correct lane matching Begin.
+    LaneValueEnumerator(RangeIteratorT Begin, RangeIteratorT End,
+                        unsigned BeginLane)
+        : It(Begin), ItE(End), Lane(BeginLane) {}
     using iterator_catecotry = std::input_iterator_tag;
     // NOTE: dereference returns by value instead of by reference.
     using value_type = std::pair<unsigned, Value *>;
@@ -344,27 +344,23 @@ public:
     }
     value_type operator*() const { return {Lane, *It}; }
     bool operator==(const LaneValueEnumerator &Other) const {
-      assert(&Range == &Other.Range && "Different ranges!");
-      // If at end, don't check Lane.
-      if (It == ItE)
-        return It == Other.It;
-      return It == Other.It && Lane == Other.Lane;
+      return It == Other.It;
     }
     bool operator!=(const LaneValueEnumerator &Other) const {
       return !(*this == Other);
     }
   };
   // Deduction guide.
-  template <typename RangeT, typename RangeIteratorT>
-  LaneValueEnumerator(RangeT, unsigned, RangeIteratorT, RangeIteratorT)
-      -> LaneValueEnumerator<RangeT, RangeIteratorT>;
+  template <typename RangeIteratorT>
+  LaneValueEnumerator(RangeIteratorT, RangeIteratorT, unsigned)
+      -> LaneValueEnumerator<RangeIteratorT>;
 
   /// Helper for creating LaneValueEnumerator ranges. Can be used in for loops
   /// like: `for (auto [Lane, V] : enumerateLanes(Range))`
   template <typename ValueContainerT>
   static auto enumerateLanes(const ValueContainerT &Range) {
-    auto Begin = LaneValueEnumerator(Range, 0, Range.begin(), Range.end());
-    auto End = LaneValueEnumerator(Range, 0, Range.end(), Range.end());
+    auto Begin = LaneValueEnumerator(Range.begin(), Range.end(), 0);
+    auto End = LaneValueEnumerator(Range.end(), Range.end(), 0);
     return make_range(Begin, End);
   }
 
