@@ -660,7 +660,7 @@ APInt APInt::getSplat(unsigned NewLen, const APInt &V) {
 
 unsigned APInt::countLeadingZerosSlowCase() const {
   unsigned Count = 0;
-  for (int i = getNumWords()-1; i >= 0; --i) {
+  for (int i = getNumWords() - 1; i >= 0; --i) {
     uint64_t V = U.pVal[i];
     if (V == 0)
       Count += APINT_BITS_PER_WORD;
@@ -725,6 +725,16 @@ unsigned APInt::countPopulationSlowCase() const {
   for (unsigned i = 0; i < getNumWords(); ++i)
     Count += llvm::popcount(U.pVal[i]);
   return Count;
+}
+
+bool APInt::isPowerOf2SlowCase() const {
+  unsigned Count = 0;
+  for (unsigned i = 0; i < getNumWords(); ++i) {
+    Count += llvm::popcount(U.pVal[i]);
+    if (Count > 1)
+      return false;
+  }
+  return Count == 1;
 }
 
 bool APInt::intersectsSlowCase(const APInt &RHS) const {
@@ -1705,6 +1715,12 @@ APInt APInt::urem(const APInt &RHS) const {
   if (lhsWords == 1)
     // All high words are zero, just use native remainder
     return APInt(BitWidth, U.pVal[0] % RHS.U.pVal[0]);
+  if (RHS.isPowerOf2()) {
+    // X % 2^w ===> X & (2^w - 1)
+    APInt Result(*this);
+    Result.clearBits(RHS.logBase2(), BitWidth);
+    return Result;
+  }
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   APInt Remainder(BitWidth, 0);
@@ -1737,6 +1753,9 @@ uint64_t APInt::urem(uint64_t RHS) const {
   if (lhsWords == 1)
     // All high words are zero, just use native remainder
     return U.pVal[0] % RHS;
+  if (llvm::isPowerOf2_64(RHS))
+    // X % 2^w ===> X & (2^w - 1)
+    return getZExtValue() & (RHS - 1);
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   uint64_t Remainder;

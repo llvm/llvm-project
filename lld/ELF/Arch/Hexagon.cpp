@@ -9,6 +9,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "RelocScan.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -43,6 +44,7 @@ public:
   void scanSection(InputSectionBase &sec) override {
     elf::scanSection1<Hexagon, ELF32LE>(*this, sec);
   }
+  void finalizeRelocScan() override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -182,7 +184,11 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_HEX_GD_PLT_B22_PCREL:
     case R_HEX_GD_PLT_B22_PCREL_X:
     case R_HEX_GD_PLT_B32_PCREL_X:
-      sym.setFlags(NEEDS_PLT);
+      // GD PLT: call foo@GDPLT becomes call __tls_get_addr.
+      // Record R_PLT_PC on the TLS symbol; finalizeRelocScan (called
+      // single-threaded after scanning) will create __tls_get_addr and
+      // rebind these relocations.  We cannot access the symbol table here
+      // because scanSectionImpl runs in parallel.
       sec.addReloc({R_PLT_PC, type, offset, addend, &sym});
       continue;
 
@@ -662,6 +668,45 @@ void elf::mergeHexagonAttributesSections(Ctx &ctx) {
   // Add the merged section.
   ctx.inputSections.insert(ctx.inputSections.begin() + place,
                            mergeAttributesSection(ctx, sections));
+}
+
+static bool isGDPLT(RelType type) {
+  switch (type) {
+  case R_HEX_GD_PLT_B22_PCREL:
+  case R_HEX_GD_PLT_B22_PCREL_X:
+  case R_HEX_GD_PLT_B32_PCREL_X:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void Hexagon::finalizeRelocScan() {
+  Symbol *tga = nullptr;
+
+  // Scan for R_HEX_GD_PLT_* relocations (recorded as R_PLT_PC by
+  // scanSectionImpl) and rebind them to __tls_get_addr.
+  for (ELFFileBase *f : ctx.objectFiles) {
+    for (InputSectionBase *s : f->getSections()) {
+      auto *isec = dyn_cast_or_null<InputSection>(s);
+      if (!isec || !isec->isLive())
+        continue;
+      for (Relocation &rel : isec->relocs()) {
+        if (rel.expr != R_PLT_PC || !isGDPLT(rel.type))
+          continue;
+        if (!tga) {
+          tga = ctx.symtab->addSymbol(Undefined{ctx.internalFile,
+                                                "__tls_get_addr", STB_GLOBAL,
+                                                STV_DEFAULT, STT_FUNC});
+          tga->isUsedInRegularObj = true;
+          tga->used = true;
+          tga->isPreemptible = true;
+          tga->setFlags(NEEDS_PLT);
+        }
+        rel.sym = tga;
+      }
+    }
+  }
 }
 
 void elf::setHexagonTargetInfo(Ctx &ctx) { ctx.target.reset(new Hexagon(ctx)); }
