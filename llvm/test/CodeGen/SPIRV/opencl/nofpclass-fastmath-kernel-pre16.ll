@@ -1,10 +1,10 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64v1.5-unknown-unknown %s -o - | FileCheck %s
 
-; Negative test: nofpclass attributes should NOT produce FPFastMathMode
-; decorations on OpExtInst when SPIR-V version < 1.6 and the
-; SPV_KHR_float_controls2 extension is not enabled.
+; Check that nofpclass attributes produce FPFastMathMode decorations on
+; OpExtInst in Kernel environments even for SPIR-V versions before 1.6,
+; because the Kernel capability makes FPFastMathMode available.
 
-; CHECK-NOT: FPFastMathMode
+; CHECK: OpDecorate %[[#]] FPFastMathMode NotNaN|NotInf
 
 declare spir_func noundef nofpclass(nan inf) float @_Z16__spirv_ocl_fmaxff(float noundef nofpclass(nan inf), float noundef nofpclass(nan inf))
 

@@ -1281,7 +1281,9 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
   }
 
   // Derive fast-math flags from nofpclass attributes on the called function.
-  if (ST.isKernel() &&
+  // FPFastMathMode decoration is valid on ExtInst in Kernel environments
+  // (SPIR-V core) or with SPV_KHR_float_controls2 for any environment.
+  if (ST.isKernel() ||
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
     if (const Function *F = CB.getCalledFunction()) {
       bool AddNoNan = !!(CB.getRetNoFPClass() & fcNan);
