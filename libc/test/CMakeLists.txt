@@ -42,7 +42,7 @@ add_subdirectory(UnitTest)
 
 if(LIBC_TARGET_OS_IS_GPU)
   if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
-    message(WARNING "Cannot build libc GPU tests, missing loader.")
+    message(WARNING "Cannot build libc GPU tests, set CMAKE_CROSS_COMPILING_EMULATOR.")
     return()
   elseif(LIBC_GPU_TESTS_DISABLED)
     message(WARNING "Cannot build libc GPU tests, missing target architecture.")
