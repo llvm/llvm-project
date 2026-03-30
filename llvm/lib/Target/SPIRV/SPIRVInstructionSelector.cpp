@@ -381,6 +381,8 @@ private:
 
   bool selectReadImageIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                 MachineInstr &I) const;
+  bool selectGetDimensionsIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
+                                    MachineInstr &I) const;
   bool selectSampleBasicIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                   MachineInstr &I) const;
   bool selectCalculateLodIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
@@ -4637,6 +4639,16 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_load_level: {
     return selectLoadLevelIntrinsic(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_resource_getdimensions_x:
+  case Intrinsic::spv_resource_getdimensions_xy:
+  case Intrinsic::spv_resource_getdimensions_xyz:
+  case Intrinsic::spv_resource_getdimensions_levels_x:
+  case Intrinsic::spv_resource_getdimensions_levels_xy:
+  case Intrinsic::spv_resource_getdimensions_levels_xyz:
+  case Intrinsic::spv_resource_getdimensions_ms_xy:
+  case Intrinsic::spv_resource_getdimensions_ms_xyz: {
+    return selectGetDimensionsIntrinsic(ResVReg, ResType, I);
+  }
   case Intrinsic::spv_resource_calculate_lod:
   case Intrinsic::spv_resource_calculate_lod_unclamped:
     return selectCalculateLodIntrinsic(ResVReg, ResType, I);
@@ -4948,6 +4960,41 @@ bool SPIRVInstructionSelector::generateSampleImage(
   }
 
   MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectGetDimensionsIntrinsic(
+    Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                *ImageDef, I)) {
+    return false;
+  }
+
+  unsigned IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
+  bool HasLod =
+      IntrinsicID == Intrinsic::spv_resource_getdimensions_levels_x ||
+      IntrinsicID == Intrinsic::spv_resource_getdimensions_levels_xy ||
+      IntrinsicID == Intrinsic::spv_resource_getdimensions_levels_xyz;
+
+  unsigned Opcode =
+      HasLod ? SPIRV::OpImageQuerySizeLod : SPIRV::OpImageQuerySize;
+
+  // We need to match the return type of the intrinsic.
+  // OpImageQuerySize and OpImageQuerySizeLod return a vector if the image
+  // dimensionality is > 1 or it's an array.
+  // The HLSL builtins might return fewer components than the SPIR-V instruction
+  // provides.
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(NewImageReg)
+      .add(HasLod ? I.getOperand(3) : MachineOperand::CreateImm(0)) // dummy lod
+      .constrainAllUses(TII, TRI, RBI);
+
   return true;
 }
 
