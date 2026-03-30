@@ -82,8 +82,10 @@ INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_END(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion",
                     true, false)
 
-static void setPrefetchTargets(MachineFunction &MF,
+static bool setPrefetchTargets(MachineFunction &MF,
                                const SmallVector<CallsiteID> &PrefetchTargets) {
+  if (PrefetchTargets.empty())
+    return false;
   // Set each block's prefetch targets so AsmPrinter can emit a special symbol
   // there.
   DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargetsByBBID;
@@ -95,11 +97,13 @@ static void setPrefetchTargets(MachineFunction &MF,
     V.erase(llvm::unique(V), V.end());
   }
   MF.setPrefetchTargets(PrefetchTargetsByBBID);
+  return true;
 }
 
-static void
+static bool
 insertPrefetchHints(MachineFunction &MF,
                     const SmallVector<PrefetchHint> &PrefetchHints) {
+  bool PrefetchInserted = false;
   bool IsELF = MF.getTarget().getTargetTriple().isOSBinFormatELF();
   const Module *M = MF.getFunction().getParent();
   DenseMap<UniqueBBID, SmallVector<PrefetchHint>> PrefetchHintsBySiteBBID;
@@ -153,6 +157,7 @@ insertPrefetchHints(MachineFunction &MF,
           WeakFallbackSym->setBinding(ELF::STB_WEAK);
           PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
         }
+        PrefetchInserted = true;
         ++HintIt;
       }
       if (InstrIt == BB.end())
@@ -162,6 +167,7 @@ insertPrefetchHints(MachineFunction &MF,
       InstrIt = NextInstrIt;
     }
   }
+  return PrefetchInserted;
 }
 
 bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
@@ -172,12 +178,11 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
 
   auto &ProfileReader =
       getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>();
-  setPrefetchTargets(MF,
-                     ProfileReader.getPrefetchTargetsForFunction(MF.getName()));
-  insertPrefetchHints(MF,
-                      ProfileReader.getPrefetchHintsForFunction(MF.getName()));
-
-  return true;
+  bool R = setPrefetchTargets(
+      MF, ProfileReader.getPrefetchTargetsForFunction(MF.getName()));
+  bool S = insertPrefetchHints(
+      MF, ProfileReader.getPrefetchHintsForFunction(MF.getName()));
+  return R || S;
 }
 
 void InsertCodePrefetch::getAnalysisUsage(AnalysisUsage &AU) const {
