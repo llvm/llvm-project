@@ -1953,7 +1953,7 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
   // address spaces have non-zero null values.
   auto SrcPtrKB = computeKnownBits(V, DL);
-  const auto NullVal = TM.getNullPointerValue(AS);
+  const auto NullVal = AMDGPU::getNullPointerValue(AS);
 
   assert(SrcPtrKB.getBitWidth() == DL.getPointerSizeInBits(AS));
   assert((NullVal == 0 || NullVal == -1) &&
@@ -2049,16 +2049,14 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
   Value *Arg1 = I.getArgOperand(1);
 
   const APFloat *C;
-  if (!match(Arg1, m_APFloat(C)))
+  if (!match(Arg1, m_APFloatAllowPoison(C)))
     return nullptr;
 
-  APFloat One(1.0);
-  bool LosesInfo;
-  One.convert(C->getSemantics(), APFloat::rmNearestTiesToEven, &LosesInfo);
+  APFloat OneNextDown = APFloat::getOne(C->getSemantics());
+  OneNextDown.next(true);
 
   // Match nextafter(1.0, -1)
-  One.next(true);
-  if (One != *C)
+  if (OneNextDown != *C)
     return nullptr;
 
   Value *FloorSrc;

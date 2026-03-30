@@ -20,12 +20,12 @@ class PtrType(BfDialect.Type, name="ptr"):
 
 class NextOp(BfDialect.Operation, name="next"):
     in_: Operand[PtrType]
-    out: Result[PtrType[()]]
+    out: Result[PtrType[()]] = result(infer_type=True)
 
 
 class PrevOp(BfDialect.Operation, name="prev"):
     in_: Operand[PtrType]
-    out: Result[PtrType[()]]
+    out: Result[PtrType[()]] = result(infer_type=True)
 
 
 class IncOp(BfDialect.Operation, name="inc"):
@@ -46,7 +46,7 @@ class OutputOp(BfDialect.Operation, name="output"):
 
 class WhileOp(BfDialect.Operation, name="while"):
     in_: Operand[PtrType]
-    out: Result[PtrType[()]]
+    out: Result[PtrType[()]] = result(infer_type=True)
     body: Region
 
 

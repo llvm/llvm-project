@@ -83,11 +83,39 @@ Changes to LLVM infrastructure
 * Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
   `llvm/utils/reduce_pipeline.py`.
 
+* The ``Br`` opcode was split into two opcodes separating unconditional
+  (``UncondBr``) and conditional (``CondBr``) branches.
+
+* ``BranchInst`` was deprecated in favor of ``UncondBrInst`` and ``CondBrInst``.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``getOperand`` or
+  ``setOperand`` to access successors.
+
+* The ``llvm::sys::fs`` link creation API has been refactored:
+
+  * ``create_link`` now tries to create a symbolic link first, falling back to a
+    hard link if that fails (previously it created a symlink on Unix and a hard
+    link on Windows).
+  * Added ``create_symlink``, which always creates a symbolic link. On windows
+    this may fail if symlink permissions are not available.
+  * Added ``readlink``, which reads the target of a symbolic link.
+
+* Bitcode libraries can now implement compiler-managed library functions
+  (libcalls) without causing incorrect API manipulation or undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there are still issues with invalid compiler reasoning about some functions
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO. 
+
 Changes to building LLVM
 ------------------------
 
 Changes to TableGen
 -------------------
+
+* Outer let statements use ``ID{n-m}`` instead of ``ID<n-m>`` to be consistent
+  with inner let statements.
 
 Changes to Interprocedural Optimizations
 ----------------------------------------
@@ -146,16 +174,21 @@ Changes to the RISC-V Backend
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 * `-mcpu=spacemit-x100` was added.
-* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Change P extension version to match the 0.21 draft specification.
 * Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
   `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
   available in the assembler and disassembler without requiring their respective
   extensions.
 * Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
   Absolute Difference) extension.
+* Adds CodeGen support for the 'Zvabd` extension.
 * `-mcpu=spacemit-a100` was added.
 * The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
+* Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
+  Reordering Structured Data) extension.
+* `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
+* Support for the experimental `XRivosVisni` vendor extension has been removed.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -182,6 +215,12 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* Replaced opcode ``LLVMBr`` with ``LLVMUncondBr`` and ``LLVMCondBr``.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``LLVMGetOperand``
+  or ``LLVMSetOperand`` to access successors.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -197,6 +236,7 @@ Changes to the LLVM tools
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
+* Add `-mtune` option to `llc`.
 
 Changes to LLDB
 ---------------
@@ -205,6 +245,7 @@ Changes to LLDB
 
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
   have been deprecated. They always return 1, as before.
+* A new ``webinspector-wasm`` platform was added to list and attach to WebAssebly processes in Safari.
 
 ### FreeBSD
 

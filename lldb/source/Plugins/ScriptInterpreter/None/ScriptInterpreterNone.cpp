@@ -43,7 +43,9 @@ void ScriptInterpreterNone::Initialize() {
                                 lldb::eScriptLanguageNone, CreateInstance);
 }
 
-void ScriptInterpreterNone::Terminate() {}
+void ScriptInterpreterNone::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 lldb::ScriptInterpreterSP
 ScriptInterpreterNone::CreateInstance(Debugger &debugger) {

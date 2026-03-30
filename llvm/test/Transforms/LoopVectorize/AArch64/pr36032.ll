@@ -7,11 +7,11 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 %struct.anon = type { i8 }
 
-@c = local_unnamed_addr global [6 x i8] zeroinitializer, align 1
+@c = global [6 x i8] zeroinitializer, align 1
 @b = internal global %struct.anon zeroinitializer, align 1
 
 ; Function Attrs: noreturn nounwind
-define void @_Z1dv() local_unnamed_addr #0 {
+define void @_Z1dv() #0 {
 ; CHECK-LABEL: @_Z1dv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @"_ZN3$_01aEv"(ptr nonnull @b)
@@ -81,4 +81,4 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-declare ptr @"_ZN3$_01aEv"(ptr) local_unnamed_addr #1
+declare ptr @"_ZN3$_01aEv"(ptr) #1

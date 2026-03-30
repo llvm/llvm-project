@@ -57,6 +57,19 @@ if (COMPILER_RT_STANDALONE_BUILD)
     ON)
 endif()
 
+function(set_special_properties source_file)
+  cmake_parse_arguments(ARG "" "" "SUPERSEDES;PROVIDES" ${ARGN})
+  if(ARG_SUPERSEDES)
+    set_property(SOURCE ${source_file}
+      PROPERTY crt_supersedes "${ARG_SUPERSEDES}")
+  endif()
+  if(ARG_PROVIDES AND NOT COMPILER_RT_BUILTINS_STANDALONE_BUILD)
+    set_property(SOURCE ${source_file}
+      DIRECTORY ${COMPILER_RT_SOURCE_DIR}
+      PROPERTY crt_provides "${ARG_PROVIDES}")
+  endif()
+endfunction()
+
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
@@ -463,6 +476,9 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/fnan2.c
       arm/fnorm2.c
       arm/funder.c
+      arm/dnan2.c
+      arm/dnorm2.c
+      arm/dunder.c
       )
   endif()
 endif()
@@ -890,8 +906,6 @@ set(s390x_SOURCES
 
 
 set(wasm_SOURCES
-  wasm/__c_longjmp.S
-  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
@@ -957,8 +971,6 @@ else ()
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
-    append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
-                   -fconvergent-functions BUILTIN_CFLAGS)
 
     # AMDGPU targets want to use a generic ABI.
     if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")

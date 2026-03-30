@@ -34,7 +34,6 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -66,6 +65,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -340,7 +340,6 @@ static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
 std::string objdump::TripleName;
 bool objdump::UnwindInfo;
-static bool Wide;
 std::string objdump::Prefix;
 uint32_t objdump::PrefixStrip;
 
@@ -525,7 +524,7 @@ static const Target *getTarget(const ObjectFile *Obj) {
   const Target *TheTarget =
       TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
   if (!TheTarget)
-    reportError(Obj->getFileName(), "can't find target: " + Error);
+    reportError(Obj->getFileName(), "cannot find target: " + Error);
 
   // Update the triple name and return the found target.
   TripleName = TheTriple.getTriple();
@@ -1644,7 +1643,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                 ((Target == 0 && isXCOFF) || (Target == Index && !isXCOFF))))
             Targets.insert(Target);
         }
-        MIA->updateState(Inst, Index);
+        MIA->updateState(Inst, STI, Index);
       } else
         MIA->resetState();
     }
@@ -2615,7 +2614,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 *TargetOS << "\n";
             }
 
-            DT->InstrAnalysis->updateState(Inst, SectionAddr + Index);
+            DT->InstrAnalysis->updateState(Inst, DT->SubtargetInfo.get(),
+                                           SectionAddr + Index);
           } else if (!Disassembled && DT->InstrAnalysis) {
             DT->InstrAnalysis->resetState();
           }
@@ -3658,6 +3658,8 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   PrintImmHex = true;
 
   ArchName = InputArgs.getLastArgValue(OTOOL_arch).str();
+  if (!ArchName.empty())
+    ArchFlags.push_back(ArchName);
   LinkOptHints = InputArgs.hasArg(OTOOL_C);
   if (InputArgs.hasArg(OTOOL_d))
     FilterSections.push_back("__DATA,__data");
@@ -3761,7 +3763,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
   TripleName = InputArgs.getLastArgValue(OBJDUMP_triple_EQ).str();
   UnwindInfo = InputArgs.hasArg(OBJDUMP_unwind_info);
-  Wide = InputArgs.hasArg(OBJDUMP_wide);
   Prefix = InputArgs.getLastArgValue(OBJDUMP_prefix).str();
   parseIntArg(InputArgs, OBJDUMP_prefix_strip, PrefixStrip);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {

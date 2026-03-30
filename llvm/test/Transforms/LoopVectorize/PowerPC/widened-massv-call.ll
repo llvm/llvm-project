@@ -3,7 +3,7 @@
 ; RUN:   -vectorizer-maximize-bandwidth -passes='default<O2>,inject-tli-mappings,loop-vectorize' \
 ; RUN:   -mtriple=powerpc64le-unknown-linux -S -mcpu=pwr9 2>&1 | FileCheck %s
 
-define dso_local double @test(ptr %Arr) {
+define double @test(ptr %Arr) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

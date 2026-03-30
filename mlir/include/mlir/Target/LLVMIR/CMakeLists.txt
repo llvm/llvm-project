@@ -3,3 +3,7 @@ add_subdirectory(Transforms)
 set(LLVM_TARGET_DEFINITIONS LLVMTranslationDialectInterface.td)
 mlir_tablegen(LLVMTranslationDialectInterface.h.inc -gen-dialect-interface-decls)
 add_mlir_generic_tablegen_target(MLIRLLVMTranslationDialectInterfaceIncGen)
+
+set(LLVM_TARGET_DEFINITIONS LLVMImportDialectInterface.td)
+mlir_tablegen(LLVMImportDialectInterface.h.inc -gen-dialect-interface-decls)
+add_mlir_generic_tablegen_target(MLIRLLVMImportDialectInterfaceIncGen)

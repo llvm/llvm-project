@@ -181,6 +181,17 @@ def OpenACC_KernelEnvironmentOp
   }];
 
   let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    /// Create a `KernelEnvironmentOp` populated with data mapping, async, and
+    /// wait clauses extracted from the given ACC compute construct. Emplaces
+    /// a block in the region and sets the rewriter's insertion point to the
+    /// start of that block so callers can create operations inside it
+    /// (e.g., `acc.compute_region`).
+    template <typename ComputeConstructT>
+    static KernelEnvironmentOp createAndPopulate(
+        ComputeConstructT computeConstruct, ::mlir::OpBuilder &builder);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -238,7 +249,7 @@ def OpenACC_ParWidthOp
   }];
   let arguments = (ins Optional<Index>:$launchArg,
                        OpenACC_GPUParallelDimAttr:$par_dim);
-  let results = (outs OpenACC_ParWidthType:$output);
+  let results = (outs Index:$output);
   let assemblyFormat = [{
     ($launchArg^)? attr-dict
   }];
@@ -273,10 +284,10 @@ def OpenACC_ComputeRegionOp
     The operation is `IsolatedFromAbove`: all values used inside the
     region must be explicitly captured. Values are captured in two ways:
 
-    - Launch arguments (`launch`): Results of operations that define
-      the parallel launch configuration. These are `!acc.par_width`-typed
-      and become block arguments representing the parallel width for each
-      dimension.
+    - Launch arguments (`launch`): Results of `acc.par_width`
+      operations that define the parallel launch configuration. These
+      become `index`-typed block arguments representing the parallel
+      width for each dimension.
 
     - Input arguments (`ins`): Arbitrary values captured from outside
       the region (data pointers, scalars, etc.). These become block
@@ -305,7 +316,7 @@ def OpenACC_ComputeRegionOp
     ```
   }];
 
-  let arguments = (ins Variadic<OpenACC_ParWidthType>:$launchArgs,
+  let arguments = (ins Variadic<Index>:$launchArgs,
                        Variadic<AnyType>:$inputArgs,
                        Optional<OpenACC_GPUAsyncTokenType>:$stream,
                        StrAttr:$origin,

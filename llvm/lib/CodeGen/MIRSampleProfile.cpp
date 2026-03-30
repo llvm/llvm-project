@@ -370,8 +370,6 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
 
   MF.RenumberBlocks();
-  MDT->updateBlockNumbers();
-  MPDT->updateBlockNumbers();
 
   MIRSampleLoader->setInitVals(
       MDT, MPDT, &getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,

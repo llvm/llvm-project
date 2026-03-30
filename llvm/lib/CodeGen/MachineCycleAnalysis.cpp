@@ -62,6 +62,17 @@ MachineCycleAnalysis::run(MachineFunction &MF,
   return MCI;
 }
 
+bool MachineCycleAnalysis::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<MachineCycleAnalysis>();
+  return !(PAC.preserved() ||
+           PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
 namespace {
 class MachineCycleInfoPrinterLegacy : public MachineFunctionPass {
 public:

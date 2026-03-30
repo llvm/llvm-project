@@ -500,11 +500,19 @@ private:
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                           bool Negate);
+  bool SelectSVEAddSubImm(SDLoc DL, APInt Value, MVT VT, SDValue &Imm,
+                          SDValue &Shift, bool Negate);
   bool SelectSVEAddSubSSatImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                               bool Negate);
   bool SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
   bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm, bool Invert);
 
+  // Match `<NEON Splat> SVEImm` (where <NEON Splat> could be fmov, movi, etc).
+  bool SelectNEONSplatOfSVELogicalImm(SDValue N, SDValue &Imm);
+  bool SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm, SDValue &Shift);
+  bool SelectNEONSplatOfSVEArithSImm(SDValue N, SDValue &Imm);
+
+  bool SelectSVESignedArithImm(SDLoc DL, APInt Value, SDValue &Imm);
   bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
   bool SelectSVEShiftImm(SDValue N, uint64_t Low, uint64_t High,
                          bool AllowSaturation, SDValue &Imm);
@@ -596,6 +604,85 @@ static bool isIntImmediateEq(SDValue N, const uint64_t ImmExpected) {
   return Imm == ImmExpected;
 }
 #endif
+
+static APInt DecodeFMOVImm(uint64_t Imm, unsigned RegWidth) {
+  assert(RegWidth == 32 || RegWidth == 64);
+  if (RegWidth == 32)
+    return APInt(RegWidth,
+                 uint32_t(AArch64_AM::decodeAdvSIMDModImmType11(Imm)));
+  return APInt(RegWidth, AArch64_AM::decodeAdvSIMDModImmType12(Imm));
+}
+
+// Decodes the raw integer splat value from a NEON splat operation.
+static std::optional<APInt> DecodeNEONSplat(SDValue N) {
+  assert(N.getValueType().isInteger() && "Only integers are supported");
+  if (N->getOpcode() == AArch64ISD::NVCAST)
+    N = N->getOperand(0);
+  unsigned SplatWidth = N.getScalarValueSizeInBits();
+  if (N.getOpcode() == AArch64ISD::FMOV)
+    return DecodeFMOVImm(N.getConstantOperandVal(0), SplatWidth);
+  if (N->getOpcode() == AArch64ISD::MOVI)
+    return APInt(SplatWidth, N.getConstantOperandVal(0));
+  if (N->getOpcode() == AArch64ISD::MOVIshift)
+    return APInt(SplatWidth, N.getConstantOperandVal(0)
+                                 << N.getConstantOperandVal(1));
+  if (N->getOpcode() == AArch64ISD::MVNIshift)
+    return ~APInt(SplatWidth, N.getConstantOperandVal(0)
+                                  << N.getConstantOperandVal(1));
+  if (N->getOpcode() == AArch64ISD::MOVIedit)
+    return APInt(SplatWidth, AArch64_AM::decodeAdvSIMDModImmType10(
+                                 N.getConstantOperandVal(0)));
+  if (N->getOpcode() == AArch64ISD::DUP)
+    if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
+      return Const->getAPIntValue().trunc(SplatWidth);
+  // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
+  // in AArch64ISelLowering.
+  return std::nullopt;
+}
+
+// If \p N is a NEON splat operation (movi, fmov, etc), return the splat value
+// matching the element size of N.
+static std::optional<APInt> GetNEONSplatValue(SDValue N) {
+  unsigned SplatWidth = N.getScalarValueSizeInBits();
+  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N)) {
+    if (SplatVal->getBitWidth() <= SplatWidth)
+      return APInt::getSplat(SplatWidth, *SplatVal);
+    if (SplatVal->isSplat(SplatWidth))
+      return SplatVal->trunc(SplatWidth);
+  }
+  return std::nullopt;
+}
+
+bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
+                                                         SDValue &Imm) {
+  std::optional<APInt> ImmVal = GetNEONSplatValue(N);
+  if (!ImmVal)
+    return false;
+  uint64_t Encoding;
+  if (!AArch64_AM::isSVELogicalImm(N.getScalarValueSizeInBits(),
+                                   ImmVal->getZExtValue(), Encoding))
+    return false;
+
+  Imm = CurDAG->getTargetConstant(Encoding, SDLoc(N), MVT::i64);
+  return true;
+}
+
+bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
+                                                        SDValue &Shift) {
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
+    return SelectSVEAddSubImm(SDLoc(N), *ImmVal,
+                              N.getValueType().getScalarType().getSimpleVT(),
+                              Imm, Shift,
+                              /*Negate=*/false);
+  return false;
+}
+
+bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEArithSImm(SDValue N,
+                                                        SDValue &Imm) {
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
+    return SelectSVESignedArithImm(SDLoc(N), *ImmVal, Imm);
+  return false;
+}
 
 bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     const SDValue &Op, const InlineAsm::ConstraintCode ConstraintID,
@@ -4093,14 +4180,7 @@ bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
                                           << N.getConstantOperandVal(1)));
     break;
   case AArch64ISD::FMOV:
-    assert(RegWidth == 32 || RegWidth == 64);
-    if (RegWidth == 32)
-      FVal = ImmToFloat(
-          APInt(RegWidth, (uint32_t)AArch64_AM::decodeAdvSIMDModImmType11(
-                              N.getConstantOperandVal(0))));
-    else
-      FVal = ImmToFloat(APInt(RegWidth, AArch64_AM::decodeAdvSIMDModImmType12(
-                                            N.getConstantOperandVal(0))));
+    FVal = ImmToFloat(DecodeFMOVImm(N.getConstantOperandVal(0), RegWidth));
     break;
   case AArch64ISD::DUP:
     if (isa<ConstantSDNode>(N.getOperand(0)))
@@ -4344,10 +4424,15 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  SDLoc DL(N);
   APInt Val =
       cast<ConstantSDNode>(N)->getAPIntValue().trunc(VT.getFixedSizeInBits());
 
+  return SelectSVEAddSubImm(SDLoc(N), Val, VT, Imm, Shift, Negate);
+}
+
+bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDLoc DL, APInt Val, MVT VT,
+                                             SDValue &Imm, SDValue &Shift,
+                                             bool Negate) {
   if (Negate)
     Val = -Val;
 
@@ -4451,13 +4536,17 @@ bool AArch64DAGToDAGISel::SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm,
 }
 
 bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDValue N, SDValue &Imm) {
-  if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
-    int64_t ImmVal = CNode->getSExtValue();
-    SDLoc DL(N);
-    if (ImmVal >= -128 && ImmVal < 128) {
-      Imm = CurDAG->getSignedTargetConstant(ImmVal, DL, MVT::i32);
-      return true;
-    }
+  if (auto CNode = dyn_cast<ConstantSDNode>(N))
+    return SelectSVESignedArithImm(SDLoc(N), CNode->getAPIntValue(), Imm);
+  return false;
+}
+
+bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDLoc DL, APInt Val,
+                                                  SDValue &Imm) {
+  int64_t ImmVal = Val.getSExtValue();
+  if (ImmVal >= -128 && ImmVal < 128) {
+    Imm = CurDAG->getSignedTargetConstant(ImmVal, DL, MVT::i32);
+    return true;
   }
   return false;
 }

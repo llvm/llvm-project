@@ -176,6 +176,12 @@ public:
   /// any references to shared data that this object may contain.
   void Clear();
 
+  /// Return a shared pointer to a copy of this object.
+  /// May be overridden by a subclass, so the object is copied correctly.
+  virtual lldb::DataExtractorSP Clone() const {
+    return std::make_shared<DataExtractor>(*this);
+  }
+
   /// Dumps the binary data as \a type objects to stream \a s (or to Log() if
   /// \a s is nullptr) starting \a offset bytes into the data and stopping
   /// after dumping \a length bytes. The offset into the data is displayed at

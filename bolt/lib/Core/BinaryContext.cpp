@@ -1870,7 +1870,7 @@ void BinaryContext::preprocessDebugInfo() {
   uint64_t NumMissingDWOs = 0;
 
   // Populate MCContext with DWARF files from all units.
-  StringRef GlobalPrefix = AsmInfo->getPrivateGlobalPrefix();
+  StringRef GlobalPrefix = AsmInfo->getInternalSymbolPrefix();
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     const uint64_t CUID = CU->getOffset();
     DwarfLineTable &BinaryLineTable = getDwarfLineTable(CUID);
@@ -2628,7 +2628,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
       std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
-  Streamer->initSections(false, *STI);
+  Streamer->initSections(*STI);
 
   MCSection *Section = MCEInstance.LocalMOFI->getTextSection();
   Section->setHasInstructions(true);

@@ -524,6 +524,15 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     }
   } { linear_var_types = [i32] }
 
+  // CHECK: omp.wsloop linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32), val(%{{.*}} : memref<i32> = %{{.*}} : i32)) schedule(static) {
+  // CHECK-NEXT: omp.loop_nest
+  omp.wsloop schedule(static) linear(val(%data_var : memref<i32> = %linear_var : i32),
+                                     val(%data_var : memref<i32> = %linear_var : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } { linear_var_types = [i32, i32] }
+
   // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) ordered(2) schedule(static = %{{.*}} : i32) {
   // CHECK-NEXT: omp.loop_nest
   omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) schedule(static = %chunk_var : i32) {
@@ -741,6 +750,32 @@ func.func @omp_simd_pretty_order(%lb : index, %ub : index, %step : index) -> () 
       omp.yield
     }
   }
+  return
+}
+
+// CHECK-LABEL: omp_simd_linear_val
+func.func @omp_simd_linear_val(%lb : index, %ub : index, %step : index,
+                               %data_var : memref<i32>, %linear_var : i32) -> () {
+  // CHECK: omp.simd linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32))
+  omp.simd linear(val(%data_var : memref<i32> = %linear_var : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  return
+}
+
+// CHECK-LABEL: omp_simd_linear_val_multiple
+func.func @omp_simd_linear_val_multiple(%lb : index, %ub : index, %step : index,
+                                        %d1 : memref<i32>, %d2 : memref<i32>,
+                                        %s1 : i32, %s2 : i32) -> () {
+  // CHECK: omp.simd linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32), val(%{{.*}} : memref<i32> = %{{.*}} : i32))
+  omp.simd linear(val(%d1 : memref<i32> = %s1 : i32),
+                  val(%d2 : memref<i32> = %s2 : i32)) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32, i32]}
   return
 }
 
@@ -3452,6 +3487,53 @@ func.func @omp_declare_simd_linear(%a: f64, %b: f64, %iv: i32, %step: i32) -> ()
   return
 }
 
+// CHECK-LABEL: func.func @omp_declare_simd_linear_val
+func.func @omp_declare_simd_linear_val(%iv: i32, %step: i32) -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: linear(val(%{{.*}} : i32 = %{{.*}} : i32))
+  omp.declare_simd linear(val(%iv : i32 = %step : i32))
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_linear_ref
+func.func @omp_declare_simd_linear_ref(%p: memref<i32>, %step: i32) -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: linear(ref(%{{.*}} : memref<i32> = %{{.*}} : i32))
+  omp.declare_simd linear(ref(%p : memref<i32> = %step : i32))
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_linear_uval
+func.func @omp_declare_simd_linear_uval(%p: memref<i32>, %step: i32) -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: linear(uval(%{{.*}} : memref<i32> = %{{.*}} : i32))
+  omp.declare_simd linear(uval(%p : memref<i32> = %step : i32))
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_linear_mixed_modifiers
+func.func @omp_declare_simd_linear_mixed_modifiers(%a: i32, %b: memref<i32>,
+                                                   %c: memref<i32>,
+                                                   %s1: i32, %s2: i32, %s3: i32) -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: linear(val(%{{.*}} : i32 = %{{.*}} : i32), ref(%{{.*}} : memref<i32> = %{{.*}} : i32), uval(%{{.*}} : memref<i32> = %{{.*}} : i32))
+  omp.declare_simd linear(val(%a : i32 = %s1 : i32),
+                          ref(%b : memref<i32> = %s2 : i32),
+                          uval(%c : memref<i32> = %s3 : i32))
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_linear_mixed_with_non_modifiers
+func.func @omp_declare_simd_linear_mixed_with_non_modifiers(
+    %a: i32, %b: memref<i32>, %c: i32, %s1: i32, %s2: i32, %s3: i32) -> () {
+  // CHECK: omp.declare_simd
+  // CHECK-SAME: linear(val(%{{.*}} : i32 = %{{.*}} : i32), %{{.*}} : memref<i32> = %{{.*}} : i32, ref(%{{.*}} : i32 = %{{.*}} : i32))
+  omp.declare_simd linear(val(%a : i32 = %s1 : i32),
+                          %b : memref<i32> = %s2 : i32,
+                          ref(%c : i32 = %s3 : i32))
+  return
+}
+
 // CHECK-LABEL: func.func @omp_declare_simd_uniform
 func.func @omp_declare_simd_uniform(%a: f64, %b: f64,
                                     %p0: memref<i32>, %p1: memref<i32>) -> () {
@@ -3598,6 +3680,24 @@ func.func @omp_iterator_2d(%s2 : !llvm.struct<(ptr, i64)>) -> () {
     omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
   } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
 
+  return
+}
+
+// CHECK-LABEL: func.func @omp_iterator_negative_step
+func.func @omp_iterator_negative_step(%s2 : !llvm.struct<(ptr, i64)>) -> () {
+  // CHECK: %[[LB:.*]] = arith.constant 4 : index
+  // CHECK: %[[UB:.*]] = arith.constant 1 : index
+  // CHECK: %[[ST:.*]] = arith.constant -1 : index
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%[[LB]] to %[[UB]] step %[[ST]]) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.struct<(ptr, i64)>)
+  // CHECK: } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  %lb = arith.constant 4 : index
+  %ub = arith.constant 1 : index
+  %st = arith.constant -1 : index
+
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
+  } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
   return
 }
 
