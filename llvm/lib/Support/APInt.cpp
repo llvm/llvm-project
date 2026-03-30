@@ -783,7 +783,7 @@ APInt APInt::reverseBits() const {
 
   APInt Result(BitWidth, 0);
   unsigned NumWords = getNumWords();
-  unsigned ExcessBits = NumWords * 64 - BitWidth;
+  unsigned ExcessBits = NumWords * APINT_BITS_PER_WORD - BitWidth;
   if (LLVM_UNLIKELY(ExcessBits == 0)) {
     // Fast path. No cross-word shift needed.
     for (unsigned I = 0; I < NumWords; ++I)
