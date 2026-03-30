@@ -209,8 +209,8 @@ TEST_F(RecordPPTest, CapturesMacroRefs) {
     #define $def^X 1
 
     // Refs, but not in main file.
-    #define Y X
-    int one = X;
+    #define Y $hdr^X
+    int one = $hdr^X;
   )cpp");
   llvm::Annotations MainFile(R"cpp(
     #define EARLY X // not a ref, no definition
@@ -244,11 +244,15 @@ TEST_F(RecordPPTest, CapturesMacroRefs) {
 
   std::vector<unsigned> RefOffsets;
   std::vector<unsigned> ExpOffsets; // Expansion locs of refs in macro locs.
+  std::vector<unsigned> HeaderOffsets;
   for (const auto &Ref : Recorded.MacroReferences) {
     if (Ref.Target == OrigX) {
       auto [FID, Off] = SM.getDecomposedLoc(Ref.RefLocation);
       if (FID == SM.getMainFileID()) {
         RefOffsets.push_back(Off);
+      } else if (FID == SM.translateFile(*AST.fileManager().getOptionalFileRef(
+                            "header.h"))) {
+        HeaderOffsets.push_back(Off);
       } else if (Ref.RefLocation.isMacroID() &&
                  SM.isWrittenInMainFile(SM.getExpansionLoc(Ref.RefLocation))) {
         ExpOffsets.push_back(
@@ -260,6 +264,7 @@ TEST_F(RecordPPTest, CapturesMacroRefs) {
   }
   EXPECT_THAT(RefOffsets, ElementsAreArray(MainFile.points()));
   EXPECT_THAT(ExpOffsets, ElementsAreArray(MainFile.points("exp")));
+  EXPECT_THAT(HeaderOffsets, ElementsAreArray(Header.points("hdr")));
 }
 
 TEST_F(RecordPPTest, CapturesConditionalMacroRefs) {
@@ -298,6 +303,68 @@ TEST_F(RecordPPTest, CapturesConditionalMacroRefs) {
     RefOffsets.push_back(Off);
   }
   EXPECT_THAT(RefOffsets, ElementsAreArray(MainFile.points()));
+}
+
+TEST_F(RecordPPTest, CapturesConditionalMacroRefsInDirectIncludes) {
+  llvm::Annotations Header(R"cpp(
+    #ifdef ^X
+    #endif
+
+    #if defined(^X)
+    #endif
+
+    #ifndef ^X
+    #endif
+
+    #ifdef Y
+    #elifdef ^X
+    #endif
+
+    #ifndef ^X
+    #elifndef ^X
+    #endif
+  )cpp");
+
+  Inputs.Code = R"cpp(
+    #define X 1
+    #include "header.h"
+  )cpp";
+  Inputs.ExtraFiles["header.h"] = Header.code();
+  Inputs.ExtraArgs.push_back("-std=c++2b");
+  auto AST = build();
+
+  std::vector<unsigned> RefOffsets;
+  SourceManager &SM = AST.sourceManager();
+  FileID HeaderID =
+      SM.translateFile(*AST.fileManager().getOptionalFileRef("header.h"));
+  for (const auto &Ref : Recorded.MacroReferences) {
+    auto [FID, Off] = SM.getDecomposedLoc(Ref.RefLocation);
+    ASSERT_EQ(FID, HeaderID);
+    EXPECT_EQ(Ref.RT, RefType::Ambiguous);
+    EXPECT_EQ("X", Ref.Target.macro().Name->getName());
+    RefOffsets.push_back(Off);
+  }
+  EXPECT_THAT(RefOffsets, ElementsAreArray(Header.points()));
+}
+
+TEST_F(RecordPPTest, DoesNotCaptureMacroRefsInTransitiveIncludes) {
+  Inputs.Code = R"cpp(
+    #define X 1
+    #include "header.h"
+  )cpp";
+  Inputs.ExtraFiles["header.h"] = R"cpp(
+    #include "nested.h"
+  )cpp";
+  Inputs.ExtraFiles["nested.h"] = R"cpp(
+    int one = X;
+
+    #ifdef X
+    #endif
+  )cpp";
+  Inputs.ExtraArgs.push_back("-std=c++2b");
+  build();
+
+  EXPECT_THAT(Recorded.MacroReferences, IsEmpty());
 }
 
 class PragmaIncludeTest : public ::testing::Test {
