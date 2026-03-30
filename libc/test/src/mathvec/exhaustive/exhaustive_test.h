@@ -8,7 +8,6 @@
 
 #include "src/__support/CPP/simd.h"
 #include "test/UnitTest/FPMatcher.h"
-#include "utils/MPFRWrapper/MPFRUtils.h"
 
 #include <atomic>
 #include <iostream>
@@ -29,8 +28,6 @@
 // 2. Use LlvmLibcExhaustiveMathTest<Checker> class
 // 3. Call: test_full_range_<RoundingMode>(start, stop)
 //       or test_full_range_all_roundings(start, stop).
-namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
-
 template <typename OutType, typename InType = OutType>
 using ScalarUnaryOp = OutType(InType);
 
@@ -48,8 +45,8 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
 
   // Check in a range, return the number of failures.
   uint64_t check(StorageType start, StorageType stop,
-                 mpfr::RoundingMode rounding) {
-    mpfr::ForceRoundingMode r(rounding);
+                 LIBC_NAMESPACE::fputil::testing::RoundingMode rounding) {
+    LIBC_NAMESPACE::fputil::testing::ForceRoundingMode r(rounding);
     if (!r.success)
       return (stop > start);
 
@@ -66,7 +63,7 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
       bool correct = TEST_FP_EQ(scalar_result, vec_res);
 
       if (!correct) {
-        EXPECT_FP_EQ(scalar_result, vec_res);
+        EXPECT_FP_EQ_ROUNDING_MODE(scalar_result, vec_res, rounding);
         failed++;
       }
     } while (bits++ < stop);
@@ -95,8 +92,8 @@ struct LlvmLibcExhaustiveMathvecTest
   // Break [start, stop) into `nthreads` subintervals and apply *check to each
   // subinterval in parallel.
   template <typename... T>
-  void test_full_range(mpfr::RoundingMode rounding, StorageType start,
-                       StorageType stop) {
+  void test_full_range(LIBC_NAMESPACE::fputil::testing::RoundingMode rounding,
+                       StorageType start, StorageType stop) {
     int n_threads = std::thread::hardware_concurrency();
     std::vector<std::thread> thread_list;
     std::mutex mx_cur_val;
@@ -164,25 +161,29 @@ struct LlvmLibcExhaustiveMathvecTest
   void test_full_range_RN(StorageType start, StorageType stop) {
     std::cout << "-- Testing for FE_TONEAREST in range [0x" << std::hex << start
               << ", 0x" << stop << ") --" << std::dec << std::endl;
-    test_full_range(mpfr::RoundingMode::Nearest, start, stop);
+    test_full_range(LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest,
+                    start, stop);
   }
 
   void test_full_range_RU(StorageType start, StorageType stop) {
     std::cout << "-- Testing for FE_UPWARD in range [0x" << std::hex << start
               << ", 0x" << stop << ") --" << std::dec << std::endl;
-    test_full_range(mpfr::RoundingMode::Upward, start, stop);
+    test_full_range(LIBC_NAMESPACE::fputil::testing::RoundingMode::Upward,
+                    start, stop);
   }
 
   void test_full_range_RD(StorageType start, StorageType stop) {
     std::cout << "-- Testing for FE_DOWNWARD in range [0x" << std::hex << start
               << ", 0x" << stop << ") --" << std::dec << std::endl;
-    test_full_range(mpfr::RoundingMode::Downward, start, stop);
+    test_full_range(LIBC_NAMESPACE::fputil::testing::RoundingMode::Downward,
+                    start, stop);
   }
 
   void test_full_range_RZ(StorageType start, StorageType stop) {
     std::cout << "-- Testing for FE_TOWARDZERO in range [0x" << std::hex
               << start << ", 0x" << stop << ") --" << std::dec << std::endl;
-    test_full_range(mpfr::RoundingMode::TowardZero, start, stop);
+    test_full_range(LIBC_NAMESPACE::fputil::testing::RoundingMode::TowardZero,
+                    start, stop);
   }
 
   void test_full_range_all_roundings(StorageType start, StorageType stop) {
