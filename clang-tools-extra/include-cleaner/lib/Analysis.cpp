@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
 #include <cassert>
 #include <climits>
 #include <optional>
@@ -79,7 +80,7 @@ public:
       // Fragments are intentionally direct-includes-only for now. If a
       // fragment includes another file, that nested include keeps normal
       // header semantics.
-      IncludeSitesByFile[&I.Resolved->getFileEntry()].push_back(&I);
+      IncludeSitesByFile[I.Resolved->getUniqueID()].push_back(&I);
       DirectIncludes.insert(&I);
     }
   }
@@ -92,7 +93,7 @@ public:
     auto FE = SM.getFileEntryRefForID(FID);
     if (!FE)
       return std::nullopt;
-    auto It = IncludeSitesByFile.find(&FE->getFileEntry());
+    auto It = IncludeSitesByFile.find(FE->getUniqueID());
     if (It == IncludeSitesByFile.end())
       return std::nullopt;
     if (It->second.size() != 1)
@@ -107,7 +108,7 @@ public:
 
 private:
   const SourceManager &SM;
-  llvm::DenseMap<const FileEntry *, llvm::SmallVector<const Include *>>
+  llvm::DenseMap<llvm::sys::fs::UniqueID, llvm::SmallVector<const Include *>>
       IncludeSitesByFile;
   llvm::DenseSet<const Include *> DirectIncludes;
 };
