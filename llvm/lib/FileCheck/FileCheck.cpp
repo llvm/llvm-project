@@ -1289,9 +1289,8 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       if (Diags)
         Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy,
                             SMRange(Range.Start, Range.Start), OS.str());
-      else {
-        if (Req.DiffMode == DiffFormatType::Standard)
-          SM.PrintMessage(Range.Start, SourceMgr::DK_Note, OS.str());
+      else if (Req.DiffMode == DiffFormatType::Standard) {
+        SM.PrintMessage(Range.Start, SourceMgr::DK_Note, OS.str());
       }
     }
   }
@@ -2753,14 +2752,11 @@ static DiffContext getDiffContext(SourceMgr &SM, unsigned LineNo,
     if (!LineLoc.isValid())
       return "";
 
-    const char *Ptr = LineLoc.getPointer();
-    const char *End = BufText.end();
-    const char *LineEnd = Ptr;
-
-    while (LineEnd < End && *LineEnd != '\n' && *LineEnd != '\r')
-      LineEnd++;
-
-    return StringRef(Ptr, LineEnd - Ptr).trim();
+    StringRef FromLineStart(LineLoc.getPointer(),
+                            BufText.end() - LineLoc.getPointer());
+    return FromLineStart
+        .take_while([](char C) { return C != '\n' && C != '\r'; })
+        .trim();
   };
 
   return {getLineText(LineNo), getLineText(LineNo - 1),
@@ -2883,8 +2879,7 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
 
   // If no fuzzy match was found by the engine, just use the next line.
   if (TargetLine.empty()) {
-    TargetLine =
-        (EOL == StringRef::npos) ? CheckRegion : CheckRegion.substr(0, EOL);
+    TargetLine = CheckRegion.substr(0, EOL);
     TargetLineNo = SM.getLineAndColumn(CurrentLoc).first;
   }
 
@@ -2981,7 +2976,6 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
           break;
         }
       }
-
       CheckRegion = CheckRegion.substr(MatchPos + MatchLen);
     }
 
