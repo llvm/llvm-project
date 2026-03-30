@@ -246,6 +246,13 @@ function(add_llvm_symbol_exports target_name export_file)
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
 endfunction(add_llvm_symbol_exports)
 
+function(llvm_set_macho_current_version target major)
+  set_target_properties(${target} PROPERTIES
+    MACHO_COMPATIBILITY_VERSION 1
+    MACHO_CURRENT_VERSION
+      ${major}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
+endfunction()
+
 if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
   # Detect what linker we have here.
   if(APPLE)
