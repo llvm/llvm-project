@@ -13852,7 +13852,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
     return false;
   if (!SelectTE.ReorderIndices.empty() || !SelectTE.ReuseShuffleIndices.empty())
     return false;
-  if (!UserIgnoreList)
+  if (!UserIgnoreList || SelectTE.Idx != 0)
     return false;
   if (any_of(SelectTE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
     return false;
@@ -15549,7 +15549,7 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
   };
 
   if (E->State == TreeEntry::SplitVectorize) {
-    for (const auto [Idx, _] : E->CombinedEntriesWithIndices) {
+    for (const auto &[Idx, _] : E->CombinedEntriesWithIndices) {
       const TreeEntry *OpTE = VectorizableTree[Idx].get();
 
       if (!CountedOpEntries.insert(OpTE).second)
