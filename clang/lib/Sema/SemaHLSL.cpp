@@ -3013,8 +3013,6 @@ bool SemaHLSL::ActOnResourceMemberAccessExpr(MemberExpr *ME) {
       if (!NonConstIndexExpr)
         return true;
 
-      assert(isa<VarDecl>(DRE->getDecl()) &&
-             "member expr base is not a var decl");
       const VarDecl *VD = cast<VarDecl>(DRE->getDecl());
       if (!VD->hasGlobalStorage())
         return true;
