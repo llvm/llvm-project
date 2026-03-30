@@ -79,7 +79,7 @@ public:
 
   void sync() const {
     std::unique_lock<std::mutex> lock(Mutex);
-    Cond.wait(lock, [&] { return Count.load(std::memory_order_acquire) == 0; });
+    Cond.wait(lock, [&] { return Count.load(std::memory_order_relaxed) == 0; });
   }
 };
 } // namespace detail
