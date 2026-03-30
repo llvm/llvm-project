@@ -11,6 +11,8 @@
 
 #if defined(_LIBCPP_WIN32API)
 #  include <__algorithm/max.h>
+#  include <cctype>
+#  include <charconv>
 #  include <cwchar>
 #  include <windows.h>
 #else
@@ -227,12 +229,37 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
   wchar_t __locale_wbuffer[LOCALE_NAME_MAX_LENGTH + 1]{};
   wchar_t __number_buffer[11]{};
 
-  bool __is_ansi  = ::AreFileApisANSI();
-  auto __codepage = __is_ansi ? CP_ACP : CP_OEMCP;
-
   string_view __sv(__name);
-  int __ret = ::MultiByteToWideChar(
-      __codepage, MB_ERR_INVALID_CHARS, __name, __sv.size(), __locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
+  unsigned long long __name_size = __sv.size();
+  bool __is_ansi                 = ::AreFileApisANSI();
+
+  // locale :: "locale-name"
+  // | "language"[_country-region[.code-page]]
+  // | ".code-page"
+  // GetLocaleInfoEx doesn't accept anything other than BCP-47 locale names, e.g. "en_US",
+  // so we'll try to do a best-attempt to derive the text encoding from the name.
+  if (auto __dot = __sv.find('.'); __dot != std::string_view::npos) {
+    string_view __code_page(__name + __dot + 1);
+
+    // Windows allows the codepage number as part of the name,
+    // e.g. "en_US.1252" for English US, Windows-1252.
+    if (std::isdigit(__code_page[0])) {
+      unsigned int __cpage{};
+      auto res = std::from_chars(__code_page.data(), __code_page.data() + __code_page.size(), res);
+      if (res) {
+        return __get_win32_acp(__cpage)
+      }
+    } else { // POSIX-style name
+      std::text_encoding __te = std::text_encoding(__code_page);
+      if (__te != std::text_encoding::id::unknown) {
+        return __te;
+      }
+    }
+  }
+
+  auto __codepage = __is_ansi ? CP_ACP : CP_OEMCP;
+  int __ret       = ::MultiByteToWideChar(
+      __codepage, MB_ERR_INVALID_CHARS, __name, __name_size, __locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
 
   if (__ret <= 0)
     return std::text_encoding();
@@ -252,13 +279,8 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
 #elif defined(__ANDROID__)
 // Android has minimal libc suppport for locale, and doesn't support any other locale
 // than the ones checked for below.
-_LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* __name) {
-  string_view __sv(__name);
-  if (__sv == "" || __sv == "*" || __sv == "C" || __sv == "POSIX" || __sv.contains("UTF-8")) {
-    return std::text_encoding(std::text_encoding::id::UTF8);
-  }
-
-  return std::text_encoding();
+_LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding([[maybe_unused]] const char* __name) {
+  return std::text_encoding(std::text_encoding::id::UTF8);
 }
 
 #else // POSIX

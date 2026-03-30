@@ -37,5 +37,21 @@ int main(int, char**) {
     }
     assert(te == utf8_te);
   }
+#if defined(_WIN32)
+  {
+    const std::locale loc("en-US");
+    std::text_encoding te    = loc.encoding();
+    std::text_encoding w1252 = std::text_encoding(std::text_encoding::id::windows1252);
+    assert(te == std::text_encoding::id::windows1252);
+    assert(te == w1252);
+  }
+  {
+    const std::locale loc("en-US.1252");
+    std::text_encoding te    = loc.encoding();
+    std::text_encoding w1252 = std::text_encoding(std::text_encoding::id::windows1252);
+    assert(te == std::text_encoding::id::windows1252);
+    assert(te == w1252);
+  }
+#endif
   return 0;
 }

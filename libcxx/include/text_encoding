@@ -593,7 +593,12 @@ public:
   [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
     // TODO: It may be worthwhile to implement an optimization for popular encodings, e.g. UTF-8,
     // to allow checking the environment text encoding without needing to use the data tables.
+
+#      if defined(__ANDROID__)
+    return __Id == std::text_encoding::id::UTF8;
+#      else
     return environment() == _Id;
+#      endif
   }
 #    else
   static text_encoding environment() = delete;
