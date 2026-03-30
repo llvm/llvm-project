@@ -9,6 +9,7 @@
 #define LIBC_ENABLE_CONSTEXPR 1
 
 #include "shared/math.h"
+#include "test/UnitTest/Test.h"
 
 //===----------------------------------------------------------------------===//
 //                       Double Tests
@@ -59,5 +60,8 @@ static_assert(float128(0x0p+0) ==
 //                       BFloat16 Tests
 //===----------------------------------------------------------------------===//
 
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::asinbf16(bfloat16(0.0)));
 static_assert(bfloat16(0x0p+0) ==
               LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
+
+TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}
