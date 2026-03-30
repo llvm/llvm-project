@@ -87,8 +87,8 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const auto *Arg = Call->getArg(0);
-  QualType ArgTy = Arg->getType();
-  QualType ArgPointeeTy = stripPointerOrReference(ArgTy);
+  const QualType ArgTy = Arg->getType();
+  const QualType ArgPointeeTy = stripPointerOrReference(ArgTy);
   const CanQualType FromTy = ArgPointeeTy->getCanonicalTypeUnqualified();
   const auto *FromDecl = FromTy->getAsCXXRecordDecl();
   const auto *RetDecl = RetTy->getAsCXXRecordDecl();
@@ -107,7 +107,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
   // printing the canonical type for a template parameter prints as e.g.
   // 'type-parameter-0-0'
-  QualType DiagFromTy(ArgPointeeTy->getUnqualifiedDesugaredType(), 0);
+  const QualType DiagFromTy(ArgPointeeTy->getUnqualifiedDesugaredType(), 0);
   diag(Arg->getExprLoc(),
        "source expression has %select{|pointee}0 type %1%select{|, which is a "
        "subtype of %3}2",
