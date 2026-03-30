@@ -1070,16 +1070,12 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 //===----------------------------------------------------------------------===//
 
 def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
-    [Pure,
+    [Pure, Elementwise,
      // Infer linear_index type from the first result type during parsing.
+     // Type matching is verified by the Elementwise trait.
      TypesMatchWith<"linear_index type must match result types",
-                    "multi_index", "linear_index", "$_self[0]">,
-     // Verify all result types match the linear_index type.
-     TypesMatchWith<"all result types must match linear_index type",
-                    "linear_index", "multi_index", "$_self",
-                    "[](::mlir::Type a, ::mlir::TypeRange b) { "
-                    "return llvm::all_of(b, [a](::mlir::Type t) { "
-                    "return t == a; }); }">
+                    "multi_index", "linear_index", "$_self[0]",
+                    "[](::mlir::Type, ::mlir::Type) { return true; }">
     ]> {
   let summary = "delinearize an index";
   let description = [{
@@ -1184,12 +1180,12 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
 // AffineLinearizeIndexOp
 //===----------------------------------------------------------------------===//
 def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
-    [Pure, AttrSizedOperandSegments,
+    [Pure, AttrSizedOperandSegments, Elementwise,
+     // Infer multi_index types from result type during parsing.
+     // Type matching is verified by the Elementwise trait.
      TypesMatchWith<"multi_index types must match result type",
                     "linear_index", "multi_index", "$_self",
-                    "[](::mlir::Type a, ::mlir::TypeRange b) { "
-                    "return llvm::all_of(b, [a](::mlir::Type t) { "
-                    "return t == a; }); }">]> {
+                    "[](::mlir::Type, ::mlir::TypeRange) { return true; }">]> {
   let summary = "linearize an index";
   let description = [{
     The `affine.linearize_index` operation takes a sequence of index values and a
