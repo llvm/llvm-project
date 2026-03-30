@@ -398,7 +398,6 @@ void GsymCreator::encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
 }
 
 llvm::Error GsymCreator::encodeFileTable(FileWriter &O) const {
-  O.alignTo(4);
   assert(!Files.empty());
   assert(Files[0].Dir == 0);
   assert(Files[0].Base == 0);

@@ -173,6 +173,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   }
 
   // Write FileTable section.
+  O.alignTo(4);
   assert(O.tell() == FileTableOffset);
   if (auto Err = encodeFileTable(O))
     return Err;
