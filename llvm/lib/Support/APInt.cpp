@@ -775,11 +775,15 @@ APInt APInt::reverseBits() const {
     return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
   case 8:
     return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
+  case 1:  // fallthrough
   case 0:
     return *this;
   default:
     break;
   }
+  // Special case for all widths less than 64 and non-power-of-2
+  if (BitWidth < 64)
+      return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL) >> (64 - BitWidth));
 
   APInt Result(BitWidth, 0);
   unsigned NumWords = getNumWords();
