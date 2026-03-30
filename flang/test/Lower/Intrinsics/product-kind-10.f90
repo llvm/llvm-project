@@ -3,13 +3,14 @@
 ! This test was extracted from product.f90, since most tests in product.f90 didn't
 ! need types specific to x86 platform.
 
-! Note: originally, the test used 'REQUIRES: x86-registered-target' to try to
-! avoid running on platforms that don't support kind 10. Unfortunately, this
-! checks if the x86 backend was compiled into LLVM, not whether the host is x86.
-! On ARM CI machines with multi-target LLVM builds, this feature is set to true,
-! so the test runs — but COMPLEX(KIND=10) (f80) is unsupported on ARM, causing
-! a semantic error. For that reason, change this test to support CHECK-KIND10
-! mechanism. The same mechanism is used by nearest.f90 and sum.f90, for example.
+! Note: originally, the test used 'REQUIRES' directive for
+! x86-registered-target' to try to avoid running on platforms that don't
+! support kind 10. Unfortunately, this checks if the x86 backend was compiled
+! into LLVM, not whether the host is x86. On ARM CI machines with multi-target
+! LLVM builds, this feature is set to true, so the test runs. With
+! COMPLEX(KIND=10) (f80) not unsupported on ARM, this caused a semantic error.
+! For this reason, change this test to support CHECK-KIND10 mechanism. (The
+! same mechanism is used by nearest.f90 and sum.f90 tests.)
 
 ! CHECK-LABEL: func @_QPproduct_test4(
 ! CHECK-KIND10-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xcomplex<f80>>>{{.*}}) -> complex<f80>
