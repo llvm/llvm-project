@@ -1186,6 +1186,22 @@ TEST(APIntTest, divrem_simple) {
   EXPECT_EQ(R, APInt(65, 0));
 }
 
+TEST(APIntTest, URemUint64PowerOf2Wide) {
+  // Edge case tests for urem with power of two arguments
+  APInt V(128, 0);
+  V.setBit(127);
+  V.setLowBits(12);
+
+  EXPECT_EQ(15u, V.urem(16));
+  EXPECT_EQ(255u, V.urem(256));
+  EXPECT_EQ(4095u, V.urem(4096));
+
+  APInt AllOnes = APInt::getAllOnes(128);
+  EXPECT_EQ(static_cast<uint64_t>(63), AllOnes.urem(64));
+  EXPECT_EQ(static_cast<uint64_t>(255), AllOnes.urem(256));
+  EXPECT_EQ(static_cast<uint64_t>(4095), AllOnes.urem(4096));
+}
+
 TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, 0), APInt(32,   "0", 2));
   EXPECT_EQ(APInt(32, 1), APInt(32,   "1", 2));
