@@ -372,6 +372,10 @@ def IIT_V6 : IIT_Vec<6, 50>;
 def IIT_V10 : IIT_Vec<10, 51>;
 def IIT_V2048 : IIT_Vec<2048, 52>;
 def IIT_V4096 : IIT_Vec<4096, 53>;
+// Constrained type encoding for overloaded intrinsics.
+def IIT_ANYTYPE : IIT_Base<93>;
+def IIT_NONETYPE : IIT_Base<94>;
+def IIT_EXCEPT : IIT_Base<95>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -446,6 +450,63 @@ class LLVMQualPointerType<int addrspace>
 
 class LLVMAnyPointerType : LLVMAnyType<pAny> {
   assert isAny, "pAny should have isOverloaded";
+}
+
+// AnyTypeOf: Constrain overloaded type to specific set of allowed types.
+// Encoding follows the pattern: [IIT_ARG, EncAny, IIT_ANYTYPE, count, type_sigs...].
+class AnyTypeOf<list<LLVMType> allowed_types> : LLVMAnyType<Any> {
+  list<LLVMType> AllowedTypes = allowed_types;
+  
+  // Validation: specifying maximal 255 number of allowed types.
+  assert !le(!size(allowed_types), 255),
+         "AnyTypeOf cannot exceed 255 allowed types";
+  
+  let Sig = !listconcat(
+    [IIT_ARG.Number, EncAnyType<ArgCode>.ret],
+    [IIT_ANYTYPE.Number, !size(allowed_types)],
+    !foldl([]<int>, allowed_types, accum, ty,
+      !listconcat(accum, ty.Sig))
+  );
+}
+
+// NoneTypeOf: Exclude specific types from overloaded type (inverse of AnyTypeOf).
+// Encoding follows the pattern: [IIT_ARG, EncAny, IIT_NONETYPE, count, type_sigs...].
+class NoneTypeOf<list<LLVMType> excluded_types> : LLVMAnyType<Any> {
+  list<LLVMType> ExcludedTypes = excluded_types;
+  
+  // Validation: specifying maximal 255 number of excluded types.
+  assert !le(!size(excluded_types), 255),
+         "NoneTypeOf cannot exceed 255 excluded types";
+  
+  let Sig = !listconcat(
+    [IIT_ARG.Number, EncAnyType<ArgCode>.ret],
+    [IIT_NONETYPE.Number, !size(excluded_types)],
+    !foldl([]<int>, excluded_types, accum, ty,
+      !listconcat(accum, ty.Sig))
+  );
+}
+
+// Except: To constraint specific combinations allowed by cartesian product of AnyTypeOfs/NoneTypeOfs.
+// Encoding: [IIT_EXCEPT, num_combinations, combo_size, type_sigs...]
+class Except<list<list<LLVMType>> invalid_combinations> {
+  list<list<LLVMType>> InvalidCombinations = invalid_combinations;
+  
+  // Validate: at least one combination.
+  assert !gt(!size(invalid_combinations), 0),
+         "Except must have at least one invalid combination";
+  
+  // Validate: all combinations have same size.
+  defvar first_size = !size(!head(invalid_combinations));
+  assert !foldl(1, invalid_combinations, valid, combo,
+    !and(valid, !eq(!size(combo), first_size))),
+    "All Except combinations must have the same number of types";
+  
+  list<int> Sig = !listconcat(
+    [IIT_EXCEPT.Number, !size(invalid_combinations), first_size],
+    !foldl([]<int>, invalid_combinations, accum, combo,
+      !listconcat(accum, !foldl([]<int>, combo, accum2, ty,
+        !listconcat(accum2, ty.Sig))))
+  );
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -742,6 +803,19 @@ class DefaultAttrsIntrinsic<list<LLVMType> ret_types,
                 : Intrinsic<ret_types, param_types,
                             intr_properties, name,
                             sd_properties, /*disable_default_attributes*/ 0> {}
+
+class IntrinsicWithExcept<list<LLVMType> ret_types,
+                list<LLVMType> param_types = [],
+                list<IntrinsicProperty> intr_properties = [],
+                list<Except> except_constraints = [],
+                string name = "",
+                list<SDNodeProperty> sd_properties = [],
+                bit disable_default_attributes = true>
+                : Intrinsic<ret_types, param_types, intr_properties, name, sd_properties,
+                            disable_default_attributes> {
+  
+   list<Except> ExceptConstraints = except_constraints;
+}
 
 /// ClangBuiltin - If this intrinsic exactly corresponds to a Clang builtin, this
 /// specifies the name of the builtin.  This provides automatic CBE and CFE
