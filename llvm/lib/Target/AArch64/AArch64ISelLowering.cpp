@@ -7309,14 +7309,50 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (PassThru->isUndef() || isZerosVector(PassThru.getNode()))
     return Op;
 
+  if (!LoadNode->isExpandingLoad()) {
+    SDValue Load = DAG.getMaskedLoad(
+        VT, DL, LoadNode->getChain(), LoadNode->getBasePtr(),
+        LoadNode->getOffset(), Mask, DAG.getUNDEF(VT), LoadNode->getMemoryVT(),
+        LoadNode->getMemOperand(), LoadNode->getAddressingMode(),
+        LoadNode->getExtensionType());
+
+    SDValue Result = DAG.getSelect(DL, VT, Mask, Load, PassThru);
+    return DAG.getMergeValues({Result, Load.getValue(1)}, DL);
+  }
+
+  // Expand instruction is available with SVE2p2 in streaming mode only
+  // if SMEFA64 is available. Expand is always available with SME2p2.
+  if (!(Subtarget->hasSVE2p2() &&
+        (!Subtarget->isStreaming() || Subtarget->hasSMEFA64())) &&
+      !Subtarget->hasSME2p2())
+    return Op;
+
+  // Create mask using the number of active lanes in the predicate.
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask,
+      Mask);
+
+  SDValue ActiveMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, Mask->getValueType(0),
+                  DAG.getConstant(0, DL, MVT::i64), CntActive);
+
+  // Contiguous load of elements using the active lane mask above.
   SDValue Load = DAG.getMaskedLoad(
       VT, DL, LoadNode->getChain(), LoadNode->getBasePtr(),
-      LoadNode->getOffset(), Mask, DAG.getUNDEF(VT), LoadNode->getMemoryVT(),
-      LoadNode->getMemOperand(), LoadNode->getAddressingMode(),
-      LoadNode->getExtensionType());
+      LoadNode->getOffset(), ActiveMask, DAG.getUNDEF(VT),
+      LoadNode->getMemoryVT(), LoadNode->getMemOperand(),
+      LoadNode->getAddressingMode(), LoadNode->getExtensionType());
 
-  SDValue Result = DAG.getSelect(DL, VT, Mask, Load, PassThru);
+  // Expand instruction copies the low-numbered elements to active elements
+  // in the original predicate.
+  SDValue Expand = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, VT,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_expand, DL, MVT::i64), Mask,
+      Load);
 
+  // Copy the passthrough value.
+  SDValue Result = DAG.getSelect(DL, VT, Mask, Expand, PassThru);
   return DAG.getMergeValues({Result, Load.getValue(1)}, DL);
 }
 
@@ -31388,7 +31424,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
   }
   Mask = convertFixedMaskToScalableVector(Mask, DAG);
 
-  SDValue PassThru;
+  SDValue PassThru, NewLoad, Result;
   bool IsPassThruZeroOrUndef = false;
 
   if (Load->getPassThru()->isUndef()) {
@@ -31403,12 +31439,42 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
       IsPassThruZeroOrUndef = true;
   }
 
-  SDValue NewLoad = DAG.getMaskedLoad(
-      ContainerVT, DL, Load->getChain(), Load->getBasePtr(), Load->getOffset(),
-      Mask, PassThru, Load->getMemoryVT(), Load->getMemOperand(),
-      Load->getAddressingMode(), Load->getExtensionType());
+  if (!Load->isExpandingLoad()) {
+    NewLoad =
+        DAG.getMaskedLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
+                          Load->getOffset(), Mask, PassThru,
+                          Load->getMemoryVT(), Load->getMemOperand(),
+                          Load->getAddressingMode(), Load->getExtensionType());
+    Result = NewLoad;
+  } else {
+    // Fixed-length masked.expandload intrinsics should have been scalarised
+    // if the required features are not available to use expand.
+    assert(((Subtarget->hasSVE2p2() &&
+             (!Subtarget->isStreaming() || Subtarget->hasSMEFA64())) ||
+            Subtarget->hasSME2p2()) &&
+           "Expected SVE2p2 or SME2p2");
 
-  SDValue Result = NewLoad;
+    SDValue CntActive = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64), Mask,
+        Mask);
+
+    SDValue ActiveMask =
+        DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, Mask->getValueType(0),
+                    DAG.getConstant(0, DL, MVT::i64), CntActive);
+
+    NewLoad =
+        DAG.getMaskedLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
+                          Load->getOffset(), ActiveMask, PassThru,
+                          Load->getMemoryVT(), Load->getMemOperand(),
+                          Load->getAddressingMode(), Load->getExtensionType());
+
+    Result = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_expand, DL, MVT::i64),
+        Mask, NewLoad);
+  }
+
   if (!IsPassThruZeroOrUndef) {
     SDValue OldPassThru =
         convertToScalableVector(DAG, ContainerVT, Load->getPassThru());

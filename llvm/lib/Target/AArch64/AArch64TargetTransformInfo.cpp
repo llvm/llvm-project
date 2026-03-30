@@ -4886,6 +4886,7 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
   case Intrinsic::masked_load:
+  case Intrinsic::masked_expandload:
   case Intrinsic::masked_store:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
@@ -4913,6 +4914,10 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
   if (VT->getElementCount() == ElementCount::getScalable(1))
+    return InstructionCost::getInvalid();
+
+  if (MICA.getID() == Intrinsic::masked_expandload &&
+      !isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
     return InstructionCost::getInvalid();
 
   // If we need to split the memory operation, we will also need to split the
@@ -5148,6 +5153,20 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
               getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
   }
   return Cost;
+}
+
+bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
+                                             Align Alignment) const {
+  EVT VT = TLI->getValueType(DL, DataTy, true);
+
+  // Neon types should be scalarised when we are not choosing to use SVE.
+  if (useNeonVector(DataTy))
+    return false;
+
+  // Return true only if we are able to lower using the SVE2p2/SME2p2
+  // expand instruction.
+  return (ST->hasSVE2p2() && (!ST->isStreaming() || ST->hasSMEFA64())) ||
+         ST->hasSME2p2();
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
