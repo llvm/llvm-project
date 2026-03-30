@@ -4724,6 +4724,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atanpibf16_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    atanpibf16_test.cpp
+  DEPENDS
+    libc.src.math.atanpibf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   atanpif16_test
   NEED_MPFR
   SUITE

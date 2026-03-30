@@ -36,6 +36,7 @@
 #include "math/atanf16.h"
 #include "math/atanhf.h"
 #include "math/atanhf16.h"
+#include "math/atanpibf16.h"
 #include "math/atanpif16.h"
 #include "math/bf16add.h"
 #include "math/bf16addf.h"
