@@ -161,7 +161,7 @@ func.func @not_perfectly_nested(%tc1 : i32, %tc2 : i32) {
     omp.terminator
   }
 
-  // expected-error@+1 {{'omp.interchange' op interchanged loop nest must be perfectly nested}}
+  // expected-error@+1 {{'omp.interchange' op OpenMP transformation loop nest must be perfectly nested}}
   omp.interchange <-(%canonloop1, %canonloop2) permutation([1 : i32, 2 : i32])
 
   llvm.return
@@ -179,7 +179,7 @@ func.func @non_nectangular(%tc1 : i32, %tc2 : i32) {
     omp.terminator
   }
 
-  // expected-error@+1 {{'omp.interchange' op interchanged loop nest must be rectangular}}
+  // expected-error@+1 {{'omp.interchange' op OpenMP transformation loop nest must be rectangular}}
   omp.interchange <-(%canonloop1, %canonloop2) permutation([1 : i32, 2 : i32])
 
   llvm.return
@@ -195,7 +195,7 @@ func.func @not_nested(%tc1 : i32, %tc2 : i32) -> () {
     omp.terminator
   }
 
-  // expected-error@+1 {{'omp.interchange' op interchanged loop nest must be nested within each other}}
+  // expected-error@+1 {{'omp.interchange' op OpenMP transformation loop nest must be nested within each other}}
   omp.interchange <- (%cli_outer, %cli_inner) permutation([2 : i32, 1 : i32])
   return
 }

@@ -6786,7 +6786,7 @@ void OpenMPIRBuilder::unrollLoopHeuristic(DebugLoc, CanonicalLoopInfo *Loop) {
 std::vector<CanonicalLoopInfo *>
 OpenMPIRBuilder::interchangeLoops(DebugLoc DL,
                                   ArrayRef<CanonicalLoopInfo *> Loops,
-                                  std::vector<int> Permutation) {
+                                  ArrayRef<int> Permutation) {
   assert(Permutation.size() == Loops.size() &&
          "The permutation must have every input loop");
   int NumLoops = Loops.size();
@@ -6798,8 +6798,9 @@ OpenMPIRBuilder::interchangeLoops(DebugLoc DL,
 
   // Loop control blocks that may become orphaned later.
   SmallVector<BasicBlock *> OldControlBBs;
-  for (CanonicalLoopInfo *Loop : Loops)
+  for (CanonicalLoopInfo *Loop : Loops) {
     Loop->collectControlBlocks(OldControlBBs);
+  }
 
   // Create the new loop nest structure
   std::vector<CanonicalLoopInfo *> Result;
@@ -6809,15 +6810,13 @@ OpenMPIRBuilder::interchangeLoops(DebugLoc DL,
   BasicBlock *OutroInsertBefore = InnermostLoop->getExit();
 
   for (int i = 0; i < NumLoops; i++) {
-    int loop_n = Permutation[i] - 1;
-    assert(Loops[loop_n]->isValid() &&
+    int LoopIndex = Permutation[i] - 1;
+    assert(Loops[LoopIndex]->isValid() &&
            "All input loops must be valid canonical loops");
 
     CanonicalLoopInfo *newLoop = createLoopSkeleton(
-        DL, Loops[loop_n]->getTripCount(), F, InnermostLoop->getBody(),
+        DL, Loops[LoopIndex]->getTripCount(), F, InnermostLoop->getBody(),
         OutroInsertBefore, "interchange" + Twine(i));
-    redirectAllPredecessorsTo(Loops[i]->getPreheader(), newLoop->getPreheader(),
-                              DL);
     redirectTo(Enter, newLoop->getPreheader(), DL);
     redirectTo(newLoop->getAfter(), Continue, DL);
 
@@ -6829,18 +6828,6 @@ OpenMPIRBuilder::interchangeLoops(DebugLoc DL,
     Result.push_back(newLoop);
   }
 
-  // Detach the original loops
-  for (int i = 0; i < NumLoops - 1; i++) {
-    BasicBlock *body = Loops[i]->getBody();
-    BasicBlock *region =
-        cast<UncondBrInst>(body->getTerminator())->getSuccessor(0);
-    BasicBlock *cont = Loops[i]->getLatch()->getUniquePredecessor();
-
-    // Add the old "bodies" to delete
-    OldControlBBs.push_back(body);
-    OldControlBBs.push_back(region);
-    OldControlBBs.push_back(cont);
-  }
   // Append the original loop nest body into the generated loop nest body.
   redirectTo(Enter, InnermostLoop->getBody(), DL);
   redirectAllPredecessorsTo(InnermostLoop->getLatch(), Continue, DL);
@@ -6848,8 +6835,8 @@ OpenMPIRBuilder::interchangeLoops(DebugLoc DL,
   // Replace the original induction variable with the new induction variable
   Builder.restoreIP(Result.back()->getBodyIP());
   for (int i = 0; i < NumLoops; ++i) {
-    int loop_n = Permutation[i] - 1;
-    Value *OrigIndVar = Loops[loop_n]->getIndVar();
+    int LoopIndex = Permutation[i] - 1;
+    Value *OrigIndVar = Loops[LoopIndex]->getIndVar();
     OrigIndVar->replaceAllUsesWith(Result[i]->getIndVar());
   }
 

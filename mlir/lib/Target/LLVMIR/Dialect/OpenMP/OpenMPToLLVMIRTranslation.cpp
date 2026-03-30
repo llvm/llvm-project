@@ -4172,7 +4172,7 @@ applyInterchange(omp::InterchangeOp op, llvm::IRBuilderBase &builder,
   }
 
   auto perm = op.getPermutation().value();
-  std::vector<int> permutation;
+  SmallVector<int> permutation;
   for (auto &val : perm) {
     auto intVal = llvm::dyn_cast<mlir::IntegerAttr>(val);
     assert(intVal && "permutation attributes must be integers");

@@ -1446,7 +1446,7 @@ public:
   ///          loop nest reordered.
   LLVM_ABI std::vector<CanonicalLoopInfo *>
   interchangeLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
-                   std::vector<int> Permutation);
+                   ArrayRef<int> Permutation);
 
   /// Fully or partially unroll a loop. How the loop is unrolled is determined
   /// using LLVM's LoopUnrollPass.

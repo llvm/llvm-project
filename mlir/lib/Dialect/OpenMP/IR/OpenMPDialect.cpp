@@ -3709,30 +3709,6 @@ CanonicalLoopOp::getGenerateesODSOperandIndexAndLength() {
   return getODSOperandIndexAndLength(odsIndex_cli);
 }
 
-/// Canonical loop must be perfectly nested, i.e. the body of the parent must
-/// only contain the omp.canonical_loop of the nested loops, and
-/// omp.terminator
-bool isPerfectlyNested(CanonicalLoopOp parentLoop, CanonicalLoopOp loop) {
-  auto &parentBody = parentLoop.getRegion();
-  if (!parentBody.hasOneBlock())
-    return false;
-  auto &parentBlock = parentBody.getBlocks().front();
-
-  auto nestedLoopIt = parentBlock.begin();
-  if (nestedLoopIt == parentBlock.end() ||
-      (&*nestedLoopIt != loop.getOperation()))
-    return false;
-
-  auto termIt = std::next(nestedLoopIt);
-  if (termIt == parentBlock.end() || !isa<TerminatorOp>(termIt))
-    return false;
-
-  if (std::next(termIt) != parentBlock.end())
-    return false;
-
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 // UnrollHeuristicOp
 //===----------------------------------------------------------------------===//
@@ -3838,7 +3814,8 @@ static ParseResult parseLoopTransformClis(
 ///    (loop bounds are invariant in respect to the outer loops)
 ///
 /// TODO: Generalize for LoopTransformationInterface.
-static LogicalResult checkApplyeesNesting(TileOp op) {
+template <typename OpenMPTransform>
+static LogicalResult checkApplyeesNesting(OpenMPTransform op) {
   // Collect the loops from the nest
   bool isOnlyCanonLoops = true;
   SmallVector<CanonicalLoopOp> canonLoops;
@@ -3865,16 +3842,41 @@ static LogicalResult checkApplyeesNesting(TileOp op) {
     auto loop = canonLoops[i];
 
     if (parentLoop.getOperation() != loop.getOperation()->getParentOp())
-      return op.emitOpError()
-             << "tiled loop nest must be nested within each other";
+      return op.emitOpError() << "OpenMP transformation loop nest must be "
+                                 "nested within each other";
 
     parentIVs.insert(parentLoop.getInductionVar());
 
-    if (!isPerfectlyNested(parentLoop, loop))
-      return op.emitOpError() << "tiled loop nest must be perfectly nested";
+    // Canonical loop must be perfectly nested, i.e. the body of the parent must
+    // only contain the omp.canonical_loop of the nested loops, and
+    // omp.terminator
+    bool isPerfectlyNested = [&]() {
+      auto &parentBody = parentLoop.getRegion();
+      if (!parentBody.hasOneBlock())
+        return false;
+      auto &parentBlock = parentBody.getBlocks().front();
+
+      auto nestedLoopIt = parentBlock.begin();
+      if (nestedLoopIt == parentBlock.end() ||
+          (&*nestedLoopIt != loop.getOperation()))
+        return false;
+
+      auto termIt = std::next(nestedLoopIt);
+      if (termIt == parentBlock.end() || !isa<TerminatorOp>(termIt))
+        return false;
+
+      if (std::next(termIt) != parentBlock.end())
+        return false;
+
+      return true;
+    }();
+    if (!isPerfectlyNested)
+      return op.emitOpError()
+             << "OpenMP transformation loop nest must be perfectly nested";
 
     if (parentIVs.contains(loop.getTripCount()))
-      return op.emitOpError() << "tiled loop nest must be rectangular";
+      return op.emitOpError()
+             << "OpenMP transformation loop nest must be rectangular";
   }
 
   // TODO: The tile sizes must be computed before the loop, but checking this
@@ -4017,46 +4019,7 @@ LogicalResult InterchangeOp::verify() {
     return emitOpError()
            << "expecting the same number of generatees and applyees";
 
-  // FIXME: Unify common checks with other loop transformations
-  // Collect the loops from the nest
-  bool isOnlyCanonLoops = true;
-  SmallVector<CanonicalLoopOp> canonLoops;
-  for (Value applyee : getApplyees()) {
-    auto [create, gen, cons] = decodeCli(applyee);
-
-    if (!gen)
-      return emitOpError() << "applyee CLI has no generator";
-
-    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
-    canonLoops.push_back(loop);
-    if (!loop)
-      isOnlyCanonLoops = false;
-  }
-
-  // FIXME: We currently can only verify non-rectangularity and perfect nest of
-  // omp.canonical_loop.
-  if (!isOnlyCanonLoops)
-    return success();
-
-  DenseSet<Value> parentIVs;
-  for (auto i : llvm::seq<int>(1, canonLoops.size())) {
-    auto parentLoop = canonLoops[i - 1];
-    auto loop = canonLoops[i];
-
-    if (parentLoop.getOperation() != loop.getOperation()->getParentOp())
-      return emitOpError()
-             << "interchanged loop nest must be nested within each other";
-
-    parentIVs.insert(parentLoop.getInductionVar());
-
-    if (!isPerfectlyNested(parentLoop, loop))
-      return emitOpError() << "interchanged loop nest must be perfectly nested";
-
-    if (parentIVs.contains(loop.getTripCount()))
-      return emitOpError() << "interchanged loop nest must be rectangular";
-  }
-
-  return success();
+  return checkApplyeesNesting(*this);
 }
 
 std::pair<unsigned, unsigned>
