@@ -1386,17 +1386,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   Level--;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  if (Delta->isZero() && SE->isKnownNonZero(Coeff)) {
-    Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
-    Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
-    ++WeakCrossingSIVsuccesses;
-    if (!Result.DV[Level].Direction) {
-      ++WeakCrossingSIVindependence;
-      return true;
-    }
-    Result.DV[Level].Distance = Delta; // = 0
-    return false;
-  }
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(Coeff);
   if (!ConstCoeff)
     return false;
@@ -1424,28 +1413,21 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     return true;
   }
 
-  // We're certain that Delta > 0 and ConstCoeff > 0.
-  // Check Delta/(2*ConstCoeff) against upper loop bound
-  const Loop *CurSrcLoop = Src->getLoop();
-  if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *ConstantTwo = SE->getConstant(UpperBound->getType(), 2);
-    const SCEV *ML =
-        SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
-    LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
-      // i = i' = UB
-      Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
-      Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
-      ++WeakCrossingSIVsuccesses;
-      if (!Result.DV[Level].Direction) {
-        ++WeakCrossingSIVindependence;
-        return true;
-      }
-      Result.DV[Level].Distance = SE->getZero(Delta->getType());
-      return false;
+  ConstantRange SrcRange = SE->getSignedRange(Src);
+  ConstantRange DstRange = SE->getSignedRange(Dst);
+  LLVM_DEBUG(dbgs() << "\t    SrcRange = " << SrcRange << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstRange = " << DstRange << "\n");
+  if (SrcRange.intersectWith(DstRange).isSingleElement()) {
+    // The ranges touch at exactly one value (i = i' = 0 or i = i' = BTC).
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
+    ++WeakCrossingSIVsuccesses;
+    if (!Result.DV[Level].Direction) {
+      ++WeakCrossingSIVindependence;
+      return true;
     }
+    Result.DV[Level].Distance = SE->getZero(Delta->getType());
+    return false;
   }
 
   // check that Coeff divides Delta
@@ -1807,9 +1789,6 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
   if (!ConstCoeff)
     return false;
 
-  const SCEV *NewDelta =
-      SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
-
   if (const SCEV *UpperBound =
           collectUpperBound(AR->getLoop(), Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
@@ -1827,15 +1806,6 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
       }
       return false;
     }
-  }
-
-  // check that Delta/ARCoeff >= 0
-  // really check that NewDelta >= 0
-  if (SE->isKnownNegative(NewDelta)) {
-    // No dependence, newDelta < 0
-    ++WeakZeroSIVindependence;
-    ++WeakZeroSIVsuccesses;
-    return true;
   }
 
   // if ARCoeff doesn't divide Delta, then no dependence
@@ -2088,27 +2058,23 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
            "Loops in the SIV test should have the same iteration space and "
            "depth");
     Level = mapSrcLoop(CurSrcLoop);
-    bool disproven;
+    bool disproven = false;
     if (SrcCoeff == DstCoeff)
       disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
                                 UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
-    else
-      disproven = exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
-    return disproven || gcdMIVtest(Src, Dst, Result);
+    return disproven || exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
   }
   if (SrcAddRec) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
-    return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result) ||
-           gcdMIVtest(Src, Dst, Result);
+    return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result);
   }
   if (DstAddRec) {
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
-    return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result) ||
-           gcdMIVtest(Src, Dst, Result);
+    return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
   llvm_unreachable("SIV test expected at least one AddRec");
   return false;
