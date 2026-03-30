@@ -13,7 +13,10 @@
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Target/LLVM/XeVM/Target.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
@@ -98,8 +101,15 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
 
   // Embed the object as a global string.
   // Add null for assembly output for JIT paths that expect null-terminated
-  // strings.
-  bool addNull = (object.getFormat() == gpu::CompilationTarget::Assembly);
+  // strings. SPIR-V (for both XeVM and SPIR-V target) is passed as a binary
+  // blob and should not have a null terminator.
+  auto xevmTarget = dyn_cast<xevm::XeVMTargetAttr>(object.getTarget());
+  bool isXeVMSPIRV =
+      xevmTarget && xevmTarget.getTriple() == "spirv64-unknown-unknown";
+  bool isSPIRVTarget = isa<spirv::TargetEnvAttr>(object.getTarget());
+
+  bool addNull = !(isXeVMSPIRV || isSPIRVTarget) &&
+                 (object.getFormat() == gpu::CompilationTarget::Assembly);
   StringRef serializedStr = object.getObject().getValue();
   Constant *serializedCst =
       ConstantDataArray::getString(module.getContext(), serializedStr, addNull);
@@ -142,16 +152,24 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
   auto *loadBlock = BasicBlock::Create(module.getContext(), "entry", loadFn);
   builder.SetInsertPoint(loadBlock);
   Value *moduleObj = [&] {
+    Constant *binarySize =
+        ConstantInt::get(i64Ty, serializedStr.size() + (addNull ? 1 : 0));
     if (object.getFormat() == gpu::CompilationTarget::Assembly) {
       FunctionCallee moduleLoadFn = module.getOrInsertFunction(
-          "mgpuModuleLoadJIT", FunctionType::get(ptrTy, {ptrTy, i32Ty}, false));
+          "mgpuModuleLoadJIT", FunctionType::get(ptrTy,
+                                                 {
+                                                     ptrTy,
+                                                     i32Ty,
+                                                     i64Ty,
+                                                 },
+                                                 false));
+
       Constant *optValue = ConstantInt::get(i32Ty, optLevel);
-      return builder.CreateCall(moduleLoadFn, {serializedObj, optValue});
+      return builder.CreateCall(moduleLoadFn,
+                                {serializedObj, optValue, binarySize});
     }
     FunctionCallee moduleLoadFn = module.getOrInsertFunction(
         "mgpuModuleLoad", FunctionType::get(ptrTy, {ptrTy, i64Ty}, false));
-    Constant *binarySize =
-        ConstantInt::get(i64Ty, serializedStr.size() + (addNull ? 1 : 0));
     return builder.CreateCall(moduleLoadFn, {serializedObj, binarySize});
   }();
   builder.CreateStore(moduleObj, modulePtr);

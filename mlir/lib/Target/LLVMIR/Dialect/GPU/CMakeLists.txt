@@ -9,6 +9,7 @@ add_mlir_translation_library(MLIRGPUToLLVMIRTranslation
   MLIRIR
   MLIRGPUDialect
   MLIRLLVMDialect
+  MLIRXeVMTarget
   MLIRSupport
   MLIRTargetLLVMIRExport
   )

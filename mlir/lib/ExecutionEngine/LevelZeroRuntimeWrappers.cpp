@@ -520,10 +520,10 @@ extern "C" ze_module_handle_t mgpuModuleLoad(const void *data,
   return catchAll([&]() { return loadModule(data, gpuBlobSize); });
 }
 
-extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel) {
+extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
+                                                size_t assemblySize) {
   return catchAll([&]() {
-    return loadModule(data, strlen(reinterpret_cast<char *>(data)),
-                      ZE_MODULE_FORMAT_IL_SPIRV);
+    return loadModule(data, assemblySize, ZE_MODULE_FORMAT_IL_SPIRV);
   });
 }
 
