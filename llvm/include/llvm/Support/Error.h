@@ -815,7 +815,7 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
 /// pointer as is.
 template <typename T, typename = std::enable_if_t<std::is_convertible_v<
                           decltype(std::declval<T>() != nullptr), bool>>>
-[[nodiscard]] T &&checkNotNull(
+[[nodiscard]] decltype(auto) checkNotNull(
     T &&Pointer,
     const char *Msg = "Expected a non-null pointer but got a null pointer") {
   assert(Msg);
