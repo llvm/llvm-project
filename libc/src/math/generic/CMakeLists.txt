@@ -3863,7 +3863,6 @@ add_entrypoint_object(
     libc.src.__support.math.acosbf16
 )
 
-
 add_entrypoint_object(
   acosf
   SRCS
