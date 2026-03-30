@@ -2117,7 +2117,7 @@ vec_cmpne(vector unsigned long long __a, vector unsigned long long __b) {
 }
 #endif
 
-#ifdef __VSX__
+#ifdef __POWER8_VECTOR__
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpne(vector double __a, vector double __b) {
   return (vector bool long long)
@@ -17809,6 +17809,7 @@ vec_xl(ptrdiff_t __offset, const unsigned __int128 *__ptr) {
 /* vec_xl_be */
 
 #ifdef __LITTLE_ENDIAN__
+#ifdef __VSX__
 static __inline__ vector signed char __ATTRS_o_ai
 vec_xl_be(ptrdiff_t __offset, const signed char *__ptr) {
   vector signed char __vec = (vector signed char)__builtin_vsx_lxvd2x_be(__offset, __ptr);
@@ -17850,7 +17851,6 @@ vec_xl_be(signed long long  __offset, const float *__ptr) {
   return (vector float)__builtin_vsx_lxvw4x_be(__offset, __ptr);
 }
 
-#ifdef __VSX__
 static __inline__ vector signed long long __ATTRS_o_ai
 vec_xl_be(signed long long  __offset, const signed long long *__ptr) {
   return (vector signed long long)__builtin_vsx_lxvd2x_be(__offset, __ptr);
@@ -17865,7 +17865,6 @@ static __inline__ vector double __ATTRS_o_ai
 vec_xl_be(signed long long  __offset, const double *__ptr) {
   return (vector double)__builtin_vsx_lxvd2x_be(__offset, __ptr);
 }
-#endif
 
 #if defined(__POWER8_VECTOR__) && defined(__powerpc64__) &&                    \
     defined(__SIZEOF_INT128__)
@@ -17879,8 +17878,9 @@ vec_xl_be(signed long long  __offset, const unsigned __int128 *__ptr) {
   return vec_xl(__offset, __ptr);
 }
 #endif
-#else
-  #define vec_xl_be vec_xl
+#endif // __VSX__
+#else  // ! __LITTLE_ENDIAN__
+#define vec_xl_be vec_xl
 #endif
 
 #if defined(__POWER10_VECTOR__) && defined(__VSX__) &&                         \
@@ -18130,6 +18130,7 @@ vec_xst_trunc(vector unsigned __int128 __vec, ptrdiff_t __offset,
 /* vec_xst_be */
 
 #ifdef __LITTLE_ENDIAN__
+#ifdef __VSX__
 static __inline__ void __ATTRS_o_ai vec_xst_be(vector signed char __vec,
                                                signed long long  __offset,
                                                signed char *__ptr) {
@@ -18186,7 +18187,6 @@ static __inline__ void __ATTRS_o_ai vec_xst_be(vector float __vec,
   __builtin_vsx_stxvw4x_be((vector int)__vec, __offset, __ptr);
 }
 
-#ifdef __VSX__
 static __inline__ void __ATTRS_o_ai vec_xst_be(vector signed long long __vec,
                                                signed long long  __offset,
                                                signed long long *__ptr) {
@@ -18204,7 +18204,6 @@ static __inline__ void __ATTRS_o_ai vec_xst_be(vector double __vec,
                                                double *__ptr) {
   __builtin_vsx_stxvd2x_be((vector double)__vec, __offset, __ptr);
 }
-#endif
 
 #if defined(__POWER8_VECTOR__) && defined(__powerpc64__) &&                    \
     defined(__SIZEOF_INT128__)
@@ -18220,8 +18219,9 @@ static __inline__ void __ATTRS_o_ai vec_xst_be(vector unsigned __int128 __vec,
   vec_xst(__vec, __offset, __ptr);
 }
 #endif
-#else
-  #define vec_xst_be vec_xst
+#endif // VSX
+#else  // ! __LITTLE_ENDIAN__
+#define vec_xst_be vec_xst
 #endif
 
 #ifdef __POWER9_VECTOR__

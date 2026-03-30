@@ -113,3 +113,43 @@ func.func @unknown_region_op_load() {
   }) : () -> ()
   return
 }
+
+// -----
+
+// A cycle of merge points where both merge point block arguments are unused.
+// merge1 branches to merge2, and merge2 branches back to merge1, so each
+// merge point's reaching definition arg is used as a successor operand
+// feeding the other. During removeUnusedItems, the successor operand erasure
+// and block argument erasure must be performed in separate phases. Otherwise,
+// regardless of iteration order, erasing either arg first will crash because
+// the other's successor operand still uses it.
+
+// CHECK-LABEL: func.func @cyclic_unused_merge_points
+// CHECK-SAME: (%[[COND:.*]]: i1)
+// CHECK-NOT: memref.alloca
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
+// CHECK: cf.br ^[[MERGE1:.*]]{{$}}
+// CHECK: ^[[MERGE1]]:
+// CHECK:   cf.cond_br %[[COND]], ^[[MERGE2:.*]], ^[[STORE:.*]]
+// CHECK: ^[[STORE]]:
+// CHECK:   cf.br ^[[MERGE2]]{{$}}
+// CHECK: ^[[MERGE2]]:
+// CHECK:   cf.cond_br %[[COND]], ^[[MERGE1]], ^[[EXIT:.*]]
+// CHECK: ^[[EXIT]]:
+// CHECK:   return %[[C0]] : i32
+func.func @cyclic_unused_merge_points(%cond: i1) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c0, %alloca[] : memref<i32>
+  cf.br ^merge1
+^merge1:
+  cf.cond_br %cond, ^merge2, ^store
+^store:
+  memref.store %c1, %alloca[] : memref<i32>
+  cf.br ^merge2
+^merge2:
+  cf.cond_br %cond, ^merge1, ^exit
+^exit:
+  return %c0 : i32
+}

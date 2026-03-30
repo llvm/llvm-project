@@ -732,8 +732,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
       // Do not simplify if shl is part of funnel-shift pattern
       if (I->hasOneUse()) {
-        auto *Inst = dyn_cast<Instruction>(I->user_back());
-        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+        Instruction *Inst = I->user_back();
+        if (Inst->getOpcode() == BinaryOperator::Or) {
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
@@ -814,8 +814,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
       // Do not simplify if lshr is part of funnel-shift pattern
       if (I->hasOneUse()) {
-        auto *Inst = dyn_cast<Instruction>(I->user_back());
-        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+        Instruction *Inst = I->user_back();
+        if (Inst->getOpcode() == BinaryOperator::Or) {
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&

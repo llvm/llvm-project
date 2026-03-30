@@ -4976,6 +4976,13 @@ void Verifier::visitCatchPadInst(CatchPadInst &CPI) {
   Check(&*BB->getFirstNonPHIIt() == &CPI,
         "CatchPadInst not the first non-PHI instruction in the block.", &CPI);
 
+  Check(llvm::all_of(CPI.arg_operands(),
+                     [](Use &U) {
+                       auto *V = U.get();
+                       return isa<Constant>(V) || isa<AllocaInst>(V);
+                     }),
+        "Argument operand must be alloca or constant.", &CPI);
+
   visitEHPadPredecessors(CPI);
   visitFuncletPadInst(CPI);
 }
@@ -6971,6 +6978,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::structured_alloca:
+    Check(Call.hasRetAttr(Attribute::ElementType),
+          "@llvm.structured.alloca calls require elementtype attribute.",
+          &Call);
+    break;
   case Intrinsic::amdgcn_cs_chain: {
     auto CallerCC = Call.getCaller()->getCallingConv();
     switch (CallerCC) {
@@ -7248,7 +7260,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     Value *Ptr = Call.getArgOperand(0);
-    Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr),
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr);
+    Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr) ||
+              (II && II->getIntrinsicID() == Intrinsic::structured_alloca),
           "llvm.lifetime.start/end can only be used on alloca or poison",
           &Call);
     break;

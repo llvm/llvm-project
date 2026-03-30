@@ -443,7 +443,7 @@ public:
   /// G_INSERT_VECTOR_ELT, G_EXTRACT_VECTOR_ELT,
   /// G_INSERT_SUBVECTOR, and G_EXTRACT_SUBVECTOR
   LLT getVectorIdxLLT(const DataLayout &DL) const {
-    return LLT::integer(getVectorIdxWidth(DL));
+    return LLT::scalar(getVectorIdxWidth(DL));
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
@@ -2083,6 +2083,12 @@ public:
 
   /// Retuen the minimum of largest number of comparisons in BitTest.
   unsigned getMinimumBitTestCmps() const;
+
+  /// Return maximum known-legal store size, which can be guaranteed for
+  /// scalable vectors.
+  unsigned getMaximumLegalStoreInBits() const {
+    return MaximumLegalStoreInBits;
+  }
 
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
@@ -3767,6 +3773,10 @@ private:
   /// The minimum of largest number of comparisons to use bit test for switch.
   unsigned MinimumBitTestCmps;
 
+  /// Maximum known-legal store size, which can be guaranteed for scalable
+  /// vectors.
+  unsigned MaximumLegalStoreInBits;
+
   /// This indicates if the target supports unaligned atomic operations.
   bool SupportsUnalignedAtomics;
 
@@ -4009,6 +4019,11 @@ public:
   ~TargetLowering() override;
 
   bool isPositionIndependent() const;
+
+  // If set to true, SelectionDAG nodes will be consistently processed in
+  // topological order. This is a temporary hook until sorting can be
+  // enabled globally.
+  virtual bool useTopologicalSorting() const { return false; }
 
   virtual bool isSDNodeSourceOfDivergence(const SDNode *N,
                                           FunctionLoweringInfo *FLI,
@@ -4442,6 +4457,15 @@ public:
   /// This method returns the constant pool value that will be loaded by LD.
   /// NOTE: You must check for implicit extensions of the constant by LD.
   virtual const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const;
+
+  /// Determine floating-point class information for a target node. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  virtual void computeKnownFPClassForTargetNode(const SDValue Op,
+                                                KnownFPClass &Known,
+                                                const APInt &DemandedElts,
+                                                const SelectionDAG &DAG,
+                                                unsigned Depth = 0) const;
 
   /// If \p SNaN is false, \returns true if \p Op is known to never be any
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
