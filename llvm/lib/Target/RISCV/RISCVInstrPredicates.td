@@ -23,6 +23,10 @@ def VLDSX0Pred
 // is enabled.
 def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVecFP64>;
 
+// This scheduling predicate is true when the subtarget is RV32 (i.e. Feature64Bit
+// is not enabled).
+def RV32SchedPred : NotSchedPred<FeatureSchedPredicate<Feature64Bit>>;
+
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
     : TIIPredicate<"isSEXT_W",
@@ -141,12 +145,6 @@ def isScalarExtractInstr
                       !instances<Pseudo>("^PseudoVMV_X_S.*"),
                       !instances<Pseudo>("^PseudoVFMV_F.*_S.*")
                      ])>>>;
-
-def isVExtractInstr
-    : TIIPredicate<"isVExtractInstr",
-                   MCReturnStatement<
-                     CheckOpcode<
-                      !instances<Instruction>("^PseudoRI_VEXTRACT.*")>>>;
 
 def isScalarInsertInstr
     : TIIPredicate<"isScalarInsertInstr",

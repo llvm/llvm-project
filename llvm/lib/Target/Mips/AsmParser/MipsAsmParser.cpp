@@ -710,6 +710,11 @@ public:
   bool useSoftFloat() const {
     return getSTI().hasFeature(Mips::FeatureSoftFloat);
   }
+
+  bool isSingleFloat() const {
+    return getSTI().hasFeature(Mips::FeatureSingleFloat);
+  }
+
   bool hasMT() const {
     return getSTI().hasFeature(Mips::FeatureMT);
   }
@@ -2956,7 +2961,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
          static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
              ELF::STB_LOCAL);
     // For O32, "$"-prefixed symbols are recognized as temporary while
-    // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
+    // .L-prefixed symbols are not (InternalSymbolPrefix is "$"). Recognize ".L"
     // manually.
     if (ABI.IsO32() && Res.getAddSym()->getName().starts_with(".L"))
       IsLocalSym = true;

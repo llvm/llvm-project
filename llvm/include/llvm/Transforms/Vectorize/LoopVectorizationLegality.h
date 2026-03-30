@@ -245,6 +245,13 @@ struct HistogramInfo {
       : Load(Load), Update(Update), Store(Store) {}
 };
 
+/// Indicates the characteristics of a loop with an uncountable exit.
+/// * None      -- No uncountable exit present.
+/// * ReadOnly  -- At least one uncountable exit in a readonly loop.
+/// * ReadWrite -- At least one uncountable exit in a loop with side effects
+///                that may require masking.
+enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
+
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
 /// This class does not look at the profitability of vectorization, only the
@@ -407,16 +414,25 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
+  /// Returns information about whether this loop contains at least one
+  /// uncountable early exit, and if so, if it also contains instructions (such
+  /// as stores) that cause side-effects.
+  UncountableExitTrait getUncountableExitTrait() const {
+    return UncountableExitType;
+  }
+
   /// Returns true if the loop has uncountable early exits, i.e. uncountable
   /// exits that aren't the latch block.
-  bool hasUncountableEarlyExit() const { return HasUncountableEarlyExit; }
+  bool hasUncountableEarlyExit() const {
+    return getUncountableExitTrait() != UncountableExitTrait::None;
+  }
 
   /// Returns true if this is an early exit loop with state-changing or
   /// potentially-faulting operations and the condition for the uncountable
   /// exit must be determined before any of the state changes or potentially
   /// faulting operations take place.
   bool hasUncountableExitWithSideEffects() const {
-    return UncountableExitWithSideEffects;
+    return getUncountableExitTrait() == UncountableExitTrait::ReadWrite;
   }
 
   /// Return true if there is store-load forwarding dependencies.
@@ -456,12 +472,6 @@ public:
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
-
-  /// Returns potentially faulting loads.
-  const SmallPtrSetImpl<const Instruction *> &
-  getPotentiallyFaultingLoads() const {
-    return PotentiallyFaultingLoads;
-  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -718,9 +728,6 @@ private:
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
 
-  /// Hold potentially faulting loads.
-  SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
-
   /// Whether or not creating SCEV predicates is allowed.
   bool AllowRuntimeSCEVChecks;
 
@@ -738,12 +745,9 @@ private:
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
-  /// True if the loop has uncountable early exits.
-  bool HasUncountableEarlyExit = false;
-
-  /// If true, the loop has at least one uncountable exit and operations within
-  /// the loop may have observable side effects.
-  bool UncountableExitWithSideEffects = false;
+  /// Records whether we have an uncountable early exit in a loop that's
+  /// either read-only or read-write.
+  UncountableExitTrait UncountableExitType = UncountableExitTrait::None;
 };
 
 } // namespace llvm

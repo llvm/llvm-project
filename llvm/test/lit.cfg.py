@@ -827,6 +827,8 @@ if config.have_ondisk_cas:
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+if "Undefined" in config.llvm_use_sanitizer:
+    config.available_features.add("ubsan")
 
 # Restrict the size of the on-disk CAS for tests. This allows testing in
 # constrained environments (e.g. small TMPDIR). It also prevents leaving

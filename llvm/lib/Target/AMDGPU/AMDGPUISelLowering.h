@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class AMDGPUMachineFunction;
+class AMDGPUMachineFunctionInfo;
 class AMDGPUSubtarget;
 struct ArgDescriptor;
 
@@ -51,6 +51,7 @@ protected:
   /// Split a vector store into multiple scalar stores.
   /// \returns The resulting chain.
 
+  SDValue LowerCTLS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCEIL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRINT(SDValue Op, SelectionDAG &DAG) const;
@@ -145,7 +146,7 @@ protected:
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
 
-  virtual SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  virtual SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
 
   /// Return 64-bit value Op as two 32-bit integers.

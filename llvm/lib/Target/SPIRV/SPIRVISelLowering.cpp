@@ -132,6 +132,15 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
   }
 }
 
+TargetLowering::ConstraintType
+SPIRVTargetLowering::getConstraintType(StringRef Constraint) const {
+  // SPIR-V represents inline assembly via OpAsmINTEL where constraints are
+  // passed through as literals defined by client API. Return C_RegisterClass
+  // for any constraint since SPIR-V does not distinguish between register,
+  // immediate, or memory operands at this level.
+  return C_RegisterClass;
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   StringRef Constraint,

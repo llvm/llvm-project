@@ -184,7 +184,7 @@ for.body:                                         ; preds = %entry, %for.body
 for.cond.cleanup:                                 ; preds = %for.body
   ret void
 }
-define void @test_i64_store(ptr nocapture %ddst) local_unnamed_addr #0 {
+define void @test_i64_store(ptr nocapture %ddst) #0 {
 ; CHECK-LE-LABEL: define void @test_i64_store(
 ; CHECK-LE-LABEL: vector.body:
 ; CHECK-LE:         store <4 x i64> {{.*}} !nontemporal !0

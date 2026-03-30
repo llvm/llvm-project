@@ -525,6 +525,7 @@ private:
 
   private:
     const SyntheticBytecodeImplementation &m_impl;
+    FormatterBytecode::DataStack m_init_results;
     FormatterBytecode::DataStack m_self;
   };
 

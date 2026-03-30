@@ -2683,7 +2683,7 @@ define float @v_exp10_fabs_f32(float %in) {
 ; VI-SDAG:       ; %bb.0:
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v0
-; VI-SDAG-NEXT:    v_and_b32_e32 v1, 0xfffff000, v1
+; VI-SDAG-NEXT:    v_and_b32_e32 v1, 0x7ffff000, v1
 ; VI-SDAG-NEXT:    v_sub_f32_e64 v4, |v0|, v1
 ; VI-SDAG-NEXT:    v_mul_f32_e32 v2, 0x40549000, v1
 ; VI-SDAG-NEXT:    v_mul_f32_e32 v5, 0x3a2784bc, v4

@@ -10,8 +10,8 @@ define i35 @f(i35 %0) {
 ; CHECK-NEXT:    sdiv x10, x9, x8
 ; CHECK-NEXT:    msub x8, x10, x8, x9
 ; CHECK-NEXT:    clz x8, x8
-; CHECK-NEXT:    sub x8, x8, #29
-; CHECK-NEXT:    ubfx x0, x8, #5, #30
+; CHECK-NEXT:    sub w8, w8, #29
+; CHECK-NEXT:    ubfx x0, x8, #5, #2
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: f:

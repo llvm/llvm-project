@@ -303,7 +303,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
   unsigned NumMEMCPYs = (NumMemOps + MaxLoadsInLDM - 1) / MaxLoadsInLDM;
 
   // Code size optimisation: do not inline memcpy if expansion results in
-  // more instructions than the libary call.
+  // more instructions than the library call.
   if (NumMEMCPYs > 1 && Subtarget.hasMinSize()) {
     return SDValue();
   }

@@ -20,7 +20,12 @@ class VPUncountableExitTest : public VPlanTestIRBase {};
 
 TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
   const char *ModuleString =
-      "define void @f(ptr %array, ptr %pred) {\n"
+      "target datalayout = "
+      "\"e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
+      "f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:"
+      "32:64-S128\"\n"
+      "define void @f(ptr dereferenceable(40) align 2 %array, "
+      "ptr dereferenceable(40) align 2 %pred) {\n"
       "entry:\n"
       "  br label %for.body\n"
       "for.body:\n"
@@ -28,7 +33,9 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
       "  %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv\n"
       "  %data = load i16, ptr %st.addr, align 2\n"
       "  %inc = add nsw i16 %data, 1\n"
-      "  store i16 %inc, ptr %st.addr, align 2\n"
+      // TODO: Uncomment store once more support is added for uncountable exits
+      //       in loops with stores.
+      // "  store i16 %inc, ptr %st.addr, align 2\n"
       "  %uncountable.addr = getelementptr inbounds nuw i16, ptr %pred, i64 "
       "%iv\n"
       "  %uncountable.val = load i16, ptr %uncountable.addr, align 2\n"
@@ -46,7 +53,7 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildVPlan(LoopHeader, /*HasUncountableExit=*/true);
+  auto Plan = buildVPlan(LoopHeader, UncountableExitStyle::ReadOnly);
   VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
   VPlanTransforms::optimize(*Plan);
 
