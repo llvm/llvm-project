@@ -187,12 +187,12 @@ public:
   }
 };
 
-/// Check if a memory operation doesn't alias with memory operations in blocks
-/// between \p FirstBB and \p LastBB using scoped noalias metadata. If
-/// \p SinkInfo is std::nullopt, only recipes that may write to memory are
-/// checked (for load hoisting). Otherwise recipes that both read and write
-/// memory are checked, and SCEV is used to prove no-alias between the group
-/// leader and other replicate recipes (for store sinking).
+/// Check if a memory operation doesn't alias with memory operations using
+/// scoped noalias metadata, in blocks in the single-successor chain between \p
+/// FirstBB and \p LastBB. If \p SinkInfo is std::nullopt, only recipes that may
+/// write to memory are checked (for load hoisting). Otherwise recipes that both
+/// read and write memory are checked, and SCEV is used to prove no-alias
+/// between the group leader and other replicate recipes (for store sinking).
 static bool
 canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
@@ -201,11 +201,8 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   if (!MemLoc.AATags.Scope)
     return false;
 
-  for (VPBlockBase *Block = FirstBB; Block;
-       Block = Block->getSingleSuccessor()) {
-    assert(Block->getNumSuccessors() <= 1 &&
-           "Expected at most one successor in block chain");
-    auto *VPBB = cast<VPBasicBlock>(Block);
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
     for (VPRecipeBase &R : *VPBB) {
       if (SinkInfo && SinkInfo->shouldSkip(R))
         continue;
@@ -223,14 +220,12 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
       if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
-
-    if (Block == LastBB)
-      break;
   }
   return true;
 }
 
-/// Collect either replicated Loads or Stores grouped by their address SCEV.
+/// Collect either replicated Loads or Stores grouped by their address SCEV, in
+/// a deep-traversal of the vector loop region in \p Plan.
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
@@ -241,9 +236,8 @@ collectGroupedReplicateMemOps(
   constexpr bool IsLoad = (Opcode == Instruction::Load);
   SmallDenseMap<const SCEV *, SmallVector<VPReplicateRecipe *, 4>>
       RecipesByAddress;
-  for (VPBlockBase *Block :
-       vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry())) {
-    auto *VPBB = cast<VPBasicBlock>(Block);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (!RepR || RepR->getOpcode() != Opcode || !FilterFn(RepR))
@@ -597,10 +591,7 @@ bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
     auto *ParentRegion = VPBB->getParent();
     if (ParentRegion && ParentRegion->getExiting() == VPBB)
       ParentRegion->setExiting(PredVPBB);
-    for (auto *Succ : to_vector(VPBB->successors())) {
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
-      VPBlockUtils::connectBlocks(PredVPBB, Succ);
-    }
+    VPBlockUtils::transferSuccessors(VPBB, PredVPBB);
     // VPBB is now dead and will be cleaned up when the plan gets destroyed.
   }
   return !WorkList.empty();
@@ -1662,15 +1653,29 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Hoist an invariant increment Y of a phi X, by having X start at Y.
-  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && isa<VPIRValue>(Y) &&
-      isa<VPPhi>(X)) {
+  // Look for cycles where Def is of the form:
+  //  X = phi(0, IVInc)  ; used only by IVInc, or by IVInc and Inc = X + Y
+  //  IVInc = X + Step   ; used by X and Def
+  //  Def = IVInc + Y
+  // Fold the increment Y into the phi's start value, replace Def with IVInc,
+  // and if Inc exists, replace it with X.
+  if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
+      isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) &&
+      match(X, m_VPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
     auto *Phi = cast<VPPhi>(X);
-    if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
-        Phi->getSingleUser() == Def) {
-      Phi->setOperand(0, Y);
-      Def->replaceAllUsesWith(Phi);
-      return;
+    auto *IVInc = Def->getOperand(0);
+    if (IVInc->getNumUsers() == 2) {
+      // If Phi has a second user (besides IVInc's defining recipe), it must
+      // be Inc = Phi + Y for the fold to apply.
+      auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
+          vputils::findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+      if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
+        Def->replaceAllUsesWith(IVInc);
+        if (Inc)
+          Inc->replaceAllUsesWith(Phi);
+        Phi->setOperand(0, Y);
+        return;
+      }
     }
   }
 
@@ -2177,9 +2182,12 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
-  if (match(Term,
-            m_BranchOnCount(m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())),
-                            m_VPValue())) ||
+  auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
+  // Check if the branch condition compares the canonical IV increment (for main
+  // loop), or the canonical IV increment plus an offset (for epilog loop).
+  if (match(Term, m_BranchOnCount(
+                      m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_LiveIn())),
+                      m_VPValue())) ||
       match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                       m_VPValue(), m_VPValue(), m_VPValue()))))) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the

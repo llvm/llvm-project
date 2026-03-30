@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FasterStringFindCheck.h"
+#include "PreferSingleCharOverloadsCheck.h"
 #include "../utils/OptionsUtils.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -42,19 +41,20 @@ makeCharacterLiteral(const StringLiteral *Literal) {
   return Result;
 }
 
-FasterStringFindCheck::FasterStringFindCheck(StringRef Name,
-                                             ClangTidyContext *Context)
+PreferSingleCharOverloadsCheck::PreferSingleCharOverloadsCheck(
+    StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StringLikeClasses(utils::options::parseStringList(
           Options.get("StringLikeClasses",
                       "::std::basic_string;::std::basic_string_view"))) {}
 
-void FasterStringFindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+void PreferSingleCharOverloadsCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StringLikeClasses",
                 utils::options::serializeStringList(StringLikeClasses));
 }
 
-void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
+void PreferSingleCharOverloadsCheck::registerMatchers(MatchFinder *Finder) {
   const auto SingleChar =
       ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal"));
 
@@ -78,7 +78,8 @@ void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
+void PreferSingleCharOverloadsCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("literal");
   const auto *FindFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
