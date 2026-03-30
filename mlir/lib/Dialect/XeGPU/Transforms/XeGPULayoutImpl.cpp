@@ -451,10 +451,6 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   int srcRank = srcShape.size();
   auto context = srcVecTy.getContext();
 
-  // Reduction layout requires at least 2D tensors
-  if (srcRank < 2)
-    return nullptr;
-
   // Helper lambda to convert int64 vectors to int32 DenseArrayAttr
   auto toInt32Attr = [&](ArrayRef<int64_t> vec) {
     SmallVector<int32_t> vec32(vec.begin(), vec.end());
@@ -532,16 +528,18 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     SmallVector<int64_t> instData(srcRank, 1);
     instData[srcRank - 2] =
         std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
-    instData[srcRank - 1] =
-        std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
+    if (srcRank >= 2)
+      instData[srcRank - 1] =
+          std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
 
     SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
     laneLayout[srcRank - 1] =
         std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
-    laneData[srcRank - 2] =
-        std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
+    if (srcRank >= 2)
+      laneData[srcRank - 2] =
+          std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
                                        toInt32Attr(laneData));
   }
@@ -688,13 +686,14 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
     }
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     for (int dim = 0; dim < srcRank; dim++) {
-      assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&
-             "srcShape must be divisible by laneLayout for all dimensions");
-      laneDataValue = std::min(srcShape[dim] / consumerLaneLayout[dim],
-                               consumerLaneData[dim]);
-
-      requiredResLayout =
-          requiredResLayout.setDimData(dim, -1, -1, laneDataValue);
+      if (consumerLaneData[dim] != srcShape[dim]) {
+        assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&
+               "srcShape must be divisible by laneLayout for all dimensions");
+        laneDataValue = std::min(srcShape[dim] / consumerLaneLayout[dim],
+                                 consumerLaneData[dim]);
+        requiredResLayout =
+            requiredResLayout.setDimData(dim, -1, -1, laneDataValue);
+      }
     }
   }
   return requiredResLayout;

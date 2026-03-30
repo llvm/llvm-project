@@ -637,12 +637,12 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   LayoutInfo resLayoutInfo = results[0]->getValue();
 
   xegpu::DistributeLayoutAttr consumerLayoutAttr;
-  if (!resultTy.isIntOrFloat())
+  if (!resultTy.isIntOrFloat()) {
     if (!resLayoutInfo.isAssigned())
       return;
-    else
-      consumerLayoutAttr =
-          dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+    consumerLayoutAttr =
+        dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  }
 
   VectorType sourceTy = reduction.getSourceVectorType();
   SmallVector<int64_t> reductionDims(reduction.getReductionDims());
