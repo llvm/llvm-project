@@ -1576,6 +1576,47 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
   EXPECT_TRUE(DAG->isKnownNeverZero(VSelect4444, DemandAll));
 }
 
+TEST_F(AArch64SelectionDAGTest, KnownNeverNaN_Bitcast) {
+  SDLoc Loc;
+
+  auto UnknownI32 = DAG->getRegister(1, MVT::i32);
+  auto FiniteMask = DAG->getConstant(0x3fff'ffff, Loc, MVT::i32);
+  auto NeverNaNI32 =
+      DAG->getNode(ISD::AND, Loc, MVT::i32, FiniteMask, UnknownI32);
+
+  auto NeverNaNF32 = DAG->getBitcast(MVT::f32, NeverNaNI32);
+  EXPECT_TRUE(DAG->isKnownNeverNaN(NeverNaNF32));
+
+  auto UnknownF32 = DAG->getBitcast(MVT::f32, UnknownI32);
+  EXPECT_FALSE(DAG->isKnownNeverNaN(UnknownF32));
+
+  auto NeverNaNV2I32 = DAG->getSplat(MVT::v2i32, Loc, NeverNaNI32);
+  auto NeverNaNV2F32 = DAG->getBitcast(MVT::v2f32, NeverNaNV2I32);
+  EXPECT_TRUE(DAG->isKnownNeverNaN(NeverNaNV2F32));
+
+  auto PartialNaNV2I32 =
+      DAG->getBuildVector(MVT::v2i32, Loc, {UnknownI32, NeverNaNI32});
+  auto PartialNaNV2F32 = DAG->getBitcast(MVT::v2f32, PartialNaNV2I32);
+  EXPECT_FALSE(DAG->isKnownNeverNaN(PartialNaNV2F32));
+  APInt DemandLo(2, 1);
+  EXPECT_FALSE(DAG->isKnownNeverNaN(PartialNaNV2F32, DemandLo));
+  APInt DemandHi(2, 2);
+  EXPECT_TRUE(DAG->isKnownNeverNaN(PartialNaNV2F32, DemandHi));
+
+  auto PartialNaNAsF64 = DAG->getBitcast(MVT::f64, PartialNaNV2I32);
+  EXPECT_TRUE(DAG->isKnownNeverNaN(PartialNaNAsF64));
+
+  auto UnknownI64 = DAG->getRegister(2, MVT::i64);
+  auto Lo32NeverNaNMask =
+      DAG->getConstant(0xffff'ffff'3fff'ffff, Loc, MVT::i64);
+  auto PartialNaNPack64 =
+      DAG->getNode(ISD::AND, Loc, MVT::i64, Lo32NeverNaNMask, UnknownI64);
+  auto PartialNaNUnpackV2F32 = DAG->getBitcast(MVT::v2f32, PartialNaNPack64);
+  EXPECT_FALSE(DAG->isKnownNeverNaN(PartialNaNUnpackV2F32));
+  EXPECT_TRUE(DAG->isKnownNeverNaN(PartialNaNUnpackV2F32, DemandLo));
+  EXPECT_FALSE(DAG->isKnownNeverNaN(PartialNaNUnpackV2F32, DemandHi));
+}
+
 // tests for SelectionDAG::computeKnownFPClass
 TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_ConstantScalar) {
   SDLoc Loc;
