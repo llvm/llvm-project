@@ -162,9 +162,8 @@ static std::pair<std::string, MemoryEffects> convertConstraintsToMemory(
 
 /// Process an output constraint, creating allocas for converted constraints.
 static void processOutputConstraint(
-    const InlineAsm::ConstraintInfo &C, Type *SlotTy,
-    IRBuilder<> &EntryBuilder, SmallVectorImpl<Value *> &NewArgs,
-    SmallVectorImpl<Type *> &NewRetTypes,
+    const InlineAsm::ConstraintInfo &C, Type *SlotTy, IRBuilder<> &EntryBuilder,
+    SmallVectorImpl<Value *> &NewArgs, SmallVectorImpl<Type *> &NewRetTypes,
     SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs,
     SmallVectorImpl<std::pair<AllocaInst *, Type *>> &OutputAllocas,
     unsigned ConstraintIdx) {
