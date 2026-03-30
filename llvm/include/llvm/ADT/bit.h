@@ -238,25 +238,15 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 template <typename T> [[nodiscard]] constexpr int countl_zero_constexpr(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
-
-  constexpr int BitWidth = std::numeric_limits<T>::digits;
-
-  if (!Val)
-    return BitWidth;
-
-  Val |= (Val >> 1);
-  Val |= (Val >> 2);
-  Val |= (Val >> 4);
-  if constexpr (BitWidth > 8) {
-    Val |= (Val >> 8);
+  unsigned ZeroBits = 0;
+  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
+    T Tmp = Val >> Shift;
+    if (Tmp)
+      Val = Tmp;
+    else
+      ZeroBits |= Shift;
   }
-  if constexpr (BitWidth > 16) {
-    Val |= (Val >> 16);
-  }
-  if constexpr (BitWidth > 32) {
-    Val |= (Val >> 32);
-  }
-  return BitWidth - llvm::popcount(Val);
+  return ZeroBits;
 }
 
 /// Count number of 0's from the most significant bit to the least
