@@ -66,6 +66,16 @@ else()
 endif()
 set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
 
+# Search for the loader utility if the user did not provide one.
+if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
+  find_program(gpu_loader_executable
+               NAMES llvm-gpu-loader NO_DEFAULT_PATH
+               PATHS ${LLVM_BINARY_DIR}/bin ${compiler_path})
+  if(gpu_loader_executable)
+    set(CMAKE_CROSSCOMPILING_EMULATOR "${gpu_loader_executable}" CACHE STRING "")
+  endif()
+endif()
+
 # The AMDGPU environment uses different code objects to encode the ABI for
 # kernel calls and intrinsic functions. We want to expose this to conform to
 # whatever the test suite was built to handle.
