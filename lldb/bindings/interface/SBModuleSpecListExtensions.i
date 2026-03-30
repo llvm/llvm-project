@@ -12,12 +12,11 @@ STRING_EXTENSION_OUTSIDE(SBModuleSpecList)
       return lldb_iter(self, 'GetSize', 'GetSpecAtIndex')
 
     def __getitem__(self, key):
-      '''Access module specs by index, full or partial path, or regular expression.
+      '''Access module specs by index or by file path.
          specs[0]                      - access by integer index
          specs[-1]                     - access by negative integer index
          specs['a.out']                - find first spec matching file basename
-         specs['/usr/lib/liba.dylib']  - find first spec matching file fullpath
-         specs[re.compile(r'lib.*')]   - find all specs matching regex on fullpath
+         specs['/usr/lib/liba.dylib']  - find first spec matching full or partial path
       '''
       count = len(self)
       if type(key) is int:
@@ -27,25 +26,11 @@ STRING_EXTENSION_OUTSIDE(SBModuleSpecList)
           else:
               raise IndexError("list index out of range")
       elif type(key) is str:
-          if key.find('/') == -1:
-              for idx in range(count):
-                  spec = self.GetSpecAtIndex(idx)
-                  if spec.GetFileSpec().GetFilename() == key:
-                      return spec
-          else:
-              for idx in range(count):
-                  spec = self.GetSpecAtIndex(idx)
-                  if str(spec.GetFileSpec()) == key:
-                      return spec
-          return None
-      elif isinstance(key, type(re.compile(''))):
-          matching_specs = []
           for idx in range(count):
               spec = self.GetSpecAtIndex(idx)
-              re_match = key.search(str(spec.GetFileSpec()))
-              if re_match:
-                  matching_specs.append(spec)
-          return matching_specs
+              if str(spec.GetFileSpec()).endswith(key):
+                  return spec
+          return None
       else:
           raise TypeError("unsupported index type: %s" % type(key))
     %}

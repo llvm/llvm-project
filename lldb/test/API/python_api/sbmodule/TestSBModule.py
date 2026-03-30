@@ -1,7 +1,5 @@
 """Test the SBDModule APIs."""
 
-import re
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -161,24 +159,16 @@ class SBModuleAPICase(TestBase):
                 "Found spec basename should match",
             )
 
+        # String indexing: lookup by partial path (endswith matching)
+        fullpath = str(spec0.GetFileSpec())
+        if fullpath:
+            found = specs[fullpath]
+            self.assertIsNotNone(
+                found, "Should find spec by full path '%s'" % fullpath
+            )
+
         # String indexing: missing basename returns None
         self.assertIsNone(
             specs["nonexistent_file.xyz"],
             "Lookup of nonexistent basename should return None",
-        )
-
-        # Regex indexing: match all specs
-        all_matches = specs[re.compile(r".*")]
-        self.assertEqual(
-            len(all_matches),
-            count,
-            "Regex '.*' should match all specs",
-        )
-
-        # Regex indexing: no matches returns empty list
-        no_matches = specs[re.compile(r"^ZZZZZ_no_match$")]
-        self.assertEqual(
-            len(no_matches),
-            0,
-            "Regex with no matches should return empty list",
         )

@@ -3104,9 +3104,15 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
   // Alias constructors and destructors are always unnamed_addr.
   assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
 
-  // Switch any previous uses to the alias.
   if (op) {
-    errorNYI(aliasFD->getSourceRange(), "emitAliasForGlobal: previous uses");
+    // Any existing users of the existing function declaration will be
+    // referencing the function by flat symbol reference (i.e. the name), so
+    // those uses will automatically resolve to the alias now that we've
+    // replaced the function declaration. We can safely erase the existing
+    // function declaration.
+    assert(cast<cir::FuncOp>(op).getFunctionType() == alias.getFunctionType() &&
+           "declaration exists with different type");
+    op->erase();
   } else {
     // Name already set by createCIRFunction
   }

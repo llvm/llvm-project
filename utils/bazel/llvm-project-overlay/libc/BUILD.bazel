@@ -3190,6 +3190,27 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_asinpi",
+    hdrs = ["src/__support/math/asinpi.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_asin_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_asinpif",
     hdrs = ["src/__support/math/asinpif.h"],
     deps = [
@@ -3343,6 +3364,21 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_asinbf16",
+    hdrs = ["src/__support/math/asinbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -6543,6 +6579,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "asinbf16",
+    additional_deps = [
+        ":__support_math_asinbf16",
+    ],
+)
+
+libc_math_function(
     name = "asinf",
     additional_deps = [":__support_math_asinf"],
 )
@@ -6563,6 +6606,13 @@ libc_math_function(
     name = "asinhf16",
     additional_deps = [
         ":__support_math_asinhf16",
+    ],
+)
+
+libc_math_function(
+    name = "asinpi",
+    additional_deps = [
+        ":__support_math_asinpi",
     ],
 )
 

@@ -1069,7 +1069,7 @@ TEST(APIntTest, divrem_big3) {
 }
 
 TEST(APIntTest, divrem_big4) {
-  // Tests heap allocation in divide() enfoced by huge numbers
+  // Tests heap allocation in divide() enforced by huge numbers
   testDiv(APInt{4096, 5}.shl(2001),
           APInt{4096, 1}.shl(2000),
           APInt{4096, 4219*13});
