@@ -785,8 +785,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
 
     if (InvocationList.contains(InvocationKey))
       return llvm::make_error<IndexError>(
-          index_error_code::invocation_list_ambiguous,
-          InvocationKey.str());
+          index_error_code::invocation_list_ambiguous, InvocationKey.str());
 
     /// The values should be sequences of strings, each representing a part of
     /// the invocation.
