@@ -1242,7 +1242,8 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   // with the same storage and qualifiers as the parent DecompositionDecl.
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
     if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl()))
-      return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
+      if (!BD->getType().isNull())
+        return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
     return SK_Invalid;
   }
 
