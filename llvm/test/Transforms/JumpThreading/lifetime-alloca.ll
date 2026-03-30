@@ -8,11 +8,7 @@
 define void @widget(i1 %arg) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NOT: phi ptr
-; CHECK: bb:
-; CHECK-NEXT: %alloca = alloca [4 x [4 x i32]], align 8
-; CHECK-NEXT: %alloca1 = alloca [4 x [4 x i32]], align 8
-; CHECK: call void @llvm.lifetime.start.p0(ptr %alloca)
-; CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %alloca)
+; CHECK-NOT: call void @llvm.lifetime
 bb:
   br i1 %arg, label %bb1, label %bb2
 
