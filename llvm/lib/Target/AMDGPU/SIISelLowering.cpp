@@ -17369,8 +17369,8 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
 //  For unordered le / ordered gt, the LHS cannot be NaN.
 //  For ordered le / unordered gt, neither operand can be NaN.
 static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
-                                                 const SDValue &LHS,
-                                                 const SDValue &RHS,
+                                                 const SDValue LHS,
+                                                 const SDValue RHS,
                                                  const SelectionDAG &DAG) {
   assert(LHS.getValueType() == MVT::f64 && "Incorrect operand type!");
 
