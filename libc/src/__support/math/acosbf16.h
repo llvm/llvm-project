@@ -37,56 +37,55 @@ LIBC_INLINE bfloat16 acosbf16(bfloat16 x) {
   bool sign = (x_u >> 15);
   float xf = x;
 
-  // case 1: |x|>=1, NaN or Inf
-  if (LIBC_UNLIKELY(x_abs >= 0x3F80)) {
+  float xf_abs = (xf < 0 ? -xf : xf);
+  float x_sq = xf_abs * xf_abs;
+
+  // case 1: x <= 0.5
+  if (x_abs <= 0x3F00) {
+    // |x| = {0}
+    if (LIBC_UNLIKELY(x_abs == 0))
+      return fputil::cast<bfloat16>(PI_2);
+
+    float xp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(x_sq));
+    float result = xf * fputil::multiply_add(x_sq, xp, 1.0f);
+    return fputil::cast<bfloat16>(PI_2 - result);
+  }
+
+  // case 2: 0.5< |x|<= 1.0
+  if (x_abs <= 0x3F80) {
+    // |x| = {1}
     if (x_abs == 0x3F80) {
       if (sign)
         return fputil::cast<bfloat16>(PI);
       else
         return fputil::cast<bfloat16>(0.0f);
     }
-    // NaN
-    if (xbits.is_nan()) {
-      if (xbits.is_signaling_nan()) {
-        fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::quiet_nan().get_val();
-      }
-      return x; // quiet NaN
+
+    // using reduction for acos:
+    // acos(|x|) = 2*asin(sqrt((1 - |x|)/2)),
+    // and acos(x) = acos(|x|) for x >= 0, pi - acos(|x|) for x < 0
+    float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
+    float t_sqrt = fputil::sqrt<float>(t);
+    float tp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(t));
+    float asin_sqrt_t = t_sqrt * (fputil::multiply_add(t, tp, 1.0f));
+
+    return fputil::cast<bfloat16>(
+        (sign) ? fputil::multiply_add(asin_sqrt_t, -2.0f, PI)
+               : 2 * asin_sqrt_t);
+  }
+  // case 3: NaN or Inf
+  // NaN
+  if (xbits.is_nan()) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
     }
-    // |x|>1 & inf
-    fputil::raise_except_if_required(FE_INVALID);
-    fputil::set_errno_if_required(EDOM); // Domain is bounded
-    return FPBits::quiet_nan().get_val();
+    return x; // quiet NaN
   }
-
-  // case 2:  |x| = {0}
-  if (LIBC_UNLIKELY(x_abs == 0)) {
-    return fputil::cast<bfloat16>(PI_2);
-  }
-
-  float xf_abs = (xf < 0 ? -xf : xf);
-  float x_sq = xf_abs * xf_abs;
-
-  // case 3: (0,0.5]
-  if (x_abs <= 0x3F00) {
-    double xp = inv_trigf_utils_internal::asin_eval(x_sq);
-    float result =
-        xf * static_cast<float>(fputil::multiply_add<double>(x_sq, xp, 1.0));
-    return fputil::cast<bfloat16>(PI_2 - result);
-  }
-
-  // case 4: (0.5,1)
-  // using reduction for acos:
-  // acos(|x|) = 2*asin(sqrt((1 - |x|)/2)),
-  // and acos(x) = acos(|x|) for x >= 0, pi - acos(|x|) for x < 0
-  float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
-  float t_sqrt = fputil::sqrt<float>(t);
-  double tp = inv_trigf_utils_internal::asin_eval(t);
-  float asin_sqrt_t =
-      t_sqrt * static_cast<float>(fputil::multiply_add<double>(t, tp, 1.0));
-
-  return fputil::cast<bfloat16>(
-      (sign) ? fputil::multiply_add(asin_sqrt_t, -2.0f, PI) : 2 * asin_sqrt_t);
+  // inf
+  fputil::raise_except_if_required(FE_INVALID);
+  fputil::set_errno_if_required(EDOM); // Domain is bounded
+  return FPBits::quiet_nan().get_val();
 }
 
 } // namespace math
