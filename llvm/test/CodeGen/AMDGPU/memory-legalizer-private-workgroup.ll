@@ -12,7 +12,8 @@
 ; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -O0 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -O0 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -O0 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
-; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -O0 < %s | FileCheck --check-prefixes=GFX1250 %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -O0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -O0 -amdgpu-globally-addressable-scratch < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS %s
 
 define amdgpu_kernel void @private_workgroup_unordered_load(
 ; GFX6-LABEL: private_workgroup_unordered_load:
