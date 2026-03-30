@@ -752,6 +752,18 @@ void no_error_if_dangle_then_rescue_gsl() {
   v.use();     // This is safe.
 }
 
+void no_error_if_dangle_then_rescue_via_ref() {
+  MyObj safe;
+  MyObj* p;
+  MyObj*& ref = p;
+  {
+    MyObj temp;
+    ref = &temp;  // p temporarily points to temp via ref.
+  }
+  ref = &safe;    // p is "rescued" via ref before use.
+  (void)*ref;     // This is safe.
+}
+
 void no_error_loan_from_current_iteration(bool cond) {
   // See https://github.com/llvm/llvm-project/issues/156959.
   MyObj b;

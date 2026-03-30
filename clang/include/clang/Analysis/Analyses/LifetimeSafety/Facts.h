@@ -234,7 +234,7 @@ public:
 
 class UseFact : public Fact {
   const Expr *UseExpr;
-  const OriginList *OList;
+  std::variant<const OriginList *, OriginID> Origins;
   // True if this use is a write operation (e.g., left-hand side of assignment).
   // Write operations are exempted from use-after-free checks.
   bool IsWritten = false;
@@ -243,12 +243,30 @@ public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
   UseFact(const Expr *UseExpr, const OriginList *OList)
-      : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
+      : Fact(Kind::Use), UseExpr(UseExpr), Origins(OList) {}
+  UseFact(const Expr *UseExpr, OriginID OID)
+      : Fact(Kind::Use), UseExpr(UseExpr), Origins(OID) {}
 
-  const OriginList *getUsedOrigins() const { return OList; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
+
+  void setOrigins(OriginID OID) { Origins = OID; }
+
+  const OriginList *getOriginList() const {
+    if (auto *OList = std::get_if<const OriginList *>(&Origins))
+      return *OList;
+    return nullptr;
+  }
+
+  template <typename Fn> void forEachOrigin(Fn &&F) const {
+    if (const OriginList *OList = getOriginList()) {
+      for (auto *Cur = OList; Cur; Cur = Cur->peelOuterOrigin())
+        F(Cur->getOuterOriginID());
+    } else {
+      F(std::get<OriginID>(Origins));
+    }
+  }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
