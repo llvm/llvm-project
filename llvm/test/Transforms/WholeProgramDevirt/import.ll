@@ -2,14 +2,17 @@
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-uniform-ret-val.yaml < %s | FileCheck --check-prefixes=CHECK,INDIR,UNIFORM-RET-VAL %s
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-unique-ret-val0.yaml < %s | FileCheck --check-prefixes=CHECK,INDIR,UNIQUE-RET-VAL0 %s
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-unique-ret-val1.yaml < %s | FileCheck --check-prefixes=CHECK,INDIR,UNIQUE-RET-VAL1 %s
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml < %s | FileCheck --check-prefixes=CHECK,VCP,INDIR %s
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml -mtriple=i686-unknown-linux -data-layout=e-p:32:32 < %s | FileCheck --check-prefixes=CHECK,VCP %s
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml -mtriple=armv7-unknown-linux -data-layout=e-p:32:32 < %s | FileCheck --check-prefixes=CHECK,VCP %s
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp-branch-funnel.yaml < %s | FileCheck --check-prefixes=CHECK,VCP,BRANCH-FUNNEL %s
+; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-X86,VCP64,INDIR %s
+; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml -mtriple=i686-unknown-linux -data-layout=e-p:32:32 < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-X86,VCP32 %s
+; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml -mtriple=armv7-unknown-linux -data-layout=e-p:32:32 < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-ARM %s
+; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp-branch-funnel.yaml < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-X86,VCP64,BRANCH-FUNNEL %s
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-branch-funnel.yaml < %s | FileCheck --check-prefixes=CHECK,BRANCH-FUNNEL,BRANCH-FUNNEL-NOVCP %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
+
+; VCP-X86: @__typeid_typeid1_0_1_bit = external hidden global [0 x i8], !absolute_symbol !0
+; VCP-X86: @__typeid_typeid2_8_3_bit = external hidden global [0 x i8], !absolute_symbol !0
 
 ; Test cases where the argument values are known and we can apply virtual
 ; constant propagation.
@@ -68,7 +71,8 @@ cont:
   ; UNIQUE-RET-VAL1: icmp eq ptr %vtable, @__typeid_typeid2_8_3_unique_member
   ; VCP: [[GEP2:%.*]] = getelementptr i8, ptr %vtable, i32 43
   ; VCP: [[LOAD2:%.*]] = load i8, ptr [[GEP2]]
-  ; VCP: [[AND2:%.*]] = and i8 [[LOAD2]], -128
+  ; VCP-X86: [[AND2:%.*]] = and i8 [[LOAD2]], ptrtoint (ptr @__typeid_typeid2_8_3_bit to i8)
+  ; VCP-ARM: [[AND2:%.*]] = and i8 [[LOAD2]], -128
   ; VCP: [[ICMP2:%.*]] = icmp ne i8 [[AND2]], 0
   ; VCP: ret i1 [[ICMP2]]
   ; BRANCH-FUNNEL-NOVCP: call i1 @__typeid_typeid2_8_branch_funnel(ptr nest %vtable, ptr %obj, i32 3)
@@ -81,6 +85,9 @@ trap:
 
 ; SINGLE-IMPL-DAG: declare void @singleimpl1()
 ; SINGLE-IMPL-DAG: declare void @singleimpl2()
+
+; VCP32: !0 = !{i32 0, i32 256}
+; VCP64: !0 = !{i64 0, i64 256}
 
 declare void @llvm.assume(i1)
 declare void @llvm.trap()

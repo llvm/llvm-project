@@ -696,16 +696,23 @@ struct DevirtModule {
   std::string getGlobalName(VTableSlot Slot, ArrayRef<uint64_t> Args,
                             StringRef Name);
 
+  bool shouldExportConstantsAsAbsoluteSymbols();
+
   // This function is called during the export phase to create a symbol
   // definition containing information about the given vtable slot and list of
   // arguments.
   void exportGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args, StringRef Name,
                     Constant *C);
+  void exportConstant(VTableSlot Slot, ArrayRef<uint64_t> Args, StringRef Name,
+                      uint32_t Const, uint32_t &Storage);
 
   // This function is called during the import phase to create a reference to
   // the symbol definition created during the export phase.
   Constant *importGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
                          StringRef Name);
+  Constant *importConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
+                           StringRef Name, IntegerType *IntTy,
+                           uint32_t Storage);
 
   Constant *getMemberAddr(const TypeMemberInfo *M);
 
@@ -1728,11 +1735,29 @@ std::string DevirtModule::getGlobalName(VTableSlot Slot,
   return FullName;
 }
 
+bool DevirtModule::shouldExportConstantsAsAbsoluteSymbols() {
+  Triple T(M.getTargetTriple());
+  return T.isX86() && T.getObjectFormat() == Triple::ELF;
+}
+
 void DevirtModule::exportGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
                                 StringRef Name, Constant *C) {
   GlobalAlias *GA = GlobalAlias::create(Int8Ty, 0, GlobalValue::ExternalLinkage,
                                         getGlobalName(Slot, Args, Name), C, &M);
   GA->setVisibility(GlobalValue::HiddenVisibility);
+}
+
+void DevirtModule::exportConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
+                                  StringRef Name, uint32_t Const,
+                                  uint32_t &Storage) {
+  if (shouldExportConstantsAsAbsoluteSymbols()) {
+    exportGlobal(
+        Slot, Args, Name,
+        ConstantExpr::getIntToPtr(ConstantInt::get(Int32Ty, Const), Int8PtrTy));
+    return;
+  }
+
+  Storage = Const;
 }
 
 Constant *DevirtModule::importGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
@@ -1741,6 +1766,37 @@ Constant *DevirtModule::importGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
       M.getOrInsertGlobal(getGlobalName(Slot, Args, Name), Int8Arr0Ty);
   GV->setVisibility(GlobalValue::HiddenVisibility);
   return GV;
+}
+
+Constant *DevirtModule::importConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
+                                       StringRef Name, IntegerType *IntTy,
+                                       uint32_t Storage) {
+  if (!shouldExportConstantsAsAbsoluteSymbols())
+    return ConstantInt::get(IntTy, Storage);
+
+  Constant *C = importGlobal(Slot, Args, Name);
+  auto *GV = cast<GlobalVariable>(C->stripPointerCasts());
+  C = ConstantExpr::getPtrToInt(C, IntTy);
+
+  // We only need to set metadata if the global is newly created, in which
+  // case it would not have hidden visibility.
+  if (GV->hasMetadata(LLVMContext::MD_absolute_symbol))
+    return C;
+
+  auto SetAbsRange = [&](uint64_t Min, uint64_t Max) {
+    auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntPtrTy, Min));
+    auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntPtrTy, Max));
+    GV->setMetadata(LLVMContext::MD_absolute_symbol,
+                    MDNode::get(M.getContext(), {MinC, MaxC}));
+  };
+  unsigned AbsWidth = IntTy->getBitWidth();
+  if (AbsWidth == IntPtrTy->getBitWidth()) {
+    uint64_t AllOnes = IntTy->getBitMask();
+    SetAbsRange(AllOnes, AllOnes); // Full set.
+  } else {
+    SetAbsRange(0, 1ull << AbsWidth);
+  }
+  return C;
 }
 
 void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
@@ -1971,7 +2027,8 @@ bool DevirtModule::tryVirtualConstProp(
     if (CSByConstantArg.second.isExported()) {
       ResByArg->TheKind = WholeProgramDevirtResolution::ByArg::VirtualConstProp;
       ResByArg->Byte = OffsetByte;
-      ResByArg->Bit = 1ULL << OffsetBit;
+      exportConstant(Slot, CSByConstantArg.first, "bit", 1ULL << OffsetBit,
+                     ResByArg->Bit);
     }
 
     // Rewrite each call to a load from OffsetByte/OffsetBit.
@@ -2252,7 +2309,8 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
     }
     case WholeProgramDevirtResolution::ByArg::VirtualConstProp: {
       Constant *Byte = ConstantInt::get(Int32Ty, ResByArg.Byte);
-      Constant *Bit = ConstantInt::get(Int8Ty, ResByArg.Bit);
+      Constant *Bit = importConstant(Slot, CSByConstantArg.first, "bit", Int8Ty,
+                                     ResByArg.Bit);
       applyVirtualConstProp(CSByConstantArg.second, "", Byte, Bit);
       break;
     }
