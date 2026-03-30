@@ -292,6 +292,19 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       return RecurKind::FMinimumNum;
     if (match(V, m_Intrinsic<Intrinsic::maximumnum>(m_Value(A), m_Value(B))))
       return RecurKind::FMaximumNum;
+    // A select(fcmp(A, B)) is equivalent to a min/max recurrence
+    // depending on the condition used
+    if (match(V, m_FCmp(m_Value(A), m_Value(B)))) {
+      User *U = V->getUniqueUndroppableUser();
+      if (U && match(U, m_Select(m_Cmp(), m_Value(A), m_Value(B)))) {
+        const auto P = dyn_cast<FCmpInst>(V)->getPredicate();
+        // Determine that the predicate is relational
+        if (P == CmpInst::FCMP_OLT || P == CmpInst::FCMP_ULT)
+          return RecurKind::FMax;
+        if (P == CmpInst::FCMP_OGT || P == CmpInst::FCMP_UGT)
+          return RecurKind::FMin;
+      }
+    }
     return RecurKind::None;
   };
 
@@ -355,7 +368,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
            GetMinMaxRK(U, A, B) == RecurKind::None;
   });
   if (PhiHasInvalidUses) {
-    if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RK) ||
+    if (!RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
         !BackedgeValue->hasOneUse())
       return {};
     return RecurrenceDescriptor(
@@ -367,6 +380,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   // Validate chain entries and collect stores from chain entries and
   // intermediate ops.
   SmallVector<StoreInst *> Stores;
+  SmallPtrSet<Value *, 8> SubChains;
   for (Value *V : Chain) {
     for (User *U : V->users()) {
       if (Chain.contains(U))
@@ -384,10 +398,31 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       Value *A, *B;
       if (GetMinMaxRK(I, A, B) != RK)
         return {};
+
+      // Results of FCmps should be used by single selects to qualify as valid
+      // intermediate uses of the Phi. These selects must exist as backedge
+      // values to unique def-use chains. These unique chains should be handled
+      // as separate but parralel "sub" min/max recurrences and should not cause
+      // this chain to fail getting the recurrence descriptor.
+      if (auto *FCmpI = dyn_cast<FCmpInst>(I)) {
+        auto *Select = dyn_cast<SelectInst>(FCmpI->getUniqueUndroppableUser());
+        if (!Select || !TheLoop->contains(Select))
+          return {};
+
+        bool SubChainIsValid = any_of(Select->users(), [&](User *US) {
+          auto *SubChain = dyn_cast<PHINode>(US);
+          return SubChain && !Chain.contains(SubChain);
+        });
+
+        if (!SubChainIsValid)
+          return {};
+        SubChains.insert(Select);
+      }
+
       for (User *IU : I->users()) {
         if (auto *SI = dyn_cast<StoreInst>(IU))
           Stores.push_back(SI);
-        else if (!Chain.contains(IU))
+        else if (!Chain.contains(IU) && !SubChains.contains(IU))
           return {};
       }
     }
@@ -1090,6 +1125,7 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
     return true;
   }
+
   auto RD = getMinMaxRecurrence(Phi, TheLoop, SE);
   if (RD.getRecurrenceKind() != RecurKind::None) {
     assert(
@@ -1434,6 +1470,7 @@ bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
 
   // Here we only handle FP induction variables.
   assert(Phi->getType()->isFloatingPointTy() && "Unexpected Phi type");
+  errs() << "Phi = " << *Phi << '\n';
 
   if (TheLoop->getHeader() != Phi->getParent())
     return false;
