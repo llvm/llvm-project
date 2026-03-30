@@ -144,5 +144,1120 @@ entry:
   ret i64 %0
 }
 
+define i32 @all_true_big_v32i16(<32 x i16> %v) {
+; CHECK-LABEL: all_true_big_v32i16:
+; CHECK:         .functype all_true_big_v32i16 (v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push20=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push19=, $4=, $pop20
+; CHECK-NEXT:    i16x8.eq $push4=, $0, $pop19
+; CHECK-NEXT:    i16x8.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.const $push6=, 24
+; CHECK-NEXT:    i32.shl $push7=, $pop5, $pop6
+; CHECK-NEXT:    i16x8.eq $push0=, $1, $4
+; CHECK-NEXT:    i16x8.bitmask $push1=, $pop0
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i32.or $push8=, $pop7, $pop3
+; CHECK-NEXT:    i16x8.eq $push9=, $2, $4
+; CHECK-NEXT:    i16x8.bitmask $push10=, $pop9
+; CHECK-NEXT:    i32.const $push11=, 8
+; CHECK-NEXT:    i32.shl $push12=, $pop10, $pop11
+; CHECK-NEXT:    i32.or $push13=, $pop8, $pop12
+; CHECK-NEXT:    i16x8.eq $push14=, $3, $4
+; CHECK-NEXT:    i16x8.bitmask $push15=, $pop14
+; CHECK-NEXT:    i32.or $push16=, $pop13, $pop15
+; CHECK-NEXT:    i32.const $push17=, -1
+; CHECK-NEXT:    i32.ne $push18=, $pop16, $pop17
+; CHECK-NEXT:    return $pop18
+  %1 = icmp eq <32 x i16> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, -1
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @all_true_big_v64i16(<64 x i16> %v) {
+; CHECK-LABEL: all_true_big_v64i16:
+; CHECK:         .functype all_true_big_v64i16 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push49=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push48=, $8=, $pop49
+; CHECK-NEXT:    i16x8.eq $push5=, $0, $pop48
+; CHECK-NEXT:    i16x8.bitmask $push6=, $pop5
+; CHECK-NEXT:    i64.extend_i32_u $push7=, $pop6
+; CHECK-NEXT:    i64.const $push8=, 24
+; CHECK-NEXT:    i64.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i16x8.eq $push0=, $1, $8
+; CHECK-NEXT:    i16x8.bitmask $push1=, $pop0
+; CHECK-NEXT:    i64.extend_i32_u $push2=, $pop1
+; CHECK-NEXT:    i64.const $push3=, 16
+; CHECK-NEXT:    i64.shl $push4=, $pop2, $pop3
+; CHECK-NEXT:    i64.or $push10=, $pop9, $pop4
+; CHECK-NEXT:    i16x8.eq $push11=, $2, $8
+; CHECK-NEXT:    i16x8.bitmask $push12=, $pop11
+; CHECK-NEXT:    i64.extend_i32_u $push13=, $pop12
+; CHECK-NEXT:    i64.const $push14=, 8
+; CHECK-NEXT:    i64.shl $push15=, $pop13, $pop14
+; CHECK-NEXT:    i64.or $push16=, $pop10, $pop15
+; CHECK-NEXT:    i16x8.eq $push17=, $3, $8
+; CHECK-NEXT:    i16x8.bitmask $push18=, $pop17
+; CHECK-NEXT:    i64.extend_i32_u $push19=, $pop18
+; CHECK-NEXT:    i64.or $push20=, $pop16, $pop19
+; CHECK-NEXT:    i64.const $push47=, 16
+; CHECK-NEXT:    i64.shl $push21=, $pop20, $pop47
+; CHECK-NEXT:    i16x8.eq $push22=, $4, $8
+; CHECK-NEXT:    i16x8.bitmask $push23=, $pop22
+; CHECK-NEXT:    i64.extend_i32_u $push24=, $pop23
+; CHECK-NEXT:    i64.const $push46=, 8
+; CHECK-NEXT:    i64.shl $push25=, $pop24, $pop46
+; CHECK-NEXT:    i64.or $push26=, $pop21, $pop25
+; CHECK-NEXT:    i16x8.eq $push27=, $5, $8
+; CHECK-NEXT:    i16x8.bitmask $push28=, $pop27
+; CHECK-NEXT:    i64.extend_i32_u $push29=, $pop28
+; CHECK-NEXT:    i64.or $push30=, $pop26, $pop29
+; CHECK-NEXT:    i64.const $push45=, 16
+; CHECK-NEXT:    i64.shl $push31=, $pop30, $pop45
+; CHECK-NEXT:    i16x8.eq $push32=, $6, $8
+; CHECK-NEXT:    i16x8.bitmask $push33=, $pop32
+; CHECK-NEXT:    i64.extend_i32_u $push34=, $pop33
+; CHECK-NEXT:    i64.const $push44=, 8
+; CHECK-NEXT:    i64.shl $push35=, $pop34, $pop44
+; CHECK-NEXT:    i64.or $push36=, $pop31, $pop35
+; CHECK-NEXT:    i16x8.eq $push37=, $7, $8
+; CHECK-NEXT:    i16x8.bitmask $push38=, $pop37
+; CHECK-NEXT:    i64.extend_i32_u $push39=, $pop38
+; CHECK-NEXT:    i64.or $push40=, $pop36, $pop39
+; CHECK-NEXT:    i64.const $push41=, -1
+; CHECK-NEXT:    i64.ne $push42=, $pop40, $pop41
+; CHECK-NEXT:    i64.extend_i32_u $push43=, $pop42
+; CHECK-NEXT:    return $pop43
+  %1 = icmp eq <64 x i16> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, -1
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @all_true_big_v32i32(<32 x i32> %v) {
+; CHECK-LABEL: all_true_big_v32i32:
+; CHECK:         .functype all_true_big_v32i32 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push40=, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push39=, $8=, $pop40
+; CHECK-NEXT:    i32x4.eq $push4=, $0, $pop39
+; CHECK-NEXT:    i32x4.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.const $push6=, 12
+; CHECK-NEXT:    i32.shl $push7=, $pop5, $pop6
+; CHECK-NEXT:    i32x4.eq $push0=, $1, $8
+; CHECK-NEXT:    i32x4.bitmask $push1=, $pop0
+; CHECK-NEXT:    i32.const $push2=, 8
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i32.or $push8=, $pop7, $pop3
+; CHECK-NEXT:    i32x4.eq $push9=, $2, $8
+; CHECK-NEXT:    i32x4.bitmask $push10=, $pop9
+; CHECK-NEXT:    i32.const $push11=, 4
+; CHECK-NEXT:    i32.shl $push12=, $pop10, $pop11
+; CHECK-NEXT:    i32.or $push13=, $pop8, $pop12
+; CHECK-NEXT:    i32x4.eq $push14=, $3, $8
+; CHECK-NEXT:    i32x4.bitmask $push15=, $pop14
+; CHECK-NEXT:    i32.or $push16=, $pop13, $pop15
+; CHECK-NEXT:    i32.const $push38=, 8
+; CHECK-NEXT:    i32.shl $push17=, $pop16, $pop38
+; CHECK-NEXT:    i32x4.eq $push18=, $4, $8
+; CHECK-NEXT:    i32x4.bitmask $push19=, $pop18
+; CHECK-NEXT:    i32.const $push37=, 4
+; CHECK-NEXT:    i32.shl $push20=, $pop19, $pop37
+; CHECK-NEXT:    i32.or $push21=, $pop17, $pop20
+; CHECK-NEXT:    i32x4.eq $push22=, $5, $8
+; CHECK-NEXT:    i32x4.bitmask $push23=, $pop22
+; CHECK-NEXT:    i32.or $push24=, $pop21, $pop23
+; CHECK-NEXT:    i32.const $push36=, 8
+; CHECK-NEXT:    i32.shl $push25=, $pop24, $pop36
+; CHECK-NEXT:    i32x4.eq $push26=, $6, $8
+; CHECK-NEXT:    i32x4.bitmask $push27=, $pop26
+; CHECK-NEXT:    i32.const $push35=, 4
+; CHECK-NEXT:    i32.shl $push28=, $pop27, $pop35
+; CHECK-NEXT:    i32.or $push29=, $pop25, $pop28
+; CHECK-NEXT:    i32x4.eq $push30=, $7, $8
+; CHECK-NEXT:    i32x4.bitmask $push31=, $pop30
+; CHECK-NEXT:    i32.or $push32=, $pop29, $pop31
+; CHECK-NEXT:    i32.const $push33=, -1
+; CHECK-NEXT:    i32.ne $push34=, $pop32, $pop33
+; CHECK-NEXT:    return $pop34
+  %1 = icmp eq <32 x i32> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, -1
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @all_true_big_v64i32(<64 x i32> %v) {
+; CHECK-LABEL: all_true_big_v64i32:
+; CHECK:         .functype all_true_big_v64i32 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push97=, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push96=, $16=, $pop97
+; CHECK-NEXT:    i32x4.eq $push5=, $0, $pop96
+; CHECK-NEXT:    i32x4.bitmask $push6=, $pop5
+; CHECK-NEXT:    i64.extend_i32_u $push7=, $pop6
+; CHECK-NEXT:    i64.const $push8=, 12
+; CHECK-NEXT:    i64.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i32x4.eq $push0=, $1, $16
+; CHECK-NEXT:    i32x4.bitmask $push1=, $pop0
+; CHECK-NEXT:    i64.extend_i32_u $push2=, $pop1
+; CHECK-NEXT:    i64.const $push3=, 8
+; CHECK-NEXT:    i64.shl $push4=, $pop2, $pop3
+; CHECK-NEXT:    i64.or $push10=, $pop9, $pop4
+; CHECK-NEXT:    i32x4.eq $push11=, $2, $16
+; CHECK-NEXT:    i32x4.bitmask $push12=, $pop11
+; CHECK-NEXT:    i64.extend_i32_u $push13=, $pop12
+; CHECK-NEXT:    i64.const $push14=, 4
+; CHECK-NEXT:    i64.shl $push15=, $pop13, $pop14
+; CHECK-NEXT:    i64.or $push16=, $pop10, $pop15
+; CHECK-NEXT:    i32x4.eq $push17=, $3, $16
+; CHECK-NEXT:    i32x4.bitmask $push18=, $pop17
+; CHECK-NEXT:    i64.extend_i32_u $push19=, $pop18
+; CHECK-NEXT:    i64.or $push20=, $pop16, $pop19
+; CHECK-NEXT:    i64.const $push95=, 8
+; CHECK-NEXT:    i64.shl $push21=, $pop20, $pop95
+; CHECK-NEXT:    i32x4.eq $push22=, $4, $16
+; CHECK-NEXT:    i32x4.bitmask $push23=, $pop22
+; CHECK-NEXT:    i64.extend_i32_u $push24=, $pop23
+; CHECK-NEXT:    i64.const $push94=, 4
+; CHECK-NEXT:    i64.shl $push25=, $pop24, $pop94
+; CHECK-NEXT:    i64.or $push26=, $pop21, $pop25
+; CHECK-NEXT:    i32x4.eq $push27=, $5, $16
+; CHECK-NEXT:    i32x4.bitmask $push28=, $pop27
+; CHECK-NEXT:    i64.extend_i32_u $push29=, $pop28
+; CHECK-NEXT:    i64.or $push30=, $pop26, $pop29
+; CHECK-NEXT:    i64.const $push93=, 8
+; CHECK-NEXT:    i64.shl $push31=, $pop30, $pop93
+; CHECK-NEXT:    i32x4.eq $push32=, $6, $16
+; CHECK-NEXT:    i32x4.bitmask $push33=, $pop32
+; CHECK-NEXT:    i64.extend_i32_u $push34=, $pop33
+; CHECK-NEXT:    i64.const $push92=, 4
+; CHECK-NEXT:    i64.shl $push35=, $pop34, $pop92
+; CHECK-NEXT:    i64.or $push36=, $pop31, $pop35
+; CHECK-NEXT:    i32x4.eq $push37=, $7, $16
+; CHECK-NEXT:    i32x4.bitmask $push38=, $pop37
+; CHECK-NEXT:    i64.extend_i32_u $push39=, $pop38
+; CHECK-NEXT:    i64.or $push40=, $pop36, $pop39
+; CHECK-NEXT:    i64.const $push91=, 8
+; CHECK-NEXT:    i64.shl $push41=, $pop40, $pop91
+; CHECK-NEXT:    i32x4.eq $push42=, $8, $16
+; CHECK-NEXT:    i32x4.bitmask $push43=, $pop42
+; CHECK-NEXT:    i64.extend_i32_u $push44=, $pop43
+; CHECK-NEXT:    i64.const $push90=, 4
+; CHECK-NEXT:    i64.shl $push45=, $pop44, $pop90
+; CHECK-NEXT:    i64.or $push46=, $pop41, $pop45
+; CHECK-NEXT:    i32x4.eq $push47=, $9, $16
+; CHECK-NEXT:    i32x4.bitmask $push48=, $pop47
+; CHECK-NEXT:    i64.extend_i32_u $push49=, $pop48
+; CHECK-NEXT:    i64.or $push50=, $pop46, $pop49
+; CHECK-NEXT:    i64.const $push89=, 8
+; CHECK-NEXT:    i64.shl $push51=, $pop50, $pop89
+; CHECK-NEXT:    i32x4.eq $push52=, $10, $16
+; CHECK-NEXT:    i32x4.bitmask $push53=, $pop52
+; CHECK-NEXT:    i64.extend_i32_u $push54=, $pop53
+; CHECK-NEXT:    i64.const $push88=, 4
+; CHECK-NEXT:    i64.shl $push55=, $pop54, $pop88
+; CHECK-NEXT:    i64.or $push56=, $pop51, $pop55
+; CHECK-NEXT:    i32x4.eq $push57=, $11, $16
+; CHECK-NEXT:    i32x4.bitmask $push58=, $pop57
+; CHECK-NEXT:    i64.extend_i32_u $push59=, $pop58
+; CHECK-NEXT:    i64.or $push60=, $pop56, $pop59
+; CHECK-NEXT:    i64.const $push87=, 8
+; CHECK-NEXT:    i64.shl $push61=, $pop60, $pop87
+; CHECK-NEXT:    i32x4.eq $push62=, $12, $16
+; CHECK-NEXT:    i32x4.bitmask $push63=, $pop62
+; CHECK-NEXT:    i64.extend_i32_u $push64=, $pop63
+; CHECK-NEXT:    i64.const $push86=, 4
+; CHECK-NEXT:    i64.shl $push65=, $pop64, $pop86
+; CHECK-NEXT:    i64.or $push66=, $pop61, $pop65
+; CHECK-NEXT:    i32x4.eq $push67=, $13, $16
+; CHECK-NEXT:    i32x4.bitmask $push68=, $pop67
+; CHECK-NEXT:    i64.extend_i32_u $push69=, $pop68
+; CHECK-NEXT:    i64.or $push70=, $pop66, $pop69
+; CHECK-NEXT:    i64.const $push85=, 8
+; CHECK-NEXT:    i64.shl $push71=, $pop70, $pop85
+; CHECK-NEXT:    i32x4.eq $push72=, $14, $16
+; CHECK-NEXT:    i32x4.bitmask $push73=, $pop72
+; CHECK-NEXT:    i64.extend_i32_u $push74=, $pop73
+; CHECK-NEXT:    i64.const $push84=, 4
+; CHECK-NEXT:    i64.shl $push75=, $pop74, $pop84
+; CHECK-NEXT:    i64.or $push76=, $pop71, $pop75
+; CHECK-NEXT:    i32x4.eq $push77=, $15, $16
+; CHECK-NEXT:    i32x4.bitmask $push78=, $pop77
+; CHECK-NEXT:    i64.extend_i32_u $push79=, $pop78
+; CHECK-NEXT:    i64.or $push80=, $pop76, $pop79
+; CHECK-NEXT:    i64.const $push81=, -1
+; CHECK-NEXT:    i64.ne $push82=, $pop80, $pop81
+; CHECK-NEXT:    i64.extend_i32_u $push83=, $pop82
+; CHECK-NEXT:    return $pop83
+  %1 = icmp eq <64 x i32> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, -1
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @all_true_big_v32i64(<32 x i64> %v) {
+; CHECK-LABEL: all_true_big_v32i64:
+; CHECK:         .functype all_true_big_v32i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push80=, 0, 0
+; CHECK-NEXT:    local.tee $push79=, $16=, $pop80
+; CHECK-NEXT:    i64x2.eq $push4=, $0, $pop79
+; CHECK-NEXT:    i64x2.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.const $push6=, 6
+; CHECK-NEXT:    i32.shl $push7=, $pop5, $pop6
+; CHECK-NEXT:    i64x2.eq $push0=, $1, $16
+; CHECK-NEXT:    i64x2.bitmask $push1=, $pop0
+; CHECK-NEXT:    i32.const $push2=, 4
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i32.or $push8=, $pop7, $pop3
+; CHECK-NEXT:    i64x2.eq $push9=, $2, $16
+; CHECK-NEXT:    i64x2.bitmask $push10=, $pop9
+; CHECK-NEXT:    i32.const $push11=, 2
+; CHECK-NEXT:    i32.shl $push12=, $pop10, $pop11
+; CHECK-NEXT:    i32.or $push13=, $pop8, $pop12
+; CHECK-NEXT:    i64x2.eq $push14=, $3, $16
+; CHECK-NEXT:    i64x2.bitmask $push15=, $pop14
+; CHECK-NEXT:    i32.or $push16=, $pop13, $pop15
+; CHECK-NEXT:    i32.const $push78=, 4
+; CHECK-NEXT:    i32.shl $push17=, $pop16, $pop78
+; CHECK-NEXT:    i64x2.eq $push18=, $4, $16
+; CHECK-NEXT:    i64x2.bitmask $push19=, $pop18
+; CHECK-NEXT:    i32.const $push77=, 2
+; CHECK-NEXT:    i32.shl $push20=, $pop19, $pop77
+; CHECK-NEXT:    i32.or $push21=, $pop17, $pop20
+; CHECK-NEXT:    i64x2.eq $push22=, $5, $16
+; CHECK-NEXT:    i64x2.bitmask $push23=, $pop22
+; CHECK-NEXT:    i32.or $push24=, $pop21, $pop23
+; CHECK-NEXT:    i32.const $push76=, 4
+; CHECK-NEXT:    i32.shl $push25=, $pop24, $pop76
+; CHECK-NEXT:    i64x2.eq $push26=, $6, $16
+; CHECK-NEXT:    i64x2.bitmask $push27=, $pop26
+; CHECK-NEXT:    i32.const $push75=, 2
+; CHECK-NEXT:    i32.shl $push28=, $pop27, $pop75
+; CHECK-NEXT:    i32.or $push29=, $pop25, $pop28
+; CHECK-NEXT:    i64x2.eq $push30=, $7, $16
+; CHECK-NEXT:    i64x2.bitmask $push31=, $pop30
+; CHECK-NEXT:    i32.or $push32=, $pop29, $pop31
+; CHECK-NEXT:    i32.const $push74=, 4
+; CHECK-NEXT:    i32.shl $push33=, $pop32, $pop74
+; CHECK-NEXT:    i64x2.eq $push34=, $8, $16
+; CHECK-NEXT:    i64x2.bitmask $push35=, $pop34
+; CHECK-NEXT:    i32.const $push73=, 2
+; CHECK-NEXT:    i32.shl $push36=, $pop35, $pop73
+; CHECK-NEXT:    i32.or $push37=, $pop33, $pop36
+; CHECK-NEXT:    i64x2.eq $push38=, $9, $16
+; CHECK-NEXT:    i64x2.bitmask $push39=, $pop38
+; CHECK-NEXT:    i32.or $push40=, $pop37, $pop39
+; CHECK-NEXT:    i32.const $push72=, 4
+; CHECK-NEXT:    i32.shl $push41=, $pop40, $pop72
+; CHECK-NEXT:    i64x2.eq $push42=, $10, $16
+; CHECK-NEXT:    i64x2.bitmask $push43=, $pop42
+; CHECK-NEXT:    i32.const $push71=, 2
+; CHECK-NEXT:    i32.shl $push44=, $pop43, $pop71
+; CHECK-NEXT:    i32.or $push45=, $pop41, $pop44
+; CHECK-NEXT:    i64x2.eq $push46=, $11, $16
+; CHECK-NEXT:    i64x2.bitmask $push47=, $pop46
+; CHECK-NEXT:    i32.or $push48=, $pop45, $pop47
+; CHECK-NEXT:    i32.const $push70=, 4
+; CHECK-NEXT:    i32.shl $push49=, $pop48, $pop70
+; CHECK-NEXT:    i64x2.eq $push50=, $12, $16
+; CHECK-NEXT:    i64x2.bitmask $push51=, $pop50
+; CHECK-NEXT:    i32.const $push69=, 2
+; CHECK-NEXT:    i32.shl $push52=, $pop51, $pop69
+; CHECK-NEXT:    i32.or $push53=, $pop49, $pop52
+; CHECK-NEXT:    i64x2.eq $push54=, $13, $16
+; CHECK-NEXT:    i64x2.bitmask $push55=, $pop54
+; CHECK-NEXT:    i32.or $push56=, $pop53, $pop55
+; CHECK-NEXT:    i32.const $push68=, 4
+; CHECK-NEXT:    i32.shl $push57=, $pop56, $pop68
+; CHECK-NEXT:    i64x2.eq $push58=, $14, $16
+; CHECK-NEXT:    i64x2.bitmask $push59=, $pop58
+; CHECK-NEXT:    i32.const $push67=, 2
+; CHECK-NEXT:    i32.shl $push60=, $pop59, $pop67
+; CHECK-NEXT:    i32.or $push61=, $pop57, $pop60
+; CHECK-NEXT:    i64x2.eq $push62=, $15, $16
+; CHECK-NEXT:    i64x2.bitmask $push63=, $pop62
+; CHECK-NEXT:    i32.or $push64=, $pop61, $pop63
+; CHECK-NEXT:    i32.const $push65=, -1
+; CHECK-NEXT:    i32.ne $push66=, $pop64, $pop65
+; CHECK-NEXT:    return $pop66
+  %1 = icmp eq <32 x i64> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, -1
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @all_true_big_v64i64(<64 x i64> %v) {
+; CHECK-LABEL: all_true_big_v64i64:
+; CHECK:         .functype all_true_big_v64i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push193=, 0, 0
+; CHECK-NEXT:    local.tee $push192=, $32=, $pop193
+; CHECK-NEXT:    i64x2.eq $push5=, $0, $pop192
+; CHECK-NEXT:    i64x2.bitmask $push6=, $pop5
+; CHECK-NEXT:    i64.extend_i32_u $push7=, $pop6
+; CHECK-NEXT:    i64.const $push8=, 6
+; CHECK-NEXT:    i64.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i64x2.eq $push0=, $1, $32
+; CHECK-NEXT:    i64x2.bitmask $push1=, $pop0
+; CHECK-NEXT:    i64.extend_i32_u $push2=, $pop1
+; CHECK-NEXT:    i64.const $push3=, 4
+; CHECK-NEXT:    i64.shl $push4=, $pop2, $pop3
+; CHECK-NEXT:    i64.or $push10=, $pop9, $pop4
+; CHECK-NEXT:    i64x2.eq $push11=, $2, $32
+; CHECK-NEXT:    i64x2.bitmask $push12=, $pop11
+; CHECK-NEXT:    i64.extend_i32_u $push13=, $pop12
+; CHECK-NEXT:    i64.const $push14=, 2
+; CHECK-NEXT:    i64.shl $push15=, $pop13, $pop14
+; CHECK-NEXT:    i64.or $push16=, $pop10, $pop15
+; CHECK-NEXT:    i64x2.eq $push17=, $3, $32
+; CHECK-NEXT:    i64x2.bitmask $push18=, $pop17
+; CHECK-NEXT:    i64.extend_i32_u $push19=, $pop18
+; CHECK-NEXT:    i64.or $push20=, $pop16, $pop19
+; CHECK-NEXT:    i64.const $push191=, 4
+; CHECK-NEXT:    i64.shl $push21=, $pop20, $pop191
+; CHECK-NEXT:    i64x2.eq $push22=, $4, $32
+; CHECK-NEXT:    i64x2.bitmask $push23=, $pop22
+; CHECK-NEXT:    i64.extend_i32_u $push24=, $pop23
+; CHECK-NEXT:    i64.const $push190=, 2
+; CHECK-NEXT:    i64.shl $push25=, $pop24, $pop190
+; CHECK-NEXT:    i64.or $push26=, $pop21, $pop25
+; CHECK-NEXT:    i64x2.eq $push27=, $5, $32
+; CHECK-NEXT:    i64x2.bitmask $push28=, $pop27
+; CHECK-NEXT:    i64.extend_i32_u $push29=, $pop28
+; CHECK-NEXT:    i64.or $push30=, $pop26, $pop29
+; CHECK-NEXT:    i64.const $push189=, 4
+; CHECK-NEXT:    i64.shl $push31=, $pop30, $pop189
+; CHECK-NEXT:    i64x2.eq $push32=, $6, $32
+; CHECK-NEXT:    i64x2.bitmask $push33=, $pop32
+; CHECK-NEXT:    i64.extend_i32_u $push34=, $pop33
+; CHECK-NEXT:    i64.const $push188=, 2
+; CHECK-NEXT:    i64.shl $push35=, $pop34, $pop188
+; CHECK-NEXT:    i64.or $push36=, $pop31, $pop35
+; CHECK-NEXT:    i64x2.eq $push37=, $7, $32
+; CHECK-NEXT:    i64x2.bitmask $push38=, $pop37
+; CHECK-NEXT:    i64.extend_i32_u $push39=, $pop38
+; CHECK-NEXT:    i64.or $push40=, $pop36, $pop39
+; CHECK-NEXT:    i64.const $push187=, 4
+; CHECK-NEXT:    i64.shl $push41=, $pop40, $pop187
+; CHECK-NEXT:    i64x2.eq $push42=, $8, $32
+; CHECK-NEXT:    i64x2.bitmask $push43=, $pop42
+; CHECK-NEXT:    i64.extend_i32_u $push44=, $pop43
+; CHECK-NEXT:    i64.const $push186=, 2
+; CHECK-NEXT:    i64.shl $push45=, $pop44, $pop186
+; CHECK-NEXT:    i64.or $push46=, $pop41, $pop45
+; CHECK-NEXT:    i64x2.eq $push47=, $9, $32
+; CHECK-NEXT:    i64x2.bitmask $push48=, $pop47
+; CHECK-NEXT:    i64.extend_i32_u $push49=, $pop48
+; CHECK-NEXT:    i64.or $push50=, $pop46, $pop49
+; CHECK-NEXT:    i64.const $push185=, 4
+; CHECK-NEXT:    i64.shl $push51=, $pop50, $pop185
+; CHECK-NEXT:    i64x2.eq $push52=, $10, $32
+; CHECK-NEXT:    i64x2.bitmask $push53=, $pop52
+; CHECK-NEXT:    i64.extend_i32_u $push54=, $pop53
+; CHECK-NEXT:    i64.const $push184=, 2
+; CHECK-NEXT:    i64.shl $push55=, $pop54, $pop184
+; CHECK-NEXT:    i64.or $push56=, $pop51, $pop55
+; CHECK-NEXT:    i64x2.eq $push57=, $11, $32
+; CHECK-NEXT:    i64x2.bitmask $push58=, $pop57
+; CHECK-NEXT:    i64.extend_i32_u $push59=, $pop58
+; CHECK-NEXT:    i64.or $push60=, $pop56, $pop59
+; CHECK-NEXT:    i64.const $push183=, 4
+; CHECK-NEXT:    i64.shl $push61=, $pop60, $pop183
+; CHECK-NEXT:    i64x2.eq $push62=, $12, $32
+; CHECK-NEXT:    i64x2.bitmask $push63=, $pop62
+; CHECK-NEXT:    i64.extend_i32_u $push64=, $pop63
+; CHECK-NEXT:    i64.const $push182=, 2
+; CHECK-NEXT:    i64.shl $push65=, $pop64, $pop182
+; CHECK-NEXT:    i64.or $push66=, $pop61, $pop65
+; CHECK-NEXT:    i64x2.eq $push67=, $13, $32
+; CHECK-NEXT:    i64x2.bitmask $push68=, $pop67
+; CHECK-NEXT:    i64.extend_i32_u $push69=, $pop68
+; CHECK-NEXT:    i64.or $push70=, $pop66, $pop69
+; CHECK-NEXT:    i64.const $push181=, 4
+; CHECK-NEXT:    i64.shl $push71=, $pop70, $pop181
+; CHECK-NEXT:    i64x2.eq $push72=, $14, $32
+; CHECK-NEXT:    i64x2.bitmask $push73=, $pop72
+; CHECK-NEXT:    i64.extend_i32_u $push74=, $pop73
+; CHECK-NEXT:    i64.const $push180=, 2
+; CHECK-NEXT:    i64.shl $push75=, $pop74, $pop180
+; CHECK-NEXT:    i64.or $push76=, $pop71, $pop75
+; CHECK-NEXT:    i64x2.eq $push77=, $15, $32
+; CHECK-NEXT:    i64x2.bitmask $push78=, $pop77
+; CHECK-NEXT:    i64.extend_i32_u $push79=, $pop78
+; CHECK-NEXT:    i64.or $push80=, $pop76, $pop79
+; CHECK-NEXT:    i64.const $push179=, 4
+; CHECK-NEXT:    i64.shl $push81=, $pop80, $pop179
+; CHECK-NEXT:    i64x2.eq $push82=, $16, $32
+; CHECK-NEXT:    i64x2.bitmask $push83=, $pop82
+; CHECK-NEXT:    i64.extend_i32_u $push84=, $pop83
+; CHECK-NEXT:    i64.const $push178=, 2
+; CHECK-NEXT:    i64.shl $push85=, $pop84, $pop178
+; CHECK-NEXT:    i64.or $push86=, $pop81, $pop85
+; CHECK-NEXT:    i64x2.eq $push87=, $17, $32
+; CHECK-NEXT:    i64x2.bitmask $push88=, $pop87
+; CHECK-NEXT:    i64.extend_i32_u $push89=, $pop88
+; CHECK-NEXT:    i64.or $push90=, $pop86, $pop89
+; CHECK-NEXT:    i64.const $push177=, 4
+; CHECK-NEXT:    i64.shl $push91=, $pop90, $pop177
+; CHECK-NEXT:    i64x2.eq $push92=, $18, $32
+; CHECK-NEXT:    i64x2.bitmask $push93=, $pop92
+; CHECK-NEXT:    i64.extend_i32_u $push94=, $pop93
+; CHECK-NEXT:    i64.const $push176=, 2
+; CHECK-NEXT:    i64.shl $push95=, $pop94, $pop176
+; CHECK-NEXT:    i64.or $push96=, $pop91, $pop95
+; CHECK-NEXT:    i64x2.eq $push97=, $19, $32
+; CHECK-NEXT:    i64x2.bitmask $push98=, $pop97
+; CHECK-NEXT:    i64.extend_i32_u $push99=, $pop98
+; CHECK-NEXT:    i64.or $push100=, $pop96, $pop99
+; CHECK-NEXT:    i64.const $push175=, 4
+; CHECK-NEXT:    i64.shl $push101=, $pop100, $pop175
+; CHECK-NEXT:    i64x2.eq $push102=, $20, $32
+; CHECK-NEXT:    i64x2.bitmask $push103=, $pop102
+; CHECK-NEXT:    i64.extend_i32_u $push104=, $pop103
+; CHECK-NEXT:    i64.const $push174=, 2
+; CHECK-NEXT:    i64.shl $push105=, $pop104, $pop174
+; CHECK-NEXT:    i64.or $push106=, $pop101, $pop105
+; CHECK-NEXT:    i64x2.eq $push107=, $21, $32
+; CHECK-NEXT:    i64x2.bitmask $push108=, $pop107
+; CHECK-NEXT:    i64.extend_i32_u $push109=, $pop108
+; CHECK-NEXT:    i64.or $push110=, $pop106, $pop109
+; CHECK-NEXT:    i64.const $push173=, 4
+; CHECK-NEXT:    i64.shl $push111=, $pop110, $pop173
+; CHECK-NEXT:    i64x2.eq $push112=, $22, $32
+; CHECK-NEXT:    i64x2.bitmask $push113=, $pop112
+; CHECK-NEXT:    i64.extend_i32_u $push114=, $pop113
+; CHECK-NEXT:    i64.const $push172=, 2
+; CHECK-NEXT:    i64.shl $push115=, $pop114, $pop172
+; CHECK-NEXT:    i64.or $push116=, $pop111, $pop115
+; CHECK-NEXT:    i64x2.eq $push117=, $23, $32
+; CHECK-NEXT:    i64x2.bitmask $push118=, $pop117
+; CHECK-NEXT:    i64.extend_i32_u $push119=, $pop118
+; CHECK-NEXT:    i64.or $push120=, $pop116, $pop119
+; CHECK-NEXT:    i64.const $push171=, 4
+; CHECK-NEXT:    i64.shl $push121=, $pop120, $pop171
+; CHECK-NEXT:    i64x2.eq $push122=, $24, $32
+; CHECK-NEXT:    i64x2.bitmask $push123=, $pop122
+; CHECK-NEXT:    i64.extend_i32_u $push124=, $pop123
+; CHECK-NEXT:    i64.const $push170=, 2
+; CHECK-NEXT:    i64.shl $push125=, $pop124, $pop170
+; CHECK-NEXT:    i64.or $push126=, $pop121, $pop125
+; CHECK-NEXT:    i64x2.eq $push127=, $25, $32
+; CHECK-NEXT:    i64x2.bitmask $push128=, $pop127
+; CHECK-NEXT:    i64.extend_i32_u $push129=, $pop128
+; CHECK-NEXT:    i64.or $push130=, $pop126, $pop129
+; CHECK-NEXT:    i64.const $push169=, 4
+; CHECK-NEXT:    i64.shl $push131=, $pop130, $pop169
+; CHECK-NEXT:    i64x2.eq $push132=, $26, $32
+; CHECK-NEXT:    i64x2.bitmask $push133=, $pop132
+; CHECK-NEXT:    i64.extend_i32_u $push134=, $pop133
+; CHECK-NEXT:    i64.const $push168=, 2
+; CHECK-NEXT:    i64.shl $push135=, $pop134, $pop168
+; CHECK-NEXT:    i64.or $push136=, $pop131, $pop135
+; CHECK-NEXT:    i64x2.eq $push137=, $27, $32
+; CHECK-NEXT:    i64x2.bitmask $push138=, $pop137
+; CHECK-NEXT:    i64.extend_i32_u $push139=, $pop138
+; CHECK-NEXT:    i64.or $push140=, $pop136, $pop139
+; CHECK-NEXT:    i64.const $push167=, 4
+; CHECK-NEXT:    i64.shl $push141=, $pop140, $pop167
+; CHECK-NEXT:    i64x2.eq $push142=, $28, $32
+; CHECK-NEXT:    i64x2.bitmask $push143=, $pop142
+; CHECK-NEXT:    i64.extend_i32_u $push144=, $pop143
+; CHECK-NEXT:    i64.const $push166=, 2
+; CHECK-NEXT:    i64.shl $push145=, $pop144, $pop166
+; CHECK-NEXT:    i64.or $push146=, $pop141, $pop145
+; CHECK-NEXT:    i64x2.eq $push147=, $29, $32
+; CHECK-NEXT:    i64x2.bitmask $push148=, $pop147
+; CHECK-NEXT:    i64.extend_i32_u $push149=, $pop148
+; CHECK-NEXT:    i64.or $push150=, $pop146, $pop149
+; CHECK-NEXT:    i64.const $push165=, 4
+; CHECK-NEXT:    i64.shl $push151=, $pop150, $pop165
+; CHECK-NEXT:    i64x2.eq $push152=, $30, $32
+; CHECK-NEXT:    i64x2.bitmask $push153=, $pop152
+; CHECK-NEXT:    i64.extend_i32_u $push154=, $pop153
+; CHECK-NEXT:    i64.const $push164=, 2
+; CHECK-NEXT:    i64.shl $push155=, $pop154, $pop164
+; CHECK-NEXT:    i64.or $push156=, $pop151, $pop155
+; CHECK-NEXT:    i64x2.eq $push157=, $31, $32
+; CHECK-NEXT:    i64x2.bitmask $push158=, $pop157
+; CHECK-NEXT:    i64.extend_i32_u $push159=, $pop158
+; CHECK-NEXT:    i64.or $push160=, $pop156, $pop159
+; CHECK-NEXT:    i64.const $push161=, -1
+; CHECK-NEXT:    i64.ne $push162=, $pop160, $pop161
+; CHECK-NEXT:    i64.extend_i32_u $push163=, $pop162
+; CHECK-NEXT:    return $pop163
+  %1 = icmp eq <64 x i64> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, -1
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @any_true_big_v32i16(<32 x i16> %v) {
+; CHECK-LABEL: any_true_big_v32i16:
+; CHECK:         .functype any_true_big_v32i16 (v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push20=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push19=, $4=, $pop20
+; CHECK-NEXT:    i16x8.eq $push4=, $0, $pop19
+; CHECK-NEXT:    i16x8.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.const $push6=, 24
+; CHECK-NEXT:    i32.shl $push7=, $pop5, $pop6
+; CHECK-NEXT:    i16x8.eq $push0=, $1, $4
+; CHECK-NEXT:    i16x8.bitmask $push1=, $pop0
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i32.or $push8=, $pop7, $pop3
+; CHECK-NEXT:    i16x8.eq $push9=, $2, $4
+; CHECK-NEXT:    i16x8.bitmask $push10=, $pop9
+; CHECK-NEXT:    i32.const $push11=, 8
+; CHECK-NEXT:    i32.shl $push12=, $pop10, $pop11
+; CHECK-NEXT:    i32.or $push13=, $pop8, $pop12
+; CHECK-NEXT:    i16x8.eq $push14=, $3, $4
+; CHECK-NEXT:    i16x8.bitmask $push15=, $pop14
+; CHECK-NEXT:    i32.or $push16=, $pop13, $pop15
+; CHECK-NEXT:    i32.const $push17=, 0
+; CHECK-NEXT:    i32.ne $push18=, $pop16, $pop17
+; CHECK-NEXT:    return $pop18
+  %1 = icmp eq <32 x i16> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, 0
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @any_true_big_v64i16(<64 x i16> %v) {
+; CHECK-LABEL: any_true_big_v64i16:
+; CHECK:         .functype any_true_big_v64i16 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push49=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push48=, $8=, $pop49
+; CHECK-NEXT:    i16x8.eq $push5=, $0, $pop48
+; CHECK-NEXT:    i16x8.bitmask $push6=, $pop5
+; CHECK-NEXT:    i64.extend_i32_u $push7=, $pop6
+; CHECK-NEXT:    i64.const $push8=, 24
+; CHECK-NEXT:    i64.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i16x8.eq $push0=, $1, $8
+; CHECK-NEXT:    i16x8.bitmask $push1=, $pop0
+; CHECK-NEXT:    i64.extend_i32_u $push2=, $pop1
+; CHECK-NEXT:    i64.const $push3=, 16
+; CHECK-NEXT:    i64.shl $push4=, $pop2, $pop3
+; CHECK-NEXT:    i64.or $push10=, $pop9, $pop4
+; CHECK-NEXT:    i16x8.eq $push11=, $2, $8
+; CHECK-NEXT:    i16x8.bitmask $push12=, $pop11
+; CHECK-NEXT:    i64.extend_i32_u $push13=, $pop12
+; CHECK-NEXT:    i64.const $push14=, 8
+; CHECK-NEXT:    i64.shl $push15=, $pop13, $pop14
+; CHECK-NEXT:    i64.or $push16=, $pop10, $pop15
+; CHECK-NEXT:    i16x8.eq $push17=, $3, $8
+; CHECK-NEXT:    i16x8.bitmask $push18=, $pop17
+; CHECK-NEXT:    i64.extend_i32_u $push19=, $pop18
+; CHECK-NEXT:    i64.or $push20=, $pop16, $pop19
+; CHECK-NEXT:    i64.const $push47=, 16
+; CHECK-NEXT:    i64.shl $push21=, $pop20, $pop47
+; CHECK-NEXT:    i16x8.eq $push22=, $4, $8
+; CHECK-NEXT:    i16x8.bitmask $push23=, $pop22
+; CHECK-NEXT:    i64.extend_i32_u $push24=, $pop23
+; CHECK-NEXT:    i64.const $push46=, 8
+; CHECK-NEXT:    i64.shl $push25=, $pop24, $pop46
+; CHECK-NEXT:    i64.or $push26=, $pop21, $pop25
+; CHECK-NEXT:    i16x8.eq $push27=, $5, $8
+; CHECK-NEXT:    i16x8.bitmask $push28=, $pop27
+; CHECK-NEXT:    i64.extend_i32_u $push29=, $pop28
+; CHECK-NEXT:    i64.or $push30=, $pop26, $pop29
+; CHECK-NEXT:    i64.const $push45=, 16
+; CHECK-NEXT:    i64.shl $push31=, $pop30, $pop45
+; CHECK-NEXT:    i16x8.eq $push32=, $6, $8
+; CHECK-NEXT:    i16x8.bitmask $push33=, $pop32
+; CHECK-NEXT:    i64.extend_i32_u $push34=, $pop33
+; CHECK-NEXT:    i64.const $push44=, 8
+; CHECK-NEXT:    i64.shl $push35=, $pop34, $pop44
+; CHECK-NEXT:    i64.or $push36=, $pop31, $pop35
+; CHECK-NEXT:    i16x8.eq $push37=, $7, $8
+; CHECK-NEXT:    i16x8.bitmask $push38=, $pop37
+; CHECK-NEXT:    i64.extend_i32_u $push39=, $pop38
+; CHECK-NEXT:    i64.or $push40=, $pop36, $pop39
+; CHECK-NEXT:    i64.const $push41=, 0
+; CHECK-NEXT:    i64.ne $push42=, $pop40, $pop41
+; CHECK-NEXT:    i64.extend_i32_u $push43=, $pop42
+; CHECK-NEXT:    return $pop43
+  %1 = icmp eq <64 x i16> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, 0
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @any_true_big_v32i32(<32 x i32> %v) {
+; CHECK-LABEL: any_true_big_v32i32:
+; CHECK:         .functype any_true_big_v32i32 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push40=, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push39=, $8=, $pop40
+; CHECK-NEXT:    i32x4.eq $push4=, $0, $pop39
+; CHECK-NEXT:    i32x4.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.const $push6=, 12
+; CHECK-NEXT:    i32.shl $push7=, $pop5, $pop6
+; CHECK-NEXT:    i32x4.eq $push0=, $1, $8
+; CHECK-NEXT:    i32x4.bitmask $push1=, $pop0
+; CHECK-NEXT:    i32.const $push2=, 8
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i32.or $push8=, $pop7, $pop3
+; CHECK-NEXT:    i32x4.eq $push9=, $2, $8
+; CHECK-NEXT:    i32x4.bitmask $push10=, $pop9
+; CHECK-NEXT:    i32.const $push11=, 4
+; CHECK-NEXT:    i32.shl $push12=, $pop10, $pop11
+; CHECK-NEXT:    i32.or $push13=, $pop8, $pop12
+; CHECK-NEXT:    i32x4.eq $push14=, $3, $8
+; CHECK-NEXT:    i32x4.bitmask $push15=, $pop14
+; CHECK-NEXT:    i32.or $push16=, $pop13, $pop15
+; CHECK-NEXT:    i32.const $push38=, 8
+; CHECK-NEXT:    i32.shl $push17=, $pop16, $pop38
+; CHECK-NEXT:    i32x4.eq $push18=, $4, $8
+; CHECK-NEXT:    i32x4.bitmask $push19=, $pop18
+; CHECK-NEXT:    i32.const $push37=, 4
+; CHECK-NEXT:    i32.shl $push20=, $pop19, $pop37
+; CHECK-NEXT:    i32.or $push21=, $pop17, $pop20
+; CHECK-NEXT:    i32x4.eq $push22=, $5, $8
+; CHECK-NEXT:    i32x4.bitmask $push23=, $pop22
+; CHECK-NEXT:    i32.or $push24=, $pop21, $pop23
+; CHECK-NEXT:    i32.const $push36=, 8
+; CHECK-NEXT:    i32.shl $push25=, $pop24, $pop36
+; CHECK-NEXT:    i32x4.eq $push26=, $6, $8
+; CHECK-NEXT:    i32x4.bitmask $push27=, $pop26
+; CHECK-NEXT:    i32.const $push35=, 4
+; CHECK-NEXT:    i32.shl $push28=, $pop27, $pop35
+; CHECK-NEXT:    i32.or $push29=, $pop25, $pop28
+; CHECK-NEXT:    i32x4.eq $push30=, $7, $8
+; CHECK-NEXT:    i32x4.bitmask $push31=, $pop30
+; CHECK-NEXT:    i32.or $push32=, $pop29, $pop31
+; CHECK-NEXT:    i32.const $push33=, 0
+; CHECK-NEXT:    i32.ne $push34=, $pop32, $pop33
+; CHECK-NEXT:    return $pop34
+  %1 = icmp eq <32 x i32> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, 0
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @any_true_big_v64i32(<64 x i32> %v) {
+; CHECK-LABEL: any_true_big_v64i32:
+; CHECK:         .functype any_true_big_v64i32 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push97=, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push96=, $16=, $pop97
+; CHECK-NEXT:    i32x4.eq $push5=, $0, $pop96
+; CHECK-NEXT:    i32x4.bitmask $push6=, $pop5
+; CHECK-NEXT:    i64.extend_i32_u $push7=, $pop6
+; CHECK-NEXT:    i64.const $push8=, 12
+; CHECK-NEXT:    i64.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i32x4.eq $push0=, $1, $16
+; CHECK-NEXT:    i32x4.bitmask $push1=, $pop0
+; CHECK-NEXT:    i64.extend_i32_u $push2=, $pop1
+; CHECK-NEXT:    i64.const $push3=, 8
+; CHECK-NEXT:    i64.shl $push4=, $pop2, $pop3
+; CHECK-NEXT:    i64.or $push10=, $pop9, $pop4
+; CHECK-NEXT:    i32x4.eq $push11=, $2, $16
+; CHECK-NEXT:    i32x4.bitmask $push12=, $pop11
+; CHECK-NEXT:    i64.extend_i32_u $push13=, $pop12
+; CHECK-NEXT:    i64.const $push14=, 4
+; CHECK-NEXT:    i64.shl $push15=, $pop13, $pop14
+; CHECK-NEXT:    i64.or $push16=, $pop10, $pop15
+; CHECK-NEXT:    i32x4.eq $push17=, $3, $16
+; CHECK-NEXT:    i32x4.bitmask $push18=, $pop17
+; CHECK-NEXT:    i64.extend_i32_u $push19=, $pop18
+; CHECK-NEXT:    i64.or $push20=, $pop16, $pop19
+; CHECK-NEXT:    i64.const $push95=, 8
+; CHECK-NEXT:    i64.shl $push21=, $pop20, $pop95
+; CHECK-NEXT:    i32x4.eq $push22=, $4, $16
+; CHECK-NEXT:    i32x4.bitmask $push23=, $pop22
+; CHECK-NEXT:    i64.extend_i32_u $push24=, $pop23
+; CHECK-NEXT:    i64.const $push94=, 4
+; CHECK-NEXT:    i64.shl $push25=, $pop24, $pop94
+; CHECK-NEXT:    i64.or $push26=, $pop21, $pop25
+; CHECK-NEXT:    i32x4.eq $push27=, $5, $16
+; CHECK-NEXT:    i32x4.bitmask $push28=, $pop27
+; CHECK-NEXT:    i64.extend_i32_u $push29=, $pop28
+; CHECK-NEXT:    i64.or $push30=, $pop26, $pop29
+; CHECK-NEXT:    i64.const $push93=, 8
+; CHECK-NEXT:    i64.shl $push31=, $pop30, $pop93
+; CHECK-NEXT:    i32x4.eq $push32=, $6, $16
+; CHECK-NEXT:    i32x4.bitmask $push33=, $pop32
+; CHECK-NEXT:    i64.extend_i32_u $push34=, $pop33
+; CHECK-NEXT:    i64.const $push92=, 4
+; CHECK-NEXT:    i64.shl $push35=, $pop34, $pop92
+; CHECK-NEXT:    i64.or $push36=, $pop31, $pop35
+; CHECK-NEXT:    i32x4.eq $push37=, $7, $16
+; CHECK-NEXT:    i32x4.bitmask $push38=, $pop37
+; CHECK-NEXT:    i64.extend_i32_u $push39=, $pop38
+; CHECK-NEXT:    i64.or $push40=, $pop36, $pop39
+; CHECK-NEXT:    i64.const $push91=, 8
+; CHECK-NEXT:    i64.shl $push41=, $pop40, $pop91
+; CHECK-NEXT:    i32x4.eq $push42=, $8, $16
+; CHECK-NEXT:    i32x4.bitmask $push43=, $pop42
+; CHECK-NEXT:    i64.extend_i32_u $push44=, $pop43
+; CHECK-NEXT:    i64.const $push90=, 4
+; CHECK-NEXT:    i64.shl $push45=, $pop44, $pop90
+; CHECK-NEXT:    i64.or $push46=, $pop41, $pop45
+; CHECK-NEXT:    i32x4.eq $push47=, $9, $16
+; CHECK-NEXT:    i32x4.bitmask $push48=, $pop47
+; CHECK-NEXT:    i64.extend_i32_u $push49=, $pop48
+; CHECK-NEXT:    i64.or $push50=, $pop46, $pop49
+; CHECK-NEXT:    i64.const $push89=, 8
+; CHECK-NEXT:    i64.shl $push51=, $pop50, $pop89
+; CHECK-NEXT:    i32x4.eq $push52=, $10, $16
+; CHECK-NEXT:    i32x4.bitmask $push53=, $pop52
+; CHECK-NEXT:    i64.extend_i32_u $push54=, $pop53
+; CHECK-NEXT:    i64.const $push88=, 4
+; CHECK-NEXT:    i64.shl $push55=, $pop54, $pop88
+; CHECK-NEXT:    i64.or $push56=, $pop51, $pop55
+; CHECK-NEXT:    i32x4.eq $push57=, $11, $16
+; CHECK-NEXT:    i32x4.bitmask $push58=, $pop57
+; CHECK-NEXT:    i64.extend_i32_u $push59=, $pop58
+; CHECK-NEXT:    i64.or $push60=, $pop56, $pop59
+; CHECK-NEXT:    i64.const $push87=, 8
+; CHECK-NEXT:    i64.shl $push61=, $pop60, $pop87
+; CHECK-NEXT:    i32x4.eq $push62=, $12, $16
+; CHECK-NEXT:    i32x4.bitmask $push63=, $pop62
+; CHECK-NEXT:    i64.extend_i32_u $push64=, $pop63
+; CHECK-NEXT:    i64.const $push86=, 4
+; CHECK-NEXT:    i64.shl $push65=, $pop64, $pop86
+; CHECK-NEXT:    i64.or $push66=, $pop61, $pop65
+; CHECK-NEXT:    i32x4.eq $push67=, $13, $16
+; CHECK-NEXT:    i32x4.bitmask $push68=, $pop67
+; CHECK-NEXT:    i64.extend_i32_u $push69=, $pop68
+; CHECK-NEXT:    i64.or $push70=, $pop66, $pop69
+; CHECK-NEXT:    i64.const $push85=, 8
+; CHECK-NEXT:    i64.shl $push71=, $pop70, $pop85
+; CHECK-NEXT:    i32x4.eq $push72=, $14, $16
+; CHECK-NEXT:    i32x4.bitmask $push73=, $pop72
+; CHECK-NEXT:    i64.extend_i32_u $push74=, $pop73
+; CHECK-NEXT:    i64.const $push84=, 4
+; CHECK-NEXT:    i64.shl $push75=, $pop74, $pop84
+; CHECK-NEXT:    i64.or $push76=, $pop71, $pop75
+; CHECK-NEXT:    i32x4.eq $push77=, $15, $16
+; CHECK-NEXT:    i32x4.bitmask $push78=, $pop77
+; CHECK-NEXT:    i64.extend_i32_u $push79=, $pop78
+; CHECK-NEXT:    i64.or $push80=, $pop76, $pop79
+; CHECK-NEXT:    i64.const $push81=, 0
+; CHECK-NEXT:    i64.ne $push82=, $pop80, $pop81
+; CHECK-NEXT:    i64.extend_i32_u $push83=, $pop82
+; CHECK-NEXT:    return $pop83
+  %1 = icmp eq <64 x i32> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, 0
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @any_true_big_v32i64(<32 x i64> %v) {
+; CHECK-LABEL: any_true_big_v32i64:
+; CHECK:         .functype any_true_big_v32i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push80=, 0, 0
+; CHECK-NEXT:    local.tee $push79=, $16=, $pop80
+; CHECK-NEXT:    i64x2.eq $push4=, $0, $pop79
+; CHECK-NEXT:    i64x2.bitmask $push5=, $pop4
+; CHECK-NEXT:    i32.const $push6=, 6
+; CHECK-NEXT:    i32.shl $push7=, $pop5, $pop6
+; CHECK-NEXT:    i64x2.eq $push0=, $1, $16
+; CHECK-NEXT:    i64x2.bitmask $push1=, $pop0
+; CHECK-NEXT:    i32.const $push2=, 4
+; CHECK-NEXT:    i32.shl $push3=, $pop1, $pop2
+; CHECK-NEXT:    i32.or $push8=, $pop7, $pop3
+; CHECK-NEXT:    i64x2.eq $push9=, $2, $16
+; CHECK-NEXT:    i64x2.bitmask $push10=, $pop9
+; CHECK-NEXT:    i32.const $push11=, 2
+; CHECK-NEXT:    i32.shl $push12=, $pop10, $pop11
+; CHECK-NEXT:    i32.or $push13=, $pop8, $pop12
+; CHECK-NEXT:    i64x2.eq $push14=, $3, $16
+; CHECK-NEXT:    i64x2.bitmask $push15=, $pop14
+; CHECK-NEXT:    i32.or $push16=, $pop13, $pop15
+; CHECK-NEXT:    i32.const $push78=, 4
+; CHECK-NEXT:    i32.shl $push17=, $pop16, $pop78
+; CHECK-NEXT:    i64x2.eq $push18=, $4, $16
+; CHECK-NEXT:    i64x2.bitmask $push19=, $pop18
+; CHECK-NEXT:    i32.const $push77=, 2
+; CHECK-NEXT:    i32.shl $push20=, $pop19, $pop77
+; CHECK-NEXT:    i32.or $push21=, $pop17, $pop20
+; CHECK-NEXT:    i64x2.eq $push22=, $5, $16
+; CHECK-NEXT:    i64x2.bitmask $push23=, $pop22
+; CHECK-NEXT:    i32.or $push24=, $pop21, $pop23
+; CHECK-NEXT:    i32.const $push76=, 4
+; CHECK-NEXT:    i32.shl $push25=, $pop24, $pop76
+; CHECK-NEXT:    i64x2.eq $push26=, $6, $16
+; CHECK-NEXT:    i64x2.bitmask $push27=, $pop26
+; CHECK-NEXT:    i32.const $push75=, 2
+; CHECK-NEXT:    i32.shl $push28=, $pop27, $pop75
+; CHECK-NEXT:    i32.or $push29=, $pop25, $pop28
+; CHECK-NEXT:    i64x2.eq $push30=, $7, $16
+; CHECK-NEXT:    i64x2.bitmask $push31=, $pop30
+; CHECK-NEXT:    i32.or $push32=, $pop29, $pop31
+; CHECK-NEXT:    i32.const $push74=, 4
+; CHECK-NEXT:    i32.shl $push33=, $pop32, $pop74
+; CHECK-NEXT:    i64x2.eq $push34=, $8, $16
+; CHECK-NEXT:    i64x2.bitmask $push35=, $pop34
+; CHECK-NEXT:    i32.const $push73=, 2
+; CHECK-NEXT:    i32.shl $push36=, $pop35, $pop73
+; CHECK-NEXT:    i32.or $push37=, $pop33, $pop36
+; CHECK-NEXT:    i64x2.eq $push38=, $9, $16
+; CHECK-NEXT:    i64x2.bitmask $push39=, $pop38
+; CHECK-NEXT:    i32.or $push40=, $pop37, $pop39
+; CHECK-NEXT:    i32.const $push72=, 4
+; CHECK-NEXT:    i32.shl $push41=, $pop40, $pop72
+; CHECK-NEXT:    i64x2.eq $push42=, $10, $16
+; CHECK-NEXT:    i64x2.bitmask $push43=, $pop42
+; CHECK-NEXT:    i32.const $push71=, 2
+; CHECK-NEXT:    i32.shl $push44=, $pop43, $pop71
+; CHECK-NEXT:    i32.or $push45=, $pop41, $pop44
+; CHECK-NEXT:    i64x2.eq $push46=, $11, $16
+; CHECK-NEXT:    i64x2.bitmask $push47=, $pop46
+; CHECK-NEXT:    i32.or $push48=, $pop45, $pop47
+; CHECK-NEXT:    i32.const $push70=, 4
+; CHECK-NEXT:    i32.shl $push49=, $pop48, $pop70
+; CHECK-NEXT:    i64x2.eq $push50=, $12, $16
+; CHECK-NEXT:    i64x2.bitmask $push51=, $pop50
+; CHECK-NEXT:    i32.const $push69=, 2
+; CHECK-NEXT:    i32.shl $push52=, $pop51, $pop69
+; CHECK-NEXT:    i32.or $push53=, $pop49, $pop52
+; CHECK-NEXT:    i64x2.eq $push54=, $13, $16
+; CHECK-NEXT:    i64x2.bitmask $push55=, $pop54
+; CHECK-NEXT:    i32.or $push56=, $pop53, $pop55
+; CHECK-NEXT:    i32.const $push68=, 4
+; CHECK-NEXT:    i32.shl $push57=, $pop56, $pop68
+; CHECK-NEXT:    i64x2.eq $push58=, $14, $16
+; CHECK-NEXT:    i64x2.bitmask $push59=, $pop58
+; CHECK-NEXT:    i32.const $push67=, 2
+; CHECK-NEXT:    i32.shl $push60=, $pop59, $pop67
+; CHECK-NEXT:    i32.or $push61=, $pop57, $pop60
+; CHECK-NEXT:    i64x2.eq $push62=, $15, $16
+; CHECK-NEXT:    i64x2.bitmask $push63=, $pop62
+; CHECK-NEXT:    i32.or $push64=, $pop61, $pop63
+; CHECK-NEXT:    i32.const $push65=, 0
+; CHECK-NEXT:    i32.ne $push66=, $pop64, $pop65
+; CHECK-NEXT:    return $pop66
+  %1 = icmp eq <32 x i64> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, 0
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @any_true_big_v64i64(<64 x i64> %v) {
+; CHECK-LABEL: any_true_big_v64i64:
+; CHECK:         .functype any_true_big_v64i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push193=, 0, 0
+; CHECK-NEXT:    local.tee $push192=, $32=, $pop193
+; CHECK-NEXT:    i64x2.eq $push5=, $0, $pop192
+; CHECK-NEXT:    i64x2.bitmask $push6=, $pop5
+; CHECK-NEXT:    i64.extend_i32_u $push7=, $pop6
+; CHECK-NEXT:    i64.const $push8=, 6
+; CHECK-NEXT:    i64.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i64x2.eq $push0=, $1, $32
+; CHECK-NEXT:    i64x2.bitmask $push1=, $pop0
+; CHECK-NEXT:    i64.extend_i32_u $push2=, $pop1
+; CHECK-NEXT:    i64.const $push3=, 4
+; CHECK-NEXT:    i64.shl $push4=, $pop2, $pop3
+; CHECK-NEXT:    i64.or $push10=, $pop9, $pop4
+; CHECK-NEXT:    i64x2.eq $push11=, $2, $32
+; CHECK-NEXT:    i64x2.bitmask $push12=, $pop11
+; CHECK-NEXT:    i64.extend_i32_u $push13=, $pop12
+; CHECK-NEXT:    i64.const $push14=, 2
+; CHECK-NEXT:    i64.shl $push15=, $pop13, $pop14
+; CHECK-NEXT:    i64.or $push16=, $pop10, $pop15
+; CHECK-NEXT:    i64x2.eq $push17=, $3, $32
+; CHECK-NEXT:    i64x2.bitmask $push18=, $pop17
+; CHECK-NEXT:    i64.extend_i32_u $push19=, $pop18
+; CHECK-NEXT:    i64.or $push20=, $pop16, $pop19
+; CHECK-NEXT:    i64.const $push191=, 4
+; CHECK-NEXT:    i64.shl $push21=, $pop20, $pop191
+; CHECK-NEXT:    i64x2.eq $push22=, $4, $32
+; CHECK-NEXT:    i64x2.bitmask $push23=, $pop22
+; CHECK-NEXT:    i64.extend_i32_u $push24=, $pop23
+; CHECK-NEXT:    i64.const $push190=, 2
+; CHECK-NEXT:    i64.shl $push25=, $pop24, $pop190
+; CHECK-NEXT:    i64.or $push26=, $pop21, $pop25
+; CHECK-NEXT:    i64x2.eq $push27=, $5, $32
+; CHECK-NEXT:    i64x2.bitmask $push28=, $pop27
+; CHECK-NEXT:    i64.extend_i32_u $push29=, $pop28
+; CHECK-NEXT:    i64.or $push30=, $pop26, $pop29
+; CHECK-NEXT:    i64.const $push189=, 4
+; CHECK-NEXT:    i64.shl $push31=, $pop30, $pop189
+; CHECK-NEXT:    i64x2.eq $push32=, $6, $32
+; CHECK-NEXT:    i64x2.bitmask $push33=, $pop32
+; CHECK-NEXT:    i64.extend_i32_u $push34=, $pop33
+; CHECK-NEXT:    i64.const $push188=, 2
+; CHECK-NEXT:    i64.shl $push35=, $pop34, $pop188
+; CHECK-NEXT:    i64.or $push36=, $pop31, $pop35
+; CHECK-NEXT:    i64x2.eq $push37=, $7, $32
+; CHECK-NEXT:    i64x2.bitmask $push38=, $pop37
+; CHECK-NEXT:    i64.extend_i32_u $push39=, $pop38
+; CHECK-NEXT:    i64.or $push40=, $pop36, $pop39
+; CHECK-NEXT:    i64.const $push187=, 4
+; CHECK-NEXT:    i64.shl $push41=, $pop40, $pop187
+; CHECK-NEXT:    i64x2.eq $push42=, $8, $32
+; CHECK-NEXT:    i64x2.bitmask $push43=, $pop42
+; CHECK-NEXT:    i64.extend_i32_u $push44=, $pop43
+; CHECK-NEXT:    i64.const $push186=, 2
+; CHECK-NEXT:    i64.shl $push45=, $pop44, $pop186
+; CHECK-NEXT:    i64.or $push46=, $pop41, $pop45
+; CHECK-NEXT:    i64x2.eq $push47=, $9, $32
+; CHECK-NEXT:    i64x2.bitmask $push48=, $pop47
+; CHECK-NEXT:    i64.extend_i32_u $push49=, $pop48
+; CHECK-NEXT:    i64.or $push50=, $pop46, $pop49
+; CHECK-NEXT:    i64.const $push185=, 4
+; CHECK-NEXT:    i64.shl $push51=, $pop50, $pop185
+; CHECK-NEXT:    i64x2.eq $push52=, $10, $32
+; CHECK-NEXT:    i64x2.bitmask $push53=, $pop52
+; CHECK-NEXT:    i64.extend_i32_u $push54=, $pop53
+; CHECK-NEXT:    i64.const $push184=, 2
+; CHECK-NEXT:    i64.shl $push55=, $pop54, $pop184
+; CHECK-NEXT:    i64.or $push56=, $pop51, $pop55
+; CHECK-NEXT:    i64x2.eq $push57=, $11, $32
+; CHECK-NEXT:    i64x2.bitmask $push58=, $pop57
+; CHECK-NEXT:    i64.extend_i32_u $push59=, $pop58
+; CHECK-NEXT:    i64.or $push60=, $pop56, $pop59
+; CHECK-NEXT:    i64.const $push183=, 4
+; CHECK-NEXT:    i64.shl $push61=, $pop60, $pop183
+; CHECK-NEXT:    i64x2.eq $push62=, $12, $32
+; CHECK-NEXT:    i64x2.bitmask $push63=, $pop62
+; CHECK-NEXT:    i64.extend_i32_u $push64=, $pop63
+; CHECK-NEXT:    i64.const $push182=, 2
+; CHECK-NEXT:    i64.shl $push65=, $pop64, $pop182
+; CHECK-NEXT:    i64.or $push66=, $pop61, $pop65
+; CHECK-NEXT:    i64x2.eq $push67=, $13, $32
+; CHECK-NEXT:    i64x2.bitmask $push68=, $pop67
+; CHECK-NEXT:    i64.extend_i32_u $push69=, $pop68
+; CHECK-NEXT:    i64.or $push70=, $pop66, $pop69
+; CHECK-NEXT:    i64.const $push181=, 4
+; CHECK-NEXT:    i64.shl $push71=, $pop70, $pop181
+; CHECK-NEXT:    i64x2.eq $push72=, $14, $32
+; CHECK-NEXT:    i64x2.bitmask $push73=, $pop72
+; CHECK-NEXT:    i64.extend_i32_u $push74=, $pop73
+; CHECK-NEXT:    i64.const $push180=, 2
+; CHECK-NEXT:    i64.shl $push75=, $pop74, $pop180
+; CHECK-NEXT:    i64.or $push76=, $pop71, $pop75
+; CHECK-NEXT:    i64x2.eq $push77=, $15, $32
+; CHECK-NEXT:    i64x2.bitmask $push78=, $pop77
+; CHECK-NEXT:    i64.extend_i32_u $push79=, $pop78
+; CHECK-NEXT:    i64.or $push80=, $pop76, $pop79
+; CHECK-NEXT:    i64.const $push179=, 4
+; CHECK-NEXT:    i64.shl $push81=, $pop80, $pop179
+; CHECK-NEXT:    i64x2.eq $push82=, $16, $32
+; CHECK-NEXT:    i64x2.bitmask $push83=, $pop82
+; CHECK-NEXT:    i64.extend_i32_u $push84=, $pop83
+; CHECK-NEXT:    i64.const $push178=, 2
+; CHECK-NEXT:    i64.shl $push85=, $pop84, $pop178
+; CHECK-NEXT:    i64.or $push86=, $pop81, $pop85
+; CHECK-NEXT:    i64x2.eq $push87=, $17, $32
+; CHECK-NEXT:    i64x2.bitmask $push88=, $pop87
+; CHECK-NEXT:    i64.extend_i32_u $push89=, $pop88
+; CHECK-NEXT:    i64.or $push90=, $pop86, $pop89
+; CHECK-NEXT:    i64.const $push177=, 4
+; CHECK-NEXT:    i64.shl $push91=, $pop90, $pop177
+; CHECK-NEXT:    i64x2.eq $push92=, $18, $32
+; CHECK-NEXT:    i64x2.bitmask $push93=, $pop92
+; CHECK-NEXT:    i64.extend_i32_u $push94=, $pop93
+; CHECK-NEXT:    i64.const $push176=, 2
+; CHECK-NEXT:    i64.shl $push95=, $pop94, $pop176
+; CHECK-NEXT:    i64.or $push96=, $pop91, $pop95
+; CHECK-NEXT:    i64x2.eq $push97=, $19, $32
+; CHECK-NEXT:    i64x2.bitmask $push98=, $pop97
+; CHECK-NEXT:    i64.extend_i32_u $push99=, $pop98
+; CHECK-NEXT:    i64.or $push100=, $pop96, $pop99
+; CHECK-NEXT:    i64.const $push175=, 4
+; CHECK-NEXT:    i64.shl $push101=, $pop100, $pop175
+; CHECK-NEXT:    i64x2.eq $push102=, $20, $32
+; CHECK-NEXT:    i64x2.bitmask $push103=, $pop102
+; CHECK-NEXT:    i64.extend_i32_u $push104=, $pop103
+; CHECK-NEXT:    i64.const $push174=, 2
+; CHECK-NEXT:    i64.shl $push105=, $pop104, $pop174
+; CHECK-NEXT:    i64.or $push106=, $pop101, $pop105
+; CHECK-NEXT:    i64x2.eq $push107=, $21, $32
+; CHECK-NEXT:    i64x2.bitmask $push108=, $pop107
+; CHECK-NEXT:    i64.extend_i32_u $push109=, $pop108
+; CHECK-NEXT:    i64.or $push110=, $pop106, $pop109
+; CHECK-NEXT:    i64.const $push173=, 4
+; CHECK-NEXT:    i64.shl $push111=, $pop110, $pop173
+; CHECK-NEXT:    i64x2.eq $push112=, $22, $32
+; CHECK-NEXT:    i64x2.bitmask $push113=, $pop112
+; CHECK-NEXT:    i64.extend_i32_u $push114=, $pop113
+; CHECK-NEXT:    i64.const $push172=, 2
+; CHECK-NEXT:    i64.shl $push115=, $pop114, $pop172
+; CHECK-NEXT:    i64.or $push116=, $pop111, $pop115
+; CHECK-NEXT:    i64x2.eq $push117=, $23, $32
+; CHECK-NEXT:    i64x2.bitmask $push118=, $pop117
+; CHECK-NEXT:    i64.extend_i32_u $push119=, $pop118
+; CHECK-NEXT:    i64.or $push120=, $pop116, $pop119
+; CHECK-NEXT:    i64.const $push171=, 4
+; CHECK-NEXT:    i64.shl $push121=, $pop120, $pop171
+; CHECK-NEXT:    i64x2.eq $push122=, $24, $32
+; CHECK-NEXT:    i64x2.bitmask $push123=, $pop122
+; CHECK-NEXT:    i64.extend_i32_u $push124=, $pop123
+; CHECK-NEXT:    i64.const $push170=, 2
+; CHECK-NEXT:    i64.shl $push125=, $pop124, $pop170
+; CHECK-NEXT:    i64.or $push126=, $pop121, $pop125
+; CHECK-NEXT:    i64x2.eq $push127=, $25, $32
+; CHECK-NEXT:    i64x2.bitmask $push128=, $pop127
+; CHECK-NEXT:    i64.extend_i32_u $push129=, $pop128
+; CHECK-NEXT:    i64.or $push130=, $pop126, $pop129
+; CHECK-NEXT:    i64.const $push169=, 4
+; CHECK-NEXT:    i64.shl $push131=, $pop130, $pop169
+; CHECK-NEXT:    i64x2.eq $push132=, $26, $32
+; CHECK-NEXT:    i64x2.bitmask $push133=, $pop132
+; CHECK-NEXT:    i64.extend_i32_u $push134=, $pop133
+; CHECK-NEXT:    i64.const $push168=, 2
+; CHECK-NEXT:    i64.shl $push135=, $pop134, $pop168
+; CHECK-NEXT:    i64.or $push136=, $pop131, $pop135
+; CHECK-NEXT:    i64x2.eq $push137=, $27, $32
+; CHECK-NEXT:    i64x2.bitmask $push138=, $pop137
+; CHECK-NEXT:    i64.extend_i32_u $push139=, $pop138
+; CHECK-NEXT:    i64.or $push140=, $pop136, $pop139
+; CHECK-NEXT:    i64.const $push167=, 4
+; CHECK-NEXT:    i64.shl $push141=, $pop140, $pop167
+; CHECK-NEXT:    i64x2.eq $push142=, $28, $32
+; CHECK-NEXT:    i64x2.bitmask $push143=, $pop142
+; CHECK-NEXT:    i64.extend_i32_u $push144=, $pop143
+; CHECK-NEXT:    i64.const $push166=, 2
+; CHECK-NEXT:    i64.shl $push145=, $pop144, $pop166
+; CHECK-NEXT:    i64.or $push146=, $pop141, $pop145
+; CHECK-NEXT:    i64x2.eq $push147=, $29, $32
+; CHECK-NEXT:    i64x2.bitmask $push148=, $pop147
+; CHECK-NEXT:    i64.extend_i32_u $push149=, $pop148
+; CHECK-NEXT:    i64.or $push150=, $pop146, $pop149
+; CHECK-NEXT:    i64.const $push165=, 4
+; CHECK-NEXT:    i64.shl $push151=, $pop150, $pop165
+; CHECK-NEXT:    i64x2.eq $push152=, $30, $32
+; CHECK-NEXT:    i64x2.bitmask $push153=, $pop152
+; CHECK-NEXT:    i64.extend_i32_u $push154=, $pop153
+; CHECK-NEXT:    i64.const $push164=, 2
+; CHECK-NEXT:    i64.shl $push155=, $pop154, $pop164
+; CHECK-NEXT:    i64.or $push156=, $pop151, $pop155
+; CHECK-NEXT:    i64x2.eq $push157=, $31, $32
+; CHECK-NEXT:    i64x2.bitmask $push158=, $pop157
+; CHECK-NEXT:    i64.extend_i32_u $push159=, $pop158
+; CHECK-NEXT:    i64.or $push160=, $pop156, $pop159
+; CHECK-NEXT:    i64.const $push161=, 0
+; CHECK-NEXT:    i64.ne $push162=, $pop160, $pop161
+; CHECK-NEXT:    i64.extend_i32_u $push163=, $pop162
+; CHECK-NEXT:    return $pop163
+  %1 = icmp eq <64 x i64> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, 0
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+
 attributes #0 = { "target-features"="+atomics" }
 

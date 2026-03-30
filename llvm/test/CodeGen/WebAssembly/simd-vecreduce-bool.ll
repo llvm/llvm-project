@@ -304,7 +304,6 @@ define i1 @test_all_v8i8(<8 x i8> %x) {
   ret i1 %ret
 }
 
-;; TODO: Improve this codegen.
 define i1 @test_any_v64i8(<64 x i8> %x) {
 ; CHECK-LABEL: test_any_v64i8:
 ; CHECK:         .functype test_any_v64i8 (v128, v128, v128, v128) -> (i32)
@@ -685,7 +684,6 @@ define i1 @test_any_v64i8(<64 x i8> %x) {
   ret i1 %ret
 }
 
-;; TODO: Improve this codegen.
 define i1 @test_all_v64i8(<64 x i8> %x) {
 ; CHECK-LABEL: test_all_v64i8:
 ; CHECK:         .functype test_all_v64i8 (v128, v128, v128, v128) -> (i32)
