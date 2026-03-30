@@ -173,12 +173,11 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
             Scopes.push_back(NewScopes[Arg]);
         }
     } else {
-      // The instruction accesses memory but has no pointer arguments
-      // (e.g. a HIP builtin like threadIdx()). Since none of its operands
-      // derive from any noalias kernel argument, it cannot possibly alias
-      // them. Mark it as !noalias w.r.t. every noalias scope so that
-      // ScopedNoAliasAA can prove non-aliasing when other instructions
-      // reference those scopes via !alias.scope.
+      // The instruction accesses memory but has no pointer arguments.
+      // Since none of its operands derive from any noalias kernel argument,
+      // it cannot possibly alias them. Mark it as !noalias w.r.t. every
+      // noalias scope so that ScopedNoAliasAA can prove non-aliasing when
+      // other instructions reference those scopes via !alias.scope.
       for (const Argument *Arg : NoAliasArgs)
         NoAliases.push_back(NewScopes[Arg]);
     }
