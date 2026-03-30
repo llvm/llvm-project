@@ -24,7 +24,7 @@
 namespace llvm {
 
 class Argument;
-class CallInst;
+class CallBase;
 class GlobalVariable;
 class Module;
 class Value;
