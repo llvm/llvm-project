@@ -189,7 +189,7 @@ namespace cwg3088 { // cwg3088: partial
 
 // carries_dependency was retroactively removed by P3475R2
 #define noreturn
-// FIXME-since-cxx11-error@-1 {{}}
+// FIXME-since-cxx11-error@-1 {{attribute is hidden by macro definition}}
 #endif
 
 #if __cplusplus >= 201402L
