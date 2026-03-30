@@ -7598,12 +7598,11 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return NewMI;
 
       const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-      Register SubReg = MI.getOperand(1).getSubReg();
       Register NewSrc = MF.getRegInfo().createVirtualRegister(&RC);
       BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
               get(TargetOpcode::COPY))
-          .addReg(NewSrc, RegState::Define, SubReg)
-          .addReg(SrcReg, getKillRegState(true), SubReg);
+          .addReg(NewSrc, RegState::Define)
+          .addReg(SrcReg);
       NewMI->getOperand(1).setReg(NewSrc);
     }
     return NewMI;
