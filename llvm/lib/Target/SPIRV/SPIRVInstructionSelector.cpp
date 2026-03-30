@@ -4991,8 +4991,8 @@ unsigned SPIRVInstructionSelector::getNumQuerySizeComponents(
 }
 
 bool SPIRVInstructionSelector::selectImageQuerySize(
-    Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I, Register ImageReg,
-    unsigned Opcode, std::optional<Register> LodReg) const {
+    Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
+    Register ImageReg, unsigned Opcode, std::optional<Register> LodReg) const {
   SPIRVTypeInst ImageType = GR.getSPIRVTypeForVReg(ImageReg);
   unsigned NumSizeComponents = getNumQuerySizeComponents(ImageType);
   unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
@@ -5049,11 +5049,10 @@ bool SPIRVInstructionSelector::selectImageQuerySize(
     CompRegs.push_back(CompReg);
   }
 
-  auto ConstructMIB =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(SPIRV::OpCompositeConstruct))
-          .addDef(ResVReg)
-          .addUse(GR.getSPIRVTypeID(ResType));
+  auto ConstructMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                              TII.get(SPIRV::OpCompositeConstruct))
+                          .addDef(ResVReg)
+                          .addUse(GR.getSPIRVTypeID(ResType));
   for (Register Reg : CompRegs)
     ConstructMIB.addUse(Reg);
 
@@ -5102,7 +5101,8 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
 
   Register LevelsReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageQueryLevels))
+  BuildMI(*I.getParent(), I, I.getDebugLoc(),
+          TII.get(SPIRV::OpImageQueryLevels))
       .addDef(LevelsReg)
       .addUse(GR.getSPIRVTypeID(I32Ty))
       .addUse(NewImageReg)
@@ -5126,11 +5126,10 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
   }
   Constituents.push_back(LevelsReg);
 
-  auto ConstructMIB =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(SPIRV::OpCompositeConstruct))
-          .addDef(ResVReg)
-          .addUse(GR.getSPIRVTypeID(ResType));
+  auto ConstructMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                              TII.get(SPIRV::OpCompositeConstruct))
+                          .addDef(ResVReg)
+                          .addUse(GR.getSPIRVTypeID(ResType));
   for (Register Reg : Constituents)
     ConstructMIB.addUse(Reg);
 
@@ -5189,11 +5188,10 @@ bool SPIRVInstructionSelector::selectGetDimensionsMSIntrinsic(
   }
   Constituents.push_back(SamplesReg);
 
-  auto ConstructMIB =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(SPIRV::OpCompositeConstruct))
-          .addDef(ResVReg)
-          .addUse(GR.getSPIRVTypeID(ResType));
+  auto ConstructMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                              TII.get(SPIRV::OpCompositeConstruct))
+                          .addDef(ResVReg)
+                          .addUse(GR.getSPIRVTypeID(ResType));
   for (Register Reg : Constituents)
     ConstructMIB.addUse(Reg);
 
