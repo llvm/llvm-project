@@ -646,8 +646,8 @@ def XeVM_MMAMxOp
       Results<(outs FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$d)>,
       Arguments<(ins FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$a,
           FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$b,
-          FixedVectorOfRankAndType<[1], [I8]>:$scale_a,
-          FixedVectorOfRankAndType<[1], [I8]>:$scale_b,
+          AnyTypeOf<[VectorOfRankAndType<[1], [I8]>, I8]>:$scale_a,
+          AnyTypeOf<[VectorOfRankAndType<[1], [I8]>, I8]>:$scale_b,
           Optional<FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>>:$c,
           XeVM_MMAShapeAttr:$shape, XeVM_MMATypesAttr:$types)> {
 
@@ -669,8 +669,8 @@ def XeVM_MMAMxOp
     Parameters:
       * `a` - vector of matrix A elements.
       * `b` - vector of matrix B elements.
-      * `scale_a` - vector of scaling factors for matrix A.
-      * `scale_b` - vector of scaling factors for matrix B.
+      * `scale_a` - vector or scalar of scaling factors for matrix A.
+      * `scale_b` - vector or scalar of scaling factors for matrix B.
       * `c` - (optional) vector of matrix C elements.
       * `shape` - the shape of the matrices, specified as `M`, `N`, and `K` values.
       * `types` - the data types of the matrices, specified as `D`, `A`, `B`, and optionally `C`.
