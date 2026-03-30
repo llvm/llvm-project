@@ -48,6 +48,7 @@ static cl::opt<bool, true> TraceStmtsX(
     cl::desc("Add printf calls that print the statement being executed"),
     cl::location(TraceStmts), cl::Hidden, cl::cat(PollyCategory));
 
+bool TraceStmts;
 static cl::opt<bool> TraceScalars(
     "polly-codegen-trace-scalars",
     cl::desc("Add printf calls that print the values of all scalar values "

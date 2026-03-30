@@ -938,7 +938,7 @@ void IslNodeBuilder::generateBeginScopTrace() {
     if (i != 0)
       Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, " "));
 
-        isl::id PId = Params.get_dim_id(isl::dim::param, i);
+    isl::id PId = Params.get_dim_id(isl::dim::param, i);
     Values.push_back(
         RuntimeDebugBuilder::getPrintableString(Builder, PId.get_name()));
     Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "="));
