@@ -64,6 +64,18 @@ clang_tablegen("riscv_vector") {
   output_name = "riscv_vector.h"
 }
 
+# Generate HLSL intrinsic overloads
+clang_tablegen("hlsl_alias_intrinsics_gen") {
+  args = [ "-gen-hlsl-alias-intrinsics" ]
+  td_file = "//clang/include/clang/Basic/HLSLIntrinsics.td"
+  output_name = "hlsl/hlsl_alias_intrinsics_gen.inc"
+}
+clang_tablegen("hlsl_inline_intrinsics_gen") {
+  args = [ "-gen-hlsl-inline-intrinsics" ]
+  td_file = "//clang/include/clang/Basic/HLSLIntrinsics.td"
+  output_name = "hlsl/hlsl_inline_intrinsics_gen.inc"
+}
+
 copy("tablegen_headers") {
   visibility = [ ":Headers" ]
   deps = [
@@ -75,6 +87,8 @@ copy("tablegen_headers") {
     ":arm_sme",
     ":arm_sve",
     ":arm_vector_types",
+    ":hlsl_alias_intrinsics_gen",
+    ":hlsl_inline_intrinsics_gen",
     ":riscv_vector",
   ]
   sources = []
@@ -104,6 +118,7 @@ copy("Headers") {
     "__clang_hip_runtime_wrapper.h",
     "__clang_hip_stdlib.h",
     "__clang_spirv_builtins.h",
+    "__clang_spirv_libdevice_declares.h",
     "__float_float.h",
     "__float_header_macro.h",
     "__float_infinity_nan.h",

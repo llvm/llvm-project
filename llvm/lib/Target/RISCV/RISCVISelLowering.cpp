@@ -24724,10 +24724,11 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   for (unsigned i = 0, j = 0, e = Outs.size(); i != e; ++i) {
     if (!Outs[i].Flags.isByVal())
       continue;
-    if (j++ >= RVFI->getIncomingByValArgsSize())
+    if (j >= RVFI->getIncomingByValArgsSize())
       return false;
-    if (RVFI->getIncomingByValArgs(i).getValueType() != Outs[i].ArgVT)
+    if (RVFI->getIncomingByValArgs(j).getValueType() != Outs[i].ArgVT)
       return false;
+    ++j;
   }
 
   // The callee has to preserve all registers the caller needs to preserve.
