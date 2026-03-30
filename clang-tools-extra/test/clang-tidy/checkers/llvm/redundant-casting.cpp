@@ -89,8 +89,7 @@ void testCastNonDeclRef() {
 void testUpcast(B& value) {
   A& a8 = llvm::cast<A>(value);
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: source expression has type 'B'
-  // CHECK-MESSAGES: :[[@LINE-3]]:25: note: 'B' is a subtype of 'A'
+  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: source expression has type 'B', which is a subtype of 'A'
   // CHECK-FIXES: A& a8 = value;
   (void)a8;
 }
@@ -115,7 +114,7 @@ void testCastInLLVM(A& value) {
 void testCastPointer(A* value) {
   A *a12 = llvm::cast<A>(value);
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'A *'
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has pointee type 'A'
   // CHECK-FIXES: A *a12 = value;
   (void)a12;
 }
@@ -147,7 +146,7 @@ template <typename T>
 void testCastTemplateTrigger1(T* value) {
   T *a15 = llvm::cast<T>(value);
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'T *'
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has pointee type 'T'
   // CHECK-FIXES: T *a15 = value;
   (void)a15;
 }
@@ -156,7 +155,7 @@ template <typename T>
 void testCastTemplateTrigger2(A* value, T other) {
   A *a16 = llvm::cast<A>(value);
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'A *'
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has pointee type 'A'
   // CHECK-FIXES: A *a16 = value;
   (void)a16; (void) other;
 }
@@ -164,7 +163,7 @@ void testCastTemplateTrigger2(A* value, T other) {
 void testCastConst(const A& value) {
   const A& a17 = llvm::cast<A>(value);
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has type 'const A'
+  // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has type 'A'
   // CHECK-FIXES: const A& a17 = value;
   (void)a17;
 }
@@ -172,7 +171,7 @@ void testCastConst(const A& value) {
 void testCastConstPointer(const A* value) {
   const A* a18 = llvm::cast<A>(value);
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has type 'const A *'
+  // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has pointee type 'A'
   // CHECK-FIXES: const A* a18 = value;
   (void)a18;
 }

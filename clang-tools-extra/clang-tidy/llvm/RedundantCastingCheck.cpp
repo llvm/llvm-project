@@ -10,6 +10,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
@@ -86,8 +87,9 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const auto *Arg = Call->getArg(0);
-  const CanQualType FromTy =
-      stripPointerOrReference(Arg->getType())->getCanonicalTypeUnqualified();
+  QualType ArgTy = Arg->getType();
+  QualType ArgPointeeTy = stripPointerOrReference(ArgTy);
+  const CanQualType FromTy = ArgPointeeTy->getCanonicalTypeUnqualified();
   const auto *FromDecl = FromTy->getAsCXXRecordDecl();
   const auto *RetDecl = RetTy->getAsCXXRecordDecl();
   const bool IsDerived =
@@ -103,13 +105,15 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   diag(Call->getExprLoc(), "redundant use of '%0'")
       << FuncName
       << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
-  diag(Arg->getExprLoc(), "source expression has type %0", DiagnosticIDs::Note)
-      << Arg->getSourceRange() << Arg->IgnoreParenImpCasts()->getType();
-
-  if (FromTy != RetTy) {
-    diag(Arg->getExprLoc(), "%0 is a subtype of %1", DiagnosticIDs::Note)
-        << FromTy << RetTy;
-  }
+  // printing the canonical type for a template parameter prints as e.g.
+  // 'type-parameter-0-0'
+  QualType DiagFromTy(ArgPointeeTy->getUnqualifiedDesugaredType(), 0);
+  diag(Arg->getExprLoc(),
+       "source expression has %select{|pointee}0 type %1%select{|, which is a "
+       "subtype of %3}2",
+       DiagnosticIDs::Note)
+      << Arg->getSourceRange() << ArgTy->isPointerType() << DiagFromTy
+      << (FromTy != RetTy) << RetTy;
 }
 
 } // namespace clang::tidy::llvm_check
