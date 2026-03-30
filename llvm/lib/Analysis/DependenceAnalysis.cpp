@@ -1419,20 +1419,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     return true;
   }
 
-<<<<<<< HEAD
-  // We're certain that Delta > 0 and ConstCoeff > 0.
-  // Check Delta/(2*ConstCoeff) against upper loop bound
-  const Loop *CurSrcLoop = Src->getLoop();
-  if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *ConstantTwo = SE->getConstant(UpperBound->getType(), 2);
-    const SCEV *ML =
-        SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
-    LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
-    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, Delta, ML)) {
-      // Delta too big, no dependence
-=======
   ConstantRange SrcRange = SE->getSignedRange(Src);
   ConstantRange DstRange = SE->getSignedRange(Dst);
   LLVM_DEBUG(dbgs() << "\t    SrcRange = " << SrcRange << "\n");
@@ -1443,7 +1429,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
     ++WeakCrossingSIVsuccesses;
     if (!Result.DV[Level].Direction) {
->>>>>>> main
       ++WeakCrossingSIVindependence;
       return true;
     }
@@ -2085,16 +2070,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                                 UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
-<<<<<<< HEAD
-    else
-      disproven = exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst,
-                               CurSrcLoop, CurDstLoop, Level, Result);
-    return disproven || gcdMIVtest(Src, Dst, Result) ||
-           symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
-                            CurDstLoop);
-=======
     return disproven || exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
->>>>>>> main
   }
   if (SrcAddRec) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
