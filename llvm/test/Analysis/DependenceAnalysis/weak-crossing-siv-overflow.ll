@@ -80,9 +80,6 @@ exit:
 ;  A[-3*i + INT64_MAX] |        | A[INT64_MAX - 3] | A[1]           |
 ;  A[3*i + 1]          | A[1]   |                  |                | A[INT64_MAX - 3]
 ;
-; The root cause is that the product of the BTC, the coefficient, and 2
-; triggers an overflow.
-;
 define void @weakcorssing_prod_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'weakcorssing_prod_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
@@ -135,9 +132,6 @@ exit:
 ;  A[i - ((1ULL << 62) - 1)]  | A[-4611686018427387903] | A[-4611686018427387902] | A[0]           | A[1]
 ;  A[-i + (1ULL << 62)]       | A[4611686018427387904]  | A[4611686018427387903]  | A[1]           | A[0]
 ;
-; The root cause is that the product of the BTC, the coefficient, and 2
-; triggers an overflow.
-
 define void @test_weakcrossing_siv_overflow(ptr %A) {
 ; CHECK-ALL-LABEL: 'test_weakcrossing_siv_overflow'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1

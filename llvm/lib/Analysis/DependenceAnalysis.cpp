@@ -1424,14 +1424,12 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     return true;
   }
 
-  // We're certain that Delta > 0 and ConstCoeff > 0.
-  // Check Delta/(2*ConstCoeff) against upper loop bound
   ConstantRange SrcRange = SE->getSignedRange(Src);
   ConstantRange DstRange = SE->getSignedRange(Dst);
   LLVM_DEBUG(dbgs() << "\t    SrcRange = " << SrcRange << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstRange = " << DstRange << "\n");
   if (SrcRange.intersectWith(DstRange).isSingleElement()) {
-    // The ranges touch at exactly one value (i = i' = Boundary).
+    // The ranges touch at exactly one value (i = i' = BTC).
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
     Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
     ++WeakCrossingSIVsuccesses;
