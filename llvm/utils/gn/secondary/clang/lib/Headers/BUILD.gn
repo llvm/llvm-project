@@ -87,9 +87,9 @@ copy("tablegen_headers") {
     ":arm_sme",
     ":arm_sve",
     ":arm_vector_types",
-    ":riscv_vector",
     ":hlsl_alias_intrinsics_gen",
     ":hlsl_inline_intrinsics_gen",
+    ":riscv_vector",
   ]
   sources = []
   foreach(dep, deps) {
@@ -118,6 +118,7 @@ copy("Headers") {
     "__clang_hip_runtime_wrapper.h",
     "__clang_hip_stdlib.h",
     "__clang_spirv_builtins.h",
+    "__clang_spirv_libdevice_declares.h",
     "__float_float.h",
     "__float_header_macro.h",
     "__float_infinity_nan.h",
