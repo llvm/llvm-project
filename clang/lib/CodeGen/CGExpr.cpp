@@ -2756,6 +2756,10 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
             Builder.getInt1Ty(), IRStoreTy->getPrimitiveSizeInBits());
         Vec = Builder.CreateBitCast(Vec, IRVecTy);
         // iN --> <N x i1>.
+
+        if(SrcVal->getType() != Builder.getInt1Ty()){
+            SrcVal = Builder.CreateTrunc(SrcVal,Builder.getInt1Ty());
+        }
       }
 
       // Allow inserting `<1 x T>` into an `<N x T>`. It can happen with scalar
