@@ -208,17 +208,17 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
   if (scope.isEHCleanup())
     scope.setTestFlagInEHCleanup();
 
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
   // If the cleanup block doesn't exist yet, create it and set its initial
   // value to `true`. If we are inside a conditional branch, the value must be
   // initialized before the conditional branch begins.
   Address var = scope.getActiveFlag();
   if (!var.isValid()) {
-    CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Location loc = builder.getUnknownLoc();
-    cir::BoolType boolTy = builder.getBoolTy();
 
-    var = cgf.createTempAllocaWithoutCast(boolTy, CharUnits::One(), loc,
-                                          "cleanup.isactive");
+    var = cgf.createTempAllocaWithoutCast(builder.getBoolTy(), CharUnits::One(),
+                                          loc, "cleanup.isactive");
     scope.setActiveFlag(var);
 
     assert(dominatingIP && "no existing variable and no dominating IP!");
@@ -236,7 +236,6 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
   // The code above sets the `isActive` flag to `true` as its initial state
   // at the point where the variable is created. The code below sets it to
   // `false` at the point where the cleanup is deactivated.
-  CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
   builder.createFlagStore(loc, false, var.getPointer());
 }
