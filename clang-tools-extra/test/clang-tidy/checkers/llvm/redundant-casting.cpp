@@ -273,11 +273,15 @@ void testCastNonLLVMUnresolved(T& value) {
   (void)a27;
 }
 
-// FIXME: llvm namespace doesn't need to be explicit
 namespace llvm {
+namespace magic {
 template<typename T>
 void testCastImplicitlyLLVMUnresolved(T& value) {
   T& a28 = cast<T>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:20: note: source expression has type 'T'
+  // CHECK-FIXES: T& a28 = value;
   (void)a28;
 }
+} // namespace magic
 } // namespace llvm

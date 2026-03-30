@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantCastingCheck.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
@@ -53,7 +54,13 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
                     .bind("callee")))));
   Finder->addMatcher(callExpr(AnyCalleeName).bind("call"), this);
   Finder->addMatcher(
-      callExpr(AnyCalleeNameInUninstantiatedTemplate).bind("call"), this);
+      callExpr(
+          AnyCalleeNameInUninstantiatedTemplate,
+          optionally(hasAncestor(
+              namespaceDecl(hasName("llvm"), hasParent(translationUnitDecl()))
+                  .bind("llvm_ns"))))
+          .bind("call"),
+      this);
 }
 
 static QualType stripPointerOrReference(QualType Ty) {
@@ -91,8 +98,10 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
                  Nodes.getNodeAs<UnresolvedLookupExpr>("callee")) {
     if (UnresolvedCallee->getNumTemplateArgs() != 1)
       return;
-    const bool IsExplicitlyLLVM = isLLVMNamespace(UnresolvedCallee->getQualifier());
-    if (!IsExplicitlyLLVM)
+    const bool IsExplicitlyLLVM =
+        isLLVMNamespace(UnresolvedCallee->getQualifier());
+    const auto *CallerNS = Nodes.getNodeAs<NamedDecl>("llvm_ns");
+    if (!IsExplicitlyLLVM && !CallerNS)
       return;
     auto TArg = UnresolvedCallee->template_arguments()[0].getArgument();
     if (TArg.getKind() != TemplateArgument::Type)
