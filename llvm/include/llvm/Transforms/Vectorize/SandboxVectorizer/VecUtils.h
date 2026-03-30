@@ -85,11 +85,6 @@ public:
     }
     return true;
   }
-  template <typename LoadOrStoreT>
-  static bool areConsecutive(ArrayRef<Value *> Bndl, ScalarEvolution &SE,
-                             const DataLayout &DL) {
-    return areConsecutive<LoadOrStoreT, Value>(Bndl, SE, DL);
-  }
 
   /// \Returns the number of vector lanes of \p Ty or 1 if not a vector.
   /// NOTE: It asserts that \p Ty is a fixed vector type.
@@ -133,15 +128,8 @@ public:
     unsigned TotalBits = 0;
     unsigned MinElmBits = std::numeric_limits<unsigned>::max();
     Type *MinElmTy = nullptr;
-    bool LastIsFloat = false;
     for (auto [Idx, V] : enumerate(Bndl)) {
       Type *ElmTy = getElementType(Utils::getExpectedType(V));
-
-      // Reject mixed integer/float types.
-      bool IsFloat = ElmTy->isFloatingPointTy();
-      if (Idx != 0 && IsFloat != LastIsFloat)
-        return nullptr;
-      LastIsFloat = IsFloat;
 
       unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
       TotalBits += ElmBits * VecUtils::getNumLanes(V);

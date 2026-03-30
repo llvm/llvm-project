@@ -491,12 +491,18 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
             sandboxir::FixedVectorType::get(I8Ty, 5));
 
   // Mix float and integer.
-  EXPECT_EQ(
-      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i32, Store_f32}, DL),
-      nullptr);
-  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
-                {Store_f32, Store_2xi8}, DL),
-            nullptr);
+  {
+    auto *CVTy = sandboxir::VecUtils::getCombinedVectorTypeFor(
+        {Store_i32, Store_f32}, DL);
+    EXPECT_EQ(cast<sandboxir::FixedVectorType>(CVTy)->getNumElements(), 2u);
+    EXPECT_EQ(CVTy->getScalarSizeInBits(), 32u);
+  }
+  {
+    auto *CVTy = sandboxir::VecUtils::getCombinedVectorTypeFor(
+        {Store_f32, Store_2xi8}, DL);
+    EXPECT_EQ(cast<sandboxir::FixedVectorType>(CVTy)->getNumElements(), 6u);
+    EXPECT_EQ(CVTy->getScalarSizeInBits(), 8u);
+  }
 }
 
 TEST_F(VecUtilsTest, GetLowest) {

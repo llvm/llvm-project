@@ -38,7 +38,7 @@ std::optional<Type *> LoadStoreVec::canVectorize(ArrayRef<Instruction *> Bndl,
   bool IsFloat = false;
   bool IsInteger = false;
   for ([[maybe_unused]] auto *I : Bndl) {
-    if (Utils::getExpectedType(Bndl[0])->isFloatingPointTy())
+    if (Utils::getExpectedType(I)->getScalarType()->isFloatingPointTy())
       IsFloat = true;
     else
       IsInteger = true;
@@ -46,15 +46,11 @@ std::optional<Type *> LoadStoreVec::canVectorize(ArrayRef<Instruction *> Bndl,
   if (IsFloat && IsInteger)
     return std::nullopt;
 
-  Type *VecTy = VecUtils::getCombinedVectorTypeFor(Bndl, *DL);
-  if (VecTy == nullptr)
-    return std::nullopt;
-
   // Check scheduling.
   if (!Sched.trySchedule(Bndl))
     return std::nullopt;
 
-  return VecTy;
+  return VecUtils::getCombinedVectorTypeFor(Bndl, *DL);
 }
 
 void LoadStoreVec::tryEraseDeadInstrs(ArrayRef<Instruction *> Stores,
