@@ -159,6 +159,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   }
 
   // Write AddrOffsets section.
+  O.alignTo(AddrOffSize);
   assert(O.tell() == AddrOffsetsOffset);
   encodeAddrOffsets(O, AddrOffSize, *BaseAddr);
 

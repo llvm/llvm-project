@@ -104,7 +104,7 @@ GsymReader::copyBuffer(StringRef Bytes) {
 }
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
-  switch (CachedAddrOffSize) {
+  switch (getAddressOffsetByteSize()) {
   case 1: return addressForIndex<uint8_t>(Index);
   case 2: return addressForIndex<uint16_t>(Index);
   case 4: return addressForIndex<uint32_t>(Index);
@@ -121,10 +121,12 @@ std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
 
 Expected<uint64_t>
 GsymReader::getAddressIndex(const uint64_t Addr) const {
-  if (Addr >= CachedBaseAddress) {
-    const uint64_t AddrOffset = Addr - CachedBaseAddress;
+  const uint64_t BaseAddress = getBaseAddress();
+  if (Addr >= BaseAddress) {
+    const uint64_t AddrOffset = Addr - BaseAddress;
     std::optional<uint64_t> AddrOffsetIndex;
-    switch (CachedAddrOffSize) {
+    const uint64_t AddressOffsetByteSize = getAddressOffsetByteSize();
+    switch (AddressOffsetByteSize) {
     case 1:
       AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
       break;
@@ -139,8 +141,8 @@ GsymReader::getAddressIndex(const uint64_t Addr) const {
       break;
     default:
       return createStringError(std::errc::invalid_argument,
-                               "unsupported address offset size %u",
-                               CachedAddrOffSize);
+                               "unsupported address offset size %" PRIu64,
+                               AddressOffsetByteSize);
     }
     if (AddrOffsetIndex)
       return *AddrOffsetIndex;

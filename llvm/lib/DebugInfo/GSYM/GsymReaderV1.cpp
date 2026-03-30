@@ -84,11 +84,6 @@ llvm::Error GsymReaderV1::parse() {
   if (Error Err = Hdr->checkForError())
     return Err;
 
-  // Populate cached header values in the base class.
-  CachedBaseAddress = Hdr->BaseAddress;
-  CachedNumAddresses = Hdr->NumAddresses;
-  CachedAddrOffSize = Hdr->AddrOffSize;
-
   if (!Swap) {
     if (FileData.padToAlignment(Hdr->AddrOffSize) ||
         FileData.readArray(AddrOffsets,
@@ -182,7 +177,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "Address Table:\n";
   OS << "INDEX  OFFSET";
 
-  switch (CachedAddrOffSize) {
+  switch (getAddressOffsetByteSize()) {
   case 1: OS << "8 "; break;
   case 2: OS << "16"; break;
   case 4: OS << "32"; break;
@@ -191,9 +186,9 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   }
   OS << " (ADDRESS)\n";
   OS << "====== =============================== \n";
-  for (uint32_t I = 0; I < CachedNumAddresses; ++I) {
+  for (uint32_t I = 0; I < getNumAddresses(); ++I) {
     OS << format("[%4u] ", I);
-    switch (CachedAddrOffSize) {
+    switch (getAddressOffsetByteSize()) {
     case 1: OS << HEX8(getAddrOffsets<uint8_t>()[I]); break;
     case 2: OS << HEX16(getAddrOffsets<uint16_t>()[I]); break;
     case 4: OS << HEX32(getAddrOffsets<uint32_t>()[I]); break;
@@ -205,7 +200,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "\nAddress Info Offsets:\n";
   OS << "INDEX  Offset\n";
   OS << "====== ==========\n";
-  for (uint32_t I = 0; I < CachedNumAddresses; ++I)
+  for (uint32_t I = 0; I < getNumAddresses(); ++I)
     OS << format("[%4u] ", I) << HEX32(AddrInfoOffsets[I]) << "\n";
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
@@ -218,7 +213,7 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   }
   OS << "\n" << StrTab << "\n";
 
-  for (uint32_t I = 0; I < CachedNumAddresses; ++I) {
+  for (uint32_t I = 0; I < getNumAddresses(); ++I) {
     OS << "FunctionInfo @ " << HEX32(AddrInfoOffsets[I]) << ": ";
     if (auto FI = getFunctionInfoAtIndex(I))
       dump(OS, *FI);

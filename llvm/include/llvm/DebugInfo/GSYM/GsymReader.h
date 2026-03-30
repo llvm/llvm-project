@@ -55,18 +55,26 @@ protected:
   ArrayRef<FileEntry> Files;
   StringTable StrTab;
 
-  /// Cached header values, populated by subclass parse().
-  /// These allow shared methods to access common header fields without
-  /// needing the version-specific header type.
-  uint64_t CachedBaseAddress = 0;
-  uint32_t CachedNumAddresses = 0;
-  uint8_t CachedAddrOffSize = 0;
-
   GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
 
 public:
   LLVM_ABI GsymReader(GsymReader &&RHS);
   virtual ~GsymReader() = default;
+
+  /// Get the base address of this GSYM file.
+  virtual uint64_t getBaseAddress() const = 0;
+
+  /// Get the number of addresses in this GSYM file.
+  virtual uint64_t getNumAddresses() const = 0;
+
+  /// Get the address offset byte size for this GSYM file.
+  virtual uint64_t getAddressOffsetByteSize() const = 0;
+
+  /// Get the address info offset byte size for this GSYM file.
+  virtual uint64_t getAddressInfoOffsetByteSize() const = 0;
+
+  /// Get the string offset byte size for this GSYM file.
+  virtual uint64_t getStringOffsetByteSize() const = 0;
 
   /// Construct a GsymReader from a file on disk, auto-detecting the format
   /// version.
@@ -265,11 +273,6 @@ public:
   /// \param FE The object to dump.
   LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 
-  /// Get the number of addresses in this Gsym file.
-  uint32_t getNumAddresses() const {
-    return CachedNumAddresses;
-  }
-
   /// Gets an address from the address table.
   ///
   /// Addresses are stored as offsets from the base address.
@@ -312,7 +315,7 @@ protected:
   std::optional<uint64_t> addressForIndex(size_t Index) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
     if (Index < AIO.size())
-      return AIO[Index] + CachedBaseAddress;
+      return AIO[Index] + getBaseAddress();
     return std::nullopt;
   }
   /// Lookup an address offset in the AddrOffsets table.

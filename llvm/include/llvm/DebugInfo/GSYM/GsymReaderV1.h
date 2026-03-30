@@ -43,6 +43,12 @@ public:
 
   LLVM_ABI const Header &getHeader() const;
 
+  uint64_t getBaseAddress() const override { return getHeader().BaseAddress; }
+  uint64_t getNumAddresses() const override { return getHeader().NumAddresses; }
+  uint64_t getAddressOffsetByteSize() const override { return getHeader().AddrOffSize; }
+  uint64_t getAddressInfoOffsetByteSize() const override { return 4; }
+  uint64_t getStringOffsetByteSize() const override { return 4; }
+
   using GsymReader::dump;
   LLVM_ABI void dump(raw_ostream &OS) override;
 };

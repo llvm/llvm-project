@@ -15,7 +15,9 @@
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreatorV1.h"
+#include "llvm/DebugInfo/GSYM/GsymCreatorV2.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
+#include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
@@ -1040,9 +1042,9 @@ TEST(GSYMTest, TestGsymCreatorV1EncodeErrors) {
                              "attempted to encode invalid InlineInfo object");
 }
 
-static void Compare(const GsymCreatorV1 &GC, const GsymReaderV1 &GR) {
-  // Verify that all of the data in a GsymCreatorV1 is correctly decoded from
-  // a GsymReaderV1. To do this, we iterator over
+static void Compare(const GsymCreator &GC, const GsymReader &GR) {
+  // Verify that all of the data in a GsymCreator is correctly decoded from
+  // a GsymReader. To do this, we iterate over
   GC.forEachFunctionInfo([&](const FunctionInfo &FI) -> bool {
     auto DecodedFI = GR.getFunctionInfo(FI.Range.start());
     EXPECT_TRUE(bool(DecodedFI));
@@ -1051,30 +1053,26 @@ static void Compare(const GsymCreatorV1 &GC, const GsymReaderV1 &GR) {
   });
 }
 
-static void TestEncodeDecode(const GsymCreatorV1 &GC, llvm::endianness ByteOrder,
-                             uint16_t Version, uint8_t AddrOffSize,
-                             uint64_t BaseAddress, uint32_t NumAddresses,
-                             ArrayRef<uint8_t> UUID) {
+static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
+                             uint8_t AddrOffSize, uint64_t BaseAddress,
+                             uint32_t NumAddresses) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_TRUE(bool(GR));
-  const Header &Hdr = GR->getHeader();
-  EXPECT_EQ(Hdr.Version, Version);
-  EXPECT_EQ(Hdr.AddrOffSize, AddrOffSize);
-  EXPECT_EQ(Hdr.UUIDSize, UUID.size());
-  EXPECT_EQ(Hdr.BaseAddress, BaseAddress);
-  EXPECT_EQ(Hdr.NumAddresses, NumAddresses);
-  EXPECT_EQ(ArrayRef<uint8_t>(Hdr.UUID, Hdr.UUIDSize), UUID);
-  Compare(GC, GR.get());
+  EXPECT_EQ((*GR)->getAddressOffsetByteSize(), AddrOffSize);
+  EXPECT_EQ((*GR)->getBaseAddress(), BaseAddress);
+  EXPECT_EQ((*GR)->getNumAddresses(), NumAddresses);
+  Compare(GC, **GR);
 }
 
-TEST(GSYMTest, TestGsymCreatorV11ByteAddrOffsets) {
+template <typename CreatorT>
+static void TestGsymCreator1ByteAddrOffsetsImpl() {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreatorV1 GC;
+  CreatorT GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 1;
@@ -1085,19 +1083,21 @@ TEST(GSYMTest, TestGsymCreatorV11ByteAddrOffsets) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   2, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   2, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
+  TestEncodeDecode(GC, llvm::endianness::little, AddrOffSize, BaseAddr, 2);
+  TestEncodeDecode(GC, llvm::endianness::big, AddrOffSize, BaseAddr, 2);
 }
 
-TEST(GSYMTest, TestGsymCreatorV12ByteAddrOffsets) {
+TEST(GSYMTest, TestGsymCreatorV11ByteAddrOffsets) {
+  TestGsymCreator1ByteAddrOffsetsImpl<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestGsymCreatorV21ByteAddrOffsets) {
+  TestGsymCreator1ByteAddrOffsetsImpl<GsymCreatorV2>();
+}
+
+template <typename CreatorT>
+static void TestGsymCreator2ByteAddrOffsetsImpl() {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreatorV1 GC;
+  CreatorT GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 2;
@@ -1108,19 +1108,21 @@ TEST(GSYMTest, TestGsymCreatorV12ByteAddrOffsets) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   2, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   2, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
+  TestEncodeDecode(GC, llvm::endianness::little, AddrOffSize, BaseAddr, 2);
+  TestEncodeDecode(GC, llvm::endianness::big, AddrOffSize, BaseAddr, 2);
 }
 
-TEST(GSYMTest, TestGsymCreatorV14ByteAddrOffsets) {
+TEST(GSYMTest, TestGsymCreatorV12ByteAddrOffsets) {
+  TestGsymCreator2ByteAddrOffsetsImpl<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestGsymCreatorV22ByteAddrOffsets) {
+  TestGsymCreator2ByteAddrOffsetsImpl<GsymCreatorV2>();
+}
+
+template <typename CreatorT>
+static void TestGsymCreator4ByteAddrOffsetsImpl() {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreatorV1 GC;
+  CreatorT GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 4;
@@ -1131,19 +1133,21 @@ TEST(GSYMTest, TestGsymCreatorV14ByteAddrOffsets) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   2, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   2, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
+  TestEncodeDecode(GC, llvm::endianness::little, AddrOffSize, BaseAddr, 2);
+  TestEncodeDecode(GC, llvm::endianness::big, AddrOffSize, BaseAddr, 2);
 }
 
-TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
+TEST(GSYMTest, TestGsymCreatorV14ByteAddrOffsets) {
+  TestGsymCreator4ByteAddrOffsetsImpl<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestGsymCreatorV24ByteAddrOffsets) {
+  TestGsymCreator4ByteAddrOffsetsImpl<GsymCreatorV2>();
+}
+
+template <typename CreatorT>
+static void TestGsymCreator8ByteAddrOffsetsImpl() {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreatorV1 GC;
+  CreatorT GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 8;
@@ -1154,33 +1158,35 @@ TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   2, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   2, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
+  TestEncodeDecode(GC, llvm::endianness::little, AddrOffSize, BaseAddr, 2);
+  TestEncodeDecode(GC, llvm::endianness::big, AddrOffSize, BaseAddr, 2);
 }
 
-static void VerifyFunctionInfo(const GsymReaderV1 &GR, uint64_t Addr,
+TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
+  TestGsymCreator8ByteAddrOffsetsImpl<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestGsymCreatorV28ByteAddrOffsets) {
+  TestGsymCreator8ByteAddrOffsetsImpl<GsymCreatorV2>();
+}
+
+static void VerifyFunctionInfo(const GsymReader &GR, uint64_t Addr,
                                const FunctionInfo &FI) {
   auto ExpFI = GR.getFunctionInfo(Addr);
   ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
   ASSERT_EQ(FI, ExpFI.get());
 }
 
-static void VerifyFunctionInfoError(const GsymReaderV1 &GR, uint64_t Addr,
+static void VerifyFunctionInfoError(const GsymReader &GR, uint64_t Addr,
                                     std::string ErrMessage) {
   auto ExpFI = GR.getFunctionInfo(Addr);
   ASSERT_FALSE(bool(ExpFI));
   checkError(ErrMessage, ExpFI.takeError());
 }
 
-TEST(GSYMTest, TestGsymReaderV1) {
+template <typename CreatorT>
+static void TestGsymReaderImpl() {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreatorV1 GC;
+  CreatorT GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint64_t Func1Addr = BaseAddr;
@@ -1199,8 +1205,8 @@ TEST(GSYMTest, TestGsymReaderV1) {
   FileWriter FW(OutStrm, ByteOrder);
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
-  if (auto ExpectedGR = GsymReaderV1::copyBuffer(OutStrm.str())) {
-    const GsymReaderV1 &GR = ExpectedGR.get();
+  if (auto ExpectedGR = GsymReader::copyBuffer(OutStrm.str())) {
+    const GsymReader &GR = **ExpectedGR;
     VerifyFunctionInfoError(GR, Func1Addr-1, "address 0xfff is not in GSYM");
 
     FunctionInfo Func1(Func1Addr, FuncSize, Func1Name);
@@ -1219,13 +1225,17 @@ TEST(GSYMTest, TestGsymReaderV1) {
   }
 }
 
-TEST(GSYMTest, TestGsymLookups) {
+TEST(GSYMTest, TestGsymReaderV1) { TestGsymReaderImpl<GsymCreatorV1>(); }
+TEST(GSYMTest, TestGsymReaderV2) { TestGsymReaderImpl<GsymCreatorV2>(); }
+
+template <typename CreatorT>
+static void TestGsymLookupsImpl() {
   // Test creating a GSYM file with a function that has a inline information.
   // Verify that lookups work correctly. Lookups do not decode the entire
   // FunctionInfo or InlineInfo, they only extract information needed for the
   // lookup to happen which avoids allocations which can slow down
   // symbolication.
-  GsymCreatorV1 GC;
+  CreatorT GC;
   FunctionInfo FI(0x1000, 0x100, GC.insertString("main"));
   const auto ByteOrder = llvm::endianness::native;
   FI.OptLineTable = LineTable();
@@ -1265,57 +1275,61 @@ TEST(GSYMTest, TestGsymLookups) {
   FileWriter FW(OutStrm, ByteOrder);
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
-  Expected<GsymReaderV1> GR = GsymReaderV1::copyBuffer(OutStrm.str());
-  ASSERT_TRUE(bool(GR));
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_TRUE(bool(GROrErr));
+  const GsymReader &GR = **GROrErr;
 
   // Verify inline info is correct when doing lookups.
-  auto LR = GR->lookup(0x1000);
+  auto LR = GR.lookup(0x1000);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5}));
-  LR = GR->lookup(0x100F);
+  LR = GR.lookup(0x100F);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5, 15}));
 
-  LR = GR->lookup(0x1010);
+  LR = GR.lookup(0x1010);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
 
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 10},
                          SourceLocation{"main", "/tmp", "main.c", 6, 16}));
 
-  LR = GR->lookup(0x1012);
+  LR = GR.lookup(0x1012);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline2", "/tmp", "foo.h", 20},
                          SourceLocation{"inline1", "/tmp", "foo.h", 33, 2},
                          SourceLocation{"main", "/tmp", "main.c", 6, 18}));
 
-  LR = GR->lookup(0x1014);
+  LR = GR.lookup(0x1014);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 11, 4},
                          SourceLocation{"main", "/tmp", "main.c", 6, 20}));
 
-  LR = GR->lookup(0x1016);
+  LR = GR.lookup(0x1016);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline3", "/tmp", "foo.h", 30},
                          SourceLocation{"inline1", "/tmp", "foo.h", 35, 6},
                          SourceLocation{"main", "/tmp", "main.c", 6, 22}));
 
-  LR = GR->lookup(0x1018);
+  LR = GR.lookup(0x1018);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 12, 8},
                          SourceLocation{"main", "/tmp", "main.c", 6, 24}));
 
-  LR = GR->lookup(0x1020);
+  LR = GR.lookup(0x1020);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
     testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8, 32}));
 }
+
+TEST(GSYMTest, TestGsymLookups) { TestGsymLookupsImpl<GsymCreatorV1>(); }
+TEST(GSYMTest, TestGsymLookupsV2) { TestGsymLookupsImpl<GsymCreatorV2>(); }
 
 
 TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
@@ -2470,12 +2484,13 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
   EXPECT_EQ(MethodName, "main");
 }
 
-TEST(GSYMTest, TestGsymCreatorV1MultipleSymbolsWithNoSize) {
+template <typename CreatorT>
+static void TestGsymCreatorMultipleSymbolsWithNoSizeImpl() {
   // Multiple symbols at the same address with zero size were being emitted
   // instead of being combined into a single entry. This function tests to make
   // sure we only get one symbol.
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  GsymCreatorV1 GC;
+  CreatorT GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint8_t AddrOffSize = 1;
@@ -2486,14 +2501,15 @@ TEST(GSYMTest, TestGsymCreatorV1MultipleSymbolsWithNoSize) {
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   1, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
-  TestEncodeDecode(GC, llvm::endianness::big, GSYM_VERSION_1, AddrOffSize,
-                   BaseAddr,
-                   1, // NumAddresses
-                   ArrayRef<uint8_t>(UUID));
+  TestEncodeDecode(GC, llvm::endianness::little, AddrOffSize, BaseAddr, 1);
+  TestEncodeDecode(GC, llvm::endianness::big, AddrOffSize, BaseAddr, 1);
+}
+
+TEST(GSYMTest, TestGsymCreatorV1MultipleSymbolsWithNoSize) {
+  TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestGsymCreatorV2MultipleSymbolsWithNoSize) {
+  TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV2>();
 }
 
 // Helper function to quickly create a FunctionInfo in a GsymCreatorV1 for testing.
