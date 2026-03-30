@@ -35,16 +35,24 @@ static Expected<uint16_t> checkMagicAndDetectVersion(StringRef Data) {
   if (Data.size() < 6)
     return createStringError(std::errc::invalid_argument,
                              "data too small to be a GSYM file");
-  uint32_t Magic;
-  memcpy(&Magic, Data.data(), 4);
-  if (Magic != GSYM_MAGIC && Magic != llvm::byteswap(GSYM_MAGIC))
+  const bool IsHostLittleEndian = llvm::endianness::native == llvm::endianness::little;
+  DataExtractor DE(Data, IsHostLittleEndian, 4);
+  uint64_t Offset = 0;
+  uint32_t Magic = DE.getU32(&Offset);
+  bool NeedSwap;
+  if (Magic == GSYM_MAGIC)
+    NeedSwap = false;
+  else if (Magic == GSYM_CIGAM)
+    NeedSwap = true;
+  else
     return createStringError(std::errc::invalid_argument,
                              "not a GSYM file (bad magic)");
-  uint16_t Version;
-  memcpy(&Version, Data.data() + 4, 2);
-  if (Magic != GSYM_MAGIC)
-    Version = llvm::byteswap(Version);
-  return Version;
+  if (NeedSwap) {
+    // Re-create DataExtractor with swapped endianness to read version.
+    DE = DataExtractor(Data, !IsHostLittleEndian, 4);
+    Offset = 4;
+  }
+  return DE.getU16(&Offset);
 }
 
 llvm::Expected<std::unique_ptr<GsymReader>>
