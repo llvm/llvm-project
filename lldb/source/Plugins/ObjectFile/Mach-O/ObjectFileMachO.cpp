@@ -829,8 +829,7 @@ ObjectFile *ObjectFileMachO::CreateMemoryInstance(
 
 ModuleSpecList ObjectFileMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length) {
+    lldb::offset_t file_offset, lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
     return {};
 
@@ -838,6 +837,7 @@ ModuleSpecList ObjectFileMachO::GetModuleSpecifications(
   if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
                                        extractor_sp->GetByteSize())) {
     llvm::MachO::mach_header header;
+    offset_t data_offset = 0;
     if (ParseHeader(extractor_sp, &data_offset, header)) {
       size_t header_and_load_cmds =
           header.sizeofcmds + MachHeaderSizeFromMagic(header.magic);

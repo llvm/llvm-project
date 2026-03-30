@@ -211,8 +211,7 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
       if (actual_file_size > file_offset)
         file_size = actual_file_size - file_offset;
     }
-    return ObjectFile::GetModuleSpecifications(file, extractor_sp,
-                                               /*data_offset=*/0, file_offset,
+    return ObjectFile::GetModuleSpecifications(file, extractor_sp, file_offset,
                                                file_size);
   }
   return {};
@@ -220,12 +219,11 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
 
 ModuleSpecList ObjectFile::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size) {
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
   // Try the ObjectFile plug-ins
   for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
     ModuleSpecList specs = cbs.get_module_specifications(
-        file, extractor_sp, data_offset, file_offset, file_size);
+        file, extractor_sp, file_offset, file_size);
     if (specs.GetSize() > 0)
       return specs;
   }
@@ -233,7 +231,7 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
   // Try the ObjectContainer plug-ins
   for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
     ModuleSpecList specs = cbs.get_module_specifications(
-        file, extractor_sp, data_offset, file_offset, file_size);
+        file, extractor_sp, file_offset, file_size);
     if (specs.GetSize() > 0)
       return specs;
   }
