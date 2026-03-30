@@ -102,24 +102,20 @@ INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
     void *new_ptr = __lowfat::Allocate(size);
     if (!new_ptr)
       return nullptr;
-    // Copy old data. For LowFat pointers, old size = size class.
-    // For system pointers, we don't know exact old size, copy 'size' bytes.
+    // Copy old data. For LowFat pointers, cap the copy to the bytes reachable
+    // from the returned pointer to the end of the slot. In right-align mode
+    // the user pointer may be shifted within the slot, so copying from the
+    // slot base would corrupt the preserved contents.
     uptr copy_size = size;
     if (old_is_lowfat) {
       uptr old_class_size = __lowfat::GetSize((uptr)ptr);
-      if (old_class_size < copy_size)
-        copy_size = old_class_size;
+      uptr old_base = __lowfat::GetBase((uptr)ptr);
+      uptr old_offset = (uptr)ptr - old_base;
+      uptr old_usable = old_class_size - old_offset;
+      if (old_usable < copy_size)
+        copy_size = old_usable;
     }
-    // In right-align mode the returned pointer may be shifted within its slot
-    // to the highest malloc-aligned address that still fits the object.
-    // Copying 'copy_size' bytes from 'ptr' would read past the slot end.
-    // Instead copy from the slot base so we stay within the mapped region.
-    // The user data starts at ptr, but copying from the base is safe since
-    // the left padding is zeroed on allocation and belongs to the same slot.
-    const void *copy_src = __lowfat::lowfat_right_align && old_is_lowfat
-                               ? (const void *)__lowfat::GetBase((uptr)ptr)
-                               : ptr;
-    internal_memcpy(new_ptr, copy_src, copy_size);
+    internal_memcpy(new_ptr, ptr, copy_size);
     // Free old
     if (old_is_lowfat)
       __lowfat::Deallocate(ptr);
