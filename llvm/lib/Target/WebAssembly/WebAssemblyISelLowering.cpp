@@ -3541,23 +3541,23 @@ static SDValue combineSmallMaskReduction(SDNode *N, EVT FromVT,
                                          unsigned NumElts,
                                          const MaskReduceInfo &Info,
                                          SelectionDAG &DAG) {
-  EVT VecVT = FromVT.changeVectorElementType(
-      *DAG.getContext(), MVT::getIntegerVT(128 / NumElts));
+  EVT VecVT = FromVT.changeVectorElementType(*DAG.getContext(),
+                                             MVT::getIntegerVT(128 / NumElts));
 
   switch (Info.Kind) {
   case MaskReduceKind::AnyTrue:
     if (!Info.Invert)
       return TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
           N, VecVT, DAG);
-    return TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(
-        N, VecVT, DAG);
+    return TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(N, VecVT,
+                                                                      DAG);
 
   case MaskReduceKind::AllTrue:
     if (!Info.Invert)
       return TryMatchTrue<-1, ISD::SETEQ, false, Intrinsic::wasm_alltrue>(
           N, VecVT, DAG);
-    return TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(
-        N, VecVT, DAG);
+    return TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(N, VecVT,
+                                                                       DAG);
   }
 
   llvm_unreachable("unexpected mask reduction kind");
