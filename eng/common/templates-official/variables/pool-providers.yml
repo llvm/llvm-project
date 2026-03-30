@@ -23,7 +23,7 @@
 #
 #        pool:
 #           name: $(DncEngInternalBuildPool)
-#           image: 1es-windows-2022
+#           image: windows.vs2026.amd64
 
 variables:
   # Coalesce the target and source branches so we know when a PR targets a release branch

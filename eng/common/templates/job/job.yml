@@ -61,16 +61,16 @@ jobs:
               sbomEnabled: false  # we don't need SBOM for logs
 
     - ${{ if ne(parameters.enablePublishBuildArtifacts, 'false') }}:
-      - template: /eng/common/core-templates/steps/publish-build-artifacts.yml
+      - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
         parameters:
           is1ESPipeline: false
           args:
             displayName: Publish Logs
-            pathToPublish: '$(Build.ArtifactStagingDirectory)/artifacts/log/$(_BuildConfig)'
-            publishLocation: Container
+            targetPath: '$(Build.ArtifactStagingDirectory)/artifacts/log/$(_BuildConfig)'
             artifactName: ${{ coalesce(parameters.enablePublishBuildArtifacts.artifactName, '$(Agent.Os)_$(Agent.JobName)_Attempt$(System.JobAttempt)' ) }}
             continueOnError: true
             condition: always()
+            sbomEnabled: false
 
     - ${{ if eq(parameters.enableBuildRetry, 'true') }}:
       - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml

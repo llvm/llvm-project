@@ -44,11 +44,10 @@ jobs:
             sbomEnabled: false  # we don't need SBOM for logs
 
       - ${{ if eq(parameters.enablePublishBuildArtifacts, true) }}:
-        - output: buildArtifacts
+        - output: pipelineArtifact
           displayName: Publish Logs
-          PathtoPublish: '$(Build.ArtifactStagingDirectory)/artifacts/log/$(_BuildConfig)'
-          publishLocation: Container
-          ArtifactName: ${{ coalesce(parameters.enablePublishBuildArtifacts.artifactName, '$(Agent.Os)_$(Agent.JobName)_Attempt$(System.JobAttempt)' ) }}
+          targetPath: '$(Build.ArtifactStagingDirectory)/artifacts/log/$(_BuildConfig)'
+          artifactName: ${{ coalesce(parameters.enablePublishBuildArtifacts.artifactName, '$(Agent.Os)_$(Agent.JobName)_Attempt$(System.JobAttempt)' ) }}
           continueOnError: true
           condition: always()
           sbomEnabled: false  # we don't need SBOM for logs
