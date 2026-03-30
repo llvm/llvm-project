@@ -227,9 +227,14 @@ size_t parallel::getThreadCount() {
 }
 #endif
 
-// Nested TaskGroups on worker threads use helpSync() which executes tasks from
-// the queue while waiting, preventing deadlock while enabling nested
-// parallelism.
+static bool isNested() {
+#if LLVM_ENABLE_THREADS
+  return threadIndex != UINT_MAX;
+#else
+  return false;
+#endif
+}
+
 TaskGroup::TaskGroup()
     : Parallel(
 #if LLVM_ENABLE_THREADS
@@ -239,10 +244,11 @@ TaskGroup::TaskGroup()
 #endif
       ) {
 }
+
 TaskGroup::~TaskGroup() {
 #if LLVM_ENABLE_THREADS
   // In a nested TaskGroup (threadIndex != -1u), actively help drain the queue.
-  if (Parallel && threadIndex != UINT_MAX)
+  if (Parallel && isNested())
     getDefaultExecutor()->helpSync(L);
 #endif
   L.sync();
