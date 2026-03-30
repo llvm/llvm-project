@@ -112,10 +112,20 @@ Please follow the steps below if you only want to **build** lldb.
    ``dirname`` are available from your terminal.
 3. Install `make <https://sourceforge.net/projects/ezwinports/files/>`_ and
    verify that it's in your ``PATH``.
-4. Install `Python 3 <https://www.python.org/downloads/windows/>`_ from the
-   GUI installer. If you will be building LLDB in Debug mode, **include the
-   debug libraries** during the install. Make sure ``python`` is added to your
-   ``PATH``.
+4. Install `Python 3 <https://www.python.org/downloads/windows/>`_. Either using
+   the "Windows Installer" or "Python Install Manager". Make sure ``python`` is
+   added to your ``PATH``.
+
+   .. note::
+      Building LLDB in debug mode requires a debug version of Python (because
+      all parts of a debug build must use the debug C runtime).
+
+      If you use the "Windows installer", **include the debug libraries** during
+      the install.
+
+      The "Python Install Manager" has no way to install debug libraries, so you
+      must `build <https://devguide.python.org/getting-started/setup-building/>`_
+      a debug version of Python yourself.
 5. Install `SWIG for Windows <http://www.swig.org/download.html>`_. Make sure
    ``swig`` is added to your ``PATH`` and that ``swig -swiglib`` points to the
    correct directory.

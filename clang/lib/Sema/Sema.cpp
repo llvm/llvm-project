@@ -1420,22 +1420,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   // in the module purview but has no definition before the end of the TU or
   // the start of a Private Module Fragment (if one is present).
   if (!PendingInlineFuncDecls.empty()) {
-    for (auto *D : PendingInlineFuncDecls) {
-      if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-        bool DefInPMF = false;
-        if (auto *FDD = FD->getDefinition()) {
-          DefInPMF = FDD->getOwningModule()->isPrivateModule();
-          if (!DefInPMF)
-            continue;
-        }
-        Diag(FD->getLocation(), diag::err_export_inline_not_defined)
-            << DefInPMF;
-        // If we have a PMF it should be at the end of the ModuleScopes.
-        if (DefInPMF &&
-            ModuleScopes.back().Module->Kind == Module::PrivateModuleFragment) {
-          Diag(ModuleScopes.back().BeginLoc,
-               diag::note_private_module_fragment);
-        }
+    for (auto *FD : PendingInlineFuncDecls) {
+      bool DefInPMF = false;
+      if (auto *FDD = FD->getDefinition()) {
+        DefInPMF = FDD->getOwningModule()->isPrivateModule();
+        if (!DefInPMF)
+          continue;
+      }
+      Diag(FD->getLocation(), diag::err_export_inline_not_defined) << DefInPMF;
+      // If we have a PMF it should be at the end of the ModuleScopes.
+      if (DefInPMF &&
+          ModuleScopes.back().Module->Kind == Module::PrivateModuleFragment) {
+        Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
       }
     }
     PendingInlineFuncDecls.clear();
@@ -1610,7 +1606,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     emitAndClearUnusedLocalTypedefWarnings();
   }
 
-  if (!Diags.isIgnored(diag::warn_unused_but_set_variable, SourceLocation())) {
+  if (!Diags.isIgnored(diag::warn_unused_but_set_global, SourceLocation())) {
     // Diagnose unused-but-set static globals in a deterministic order.
     // Not tracking shadowing info for static globals; there's nothing to
     // shadow.

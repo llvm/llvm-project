@@ -147,8 +147,9 @@ Sections:
 */
 TEST_F(ObjectFileELFTest, GetModuleSpecifications_EarlySectionHeaders) {
   std::string SO = GetInputFilePath("early-section-headers.so");
-  ModuleSpecList Specs;
-  ASSERT_EQ(1u, ObjectFile::GetModuleSpecifications(FileSpec(SO), 0, 0, Specs));
+  ModuleSpecList Specs =
+      ObjectFile::GetModuleSpecifications(FileSpec(SO), 0, 0);
+  ASSERT_EQ(Specs.GetSize(), 1u);
   ModuleSpec Spec;
   ASSERT_TRUE(Specs.GetModuleSpecAtIndex(0, Spec)) ;
   UUID Uuid;
@@ -158,8 +159,9 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_EarlySectionHeaders) {
 
 TEST_F(ObjectFileELFTest, GetModuleSpecifications_OffsetSizeWithNormalFile) {
   std::string SO = GetInputFilePath("liboffset-test.so");
-  ModuleSpecList Specs;
-  ASSERT_EQ(1u, ObjectFile::GetModuleSpecifications(FileSpec(SO), 0, 0, Specs));
+  ModuleSpecList Specs =
+      ObjectFile::GetModuleSpecifications(FileSpec(SO), 0, 0);
+  ASSERT_EQ(Specs.GetSize(), 1u);
   ModuleSpec Spec;
   ASSERT_TRUE(Specs.GetModuleSpecAtIndex(0, Spec)) ;
   UUID Uuid;
@@ -176,9 +178,9 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_OffsetSizeWithOffsetFile) {
   // - 1024-4623: liboffset-test.so (offset: 1024, size: 3600, CRC32: 7D6E4738)
   // - 4624-4639: \0
   std::string SO = GetInputFilePath("offset-test.bin");
-  ModuleSpecList Specs;
-  ASSERT_EQ(
-      1u, ObjectFile::GetModuleSpecifications(FileSpec(SO), 1024, 3600, Specs));
+  ModuleSpecList Specs =
+      ObjectFile::GetModuleSpecifications(FileSpec(SO), 1024, 3600);
+  ASSERT_EQ(Specs.GetSize(), 1u);
   ModuleSpec Spec;
   ASSERT_TRUE(Specs.GetModuleSpecAtIndex(0, Spec)) ;
   UUID Uuid;
@@ -247,7 +249,7 @@ Sections:
   ASSERT_TRUE(entry_point_addr.GetOffset() & 1);
   // Decrease the offsite by 1 to make it into a breakable address since this
   // is Thumb.
-  entry_point_addr.SetOffset(entry_point_addr.GetOffset() - 1);
+  entry_point_addr.Slide(-1);
   ASSERT_EQ(entry_point_addr.GetAddressClass(),
             AddressClass::eCodeAlternateISA);
 }

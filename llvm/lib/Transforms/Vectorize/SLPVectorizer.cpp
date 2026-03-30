@@ -3814,6 +3814,13 @@ private:
                                ArrayRef<Value *> VectorizedVals,
                                SmallPtrSetImpl<Value *> &CheckedExtracts);
 
+  /// Estimates spill/reload cost from vector register pressure for \p E at the
+  /// point of emitting its vector result type \p FinalVecTy.
+  InstructionCost getVectorSpillReloadCost(const TreeEntry *E,
+                                           VectorType *VecTy,
+                                           VectorType *FinalVecTy,
+                                           TTI::TargetCostKind CostKind) const;
+
   /// This is the recursive part of buildTree.
   void buildTreeRec(ArrayRef<Value *> Roots, unsigned Depth, const EdgeInfo &EI,
                     unsigned InterleaveFactor = 0);
@@ -11805,17 +11812,35 @@ public:
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
     if (isCommutative(MainOp)) {
+      Value *BestFrontOp = nullptr;
       for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
         // Make instructions the first operands.
         if (!isa<Instruction>(OpL) && isa<Instruction>(OpR)) {
+          BestFrontOp = OpR;
           std::swap(OpL, OpR);
           continue;
         }
         // Make constants the second operands.
         if ((isa<Constant>(OpL) && !match(OpR, m_Zero())) ||
             match(OpL, m_Zero())) {
+          if (isa<Instruction>(OpR))
+            BestFrontOp = OpR;
           std::swap(OpL, OpR);
           continue;
+        }
+        if (isa<Instruction>(OpL))
+          BestFrontOp = OpL;
+      }
+      // If some of the RHS operands better match most of LHS - swap such
+      // operands to increase matching rate.
+      if (auto *BestLHS = dyn_cast_if_present<Instruction>(BestFrontOp)) {
+        const unsigned BestOpcode = BestLHS->getOpcode();
+        for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
+          auto *OpRI = dyn_cast<Instruction>(OpR);
+          if (!OpRI)
+            continue;
+          if (OpRI->getOpcode() == BestOpcode)
+            std::swap(OpL, OpR);
         }
       }
     }
@@ -13827,7 +13852,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
     return false;
   if (!SelectTE.ReorderIndices.empty() || !SelectTE.ReuseShuffleIndices.empty())
     return false;
-  if (!UserIgnoreList)
+  if (!UserIgnoreList || SelectTE.Idx != 0)
     return false;
   if (any_of(SelectTE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
     return false;
@@ -15484,6 +15509,135 @@ unsigned BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
 }
 
 InstructionCost
+BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
+                                  VectorType *FinalVecTy,
+                                  TTI::TargetCostKind CostKind) const {
+  InstructionCost SpillsReloads = 0;
+
+  // Estimate vector register pressure per target register class: operand
+  // vectors plus the result. The same vector operand is counted once via
+  // CountedOpEntries deduplication. PHIs take the max operand pressure across
+  // incoming slots (only one predecessor is live at a time) plus the result.
+  // All-constant operand bundles are skipped.
+  if (!E->hasState() || E->getOpcode() == Instruction::Store ||
+      E->getOpcode() == Instruction::ExtractElement ||
+      E->getOpcode() == Instruction::ExtractValue ||
+      E->getOpcode() == Instruction::Freeze ||
+      (E->getOpcode() == Instruction::Load &&
+       E->State != TreeEntry::ScatterVectorize))
+    return SpillsReloads;
+
+  const bool IsPHI =
+      E->State == TreeEntry::Vectorize && E->getOpcode() == Instruction::PHI;
+  SmallPtrSet<const TreeEntry *, 8> CountedOpEntries;
+  SmallDenseMap<unsigned, unsigned> PressureByClass;
+  auto AddPartsToClass = [&](unsigned RegClass, unsigned Parts) {
+    assert(Parts != 0 && "Expected non-zero number of parts (registers).");
+    PressureByClass[RegClass] += Parts;
+  };
+
+  auto GetEntryVecTy = [&](const TreeEntry *TE) -> VectorType * {
+    Type *ScalarTy = getValueType(TE->Scalars.front());
+    auto BWIt = MinBWs.find(TE);
+    if (BWIt != MinBWs.end()) {
+      auto *VTy = dyn_cast<FixedVectorType>(ScalarTy);
+      ScalarTy = IntegerType::get(F->getContext(), BWIt->second.first);
+      if (VTy)
+        ScalarTy = getWidenedType(ScalarTy, VTy->getNumElements());
+    }
+    return getWidenedType(ScalarTy, TE->getVectorFactor());
+  };
+
+  if (E->State == TreeEntry::SplitVectorize) {
+    for (const auto [Idx, _] : E->CombinedEntriesWithIndices) {
+      const TreeEntry *OpTE = VectorizableTree[Idx].get();
+
+      if (!CountedOpEntries.insert(OpTE).second)
+        continue;
+      auto *OpVecTy = GetEntryVecTy(OpTE);
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      if (Parts == 0)
+        continue;
+      const unsigned RC =
+          TTI->getRegisterClassForType(/*Vector=*/true, OpVecTy);
+      AddPartsToClass(RC, Parts);
+    }
+  } else if (IsPHI) {
+    // Only one predecessor is live at a time — take the max operand pressure
+    // across incoming slots.
+    SmallDenseMap<unsigned, unsigned> MaxOpPressureByClass;
+    for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
+      const TreeEntry *OpTE = getOperandEntry(E, Idx);
+      auto *OpVecTy = GetEntryVecTy(OpTE);
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      if (Parts == 0)
+        continue;
+      const unsigned RC =
+          TTI->getRegisterClassForType(/*Vector=*/true, OpVecTy);
+      MaxOpPressureByClass[RC] = std::max(MaxOpPressureByClass[RC], Parts);
+    }
+    for (auto [RC, Parts] : MaxOpPressureByClass)
+      AddPartsToClass(RC, Parts);
+  } else {
+    for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
+      // InsertElement operand 0 is the vector being inserted into, which is
+      // built incrementally and does not occupy an extra register.
+      if (E->getOpcode() == Instruction::InsertElement && Idx == 0)
+        continue;
+      ArrayRef<Value *> Ops = E->getOperand(Idx);
+      if (Ops.empty() || allConstant(Ops) || isSplat(Ops))
+        continue;
+      Value *Op = Ops.front();
+      if (!Op)
+        continue;
+      const TreeEntry *OpTE = getOperandEntry(E, Idx);
+
+      if (!CountedOpEntries.insert(OpTE).second)
+        continue;
+      auto *OpVecTy = getWidenedType(Op->getType(), Ops.size());
+      const unsigned Parts = ::getNumberOfParts(*TTI, OpVecTy);
+      if (Parts == 0)
+        continue;
+      const unsigned RC =
+          TTI->getRegisterClassForType(/*Vector=*/true, OpVecTy);
+      AddPartsToClass(RC, Parts);
+    }
+  }
+
+  if (E->getOpcode() != Instruction::Load) {
+    const unsigned ResParts = ::getNumberOfParts(*TTI, VecTy);
+    if (ResParts != 0) {
+      const unsigned RC = TTI->getRegisterClassForType(/*Vector=*/true, VecTy);
+      AddPartsToClass(RC, ResParts);
+    }
+    if (VecTy != FinalVecTy) {
+      const unsigned FinalResParts = ::getNumberOfParts(*TTI, FinalVecTy);
+      if (FinalResParts != 0) {
+        const unsigned RC =
+            TTI->getRegisterClassForType(/*Vector=*/true, FinalVecTy);
+        AddPartsToClass(RC, FinalResParts);
+      }
+    }
+  }
+
+  for (auto [RegClass, UsedRegs] : PressureByClass) {
+    const unsigned NumAvailRegs = TTI->getNumberOfRegisters(RegClass);
+    if (NumAvailRegs == 0 || UsedRegs <= NumAvailRegs)
+      continue;
+    const unsigned SpillCount = UsedRegs - NumAvailRegs;
+    InstructionCost SingleRegSpillReload =
+        TTI->getRegisterClassReloadCost(RegClass, CostKind);
+    // No need to spill cost only for the root entry (Idx == 0), for reduction
+    // and non-returning instructions, like void calls.
+    if (E->Idx > 0 || !UserIgnoreList || !E->Scalars[0]->getType()->isVoidTy())
+      SingleRegSpillReload +=
+          TTI->getRegisterClassSpillCost(RegClass, CostKind);
+    SpillsReloads += SingleRegSpillReload * SpillCount;
+  }
+  return SpillsReloads;
+}
+
+InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
   ArrayRef<Value *> VL = E->Scalars;
@@ -15510,6 +15664,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
 
+  const InstructionCost SpillsReloads =
+      getVectorSpillReloadCost(E, VecTy, FinalVecTy, CostKind);
   if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     if (allConstant(VL))
       return 0;
@@ -15517,8 +15673,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return InstructionCost::getInvalid();
     if (isa<CmpInst>(VL.front()))
       ScalarTy = VL.front()->getType();
-    return processBuildVector<ShuffleCostEstimator, InstructionCost>(
-        E, ScalarTy, *TTI, VectorizedVals, *this, CheckedExtracts);
+    return SpillsReloads +
+           processBuildVector<ShuffleCostEstimator, InstructionCost>(
+               E, ScalarTy, *TTI, VectorizedVals, *this, CheckedExtracts);
   }
   if (E->State == TreeEntry::SplitVectorize) {
     assert(E->CombinedEntriesWithIndices.size() == 2 &&
@@ -15543,6 +15700,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                     getWidenedType(ScalarTy, CommonVF),
                                     E->getSplitMask(), CostKind);
     }
+    VectorCost += SpillsReloads;
     LLVM_DEBUG(dumpTreeCosts(E, 0, VectorCost, 0, "Calculated costs for Tree"));
     return VectorCost;
   }
@@ -15658,6 +15816,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             }
           }
         }
+        VecCost += SpillsReloads;
         LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecCost - CommonCost,
                                  ScalarCost, "Calculated costs for Tree"));
         return VecCost - ScalarCost;
@@ -15677,7 +15836,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     LLVM_DEBUG(dumpTreeCosts(E, 0, VecCost, ScalarCost,
                              "Calculated GEPs cost for Tree"));
 
-    return VecCost - ScalarCost;
+    return VecCost - ScalarCost + SpillsReloads;
   };
 
   auto GetMinMaxCost = [&](Type *Ty, Instruction *VI = nullptr) {
@@ -15735,7 +15894,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                           OpTE->Scalars.size());
     }
 
-    return CommonCost - ScalarCost;
+    return CommonCost - ScalarCost + SpillsReloads;
   }
   case Instruction::ExtractValue:
   case Instruction::ExtractElement: {
@@ -15895,7 +16054,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
       }
     }
-    return Cost;
+    return Cost + SpillsReloads;
   }
   case Instruction::ZExt:
   case Instruction::SExt:
@@ -16010,8 +16169,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
       InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
           E->getOpcode(), OrigScalarTy, Builder.getInt1Ty(), CurrentPred,
-          CostKind, getOperandInfo(VI->getOperand(0)),
-          getOperandInfo(VI->getOperand(1)), VI);
+          CostKind,
+          getOperandInfo(
+              VI->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
+          getOperandInfo(
+              VI->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
+          VI);
       InstructionCost IntrinsicCost = GetMinMaxCost(OrigScalarTy, VI);
       if (IntrinsicCost.isValid())
         ScalarCost = IntrinsicCost;
@@ -16021,10 +16184,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto GetVectorCost = [&](InstructionCost CommonCost) {
       auto *MaskTy = getWidenedType(Builder.getInt1Ty(), VL.size());
 
-      InstructionCost VecCost =
-          TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy, VecPred,
-                                  CostKind, getOperandInfo(E->getOperand(0)),
-                                  getOperandInfo(E->getOperand(1)), VL0);
+      InstructionCost VecCost = TTI->getCmpSelInstrCost(
+          E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
+          getOperandInfo(
+              E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
+          getOperandInfo(
+              E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
+          VL0);
       if (auto *SI = dyn_cast<SelectInst>(VL0)) {
         auto *CondType =
             getWidenedType(SI->getCondition()->getType(), VL.size());
@@ -21744,7 +21910,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Value *StrideVal;
         const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
         StridedLoadTy = SPtrInfo.Ty;
-        assert(StridedLoadTy && "Missing StridedPoinerInfo for tree entry.");
+        assert(StridedLoadTy && "Missing StridedPointerInfo for tree entry.");
         unsigned StridedLoadEC =
             StridedLoadTy->getElementCount().getKnownMinValue();
 
@@ -25181,13 +25347,321 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   return false;
 }
 
-/// Checks if the quadratic mean deviation is less than 90% of the mean size.
-static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes) {
+namespace {
+/// A group of related stores which we are in the process of vectorizing,
+/// a subset of which may already be vectorized. Stores context information
+/// about the group as a whole as well as information about what VFs need
+/// to be attempted still.
+class StoreChainContext {
+public:
+  using SizePair = std::pair<unsigned, unsigned>;
+
+  explicit StoreChainContext(ArrayRef<Value *> Ops,
+                             ArrayRef<SizePair> RangeSizes,
+                             SmallVector<unsigned> &RangeSizesByIdx)
+      : Operands(Ops), RangeSizesStorage(RangeSizes),
+        RangeSizesByIdx(RangeSizesByIdx) {}
+
+  /// Set up initial values using the already set Operands
+  bool initializeContext(BoUpSLP &R, const DataLayout &DL,
+                         const TargetTransformInfo &TTI);
+  /// Get the current VF
+  std::optional<unsigned> getCurrentVF() const;
+  /// Return the maximum VF for the context
+  unsigned getMaxVF() const { return MaxVF; }
+  /// Attempt to vectorize Operands for the given VF
+  /// Returns false if no more attempts should be made for the context
+  bool vectorizeOneVF(const TargetTransformInfo &TTI, unsigned VF,
+                      BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
+                      llvm::function_ref<std::optional<bool>(
+                          ArrayRef<Value *>, unsigned, unsigned, unsigned &)>
+                          VectorizeStoreChain);
+
+private:
+  bool isNotVectorized(const SizePair &P) const {
+    return P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] > 0;
+  }
+
+  bool isVectorized(const SizePair &P) const {
+    return P.first == LocallyUnvectorizable || RangeSizesByIdx[P.first] == 0;
+  }
+
+  bool isVFProfitable(unsigned Size, const SizePair &P) const {
+    assert(P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] &&
+           "Cannot check profitability of vectorized element");
+    return Size >= RangeSizesByIdx[P.first];
+  }
+
+  bool firstSizeSame(unsigned Size, const SizePair &P) const {
+    assert(P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] &&
+           "Cannot check profitability of vectorized element");
+    return Size == RangeSizesByIdx[P.first];
+  }
+
+  /// Return the index of the first unvectorized store after \p StartIdx
+  unsigned getFirstUnvecStore(unsigned StartIdx = 0) const;
+  /// Return the index of the first vectorized store after \p StartIdx
+  unsigned getFirstVecStoreAfter(unsigned StartIdx) const;
+  /// Return true if all stores have been vectorized
+  bool allVectorized() const;
+  /// Return true if all elements in the given range match \p TreeSize
+  bool isFirstSizeSameRange(unsigned StartIdx, unsigned Length,
+                            unsigned TreeSize) const;
+  /// Return true if the \p TreeSize is profitable for all elements in the range
+  bool allOfRangeProfitable(unsigned StartIdx, unsigned Length,
+                            unsigned TreeSize) const;
+  /// Update the live (first) range sizes from the cached values (second)
+  void updateRangeSizesFromCache();
+  /// Update the cached (second) range sizes with the given \p TreeSize
+  void updateCachedRangeSizes(unsigned StartIdx, unsigned Length,
+                              unsigned TreeSize);
+  /// Update CandidateVFs for secondary iterations
+  bool updateCandidateVFs(const TargetTransformInfo &TTI);
+  /// Remove the current VF from the queue
+  void incrementVF() {
+    if (!CandidateVFs.empty())
+      CandidateVFs.pop();
+  }
+  /// Record vectorization of the provided range
+  void markRangeVectorized(unsigned StartIdx, unsigned Length,
+                           unsigned &FirstUnvecStore, unsigned &MaxSliceEnd);
+  /// Checks if the quadratic mean deviation is less than 90% of the mean size.
+  bool checkTreeSizes(const unsigned SliceStartIdx, const unsigned VF) const;
+
+  /// In RangeSizes, element has not been vectorized, but due to the elements
+  /// around it being vectorized, it does not have enough neighboring elements
+  /// to make a chain longer than MinVF as part of the current Context
+  static constexpr unsigned LocallyUnvectorizable =
+      std::numeric_limits<unsigned>::max();
+  /// Maximum number of iterations through CandidateVFs
+  static constexpr unsigned MaxAttempts = 4;
+
+  /// For the StoreTy/Stride in the given group, what is the smallest VF
+  /// that can be used
+  unsigned MinVF = 0;
+  /// Maximum number of instructions that can be vectorized, either
+  /// constrained by register width or operands size.
+  unsigned MaxVF = 0;
+  /// MaxRegVF represents the number of instructions (scalar, or vector in
+  /// case of revec) that can be vectorized to naturally fit in a vector
+  /// register.
+  unsigned MaxRegVF = 0;
+  /// The largest VF checked in the current Repeat
+  unsigned ProbeVF = 0;
+  /// Type of the Stores in `Operands`
+  Type *StoreTy = nullptr;
+  /// Which VFs do we want to attempt for this chain
+  std::queue<unsigned> CandidateVFs;
+  /// Stores that compose this chain
+  BoUpSLP::ValueList Operands;
+  /// Track the TreeSizes of prior vectorization attempts using each element,
+  /// to help us find early exit cases
+  /// - first: contains pointer into RangeSizesByIdx to help us track
+  /// vectorization of elements that belong to multiple chains
+  /// - second: contains cached TreeSize value for that element
+  SmallVector<SizePair> RangeSizesStorage;
+  MutableArrayRef<SizePair> RangeSizes;
+  /// RangeSize information for all elements in any chain
+  /// Needed since may be overlap between chains
+  SmallVector<unsigned> &RangeSizesByIdx;
+  /// What element index is the end of the to be vectorized Operands
+  /// i.e. Operands.size() == 16, and 12-15 were vectorized, then End == 12
+  unsigned End = 0;
+  /// How many times has CandidateVFs been refilled, prevents excessive
+  /// attempts at vectorizing large VFs
+  unsigned Repeat = 1;
+  /// Did any vectorization occur for the current iteration over CandidateVFs
+  bool RepeatChanged = false;
+  /// Store information about failed vectorization attempts due to scheduling
+  SmallDenseMap<Value *, SizePair> NonSchedulable;
+};
+
+void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
+                                            unsigned &FirstUnvecStore,
+                                            unsigned &MaxSliceEnd) {
+  for (SizePair &P : RangeSizes.slice(StartIdx, Length))
+    RangeSizesByIdx[P.first] = P.second = 0;
+  if (StartIdx < FirstUnvecStore + MinVF) {
+    for (SizePair &P :
+         RangeSizes.slice(FirstUnvecStore, StartIdx - FirstUnvecStore)) {
+      P.first = LocallyUnvectorizable;
+      P.second = 0;
+    }
+    FirstUnvecStore = StartIdx + Length;
+  }
+  if (StartIdx + Length > MaxSliceEnd - MinVF) {
+    for (SizePair &P : RangeSizes.slice(StartIdx + Length,
+                                        MaxSliceEnd - (StartIdx + Length))) {
+      P.first = LocallyUnvectorizable;
+      P.second = 0;
+    }
+    if (MaxSliceEnd == End)
+      End = StartIdx;
+    MaxSliceEnd = StartIdx;
+  }
+}
+
+bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
+                                          const TargetTransformInfo &TTI) {
+  // Initialize range tracking in context.
+  RangeSizes = MutableArrayRef(RangeSizesStorage);
+
+  unsigned MaxVecRegSize = R.getMaxVecRegSize();
+  unsigned EltSize = R.getVectorElementSize(Operands[0]);
+  unsigned MaxElts = llvm::bit_floor(MaxVecRegSize / EltSize);
+
+  MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store), MaxElts);
+  auto *Store = cast<StoreInst>(Operands[0]);
+  StoreTy = Store->getValueOperand()->getType();
+  Type *ValueTy = StoreTy;
+  if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
+    ValueTy = Trunc->getSrcTy();
+  // When REVEC is enabled, StoreTy and ValueTy may be FixedVectorType. But
+  // getStoreMinimumVF only support scalar type as arguments. As a result,
+  // we need to use the element type of StoreTy and ValueTy to retrieve the
+  // VF and then transform it back.
+  // Remember: VF is defined as the number we want to vectorize, not the
+  // number of elements in the final vector.
+  Type *StoreScalarTy = StoreTy->getScalarType();
+  MinVF = PowerOf2Ceil(TTI.getStoreMinimumVF(
+      R.getMinVF(DL.getTypeStoreSizeInBits(StoreScalarTy)), StoreScalarTy,
+      ValueTy->getScalarType()));
+  MinVF /= getNumElements(StoreTy);
+  MinVF = std::max<unsigned>(2, MinVF);
+
+  if (MaxVF < MinVF) {
+    LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
+                      << ") < "
+                      << "MinVF (" << MinVF << ")\n");
+    return false;
+  }
+
+  unsigned NonPowerOf2VF = 0;
+  if (VectorizeNonPowerOf2) {
+    // First try vectorizing with a non-power-of-2 VF. At the moment, only
+    // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
+    // lanes are used.
+    unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
+    if (has_single_bit(CandVF + 1)) {
+      NonPowerOf2VF = CandVF;
+      assert(NonPowerOf2VF != MaxVF &&
+             "Non-power-of-2 VF should not be equal to MaxVF");
+    }
+  }
+
+  MaxRegVF = MaxVF;
+
+  MaxVF = std::min<unsigned>(MaxVF, bit_floor(Operands.size()));
+  if (MaxVF < MinVF) {
+    LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
+                      << ") < "
+                      << "MinVF (" << MinVF << ")\n");
+    return false;
+  }
+
+  for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
+       VF = divideCeil(VF, 2))
+    CandidateVFs.push(VF);
+
+  End = Operands.size();
+  ProbeVF = MaxVF;
+  return true;
+}
+
+// Return the index of the first unvectorized store after \p StartIdx
+unsigned StoreChainContext::getFirstUnvecStore(unsigned StartIdx) const {
+  return std::distance(
+      RangeSizes.begin(),
+      find_if(RangeSizes.drop_front(StartIdx),
+              [this](const SizePair &P) { return this->isNotVectorized(P); }));
+}
+
+// Return the index of the first vectorized store after \p StartIdx
+unsigned StoreChainContext::getFirstVecStoreAfter(unsigned StartIdx) const {
+  return std::distance(
+      RangeSizes.begin(),
+      find_if(RangeSizes.drop_front(StartIdx),
+              [this](const SizePair &P) { return this->isVectorized(P); }));
+}
+
+// Return true if all stores have been vectorized
+bool StoreChainContext::allVectorized() const {
+  return all_of(RangeSizes,
+                [this](const SizePair &P) { return this->isVectorized(P); });
+}
+
+// Return true if all elements in the given range match \p TreeSize
+bool StoreChainContext::isFirstSizeSameRange(unsigned StartIdx, unsigned Length,
+                                             unsigned TreeSize) const {
+  return all_of(RangeSizes.slice(StartIdx, Length),
+                [TreeSize, this](const SizePair &P) {
+                  return firstSizeSame(TreeSize, P);
+                });
+}
+
+// Return true if the \p TreeSize is profitable for all elements in the range
+bool StoreChainContext::allOfRangeProfitable(unsigned StartIdx, unsigned Length,
+                                             unsigned TreeSize) const {
+  return all_of(RangeSizes.slice(StartIdx, Length),
+                [TreeSize, this](const SizePair &P) {
+                  return isVFProfitable(TreeSize, P);
+                });
+}
+
+// Update the live (first) range sizes from the cached values (second)
+void StoreChainContext::updateRangeSizesFromCache() {
+  for (SizePair &P : RangeSizes) {
+    if (P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] != 0)
+      RangeSizesByIdx[P.first] = std::max(P.second, RangeSizesByIdx[P.first]);
+  }
+}
+
+// Update the cached (second) range sizes with the given \p TreeSize
+void StoreChainContext::updateCachedRangeSizes(unsigned StartIdx,
+                                               unsigned Length,
+                                               unsigned TreeSize) {
+  for (SizePair &P : RangeSizes.slice(StartIdx, Length))
+    P.second = std::max(P.second, TreeSize);
+}
+
+bool StoreChainContext::updateCandidateVFs(const TargetTransformInfo &TTI) {
+  assert(CandidateVFs.empty() && "Did not use all VFs before refilling");
+  constexpr unsigned StoresLimit = 64;
+  const unsigned MaxTotalNum = std::min<unsigned>(
+      Operands.size(), static_cast<unsigned>(End - getFirstUnvecStore()));
+  unsigned VF = bit_ceil(ProbeVF) * 2;
+  if (VF > MaxTotalNum || VF >= StoresLimit)
+    return false;
+  // Attempt again to vectorize even larger chains if all previous
+  // attempts were unsuccessful because of the cost issues.
+  unsigned Limit =
+      getFloorFullVectorNumberOfElements(TTI, StoreTy, MaxTotalNum);
+  if (bit_floor(Limit) == VF && Limit != VF)
+    CandidateVFs.push(Limit);
+  CandidateVFs.push(VF);
+  ProbeVF = CandidateVFs.front();
+  ++Repeat;
+  RepeatChanged = false;
+  return true;
+}
+
+// Get the current VF
+std::optional<unsigned> StoreChainContext::getCurrentVF() const {
+  if (CandidateVFs.empty())
+    return std::nullopt;
+  return CandidateVFs.front();
+}
+
+bool StoreChainContext::checkTreeSizes(const unsigned SliceStartIdx,
+                                       const unsigned VF) const {
+  auto Sizes = RangeSizes.slice(SliceStartIdx, VF);
   unsigned Num = 0;
   uint64_t Sum = std::accumulate(
       Sizes.begin(), Sizes.end(), static_cast<uint64_t>(0),
       [&](uint64_t V, const std::pair<unsigned, unsigned> &Val) {
-        unsigned Size = Val.first;
+        unsigned Size = Val.first == StoreChainContext::LocallyUnvectorizable
+                            ? 0
+                            : RangeSizesByIdx[Val.first];
         if (Size == 1)
           return V;
         ++Num;
@@ -25201,7 +25675,10 @@ static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes) {
   uint64_t Dev = std::accumulate(
                      Sizes.begin(), Sizes.end(), static_cast<uint64_t>(0),
                      [&](uint64_t V, const std::pair<unsigned, unsigned> &Val) {
-                       unsigned P = Val.first;
+                       unsigned P =
+                           Val.first == StoreChainContext::LocallyUnvectorizable
+                               ? 0
+                               : RangeSizesByIdx[Val.first];
                        if (P == 1)
                          return V;
                        return V + (P - Mean) * (P - Mean);
@@ -25210,7 +25687,118 @@ static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes) {
   return Dev * 96 / (Mean * Mean) == 0;
 }
 
-namespace {
+bool StoreChainContext::vectorizeOneVF(
+    const TargetTransformInfo &TTI, unsigned VF,
+    BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
+    llvm::function_ref<std::optional<bool>(ArrayRef<Value *>, unsigned,
+                                           unsigned, unsigned &)>
+        VectorizeStoreChain) {
+  bool AnyProfitableGraph = false;
+  unsigned FirstUnvecStore = getFirstUnvecStore();
+
+  // Form slices of size VF starting from FirstUnvecStore and try to
+  // vectorize them.
+  while (FirstUnvecStore < End) {
+    unsigned FirstVecStore = getFirstVecStoreAfter(FirstUnvecStore);
+    unsigned MaxSliceEnd = FirstVecStore >= End ? End : FirstVecStore;
+    for (unsigned SliceStartIdx = FirstUnvecStore;
+         SliceStartIdx + VF <= MaxSliceEnd;) {
+      if (!checkTreeSizes(SliceStartIdx, VF)) {
+        ++SliceStartIdx;
+        continue;
+      }
+      ArrayRef<Value *> Slice = ArrayRef(Operands).slice(SliceStartIdx, VF);
+      assert(all_of(Slice,
+                    [&](Value *V) {
+                      return cast<StoreInst>(V)->getValueOperand()->getType() ==
+                             cast<StoreInst>(Slice.front())
+                                 ->getValueOperand()
+                                 ->getType();
+                    }) &&
+             "Expected all operands of same type.");
+      if (!NonSchedulable.empty()) {
+        auto [NonSchedSizeMax, NonSchedSizeMin] =
+            NonSchedulable.lookup(Slice.front());
+        if (NonSchedSizeMax > 0 && NonSchedSizeMin <= VF) {
+          // VF is too ambitious. Try to vectorize another slice before
+          // trying a smaller VF.
+          SliceStartIdx += NonSchedSizeMax;
+          continue;
+        }
+      }
+      unsigned TreeSize;
+      std::optional<bool> Res =
+          VectorizeStoreChain(Slice, SliceStartIdx, MinVF, TreeSize);
+      if (!Res) {
+        // Update the range of non schedulable VFs for slices starting
+        // at SliceStartIdx.
+        NonSchedulable.try_emplace(Slice.front(), std::make_pair(VF, VF))
+            .first->getSecond()
+            .second = VF;
+      } else if (*Res) {
+        // Mark the vectorized stores so that we don't vectorize them
+        // again.
+        VectorizedStores.insert_range(Slice);
+        AnyProfitableGraph = RepeatChanged = Changed = true;
+        // If we vectorized initial block, no need to try to vectorize
+        // it again.
+        markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
+        SliceStartIdx += VF;
+        continue;
+      }
+      if (VF > 2 && Res && !allOfRangeProfitable(SliceStartIdx, VF, TreeSize)) {
+        SliceStartIdx += VF;
+        continue;
+      }
+      // Check for the very big VFs that we're not rebuilding same
+      // trees, just with larger number of elements.
+      if (VF > MaxRegVF && TreeSize > 1 &&
+          isFirstSizeSameRange(SliceStartIdx, VF, TreeSize)) {
+        SliceStartIdx += VF;
+        while (SliceStartIdx != MaxSliceEnd &&
+               isFirstSizeSameRange(SliceStartIdx, 1, TreeSize))
+          ++SliceStartIdx;
+        continue;
+      }
+      if (TreeSize > 1)
+        updateCachedRangeSizes(SliceStartIdx, VF, TreeSize);
+      ++SliceStartIdx;
+      AnyProfitableGraph = true;
+    }
+    if (FirstUnvecStore >= End)
+      break;
+    if (MaxSliceEnd - FirstUnvecStore < VF &&
+        MaxSliceEnd - FirstUnvecStore >= MinVF)
+      AnyProfitableGraph = true;
+    FirstUnvecStore = getFirstUnvecStore(MaxSliceEnd);
+  }
+  if (!AnyProfitableGraph && VF >= MaxRegVF && has_single_bit(VF))
+    while (!CandidateVFs.empty())
+      CandidateVFs.pop();
+
+  // For the MaxRegVF case, save RangeSizes to limit compile time
+  if (VF == MaxRegVF)
+    updateRangeSizesFromCache();
+
+  incrementVF();
+  if (!getCurrentVF()) {
+    // All values vectorized - exit.
+    if (allVectorized())
+      return false;
+    // Check if tried all attempts or no need for the last attempts at
+    // all.
+    if (Repeat >= MaxAttempts ||
+        (Repeat > 1 && (RepeatChanged || !AnyProfitableGraph)))
+      return false;
+
+    if (!updateCandidateVFs(TTI))
+      return false;
+    // Avoid double update of cache sizes
+    if (VF != MaxRegVF)
+      updateRangeSizesFromCache();
+  }
+  return true;
+}
 
 /// A group of stores that we'll try to bundle together using vector ops.
 /// They are ordered using the signed distance of their address operand to the
@@ -25306,273 +25894,64 @@ bool SLPVectorizerPass::vectorizeStores(
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
     int64_t PrevDist = -1;
+    unsigned GlobalMaxVF = 0;
+    SmallVector<unsigned> RangeSizesByIdx(StoreSeq.size(), 1);
+    SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
     BoUpSLP::ValueList Operands;
-    // Collect the chain into a list.
+    SmallVector<StoreChainContext::SizePair> RangeSizes;
     for (auto [Idx, Data] : enumerate(StoreSeq)) {
       auto &[Dist, InstIdx] = Data;
       if (Operands.empty() || Dist - PrevDist == 1) {
         Operands.push_back(Stores[InstIdx]);
+        RangeSizes.emplace_back(Idx, 1);
         PrevDist = Dist;
         if (Idx != StoreSeq.size() - 1)
           continue;
       }
-      llvm::scope_exit E([&, &Dist = Dist, &InstIdx = InstIdx]() {
-        Operands.clear();
+
+      if (Operands.size() > 1 &&
+          Visited
+              .insert({Operands.front(),
+                       cast<StoreInst>(Operands.front())->getValueOperand(),
+                       Operands.back(),
+                       cast<StoreInst>(Operands.back())->getValueOperand(),
+                       Operands.size()})
+              .second) {
+        AllContexts.emplace_back(std::make_unique<StoreChainContext>(
+            Operands, RangeSizes, RangeSizesByIdx));
+        if (!AllContexts.back()->initializeContext(R, *DL, *TTI))
+          AllContexts.pop_back();
+        else
+          GlobalMaxVF = std::max(GlobalMaxVF, AllContexts.back()->getMaxVF());
+      }
+      Operands.clear();
+      RangeSizes.clear();
+      if (Idx != StoreSeq.size() - 1) {
         Operands.push_back(Stores[InstIdx]);
+        RangeSizes.emplace_back(Idx, 1);
         PrevDist = Dist;
-      });
-
-      if (Operands.size() <= 1 ||
-          !Visited
-               .insert({Operands.front(),
-                        cast<StoreInst>(Operands.front())->getValueOperand(),
-                        Operands.back(),
-                        cast<StoreInst>(Operands.back())->getValueOperand(),
-                        Operands.size()})
-               .second)
-        continue;
-
-      unsigned MaxVecRegSize = R.getMaxVecRegSize();
-      unsigned EltSize = R.getVectorElementSize(Operands[0]);
-      unsigned MaxElts = llvm::bit_floor(MaxVecRegSize / EltSize);
-
-      unsigned MaxVF =
-          std::min(R.getMaximumVF(EltSize, Instruction::Store), MaxElts);
-      auto *Store = cast<StoreInst>(Operands[0]);
-      Type *StoreTy = Store->getValueOperand()->getType();
-      Type *ValueTy = StoreTy;
-      if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
-        ValueTy = Trunc->getSrcTy();
-      // When REVEC is enabled, StoreTy and ValueTy may be FixedVectorType. But
-      // getStoreMinimumVF only support scalar type as arguments. As a result,
-      // we need to use the element type of StoreTy and ValueTy to retrieve the
-      // VF and then transform it back.
-      // Remember: VF is defined as the number we want to vectorize, not the
-      // number of elements in the final vector.
-      Type *StoreScalarTy = StoreTy->getScalarType();
-      unsigned MinVF = PowerOf2Ceil(TTI->getStoreMinimumVF(
-          R.getMinVF(DL->getTypeStoreSizeInBits(StoreScalarTy)), StoreScalarTy,
-          ValueTy->getScalarType()));
-      MinVF /= getNumElements(StoreTy);
-      MinVF = std::max<unsigned>(2, MinVF);
-
-      if (MaxVF < MinVF) {
-        LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
-                          << ") < "
-                          << "MinVF (" << MinVF << ")\n");
-        continue;
       }
+    }
 
-      unsigned NonPowerOf2VF = 0;
-      if (VectorizeNonPowerOf2) {
-        // First try vectorizing with a non-power-of-2 VF. At the moment, only
-        // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
-        // lanes are used.
-        unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
-        if (has_single_bit(CandVF + 1)) {
-          NonPowerOf2VF = CandVF;
-          assert(NonPowerOf2VF != MaxVF &&
-                 "Non-power-of-2 VF should not be equal to MaxVF");
-        }
-      }
-
-      // MaxRegVF represents the number of instructions (scalar, or vector in
-      // case of revec) that can be vectorized to naturally fit in a vector
-      // register.
-      unsigned MaxRegVF = MaxVF;
-
-      MaxVF = std::min<unsigned>(MaxVF, bit_floor(Operands.size()));
-      if (MaxVF < MinVF) {
-        LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
-                          << ") < "
-                          << "MinVF (" << MinVF << ")\n");
-        continue;
-      }
-
-      SmallVector<unsigned> CandidateVFs;
-      for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
-           VF = divideCeil(VF, 2))
-        CandidateVFs.push_back(VF);
-
-      unsigned End = Operands.size();
-      unsigned Repeat = 0;
-      constexpr unsigned MaxAttempts = 4;
-      // first: the best TreeSize from all prior loops over CandidateVFs, gets
-      // updated after looping through CandidateVFs
-      // second: the best TreeSize from all prior loops including the current
-      // one
-      llvm::SmallVector<std::pair<unsigned, unsigned>> RangeSizesStorage(
-          Operands.size(), {1, 1});
-      // The `slice` and `drop_front` interfaces are convenient
-      const auto RangeSizes = MutableArrayRef(RangeSizesStorage);
-      DenseMap<Value *, std::pair<unsigned, unsigned>> NonSchedulable;
-      auto IsNotVectorized = [](const std::pair<unsigned, unsigned> &P) {
-        return P.first > 0;
-      };
-      auto IsVectorized = [](const std::pair<unsigned, unsigned> &P) {
-        return P.first == 0;
-      };
-      auto VFIsProfitable = [](unsigned Size,
-                               const std::pair<unsigned, unsigned> &P) {
-        return Size >= P.first;
-      };
-      auto FirstSizeSame = [](unsigned Size,
-                              const std::pair<unsigned, unsigned> &P) {
-        return Size == P.first;
-      };
-      while (true) {
-        ++Repeat;
-        bool RepeatChanged = false;
-        bool AnyProfitableGraph = false;
-        for (unsigned VF : CandidateVFs) {
-          AnyProfitableGraph = false;
-          unsigned FirstUnvecStore = std::distance(
-              RangeSizes.begin(), find_if(RangeSizes, IsNotVectorized));
-
-          // Form slices of size VF starting from FirstUnvecStore and try to
-          // vectorize them.
-          while (FirstUnvecStore < End) {
-            unsigned FirstVecStore = std::distance(
-                RangeSizes.begin(),
-                find_if(RangeSizes.drop_front(FirstUnvecStore), IsVectorized));
-            unsigned MaxSliceEnd = FirstVecStore >= End ? End : FirstVecStore;
-            for (unsigned SliceStartIdx = FirstUnvecStore;
-                 SliceStartIdx + VF <= MaxSliceEnd;) {
-              if (!checkTreeSizes(RangeSizes.slice(SliceStartIdx, VF))) {
-                ++SliceStartIdx;
-                continue;
-              }
-              ArrayRef<Value *> Slice =
-                  ArrayRef(Operands).slice(SliceStartIdx, VF);
-              assert(all_of(Slice,
-                            [&](Value *V) {
-                              return cast<StoreInst>(V)
-                                         ->getValueOperand()
-                                         ->getType() ==
-                                     cast<StoreInst>(Slice.front())
-                                         ->getValueOperand()
-                                         ->getType();
-                            }) &&
-                     "Expected all operands of same type.");
-              if (!NonSchedulable.empty()) {
-                auto [NonSchedSizeMax, NonSchedSizeMin] =
-                    NonSchedulable.lookup(Slice.front());
-                if (NonSchedSizeMax > 0 && NonSchedSizeMin <= VF) {
-                  // VF is too ambitious. Try to vectorize another slice before
-                  // trying a smaller VF.
-                  SliceStartIdx += NonSchedSizeMax;
-                  continue;
-                }
-              }
-              unsigned TreeSize;
-              std::optional<bool> Res =
-                  vectorizeStoreChain(Slice, R, SliceStartIdx, MinVF, TreeSize);
-              if (!Res) {
-                // Update the range of non schedulable VFs for slices starting
-                // at SliceStartIdx.
-                NonSchedulable
-                    .try_emplace(Slice.front(), std::make_pair(VF, VF))
-                    .first->getSecond()
-                    .second = VF;
-              } else if (*Res) {
-                // Mark the vectorized stores so that we don't vectorize them
-                // again.
-                VectorizedStores.insert_range(Slice);
-                AnyProfitableGraph = RepeatChanged = Changed = true;
-                // If we vectorized initial block, no need to try to vectorize
-                // it again.
-                for (std::pair<unsigned, unsigned> &P :
-                     RangeSizes.slice(SliceStartIdx, VF))
-                  P.first = P.second = 0;
-                if (SliceStartIdx < FirstUnvecStore + MinVF) {
-                  for (std::pair<unsigned, unsigned> &P : RangeSizes.slice(
-                           FirstUnvecStore, SliceStartIdx - FirstUnvecStore))
-                    P.first = P.second = 0;
-                  FirstUnvecStore = SliceStartIdx + VF;
-                }
-                if (SliceStartIdx > MaxSliceEnd - VF - MinVF) {
-                  for (std::pair<unsigned, unsigned> &P :
-                       RangeSizes.slice(SliceStartIdx + VF,
-                                        MaxSliceEnd - (SliceStartIdx + VF)))
-                    P.first = P.second = 0;
-                  if (MaxSliceEnd == End)
-                    End = SliceStartIdx;
-                  MaxSliceEnd = SliceStartIdx;
-                }
-                SliceStartIdx += VF;
-                continue;
-              }
-              if (VF > 2 && Res &&
-                  !all_of(RangeSizes.slice(SliceStartIdx, VF),
-                          std::bind(VFIsProfitable, TreeSize, _1))) {
-                SliceStartIdx += VF;
-                continue;
-              }
-              // Check for the very big VFs that we're not rebuilding same
-              // trees, just with larger number of elements.
-              if (VF > MaxRegVF && TreeSize > 1 &&
-                  all_of(RangeSizes.slice(SliceStartIdx, VF),
-                         std::bind(FirstSizeSame, TreeSize, _1))) {
-                SliceStartIdx += VF;
-                while (SliceStartIdx != MaxSliceEnd &&
-                       RangeSizes[SliceStartIdx].first == TreeSize)
-                  ++SliceStartIdx;
-                continue;
-              }
-              if (TreeSize > 1)
-                for (std::pair<unsigned, unsigned> &P :
-                     RangeSizes.slice(SliceStartIdx, VF))
-                  P.second = std::max(P.second, TreeSize);
-              ++SliceStartIdx;
-              AnyProfitableGraph = true;
-            }
-            if (FirstUnvecStore >= End)
-              break;
-            if (MaxSliceEnd - FirstUnvecStore < VF &&
-                MaxSliceEnd - FirstUnvecStore >= MinVF)
-              AnyProfitableGraph = true;
-            FirstUnvecStore = std::distance(
-                RangeSizes.begin(),
-                find_if(RangeSizes.drop_front(MaxSliceEnd), IsNotVectorized));
-          }
-          if (!AnyProfitableGraph && VF >= MaxRegVF && has_single_bit(VF))
+    for (unsigned LimitVF = GlobalMaxVF; LimitVF > 0;
+         LimitVF = bit_ceil(LimitVF) / 2) {
+      for (auto &CtxPtr : AllContexts) {
+        if (!CtxPtr)
+          break;
+        StoreChainContext &Context = *CtxPtr;
+        for (std::optional<unsigned> VFUnval = Context.getCurrentVF();
+             VFUnval && *VFUnval >= LimitVF; VFUnval = Context.getCurrentVF()) {
+          unsigned VF = *VFUnval;
+          if (!Context.vectorizeOneVF(
+                  *TTI, VF, VectorizedStores, Changed,
+                  [this, &R](ArrayRef<Value *> Chain, unsigned Idx,
+                             unsigned MinVF, unsigned &Size) {
+                    return vectorizeStoreChain(Chain, R, Idx, MinVF, Size);
+                  })) {
+            CtxPtr.reset();
             break;
-          // For the MaxRegVF case, save RangeSizes to limit compile time
-          if (VF == MaxRegVF)
-            for (std::pair<unsigned, unsigned> &P : RangeSizes)
-              if (P.first != 0)
-                P.first = std::max(P.second, P.first);
+          }
         }
-        // All values vectorized - exit.
-        if (all_of(RangeSizes, IsVectorized))
-          break;
-        // Check if tried all attempts or no need for the last attempts at all.
-        if (Repeat >= MaxAttempts ||
-            (Repeat > 1 && (RepeatChanged || !AnyProfitableGraph)))
-          break;
-        constexpr unsigned StoresLimit = 64;
-        const unsigned MaxTotalNum = std::min<unsigned>(
-            Operands.size(),
-            static_cast<unsigned>(
-                End -
-                std::distance(RangeSizes.begin(),
-                              find_if(RangeSizes, IsNotVectorized)) +
-                1));
-        unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
-        if (VF > MaxTotalNum || VF >= StoresLimit)
-          break;
-        for (std::pair<unsigned, unsigned> &P : RangeSizes) {
-          if (P.first != 0)
-            P.first = std::max(P.second, P.first);
-        }
-        // Attempt again to vectorize even larger chains if all previous
-        // attempts were unsuccessful because of the cost issues.
-        CandidateVFs.clear();
-        unsigned Limit =
-            getFloorFullVectorNumberOfElements(*TTI, StoreTy, MaxTotalNum);
-        if (bit_floor(Limit) == VF && Limit != VF)
-          CandidateVFs.push_back(Limit);
-        CandidateVFs.push_back(VF);
       }
     }
   };
@@ -26313,6 +26692,7 @@ public:
     bool IsCmpSelMinMax = isCmpSelMinMax(Root);
     SmallVector<std::pair<Instruction *, unsigned>> Worklist(
         1, std::make_pair(Root, 0));
+    SmallPtrSet<Value *, 8> Operands;
     SmallVector<std::pair<Instruction *, unsigned>> PossibleOrderedReductionOps;
     // Checks if the operands of the \p TreeN instruction are also reduction
     // operations or should be treated as reduced values or an extra argument,
@@ -26341,13 +26721,17 @@ public:
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst)) {
           IsReducedVal = true;
           CurrentRK = ReductionOrdering::None;
-          if (PossibleReducedVals.size() < ReductionLimit)
+          if (PossibleReducedVals.size() < ReductionLimit &&
+              !Operands.contains(EdgeInst))
             PossibleOrderedReductionOps.emplace_back(EdgeInst, Level);
         }
         if (CurrentRK == ReductionOrdering::None ||
+            Operands.contains(EdgeInst) ||
             (R.isAnalyzedReductionRoot(EdgeInst) &&
              all_of(EdgeInst->operands(), IsaPred<Constant>))) {
           PossibleReducedVals.push_back(EdgeVal);
+          if (EdgeInst && !isCmpSelMinMax(EdgeInst))
+            Operands.insert_range(EdgeInst->operands());
           continue;
         }
         if (CurrentRK == ReductionOrdering::Ordered)
