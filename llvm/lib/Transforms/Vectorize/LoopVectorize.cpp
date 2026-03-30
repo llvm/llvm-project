@@ -7274,12 +7274,12 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
           : nullptr;
-  RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
-                 MinProfitableTripCount,
+  RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan,
+                 Plan.getEntry(), VF, UF, MinProfitableTripCount,
                  CM.requiresScalarEpilogue(VF.isVector()),
                  CM.foldTailByMasking(), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
-                 PSE, /*CheckBlock=*/nullptr);
+                 PSE);
 }
 
 // Determine how to lower the epilogue, which depends on 1) optimising

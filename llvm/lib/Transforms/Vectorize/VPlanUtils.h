@@ -176,6 +176,22 @@ VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
 } // namespace vputils
 
+/// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
+/// VPInstructions where possible, falling back to VPExpandSCEVRecipe for
+/// unsupported expressions (casts, min/max).
+class VPSCEVExpander {
+  VPBuilder &Builder;
+  VPlan &Plan;
+  DebugLoc DL;
+
+public:
+  VPSCEVExpander(VPBuilder &Builder, VPlan &Plan, DebugLoc DL)
+      : Builder(Builder), Plan(Plan), DL(DL) {}
+
+  /// Expand \p S into VPlan recipes using the builder.
+  VPValue *expand(const SCEV *S);
+};
+
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.
 //===----------------------------------------------------------------------===//

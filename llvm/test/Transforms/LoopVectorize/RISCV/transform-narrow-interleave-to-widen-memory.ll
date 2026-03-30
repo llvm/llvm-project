@@ -42,8 +42,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
-; EPILOGUE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP2]]
+; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP0]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; EPILOGUE:       [[VECTOR_BODY]]:
@@ -52,7 +51,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; EPILOGUE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP4]]
 ; EPILOGUE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; EPILOGUE-NEXT:    store <vscale x 2 x i64> [[WIDE_LOAD]], ptr [[TMP5]], align 8
-; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
 ; EPILOGUE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; EPILOGUE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; EPILOGUE:       [[MIDDLE_BLOCK]]:
@@ -287,8 +286,7 @@ define void @load_store_interleave_group_i32(ptr noalias %data) {
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
-; EPILOGUE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP2]]
+; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP0]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; EPILOGUE:       [[VECTOR_BODY]]:
@@ -297,7 +295,7 @@ define void @load_store_interleave_group_i32(ptr noalias %data) {
 ; EPILOGUE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[TMP4]]
 ; EPILOGUE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 8
 ; EPILOGUE-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP5]], align 8
-; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
 ; EPILOGUE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; EPILOGUE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; EPILOGUE:       [[MIDDLE_BLOCK]]:
