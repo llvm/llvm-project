@@ -24,7 +24,6 @@
 
 #include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Parallel.h"
