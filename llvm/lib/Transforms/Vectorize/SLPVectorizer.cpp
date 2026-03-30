@@ -17776,6 +17776,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     return Cost;
 
   bool Changed = false;
+  bool PreferTrimmedTree = false;
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
     TreeEntry *TE = Worklist.top().first;
     if (TE->isGather() || TE->Idx == 0 || DeletedNodes.contains(TE) ||
@@ -17875,7 +17876,23 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
         }))
       GatherCost *= 2;
     // Erase subtree if it is non-profitable.
-    if (TotalSubtreeCost > GatherCost) {
+    ArrayRef<unsigned> Nodes = std::get<2>(Worklist.top().second);
+    // Prefer trimming equal-cost alternate-shuffle subtrees rooted at binary
+    // ops: alt-shuffles introduce runtime shuffle overhead that the cost model
+    // may underestimate. Skip if the subtree contains ExtractElement nodes,
+    // since those operate on already-materialized vectors where the cost model
+    // is more accurate.
+    auto IsEqualCostAltShuffleToTrim = [&]() {
+      return TotalSubtreeCost == GatherCost && TE->hasState() &&
+             TE->isAltShuffle() && Instruction::isBinaryOp(TE->getOpcode()) &&
+             none_of(Nodes, [&](unsigned Idx) {
+               return VectorizableTree[Idx]->hasState() &&
+                      VectorizableTree[Idx]->getOpcode() ==
+                          Instruction::ExtractElement;
+             });
+    };
+    if (TotalSubtreeCost > GatherCost || IsEqualCostAltShuffleToTrim()) {
+      PreferTrimmedTree |= TotalSubtreeCost == GatherCost;
       // If the remaining tree is just a buildvector - exit, it will cause
       // endless attempts to vectorize.
       if (VectorizableTree.front()->hasState() &&
@@ -17895,7 +17912,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
         TransformedToGatherNodes.erase(TE);
         NodesCosts.erase(TE);
       }
-      for (unsigned Idx : std::get<2>(Worklist.top().second)) {
+      for (unsigned Idx : Nodes) {
         TreeEntry &ChildTE = *VectorizableTree[Idx];
         DeletedNodes.insert(&ChildTE);
         TransformedToGatherNodes.erase(&ChildTE);
@@ -18009,7 +18026,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
                       << ".\n"
                       << "SLP: Current total cost = " << NewCost << "\n");
   }
-  if (NewCost + LoadsExtractsCost >= Cost) {
+  if (NewCost + LoadsExtractsCost > Cost ||
+      (!PreferTrimmedTree && NewCost + LoadsExtractsCost == Cost)) {
     DeletedNodes.clear();
     TransformedToGatherNodes.clear();
     NewCost = Cost;

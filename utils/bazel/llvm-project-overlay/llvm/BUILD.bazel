@@ -1335,6 +1335,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Support",
+        ":ir_headers",
     ],
 )
 
