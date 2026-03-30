@@ -183,13 +183,32 @@ void AArch64PointerAuth::authenticateLR(
     }
     MBB.erase(TI);
   } else {
+    // When a tail call has a non-zero FPDiff (callee needs different stack
+    // arg space), the epilogue adjusts SP before reaching here. SP no
+    // longer equals the entry SP used by PACI[AB]SP. Compute the entry SP
+    // into X16 and use explicit AUTI[AB] instead of AUTI[AB]SP.
+    auto &AFL = *static_cast<const AArch64FrameLowering *>(
+        MF.getSubtarget().getFrameLowering());
+    int64_t FPDiff = AFL.getArgumentStackToRestore(MF, MBB);
+
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
       emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
-      BuildMI(MBB, MBBI, DL,
-              TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
-          .addSym(PACSym)
-          .setMIFlag(MachineInstr::FrameDestroy);
+      if (FPDiff != 0) {
+        emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
+                        StackOffset::getFixed(-FPDiff), TII,
+                        MachineInstr::FrameDestroy);
+        unsigned AutOpc = UseBKey ? AArch64::AUTIB : AArch64::AUTIA;
+        BuildMI(MBB, MBBI, DL, TII->get(AutOpc), AArch64::LR)
+            .addUse(AArch64::LR)
+            .addUse(AArch64::X16)
+            .setMIFlag(MachineInstr::FrameDestroy);
+      } else {
+        BuildMI(MBB, MBBI, DL,
+                TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
+            .addSym(PACSym)
+            .setMIFlag(MachineInstr::FrameDestroy);
+      }
     } else {
       if (MFnI->branchProtectionPAuthLR()) {
         emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
@@ -197,15 +216,6 @@ void AArch64PointerAuth::authenticateLR(
             .setMIFlag(MachineInstr::FrameDestroy);
         emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
       }
-      // When a tail call has a non-zero FPDiff (callee needs different stack
-      // arg space), the epilogue adjusts SP before reaching here. SP no
-      // longer equals the entry SP used by PACI[AB]SP. Compute the entry SP
-      // into X16 and use explicit AUTI[AB] instead of AUTI[AB]SP.
-      // entry_SP = SP - FPDiff (FPDiff is negative when callee needs more
-      // space, positive when less).
-      auto &AFL = *static_cast<const AArch64FrameLowering *>(
-          MF.getSubtarget().getFrameLowering());
-      int64_t FPDiff = AFL.getArgumentStackToRestore(MF, MBB);
       if (FPDiff != 0) {
         emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
                         StackOffset::getFixed(-FPDiff), TII,
