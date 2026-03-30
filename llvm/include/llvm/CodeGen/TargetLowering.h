@@ -2084,6 +2084,12 @@ public:
   /// Retuen the minimum of largest number of comparisons in BitTest.
   unsigned getMinimumBitTestCmps() const;
 
+  /// Return maximum known-legal store size, which can be guaranteed for
+  /// scalable vectors.
+  unsigned getMaximumLegalStoreInBits() const {
+    return MaximumLegalStoreInBits;
+  }
+
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   Register getStackPointerRegisterToSaveRestore() const {
@@ -3766,6 +3772,10 @@ private:
 
   /// The minimum of largest number of comparisons to use bit test for switch.
   unsigned MinimumBitTestCmps;
+
+  /// Maximum known-legal store size, which can be guaranteed for scalable
+  /// vectors.
+  unsigned MaximumLegalStoreInBits;
 
   /// This indicates if the target supports unaligned atomic operations.
   bool SupportsUnalignedAtomics;
