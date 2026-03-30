@@ -61,12 +61,12 @@ public:
   void Close();
 
   /// Closes the STDIN and STDOUT pipe handles and invalidates them.
-  void ClosePipes();
+  void ClosePseudoConsolePipes();
 
   /// Closes the child-side pipe handles (stdin read end and stdout/stderr write
   /// end) that were passed to CreateProcessW. Must be called after a successful
   /// CreateProcessW to avoid keeping the pipes alive indefinitely.
-  void CloseChildHandles();
+  void CloseAnonymousPipes();
 
   /// Returns whether the ConPTY and its pipes are currently open and valid.
   bool IsConnected() const;

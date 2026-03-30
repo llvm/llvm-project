@@ -251,7 +251,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     // through the HostProcess.
     ::CloseHandle(pi.hThread);
     if (pty_mode == PseudoConsole::Mode::Pipe)
-      launch_info.GetPTY().CloseChildHandles();
+      launch_info.GetPTY().CloseAnonymousPipes();
   }
 
   if (!result)

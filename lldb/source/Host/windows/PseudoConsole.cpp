@@ -95,8 +95,8 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
 
 PseudoConsole::~PseudoConsole() {
   Close();
-  ClosePipes();
-  CloseChildHandles();
+  ClosePseudoConsolePipes();
+  CloseAnonymousPipes();
 }
 
 llvm::Error PseudoConsole::OpenPseudoConsole() {
@@ -182,7 +182,7 @@ void PseudoConsole::Close() {
   m_cv.notify_all();
 }
 
-void PseudoConsole::ClosePipes() {
+void PseudoConsole::ClosePseudoConsolePipes() {
   if (m_conpty_input != INVALID_HANDLE_VALUE)
     CloseHandle(m_conpty_input);
   if (m_conpty_output != INVALID_HANDLE_VALUE)
@@ -192,7 +192,7 @@ void PseudoConsole::ClosePipes() {
   m_conpty_output = INVALID_HANDLE_VALUE;
 }
 
-void PseudoConsole::CloseChildHandles() {
+void PseudoConsole::CloseAnonymousPipes() {
   if (m_pipe_child_stdin != INVALID_HANDLE_VALUE)
     CloseHandle(m_pipe_child_stdin);
   if (m_pipe_child_stdout != INVALID_HANDLE_VALUE)
