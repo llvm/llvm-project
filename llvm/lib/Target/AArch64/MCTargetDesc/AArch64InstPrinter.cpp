@@ -919,6 +919,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   bool OptionalReg = false;
   std::string Ins;
   std::string Name;
+  StringRef RegSep = ", ";
 
   if (CnVal == 7) {
     switch (CmVal) {
@@ -929,6 +930,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
         NeedsReg = true;
         Ins = "apas";
         Name = "";
+        RegSep = "\t";
         break;
       }
 
@@ -980,6 +982,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
         NeedsReg = true;
         Ins = "trcit";
         Name = "";
+        RegSep = "\t";
         break;
       }
     } break;
@@ -1063,6 +1066,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
         return false;
 
       Name = "";
+      RegSep = "\t";
       switch (Op1Val) {
       default:
         return false;
@@ -1154,13 +1158,6 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   if (NotXZR && !NeedsReg && !OptionalReg)
     return false;
 
-  if (Name.empty()) {
-    O << '\t' << Ins;
-    if (NeedsReg || (OptionalReg && NotXZR))
-      O << '\t' << Reg;
-    return true;
-  }
-
   std::string Str = Ins + Name;
   llvm::transform(Str, Str.begin(), ::tolower);
 
@@ -1169,7 +1166,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   // For optional registers, don't print the value if it's xzr/x31
   // since this defaults to xzr/x31 if register is not specified.
   if (NeedsReg || (OptionalReg && NotXZR))
-    O << ", " << Reg;
+    O << RegSep << Reg;
 
   return true;
 }
