@@ -433,6 +433,9 @@ def warn_unused_variable : Warning<"unused variable %0">,
   InGroup<UnusedVariable>, DefaultIgnore;
 def warn_unused_but_set_variable : Warning<"variable %0 set but not used">,
   InGroup<UnusedButSetVariable>, DefaultIgnore;
+def warn_unused_but_set_global : Warning<"variable %0 set but not used">,
+                                 InGroup<UnusedButSetGlobal>,
+                                 DefaultIgnore;
 def warn_unused_local_typedef : Warning<
   "unused %select{typedef|type alias}0 %1">,
   InGroup<UnusedLocalTypedef>, DefaultIgnore;
@@ -3635,6 +3638,12 @@ def err_invalid_collection_element : Error<
 def err_box_literal_collection : Error<
   "%select{string|character|boolean|numeric}0 literal must be prefixed by '@' "
   "in a collection">;
+def err_objc_literal_nonconstant_at_file_scope : Error<
+  "%select{an array|a dictionary|a numeric literal|a boxed expression|}0 "
+  "literal can only be used at file scope if %select{its contents are all "
+  "also constant literals|its contents are all also constant literals and "
+  "its keys are string literals|constant|constant}0">;
+
 def warn_objc_literal_comparison : Warning<
   "direct comparison of %select{an array literal|a dictionary literal|"
   "a numeric literal|a boxed expression|}0 has undefined behavior">,
@@ -4246,6 +4255,8 @@ def warn_at_available_unchecked_use : Warning<
 def warn_availability_invalid_os_version
     : Warning<"invalid %1 version '%0' in availability attribute">, InGroup<DiagGroup<"invalid-version-availability">>;
 def note_availability_invalid_os_version_adjusted: Note<"implicitly treating version as '%0'">;
+def err_availability_invalid_anyappleos_version
+    : Error<"invalid anyAppleOS version '%0' in availability attribute">;
 
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
@@ -5429,6 +5440,10 @@ def err_ovl_no_viable_subscript :
     Error<"no viable overloaded operator[] for type %0">;
 def err_ovl_no_oper :
     Error<"type %0 does not provide a %select{subscript|call}1 operator">;
+def err_ovl_builtin_subscript_expects_single_arg : Error<
+  "built-in subscript operator for type %0 expects exactly one argument">;
+def err_ms_property_subscript_expects_single_arg : Error<
+  "property subscript expects exactly one argument">;
 def err_ovl_unresolvable : Error<
   "reference to %select{overloaded|multiversioned}1 function could not be "
   "resolved; did you mean to call it%select{| with no arguments}0?">;
@@ -13269,6 +13284,9 @@ def err_builtin_invalid_arg_type: Error<
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
+
+def err_builtin_requires_double_type: Error<
+  "%ordinal0 argument must be a scalar, vector, or matrix of double type (was %1)">;
 
 def err_bswapg_invalid_bit_width : Error<
   "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;

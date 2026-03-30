@@ -571,6 +571,9 @@ public:
                                                Register TargetReg,
                                                bool FrameSetup) const;
 
+  static int
+  findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr);
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 

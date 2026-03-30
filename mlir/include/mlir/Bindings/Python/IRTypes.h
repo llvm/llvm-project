@@ -338,12 +338,12 @@ public:
 private:
   static PyVectorType
   getChecked(std::vector<int64_t> shape, PyType &elementType,
-             std::optional<nanobind::list> scalable,
+             std::optional<nanobind::sequence> scalable,
              std::optional<std::vector<int64_t>> scalableDims,
              DefaultingPyLocation loc);
 
   static PyVectorType get(std::vector<int64_t> shape, PyType &elementType,
-                          std::optional<nanobind::list> scalable,
+                          std::optional<nanobind::sequence> scalable,
                           std::optional<std::vector<int64_t>> scalableDims,
                           DefaultingPyMlirContext context);
 };
