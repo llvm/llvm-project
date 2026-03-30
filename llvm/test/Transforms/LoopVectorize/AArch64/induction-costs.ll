@@ -516,8 +516,7 @@ exit:
 
 ; Test that sext(sub nsw) used in address computation is handled correctly
 ; in VPlan cost model (must match SCEV's handling).
-define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
-;
+define void @sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK-LABEL: define void @sext_sub_nsw_for_address(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[N:%.*]], ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
