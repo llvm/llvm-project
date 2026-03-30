@@ -95,6 +95,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
                                          : 4 * TargetTransformInfo::TCC_Basic;
   }
 
+  int getTransInstrCost(TTI::TargetCostKind CostKind) const;
+
   // On some parts, normal fp64 operations are half rate, and others
   // quarter. This also applies to some integer operations.
   int get64BitInstrCost(TTI::TargetCostKind CostKind) const;
