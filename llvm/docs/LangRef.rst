@@ -27924,8 +27924,8 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction, a ``poison``
-value, or an ``llvm.structured.alloca`` instrinsic.
+The argument is either a pointer to an ``alloca`` instruction or an
+``llvm.structured.alloca`` instrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
@@ -27965,9 +27965,8 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction, a ``poison`` or
-an ``llvm.structured.alloca`` intrinsic.
-value.
+The argument is either a pointer to an ``alloca`` instruction or an
+``llvm.structured.alloca`` instrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
