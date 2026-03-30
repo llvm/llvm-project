@@ -55,6 +55,8 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
+  lldb::addr_t GetLinkerPathAddr() const { return m_linker_path_addr; }
+
 protected:
   class KModImageInfo {
   public:
@@ -141,6 +143,11 @@ protected:
 
   void SetNotificationBreakPoint();
 
+  static std::optional<std::string> FindKLDPath(const char *filename,
+                                                lldb_private::Process *process,
+                                                const std::string &kernel_path,
+                                                lldb::addr_t module_path_addr);
+
   static lldb_private::UUID
   CheckForKernelImageAtAddress(lldb_private::Process *process,
                                lldb::addr_t address,
@@ -160,6 +167,7 @@ protected:
   KModImageInfo::collection_type m_linker_files_list;
   std::recursive_mutex m_mutex;
   std::unordered_map<std::string, lldb_private::UUID> m_kld_name_to_uuid;
+  lldb::addr_t m_linker_path_addr = LLDB_INVALID_ADDRESS;
 
 private:
   DynamicLoaderFreeBSDKernel(const DynamicLoaderFreeBSDKernel &) = delete;

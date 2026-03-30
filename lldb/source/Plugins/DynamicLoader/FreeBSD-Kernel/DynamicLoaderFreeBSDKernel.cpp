@@ -27,12 +27,14 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/Path.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 
 #include "DynamicLoaderFreeBSDKernel.h"
 #include <memory>
 #include <mutex>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -92,6 +94,23 @@ static bool is_reloc(Module *module) {
     return false;
 
   return true;
+}
+
+// Suffixes to probe when looking for KLD files, in priority order.
+static const char *kld_suffixes[] = {".debug", ".symbols", ""};
+
+// Check if a path (with optional suffix) exists as a regular file.
+// If found, updates path in place and returns true.
+static bool CheckKLDPath(std::string &path) {
+  for (const char *suffix : kld_suffixes) {
+    std::string candidate = path + suffix;
+    if (FileSystem::Instance().Exists(FileSpec(candidate)) &&
+        !FileSystem::Instance().IsDirectory(FileSpec(candidate))) {
+      path = std::move(candidate);
+      return true;
+    }
+  }
+  return false;
 }
 
 // Instantiate Function of the FreeBSD Kernel Dynamic Loader Plugin called when
@@ -354,7 +373,41 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
     const ModuleList &target_images = target.GetImages();
     m_module_sp = target_images.FindModule(m_uuid);
 
-    // Search in the file system
+    // Search using FreeBSD module path conventions before generic search.
+    // This mirrors kgdb's find_kld_path(): check kernel directory first,
+    // then each directory in kern.module_path, trying .debug/.symbols
+    // suffixes.
+    if (!m_module_sp && !IsKernel()) {
+      llvm::StringRef basename = llvm::sys::path::filename(m_name);
+
+      std::string kernel_path;
+      ModuleSP kernel_module = target.GetExecutableModule();
+      if (kernel_module)
+        kernel_path = kernel_module->GetFileSpec().GetPath();
+
+      addr_t module_path_addr = LLDB_INVALID_ADDRESS;
+      DynamicLoaderFreeBSDKernel *loader =
+          static_cast<DynamicLoaderFreeBSDKernel *>(
+              process->GetDynamicLoader());
+      if (loader)
+        module_path_addr = loader->GetLinkerPathAddr();
+
+      std::optional<std::string> found_path = FindKLDPath(
+          basename.str().c_str(), process, kernel_path, module_path_addr);
+
+      if (found_path) {
+        ModuleSpec module_spec(FileSpec(*found_path), target.GetArchitecture());
+        m_module_sp = target.GetOrCreateModule(module_spec, true);
+        if (m_module_sp) {
+          LLDB_LOGF(log,
+                    "KModImageInfo::LoadImageUsingMemoryModule: "
+                    "found '%s' via FreeBSD module path at '%s'",
+                    m_name.c_str(), found_path->c_str());
+        }
+      }
+    }
+
+    // Search in the file system (generic LLDB search)
     if (!m_module_sp) {
       ModuleSpec module_spec(FileSpec(GetPath()), target.GetArchitecture());
       if (IsKernel()) {
@@ -750,6 +803,28 @@ void DynamicLoaderFreeBSDKernel::LoadKernelModules() {
 
   if (symbol) {
     m_linker_file_list_struct_addr = symbol->GetAddress();
+
+    // Read linker_path address for FreeBSD module path searching.
+    // This is the KVA of the string backing kern.module_path sysctl.
+    static ConstString linker_path_symbol_name("linker_path");
+    const Symbol *linker_path_symbol =
+        m_kernel_image_info.GetModule()->FindFirstSymbolWithNameAndType(
+            linker_path_symbol_name, lldb::eSymbolTypeData);
+    if (linker_path_symbol) {
+      Status error;
+      m_linker_path_addr = m_process->ReadPointerFromMemory(
+          linker_path_symbol->GetAddress().GetLoadAddress(
+              &m_process->GetTarget()),
+          error);
+      if (error.Fail())
+        m_linker_path_addr = LLDB_INVALID_ADDRESS;
+      else
+        LLDB_LOGF(log,
+                  "DynamicLoaderFreeBSDKernel::LoadKernelModules: "
+                  "linker_path at 0x%" PRIx64,
+                  m_linker_path_addr);
+    }
+
     ReadAllKmods();
   } else {
     LLDB_LOGF(log, "DynamicLoaderFreeBSDKernel::LoadKernelModules "
@@ -759,6 +834,55 @@ void DynamicLoaderFreeBSDKernel::LoadKernelModules() {
 
 // Update symbol when use kldload by setting callback function on kldload
 void DynamicLoaderFreeBSDKernel::SetNotificationBreakPoint() {}
+
+std::optional<std::string>
+DynamicLoaderFreeBSDKernel::FindKLDPath(const char *filename, Process *process,
+                                        const std::string &kernel_path,
+                                        addr_t module_path_addr) {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+
+  // Search in the kernel binary's directory
+  if (!kernel_path.empty()) {
+    llvm::SmallString<256> dir(kernel_path);
+    llvm::sys::path::remove_filename(dir);
+    if (!dir.empty()) {
+      std::string path = (dir + "/" + filename).str();
+      if (CheckKLDPath(path)) {
+        LLDB_LOGF(log, "FindKLDPath: found '%s' in kernel directory",
+                  path.c_str());
+        return path;
+      }
+    }
+  }
+
+  // If it fails, search in each directory from linker_path (kern.module_path)
+  if (module_path_addr != LLDB_INVALID_ADDRESS && module_path_addr != 0) {
+    Status error;
+    char buf[4096];
+    size_t bytes_read = process->ReadCStringFromMemory(module_path_addr, buf,
+                                                       sizeof(buf), error);
+    if (error.Success() && bytes_read > 0) {
+      llvm::StringRef module_path_str(buf);
+      llvm::SmallVector<llvm::StringRef, 8> dirs;
+      module_path_str.split(dirs, ';', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+
+      for (const auto &d : dirs) {
+        std::string path = (d + "/" + filename).str();
+        if (CheckKLDPath(path)) {
+          LLDB_LOGF(log, "FindKLDPath: found '%s' via module_path",
+                    path.c_str());
+          return path;
+        }
+      }
+    } else {
+      LLDB_LOGF(log, "FindKLDPath: failed to read linker_path from 0x%" PRIx64,
+                module_path_addr);
+    }
+  }
+
+  LLDB_LOGF(log, "FindKLDPath: unable to find '%s'", filename);
+  return std::nullopt;
+}
 
 // Hook called when attach to a process
 void DynamicLoaderFreeBSDKernel::DidAttach() {
@@ -781,6 +905,7 @@ void DynamicLoaderFreeBSDKernel::Clear(bool clear_process) {
   m_linker_file_list_struct_addr.Clear();
   m_kernel_image_info.Clear();
   m_linker_files_list.clear();
+  m_linker_path_addr = LLDB_INVALID_ADDRESS;
 }
 
 // Reinitialize class
