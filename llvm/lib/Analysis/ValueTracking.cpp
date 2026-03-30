@@ -632,11 +632,9 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
       if (V == I || (!V->mayHaveSideEffects() && !V->isTerminator())) {
         EphValues.insert(V);
 
-        if (const User *U = dyn_cast<User>(V)) {
-          for (const Use &U : U->operands()) {
-            if (const auto *I = dyn_cast<Instruction>(U.get()))
-              WorkSet.push_back(I);
-          }
+        for (const Use &U : V->operands()) {
+          if (const auto *I = dyn_cast<Instruction>(U.get()))
+            WorkSet.push_back(I);
         }
       }
     }
@@ -7897,7 +7895,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
   // if what we are checking for includes undef and the value is not an integer.
   if (!includesUndef(Kind) || V->getType()->isIntegerTy())
     while (Dominator) {
-      auto *TI = Dominator->getBlock()->getTerminator();
+      auto *TI = Dominator->getBlock()->getTerminatorOrNull();
 
       Value *Cond = nullptr;
       if (auto BI = dyn_cast_or_null<CondBrInst>(TI)) {

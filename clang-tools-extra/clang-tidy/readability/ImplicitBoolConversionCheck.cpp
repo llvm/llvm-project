@@ -382,7 +382,8 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
     return;
   }
 
-  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion %0 -> 'bool'")
+  auto Diag = diag(Context.getSourceManager().getFileLoc(Cast->getBeginLoc()),
+                   "implicit conversion %0 -> 'bool'")
               << Cast->getSubExpr()->getType();
 
   const StringRef EquivalentLiteral =
@@ -400,7 +401,8 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
     ASTContext &Context) {
   const QualType DestType =
       NextImplicitCast ? NextImplicitCast->getType() : Cast->getType();
-  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion 'bool' -> %0")
+  auto Diag = diag(Context.getSourceManager().getFileLoc(Cast->getBeginLoc()),
+                   "implicit conversion 'bool' -> %0")
               << DestType;
 
   if (const auto *BoolLiteral =
