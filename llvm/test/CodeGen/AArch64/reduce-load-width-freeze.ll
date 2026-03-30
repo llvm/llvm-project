@@ -244,3 +244,46 @@ define i32 @neg_and_freeze_variable_mask(ptr %p, i32 %mask) {
   %masked = and i32 %freeze, %mask
   ret i32 %masked
 }
+
+define i32 @and_multiuse_freeze_extload_no_narrow(ptr %p) {
+; CHECK-LABEL: and_multiuse_freeze_extload_no_narrow:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    cmp w8, #42
+; CHECK-NEXT:    csel w0, w8, wzr, eq
+; CHECK-NEXT:    ret
+  %load = load i8, ptr %p
+  %freeze = freeze i8 %load
+  %zext = zext i8 %freeze to i32
+  %cmp = icmp eq i8 %freeze, 42
+  %sel = select i1 %cmp, i32 %zext, i32 0
+  ret i32 %sel
+}
+
+define i32 @neg_and_multiuse_freeze_narrowing(ptr %p, ptr %q) {
+; CHECK-LABEL: neg_and_multiuse_freeze_narrowing:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    and w0, w8, #0xff
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %load = load i32, ptr %p
+  %freeze = freeze i32 %load
+  %masked = and i32 %freeze, 255
+  store i32 %freeze, ptr %q
+  ret i32 %masked
+}
+
+define i64 @neg_and_multiuse_freeze_i64_narrowing(ptr %p, ptr %q) {
+; CHECK-LABEL: neg_and_multiuse_freeze_i64_narrowing:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    and x0, x8, #0xff
+; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    ret
+  %load = load i64, ptr %p
+  %freeze = freeze i64 %load
+  %masked = and i64 %freeze, 255
+  store i64 %freeze, ptr %q
+  ret i64 %masked
+}
