@@ -1286,9 +1286,10 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
     if (const Function *F = CB.getCalledFunction()) {
       bool AddNoNan = !!(CB.getRetNoFPClass() & fcNan);
       bool AddNoInf = !!(CB.getRetNoFPClass() & fcInf);
-      for (unsigned I = 0, E = F->getFunctionType()->getNumParams();
+      FunctionType *FTy = F->getFunctionType();
+      for (unsigned I = 0, E = FTy->getNumParams();
            I != E && (AddNoNan || AddNoInf); ++I) {
-        if (!F->getFunctionType()->getParamType(I)->isFloatingPointTy())
+        if (!FTy->getParamType(I)->isFloatingPointTy())
           continue;
         FPClassTest ArgTest = CB.getParamNoFPClass(I);
         AddNoNan = AddNoNan && !!(ArgTest & fcNan);
