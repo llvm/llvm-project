@@ -2685,6 +2685,8 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     Arg.getAnyValue()->setName(D.getName());
 
   QualType Ty = D.getType();
+  assert((getLangOpts().OpenCL || Ty.getAddressSpace() == LangAS::Default) &&
+         "parameter has non-default address space in non-OpenCL mode");
 
   // Use better IR generation for certain implicit parameters.
   if (auto IPD = dyn_cast<ImplicitParamDecl>(&D)) {

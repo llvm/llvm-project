@@ -47,7 +47,7 @@ func.func @subview_of_size_memcast(%arg : memref<4x6x16x32xi8>) ->
 //       CHECK: func @subview_of_strides_memcast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<1x1x?xf32, strided{{.*}}>
 //       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 0, 0] [1, 1, 4]
-//  CHECK-SAME:                    to memref<1x4xf32, strided<[7, 1], offset: ?>>
+//  CHECK-SAME:                    to memref<1x4xf32, strided<[35, 1], offset: ?>>
 //       CHECK:   %[[M:.+]] = memref.cast %[[S]]
 //  CHECK-SAME:                    to memref<1x4xf32, strided<[?, ?], offset: ?>>
 //       CHECK:   return %[[M]]
@@ -1287,6 +1287,69 @@ func.func @reinterpret_of_extract_strided_metadata_w_different_offset(%arg0 : me
 
 // -----
 
+// Check that reinterpret_cast with a negative constant size is not folded.
+// Folding would attempt to create a MemRefType with a negative static dimension,
+// which triggers an assertion in MemRefType::get (issue #188407).
+// CHECK-LABEL: func @reinterpret_cast_no_fold_negative_size
+//  CHECK-SAME: (%[[ARG:.*]]: memref<2x3xf32>)
+//       CHECK: %[[C0:.*]] = arith.constant 0 : index
+//       CHECK: %[[C1:.*]] = arith.constant 1 : index
+//       CHECK: %[[SZ:.*]] = arith.constant -1 : index
+//       CHECK: memref.reinterpret_cast %[[ARG]] to offset: [%[[C0]]], sizes: [%[[C1]], %[[SZ]]], strides: [%[[SZ]], %[[C1]]]
+func.func @reinterpret_cast_no_fold_negative_size(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %sz = arith.constant -1 : index
+  %output = memref.reinterpret_cast %arg0 to
+            offset: [%c0], sizes: [%c1, %sz], strides: [%sz, %c1]
+            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %output : memref<?x?xf32, strided<[?, ?], offset: ?>>
+}
+
+// -----
+
+// Check that reinterpret_cast with a negative constant offset is not folded.
+// Folding would create an op with a static negative offset, which violates the
+// ViewLikeInterface constraint that offsets must be non-negative.
+// CHECK-LABEL: func @reinterpret_cast_no_fold_negative_offset
+//  CHECK-SAME: (%[[ARG:.*]]: memref<2x3xf32>)
+//       CHECK: %[[C1:.*]] = arith.constant 1 : index
+//       CHECK: %[[C2:.*]] = arith.constant 2 : index
+//       CHECK: %[[NEG:.*]] = arith.constant -1 : index
+//       CHECK: memref.reinterpret_cast %[[ARG]] to offset: [%[[NEG]]], sizes: [%[[C1]], %[[C2]]], strides: [%[[C2]], %[[C1]]]
+func.func @reinterpret_cast_no_fold_negative_offset(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %neg = arith.constant -1 : index
+  %output = memref.reinterpret_cast %arg0 to
+            offset: [%neg], sizes: [%c1, %c2], strides: [%c2, %c1]
+            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %output : memref<?x?xf32, strided<[?, ?], offset: ?>>
+}
+
+// -----
+
+// Check that reinterpret_cast with a negative constant stride IS folded.
+// Negative strides are valid in MemRef layouts (e.g. reverse iteration),
+// and the ViewLikeInterface places no non-negativity constraint on strides.
+// CHECK-LABEL: func @reinterpret_cast_fold_negative_stride
+//  CHECK-SAME: (%[[ARG:.*]]: memref<2x3xf32>)
+//   CHECK-NOT: arith.constant
+//       CHECK: %[[RC:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [1, 2], strides: [-1, 1]
+//       CHECK: memref.cast %[[RC]]
+func.func @reinterpret_cast_fold_negative_stride(%arg0: memref<2x3xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %neg = arith.constant -1 : index
+  %output = memref.reinterpret_cast %arg0 to
+            offset: [%c0], sizes: [%c1, %c2], strides: [%neg, %c1]
+            : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %output : memref<?x?xf32, strided<[?, ?], offset: ?>>
+}
+
+// -----
+
 func.func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
     %arg1 : index) -> memref<?xf32, strided<[?], offset: ?>> {
   %c0 = arith.constant 0 : index
@@ -1638,4 +1701,25 @@ func.func @non_replace_view_negative_static_dims(%src: memref<?xi8>, %offset : i
   %c-1 = arith.constant -1: index
   %res = memref.view %src[%offset][%c-1] : memref<?xi8> to memref<?x4xi32>
   return %res : memref<?x4xi32>
+}
+
+// -----
+
+// Verify that canonicalization does not crash when a memref.dim is applied to
+// a subview with ambiguous dropped dimensions (multiple size-1 source dims with
+// all-dynamic strides). The dim should be folded to the corresponding subview
+// size operand.
+// See: https://github.com/llvm/llvm-project/issues/111244
+
+// CHECK-LABEL: func @no_crash_dim_of_ambiguous_subview
+// CHECK-SAME: (%[[ARG0:.*]]: {{.*}}, %[[ARG1:.*]]: index) -> index
+// CHECK-NOT: memref.dim
+// CHECK: return %[[ARG1]]
+func.func @no_crash_dim_of_ambiguous_subview(
+    %arg0: memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>, %arg1: index) -> index {
+  %c1 = arith.constant 1 : index
+  %subview = memref.subview %arg0[0, 0, 0] [1, %arg1, 1] [1, 1, 1]
+      : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> to memref<1x?xf32, strided<[?, ?], offset: ?>>
+  %dim = memref.dim %subview, %c1 : memref<1x?xf32, strided<[?, ?], offset: ?>>
+  return %dim : index
 }

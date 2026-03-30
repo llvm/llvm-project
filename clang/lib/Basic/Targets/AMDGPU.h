@@ -302,6 +302,7 @@ public:
     Opts["cl_clang_storage_class_specifiers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
     Opts["__cl_clang_function_pointers"] = true;
+    Opts["__cl_clang_function_scope_local_variables"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
     Opts["__cl_clang_bitfields"] = true;
 
@@ -344,6 +345,10 @@ public:
         Opts["__opencl_c_generic_address_space"] = true;
         Opts["__opencl_c_device_enqueue"] = true;
         Opts["__opencl_c_pipes"] = true;
+      }
+
+      if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
+        Opts["cl_khr_subgroup_extended_types"] = true;
       }
     }
   }

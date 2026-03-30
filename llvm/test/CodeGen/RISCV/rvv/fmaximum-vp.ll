@@ -1301,17 +1301,17 @@ define <vscale x 16 x double> @vfmax_vv_nxv16f64(<vscale x 16 x double> %va, <vs
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a3, a1, 3
-; CHECK-NEXT:    srli a4, a1, 3
-; CHECK-NEXT:    vslidedown.vx v6, v0, a4
+; CHECK-NEXT:    srli a3, a1, 3
 ; CHECK-NEXT:    sub a4, a2, a1
-; CHECK-NEXT:    add a3, a0, a3
-; CHECK-NEXT:    vl8re64.v v24, (a3)
+; CHECK-NEXT:    vslidedown.vx v6, v0, a3
 ; CHECK-NEXT:    sltu a3, a2, a4
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a3, a3, a4
-; CHECK-NEXT:    vmv1r.v v0, v6
+; CHECK-NEXT:    slli a4, a1, 3
+; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a4)
+; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    vmfeq.vv v8, v16, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmv8r.v v8, v16
@@ -1377,14 +1377,14 @@ define <vscale x 16 x double> @vfmax_vv_nxv16f64_unmasked(<vscale x 16 x double>
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a3, a1, 3
-; CHECK-NEXT:    sub a4, a2, a1
-; CHECK-NEXT:    add a3, a0, a3
-; CHECK-NEXT:    vl8re64.v v24, (a3)
-; CHECK-NEXT:    sltu a3, a2, a4
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a3, a3, a4
+; CHECK-NEXT:    sub a3, a2, a1
+; CHECK-NEXT:    sltu a4, a2, a3
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    slli a4, a1, 3
+; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a4)
 ; CHECK-NEXT:    vmfeq.vv v0, v16, v16
 ; CHECK-NEXT:    vmfeq.vv v7, v24, v24
 ; CHECK-NEXT:    vl8re64.v v8, (a0)

@@ -737,7 +737,7 @@ CodeGenFunction::getFuncletEHDispatchBlock(EHScopeStack::stable_iterator SI) {
     DispatchBlock = getTerminateFunclet();
   else
     DispatchBlock = createBasicBlock();
-  CGBuilderTy Builder(*this, DispatchBlock);
+  CGBuilderTy Builder(CGM, DispatchBlock);
 
   switch (EHS.getKind()) {
   case EHScope::Catch:
@@ -1325,11 +1325,8 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     // we follow the false destination for each of the cond branches to reach
     // the rethrow block.
     llvm::BasicBlock *RethrowBlock = WasmCatchStartBlock;
-    while (llvm::Instruction *TI = RethrowBlock->getTerminator()) {
-      auto *BI = cast<llvm::BranchInst>(TI);
-      assert(BI->isConditional());
-      RethrowBlock = BI->getSuccessor(1);
-    }
+    while (llvm::Instruction *TI = RethrowBlock->getTerminator())
+      RethrowBlock = cast<llvm::CondBrInst>(TI)->getSuccessor(1);
     assert(RethrowBlock != WasmCatchStartBlock && RethrowBlock->empty());
     Builder.SetInsertPoint(RethrowBlock);
     llvm::Function *RethrowInCatchFn =
@@ -1834,10 +1831,27 @@ struct CaptureFinder : ConstStmtVisitor<CaptureFinder> {
 Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
                                                    Address ParentVar,
                                                    llvm::Value *ParentFP) {
-  llvm::CallInst *RecoverCall = nullptr;
-  CGBuilderTy Builder(*this, AllocaInsertPt);
-  if (auto *ParentAlloca =
-          dyn_cast_or_null<llvm::AllocaInst>(ParentVar.getBasePointer())) {
+  llvm::Value *RecoverCall = nullptr;
+  CGBuilderTy Builder(CGM, AllocaInsertPt);
+  // We are currently handling the following case:
+  // ParentAlloca: An alloca for a local variable/direct argument
+  // ParentArg: An argument pointer, pointing to an argument passed indirectly
+  // Other case: A call to localrecover, if this is a nested __try.
+  auto *ParentAlloca =
+      dyn_cast_or_null<llvm::AllocaInst>(ParentVar.getBasePointer());
+  auto *ParentArg =
+      dyn_cast_or_null<llvm::Argument>(ParentVar.getBasePointer());
+  if (!ParentAlloca) {
+    if (ParentArg) {
+      llvm::BasicBlock &EntryBB = ParentCGF.CurFn->getEntryBlock();
+      llvm::IRBuilder<> ParentEntryBuilder(&EntryBB, EntryBB.begin());
+      ParentAlloca = ParentEntryBuilder.CreateAlloca(
+          ParentArg->getType(), nullptr, ParentArg->getName() + ".spill");
+      ParentEntryBuilder.CreateStore(ParentArg, ParentAlloca);
+    }
+  }
+
+  if (ParentAlloca) {
     // Mark the variable escaped if nobody else referenced it and compute the
     // localescape index.
     auto InsertPair = ParentCGF.EscapedLocals.insert(
@@ -1849,7 +1863,9 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
     RecoverCall = Builder.CreateCall(
         FrameRecoverFn, {ParentCGF.CurFn, ParentFP,
                          llvm::ConstantInt::get(Int32Ty, FrameEscapeIdx)});
-
+    if (ParentArg)
+      RecoverCall = Builder.CreateLoad(
+          Address(RecoverCall, ParentArg->getType(), getPointerAlign()));
   } else {
     // If the parent didn't have an alloca, we're doing some nested outlining.
     // Just clone the existing localrecover call, but tweak the FP argument to
@@ -1858,9 +1874,10 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
         ParentVar.emitRawPointer(*this)->stripPointerCasts());
     assert(ParentRecover->getIntrinsicID() == llvm::Intrinsic::localrecover &&
            "expected alloca or localrecover in parent LocalDeclMap");
-    RecoverCall = cast<llvm::CallInst>(ParentRecover->clone());
-    RecoverCall->setArgOperand(1, ParentFP);
-    RecoverCall->insertBefore(AllocaInsertPt->getIterator());
+    RecoverCall = ParentRecover->clone();
+    cast<llvm::CallInst>(RecoverCall)->setArgOperand(1, ParentFP);
+    cast<llvm::CallInst>(RecoverCall)
+        ->insertBefore(AllocaInsertPt->getIterator());
   }
 
   // Bitcast the variable, rename it, and insert it in the local decl map.

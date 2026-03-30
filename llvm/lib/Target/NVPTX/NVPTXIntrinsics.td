@@ -23,7 +23,7 @@ def AS_match {
    return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_CONST;
   }];
   code param = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_PARAM;
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_ENTRY_PARAM;
   }];
 }
 
@@ -4926,6 +4926,14 @@ def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
 def INT_PTX_SREG_PM2 : PTX_READ_SREG_R32<"pm2", int_nvvm_read_ptx_sreg_pm2>;
 def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
 
+// Reserved shared memory special register reads
+foreach suffix = ["begin", "end", "cap", "0", "1"] in {
+  defvar regname = "reserved_smem_offset_" # suffix;
+  defvar intr = !cast<Intrinsic>("int_nvvm_read_ptx_sreg_" # regname);
+  def "INT_PTX_SREG_RESERVED_SMEM_OFFSET_" # !toupper(suffix) :
+      PTX_READ_SREG_R32<regname, intr, [hasPTX<76>, hasSM<80>]>;
+}
+
 // TODO: It would be nice to use PTX_READ_SREG here, but it doesn't
 // handle the constant.
 def INT_PTX_SREG_WARPSIZE :
@@ -6156,8 +6164,8 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
 
   let AsmString = Prefix
                   # SpCtaKindStr
-                  # ".collector::a::" # CollectorUsage
                   # !if(IsAShift, ".ashift", "")
+                  # ".collector::a::" # CollectorUsage
                   # BaseOperandsStr
                   # InputDStr
                   # ScaleInpStr

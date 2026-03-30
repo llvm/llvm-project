@@ -5077,7 +5077,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       }
     }
 
-    SS = Spec;
+    SS = std::move(Spec);
   }
 
   // Must have either 'enum name' or 'enum {...}' or (rarely) 'enum : T { ... }'.
@@ -6415,7 +6415,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                                        /*IsTypename=*/false, /*LastII=*/nullptr,
                                        /*OnlyNamespace=*/false,
                                        /*InUsingDeclaration=*/false,
-                                       /*Disambiguation=*/EnteringContext) ||
+                                       /*Disambiguation=*/EnteringContext,
+                                       /*IsAddressOfOperand=*/false,
+                                       /*IsInDeclarationContext=*/true) ||
 
         SS.isEmpty() || SS.isInvalid() || !EnteringContext ||
         Tok.is(tok::star)) {
@@ -6456,7 +6458,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     if (SS.isNotEmpty()) {
       // The scope spec really belongs to the direct-declarator.
       if (D.mayHaveIdentifier())
-        D.getCXXScopeSpec() = SS;
+        D.getCXXScopeSpec() = std::move(SS);
       else
         AnnotateScopeToken(SS, true);
 

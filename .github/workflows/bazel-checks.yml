@@ -23,14 +23,25 @@ jobs:
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
       - name: Setup Buildifier
         run: |
           sudo curl -L https://github.com/bazelbuild/buildtools/releases/download/v8.2.1/buildifier-linux-amd64 -o /usr/bin/buildifier --fail
           sudo chmod +x /usr/bin/buildifier
       - name: Run Buildifier
         run: |
-          buildifier --mode=check $(find ./utils/bazel -name *BUILD*)
-  
+          BZL_FILES=$(find ./utils/bazel -name *BUILD* -o -name '*bzl' -o -name '*.bazel')
+          if ! buildifier --mode=check $BZL_FILES; then
+            echo "::error::Buildifier formatting issues found."
+            echo "::group::Buildifier Diff"
+            buildifier --mode=diff $BZL_FILES
+            echo "::endgroup::"
+            exit 1
+          else
+            echo "All files are formatted correctly."
+          fi
+
   bazel-build:
     name: "Bazel Build/Test"
     # Only run on US Central workers so we only have to keep one cache warm as
@@ -42,6 +53,8 @@ jobs:
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
         # TODO(boomanaiden154): We should use a purpose built container for this. Move
         # over when we have fixed the issues with using custom containers with Github
         # ARC in GKE.

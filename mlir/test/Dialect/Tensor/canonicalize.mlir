@@ -411,6 +411,21 @@ func.func @from_elements_with_poison() -> tensor<1xindex> {
 
 // -----
 
+// Ensure tensor.from_elements with a vector element type doesn't crash
+// when the elements fold to constants (DenseElementsAttr does not support
+// non-scalar element types via the Attribute overload).
+// CHECK-LABEL: func @from_elements_with_vector_element_type
+func.func @from_elements_with_vector_element_type() -> tensor<1xvector<1xi1>> {
+  // CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<1xi1>
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[CST]] : tensor<1xvector<1xi1>>
+  // CHECK: return %[[TENSOR]]
+  %0 = vector.constant_mask [1] : vector<1xi1>
+  %1 = tensor.from_elements %0 : tensor<1xvector<1xi1>>
+  return %1 : tensor<1xvector<1xi1>>
+}
+
+// -----
+
 // Ensure the optimization doesn't segfault from bad constants
 // CHECK-LABEL: func @extract_negative_from_tensor.from_elements
 func.func @extract_negative_from_tensor.from_elements(%element : index) -> index {
@@ -1672,6 +1687,22 @@ func.func @reshape_splat_constant_float64() -> tensor<2x4x2xf64> {
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/177845:
+// tensor.expand_shape of a constant to a dynamic shape must not crash.
+// FoldReshapeWithConstant must not call DenseElementsAttr::getFromRawBuffer
+// when the result type is dynamic (getFromRawBuffer requires static shape).
+
+// CHECK-LABEL: @expand_shape_splat_constant_dynamic_result
+//       CHECK:   arith.constant
+//       CHECK:   tensor.expand_shape
+func.func @expand_shape_splat_constant_dynamic_result(%n: index) -> tensor<?xi32> {
+  %cst = arith.constant dense<1> : tensor<i32>
+  %result = tensor.expand_shape %cst [] output_shape [%n] : tensor<i32> into tensor<?xi32>
+  return %result : tensor<?xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_rank
 func.func @fold_rank() -> (index) {
   %const_0 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]>
@@ -2245,6 +2276,19 @@ func.func @fold_empty_tensor_with_cast(%arg0 : index) -> tensor<1x12xf32> {
 //      CHECK: func @fold_empty_tensor_with_cast(%[[ARG0:.+]]: index)
 //      CHECK:   %[[T0:.+]] = tensor.empty() : tensor<1x12xf32>
 //      CHECK:   return %[[T0]] : tensor<1x12xf32>
+
+// -----
+
+func.func @fold_empty_tensor_with_cast_encoding(%arg0 : index)
+    -> tensor<1x12xf32, "foo"> {
+  %0 = tensor.empty(%arg0) : tensor<?x12xf32, "foo">
+  %1 = tensor.cast %0 : tensor<?x12xf32, "foo"> to tensor<1x12xf32, "foo">
+  return %1 : tensor<1x12xf32, "foo">
+}
+// CHECK-LABEL: func @fold_empty_tensor_with_cast_encoding
+//       CHECK:   %[[T0:.+]] = tensor.empty() : tensor<1x12xf32, "foo">
+//   CHECK-NOT:   tensor.cast
+//       CHECK:   return %[[T0]] : tensor<1x12xf32, "foo">
 
 // -----
 

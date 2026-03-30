@@ -232,15 +232,21 @@ void *strStr(const char *const Haystack, const char *const Needle) {
 }
 
 void reportNumber(const char *Msg, uint64_t Num, uint32_t Base) {
+#if !defined(__ANDROID__)
   char Buf[BufSize];
   char *Ptr = Buf;
   Ptr = strCopy(Ptr, Msg, BufSize - 23);
   Ptr = intToStr(Ptr, Num, Base);
   Ptr = strCopy(Ptr, "\n");
   __write(2, Buf, Ptr - Buf);
+#endif
 }
 
-void report(const char *Msg) { __write(2, Msg, strLen(Msg)); }
+void report(const char *Msg) {
+#if !defined(__ANDROID__)
+  __write(2, Msg, strLen(Msg));
+#endif
+}
 
 unsigned long hexToLong(const char *Str, char Terminator = '\0') {
   unsigned long Res = 0;
@@ -278,19 +284,25 @@ static bool scanUInt32(const char *&Buf, const char *End, uint32_t &Ret) {
 }
 
 void reportError(const char *Msg, uint64_t Size) {
+#if !defined(__ANDROID__)
   __write(2, Msg, Size);
+#endif
   __exit(1);
 }
 
 void assert(bool Assertion, const char *Msg) {
   if (Assertion)
     return;
+#if defined(__ANDROID__)
+  __exit(1);
+#else
   char Buf[BufSize];
   char *Ptr = Buf;
   Ptr = strCopy(Ptr, "Assertion failed: ");
   Ptr = strCopy(Ptr, Msg, BufSize - 40);
   Ptr = strCopy(Ptr, "\n");
   reportError(Buf, Ptr - Buf);
+#endif
 }
 
 #define SIG_BLOCK 0

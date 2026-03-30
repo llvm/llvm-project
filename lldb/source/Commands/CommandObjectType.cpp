@@ -67,14 +67,16 @@ public:
   bool m_skip_pointers;
   bool m_skip_references;
   bool m_cascade;
+  bool m_wants_deref;
   FormatterMatchType m_match_type;
   StringList m_target_types;
   std::string m_category;
 
-  SynthAddOptions(bool sptr, bool sref, bool casc,
+  SynthAddOptions(bool sptr, bool sref, bool casc, bool wants_deref,
                   FormatterMatchType match_type, std::string catg)
       : m_skip_pointers(sptr), m_skip_references(sref), m_cascade(casc),
-        m_match_type(match_type), m_category(catg) {}
+        m_wants_deref(wants_deref), m_match_type(match_type), m_category(catg) {
+  }
 
   typedef std::shared_ptr<SynthAddOptions> SharedPointer;
 };
@@ -289,11 +291,11 @@ protected:
 static const char *g_synth_addreader_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
     "You must define a Python class with these methods:\n"
-    "    def __init__(self, valobj, internal_dict):\n"
-    "    def num_children(self):\n"
-    "    def get_child_at_index(self, index):\n"
-    "    def get_child_index(self, name):\n"
-    "    def update(self):\n"
+    "    def __init__(self, valobj: lldb.SBValue, internal_dict):\n"
+    "    def num_children(self) -> int:\n"
+    "    def get_child_at_index(self, index: int) -> lldb.SBValue | None:\n"
+    "    def get_child_index(self, name: str) -> int:\n"
+    "    def update(self) -> bool:\n"
     "        '''Optional'''\n"
     "class synthProvider:\n";
 
@@ -321,6 +323,13 @@ private:
         if (!success)
           error = Status::FromErrorStringWithFormat(
               "invalid value for cascade: %s", option_arg.str().c_str());
+        break;
+      case 'D':
+        m_wants_deref = OptionArgParser::ToBoolean(option_arg, true, &success);
+        if (!success)
+          error = Status::FromErrorStringWithFormat(
+              "invalid value for wants-dereference: %s",
+              option_arg.str().c_str());
         break;
       case 'P':
         handwrite_python = true;
@@ -361,6 +370,7 @@ private:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_cascade = true;
+      m_wants_deref = true;
       m_class_name = "";
       m_skip_pointers = false;
       m_skip_references = false;
@@ -379,6 +389,7 @@ private:
     bool m_cascade;
     bool m_skip_references;
     bool m_skip_pointers;
+    bool m_wants_deref;
     std::string m_class_name;
     bool m_input_python;
     std::string m_category;
@@ -454,7 +465,8 @@ protected:
                     SyntheticChildren::Flags()
                         .SetCascades(options->m_cascade)
                         .SetSkipPointers(options->m_skip_pointers)
-                        .SetSkipReferences(options->m_skip_references),
+                        .SetSkipReferences(options->m_skip_references)
+                        .SetFrontEndWantsDereference(options->m_wants_deref),
                     class_name_str.c_str());
 
                 lldb::TypeCategoryImplSP category;
@@ -2131,7 +2143,8 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
     Args &command, CommandReturnObject &result) {
   auto options = std::make_unique<SynthAddOptions>(
       m_options.m_skip_pointers, m_options.m_skip_references,
-      m_options.m_cascade, m_options.m_match_type, m_options.m_category);
+      m_options.m_cascade, m_options.m_wants_deref, m_options.m_match_type,
+      m_options.m_category);
 
   for (auto &entry : command.entries()) {
     if (entry.ref().empty()) {
@@ -2173,6 +2186,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   ScriptedSyntheticChildren *impl = new ScriptedSyntheticChildren(
       SyntheticChildren::Flags()
           .SetCascades(m_options.m_cascade)
+          .SetFrontEndWantsDereference(m_options.m_wants_deref)
           .SetSkipPointers(m_options.m_skip_pointers)
           .SetSkipReferences(m_options.m_skip_references),
       m_options.m_class_name.c_str());
@@ -2713,8 +2727,8 @@ public:
     }
 
     if (!any_found)
-      result.AppendMessageWithFormat("no type was found matching '%s'\n",
-                                     name_of_type);
+      result.AppendMessageWithFormatv("no type was found matching '{0}'",
+                                      name_of_type);
 
     result.SetStatus(any_found ? lldb::eReturnStatusSuccessFinishResult
                                : lldb::eReturnStatusSuccessFinishNoResult);

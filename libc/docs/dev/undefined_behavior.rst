@@ -1,10 +1,8 @@
+.. _undefined_behavior:
+
 ===========================
 Defining Undefined Behavior
 ===========================
-
-.. contents:: Table of Contents
-   :depth: 2
-   :local:
 
 The C standard leaves behavior undefined or implementation defined in many
 places. Undefined behavior is behavior that the standards leave up to the

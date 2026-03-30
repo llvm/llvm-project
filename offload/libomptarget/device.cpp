@@ -211,7 +211,7 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   DeviceEnvironment.NumDevices = RTL->getNumDevices();
   // TODO: The device ID used here is not the real device ID used by OpenMP.
   DeviceEnvironment.DeviceNum = RTLDeviceID;
-  DeviceEnvironment.DynamicMemSize = GenericDevice.getDynamicMemorySize();
+  DeviceEnvironment.DynamicMemSize = 0;
   DeviceEnvironment.ClockFrequency = GenericDevice.getClockFrequency();
   DeviceEnvironment.IndirectCallTable =
       reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);

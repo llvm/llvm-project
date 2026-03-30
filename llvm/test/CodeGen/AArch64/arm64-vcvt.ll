@@ -434,7 +434,6 @@ define <2 x i64> @fcvtzu_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
-; FIXME: Generate "fcvtzu d0, d0"?
 define <1 x i64> @fcvtzu_1d(<1 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtzu_1d:
 ; CHECK:       // %bb.0:

@@ -134,4 +134,4 @@ To see what functions appear frequently in the trace, use this command:
 
    cat trace.json | grep -Po '"name":"(.+)"' | sort | uniq -c | sort -nr | head -n 50
 
-``uftrace`` can also dump the report as a Flame graph using ``uftrace dump --framegraph``.
+``uftrace`` can also dump the report as a Flame graph using ``uftrace dump --flame-graph``.

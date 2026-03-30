@@ -949,6 +949,44 @@ func.func @cond_prop(%arg0 : i1) -> index {
 
 // -----
 
+// Condition propagation: uses of the condition inside the then/else regions
+// are replaced with true/false respectively (regression test for
+// https://github.com/llvm/llvm-project/issues/159165).
+
+// CHECK-LABEL: @cond_prop_then
+func.func @cond_prop_then(%arg0 : i1) {
+  scf.if %arg0 {
+    "test.use"(%arg0) : (i1) -> ()
+  }
+  return
+}
+// CHECK-NEXT:  %[[true:.+]] = arith.constant true
+// CHECK-NEXT:  scf.if %arg0 {
+// CHECK-NEXT:    "test.use"(%[[true]]) : (i1) -> ()
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+// CHECK-NEXT:}
+
+// -----
+
+// CHECK-LABEL: @cond_prop_else
+func.func @cond_prop_else(%arg0 : i1) {
+  scf.if %arg0 {
+  } else {
+    "test.use"(%arg0) : (i1) -> ()
+  }
+  return
+}
+// CHECK-NEXT:  %[[false:.+]] = arith.constant false
+// CHECK-NEXT:  scf.if %arg0 {
+// CHECK-NEXT:  } else {
+// CHECK-NEXT:    "test.use"(%[[false]]) : (i1) -> ()
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+// CHECK-NEXT:}
+
+// -----
+
 // CHECK-LABEL: @replace_if_with_cond1
 func.func @replace_if_with_cond1(%arg0 : i1) -> (i32, i1) {
   %true = arith.constant true

@@ -50,9 +50,17 @@ mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
 MLIR_CAPI_EXPORTED MlirDynamicOpTrait
 mlirDynamicOpTraitIsTerminatorCreate(void);
 
+/// Get the type ID of the dynamic op trait that indicates the operation is a
+/// terminator.
+MLIR_CAPI_EXPORTED MlirTypeID mlirDynamicOpTraitIsTerminatorGetTypeID(void);
+
 /// Get the dynamic op trait that indicates regions have no terminator.
 MLIR_CAPI_EXPORTED MlirDynamicOpTrait
 mlirDynamicOpTraitNoTerminatorCreate(void);
+
+/// Get the type ID of the dynamic op trait that indicates regions have no
+/// terminator.
+MLIR_CAPI_EXPORTED MlirTypeID mlirDynamicOpTraitNoTerminatorGetTypeID(void);
 
 /// Destroy the dynamic op trait.
 MLIR_CAPI_EXPORTED void
@@ -87,9 +95,6 @@ mlirExtensibleDialectLookupTypeDefinition(MlirDialect dialect,
 /// Check if the given type is a dynamic type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsADynamicType(MlirType type);
 
-/// Get the type ID of a dynamic type.
-MLIR_CAPI_EXPORTED MlirTypeID mlirDynamicTypeGetTypeID(void);
-
 /// Get a dynamic type by instantiating the given type definition with the
 /// provided attributes.
 MLIR_CAPI_EXPORTED MlirType mlirDynamicTypeGet(
@@ -105,6 +110,10 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDynamicTypeGetParam(MlirType type,
 /// Get the type definition of the given dynamic type.
 MLIR_CAPI_EXPORTED MlirDynamicTypeDefinition
 mlirDynamicTypeGetTypeDef(MlirType type);
+
+/// Get the type ID of a dynamic type definition.
+MLIR_CAPI_EXPORTED MlirTypeID
+mlirDynamicTypeDefinitionGetTypeID(MlirDynamicTypeDefinition typeDef);
 
 /// Get the name of the given dynamic type definition.
 MLIR_CAPI_EXPORTED MlirStringRef
@@ -123,9 +132,6 @@ mlirExtensibleDialectLookupAttrDefinition(MlirDialect dialect,
 /// Check if the given attribute is a dynamic attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADynamicAttr(MlirAttribute attr);
 
-/// Get the type ID of a dynamic attribute.
-MLIR_CAPI_EXPORTED MlirTypeID mlirDynamicAttrGetTypeID(void);
-
 /// Get a dynamic attribute by instantiating the given attribute definition with
 /// the provided attributes.
 MLIR_CAPI_EXPORTED MlirAttribute mlirDynamicAttrGet(
@@ -141,6 +147,10 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDynamicAttrGetParam(MlirAttribute attr,
 /// Get the attribute definition of the given dynamic attribute.
 MLIR_CAPI_EXPORTED MlirDynamicAttrDefinition
 mlirDynamicAttrGetAttrDef(MlirAttribute attr);
+
+/// Get the type ID of a dynamic attribute definition.
+MLIR_CAPI_EXPORTED MlirTypeID
+mlirDynamicAttrDefinitionGetTypeID(MlirDynamicAttrDefinition attrDef);
 
 /// Get the name of the given dynamic attribute definition.
 MLIR_CAPI_EXPORTED MlirStringRef

@@ -149,6 +149,18 @@ public:
 
   /// Generate a constant string object.
   virtual ConstantAddress GenerateConstantString(const StringLiteral *) = 0;
+  virtual ConstantAddress GenerateConstantNumber(const bool Value,
+                                                 const QualType &Ty) = 0;
+  virtual ConstantAddress GenerateConstantNumber(const llvm::APSInt &Value,
+                                                 const QualType &Ty) = 0;
+  virtual ConstantAddress GenerateConstantNumber(const llvm::APFloat &Value,
+                                                 const QualType &Ty) = 0;
+  virtual ConstantAddress
+  GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) = 0;
+  virtual ConstantAddress GenerateConstantDictionary(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>>
+          KeysAndObjects) = 0;
 
   /// Generate a category.  A category contains a list of methods (and
   /// accompanying metadata) and a list of protocols.

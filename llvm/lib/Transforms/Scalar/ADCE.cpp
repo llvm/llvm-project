@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
@@ -212,11 +213,6 @@ ADCEChanged AggressiveDeadCodeElimination::performDeadCodeElimination() {
   return removeDeadInstructions();
 }
 
-static bool isUnconditionalBranch(Instruction *Term) {
-  auto *BR = dyn_cast<BranchInst>(Term);
-  return BR && BR->isUnconditional();
-}
-
 void AggressiveDeadCodeElimination::initialize() {
   auto NumBlocks = F.size();
 
@@ -232,7 +228,7 @@ void AggressiveDeadCodeElimination::initialize() {
     auto &Info = BlockInfo[&BB];
     Info.BB = &BB;
     Info.Terminator = BB.getTerminator();
-    Info.UnconditionalBranch = isUnconditionalBranch(Info.Terminator);
+    Info.UnconditionalBranch = isa<UncondBrInst>(Info.Terminator);
   }
 
   // Initialize instruction map and set pointers to block info.
@@ -255,45 +251,11 @@ void AggressiveDeadCodeElimination::initialize() {
     return;
 
   if (!RemoveLoops) {
-    // This stores state for the depth-first iterator. In addition
-    // to recording which nodes have been visited we also record whether
-    // a node is currently on the "stack" of active ancestors of the current
-    // node.
-    using StatusMap = DenseMap<BasicBlock *, bool>;
-
-    class DFState : public StatusMap {
-    public:
-      std::pair<StatusMap::iterator, bool> insert(BasicBlock *BB) {
-        return StatusMap::insert(std::make_pair(BB, true));
-      }
-
-      // Invoked after we have visited all children of a node.
-      void completed(BasicBlock *BB) { (*this)[BB] = false; }
-
-      // Return true if \p BB is currently on the active stack
-      // of ancestors.
-      bool onStack(BasicBlock *BB) {
-        auto Iter = find(BB);
-        return Iter != end() && Iter->second;
-      }
-    } State;
-
-    State.reserve(F.size());
-    // Iterate over blocks in depth-first pre-order and
-    // treat all edges to a block already seen as loop back edges
-    // and mark the branch live it if there is a back edge.
-    for (auto *BB: depth_first_ext(&F.getEntryBlock(), State)) {
-      Instruction *Term = BB->getTerminator();
-      if (isLive(Term))
-        continue;
-
-      for (auto *Succ : successors(BB))
-        if (State.onStack(Succ)) {
-          // back edge....
-          markLive(Term);
-          break;
-        }
-    }
+    // Mark all terminators that have backedges as live.
+    SmallVector<std::pair<const BasicBlock *, const BasicBlock *>> Backedges;
+    FindFunctionBackedges(F, Backedges);
+    for (const auto &[Src, Dst] : Backedges)
+      markLive(const_cast<Instruction *>(Src->getTerminator()));
   }
 
   // Mark blocks live if there is no path from the block to a
@@ -339,7 +301,7 @@ bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
   }
   if (!I.isTerminator())
     return false;
-  if (RemoveControlFlowFlag && (isa<BranchInst>(I) || isa<SwitchInst>(I)))
+  if (RemoveControlFlowFlag && isa<UncondBrInst, CondBrInst, SwitchInst>(I))
     return false;
   return true;
 }
@@ -682,8 +644,8 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
     collectLiveScopes(*DL);
 
   // Just mark live an existing unconditional branch
-  if (isUnconditionalBranch(PredTerm)) {
-    PredTerm->setSuccessor(0, Target);
+  if (auto *BI = dyn_cast<UncondBrInst>(PredTerm)) {
+    BI->setSuccessor(Target);
     InstInfo[PredTerm].Live = true;
     return;
   }

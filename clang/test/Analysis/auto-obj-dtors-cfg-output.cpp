@@ -1296,19 +1296,15 @@ void test_for_inc_conditional() {
     (void)0;
 }
 
-// CHECK:      [B4 (ENTRY)]
-// CHECK-NEXT:   Succs (1): B1
+// CHECK:      [B3 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B1]
 // CHECK-NEXT:   T: try ...
-// CHECK-NEXT:   Preds (1): B4
-// CHECK-NEXT:   Succs (3): B2 B0 B3
+// CHECK-NEXT:   Succs (2): B2 B0
 // CHECK:      [B2]
 // CHECK-NEXT:  catch (const A &e):
 // CHECK-NEXT:   1: catch (const A &e) {
 // CHECK-NEXT:  }
-// CHECK-NEXT:   Preds (1): B1
-// CHECK-NEXT:   Succs (1): B0
-// CHECK:      [B3]
 // CHECK-NEXT:   Preds (1): B1
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B0 (EXIT)]
@@ -1319,20 +1315,16 @@ void test_catch_const_ref() {
   }
 }
 
-// CHECK:      [B4 (ENTRY)]
-// CHECK-NEXT:   Succs (1): B1
+// CHECK:      [B3 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B1]
 // CHECK-NEXT:   T: try ...
-// CHECK-NEXT:   Preds (1): B4
-// CHECK-NEXT:   Succs (3): B2 B0 B3
+// CHECK-NEXT:   Succs (2): B2 B0
 // CHECK:      [B2]
 // CHECK-NEXT:  catch (A e):
 // CHECK-NEXT:   1: catch (A e) {
 // CHECK-NEXT:  }
 // CHECK-NEXT:   2: [B2.1].~A() (Implicit destructor)
-// CHECK-NEXT:   Preds (1): B1
-// CHECK-NEXT:   Succs (1): B0
-// CHECK:      [B3]
 // CHECK-NEXT:   Preds (1): B1
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B0 (EXIT)]

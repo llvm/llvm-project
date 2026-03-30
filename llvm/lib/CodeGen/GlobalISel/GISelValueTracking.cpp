@@ -258,12 +258,16 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       // it's always defined to be 0 by tablegen.
       if (SrcReg.isVirtual() && Src.getSubReg() == 0 /*NoSubRegister*/ &&
           SrcTy.isValid()) {
-        // In case we're forwarding from a vector register to a non-vector
-        // register we need to update the demanded elements to reflect this
-        // before recursing.
-        APInt NowDemandedElts = SrcTy.isFixedVector() && !DstTy.isFixedVector()
-                                    ? APInt::getAllOnes(SrcTy.getNumElements())
-                                    : DemandedElts; // Known to be APInt(1, 1)
+        APInt NowDemandedElts;
+        if (!SrcTy.isFixedVector()) {
+          NowDemandedElts = APInt(1, 1);
+        } else if (DstTy.isFixedVector() &&
+                   SrcTy.getNumElements() == DstTy.getNumElements()) {
+          NowDemandedElts = DemandedElts;
+        } else {
+          NowDemandedElts = APInt::getAllOnes(SrcTy.getNumElements());
+        }
+
         // For COPYs we don't do anything, don't increase the depth.
         computeKnownBitsImpl(SrcReg, Known2, NowDemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
@@ -366,6 +370,32 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
     Known = KnownBits::mulhs(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_ABDU: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::abdu(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_ABDS: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::abds(Known, Known2);
+
+    unsigned SignBits1 =
+        computeNumSignBits(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
+    if (SignBits1 == 1) {
+      break;
+    }
+    unsigned SignBits0 =
+        computeNumSignBits(MI.getOperand(1).getReg(), DemandedElts, Depth + 1);
+
+    Known.Zero.setHighBits(std::min(SignBits0, SignBits1) - 1);
     break;
   }
   case TargetOpcode::G_UDIV: {
