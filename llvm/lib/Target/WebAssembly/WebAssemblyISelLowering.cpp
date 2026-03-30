@@ -3563,6 +3563,64 @@ static SDValue combineSmallMaskReduction(SDNode *N, EVT FromVT,
   llvm_unreachable("unexpected mask reduction kind");
 }
 
+static SDValue combineWideMaskReduction(SDNode *N, SDValue Mask, EVT MaskVT,
+                                        unsigned NumElts,
+                                        const MaskReduceInfo &Info,
+                                        SelectionDAG &DAG) {
+  assert((NumElts == 32 || NumElts == 64) &&
+         "combineWideMaskReduction is only for wide masks");
+  assert(MaskVT.isFixedLengthVector() &&
+         MaskVT.getVectorElementType() == MVT::i1);
+  SDLoc DL(N);
+  unsigned ChunkElts = 16;
+  EVT ChunkMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                     ElementCount::getFixed(ChunkElts));
+  EVT LegalVecVT = ChunkMaskVT.changeVectorElementType(
+      *DAG.getContext(), MVT::getIntegerVT(128 / ChunkElts));
+  Intrinsic::ID IID = Info.Kind == MaskReduceKind::AnyTrue
+                          ? Intrinsic::wasm_anytrue
+                          : Intrinsic::wasm_alltrue;
+
+  SmallVector<SDValue, 4> ChunkResults;
+  // Split the wide mask into v16i1 chunks and reduce each chunk separately.
+  // For example:
+  //   v32i1:  [0..15] [16..31]
+  //              |       |
+  //              v       v
+  //            chunk0  chunk1
+  //
+  //   v64i1:  [0..15] [16..31] [32..47] [48..63]
+  //              |       |       |       |
+  //              v       v       v       v
+  //            chunk0  chunk1  chunk2  chunk3
+  //
+  //   each chunk:
+  //     v16i1 -> v16i8 -> wasm_anytrue/alltrue -> i32 0/1
+  for (unsigned I = 0; I < NumElts; I += ChunkElts) {
+    SDValue ChunkMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ChunkMaskVT,
+                                    Mask, DAG.getVectorIdxConstant(I, DL));
+    SDValue LegalMask = DAG.getSExtOrTrunc(ChunkMask, DL, LegalVecVT);
+    SDValue Reduced =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                    DAG.getConstant(IID, DL, MVT::i32), LegalMask);
+    ChunkResults.push_back(Reduced);
+  }
+
+  SDValue Acc = ChunkResults[0];
+  for (unsigned I = 1; I < ChunkResults.size(); ++I) {
+    unsigned Opc = Info.Kind == MaskReduceKind::AnyTrue ? ISD::OR : ISD::AND;
+    Acc = DAG.getNode(Opc, DL, MVT::i32, Acc, ChunkResults[I]);
+  }
+
+  if (Info.Invert)
+    Acc = DAG.getNode(ISD::XOR, DL, MVT::i32, Acc,
+                      DAG.getConstant(1, DL, MVT::i32));
+
+  if (N->getValueType(0) != MVT::i32)
+    return DAG.getZExtOrTrunc(Acc, DL, N->getValueType(0));
+  return Acc;
+}
+
 static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
   auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!C)
@@ -3665,6 +3723,10 @@ static SDValue performSETCCCombine(SDNode *N,
   auto &DAG = DCI.DAG;
   if (NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16)
     return combineSmallMaskReduction(N, FromVT, NumElts, *Info, DAG);
+
+  if (NumElts == 32 || NumElts == 64)
+    return combineWideMaskReduction(N, LHS.getOperand(0), FromVT, NumElts,
+                                    *Info, DAG);
 
   return SDValue();
 }
