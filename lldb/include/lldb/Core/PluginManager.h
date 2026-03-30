@@ -592,6 +592,11 @@ public:
   static llvm::SmallVector<InstrumentationRuntimeCallbacks>
   GetInstrumentationRuntimeCallbacks();
 
+  static void RegisterProcessForInstrumentationRuntimeNotifications(
+      lldb::ProcessSP process);
+  static void UnregisterProcessFromInstrumentationRuntimeNotifications(
+      lldb::ProcessSP process);
+
   // TypeSystem
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              TypeSystemCreateInstance create_callback,

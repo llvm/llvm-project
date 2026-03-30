@@ -590,17 +590,33 @@ public:
         [&](const Instance &instance) { return count++ == idx; });
   }
 
-  std::optional<Instance> GetInstanceForName(llvm::StringRef name) {
+  std::optional<Instance> GetInstanceForName(llvm::StringRef name,
+                                             bool enabled_only = true) {
     if (name.empty())
       return std::nullopt;
 
-    return FindEnabledInstance(
-        [&](const Instance &instance) { return instance.name == name; });
+    auto predicate = [&](const Instance &instance) {
+      return instance.name == name;
+    };
+    if (enabled_only)
+      return FindEnabledInstance(predicate);
+
+    return FindInstance(predicate);
   }
 
   std::optional<Instance>
   FindEnabledInstance(std::function<bool(const Instance &)> predicate) const {
     for (const auto &instance : GetSnapshot()) {
+      if (predicate(instance))
+        return instance;
+    }
+    return std::nullopt;
+  }
+
+  std::optional<Instance>
+  FindInstance(std::function<bool(const Instance &)> predicate) const {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    for (const auto &instance : m_instances) {
       if (predicate(instance))
         return instance;
     }
@@ -1859,8 +1875,16 @@ struct InstrumentationRuntimeInstance
   InstrumentationRuntimeGetType get_type_callback = nullptr;
 };
 
-typedef PluginInstances<InstrumentationRuntimeInstance>
-    InstrumentationRuntimeInstances;
+struct InstrumentationRuntimeInstances
+    : public PluginInstances<InstrumentationRuntimeInstance> {
+
+  InstrumentationRuntimeGetType GetTypeCallbackForName(llvm::StringRef name,
+                                                       bool enabled_only) {
+    if (auto instance = GetInstanceForName(name, enabled_only))
+      return instance->get_type_callback;
+    return nullptr;
+  }
+};
 
 static InstrumentationRuntimeInstances &GetInstrumentationRuntimeInstances() {
   static InstrumentationRuntimeInstances g_instances;
@@ -1888,6 +1912,33 @@ PluginManager::GetInstrumentationRuntimeCallbacks() {
   for (auto &instance : instances)
     result.push_back({instance.create_callback, instance.get_type_callback});
   return result;
+}
+
+static std::mutex &GetInstrumentationRuntimeProcessesMutex() {
+  static std::mutex g_mutex;
+  return g_mutex;
+}
+
+static llvm::SmallVector<lldb::ProcessWP> &
+GetInstrumentationRuntimeProcesses() {
+  static llvm::SmallVector<lldb::ProcessWP> g_processes;
+  return g_processes;
+}
+
+void PluginManager::RegisterProcessForInstrumentationRuntimeNotifications(
+    lldb::ProcessSP process) {
+  std::lock_guard<std::mutex> guard(GetInstrumentationRuntimeProcessesMutex());
+  GetInstrumentationRuntimeProcesses().push_back(process);
+}
+
+void PluginManager::UnregisterProcessFromInstrumentationRuntimeNotifications(
+    lldb::ProcessSP process) {
+  std::lock_guard<std::mutex> guard(GetInstrumentationRuntimeProcessesMutex());
+  auto &processes = GetInstrumentationRuntimeProcesses();
+  llvm::erase_if(processes, [process](const lldb::ProcessWP &wp) {
+    auto sp = wp.lock();
+    return !sp || sp == process;
+  });
 }
 
 #pragma mark TypeSystem
@@ -2464,7 +2515,34 @@ PluginManager::GetInstrumentationRuntimePluginInfo() {
 }
 bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
                                                            bool enable) {
-  return GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable);
+  if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
+    return false;
+
+  // Notify all registered processes to enable/disable the plugin.
+  auto type_cb = GetInstrumentationRuntimeInstances().GetTypeCallbackForName(
+      name, /*enabled_only=*/false);
+  if (!type_cb)
+    return false;
+  auto instrumentation_ty = type_cb();
+  std::lock_guard<std::mutex> guard(GetInstrumentationRuntimeProcessesMutex());
+  auto &processes = GetInstrumentationRuntimeProcesses();
+  bool success = true;
+  for (auto &process_wp : processes) {
+    ProcessSP process_sp = process_wp.lock();
+    if (!process_sp)
+      continue; // FIXME: Should we try to erase this from the list?
+
+    // If the process is dead don't try to enable the plugin because there's
+    // nothing useful it can do and it might crash when enabled on a dead
+    // process.
+    // FIXME: Should we try to erase from the list if the process is dead?
+    if (process_sp->IsAlive()) {
+      success &= process_sp->SetInstrumentationRuntimeEnabled(
+          instrumentation_ty, enable);
+    }
+  }
+
+  return success;
 }
 
 llvm::SmallVector<RegisteredPluginInfo>

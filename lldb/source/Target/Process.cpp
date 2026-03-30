@@ -573,6 +573,11 @@ void Process::Finalize(bool destructing) {
     std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
     m_language_runtimes.clear();
   }
+  if (m_registered_for_instrumentation_runtime_enabled_changed) {
+    PluginManager::UnregisterProcessFromInstrumentationRuntimeNotifications(
+        shared_from_this());
+    m_registered_for_instrumentation_runtime_enabled_changed = false;
+  }
   m_instrumentation_runtimes.clear();
   m_next_event_action_up.reset();
   // Clear the last natural stop ID since it has a strong reference to this
@@ -6181,6 +6186,15 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
   for (auto &runtime : m_instrumentation_runtimes)
     runtime.second->ModulesDidLoad(module_list);
 
+  // Register with PluginManager so we get notified when instrumentation
+  // runtime plugins are enabled/disabled.
+  if (!m_registered_for_instrumentation_runtime_enabled_changed &&
+      !m_instrumentation_runtimes.empty()) {
+    PluginManager::RegisterProcessForInstrumentationRuntimeNotifications(
+        shared_from_this());
+    m_registered_for_instrumentation_runtime_enabled_changed = true;
+  }
+
   // Give the language runtimes a chance to be created before informing them of
   // the modified modules.
   for (const lldb::LanguageType lang_type : Language::GetSupportedLanguages()) {
@@ -6264,6 +6278,45 @@ Process::GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type) {
     return InstrumentationRuntimeSP();
   } else
     return (*pos).second;
+}
+
+bool Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
+                                               bool enabled) {
+  assert(IsAlive());
+
+  if (auto instrumentation_runtime = GetInstrumentationRuntime(irt)) {
+    // This process already has an instance of this plugin so just
+    // enable/disable it
+    if (enabled)
+      return instrumentation_runtime->Enable();
+    return instrumentation_runtime->Disable();
+  }
+
+  // There's no instance of this plugin for this process.
+
+  if (!enabled)
+    return true; // nothing to do
+
+  // We need to make an instance of this plugin for this process.
+  // This could happen because `plugin disable instrumentation-runtime.*`
+  // was in `.lldbinit` and so the plugin was never created until the user asked
+  // to enable it now.
+
+  // Create the plugin by finding its create callback and calling it.
+  lldb::InstrumentationRuntimeSP new_plugin = nullptr;
+  for (auto &cbs : PluginManager::GetInstrumentationRuntimeCallbacks()) {
+    InstrumentationRuntimeType other_irt = cbs.get_type_callback();
+    if (other_irt != irt)
+      continue;
+
+    new_plugin = cbs.create_callback(shared_from_this());
+    break;
+  }
+  if (!new_plugin)
+    return false;
+
+  m_instrumentation_runtimes[irt] = new_plugin;
+  return new_plugin->Enable(); // Now try to enable it
 }
 
 bool Process::GetModuleSpec(const FileSpec &module_file_spec,

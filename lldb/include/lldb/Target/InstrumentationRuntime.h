@@ -73,6 +73,9 @@ protected:
   /// is guaranteed to be loaded.
   virtual void Activate() = 0;
 
+  /// Remove any breakpoints and perform any necessary clean up.
+  virtual void Deactivate() = 0;
+
   /// \return true if `CheckIfRuntimeIsValid` should be called on all modules.
   /// In this case the return value of `GetPatternForRuntimeLibrary` will be
   /// ignored. Return false if `CheckIfRuntimeIsValid` should only be called
@@ -91,6 +94,18 @@ public:
   void ModulesDidLoad(lldb_private::ModuleList &module_list);
 
   bool IsActive() const { return m_is_active; }
+
+  /// Called when the user runs
+  /// `plugin enable instrumentation-runtime.<name>`
+  ///
+  /// \returns true iff on success
+  virtual bool Enable();
+
+  /// Called when the user runs
+  /// `plugin enable instrumentation-runtime.<name>`
+  ///
+  /// \returns true iff on success
+  virtual bool Disable();
 
   virtual lldb::ThreadCollectionSP
   GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info);

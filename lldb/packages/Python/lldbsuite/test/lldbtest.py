@@ -1805,6 +1805,19 @@ class Base(unittest.TestCase):
         metrics_json = return_obj.GetOutput()
         return json.loads(metrics_json)
 
+    def plugin_is_enabled(self, name):
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand(f"plugin list {name}", result)
+        if not result.Succeeded():
+            return None
+        output = result.GetOutput()
+        if "[+]" in output:
+            return True
+        if "[-]" in output:
+            return False
+        return None
+
 
 # Metaclass for TestBase to change the list of test metods when a new TestCase is loaded.
 # We change the test methods to create a new test method for each test for each debug info we are
