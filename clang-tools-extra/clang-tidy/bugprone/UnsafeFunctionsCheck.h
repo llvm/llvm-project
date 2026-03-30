@@ -45,9 +45,12 @@ private:
 
   /// If true, the default set of functions are reported.
   const bool ReportDefaultFunctions;
-  /// If true, additional functions from widely used API-s (such as POSIX) are
-  /// added to the list of reported functions.
+  /// If true, additional unsafe functions from widely used API-s (such as
+  /// POSIX) are added to the list of reported functions.
   const bool ReportMoreUnsafeFunctions;
+  /// If true, additional deprecated functions from widely used API-s (such as
+  /// POSIX) are added to the list of reported functions.
+  const bool DeprecatedFunctions;
 
   Preprocessor *PP = nullptr;
   /// Whether "Annex K" functions are available and should be

@@ -24,12 +24,16 @@ static constexpr StringRef OptionNameReportDefaultFunctions =
     "ReportDefaultFunctions";
 static constexpr StringRef OptionNameReportMoreUnsafeFunctions =
     "ReportMoreUnsafeFunctions";
+static constexpr StringRef OptionNameReportDeprecatedFunctions =
+    "ReportDeprecatedFunctions";
 
 static constexpr StringRef FunctionNamesWithAnnexKReplacementId =
     "FunctionNamesWithAnnexKReplacement";
 static constexpr StringRef FunctionNamesId = "FunctionsNames";
 static constexpr StringRef AdditionalFunctionNamesId =
     "AdditionalFunctionsNames";
+static constexpr StringRef DeprecatedFunctionNamesId =
+    "DeprecatedFunctionsNames";
 static constexpr StringRef CustomFunctionNamesId = "CustomFunctionNames";
 static constexpr StringRef DeclRefId = "DRE";
 
@@ -64,12 +68,16 @@ static StringRef getReplacementFor(StringRef FunctionName,
       .Case("get_temporary_buffer", "operator new[]");
 }
 
-static StringRef getReplacementForAdditional(StringRef FunctionName,
+static StringRef getReplacementForAdditional(StringRef FunctionName) {
+  return StringSwitch<StringRef>(FunctionName).Case("getpw", "getpwuid");
+}
+
+static StringRef getReplacementForDeprecated(StringRef FunctionName,
                                              bool IsAnnexKAvailable) {
   if (IsAnnexKAvailable) {
     // Try to find a better replacement from Annex K first.
     StringRef AnnexKReplacementFunction = StringSwitch<StringRef>(FunctionName)
-                                              .Case("bcopy", "memcpy_s")
+                                              .Case("bcopy", "memmove_s")
                                               .Case("bzero", "memset_s")
                                               .Default({});
 
@@ -79,9 +87,8 @@ static StringRef getReplacementForAdditional(StringRef FunctionName,
 
   return StringSwitch<StringRef>(FunctionName)
       .Case("bcmp", "memcmp")
-      .Case("bcopy", "memcpy")
+      .Case("bcopy", "memmove")
       .Case("bzero", "memset")
-      .Case("getpw", "getpwuid")
       .Case("vfork", "posix_spawn");
 }
 
@@ -96,8 +103,7 @@ static StringRef getRationaleFor(StringRef FunctionName) {
       .Case("gets", "is insecure, was deprecated and removed in C11 and C++14")
       .Case("getpw", "is dangerous as it may overflow the provided buffer")
       .Cases({"rewind", "setbuf"}, "has no error detection")
-      .Case("vfork", "is insecure as it can lead to denial of service "
-                     "situations in the parent process")
+      .Case("vfork", "is deprecated")
       .Case("get_temporary_buffer", "returns uninitialized memory without "
                                     "performance advantages, was deprecated in "
                                     "C++17 and removed in C++20")
@@ -170,7 +176,9 @@ UnsafeFunctionsCheck::UnsafeFunctionsCheck(StringRef Name,
       ReportDefaultFunctions(
           Options.get(OptionNameReportDefaultFunctions, true)),
       ReportMoreUnsafeFunctions(
-          Options.get(OptionNameReportMoreUnsafeFunctions, true)) {}
+          Options.get(OptionNameReportMoreUnsafeFunctions, true)),
+      DeprecatedFunctions(
+          Options.get(OptionNameReportDeprecatedFunctions, false)) {}
 
 void UnsafeFunctionsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, OptionNameCustomFunctions,
@@ -178,6 +186,7 @@ void UnsafeFunctionsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, OptionNameReportDefaultFunctions, ReportDefaultFunctions);
   Options.store(Opts, OptionNameReportMoreUnsafeFunctions,
                 ReportMoreUnsafeFunctions);
+  Options.store(Opts, OptionNameReportDeprecatedFunctions, DeprecatedFunctions);
 }
 
 void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
@@ -216,11 +225,21 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 
     if (ReportMoreUnsafeFunctions) {
       // Matching functions with replacements without Annex K, at user request.
-      auto AdditionalFunctionNamesMatcher =
-          hasAnyName("::bcmp", "::bcopy", "::bzero", "::getpw", "::vfork");
+      auto AdditionalFunctionNamesMatcher = hasAnyName("::getpw");
       Finder->addMatcher(
           declRefExpr(to(functionDecl(AdditionalFunctionNamesMatcher)
                              .bind(AdditionalFunctionNamesId)))
+              .bind(DeclRefId),
+          this);
+    }
+
+    if (DeprecatedFunctions) {
+      // Matching deprecated functions from widely used APIs, at user request.
+      auto DeprecatedFunctionNamesMatcher =
+          hasAnyName("::bcmp", "::bcopy", "::bzero", "::vfork");
+      Finder->addMatcher(
+          declRefExpr(to(functionDecl(DeprecatedFunctionNamesMatcher)
+                             .bind(DeprecatedFunctionNamesId)))
               .bind(DeclRefId),
           this);
     }
@@ -273,9 +292,11 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Normal = Result.Nodes.getNodeAs<FunctionDecl>(FunctionNamesId);
   const auto *Additional =
       Result.Nodes.getNodeAs<FunctionDecl>(AdditionalFunctionNamesId);
+  const auto *Deprecated =
+      Result.Nodes.getNodeAs<FunctionDecl>(DeprecatedFunctionNamesId);
   const auto *Custom =
       Result.Nodes.getNodeAs<FunctionDecl>(CustomFunctionNamesId);
-  assert((AnnexK || Normal || Additional || Custom) &&
+  assert((AnnexK || Normal || Additional || Deprecated || Custom) &&
          "No valid match category.");
 
   bool AnnexKIsAvailable =
@@ -326,7 +347,10 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
       return getReplacementFor(FunctionName, AnnexKIsAvailable).str();
 
     if (Additional)
-      return getReplacementForAdditional(FunctionName, AnnexKIsAvailable).str();
+      return getReplacementForAdditional(FunctionName).str();
+
+    if (Deprecated)
+      return getReplacementForDeprecated(FunctionName, AnnexKIsAvailable).str();
 
     llvm_unreachable("Unhandled match category");
   }();

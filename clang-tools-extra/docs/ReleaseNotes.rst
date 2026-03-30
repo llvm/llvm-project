@@ -205,7 +205,7 @@ Changes in existing checks
   C++ files because suggested ``reinterpret_cast`` is not available in pure C.
 
 - Improved :doc:`bugprone-derived-method-shadowing-base-method
-  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by 
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by
   correctly ignoring function templates.
 
 - Improved :doc:`bugprone-exception-escape
@@ -231,7 +231,7 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
   user-defined type and by removing detection of the compiler generated ``std``
-  namespace extensions. 
+  namespace extensions.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
@@ -244,9 +244,17 @@ Changes in existing checks
   number of false positives in test code.
 
 - Improved :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
-  ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
-  function is unsafe, useless, deprecated in C++17 and removed in C++20).
+  <clang-tidy/checks/bugprone/unsafe-functions>` check:
+
+  - Added ``std::get_temporary_buffer`` to the default list of unsafe
+    functions. This function is unsafe, useless, deprecated in C++17, and
+    removed in C++20.
+
+  - Added ``ReportDeprecatedFunctions`` to emit diagnostics for deprecated
+    functions from widely used APIs.
+
+  - Updated the suggested replacement for ``bcopy`` from
+    ``memcpy``/``memcpy_s`` to ``memmove``/``memmove_s``.
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check:

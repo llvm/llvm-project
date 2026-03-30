@@ -9,12 +9,18 @@
 // RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K %s bugprone-unsafe-functions %t -- -- -U__STDC_LIB_EXT1__   -U__STDC_WANT_LIB_EXT1__
 // RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K %s bugprone-unsafe-functions %t -- -- -D__STDC_LIB_EXT1__=1 -U__STDC_WANT_LIB_EXT1__
 // RUN: %check_clang_tidy -check-suffix=WITHOUT-ANNEX-K %s bugprone-unsafe-functions %t -- -- -U__STDC_LIB_EXT1__   -D__STDC_WANT_LIB_EXT1__=1
+// RUN: %check_clang_tidy -std=c11-or-later -check-suffixes=WITH-ANNEX-K,WITH-ANNEX-K-DEPRECATED %s bugprone-unsafe-functions %t -- \
+// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportDeprecatedFunctions: true}}" -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
+// RUN: %check_clang_tidy -check-suffixes=WITHOUT-ANNEX-K,WITHOUT-ANNEX-K-DEPRECATED %s bugprone-unsafe-functions %t -- \
+// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportDeprecatedFunctions: true}}" -- -U__STDC_LIB_EXT1__ -U__STDC_WANT_LIB_EXT1__
+// RUN: %check_clang_tidy -check-suffixes=WITHOUT-ANNEX-K,WITHOUT-ANNEX-K-DEPRECATED %s bugprone-unsafe-functions %t -- \
+// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportDeprecatedFunctions: true}}" -- -D__STDC_LIB_EXT1__=1 -U__STDC_WANT_LIB_EXT1__
+// RUN: %check_clang_tidy -check-suffixes=WITHOUT-ANNEX-K,WITHOUT-ANNEX-K-DEPRECATED %s bugprone-unsafe-functions %t -- \
+// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportDeprecatedFunctions: true}}" -- -U__STDC_LIB_EXT1__ -D__STDC_WANT_LIB_EXT1__=1
 // RUN: %check_clang_tidy -std=c11-or-later -check-suffix=WITH-ANNEX-K-CERT-ONLY  %s bugprone-unsafe-functions %t -- \
-// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportMoreUnsafeFunctions: false}}" \
-// RUN:                                                                                            -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
+// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportMoreUnsafeFunctions: false}}" -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
 // RUN: %check_clang_tidy -check-suffix=WITH-NONE-ENABLED %s bugprone-unsafe-functions %t --\
-// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportDefaultFunctions: false}}" \
-// RUN:                                                                                            -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
+// RUN:   -config="{CheckOptions: {bugprone-unsafe-functions.ReportDefaultFunctions: false}}" -- -D__STDC_LIB_EXT1__=1 -D__STDC_WANT_LIB_EXT1__=1
 
 // CHECK-MESSAGES-WITH-NONE-ENABLED: 1 warning generated
 // CHECK-MESSAGES-WITH-NONE-ENABLED: Suppressed 1 warnings
@@ -127,18 +133,18 @@ void fOptional() {
   char Buf2[BUFSIZ] = {0};
 
   bcmp(Buf1, Buf2, BUFSIZ);
-  // CHECK-MESSAGES-WITH-ANNEX-K:    :[[@LINE-1]]:3: warning: function 'bcmp' is deprecated; 'memcmp' should be used instead
-  // CHECK-MESSAGES-WITHOUT-ANNEX-K: :[[@LINE-2]]:3: warning: function 'bcmp' is deprecated; 'memcmp' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-DEPRECATED:    :[[@LINE-1]]:3: warning: function 'bcmp' is deprecated; 'memcmp' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K-DEPRECATED: :[[@LINE-2]]:3: warning: function 'bcmp' is deprecated; 'memcmp' should be used instead
   // no-warning CERT-ONLY
 
   bcopy(Buf1, Buf2, BUFSIZ);
-  // CHECK-MESSAGES-WITH-ANNEX-K:    :[[@LINE-1]]:3: warning: function 'bcopy' is deprecated; 'memcpy_s' should be used instead
-  // CHECK-MESSAGES-WITHOUT-ANNEX-K: :[[@LINE-2]]:3: warning: function 'bcopy' is deprecated; 'memcpy' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-DEPRECATED:    :[[@LINE-1]]:3: warning: function 'bcopy' is deprecated; 'memmove_s' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K-DEPRECATED: :[[@LINE-2]]:3: warning: function 'bcopy' is deprecated; 'memmove' should be used instead
   // no-warning CERT-ONLY
 
   bzero(Buf1, BUFSIZ);
-  // CHECK-MESSAGES-WITH-ANNEX-K:    :[[@LINE-1]]:3: warning: function 'bzero' is deprecated; 'memset_s' should be used instead
-  // CHECK-MESSAGES-WITHOUT-ANNEX-K: :[[@LINE-2]]:3: warning: function 'bzero' is deprecated; 'memset' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-DEPRECATED:    :[[@LINE-1]]:3: warning: function 'bzero' is deprecated; 'memset_s' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K-DEPRECATED: :[[@LINE-2]]:3: warning: function 'bzero' is deprecated; 'memset' should be used instead
   // no-warning CERT-ONLY
 
   getpw(0, Buf1);
@@ -147,8 +153,8 @@ void fOptional() {
   // no-warning CERT-ONLY
 
   vfork();
-  // CHECK-MESSAGES-WITH-ANNEX-K:    :[[@LINE-1]]:3: warning: function 'vfork' is insecure as it can lead to denial of service situations in the parent process; 'posix_spawn' should be used instead
-  // CHECK-MESSAGES-WITHOUT-ANNEX-K: :[[@LINE-2]]:3: warning: function 'vfork' is insecure as it can lead to denial of service situations in the parent process; 'posix_spawn' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-DEPRECATED:    :[[@LINE-1]]:3: warning: function 'vfork' is deprecated; 'posix_spawn' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K-DEPRECATED: :[[@LINE-2]]:3: warning: function 'vfork' is deprecated; 'posix_spawn' should be used instead
   // no-warning CERT-ONLY
 }
 

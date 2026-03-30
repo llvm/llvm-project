@@ -52,14 +52,18 @@ availability:
    with ``operator new[]``
 
 If :option:`ReportMoreUnsafeFunctions` is enabled,
-the following functions are also checked:
+the following function is also checked:
+
+ - ``getpw``, suggested replacement: ``getpwuid``
+
+If :option:`ReportDeprecatedFunctions` is enabled,
+the following deprecated functions are also checked:
 
  - ``bcmp``, suggested replacement: ``memcmp``
- - ``bcopy``, suggested replacement: ``memcpy_s`` if *Annex K* is available,
-   or ``memcpy``
+ - ``bcopy``, suggested replacement: ``memmove_s`` if *Annex K* is available,
+   or ``memmove``
  - ``bzero``, suggested replacement: ``memset_s`` if *Annex K* is available,
    or ``memset``
- - ``getpw``, suggested replacement: ``getpwuid``
  - ``vfork``, suggested replacement: ``posix_spawn``
 
 Although mentioned in the associated CERT rules, the following functions are
@@ -161,11 +165,19 @@ Options
 
 .. option:: ReportMoreUnsafeFunctions
 
-   When `true`, additional functions from widely used APIs (such as POSIX) are
-   added to the list of reported functions.
+   When `true`, additional unsafe functions from widely used APIs (such as
+   POSIX) are added to the list of reported functions.
    See the main documentation of the check for the complete list as to what
    this option enables.
    Default is `true`.
+
+.. option:: ReportDeprecatedFunctions
+
+   When `true`, additional deprecated functions from widely used APIs (such as
+   POSIX) are added to the list of reported functions.
+   See the main documentation of the check for the complete list as to what
+   this option enables.
+   Default is `false`.
 
 .. option:: ReportDefaultFunctions
 
