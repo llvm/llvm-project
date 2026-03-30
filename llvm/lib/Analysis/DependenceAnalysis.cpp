@@ -2088,27 +2088,23 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
            "Loops in the SIV test should have the same iteration space and "
            "depth");
     Level = mapSrcLoop(CurSrcLoop);
-    bool disproven;
+    bool disproven = false;
     if (SrcCoeff == DstCoeff)
       disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
                                 UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcAddRec, DstAddRec, Level, Result);
-    else
-      disproven = exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
-    return disproven || gcdMIVtest(Src, Dst, Result);
+    return disproven || exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
   }
   if (SrcAddRec) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
-    return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result) ||
-           gcdMIVtest(Src, Dst, Result);
+    return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result);
   }
   if (DstAddRec) {
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
-    return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result) ||
-           gcdMIVtest(Src, Dst, Result);
+    return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result);
   }
   llvm_unreachable("SIV test expected at least one AddRec");
   return false;
