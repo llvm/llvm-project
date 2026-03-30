@@ -673,7 +673,8 @@ LogicalResult AccessOpOfExpandShapeOpFolder::matchAndRewrite(
   if (!accessedShape.empty())
     accessedShape = accessedShape.drop_front();
 
-  auto reassocs = expand.getReassociationIndices();
+  SmallVector<ReassociationIndices, 4> reassocs =
+      expand.getReassociationIndices();
   if (!hasTrivialReassociationSuffix(reassocs, accessedShape.size()))
     return rewriter.notifyMatchFailure(
         op,
@@ -706,7 +707,8 @@ LogicalResult AccessOpOfCollapseShapeOpFolder::matchAndRewrite(
   if (!accessedShape.empty())
     accessedShape = accessedShape.drop_front();
 
-  auto reassocs = collapse.getReassociationIndices();
+  SmallVector<ReassociationIndices, 4> reassocs =
+      collapse.getReassociationIndices();
   if (!hasTrivialReassociationSuffix(reassocs, accessedShape.size()))
     return rewriter.notifyMatchFailure(op,
                                        "collapse_shape folding would merge "
