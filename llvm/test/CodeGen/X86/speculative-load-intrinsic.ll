@@ -9,7 +9,7 @@ define <4 x i32> @speculative_load_v4i32(ptr %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %load = call <4 x i32> (ptr, ...) @llvm.speculative.load.v4i32.p0(ptr align 16 %ptr, i64 8)
+  %load = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr align 16 %ptr, i1 false, i64 8)
   ret <4 x i32> %load
 }
 
@@ -18,7 +18,7 @@ define <8 x i32> @speculative_load_v8i32(ptr %ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %load = call <8 x i32> (ptr, ...) @llvm.speculative.load.v8i32.p0(ptr align 32 %ptr, i64 24)
+  %load = call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr align 32 %ptr, i1 false, i64 24)
   ret <8 x i32> %load
 }
 
@@ -30,7 +30,7 @@ define <4 x i32> @speculative_load_v4i32_oracle(ptr %ptr, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %load = call <4 x i32> (ptr, ...) @llvm.speculative.load.v4i32.p0(ptr align 16 %ptr, ptr @oracle, ptr %ptr, i64 %n)
+  %load = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr align 16 %ptr, i1 false, ptr @oracle, ptr %ptr, i64 %n)
   ret <4 x i32> %load
 }
 
@@ -39,7 +39,7 @@ define <8 x i32> @speculative_load_v8i32_oracle(ptr %ptr, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %load = call <8 x i32> (ptr, ...) @llvm.speculative.load.v8i32.p0(ptr align 32 %ptr, ptr @oracle, ptr %ptr, i64 %n)
+  %load = call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr align 32 %ptr, i1 false, ptr @oracle, ptr %ptr, i64 %n)
   ret <8 x i32> %load
 }
 
@@ -48,7 +48,7 @@ define <2 x i64> @speculative_load_v2i64_oracle(ptr %ptr, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %load = call <2 x i64> (ptr, ...) @llvm.speculative.load.v2i64.p0(ptr align 16 %ptr, ptr @oracle, ptr %ptr, i64 %n)
+  %load = call <2 x i64> (ptr, i1, ...) @llvm.speculative.load.v2i64.p0(ptr align 16 %ptr, i1 false, ptr @oracle, ptr %ptr, i64 %n)
   ret <2 x i64> %load
 }
 
@@ -57,7 +57,7 @@ define <4 x i64> @speculative_load_v4i64_oracle(ptr %ptr, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    retq
-  %load = call <4 x i64> (ptr, ...) @llvm.speculative.load.v4i64.p0(ptr align 32 %ptr, ptr @oracle, ptr %ptr, i64 %n)
+  %load = call <4 x i64> (ptr, i1, ...) @llvm.speculative.load.v4i64.p0(ptr align 32 %ptr, i1 false, ptr @oracle, ptr %ptr, i64 %n)
   ret <4 x i64> %load
 }
 
@@ -66,7 +66,7 @@ define <4 x float> @speculative_load_v4f32_oracle(ptr %ptr, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %load = call <4 x float> (ptr, ...) @llvm.speculative.load.v4f32.p0(ptr align 16 %ptr, ptr @oracle, ptr %ptr, i64 %n)
+  %load = call <4 x float> (ptr, i1, ...) @llvm.speculative.load.v4f32.p0(ptr align 16 %ptr, i1 false, ptr @oracle, ptr %ptr, i64 %n)
   ret <4 x float> %load
 }
 
@@ -75,7 +75,7 @@ define <2 x double> @speculative_load_v2f64_oracle(ptr %ptr, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %load = call <2 x double> (ptr, ...) @llvm.speculative.load.v2f64.p0(ptr align 16 %ptr, ptr @oracle, ptr %ptr, i64 %n)
+  %load = call <2 x double> (ptr, i1, ...) @llvm.speculative.load.v2f64.p0(ptr align 16 %ptr, i1 false, ptr @oracle, ptr %ptr, i64 %n)
   ret <2 x double> %load
 }
 
@@ -84,7 +84,7 @@ define <8 x i16> @speculative_load_v8i16_oracle(ptr %ptr, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %load = call <8 x i16> (ptr, ...) @llvm.speculative.load.v8i16.p0(ptr align 16 %ptr, ptr @oracle, ptr %ptr, i64 %n)
+  %load = call <8 x i16> (ptr, i1, ...) @llvm.speculative.load.v8i16.p0(ptr align 16 %ptr, i1 false, ptr @oracle, ptr %ptr, i64 %n)
   ret <8 x i16> %load
 }
 
@@ -93,6 +93,44 @@ define <16 x i8> @speculative_load_v16i8_oracle(ptr %ptr, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
-  %load = call <16 x i8> (ptr, ...) @llvm.speculative.load.v16i8.p0(ptr align 16 %ptr, ptr @oracle, ptr %ptr, i64 %n)
+  %load = call <16 x i8> (ptr, i1, ...) @llvm.speculative.load.v16i8.p0(ptr align 16 %ptr, i1 false, ptr @oracle, ptr %ptr, i64 %n)
   ret <16 x i8> %load
+}
+
+; from_end tests
+
+define <4 x i32> @speculative_load_v4i32_from_end(ptr %ptr) {
+; CHECK-LABEL: speculative_load_v4i32_from_end:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %xmm0
+; CHECK-NEXT:    retq
+  %load = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr align 16 %ptr, i1 true, i64 8)
+  ret <4 x i32> %load
+}
+
+define <8 x i32> @speculative_load_v8i32_from_end(ptr %ptr) {
+; CHECK-LABEL: speculative_load_v8i32_from_end:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %ymm0
+; CHECK-NEXT:    retq
+  %load = call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr align 32 %ptr, i1 true, i64 24)
+  ret <8 x i32> %load
+}
+
+define <4 x i32> @speculative_load_v4i32_oracle_from_end(ptr %ptr, i64 %n) {
+; CHECK-LABEL: speculative_load_v4i32_oracle_from_end:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %xmm0
+; CHECK-NEXT:    retq
+  %load = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr align 16 %ptr, i1 true, ptr @oracle, ptr %ptr, i64 %n)
+  ret <4 x i32> %load
+}
+
+define <8 x i32> @speculative_load_v8i32_oracle_from_end(ptr %ptr, i64 %n) {
+; CHECK-LABEL: speculative_load_v8i32_oracle_from_end:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps (%rdi), %ymm0
+; CHECK-NEXT:    retq
+  %load = call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr align 32 %ptr, i1 true, ptr @oracle, ptr %ptr, i64 %n)
+  ret <8 x i32> %load
 }
