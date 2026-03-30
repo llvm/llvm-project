@@ -1520,6 +1520,7 @@ struct XeGPUSgToWiDistributeExperimentalPass
 
 void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 
+  // Recover temporary operand layouts for usage in patterns.
   Operation *root = getOperation();
   if (!xegpu::recoverTemporaryLayouts(root)) {
     signalPassFailure();
