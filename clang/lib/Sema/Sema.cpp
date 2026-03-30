@@ -1089,6 +1089,15 @@ void Sema::LoadExternalWeakUndeclaredIdentifiers() {
     (void)WeakUndeclaredIdentifiers[WeakID.first].insert(WeakID.second);
 }
 
+void Sema::LoadExternalExtnameUndeclaredIdentifiers() {
+  if (!ExternalSource)
+    return;
+
+  SmallVector<std::pair<IdentifierInfo *, AsmLabelAttr *>, 4> ExtnameIDs;
+  ExternalSource->ReadExtnameUndeclaredIdentifiers(ExtnameIDs);
+  for (auto &ExtnameID : ExtnameIDs)
+    ExtnameUndeclaredIdentifiers[ExtnameID.first] = ExtnameID.second;
+}
 
 typedef llvm::DenseMap<const CXXRecordDecl*, bool> RecordCompleteMap;
 
