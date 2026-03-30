@@ -464,7 +464,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
     @skipIfRemote
     def test_flags_child_limit(self):
         # Flags print like C types so they should follow the child limit setting.
-        self.runCmd("settings set target.max-children-count 3")
+        self.runCmd("settings set target.max-children-count 2")
         self.setup_flags_test(
             '<field name="field_0" start="0" end="0"/>'
             '<field name="field_1" start="1" end="1"/>'

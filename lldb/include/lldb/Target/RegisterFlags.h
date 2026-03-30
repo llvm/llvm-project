@@ -127,7 +127,7 @@ public:
   /// This assumes that:
   /// * There is at least one field.
   /// * The fields are sorted in descending order.
-  /// Gaps are allowed, they will be filled with anonymous padding fields.
+  /// Gaps are allowed.
   RegisterFlags(std::string id, unsigned size,
                 const std::vector<Field> &fields);
 

@@ -39,12 +39,7 @@ static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
   lldb::ValueObjectSP vobj_sp = lldb_private::ValueObjectConstResult::Create(
       exe_scope, fields_type, lldb_private::ConstString(), data_extractor);
   lldb_private::DumpValueObjectOptions dump_options;
-  lldb_private::DumpValueObjectOptions::ChildPrintingDecider decider =
-      [](lldb_private::ConstString varname) {
-        // Unnamed bit-fields are padding that we don't want to show.
-        return varname.GetLength();
-      };
-  dump_options.SetChildPrintingDecider(decider).SetHideRootType(true);
+  dump_options.SetHideRootType(true);
 
   if (llvm::Error error = vobj_sp->Dump(strm, dump_options))
     strm << "error: " << toString(std::move(error));

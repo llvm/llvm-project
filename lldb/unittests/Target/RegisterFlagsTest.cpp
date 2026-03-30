@@ -79,51 +79,8 @@ TEST(RegisterFlagsTest, PaddingDistance) {
   ASSERT_EQ(make_field(31, 31).PaddingDistance(make_field(0)), 30ULL);
 }
 
-static void test_padding(const std::vector<RegisterFlags::Field> &fields,
-                         const std::vector<RegisterFlags::Field> &expected) {
-  RegisterFlags rf("", 4, fields);
-  EXPECT_THAT(expected, ::testing::ContainerEq(rf.GetFields()));
-}
-
-TEST(RegisterFlagsTest, RegisterFlagsPadding) {
-  // When creating a set of flags we assume that:
-  // * There are >= 1 fields.
-  // * They are sorted in descending order.
-  // * There may be gaps between each field.
-
-  // Needs no padding
-  auto fields =
-      std::vector<RegisterFlags::Field>{make_field(16, 31), make_field(0, 15)};
-  test_padding(fields, fields);
-
-  // Needs padding in between the fields, single bit.
-  test_padding({make_field(17, 31), make_field(0, 15)},
-               {make_field(17, 31), make_field(16), make_field(0, 15)});
-  // Multiple bits of padding.
-  test_padding({make_field(17, 31), make_field(0, 14)},
-               {make_field(17, 31), make_field(15, 16), make_field(0, 14)});
-
-  // Padding before first field, single bit.
-  test_padding({make_field(0, 30)}, {make_field(31), make_field(0, 30)});
-  // Multiple bits.
-  test_padding({make_field(0, 15)}, {make_field(16, 31), make_field(0, 15)});
-
-  // Padding after last field, single bit.
-  test_padding({make_field(1, 31)}, {make_field(1, 31), make_field(0)});
-  // Multiple bits.
-  test_padding({make_field(2, 31)}, {make_field(2, 31), make_field(0, 1)});
-
-  // Fields need padding before, in between and after.
-  // [31-28][field 27-24][23-22][field 21-20][19-12][field 11-8][7-0]
-  test_padding({make_field(24, 27), make_field(20, 21), make_field(8, 11)},
-               {make_field(28, 31), make_field(24, 27), make_field(22, 23),
-                make_field(20, 21), make_field(12, 19), make_field(8, 11),
-                make_field(0, 7)});
-}
-
 TEST(RegisterFlagsTest, AsTable) {
-  // Anonymous fields are shown with an empty name cell,
-  // whether they are known up front or added during construction.
+  // Anonymous fields are shown with an empty name cell.
   RegisterFlags anon_field("", 4, {make_field(0, 31)});
   ASSERT_EQ("| 31-0 |\n"
             "|------|\n"
