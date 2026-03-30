@@ -172,7 +172,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   else
     setMaxAtomicSizeInBitsSupported(32);
 
-  setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
+  // i128 div/rem can be lowered via __divmodti4 / __udivmodti4 libcalls on
+  // both 32-bit and 64-bit x86. Allow i128 to flow to SelectionDAG on all
+  // x86 targets so the fused libcall is used when available.
+  setMaxDivRemBitWidthSupported(128);
 
   setMaxLargeFPConvertBitWidthSupported(128);
 

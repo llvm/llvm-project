@@ -13,8 +13,8 @@ define i128 @test1(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    movl 36(%ebp), %ecx
 ; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 36(%ebp), %ecx
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    sarl $31, %esi
 ; X86-NEXT:    movl %esi, %edx
@@ -118,8 +118,44 @@ define i128 @test2(i128 %x) nounwind {
 
 define i128 @test3(i128 %x) nounwind {
 ; X86-LABEL: test3:
-; X86 doesn't have __divti3, so the urem is expanded into a loop.
-; X86: udiv-do-while
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $64, %esp
+; X86-NEXT:    movl 8(%ebp), %esi
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %ecx
+; X86-NEXT:    movl 32(%ebp), %edx
+; X86-NEXT:    movl 36(%ebp), %edi
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $-5, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $-3, {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __divti3
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %edi, 12(%esi)
+; X86-NEXT:    movl %edx, 8(%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0:
@@ -129,6 +165,7 @@ define i128 @test3(i128 %x) nounwind {
 ; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+; X86 doesn't have __divti3, so the urem is expanded into a loop.
   %tmp = sdiv i128 %x, -73786976294838206467
   ret i128 %tmp
 }

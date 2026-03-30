@@ -3419,7 +3419,9 @@ def X86_32SystemLibrary
     : SystemRuntimeLibrary<isX86_32,
       (add X86CommonLibcalls,
              NotWindows32DivRemMulCalls,
-             Windows32DivRemMulCalls)>;
+             Windows32DivRemMulCalls,
+             __divmodti4,
+             __udivmodti4)>;
 
 def X86_64SystemLibrary
     : SystemRuntimeLibrary<isX86_64,

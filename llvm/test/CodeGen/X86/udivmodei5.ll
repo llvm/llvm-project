@@ -1,10 +1,11 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
-; On i686, this is expanded into a loop. On x86_64, this calls __udivti3.
+; i65 is widened to i128 before reaching SelectionDAG, which uses __udivti3 on
+; both i686 and x86_64 (i65 <= MaxDivRemBitWidthSupported=128).
 define i65 @udiv65(i65 %a, i65 %b) nounwind {
 ; X86-LABEL: udiv65:
-; X86-NOT:     call
+; X86:         calll __udivti3
 ;
 ; X64-LABEL: udiv65:
 ; X64:       # %bb.0:
