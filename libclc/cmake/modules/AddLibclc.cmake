@@ -127,7 +127,7 @@ function(link_libclc_builtin_library target_name)
                 --spirv-max-version=1.1
                 --spirv-ext=+SPV_KHR_fma
                 -o ${builtins_lib} ${linked_bc}
-        DEPENDS ${llvm-spirv_target} ${linked_bc}
+        DEPENDS ${linked_bc}
       )
     endif()
   else()

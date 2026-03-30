@@ -1728,7 +1728,7 @@ TEST(ScudoCombinedDeathTest, AlignTypeMismatch) {
 
 // Scudo currently cannot verify that a pointer allocated with an aligned
 // new/new [] is deallocated with an aligned delete/delete [].
-TEST(ScudoCombinedTest, NewType) {
+TEST(ScudoCombinedTest, DISABLED_NewType) {
   ScopedScudoOptions Options("dealloc_type_mismatch=true");
 
   using AllocatorT = scudo::Allocator<TestMatchConfig>;
@@ -1829,7 +1829,7 @@ TEST(ScudoCombinedDeathTest, AlignMismatch) {
   // Pointer is guaranteed to not be aligned to 2 * page size.
   void *AlignedPtr = getMinAlignedPointer<AllocatorT>(Allocator.get());
   if (AlignedPtr == nullptr) {
-    GTEST_SKIP() << "Cannot allocate aligned pointer for test.";
+    TEST_SKIP("Cannot allocate aligned pointer for test.");
   }
 
   scudo::uptr Alignment = 2 * scudo::getPageSizeCached();

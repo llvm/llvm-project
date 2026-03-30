@@ -139,3 +139,24 @@ llvm.mlir.alias private thread_local unnamed_addr @a30 {dso_local} : i32 {
 // CHECK:   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
 // CHECK:   llvm.return %0 : !llvm.ptr
 // CHECK: }
+
+// -----
+
+// Test that llvm.call and llvm.invoke can use an alias as the callee.
+
+llvm.func @aliased_func() {
+  llvm.return
+}
+
+llvm.mlir.alias external @func_alias {addr_space = 0 : i32} : !llvm.ptr {
+  %0 = llvm.mlir.addressof @aliased_func : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.func @caller() {
+  llvm.call @func_alias() : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @caller()
+// CHECK:         llvm.call @func_alias() : () -> ()

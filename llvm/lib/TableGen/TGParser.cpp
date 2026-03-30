@@ -194,8 +194,8 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   case SK_ForeachLoop: {
     // The variable is a loop iterator?
     if (CurLoop->IterVar) {
-      const auto *IterVar = dyn_cast<VarInit>(CurLoop->IterVar);
-      if (IterVar && IterVar->getNameInit() == Name)
+      const VarInit *IterVar = CurLoop->IterVar;
+      if (IterVar->getNameInit() == Name)
         return IterVar;
     }
     break;

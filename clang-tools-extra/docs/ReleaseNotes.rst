@@ -49,6 +49,12 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- Deprecated the :program:`clang-tidy` check :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>`. It has been renamed to
+  :doc:`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>`.
+  The original check will be removed in the 25th release.
+
 Improvements to clangd
 ----------------------
 
@@ -189,6 +195,12 @@ New check aliases
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
 
+- Renamed :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>` to
+  :doc:`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>`.
+  The `performance-faster-string-find` name is kept as an alias.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -219,6 +231,11 @@ Changes in existing checks
   loss in overloads with transparent standard functors (e.g. ``std::plus<>``)
   for ``std::accumulate``, ``std::reduce``, and ``std::inner_product``.
 
+- Improved :doc:`bugprone-inc-dec-in-conditions
+  <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check by fixing a false
+  positive when increment/decrement operators appear inside lambda bodies that
+  are part of a condition expression.
+
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
@@ -230,7 +247,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
-  user-defined type.
+  user-defined type and by removing detection of the compiler generated ``std``
+  namespace extensions. 
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
@@ -270,6 +288,11 @@ Changes in existing checks
   warning on builtins with custom type checking (e.g., type-generic builtins
   like ``__builtin_clzg``) that use variadic declarations as an implementation
   detail.
+
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  by fixing a false positive on implicitly generated functions such as
+  inherited constructors.
 
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
@@ -318,8 +341,17 @@ Changes in existing checks
   special member function.
 
 - Improved :doc:`modernize-use-std-format
-  <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
-  when an argument is part of a macro expansion.
+  <clang-tidy/checks/modernize/use-std-format>` check:
+
+  - Fixed a crash when an argument is part of a macro expansion.
+
+  - Added missing ``#include`` insertion when the format function call
+    appears as an argument to a macro.
+
+- Improved :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-print>` check by adding missing
+  ``#include`` insertion when the format function call appears as an
+  argument to a macro.
 
 - Improved :doc:`modernize-use-trailing-return-type
   <clang-tidy/checks/modernize/use-trailing-return-type>` check by fixing
@@ -337,14 +369,6 @@ Changes in existing checks
 
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
-- Improved :doc:`performance-faster-string-find
-  <clang-tidy/checks/performance/faster-string-find>` check:
-
-  - Now analyzes calls to the ``starts_with``, ``ends_with``, ``contains``,
-    and ``operator+=`` string member functions.
-
-  - Fixes false negatives when using ``std::set`` from ``libstdc++``.
-
 - Improved :doc:`performance-inefficient-string-concatenation
   <clang-tidy/checks/performance/inefficient-string-concatenation>` check by
   adding support for detecting inefficient string concatenation in ``do-while``
@@ -358,6 +382,14 @@ Changes in existing checks
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
+
+- Improved :doc:`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>` check:
+
+  - Now analyzes calls to the ``starts_with``, ``ends_with``, ``contains``,
+    and ``operator+=`` string member functions.
+
+  - Fixes false negatives when using ``std::set`` from ``libstdc++``.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check:
@@ -391,11 +423,15 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-implicit-bool-conversion
-  <clang-tidy/checks/readability/implicit-bool-conversion>` check by fixing a
-  false positive where `AllowPointerConditions` and `AllowIntegerConditions`
-  options did not suppress warnings when the condition expression involved
-  temporaries (e.g. passing a string literal to a ``const std::string&``
-  parameter)
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check:
+
+  - Fixed a false positive where `AllowPointerConditions` and
+    `AllowIntegerConditions` options did not suppress warnings when the
+    condition expression involved temporaries (e.g. passing a string literal to
+    a ``const std::string&`` parameter).
+
+  - Warn and provide fix-its when a macro defined in a system header (e.g.
+    ``NULL``) is implicitly converted to ``bool``.
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false

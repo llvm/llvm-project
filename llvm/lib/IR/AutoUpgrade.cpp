@@ -1307,16 +1307,27 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
+      switch (F->getIntrinsicID()) {
+      default:
+        break;
       // Legacy wmma iu intrinsics without the optional clamp operand.
-      if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8 &&
-          F->arg_size() == 7) {
-        NewFn = nullptr;
-        return true;
-      }
-      if (F->getIntrinsicID() == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8 &&
-          F->arg_size() == 8) {
-        NewFn = nullptr;
-        return true;
+      case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
+        if (F->arg_size() == 7) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
+      case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
+      case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
+      case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
+      case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
+      case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16:
+        if (F->arg_size() == 8) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
       }
 
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
@@ -4713,6 +4724,45 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     Type *T3 = CI->getArgOperand(3)->getType();
     Type *T4 = CI->getArgOperand(5)->getType();
     return UpgradeLegacyWMMAIUIntrinsicCall(F, CI, Builder, {T1, T2, T3, T4});
+  }
+
+  switch (F->getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
+  case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
+  case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
+  case Intrinsic::amdgcn_wmma_f16_16x16x32_f16:
+  case Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16: {
+    // Drop src0 and src1 modifiers.
+    const Value *Op0 = CI->getArgOperand(0);
+    const Value *Op2 = CI->getArgOperand(2);
+    assert(Op0->getType()->isIntegerTy() && Op2->getType()->isIntegerTy());
+    const ConstantInt *ModA = dyn_cast<ConstantInt>(Op0);
+    const ConstantInt *ModB = dyn_cast<ConstantInt>(Op2);
+    if (!ModA->isZero() || !ModB->isZero())
+      reportFatalUsageError(Name + " matrix A and B modifiers shall be zero");
+
+    SmallVector<Value *, 8> Args{CI->getArgOperand(1), CI->getArgOperand(3)};
+    for (int I = 4, E = CI->arg_size(); I < E; ++I)
+      Args.push_back(CI->getArgOperand(I));
+
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), F->getIntrinsicID(),
+        {F->getReturnType(), Args[0]->getType()});
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->setDebugLoc(CI->getDebugLoc());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
+  }
   }
 
   AtomicRMWInst::BinOp RMWOp =

@@ -1292,7 +1292,16 @@ add_entrypoint_object(
     ../erff16.h
   DEPENDS
     libc.src.__support.math.erff16
-    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  erfcf16
+  SRCS
+    erfcf16.cpp
+  HDRS
+    ../erfcf16.h
+  DEPENDS
+    libc.src.__support.math.erfcf16
 )
 
 add_entrypoint_object(
@@ -1855,6 +1864,17 @@ add_entrypoint_object(
     ../log10p1f16.h
   DEPENDS
     libc.src.__support.math.log10p1f16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  log2p1f16
+  SRCS
+    log2p1f16.cpp
+  HDRS
+    ../log2p1f16.h
+  DEPENDS
+    libc.src.__support.math.log2p1f16
     libc.src.errno.errno
 )
 
@@ -4015,6 +4035,16 @@ add_entrypoint_object(
     ../asinhf16.h
   DEPENDS
     libc.src.__support.math.asinhf16
+)
+
+add_entrypoint_object(
+  asinpi
+  SRCS
+    asinpi.cpp
+  HDRS
+    ../asinpi.h
+  DEPENDS
+    libc.src.__support.math.asinpi
 )
 
 add_entrypoint_object(
