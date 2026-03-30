@@ -163,6 +163,8 @@ class ResourceState {
   /// That is because MSB(B) and MSB(C) are both contained within Group(D).
   const uint64_t ResourceMask;
 
+  const bool IsAGroup;
+
   /// A ProcResource can have multiple units.
   ///
   /// For processor resource groups this field is a mask of contained resource
@@ -173,7 +175,7 @@ class ResourceState {
   /// For normal (i.e. non-group) resources, the number of bits set in this mask
   /// is equivalent to the number of units declared by the processor model (see
   /// field 'NumUnits' in 'ProcResourceUnits').
-  uint64_t ResourceSizeMask;
+  const uint64_t ResourceSizeMask;
 
   /// A mask of ready units.
   uint64_t ReadyMask;
@@ -203,8 +205,6 @@ class ResourceState {
   /// istructions dispatched to a reserved resource cannot be issued to the
   /// underlying units (i.e. pipelines) until the resource is released.
   bool Unavailable;
-
-  const bool IsAGroup;
 
   /// Checks for the availability of unit 'SubResMask' in the group.
   bool isSubResourceReady(uint64_t SubResMask) const {
