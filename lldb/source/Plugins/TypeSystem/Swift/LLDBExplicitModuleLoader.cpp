@@ -69,7 +69,7 @@ LLDBExplicitSwiftModuleLoader::create(
   llvm::for_each(*ExplicitClangModuleMap, addClangEntry);
 
   std::unique_ptr<swift::ExplicitCASModuleLoader> casml;
-  if (cas && action_cache) {
+  if ((cas_swift_mm->size() || cas_clang_mm->size()) && cas && action_cache) {
     casml = swift::ExplicitCASModuleLoader::create(
         ctx, *cas, *action_cache, tracker, loadMode, ExplicitSwiftModuleMapPath,
         ExplicitSwiftModuleInputs, IgnoreSwiftSourceInfoFile,
