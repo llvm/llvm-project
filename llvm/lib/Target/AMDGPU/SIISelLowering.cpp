@@ -5748,6 +5748,8 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
   case AMDGPU::V_MIN_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
   case AMDGPU::V_MAX_F64_e64:
+  case AMDGPU::V_ADD_F64_pseudo_e64:
+  case AMDGPU::V_ADD_F64_e64:
     DPPOpc = AMDGPU::V_MOV_B64_DPP_PSEUDO;
     break;
   default:
@@ -5802,6 +5804,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   unsigned Stratergy = static_cast<unsigned>(MI.getOperand(2).getImm());
   enum WAVE_REDUCE_STRATEGY : unsigned { DEFAULT = 0, ITERATIVE = 1, DPP = 2 };
   MachineBasicBlock *RetBB = nullptr;
+  unsigned MIOpc = MI.getOpcode();
   auto BuildRegSequence = [&](MachineBasicBlock &BB,
                               MachineBasicBlock::iterator MI, Register Dst,
                               Register Src0, Register Src1) {
@@ -5999,11 +6002,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             .addImm(0); // output-modifier
 
         // Take negation of input for SUB reduction
-        unsigned srcMod =
-            (Opc == AMDGPU::V_SUB_F32_e64 ||
-             MI.getOpcode() == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64)
-                ? SISrcMods::NEG
-                : SISrcMods::NONE;
+        unsigned srcMod = (MIOpc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F32 ||
+                           MIOpc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64)
+                              ? SISrcMods::NEG
+                              : SISrcMods::NONE;
         unsigned MulOpc = is32BitOpc ? AMDGPU::V_MUL_F32_e64
                           : ST.getGeneration() >= AMDGPUSubtarget::GFX12
                               ? AMDGPU::V_MUL_F64_pseudo_e64
@@ -6591,17 +6593,20 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         }
         FinalDPPResult = RowBcast31;
       }
-      if (Opc == AMDGPU::V_SUB_F32_e64) {
-        Register NegatedValVGPR =
-            MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-        BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::V_SUB_F32_e64),
+      if (MIOpc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F32 ||
+          MIOpc == AMDGPU::WAVE_REDUCE_FSUB_PSEUDO_F64) {
+        Register NegatedValVGPR = MRI.createVirtualRegister(SrcRegClass);
+        // Opc for f32 reduction is V_SUB_F32.
+        // For f64, there is no equivalent V_SUB_F64 opcode, so use
+        // V_ADD_F64/V_ADD_F64_pseudo, and negate the second operand.
+        BuildMI(*CurrBB, MI, DL, TII->get(Opc),
                 NegatedValVGPR)
-            .addImm(SISrcMods::NONE)                    // src0 mods
-            .addReg(IdentityVGPR)                       // src0
-            .addImm(SISrcMods::NONE)                    // src1 mods
-            .addReg(IsWave32 ? RowBcast15 : RowBcast31) // src1
-            .addImm(SISrcMods::NONE)                    // clamp
-            .addImm(SISrcMods::NONE);                   // omod
+            .addImm(SISrcMods::NONE)                               // src0 mods
+            .addReg(IdentityVGPR)                                  // src0
+            .addImm(is32BitOpc ? SISrcMods::NONE : SISrcMods::NEG) // src1 mods
+            .addReg(IsWave32 ? RowBcast15 : RowBcast31)            // src1
+            .addImm(SISrcMods::NONE)                               // clamp
+            .addImm(SISrcMods::NONE);                              // omod
         FinalDPPResult = NegatedValVGPR;
       }
       // The final reduced value is in the last lane.
