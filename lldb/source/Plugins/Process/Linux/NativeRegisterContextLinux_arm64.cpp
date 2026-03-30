@@ -901,9 +901,9 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
     }
   }
 
-  // If SVE is enabled we need not copy FPR separately. If we are in
-  // non-streaming mode of a streaming only process, then we need to save FPR
-  // though.
+  // If SVE is enabled we need not copy FPR separately, unless we are in the
+  // non-streaming mode of a streaming only process (as its non-streaming mode
+  // is FPSIMD, rather than SVE).
   if ((GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) &&
       m_sve_state != SVEState::StreamingFPSIMD) {
     // Store mode and register data.
@@ -1193,8 +1193,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
         ioVec.iov_base = sve_fpsimd_data.data();
         ioVec.iov_len = sve_fpsimd_data.size();
 
-        // Always use non-streaming SVE here, even if the system only
-        // has streaming mode SVE.
+        // Even though the system does not have SVE, NT_ARM_SVE is used when
+        // exiting streaming mode.
         error = WriteRegisterSet(&ioVec, sve_fpsimd_data.size(), NT_ARM_SVE);
 
         // Wrote FPU, and SVE overlaps FPU.
