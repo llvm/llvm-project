@@ -836,8 +836,9 @@ public:
 
     size_t __length = __last - __first + 1;
     if (__gexec_state.__machine_.__find_longest_) {
-      __local_state __best_state = __base_state_matched ? std::move(__base_state) : __local_state{};
-      bool __found_match         = __base_state_matched;
+      if (!__base_state_matched)
+        __base_state.__current_ = __first;
+      bool __found_match = __base_state_matched;
       while (!__gexec_state.__states_.empty()) {
         if (__gcounter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
           std::__throw_regex_error<regex_constants::error_complexity>();
@@ -846,19 +847,19 @@ public:
         auto [__success, __counter] = __state.__execute(__first, __last, __gexec_state);
         __gcounter += __counter;
         if (__success) {
-          if (!__found_match || __best_state.__current_ < __state.__current_)
-            __best_state = std::move(__state);
-          if (__best_state.__current_ == __last) {
-            __copy_to_submatches(__best_state.__sub_matches_, __sub_matches);
-            return {true, __best_state.__current_};
+          if (!__found_match || __base_state.__current_ < __state.__current_)
+            __base_state = std::move(__state);
+          if (__base_state.__current_ == __last) {
+            __copy_to_submatches(__base_state.__sub_matches_, __sub_matches);
+            return {true, __base_state.__current_};
           }
           __found_match = true;
         }
       }
       if (!__found_match)
         return {false, {}};
-      __copy_to_submatches(__best_state.__sub_matches_, __sub_matches);
-      return {true, __best_state.__current_};
+      __copy_to_submatches(__base_state.__sub_matches_, __sub_matches);
+      return {true, __base_state.__current_};
     } else {
       if (__base_state_matched) {
         __copy_to_submatches(__base_state.__sub_matches_, __sub_matches);
@@ -867,11 +868,11 @@ public:
       while (!__gexec_state.__states_.empty()) {
         if (__gcounter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
           std::__throw_regex_error<regex_constants::error_complexity>();
-        auto __state = std::move(__gexec_state.__states_.back());
+        __base_state = std::move(__gexec_state.__states_.back());
         __gexec_state.__states_.pop_back();
-        if (auto [__success, __counter] = __state.__execute(__first, __last, __gexec_state); __success) {
-          __copy_to_submatches(__state.__sub_matches_, __sub_matches);
-          return {true, __state.__current_};
+        if (auto [__success, __counter] = __base_state.__execute(__first, __last, __gexec_state); __success) {
+          __copy_to_submatches(__base_state.__sub_matches_, __sub_matches);
+          return {true, __base_state.__current_};
         } else {
           __gcounter += __counter;
         }
