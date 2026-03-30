@@ -1061,14 +1061,22 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // No operations on x86mmx supported, everything uses intrinsics.
   }
 
+  auto SetFPMinMaxAction = [&](MVT VT) {
+    setOperationAction(ISD::PSEUDO_FMIN, VT, Legal);
+    setOperationAction(ISD::PSEUDO_FMAX, VT, Legal);
+    setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Legal);
+    setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Legal);
+    setOperationAction(ISD::FMAXIMUM, VT, Custom);
+    setOperationAction(ISD::FMINIMUM, VT, Custom);
+    setOperationAction(ISD::FMAXIMUMNUM, VT, Custom);
+    setOperationAction(ISD::FMINIMUMNUM, VT, Custom);
+  };
+
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE1()) {
     addRegisterClass(MVT::v4f32, Subtarget.hasVLX() ? &X86::VR128XRegClass
                                                     : &X86::VR128RegClass);
 
-    setOperationAction(ISD::FMAXIMUM,           MVT::f32, Custom);
-    setOperationAction(ISD::FMINIMUM,           MVT::f32, Custom);
-    setOperationAction(ISD::FMAXIMUMNUM,        MVT::f32, Custom);
-    setOperationAction(ISD::FMINIMUMNUM,        MVT::f32, Custom);
+    SetFPMinMaxAction(MVT::f32);
 
     setOperationAction(ISD::FNEG,               MVT::v4f32, Custom);
     setOperationAction(ISD::FABS,               MVT::v4f32, Custom);
@@ -1108,12 +1116,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v2i64, Subtarget.hasVLX() ? &X86::VR128XRegClass
                                                     : &X86::VR128RegClass);
 
-    for (auto VT : { MVT::f64, MVT::v4f32, MVT::v2f64 }) {
-      setOperationAction(ISD::FMAXIMUM, VT, Custom);
-      setOperationAction(ISD::FMINIMUM, VT, Custom);
-      setOperationAction(ISD::FMAXIMUMNUM, VT, Custom);
-      setOperationAction(ISD::FMINIMUMNUM, VT, Custom);
-    }
+    for (auto VT : { MVT::f64, MVT::v4f32, MVT::v2f64 })
+      SetFPMinMaxAction(VT);
 
     setOperationAction(ISD::MUL,                MVT::v2i8,  Custom);
     setOperationAction(ISD::MUL,                MVT::v4i8,  Custom);
@@ -1491,12 +1495,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FNEG,              VT, Custom);
       setOperationAction(ISD::FABS,              VT, Custom);
       setOperationAction(ISD::FCOPYSIGN,         VT, Custom);
-
-      setOperationAction(ISD::FMAXIMUM,          VT, Custom);
-      setOperationAction(ISD::FMINIMUM,          VT, Custom);
-      setOperationAction(ISD::FMAXIMUMNUM,       VT, Custom);
-      setOperationAction(ISD::FMINIMUMNUM,       VT, Custom);
-      setOperationAction(ISD::FCANONICALIZE, VT, Custom);
+      setOperationAction(ISD::FCANONICALIZE,     VT, Custom);
+      SetFPMinMaxAction(VT);
     }
 
     setOperationAction(ISD::LRINT, MVT::v8f32, Custom);
@@ -1858,10 +1858,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     for (MVT VT : { MVT::v16f32, MVT::v8f64 }) {
-      setOperationAction(ISD::FMAXIMUM, VT, Custom);
-      setOperationAction(ISD::FMINIMUM, VT, Custom);
-      setOperationAction(ISD::FMAXIMUMNUM, VT, Custom);
-      setOperationAction(ISD::FMINIMUMNUM, VT, Custom);
+      SetFPMinMaxAction(VT);
       setOperationAction(ISD::FNEG,  VT, Custom);
       setOperationAction(ISD::FABS,  VT, Custom);
       setOperationAction(ISD::FMA,   VT, Legal);
@@ -2373,6 +2370,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // AVX512_FP16 scalar operations
     setGroup(MVT::f16);
+    SetFPMinMaxAction(MVT::f16);
     setOperationAction(ISD::FREM,                 MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
@@ -2382,10 +2380,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FROUNDEVEN,    MVT::f16, Legal);
     setOperationAction(ISD::FP_ROUND,             MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND,      MVT::f16, Custom);
-    setOperationAction(ISD::FMAXIMUM,             MVT::f16, Custom);
-    setOperationAction(ISD::FMINIMUM,             MVT::f16, Custom);
-    setOperationAction(ISD::FMAXIMUMNUM,          MVT::f16, Custom);
-    setOperationAction(ISD::FMINIMUMNUM,          MVT::f16, Custom);
     setOperationAction(ISD::FP_EXTEND,            MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Legal);
     setOperationAction(ISD::LRINT,                MVT::f16, Legal);
@@ -2433,10 +2427,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setLoadExtAction(ISD::EXTLOAD, MVT::v8f64,  MVT::v8f16,  Legal);
       setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Legal);
 
-      setOperationAction(ISD::FMINIMUM, MVT::v32f16, Custom);
-      setOperationAction(ISD::FMAXIMUM, MVT::v32f16, Custom);
-      setOperationAction(ISD::FMINIMUMNUM, MVT::v32f16, Custom);
-      setOperationAction(ISD::FMAXIMUMNUM, MVT::v32f16, Custom);
+      SetFPMinMaxAction(MVT::v32f16);
       setOperationAction(ISD::LRINT, MVT::v32f16, Legal);
       setOperationAction(ISD::LLRINT, MVT::v8f16, Legal);
     }
@@ -2485,15 +2476,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LOAD,  MVT::v4f16, Custom);
       setOperationAction(ISD::STORE, MVT::v4f16, Custom);
 
-      setOperationAction(ISD::FMINIMUM, MVT::v8f16, Custom);
-      setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Custom);
-      setOperationAction(ISD::FMINIMUMNUM, MVT::v8f16, Custom);
-      setOperationAction(ISD::FMAXIMUMNUM, MVT::v8f16, Custom);
+      SetFPMinMaxAction(MVT::v8f16);
+      SetFPMinMaxAction(MVT::v16f16);
 
-      setOperationAction(ISD::FMINIMUM, MVT::v16f16, Custom);
-      setOperationAction(ISD::FMAXIMUM, MVT::v16f16, Custom);
-      setOperationAction(ISD::FMINIMUMNUM, MVT::v16f16, Custom);
-      setOperationAction(ISD::FMAXIMUMNUM, MVT::v16f16, Custom);
       setOperationAction(ISD::LRINT, MVT::v8f16, Legal);
       setOperationAction(ISD::LRINT, MVT::v16f16, Legal);
     }
@@ -2551,10 +2536,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
     setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
     setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
-    setOperationAction(ISD::FMINIMUM, MVT::v32bf16, Custom);
-    setOperationAction(ISD::FMAXIMUM, MVT::v32bf16, Custom);
-    setOperationAction(ISD::FMINIMUMNUM, MVT::v32bf16, Custom);
-    setOperationAction(ISD::FMAXIMUMNUM, MVT::v32bf16, Custom);
+    SetFPMinMaxAction(MVT::v32bf16);
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setOperationAction(ISD::FADD, VT, Legal);
       setOperationAction(ISD::FSUB, VT, Legal);
@@ -2563,10 +2545,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
       setOperationAction(ISD::SETCC, VT, Custom);
-      setOperationAction(ISD::FMINIMUM, VT, Custom);
-      setOperationAction(ISD::FMAXIMUM, VT, Custom);
-      setOperationAction(ISD::FMINIMUMNUM, VT, Custom);
-      setOperationAction(ISD::FMAXIMUMNUM, VT, Custom);
+      SetFPMinMaxAction(VT);
     }
     for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
       setCondCodeAction(ISD::SETOEQ, VT, Custom);
@@ -2754,6 +2733,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::STRICT_FMA,
                        ISD::FMINNUM,
                        ISD::FMAXNUM,
+                       ISD::PSEUDO_FMIN,
+                       ISD::PSEUDO_FMAX,
                        ISD::SUB,
                        ISD::LOAD,
                        ISD::LRINT,
@@ -22825,11 +22806,11 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   if (AreExactFloatBounds) {
     if (DstVT != TmpVT) {
       // Clamp by MinFloat from below. If Src is NaN, propagate NaN.
-      SDValue MinClamped = DAG.getNode(
-        X86ISD::FMAX, dl, SrcVT, MinFloatNode, Src);
+      SDValue MinClamped =
+          DAG.getNode(ISD::PSEUDO_FMAX, dl, SrcVT, MinFloatNode, Src);
       // Clamp by MaxFloat from above. If Src is NaN, propagate NaN.
-      SDValue BothClamped = DAG.getNode(
-        X86ISD::FMIN, dl, SrcVT, MaxFloatNode, MinClamped);
+      SDValue BothClamped =
+          DAG.getNode(ISD::PSEUDO_FMIN, dl, SrcVT, MaxFloatNode, MinClamped);
       // Convert clamped value to integer.
       SDValue FpToInt = DAG.getNode(FpToIntOpcode, dl, TmpVT, BothClamped);
 
@@ -22839,8 +22820,8 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     }
 
     // Clamp by MinFloat from below. If Src is NaN, the result is MinFloat.
-    SDValue MinClamped = DAG.getNode(
-      X86ISD::FMAX, dl, SrcVT, Src, MinFloatNode);
+    SDValue MinClamped =
+        DAG.getNode(ISD::PSEUDO_FMAX, dl, SrcVT, Src, MinFloatNode);
     // Clamp by MaxFloat from above. NaN cannot occur.
     SDValue BothClamped = DAG.getNode(
       X86ISD::FMINC, dl, SrcVT, MinClamped, MaxFloatNode);
@@ -29877,11 +29858,11 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   APInt OppositeZero = PreferredZero;
   unsigned MinMaxOp;
   if (IsMaxOp) {
-    MinMaxOp = X86ISD::FMAX;
+    MinMaxOp = ISD::PSEUDO_FMAX;
     OppositeZero.setSignBit();
   } else {
     PreferredZero.setSignBit();
-    MinMaxOp = X86ISD::FMIN;
+    MinMaxOp = ISD::PSEUDO_FMIN;
   }
   EVT SetCCType =
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
@@ -29951,8 +29932,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
     // Bits of classes:
     // Bits  Imm8[0] Imm8[1] Imm8[2] Imm8[3] Imm8[4]  Imm8[5]  Imm8[6] Imm8[7]
     // Class    QNAN PosZero NegZero  PosINF  NegINF Denormal Negative    SNAN
-    SDValue Imm = DAG.getTargetConstant(MinMaxOp == X86ISD::FMAX ? 0b11 : 0b101,
-                                        DL, MVT::i32);
+    SDValue Imm = DAG.getTargetConstant(
+        MinMaxOp == ISD::PSEUDO_FMAX ? 0b11 : 0b101, DL, MVT::i32);
     SDValue IsNanZero = DAG.getNode(X86ISD::VFPCLASSS, DL, MVT::v1i1, VX, Imm);
     SDValue Ins = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v8i1,
                               DAG.getConstant(0, DL, MVT::v8i1), IsNanZero,
@@ -34923,14 +34904,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   // We might have generated v2f32 FMIN/FMAX operations. Widen them to v4f32.
   case X86ISD::FMINC:
-  case X86ISD::FMIN:
   case X86ISD::FMAXC:
-  case X86ISD::FMAX:
-  case X86ISD::STRICT_FMIN:
-  case X86ISD::STRICT_FMAX: {
+  case ISD::STRICT_PSEUDO_FMIN:
+  case ISD::STRICT_PSEUDO_FMAX: {
     EVT VT = N->getValueType(0);
     assert(VT == MVT::v2f32 && "Unexpected type (!= v2f32) on FMIN/FMAX.");
-    bool IsStrict = Opc == X86ISD::STRICT_FMIN || Opc == X86ISD::STRICT_FMAX;
+    bool IsStrict =
+        Opc == ISD::STRICT_PSEUDO_FMIN || Opc == ISD::STRICT_PSEUDO_FMAX;
     // For strict FP use a value that can not signal.
     SDValue Filler =
         IsStrict ? DAG.getConstantFP(0.0, dl, VT) : DAG.getUNDEF(VT);
@@ -36010,8 +35990,6 @@ bool X86TargetLowering::isBinOp(unsigned Opcode) const {
   // TODO: Add more X86ISD opcodes once we have test coverage.
   case X86ISD::ANDNP:
   case X86ISD::PCMPGT:
-  case X86ISD::FMAX:
-  case X86ISD::FMIN:
   case X86ISD::FANDN:
   case X86ISD::VPSHA:
   case X86ISD::VPSHL:
@@ -44887,8 +44865,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::VSRAV:
     case X86ISD::PCLMULQDQ:
       // Float ops.
-    case X86ISD::FMAX:
-    case X86ISD::FMIN:
+    // case X86ISD::FMAX:
+    // case X86ISD::FMIN:
     case X86ISD::FMAXC:
     case X86ISD::FMINC:
     case X86ISD::FRSQRT:
@@ -47582,8 +47560,8 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
   case ISD::FMINIMUM:
   case ISD::FMAXIMUMNUM:
   case ISD::FMINIMUMNUM:
-  case X86ISD::FMAX:
-  case X86ISD::FMIN:
+  case ISD::PSEUDO_FMAX:
+  case ISD::PSEUDO_FMIN:
   case ISD::FABS: // Begin 1 operand
   case ISD::FSQRT:
   case ISD::FRINT:
@@ -48371,105 +48349,6 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
 }
 
-// If we have SSE[12] support, try to form min/max nodes. SSE min/max
-// instructions match the semantics of the common C idiom x<y?x:y but not
-// x<=y?x:y, because of how they handle negative zero (which can be
-// ignored in unsafe-math mode).
-// We also try to create v2f32 min/max nodes, which we later widen to v4f32.
-static SDValue combineSelectToMinMax(SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget, SDNode *N) {
-  SDLoc DL(N);
-  SDValue Cond = N->getOperand(0);
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
-  EVT VT = LHS.getValueType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if ((Cond.getOpcode() != ISD::SETCC &&
-       Cond.getOpcode() != ISD::STRICT_FSETCCS) ||
-      !VT.isFloatingPoint() || VT == MVT::f80 || VT == MVT::f128 ||
-      isSoftF16(VT, Subtarget) || (!TLI.isTypeLegal(VT) && VT != MVT::v2f32) ||
-      ((VT == MVT::v8f16 || VT == MVT::v16f16) && !Subtarget.hasVLX()) ||
-      (!Subtarget.hasSSE2() &&
-       (!Subtarget.hasSSE1() || VT.getScalarType() != MVT::f32)))
-    return SDValue();
-
-  bool IsStrict = Cond->isStrictFPOpcode();
-  ISD::CondCode CC =
-      cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
-  SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
-  SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
-
-  // Check for x CC y ? x : y.
-  if (!DAG.isEqualTo(LHS, Op0) || !DAG.isEqualTo(RHS, Op1)) {
-    if (!DAG.isEqualTo(LHS, Op1) || !DAG.isEqualTo(RHS, Op0))
-      return SDValue();
-
-    // Convert x CC y ? y : x to x inv(CC) y ? x : y.
-    CC = ISD::getSetCCInverse(CC, VT);
-    std::swap(LHS, RHS);
-  }
-
-  // Convert x CC y ? x : y to y swap(inv(CC)) x ? y : x
-  // to convert an unordered into an ordered comparison.
-  if (ISD::getUnorderedFlavor(CC) == 1) {
-    CC = ISD::getSetCCSwappedOperands(ISD::getSetCCInverse(CC, VT));
-    std::swap(LHS, RHS);
-  }
-
-  unsigned Opcode = 0;
-  switch (CC) {
-  default:
-    break;
-  case ISD::SETOLE:
-    // Converting this to a min would handle comparisons between positive
-    // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-        !DAG.isKnownNeverZeroFloat(RHS))
-      break;
-    Opcode = X86ISD::FMIN;
-    break;
-  case ISD::SETLE:
-    // Convert setle to setlt via inv+swap.
-    std::swap(LHS, RHS);
-    [[fallthrough]];
-  case ISD::SETOLT:
-  case ISD::SETLT:
-    Opcode = X86ISD::FMIN;
-    break;
-
-  case ISD::SETOGE:
-    // Converting this to a max would handle comparisons between positive
-    // and negative zero incorrectly.
-    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-        !DAG.isKnownNeverZeroFloat(RHS))
-      break;
-    Opcode = X86ISD::FMAX;
-    break;
-  case ISD::SETGE:
-    // Convert setge to setgt via inv+swap.
-    std::swap(LHS, RHS);
-    [[fallthrough]];
-  case ISD::SETOGT:
-  case ISD::SETGT:
-    Opcode = X86ISD::FMAX;
-    break;
-  }
-
-  if (!Opcode)
-    return SDValue();
-
-  // Propagate fast-math-flags.
-  SelectionDAG::FlagInserter FlagsInserter(DAG, N->getFlags());
-  if (IsStrict) {
-    SDValue Ret = DAG.getNode(
-        Opcode == X86ISD::FMIN ? X86ISD::STRICT_FMIN : X86ISD::STRICT_FMAX, DL,
-        {N->getValueType(0), MVT::Other}, {Cond.getOperand(0), LHS, RHS});
-    DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
-    return Ret;
-  }
-  return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
-}
-
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -48566,9 +48445,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         return Res;
     }
   }
-
-  if (SDValue Res = combineSelectToMinMax(DAG, Subtarget, N))
-    return Res;
 
   // Some mask scalar intrinsics rely on checking if only one bit is set
   // and implement it in C code like this:
@@ -56331,9 +56207,10 @@ static SDValue combineFOr(SDNode *N, SelectionDAG &DAG,
   return combineX86FPLogicOp(N, DAG, Subtarget);
 }
 
-/// Do target-specific dag combines on X86ISD::FMIN and X86ISD::FMAX nodes.
+/// Do target-specific dag combines on PSEUDO_FMIN/PSEUDO_FMAX nodes.
 static SDValue combineFMinFMax(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == X86ISD::FMIN || N->getOpcode() == X86ISD::FMAX);
+  assert(N->getOpcode() == ISD::PSEUDO_FMIN ||
+         N->getOpcode() == ISD::PSEUDO_FMAX);
 
   // FMIN/FMAX are commutative if no NaNs and no negative zeros are allowed.
   if (!N->getFlags().hasNoNaNs() || !N->getFlags().hasNoSignedZeros())
@@ -56344,9 +56221,13 @@ static SDValue combineFMinFMax(SDNode *N, SelectionDAG &DAG) {
   unsigned NewOp = 0;
   switch (N->getOpcode()) {
     default: llvm_unreachable("unknown opcode");
-    case X86ISD::FMIN:  NewOp = X86ISD::FMINC; break;
-    case X86ISD::FMAX:  NewOp = X86ISD::FMAXC; break;
-  }
+    case ISD::PSEUDO_FMIN:
+      NewOp = X86ISD::FMINC;
+      break;
+    case ISD::PSEUDO_FMAX:
+      NewOp = X86ISD::FMAXC;
+      break;
+    }
 
   return DAG.getNode(NewOp, SDLoc(N), N->getValueType(0),
                      N->getOperand(0), N->getOperand(1));
@@ -56376,7 +56257,8 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
-  auto MinMaxOp = N->getOpcode() == ISD::FMAXNUM ? X86ISD::FMAX : X86ISD::FMIN;
+  auto MinMaxOp =
+      N->getOpcode() == ISD::FMAXNUM ? ISD::PSEUDO_FMAX : ISD::PSEUDO_FMIN;
 
   // If we don't have to respect NaN inputs, this is a direct translation to x86
   // min/max instructions.
@@ -60490,8 +60372,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::FADD:
     case ISD::FSUB:
     case ISD::FMUL:
-    case X86ISD::FMAX:
-    case X86ISD::FMIN:
+    case ISD::PSEUDO_FMAX:
+    case ISD::PSEUDO_FMIN:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
@@ -62324,8 +62206,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);
   case X86ISD::FXOR:
   case X86ISD::FOR:         return combineFOr(N, DAG, DCI, Subtarget);
-  case X86ISD::FMIN:
-  case X86ISD::FMAX:        return combineFMinFMax(N, DAG);
+  case ISD::PSEUDO_FMIN:
+  case ISD::PSEUDO_FMAX:    return combineFMinFMax(N, DAG);
   case ISD::FMINNUM:
   case ISD::FMAXNUM:        return combineFMinNumFMaxNum(N, DAG, Subtarget);
   case X86ISD::CVTSI2P:

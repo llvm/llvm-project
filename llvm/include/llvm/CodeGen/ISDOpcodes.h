@@ -458,6 +458,8 @@ enum NodeType {
   STRICT_FNEARBYINT,
   STRICT_FMAXNUM,
   STRICT_FMINNUM,
+  STRICT_PSEUDO_FMIN,
+  STRICT_PSEUDO_FMAX,
   STRICT_FCEIL,
   STRICT_FFLOOR,
   STRICT_FROUND,
@@ -1109,6 +1111,15 @@ enum NodeType {
   /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
   FMINIMUMNUM,
   FMAXIMUMNUM,
+
+  /// PSEUDO_FMIN is strictly equivalent to op0 olt op1 ? op0 : op1.
+  /// PSEUDO_FMAX is strictly equivalent to op0 ogt op1 ? op0 : op1.
+  /// In particular, this implies that if both operands are zeros, the second
+  /// operand is returned (regardless of sign), and that if one operand is NaN,
+  /// the second operand is returned (exactly as-is, without any NaN changes).
+  /// The StrictFP variant assumes signaling fcmp (FSETCCS).
+  PSEUDO_FMIN,
+  PSEUDO_FMAX,
 
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,

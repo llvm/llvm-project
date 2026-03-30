@@ -38,10 +38,6 @@ def SDTX86VFCMP : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisVec<0>,
                                        SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                        SDTCisVT<3, i8>]>;
 
-// Floating point max and min.
-def X86fmin    : SDNode<"X86ISD::FMIN",      SDTFPBinOp>;
-def X86fmax    : SDNode<"X86ISD::FMAX",      SDTFPBinOp>;
-
 // Scalar intrinsic floating point max and min.
 def X86fmins   : SDNode<"X86ISD::FMINS",     SDTFPBinOp>;
 def X86fmaxs   : SDNode<"X86ISD::FMAXS",     SDTFPBinOp>;
@@ -52,20 +48,12 @@ def X86fminc    : SDNode<"X86ISD::FMINC", SDTFPBinOp,
 def X86fmaxc    : SDNode<"X86ISD::FMAXC", SDTFPBinOp,
     [SDNPCommutative, SDNPAssociative]>;
 
-let IsStrictFP = true in {
-  // Floating point max and min.
-  def X86strict_fmin : SDNode<"X86ISD::STRICT_FMIN", SDTFPBinOp,
-                              [SDNPHasChain]>;
-  def X86strict_fmax : SDNode<"X86ISD::STRICT_FMAX", SDTFPBinOp,
-                              [SDNPHasChain]>;
-}
-
 def X86any_fmin : PatFrags<(ops node:$src1, node:$src2),
-                           [(X86strict_fmin node:$src1, node:$src2),
-                            (X86fmin node:$src1, node:$src2)]>;
+                           [(strict_pseudo_fmin node:$src1, node:$src2),
+                            (pseudo_fmin node:$src1, node:$src2)]>;
 def X86any_fmax : PatFrags<(ops node:$src1, node:$src2),
-                           [(X86strict_fmax node:$src1, node:$src2),
-                            (X86fmax node:$src1, node:$src2)]>;
+                           [(strict_pseudo_fmax node:$src1, node:$src2),
+                            (pseudo_fmax node:$src1, node:$src2)]>;
 
 // Bitwise logical AND of floating point values. This corresponds
 // to X86::ANDPS or X86::ANDPD.
