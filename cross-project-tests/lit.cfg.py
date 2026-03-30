@@ -425,14 +425,17 @@ def get_dbgeng_version():
     except:
         return None
 
-    info = win32api.GetFileVersionInfo(dbgeng, '\\')
-    ms = info['FileVersionMS']
-    ls = info['FileVersionLS']
-    return (win32api.HIWORD(ms), win32api.LOWORD(ms),
-            win32api.HIWORD(ls), win32api.LOWORD(ls))
+    info = win32api.GetFileVersionInfo(dbgeng, "\\")
+    ms = info["FileVersionMS"]
+    ls = info["FileVersionLS"]
+    return (
+        win32api.HIWORD(ms),
+        win32api.LOWORD(ms),
+        win32api.HIWORD(ls),
+        win32api.LOWORD(ls),
+    )
 
 
 dbgeng_version = get_dbgeng_version()
 if dbgeng_version and dbgeng_version >= (10, 0, 19041, 0):
     config.available_features.add("dbgeng-10-19041")
-
