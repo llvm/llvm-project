@@ -12,11 +12,13 @@
 namespace llvm {
 
 class BitVector;
-class MachineFunction;
+class MachineBasicBlock;
+class MachineFrameInfo;
 
 /// Replace frame index operands with null registers in debug value instructions
 /// for the specified spill frame indices.
-void clearDebugInfoForSpillFIs(MachineFunction &MF, const BitVector &SpillFIs);
+void clearDebugInfoForSpillFIs(MachineFrameInfo &MFI, MachineBasicBlock &MBB,
+                               const BitVector &SpillFIs);
 
 } // end namespace llvm
 

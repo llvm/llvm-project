@@ -1525,10 +1525,10 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
         MBB.addLiveIn(Reg);
 
       MBB.sortUniqueLiveIns();
-    }
 
-    if (!SpillFIs.empty() && SeenDbgInstr)
-      clearDebugInfoForSpillFIs(MF, SpillFIs);
+      if (!SpillFIs.empty() && SeenDbgInstr)
+        clearDebugInfoForSpillFIs(MFI, MBB, SpillFIs);
+    }
   }
 
   // At this point we've already allocated all spilled SGPRs to VGPRs if we

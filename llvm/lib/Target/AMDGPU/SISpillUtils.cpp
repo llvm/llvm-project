@@ -13,23 +13,21 @@
 
 using namespace llvm;
 
-void llvm::clearDebugInfoForSpillFIs(MachineFunction &MF,
+void llvm::clearDebugInfoForSpillFIs(MachineFrameInfo &MFI,
+                                     MachineBasicBlock &MBB,
                                      const BitVector &SpillFIs) {
   // FIXME: The dead frame indices are replaced with a null register from the
   // debug value instructions. We should instead update it with the correct
   // register value. But not sure the register value alone is adequate to lower
   // the DIExpression. It should be worked out later.
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      if (!MI.isDebugValue())
-        continue;
+  for (MachineInstr &MI : MBB) {
+    if (!MI.isDebugValue())
+      continue;
 
-      for (MachineOperand &Op : MI.debug_operands()) {
-        if (Op.isFI() && !MFI.isFixedObjectIndex(Op.getIndex()) &&
-            SpillFIs[Op.getIndex()]) {
-          Op.ChangeToRegister(Register(), false /*isDef*/);
-        }
+    for (MachineOperand &Op : MI.debug_operands()) {
+      if (Op.isFI() && !MFI.isFixedObjectIndex(Op.getIndex()) &&
+          SpillFIs[Op.getIndex()]) {
+        Op.ChangeToRegister(Register(), false /*isDef*/);
       }
     }
   }
