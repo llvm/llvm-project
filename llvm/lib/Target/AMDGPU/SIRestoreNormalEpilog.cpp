@@ -1,4 +1,5 @@
 #include "SICustomBranchBundles.h"
+#include "SIRestoreNormalEpilog.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -8,6 +9,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "si-restore-normal-epilog"
@@ -44,3 +46,11 @@ INITIALIZE_PASS(SIRestoreNormalEpilogLegacy, DEBUG_TYPE,
 
 char SIRestoreNormalEpilogLegacy::ID;
 char &llvm::SIRestoreNormalEpilogLegacyID = SIRestoreNormalEpilogLegacy::ID;
+
+PreservedAnalyses
+SIRestoreNormalEpilogPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  hoistUnrelatedCopies(MF);
+  normalizeIrPostPhiElimination(MF);
+  return PreservedAnalyses::none();
+}

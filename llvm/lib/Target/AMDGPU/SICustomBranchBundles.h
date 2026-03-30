@@ -14,9 +14,6 @@
 
 using namespace llvm;
 
-using std::unordered_set;
-using std::vector;
-
 static inline MachineInstr &getBranchWithDest(MachineBasicBlock &BranchingMBB,
                                               MachineBasicBlock &DestMBB) {
   auto &TII =
@@ -96,8 +93,8 @@ static inline EpilogIterator getEpilogForSuccessor(MachineBasicBlock &PredMBB,
   llvm_unreachable("There should always be a branch to succ_MBB.");
 }
 
-static inline bool epilogsAreIdentical(const vector<MachineInstr *> Left,
-                                       const vector<MachineInstr *> Right,
+static inline bool epilogsAreIdentical(const std::vector<MachineInstr *> Left,
+                                       const std::vector<MachineInstr *> Right,
                                        const MachineBasicBlock &SuccMBB) {
   if (Left.size() != Right.size())
     return false;
@@ -108,7 +105,7 @@ static inline bool epilogsAreIdentical(const vector<MachineInstr *> Left,
   return true;
 }
 
-static inline void moveBody(vector<MachineInstr *> &Body,
+static inline void moveBody(std::vector<MachineInstr *> &Body,
                             MachineBasicBlock &DestMBB) {
   for (auto RevIt = Body.rbegin(); RevIt != Body.rend(); RevIt++) {
     MachineInstr &BodyIns = **RevIt;
@@ -121,18 +118,18 @@ static inline void normalizeIrPostPhiElimination(MachineFunction &MF) {
   auto &TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
   struct CFGRewriteEntry {
-    unordered_set<MachineBasicBlock *> PredMBBs;
+    std::unordered_set<MachineBasicBlock *> PredMBBs;
     MachineBasicBlock *SuccMBB;
-    vector<MachineInstr *> Body;
+    std::vector<MachineInstr *> Body;
   };
 
-  vector<CFGRewriteEntry> CfgRewriteEntries;
+  std::vector<CFGRewriteEntry> CfgRewriteEntries;
   for (MachineBasicBlock &MBB : MF) {
     CFGRewriteEntry ToInsert = {{}, &MBB, {}};
     for (MachineBasicBlock *PredMBB : MBB.predecessors()) {
       EpilogIterator EpIt = getEpilogForSuccessor(*PredMBB, MBB);
 
-      vector<MachineInstr *> Epilog;
+      std::vector<MachineInstr *> Epilog;
       while (!EpIt.isEnd())
         Epilog.push_back(&*EpIt++);
 
@@ -219,7 +216,7 @@ static inline void hoistUnrelatedCopies(MachineFunction &MF) {
       if (!BranchMI.isBranch())
         continue;
 
-      unordered_set<Register> RelatedCopySources;
+      std::unordered_set<Register> RelatedCopySources;
       EpilogIterator EpilogIt = BranchMI.getIterator();
       EpilogIterator CopyMoveIt = ++EpilogIt;
       while (!EpilogIt.isEnd()) {
