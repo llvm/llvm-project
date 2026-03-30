@@ -404,7 +404,7 @@ public:
   ///
   /// \param YAMLFile The path to the YAML file containing call site
   /// information.
-  virtual llvm::Error loadCallSitesFromYAML(StringRef YAMLFile) = 0;
+  LLVM_ABI llvm::Error loadCallSitesFromYAML(StringRef YAMLFile);
 
   /// Organize merged FunctionInfo's
   ///

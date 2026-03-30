@@ -28,11 +28,6 @@ uint64_t GsymCreatorV1::calculateHeaderAndTableSize() const {
   return Size;
 }
 
-llvm::Error GsymCreatorV1::loadCallSitesFromYAML(StringRef YAMLFile) {
-  CallSiteInfoLoader Loader(*this, Funcs);
-  return Loader.loadYAML(YAMLFile);
-}
-
 llvm::Error GsymCreatorV1::encode(FileWriter &O) const {
   std::lock_guard<std::mutex> Guard(Mutex);
   std::optional<uint64_t> BaseAddress;

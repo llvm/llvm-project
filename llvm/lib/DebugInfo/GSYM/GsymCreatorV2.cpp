@@ -36,11 +36,6 @@ uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   return Size;
 }
 
-llvm::Error GsymCreatorV2::loadCallSitesFromYAML(StringRef YAMLFile) {
-  return createStringError(std::errc::not_supported,
-                           "call site loading not yet supported in V2");
-}
-
 llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   std::lock_guard<std::mutex> Guard(Mutex);
   std::optional<uint64_t> BaseAddr;

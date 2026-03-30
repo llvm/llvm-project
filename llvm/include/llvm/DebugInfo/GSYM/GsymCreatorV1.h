@@ -22,7 +22,6 @@ public:
   GsymCreatorV1(bool Quiet = false) : GsymCreator(Quiet) {}
 
   LLVM_ABI llvm::Error encode(FileWriter &O) const override;
-  LLVM_ABI llvm::Error loadCallSitesFromYAML(StringRef YAMLFile) override;
 };
 
 } // namespace gsym
