@@ -14814,21 +14814,16 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(Ptr);
     break;
   }
-  case PPC::LWAT_PSEUDO:
-  case PPC::LDAT_PSEUDO: {
+  case PPC::LWAT_PSEUDO: {
     DebugLoc DL = MI.getDebugLoc();
     Register DstReg = MI.getOperand(0).getReg();
     Register PtrReg = MI.getOperand(1).getReg();
     Register ValReg = MI.getOperand(2).getReg();
     unsigned FC = MI.getOperand(3).getImm();
-    bool IsLwat = MI.getOpcode() == PPC::LWAT_PSEUDO;
     Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (IsLwat)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
-          .addReg(ValReg)
-          .addImm(PPC::sub_32);
-    else
-      Val64 = ValReg;
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
+        .addReg(ValReg)
+        .addImm(PPC::sub_32);
 
     Register G8rPair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
     Register UndefG8r = MRI.createVirtualRegister(&PPC::G8RCRegClass);
@@ -14840,47 +14835,36 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addImm(PPC::sub_gp8_x1);
 
     Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(IsLwat ? PPC::LWAT : PPC::LDAT), PairResult)
+    BuildMI(*BB, MI, DL, TII->get(PPC::LWAT), PairResult)
         .addReg(G8rPair)
         .addReg(PtrReg)
         .addImm(FC);
     Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
         .addReg(PairResult, {}, PPC::sub_gp8_x0);
-    if (IsLwat)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64, {}, PPC::sub_32);
-    else
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+        .addReg(Result64, {}, PPC::sub_32);
     break;
   }
-  case PPC::LWAT_COND_PSEUDO:
-  case PPC::LDAT_COND_PSEUDO: {
+  case PPC::LWAT_COND_PSEUDO: {
     DebugLoc DL = MI.getDebugLoc();
     Register DstReg = MI.getOperand(0).getReg();
     Register PtrReg = MI.getOperand(1).getReg();
     unsigned FC = MI.getOperand(2).getImm();
-    bool IsLwat_Cond = MI.getOpcode() == PPC::LWAT_COND_PSEUDO;
 
     Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
 
     Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(IsLwat_Cond ? PPC::LWAT : PPC::LDAT),
-            PairResult)
+    BuildMI(*BB, MI, DL, TII->get(PPC::LWAT), PairResult)
         .addReg(Pair)
         .addReg(PtrReg)
         .addImm(FC);
     Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
         .addReg(PairResult, {}, PPC::sub_gp8_x0);
-    if (IsLwat_Cond)
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64, {}, PPC::sub_32);
-    else
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+        .addReg(Result64, {}, PPC::sub_32);
     break;
   }
   default:

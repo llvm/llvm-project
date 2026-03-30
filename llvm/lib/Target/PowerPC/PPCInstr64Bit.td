@@ -29,6 +29,17 @@ def tlscall : Operand<i64> {
 }
 
 //===----------------------------------------------------------------------===//
+// 64-bit output pattern fragments.
+//
+
+// Create an even/odd register pair.
+def PAIR8 : OutPatFrag<(ops node:$even, node:$odd),
+                       (REG_SEQUENCE G8pRC, $even, sub_gp8_x0, $odd, sub_gp8_x1)>;
+
+// Return the even part of an even/odd register pair.
+def EVEN8 : OutPatFrag<(ops node:$pair), (EXTRACT_SUBREG $pair, sub_gp8_x0)>;
+
+//===----------------------------------------------------------------------===//
 // 64-bit transformation functions.
 //
 
@@ -348,19 +359,11 @@ def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
            Requires<[IsISA3_0]>;
 }
 
-def LDAT_PSEUDO : PPCCustomInserterPseudo<
-    (outs g8rc:$dst),
-    (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
-    "#LDAT_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val,
-                                      u5imm_timm:$fc))]>;
+def : Pat<(int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, u5imm_timm:$fc),
+          (EVEN8 (LDAT (PAIR8 (i64 (IMPLICIT_DEF)), $val), $ptr, $fc))>;
 
-def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
-    (outs g8rc:$dst),
-    (ins ptr_rc_nor0:$ptr, u5imm:$fc),
-    "#LDAT_COND_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
-                                            u5imm_timm:$fc))]>;
+def : Pat<(int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc),
+          (EVEN8 (LDAT (PAIR8 (i64 (IMPLICIT_DEF)), (i64 (IMPLICIT_DEF))), $ptr, $fc))>;
 
 let Defs = [X8, X9, X10], Uses = [X9, X10] in
 def LDAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
