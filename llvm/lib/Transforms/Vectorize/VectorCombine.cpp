@@ -3619,7 +3619,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if (++NumVisited > MaxInstrsToScan)
       return false;
 
-    auto [Item, From] = Worklist.pop_back_val();
+    auto ItemFrom = Worklist.pop_back_val();
+    auto Item = ItemFrom.first;
+    auto From = ItemFrom.second;
     auto [FrontV, FrontLane] = Item.front();
 
     // If we found an undef first lane then bail out to keep things simple.
