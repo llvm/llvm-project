@@ -430,8 +430,8 @@ class LLVMAnyType<ValueType vt> : LLVMType<vt> {
   assert isAny, "LLVMAnyType.VT should have isOverloaded";
 }
 
-class LLVMQualPointerType<int addrspace>
-  : LLVMType<iPTR> {
+class LLVMQualPointerType<int addrspace, ValueType vt = iPTR>
+  : LLVMType<vt> {
   assert !and(!le(0, addrspace), !le(addrspace, 255)),
     "Address space exceeds 255";
 
@@ -446,6 +446,10 @@ class LLVMQualPointerType<int addrspace>
 
 class LLVMAnyPointerType : LLVMAnyType<pAny> {
   assert isAny, "pAny should have isOverloaded";
+}
+
+class LLVMCapabilityType : LLVMQualPointerType<200, cPTR> {
+  let isAny = false;
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -540,6 +544,7 @@ def llvm_f128_ty       : LLVMType<f128>;
 def llvm_ppcf128_ty    : LLVMType<ppcf128>;
 def llvm_ptr_ty        : LLVMQualPointerType<0>; // ptr
 def llvm_anyptr_ty     : LLVMAnyPointerType;     // ptr addrspace(N)
+def llvm_cap_ty        : LLVMCapabilityType;     // ptr addrspace(200), CHERI
 def llvm_empty_ty      : LLVMType<OtherVT>;      // { }
 def llvm_metadata_ty   : LLVMType<MetadataVT>;   // !{...}
 def llvm_token_ty      : LLVMType<token>;        // token
