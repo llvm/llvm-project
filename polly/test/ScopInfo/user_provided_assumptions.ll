@@ -9,7 +9,7 @@
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
 
 ; SCOP:      Context:
-; SCOP-NEXT: [N, M, Debug] -> {  : Debug = 0 and 0 < N <= 2147483647 and 0 < M <= 100 }
+; SCOP-NEXT: [N, M, Debug] -> { : Debug = 0 and 0 < N <= 2147483647 and 0 < M <= 100 }
 ; SCOP:      Assumed Context:
 ; SCOP-NEXT: [N, M, Debug] -> {  :  }
 ; SCOP:      Invalid Context:
