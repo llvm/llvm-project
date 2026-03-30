@@ -11,6 +11,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(bfloat16, asinpibf16, (bfloat16 x)) { return math::asinpibf16(x); }
-
+LLVM_LIBC_FUNCTION(bfloat16, asinpibf16, (bfloat16 x)) {
+  return math::asinpibf16(x);
+}
 } // namespace LIBC_NAMESPACE_DECL
