@@ -372,6 +372,74 @@ TEST(GSYMV2Test, TestCreatorV2UUIDSection) {
                                 sizeof(UUID)));
 }
 
+/// Verify that all sections in a V2 GSYM are correctly aligned.
+/// Uses a 13-byte UUID and 8-byte AddrOffSize to create non-trivial
+/// alignment scenarios where padding is required between sections.
+TEST(GSYMV2Test, TestCreatorV2SectionAlignment) {
+  // 13-byte UUID: after header (24) + GlobalData (7 entries * 20 = 140),
+  // UUID ends at offset 177. AddrOffsets needs 8-byte alignment → 184.
+  uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+  GsymCreatorV2 GC;
+  GC.setUUID(UUID);
+  // Addresses far apart to force 8-byte AddrOffSize.
+  GC.addFunctionInfo(
+      FunctionInfo(0x1000, 0x100, GC.insertString("foo")));
+  GC.addFunctionInfo(
+      FunctionInfo(0x100001000, 0x100, GC.insertString("bar")));
+  GC.addFunctionInfo(
+      FunctionInfo(0x200002000, 0x100, GC.insertString("baz")));
+  OutputAggregator Null(nullptr);
+  ASSERT_FALSE(GC.finalize(Null));
+
+  auto Result = encodeV2(GC, llvm::endianness::little);
+  ASSERT_THAT_EXPECTED(Result, Succeeded());
+  StringRef Data = *Result;
+
+  // Decode header to get alignment sizes.
+  auto HdrOrErr = decodeHeaderV2(Data, llvm::endianness::little);
+  ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
+  const HeaderV2 &Hdr = *HdrOrErr;
+  EXPECT_EQ(Hdr.AddrOffSize, 8u);
+
+  // Decode GlobalData entries and verify alignment for each section.
+  uint64_t Offset = 24;
+  while (Offset < Data.size()) {
+    GlobalData GD =
+        decodeGlobalDataEntry(Data, Offset, llvm::endianness::little);
+    if (GD.Type == GlobalInfoType::EndOfList)
+      break;
+    switch (GD.Type) {
+    case GlobalInfoType::UUID:
+      // UUID has no alignment requirement.
+      break;
+    case GlobalInfoType::AddrOffsets:
+      EXPECT_EQ(GD.FileOffset % Hdr.AddrOffSize, 0u)
+          << "AddrOffsets not aligned to " << (unsigned)Hdr.AddrOffSize;
+      break;
+    case GlobalInfoType::AddrInfoOffsets:
+      EXPECT_EQ(GD.FileOffset % Hdr.AddrInfoOffSize, 0u)
+          << "AddrInfoOffsets not aligned to " << (unsigned)Hdr.AddrInfoOffSize;
+      break;
+    case GlobalInfoType::FileTable:
+      EXPECT_EQ(GD.FileOffset % 4, 0u) << "FileTable not 4-byte aligned";
+      break;
+    case GlobalInfoType::StringTable:
+      // StringTable has no alignment requirement.
+      break;
+    case GlobalInfoType::FunctionInfo:
+      EXPECT_EQ(GD.FileOffset % 4, 0u) << "FunctionInfo not 4-byte aligned";
+      break;
+    default:
+      break;
+    }
+  }
+
+  // Also verify the round-trip works.
+  auto GR = GsymReaderV2::copyBuffer(Data);
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  EXPECT_EQ(GR->getNumAddresses(), 3u);
+}
+
 //===----------------------------------------------------------------------===//
 // Reader V2 tests (without creator — hand-crafted binary)
 //===----------------------------------------------------------------------===//
