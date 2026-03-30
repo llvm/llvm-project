@@ -1306,10 +1306,10 @@ def : InstRW<[C1UWrite_11c_V1_4rc], (instrs FDIVv4f32)>;
 def : InstRW<[C1UWrite_13c_V1_2rc], (instrs FDIVv2f64)>;
 
 // ASIMD FP max/min, reduce, F32 and D-form F16
-def : InstRW<[C1UWrite_4c_1V], (instregex "^(FMAX|FMIN)(NM)?Vv4(i16|i32)v$")>;
+def : InstRW<[C1UWrite_4c_2V], (instregex "^(FMAX|FMIN)(NM)?Vv4(i16|i32)v$")>;
 
 // ASIMD FP max/min, reduce, Q-form F16
-def : InstRW<[C1UWrite_6c_1V], (instregex "^(FMAX|FMIN)(NM)?Vv8i16v$")>;
+def : InstRW<[C1UWrite_6c_3V], (instregex "^(FMAX|FMIN)(NM)?Vv8i16v$")>;
 
 // ASIMD FP multiply
 def : InstRW<[C1UWrite_3c_1V], (instregex "^FMULv", "^FMULXv")>;
@@ -1361,10 +1361,10 @@ def : InstRW<[C1UWr_VBFDOT, C1URd_VBFDOT, C1URd_VBFDOT],
                         "^BF16DOTlanev[48]bf16$")>;
 
 // ASIMD matrix multiply accumulate
-def : InstRW<[C1UWr_VBFMMA, C1URd_VBFDOT, C1URd_VBFMMA], (instrs BFMMLA)>;
+def : InstRW<[C1UWr_VBFMMA, C1URd_VBFMMA, C1URd_VBFMMA], (instrs BFMMLA)>;
 
 // ASIMD multiply accumulate long
-def : InstRW<[C1UWr_VBFMAL, C1URd_VBFDOT, C1URd_VBFMAL], (instrs BFMLALB, BFMLALBIdx, BFMLALT,
+def : InstRW<[C1UWr_VBFMAL, C1URd_VBFMAL, C1URd_VBFMAL], (instrs BFMLALB, BFMLALBIdx, BFMLALT,
                                                  BFMLALTIdx)>;
 
 // ASIMD miscellaneous instructions
@@ -2215,7 +2215,7 @@ def : InstRW<[C1UWr_ZFMA, ReadDefault, C1URd_ZFMA, C1URd_ZFMA],
                         "^FN?(MAD|MSB)_ZPmZZ_[HSD]",
                         "^FN?ML[AS]_ZPZZZ_[HSD]")>;
 
-def : InstRW<[C1UWr_ZFMA, ReadDefault, C1URd_ZFMA, C1URd_ZFMA],
+def : InstRW<[C1UWr_ZFMA, C1URd_ZFMA, C1URd_ZFMA],
              (instregex "^FML[AS]_ZZZI_[HSD]")>;
 
 // Floating point multiply add/sub accumulate long

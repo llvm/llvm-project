@@ -946,26 +946,26 @@ orns p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      1803
+# CHECK-NEXT: Total Cycles:      1603
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    0.22
-# CHECK-NEXT: IPC:               0.22
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 0.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012345678
+# CHECK-NEXT:                     0123456789          01234
 # CHECK-NEXT: Index     0123456789          0123456789
 
-# CHECK:      [0,0]     DeeeER    .    .    .    .    .    .  .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    .    .  .   bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,2]     D========eeeeeER    .    .    .    .  .   bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,3]     D=============eeeeeER    .    .    .  .   bfmmla	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT: [1,0]     D==================eeeER .    .    .  .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,1]     D=====================eeeeeER .    .  .   bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,2]     D==========================eeeeeER .  .   bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,3]     D===============================eeeeeER   bfmmla	v0.4s, v0.8h, v1.8h
+# CHECK:      [0,0]     DeeeER    .    .    .    .    .   .   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    .   .   bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,2]     D=======eeeeeER.    .    .    .   .   bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,3]     D===========eeeeeER .    .    .   .   bfmmla	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [1,0]     D================eeeER   .    .   .   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,1]     D===================eeeeeER   .   .   bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,2]     D=======================eeeeeER   .   bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,3]     D===========================eeeeeER   bfmmla	v0.4s, v0.8h, v1.8h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -974,36 +974,36 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     10.0   0.5    0.0       fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: 1.     2     13.0   0.0    0.0       bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: 2.     2     18.0   0.0    0.0       bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: 3.     2     23.0   0.0    0.0       bfmmla	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT:        2     16.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     9.0    0.5    0.0       fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: 1.     2     12.0   0.0    0.0       bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: 2.     2     16.0   0.0    0.0       bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: 3.     2     20.0   0.0    0.0       bfmmla	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT:        2     14.3   0.1    0.0       <total>
 
 # CHECK:      [15] Code Region - bfmlalb
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      1803
+# CHECK-NEXT: Total Cycles:      1203
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    0.22
-# CHECK-NEXT: IPC:               0.22
+# CHECK-NEXT: uOps Per Cycle:    0.33
+# CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 0.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012345678
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          0123456
 
-# CHECK:      [0,0]     DeeeER    .    .    .    .    .    .  .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    .    .  .   bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,2]     D========eeeeeER    .    .    .    .  .   bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,3]     D=============eeeeeER    .    .    .  .   bfmlalb	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT: [1,0]     D==================eeeER .    .    .  .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,1]     D=====================eeeeeER .    .  .   bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,2]     D==========================eeeeeER .  .   bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,3]     D===============================eeeeeER   bfmlalb	v0.4s, v0.8h, v1.8h
+# CHECK:      [0,0]     DeeeER    .    .    .    ..   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    ..   bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,2]     D=====eeeeeER  .    .    ..   bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,3]     D=======eeeeeER.    .    ..   bfmlalb	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [1,0]     D============eeeER  .    ..   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,1]     D===============eeeeeER  ..   bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,2]     D=================eeeeeER..   bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,3]     D===================eeeeeER   bfmlalb	v0.4s, v0.8h, v1.8h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1012,11 +1012,11 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     10.0   0.5    0.0       fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: 1.     2     13.0   0.0    0.0       bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: 2.     2     18.0   0.0    0.0       bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: 3.     2     23.0   0.0    0.0       bfmlalb	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT:        2     16.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     7.0    0.5    0.0       fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: 1.     2     10.0   0.0    0.0       bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: 2.     2     12.0   0.0    0.0       bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: 3.     2     14.0   0.0    0.0       bfmlalb	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT:        2     10.8   0.1    0.0       <total>
 
 # CHECK:      [16] Code Region - Z saba
 
@@ -1820,26 +1820,26 @@ orns p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      1503
+# CHECK-NEXT: Total Cycles:      1103
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    0.27
-# CHECK-NEXT: IPC:               0.27
+# CHECK-NEXT: uOps Per Cycle:    0.36
+# CHECK-NEXT: IPC:               0.36
 # CHECK-NEXT: Block RThroughput: 0.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234
 
-# CHECK:      [0,0]     DeeeER    .    .    .    .    . .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeER.    .    .    .    . .   fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: [0,2]     D=======eeeeER .    .    .    . .   fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: [0,3]     D===========eeeeER  .    .    . .   fmla	z0.d, z0.d, z1.d[1]
-# CHECK-NEXT: [1,0]     D===============eeeER    .    . .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D==================eeeeER.    . .   fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: [1,2]     D======================eeeeER . .   fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: [1,3]     D==========================eeeeER   fmla	z0.d, z0.d, z1.d[1]
+# CHECK:      [0,0]     DeeeER    .    .    .   .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     D===eeeeER.    .    .   .   fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: [0,2]     D=====eeeeER   .    .   .   fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: [0,3]     D=======eeeeER .    .   .   fmla	z0.d, z0.d, z1.d[1]
+# CHECK-NEXT: [1,0]     D===========eeeER   .   .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     D==============eeeeER   .   fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: [1,2]     D================eeeeER .   fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: [1,3]     D==================eeeeER   fmla	z0.d, z0.d, z1.d[1]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1848,11 +1848,11 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     8.5    0.5    0.0       fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: 1.     2     11.5   0.0    0.0       fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: 2.     2     15.5   0.0    0.0       fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: 3.     2     19.5   0.0    0.0       fmla	z0.d, z0.d, z1.d[1]
-# CHECK-NEXT:        2     13.8   0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     6.5    0.5    0.0       fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: 1.     2     9.5    0.0    0.0       fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: 2.     2     11.5   0.0    0.0       fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: 3.     2     13.5   0.0    0.0       fmla	z0.d, z0.d, z1.d[1]
+# CHECK-NEXT:        2     10.3   0.1    0.0       <total>
 
 # CHECK:      [38] Code Region - Z fmlalb ZZZ
 
