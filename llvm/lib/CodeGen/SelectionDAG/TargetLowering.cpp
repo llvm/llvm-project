@@ -2789,20 +2789,12 @@ bool TargetLowering::SimplifyDemandedBits(
     if (!TLO.LegalOperations() && !VT.isVector() && !SrcVT.isVector() &&
         DemandedBits == APInt::getSignMask(Op.getValueSizeInBits()) &&
         SrcVT.isFloatingPoint()) {
-      bool OpVTLegal = isOperationLegalOrCustom(ISD::FGETSIGN, VT);
-      bool i32Legal = isOperationLegalOrCustom(ISD::FGETSIGN, MVT::i32);
-      if ((OpVTLegal || i32Legal) && VT.isSimple() && SrcVT != MVT::f16 &&
-          SrcVT != MVT::f128) {
-        // Cannot eliminate/lower SHL for f128 yet.
-        EVT Ty = OpVTLegal ? VT : MVT::i32;
+      if (isOperationLegalOrCustom(ISD::FGETSIGN, VT)) {
         // Make a FGETSIGN + SHL to move the sign bit into the appropriate
         // place.  We expect the SHL to be eliminated by other optimizations.
-        SDValue Sign = TLO.DAG.getNode(ISD::FGETSIGN, dl, Ty, Src);
-        unsigned OpVTSizeInBits = Op.getValueSizeInBits();
-        if (!OpVTLegal && OpVTSizeInBits > 32)
-          Sign = TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Sign);
+        SDValue Sign = TLO.DAG.getNode(ISD::FGETSIGN, dl, VT, Src);
         unsigned ShVal = Op.getValueSizeInBits() - 1;
-        SDValue ShAmt = TLO.DAG.getConstant(ShVal, dl, VT);
+        SDValue ShAmt = TLO.DAG.getShiftAmountConstant(ShVal, VT, dl);
         return TLO.CombineTo(Op,
                              TLO.DAG.getNode(ISD::SHL, dl, VT, Sign, ShAmt));
       }
