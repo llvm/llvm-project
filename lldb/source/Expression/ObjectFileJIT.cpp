@@ -62,8 +62,7 @@ ObjectFile *ObjectFileJIT::CreateMemoryInstance(const lldb::ModuleSP &module_sp,
 
 ModuleSpecList ObjectFileJIT::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length) {
+    lldb::offset_t file_offset, lldb::offset_t length) {
   // JIT'ed object file can't be read from a file on disk
   return {};
 }

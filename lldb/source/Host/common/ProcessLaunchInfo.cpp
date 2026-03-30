@@ -242,6 +242,14 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 #endif
 }
 
+#ifdef _WIN32
+llvm::Error ProcessLaunchInfo::SetUpPipeRedirection() {
+  if (!m_pty)
+    m_pty = std::make_shared<PTY>();
+  return m_pty->OpenAnonymousPipes();
+}
+#endif
+
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
     Status &error, bool will_debug, bool first_arg_is_full_shell_command,
     uint32_t num_resumes) {

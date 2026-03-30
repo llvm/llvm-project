@@ -49,6 +49,10 @@ LogicalResult lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
 LogicalResult lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
                                           AffineLinearizeIndexOp op);
 
+/// Populate patterns that simplify `affine.delinearize_index` /
+/// `affine.linearize_index` pairs using value bounds analysis.
+void populateSimplifyAffineWithBoundsPatterns(RewritePatternSet &patterns);
+
 /// Populate patterns that expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).
 void populateAffineExpandIndexOpsPatterns(RewritePatternSet &patterns);

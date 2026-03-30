@@ -74,6 +74,16 @@ public:
   /// \param   Value The value to write into the stream.
   LLVM_ABI void writeULEB(uint64_t Value);
 
+  /// Write a single unsigned value into the stream at the current file
+  /// position. The value will be byte swapped if needed to match the byte
+  /// order specified during construction. The size of the value is specified
+  /// by the Size parameter.
+  ///
+  /// \param   Value The value to write into the stream. The higher bits which
+  ///          don't fit into ByteSize should be zero.
+  /// \param   ByteSize The size of the value to write in bytes. Can be 1-8.
+  LLVM_ABI void writeUnsigned(uint64_t Value, size_t ByteSize);
+
   /// Write an array of uint8_t values into the stream at the current file
   /// position.
   ///

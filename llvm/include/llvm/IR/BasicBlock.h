@@ -228,16 +228,28 @@ public:
   /// Requires the basic block to have a parent module.
   LLVM_ABI const DataLayout &getDataLayout() const;
 
-  /// Returns the terminator instruction if the block is well formed or
-  /// null if the block is not well formed.
+  /// Returns whether the block has a terminator.
+  bool hasTerminator() const LLVM_READONLY {
+    return !InstList.empty() && InstList.back().isTerminator();
+  }
+
+  /// Returns the terminator instruction; assumes that the block is well-formed.
   const Instruction *getTerminator() const LLVM_READONLY {
-    if (InstList.empty() || !InstList.back().isTerminator())
-      return nullptr;
+    assert(hasTerminator() && "cannot get terminator of non-well-formed block");
     return &InstList.back();
   }
   Instruction *getTerminator() {
     return const_cast<Instruction *>(
         static_cast<const BasicBlock *>(this)->getTerminator());
+  }
+
+  /// Returns the terminator instruction if the block is well formed or
+  /// null if the block is not well formed.
+  const Instruction *getTerminatorOrNull() const LLVM_READONLY {
+    return hasTerminator() ? getTerminator() : nullptr;
+  }
+  Instruction *getTerminatorOrNull() {
+    return hasTerminator() ? getTerminator() : nullptr;
   }
 
   /// Returns the call instruction calling \@llvm.experimental.deoptimize

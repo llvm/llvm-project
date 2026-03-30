@@ -162,7 +162,8 @@ bool DynamicLoaderFreeBSDKernel::ReadELFHeader(Process *process,
     *read_error = false;
 
   if (process->ReadMemory(addr, &header, sizeof(header), error) !=
-      sizeof(header)) {
+          sizeof(header) ||
+      error.Fail()) {
     if (read_error)
       *read_error = true;
     return false;
@@ -291,7 +292,8 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::ReadMemoryModule(
       llvm::ELF::Elf64_Ehdr elf_eheader;
       Status error;
       if (process->ReadMemory(m_load_address, &elf_eheader, sizeof(elf_eheader),
-                              error) == sizeof(elf_eheader))
+                              error) == sizeof(elf_eheader) &&
+          error.Success())
         size_to_read = sizeof(llvm::ELF::Elf64_Ehdr) +
                        elf_eheader.e_phnum * elf_eheader.e_phentsize;
     }
@@ -358,7 +360,8 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       if (IsKernel()) {
         Status error;
         if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
-                                                       true)) {
+                                                       true) &&
+            error.Success()) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec()))
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());

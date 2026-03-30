@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy %s performance-faster-string-find %t -- -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-faster-string-find %t -- \
+// RUN: %check_clang_tidy %s performance-prefer-single-char-overloads %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-prefer-single-char-overloads %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             {performance-faster-string-find.StringLikeClasses: \
+// RUN:             {performance-prefer-single-char-overloads.StringLikeClasses: \
 // RUN:                '::llvm::StringRef;'}}" -- -fno-delayed-template-parsing
 #include <string>
 
@@ -23,7 +23,7 @@ void StringFind() {
   std::string Str;
 
   Str.find("a");
-  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more efficient overload accepting a character [performance-faster-string-find]
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more efficient overload accepting a character [performance-prefer-single-char-overloads]
   // CHECK-FIXES: Str.find('a');
 
   // Works with the pos argument.

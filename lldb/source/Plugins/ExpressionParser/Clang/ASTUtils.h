@@ -582,6 +582,13 @@ public:
       Source->ReadWeakUndeclaredIdentifiers(WI);
   }
 
+  void ReadExtnameUndeclaredIdentifiers(
+      llvm::SmallVectorImpl<std::pair<clang::IdentifierInfo *,
+                                      clang::AsmLabelAttr *>> &EI) override {
+    for (auto &Source : Sources)
+      Source->ReadExtnameUndeclaredIdentifiers(EI);
+  }
+
   void ReadUsedVTables(
       llvm::SmallVectorImpl<clang::ExternalVTableUse> &VTables) override {
     for (auto &Source : Sources)

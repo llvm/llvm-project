@@ -49,6 +49,23 @@ void FileWriter::writeU64(uint64_t U) {
   OS.write(reinterpret_cast<const char *>(&Swapped), sizeof(Swapped));
 }
 
+void FileWriter::writeUnsigned(uint64_t Value, size_t ByteSize) {
+  assert(ByteSize <= 8 && "invalid byte size");
+  // Make sure the value fits in the number of bytes specified.
+  assert((ByteSize == 8 || (Value & (uint64_t)-1 << (8 * ByteSize)) == 0) &&
+         "potential data loss: higher bits are non-zero");
+  // Swap and shift bytes if endianness doesn't match.
+  if (ByteOrder != llvm::endianness::native) {
+    // Say ByteSize is 3.
+    //                high                low
+    // Input bytes:   00 00 00 00 00 AA BB CC
+    // Swapped bytes: CC BB AA 00 00 00 00 00
+    // Shifted bytes: 00 00 00 00 00 CC BB AA
+    Value = sys::getSwappedBytes(Value) >> (8 * (8 - ByteSize));
+  }
+  OS.write(reinterpret_cast<const char *>(&Value), ByteSize);
+}
+
 void FileWriter::fixup32(uint32_t U, uint64_t Offset) {
   const uint32_t Swapped = support::endian::byte_swap(U, ByteOrder);
   OS.pwrite(reinterpret_cast<const char *>(&Swapped), sizeof(Swapped),

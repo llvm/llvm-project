@@ -684,29 +684,38 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
   return buf;
 }
 
-mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
-                             bool turnBoxIntoClass) {
+static mlir::Type changeElementTypeImpl(mlir::Type type,
+                                        mlir::Type newElementType,
+                                        bool turnBoxIntoClass,
+                                        bool turnClassIntoBox) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
       .Case([&](fir::SequenceType seqTy) -> mlir::Type {
         return fir::SequenceType::get(seqTy.getShape(), newElementType);
       })
-      .Case<fir::ReferenceType, fir::ClassType>([&](auto t) -> mlir::Type {
+      .Case<fir::ReferenceType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
-        auto newEleTy =
-            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass);
+        auto newEleTy = changeElementTypeImpl(
+            t.getEleTy(), newElementType, turnBoxIntoClass, turnClassIntoBox);
         return FIRT::get(newEleTy, t.isVolatile());
       })
       .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
-        return FIRT::get(
-            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
+        return FIRT::get(changeElementTypeImpl(
+            t.getEleTy(), newElementType, turnBoxIntoClass, turnClassIntoBox));
       })
       .Case([&](fir::BoxType t) -> mlir::Type {
         mlir::Type newInnerType =
-            changeElementType(t.getEleTy(), newElementType, false);
+            changeElementTypeImpl(t.getEleTy(), newElementType, false, false);
         if (turnBoxIntoClass)
           return fir::ClassType::get(newInnerType, t.isVolatile());
         return fir::BoxType::get(newInnerType, t.isVolatile());
+      })
+      .Case([&](fir::ClassType t) -> mlir::Type {
+        mlir::Type newInnerType =
+            changeElementTypeImpl(t.getEleTy(), newElementType, false, false);
+        if (turnClassIntoBox)
+          return fir::BoxType::get(newInnerType, t.isVolatile());
+        return fir::ClassType::get(newInnerType, t.isVolatile());
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
@@ -714,6 +723,12 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
                "unexpected FIR leaf type");
         return newElementType;
       });
+}
+
+mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
+                             bool turnBoxIntoClass) {
+  return changeElementTypeImpl(type, newElementType, turnBoxIntoClass,
+                               /*turnClassIntoBox=*/false);
 }
 
 } // namespace fir
@@ -1432,11 +1447,11 @@ mlir::Type BaseBoxType::getEleTy() const {
           [](auto type) { return type.getEleTy(); });
 }
 
-mlir::Type BaseBoxType::getBaseAddressType() const {
+mlir::Type BaseBoxType::getBaseAddressType(bool dropHeapOrPtr) const {
   mlir::Type eleTy = getEleTy();
-  if (fir::isa_ref_type(eleTy))
+  if (!dropHeapOrPtr && fir::isa_ref_type(eleTy))
     return eleTy;
-  return fir::ReferenceType::get(eleTy, isVolatile());
+  return fir::ReferenceType::get(getElementOrSequenceType(), isVolatile());
 }
 
 mlir::Type BaseBoxType::unwrapInnerType() const {
@@ -1500,6 +1515,14 @@ fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewShape(int rank) const {
   return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
 }
 
+fir::BaseBoxType
+fir::BaseBoxType::getBoxTypeWithNewElementType(mlir::Type elementType,
+                                               bool polymorphic) const {
+  return llvm::cast<fir::BaseBoxType>(changeElementTypeImpl(
+      *this, elementType, /*turnBoxIntoClass=*/polymorphic,
+      /*turnClassIntoBox=*/!polymorphic));
+}
+
 fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewAttr(
     fir::BaseBoxType::Attribute attr) const {
   mlir::Type baseType = fir::unwrapRefType(getEleTy());
@@ -1538,6 +1561,10 @@ bool fir::BaseBoxType::isPointerOrAllocatable() const {
 }
 
 bool BaseBoxType::isVolatile() const { return fir::isa_volatile_type(*this); }
+
+bool BaseBoxType::isArray() const {
+  return llvm::isa<fir::SequenceType>(getElementOrSequenceType());
+}
 
 //===----------------------------------------------------------------------===//
 // FIROpsDialect

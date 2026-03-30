@@ -24,8 +24,7 @@ template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
 }
 
 template <typename Pattern> bool match(const SCEVUse U, const Pattern &P) {
-  const SCEV *S = U.getPointer();
-  return const_cast<Pattern &>(P).match(S);
+  return P.match(U.getPointer());
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {

@@ -38,19 +38,8 @@ thread_local unsigned parallel::threadIndex = UINT_MAX;
 
 namespace {
 
-/// An abstract class that takes closures and runs them asynchronously.
-class Executor {
-public:
-  virtual ~Executor() = default;
-  virtual void add(std::function<void()> func) = 0;
-  virtual size_t getThreadCount() const = 0;
-
-  static Executor *getDefaultExecutor();
-};
-
-/// An implementation of an Executor that runs closures on a thread pool
-///   in filo order.
-class ThreadPoolExecutor : public Executor {
+/// Runs closures on a thread pool in filo order.
+class ThreadPoolExecutor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
     if (S.UseJobserver)
@@ -98,7 +87,7 @@ public:
         T.join();
   }
 
-  ~ThreadPoolExecutor() override { stop(); }
+  ~ThreadPoolExecutor() { stop(); }
 
   struct Creator {
     static void *call() { return new ThreadPoolExecutor(strategy); }
@@ -107,7 +96,7 @@ public:
     static void call(void *Ptr) { ((ThreadPoolExecutor *)Ptr)->stop(); }
   };
 
-  void add(std::function<void()> F) override {
+  void add(std::function<void()> F) {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
       WorkStack.push_back(std::move(F));
@@ -115,7 +104,7 @@ public:
     Cond.notify_one();
   }
 
-  size_t getThreadCount() const override { return ThreadCount; }
+  size_t getThreadCount() const { return ThreadCount; }
 
 private:
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
@@ -188,8 +177,9 @@ private:
 
   JobserverClient *TheJobserver = nullptr;
 };
+} // namespace
 
-Executor *Executor::getDefaultExecutor() {
+static ThreadPoolExecutor *getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() on Windows. This is important to avoid various race
@@ -209,10 +199,9 @@ Executor *Executor::getDefaultExecutor() {
   return &Exec;
 #endif
 }
-} // namespace
 
 size_t parallel::getThreadCount() {
-  return Executor::getDefaultExecutor()->getThreadCount();
+  return getDefaultExecutor()->getThreadCount();
 }
 #endif
 
@@ -239,7 +228,7 @@ void TaskGroup::spawn(std::function<void()> F) {
 #if LLVM_ENABLE_THREADS
   if (Parallel) {
     L.inc();
-    Executor::getDefaultExecutor()->add([&, F = std::move(F)] {
+    getDefaultExecutor()->add([&, F = std::move(F)] {
       F();
       L.dec();
     });

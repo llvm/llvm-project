@@ -108,11 +108,11 @@ ObjectFile *ObjectFileJSON::CreateMemoryInstance(const ModuleSP &module_sp,
   return nullptr;
 }
 
-ModuleSpecList ObjectFileJSON::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length) {
-  if (!extractor_sp ||
-      !MagicBytesMatch(extractor_sp->GetSubsetExtractorSP(data_offset)))
+ModuleSpecList
+ObjectFileJSON::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
+  if (!extractor_sp || !MagicBytesMatch(extractor_sp))
     return {};
 
   // Update the data to contain the entire file if it doesn't already.
@@ -121,7 +121,6 @@ ModuleSpecList ObjectFileJSON::GetModuleSpecifications(
       extractor_sp->SetData(file_data_sp);
     if (!extractor_sp->HasData())
       return {};
-    data_offset = 0;
   }
 
   Log *log = GetLog(LLDBLog::Symbols);

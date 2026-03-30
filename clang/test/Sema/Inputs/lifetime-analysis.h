@@ -156,6 +156,12 @@ struct basic_string_view {
 };
 using string_view = basic_string_view<char>;
 
+template<typename T>
+struct span {
+  span();
+  span(const vector<T>&);
+};
+
 template<class _Mystr> struct iter {
     iter& operator-=(int);
 
@@ -191,6 +197,7 @@ template<typename T>
 struct unique_ptr {
   unique_ptr();
   unique_ptr(unique_ptr<T>&&);
+  unique_ptr& operator=(unique_ptr<T>&&);
   ~unique_ptr();
   T* release();
   T &operator*();

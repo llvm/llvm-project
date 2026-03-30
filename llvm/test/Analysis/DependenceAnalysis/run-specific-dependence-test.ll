@@ -33,7 +33,7 @@ define void @strong_siv(ptr %a) {
 ;
 ; CHECK-EXACT-SIV-LABEL: 'strong_siv'
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'strong_siv'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
@@ -97,11 +97,11 @@ define void @weak_crossing_siv(ptr %a) {
 ;
 ; CHECK-EXACT-SIV-LABEL: 'weak_crossing_siv'
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'weak_crossing_siv'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -184,11 +184,11 @@ define void @exact_siv(ptr %a) {
 ;
 ; CHECK-EXACT-SIV-LABEL: 'exact_siv'
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*|<]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'exact_siv'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -210,7 +210,7 @@ define void @exact_siv(ptr %a) {
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - none!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ;
@@ -276,7 +276,7 @@ define void @weak_zero_siv(ptr %a) {
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'weak_zero_siv'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -358,11 +358,11 @@ define void @exact_rdiv(ptr %a) {
 ;
 ; CHECK-EXACT-SIV-LABEL: 'exact_rdiv'
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - output [|<]!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'exact_rdiv'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -454,11 +454,11 @@ define void @symbolic_rdiv(ptr %a) {
 ;
 ; CHECK-EXACT-SIV-LABEL: 'symbolic_rdiv'
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'symbolic_rdiv'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1

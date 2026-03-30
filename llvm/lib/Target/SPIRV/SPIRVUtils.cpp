@@ -869,7 +869,9 @@ void setRegClassType(Register Reg, SPIRVTypeInst SpvType,
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
   if (!MRI->getRegClassOrNull(Reg) || Force) {
     MRI->setRegClass(Reg, GR->getRegClass(SpvType));
-    MRI->setType(Reg, GR->getRegType(SpvType));
+    LLT RegType = GR->getRegType(SpvType);
+    if (Force || !MRI->getType(Reg).isValid())
+      MRI->setType(Reg, RegType);
   }
 }
 

@@ -17,6 +17,7 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/iterator_range.h"
 
+#include <set>
 #include <unordered_map>
 
 namespace Fortran::semantics {
@@ -53,6 +54,21 @@ public:
   }
   void Post(const parser::DoConstruct &) { numDoConstruct_--; }
   void Post(const parser::ReturnStmt &) { EmitBranchOutError("RETURN"); }
+  void Post(const parser::GotoStmt &gotoStmt) {
+    if constexpr (std::is_same_v<D, llvm::acc::Directive>) {
+      switch ((llvm::acc::Directive)currentDirective_) {
+      case llvm::acc::Directive::ACCD_parallel:
+      case llvm::acc::Directive::ACCD_serial:
+      case llvm::acc::Directive::ACCD_kernels:
+        if (labelsInBlock_.count(gotoStmt.v) == 0)
+          EmitBranchOutOfComputeConstructError("GOTO");
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  void CollectLabel(parser::Label label) { labelsInBlock_.insert(label); }
   void Post(const parser::ExitStmt &exitStmt) {
     if (const auto &exitName{exitStmt.v}) {
       CheckConstructNameBranching("EXIT", exitName.value());
@@ -115,6 +131,14 @@ private:
         .Attach(sourcePosition_, GetEnclosingMsg());
   }
 
+  void EmitBranchOutOfComputeConstructError(const char *stmt) const {
+    context_
+        .Say(currentStatementSourcePosition_,
+            "%s to a label outside of a %s construct is not allowed"_err_en_US,
+            stmt, upperCaseDirName_)
+        .Attach(sourcePosition_, GetEnclosingMsg());
+  }
+
   inline void EmitUnlabelledBranchOutError(const char *stmt) {
     context_
         .Say(currentStatementSourcePosition_,
@@ -172,6 +196,7 @@ private:
   D currentDirective_;
   int numDoConstruct_; // tracks number of DoConstruct found AFTER encountering
                        // an OpenMP/OpenACC directive
+  std::set<parser::Label> labelsInBlock_;
 };
 
 // Generic structure checker for directives/clauses language such as OpenMP
@@ -401,12 +426,28 @@ protected:
   std::string ClauseSetToString(const common::EnumSet<C, ClauseEnumSize> set);
 };
 
+// Collect all labels defined in a block.
+struct LabelCollector {
+  std::set<parser::Label> labels;
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+  template <typename T> bool Pre(const parser::Statement<T> &stmt) {
+    if (stmt.label)
+      labels.insert(*stmt.label);
+    return true;
+  }
+};
+
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckNoBranching(
     const parser::Block &block, D directive,
     const parser::CharBlock &directiveSource) {
+  LabelCollector labelCollector;
+  parser::Walk(block, labelCollector);
   NoBranchingEnforce<D> noBranchingEnforce{
       context_, directiveSource, directive, ContextDirectiveAsFortran()};
+  for (auto label : labelCollector.labels)
+    noBranchingEnforce.CollectLabel(label);
   parser::Walk(block, noBranchingEnforce);
 }
 

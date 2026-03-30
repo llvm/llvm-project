@@ -900,8 +900,73 @@ func.func @fold_resize_bilinear(%arg0 : tensor<1x15x13x1xi8>) -> tensor<1x15x13x
   %scale = tosa.const_shape { values = dense<[2, 2, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = NEAREST_NEIGHBOR} : (tensor<1x15x13x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x15x13x1xi8>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = BILINEAR} : (tensor<1x15x13x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x15x13x1xi8>
   return %resize : tensor<1x15x13x1xi8>
+}
+
+// -----
+
+// ResizeOp::fold: unit scale (1:1 Y and X), zero offset/border, in/out types equal.
+// CHECK-LABEL: @fold_resize_identity_scale
+func.func @fold_resize_identity_scale(%arg0 : tensor<1x15x13x1xf32>) -> tensor<1x15x13x1xf32> {
+  // CHECK-NOT: tosa.resize
+  %scale = tosa.const_shape { values = dense<[1, 1, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = NEAREST_NEIGHBOR} : (tensor<1x15x13x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x15x13x1xf32>
+  return %resize : tensor<1x15x13x1xf32>
+}
+
+// -----
+// CHECK-LABEL: @fold_resize_identity_scale_to_unranked
+func.func @fold_resize_identity_scale_to_unranked(%arg0 : tensor<1x15x13x1xf32>) -> tensor<*xf32> {
+  // CHECK: tosa.resize
+  %scale = tosa.const_shape { values = dense<[1, 1, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = NEAREST_NEIGHBOR} : (tensor<1x15x13x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xf32>
+  return %resize : tensor<*xf32>
+}
+
+// -----
+
+// Same parameters except scale_y_n != scale_y_d: fold must not apply.
+// CHECK-LABEL: @resize_nofold_asymmetric_y_scale
+func.func @resize_nofold_asymmetric_y_scale(%arg0 : tensor<1x15x13x1xf32>) -> tensor<1x29x13x1xf32> {
+  // CHECK: tosa.resize
+  %scale = tosa.const_shape { values = dense<[4, 2, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = NEAREST_NEIGHBOR} : (tensor<1x15x13x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x29x13x1xf32>
+  return %resize : tensor<1x29x13x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unranked_clamp
+func.func @dont_canonicalize_unranked_clamp(%arg0 : tensor<*xf32>) -> tensor<*xf32> {
+  // CHECK: tosa.clamp
+  %0 = tosa.clamp %arg0 {min_val = 0.0 : f32, max_val = 1.0 : f32} : (tensor<*xf32>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unranked_to_ranked_clamp
+func.func @dont_canonicalize_unranked_to_ranked_clamp(%arg0 : tensor<*xf32>) -> tensor<1xf32> {
+  // CHECK: tosa.clamp
+  %0 = tosa.clamp %arg0 {min_val = 0.0 : f32, max_val = 1.0 : f32} : (tensor<*xf32>) -> tensor<1xf32>
+  return %0 : tensor<1xf32>
+}
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unranked_slice_dynamic_size
+func.func @dont_canonicalize_unranked_slice_dynamic_size(%arg0: tensor<1x4xf32>) -> tensor<*xf32> {
+  // CHECK: tosa.slice
+  %start = tosa.const_shape {values = dense<[0, 0]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %size = tosa.const_shape {values = dense<[1, -1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %0 = tosa.slice %arg0, %start, %size : (tensor<1x4xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
 }
 
 // -----
@@ -1198,6 +1263,37 @@ func.func @reverse_quant_fold() -> tensor<1x!quant.uniform<i8:f32, 3.07574046018
    %0 = "tosa.const"() {values = dense<0> : tensor<1xi8>} : () -> tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
    %1 = "tosa.reverse"(%0) { axis = 0 : i32 } : (tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>) -> tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
    return %1 : tensor<1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
+}
+
+// -----
+
+// ReverseOp::fold: unranked operand has hasRank() == false;
+// CHECK-LABEL: @reverse_nofold_unranked_operand
+func.func @reverse_nofold_unranked_operand(%arg0: tensor<*xf32>) -> tensor<*xf32> {
+  // CHECK: tosa.reverse
+  %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<*xf32>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}
+
+// -----
+
+// Unit-dim no-op, but mismatch type
+// CHECK-LABEL: @reverse_nofold_unit_dim_unranked_result
+func.func @reverse_nofold_unit_dim_unranked_result(%arg0: tensor<1x4xf32>) -> tensor<*xf32> {
+  // CHECK: tosa.reverse
+  %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<1x4xf32>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}
+
+// -----
+
+// Splat fold returns the operand ElementsAttr; But result type doesn't match.
+// CHECK-LABEL: @reverse_nofold_splat_type_unmatch
+func.func @reverse_nofold_splat_type_unmatch() -> tensor<*xf32> {
+  // CHECK: tosa.reverse
+  %0 = "tosa.const"() <{values = dense<1.0> : tensor<4xf32>}> : () -> tensor<4xf32>
+  %1 = tosa.reverse %0 {axis = 0 : i32} : (tensor<4xf32>) -> tensor<*xf32>
+  return %1 : tensor<*xf32>
 }
 
 // -----

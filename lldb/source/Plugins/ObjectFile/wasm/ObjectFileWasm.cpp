@@ -273,9 +273,10 @@ bool ObjectFileWasm::DecodeSections() {
   return true;
 }
 
-ModuleSpecList ObjectFileWasm::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length) {
+ModuleSpecList
+ObjectFileWasm::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
   if (!ValidateModuleHeader(extractor_sp->GetData()))
     return {};
 

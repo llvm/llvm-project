@@ -276,3 +276,39 @@ define void @log2_f64() {
   %v17f64 = call <17 x double> @llvm.log2.v17f64(<17 x double> undef)
   ret void
 }
+
+define void @log2_f32_daz() #0 {
+; ALL-LABEL: 'log2_f32_daz'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.log2.f32(float poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.log2.v2f32(<2 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.log2.v3f32(<3 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.log2.v4f32(<4 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.log2.v5f32(<5 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.log2.v8f32(<8 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.log2.v16f32(<16 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f32 = call <17 x float> @llvm.log2.v17f32(<17 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'log2_f32_daz'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.log2.f32(float poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.log2.v2f32(<2 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.log2.v3f32(<3 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.log2.v4f32(<4 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.log2.v5f32(<5 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.log2.v8f32(<8 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.log2.v16f32(<16 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f32 = call <17 x float> @llvm.log2.v17f32(<17 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %f32 = call float @llvm.log2.f32(float poison)
+  %v2f32 = call <2 x float> @llvm.log2.v2f32(<2 x float> poison)
+  %v3f32 = call <3 x float> @llvm.log2.v3f32(<3 x float> poison)
+  %v4f32 = call <4 x float> @llvm.log2.v4f32(<4 x float> poison)
+  %v5f32 = call <5 x float> @llvm.log2.v5f32(<5 x float> poison)
+  %v8f32 = call <8 x float> @llvm.log2.v8f32(<8 x float> poison)
+  %v16f32 = call <16 x float> @llvm.log2.v16f32(<16 x float> poison)
+  %v17f32 = call <17 x float> @llvm.log2.v17f32(<17 x float> poison)
+  ret void
+}
+
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }

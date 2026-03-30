@@ -118,17 +118,16 @@ define void @pr45679(ptr %A) {
 ; VF1UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF1UF4:       vector.body:
 ; VF1UF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; VF1UF4-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; VF1UF4-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; VF1UF4-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; VF1UF4-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
-; VF1UF4-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[TMP0]], 13
+; VF1UF4-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[INDEX]], 13
 ; VF1UF4-NEXT:    [[TMP5:%.*]] = icmp ule i32 [[TMP1]], 13
 ; VF1UF4-NEXT:    [[TMP6:%.*]] = icmp ule i32 [[TMP2]], 13
 ; VF1UF4-NEXT:    [[TMP7:%.*]] = icmp ule i32 [[TMP3]], 13
 ; VF1UF4-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF1UF4:       pred.store.if:
-; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP0]]
+; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; VF1UF4-NEXT:    store i32 13, ptr [[TMP8]], align 1
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VF1UF4:       pred.store.continue:
@@ -289,17 +288,16 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF1UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF1UF4:       vector.body:
 ; VF1UF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; VF1UF4-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF1UF4-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; VF1UF4-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; VF1UF4-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; VF1UF4-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP0]], 13
+; VF1UF4-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[INDEX]], 13
 ; VF1UF4-NEXT:    [[TMP5:%.*]] = icmp ule i64 [[TMP1]], 13
 ; VF1UF4-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP2]], 13
 ; VF1UF4-NEXT:    [[TMP7:%.*]] = icmp ule i64 [[TMP3]], 13
 ; VF1UF4-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF1UF4:       pred.store.if:
-; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; VF1UF4-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8
 ; VF1UF4-NEXT:    store i64 [[TMP9]], ptr [[B:%.*]], align 8
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]

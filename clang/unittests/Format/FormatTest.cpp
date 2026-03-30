@@ -80,6 +80,8 @@ TEST_F(FormatTest, NestedNameSpecifiers) {
   verifyFormat("static constexpr bool Bar = _Atomic(bar())::value;");
   verifyFormat("bool a = 2 < ::SomeFunction();");
   verifyFormat("ALWAYS_INLINE ::std::string getName();");
+  verifyFormat("template <typename T> auto mem = &T::member;",
+               "template <typename T> auto mem = &T :: member;");
   verifyFormat("some::string getName();");
 }
 
@@ -15563,6 +15565,12 @@ TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
   verifyFormat("class foo {};\n"
                "class bar { int i; };",
                Style);
+  verifyFormat("namespace foo {\n"
+               "struct S {\n"
+               "} s;\n"
+               "} // namespace foo",
+               Style);
+
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
   verifyFormat("class foo\n"

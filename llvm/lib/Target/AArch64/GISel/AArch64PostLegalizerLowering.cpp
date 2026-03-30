@@ -1227,8 +1227,7 @@ protected:
 
 public:
   AArch64PostLegalizerLoweringImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI);
 
@@ -1247,11 +1246,10 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI)
-    : Combiner(MF, CInfo, TPC, /*VT*/ nullptr, CSEInfo),
+    : Combiner(MF, CInfo, /*VT*/ nullptr, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true), RuleConfig(RuleConfig),
       STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -1279,7 +1277,6 @@ private:
 } // end anonymous namespace
 
 void AArch64PostLegalizerLowering::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -1295,7 +1292,6 @@ bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
 
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
@@ -1307,7 +1303,7 @@ bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
   CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
   // PostLegalizerCombiner performs DCE, so a full DCE pass is unnecessary.
   CInfo.EnableFullDCE = false;
-  AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, TPC, /*CSEInfo*/ nullptr,
+  AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, /*CSEInfo*/ nullptr,
                                         RuleConfig, ST);
   return Impl.combineMachineInstrs();
 }
@@ -1316,7 +1312,6 @@ char AArch64PostLegalizerLowering::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64PostLegalizerLowering, DEBUG_TYPE,
                       "Lower AArch64 MachineInstrs after legalization", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AArch64PostLegalizerLowering, DEBUG_TYPE,
                     "Lower AArch64 MachineInstrs after legalization", false,
                     false)

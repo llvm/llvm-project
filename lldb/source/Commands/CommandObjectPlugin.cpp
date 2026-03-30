@@ -96,9 +96,9 @@ int SetEnableOnMatchingPlugins(const llvm::StringRef &pattern,
             continue;
           }
 
-          result.AppendMessageWithFormat(
-              "  %s %-30s %s\n", enabled ? "[+]" : "[-]", plugin.name.data(),
-              plugin.description.data());
+          result.AppendMessageWithFormatv("  {0} {1, -30} {2}",
+                                          enabled ? "[+]" : "[-]", plugin.name,
+                                          plugin.description);
         }
       });
 }
@@ -253,9 +253,9 @@ private:
                        const std::vector<RegisteredPluginInfo> &plugins) {
             result.AppendMessage(plugin_namespace.name);
             for (auto &plugin : plugins) {
-              result.AppendMessageWithFormat(
-                  "  %s %-30s %s\n", plugin.enabled ? "[+]" : "[-]",
-                  plugin.name.data(), plugin.description.data());
+              result.AppendMessageWithFormatv("  {0} {1, -30} {2}",
+                                              plugin.enabled ? "[+]" : "[-]",
+                                              plugin.name, plugin.description);
             }
           });
       if (num_matching == 0) {

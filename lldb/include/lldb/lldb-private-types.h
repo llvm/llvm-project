@@ -9,11 +9,9 @@
 #ifndef LLDB_LLDB_PRIVATE_TYPES_H
 #define LLDB_LLDB_PRIVATE_TYPES_H
 
-#include "lldb/lldb-private.h"
-
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
-
 #include <type_traits>
 
 namespace llvm {

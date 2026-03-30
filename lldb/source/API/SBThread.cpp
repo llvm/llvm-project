@@ -846,10 +846,9 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
             "step until target not in current function");
     } else {
       Status new_plan_status;
-      ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepUntil(
-          abort_other_plans, &step_over_until_addrs[0],
-          step_over_until_addrs.size(), stop_other_threads,
-          frame_sp->GetFrameIndex(), new_plan_status));
+      ThreadPlanSP new_plan_sp = thread->QueueThreadPlanForStepUntil(
+          abort_other_plans, step_over_until_addrs, stop_other_threads,
+          frame_sp->GetFrameIndex(), new_plan_status);
 
       if (new_plan_status.Success())
         sb_error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());

@@ -588,6 +588,17 @@ struct SgToWiMultiDimReduction
     assert(reductionDims.size() == 1 &&
            "Expecting single reduction dimension for subgroup multi "
            "reduction op");
+    // For rank > 2, ensure leading dimensions are unit.
+    VectorType sourceType = op.getSourceVectorType();
+    int64_t rank = sourceType.getRank();
+    if (rank > 2) {
+      ArrayRef<int64_t> shape = sourceType.getShape();
+      if (llvm::any_of(shape.take_front(rank - 2),
+                       [](int64_t d) { return d != 1; }))
+        return rewriter.notifyMatchFailure(
+            op, "only unit leading dimensions are supported for "
+                "multi_reduction with rank > 2");
+    }
     if (isReductionLaneLocal(op)) {
       auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
       VectorType resVecTy = dyn_cast<VectorType>(op.getType());

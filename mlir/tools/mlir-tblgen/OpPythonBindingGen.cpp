@@ -49,7 +49,7 @@ import builtins
 from typing import Any as _Any, Sequence as _Sequence, Union as _Union, Optional as _Optional
 import sys as _sys
 if _sys.version_info >= (3, 12):
-  from collections.abc import Buffer as _Buffer
+  from collections.abc import Buffer as _Buffer  # pytype: disable=not-supported-yet
 else:
   try:
     from typing_extensions import Buffer as _Buffer

@@ -614,7 +614,7 @@ void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
 
 void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *Old,
                                               BasicBlock *New) {
-  Instruction *TI = getTerminator();
+  Instruction *TI = getTerminatorOrNull();
   if (!TI)
     // Cope with being called on a BasicBlock that doesn't have a terminator
     // yet. Clang's CodeGenFunction::EmitReturnBlock() likes to do this.
@@ -676,7 +676,7 @@ void BasicBlock::flushTerminatorDbgRecords() {
   // DbgRecords in front of the terminator.
 
   // If there's no terminator, there's nothing to do.
-  Instruction *Term = getTerminator();
+  Instruction *Term = getTerminatorOrNull();
   if (!Term)
     return;
 

@@ -26,9 +26,9 @@ define i16 @cmov16(i16 %a, i16 %b, i16 %x, ptr %y.ptr) {
 ; NDD-LABEL: cmov16:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpw %si, %di # encoding: [0x66,0x39,0xf7]
-; NDD-NEXT:    movzwl (%rcx), %eax # encoding: [0x0f,0xb7,0x01]
 ; NDD-NEXT:    cmovbel %edx, %edi # EVEX TO LEGACY Compression encoding: [0x0f,0x46,0xfa]
-; NDD-NEXT:    cmovbew %dx, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x46,0xc2]
+; NDD-NEXT:    movzwl (%rcx), %eax # encoding: [0x0f,0xb7,0x01]
+; NDD-NEXT:    cmovbew %dx, %ax # encoding: [0x66,0x0f,0x46,0xc2]
 ; NDD-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
@@ -52,10 +52,9 @@ define i32 @cmov32(i32 %a, i32 %b, i32 %x, ptr %y.ptr) {
 ; NDD-LABEL: cmov32:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
-; NDD-NEXT:    movl (%rcx), %eax # encoding: [0x8b,0x01]
-; NDD-NEXT:    cmovbel %edx, %edi # EVEX TO LEGACY Compression encoding: [0x0f,0x46,0xfa]
-; NDD-NEXT:    cmovbel %edx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x46,0xc2]
-; NDD-NEXT:    addl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf8]
+; NDD-NEXT:    cmoval %edi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x47,0xd7]
+; NDD-NEXT:    cmoval (%rcx), %edx # encoding: [0x0f,0x47,0x11]
+; NDD-NEXT:    addl %edx, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xd0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: cmov32:
@@ -83,10 +82,9 @@ define i64 @cmov64(i64 %a, i64 %b, i64 %x, ptr %y.ptr) {
 ; NDD-LABEL: cmov64:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
-; NDD-NEXT:    movq (%rcx), %rax # encoding: [0x48,0x8b,0x01]
-; NDD-NEXT:    cmovbeq %rdx, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x46,0xfa]
-; NDD-NEXT:    cmovbeq %rdx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x46,0xc2]
-; NDD-NEXT:    addq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf8]
+; NDD-NEXT:    cmovaq %rdi, %rdx, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x47,0xd7]
+; NDD-NEXT:    cmovaq (%rcx), %rdx # encoding: [0x48,0x0f,0x47,0x11]
+; NDD-NEXT:    addq %rdx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xd0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: cmov64:
@@ -128,9 +126,10 @@ entry:
 define i16 @cmov16rm_inv(i16 %a, i16 %x, ptr %y.ptr) {
 ; NDD-LABEL: cmov16rm_inv:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rdx), %eax # encoding: [0x0f,0xb7,0x02]
+; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; NDD-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
-; NDD-NEXT:    cmovsw %si, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x48,0xc6]
+; NDD-NEXT:    cmovnsw (%rdx), %ax # encoding: [0x66,0x0f,0x49,0x02]
+; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: cmov16rm_inv:
@@ -156,9 +155,9 @@ entry:
 define i32 @cmov32rm_inv(i32 %a, i32 %x, ptr %y.ptr) {
 ; NDD-LABEL: cmov32rm_inv:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl (%rdx), %eax # encoding: [0x8b,0x02]
+; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; NDD-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
-; NDD-NEXT:    cmovsl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x48,0xc6]
+; NDD-NEXT:    cmovnsl (%rdx), %eax # encoding: [0x0f,0x49,0x02]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: cmov32rm_inv:
@@ -181,9 +180,9 @@ entry:
 define i64 @cmov64rm_inv(i64 %a, i64 %x, ptr %y.ptr) {
 ; NDD-LABEL: cmov64rm_inv:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq (%rdx), %rax # encoding: [0x48,0x8b,0x02]
+; NDD-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; NDD-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
-; NDD-NEXT:    cmovsq %rsi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x48,0xc6]
+; NDD-NEXT:    cmovnsq (%rdx), %rax # encoding: [0x48,0x0f,0x49,0x02]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: cmov64rm_inv:
