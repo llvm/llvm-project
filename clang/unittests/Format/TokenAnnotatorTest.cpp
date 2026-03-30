@@ -428,11 +428,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[1], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
 
-  Tokens = annotate("FuncPointerType = MCStreamer *(*)(MCContext &Ctx);");
-  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
-  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_Unknown); // Not TT_CastRParen
-  EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_StartOfName);
+  Tokens = annotate("using FuncPointerType = MCStreamer *(*)(MCContext &Ctx);");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown); // Not TT_CastRParen
+  EXPECT_TOKEN(Tokens[10], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[11], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
