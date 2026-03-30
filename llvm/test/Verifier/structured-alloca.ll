@@ -1,4 +1,4 @@
-; RUN: llvm-as -disable-output %s
+; RUN: llvm-as < %s | llvm-dis
 
 %S = type { i32, i32 }
 
