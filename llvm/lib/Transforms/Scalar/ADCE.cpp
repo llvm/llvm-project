@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -126,10 +125,8 @@ class AggressiveDeadCodeElimination {
   DominatorTree *DT;
   PostDominatorTree &PDT;
 
-  /// Mapping of blocks to associated information, an element in BlockInfoVec.
-  /// Use MapVector to get deterministic iteration order.
-  MapVector<BasicBlock *, BlockInfoType> BlockInfo;
-  bool isLive(BasicBlock *BB) { return BlockInfo[BB].Live; }
+  /// Mapping of blocks to associated information, indexed by block number.
+  SmallVector<BlockInfoType> BlockInfo;
 
   /// Mapping of instructions to associated information.
   DenseMap<Instruction *, InstInfoType> InstInfo;
@@ -154,6 +151,10 @@ class AggressiveDeadCodeElimination {
   /// initialize the Worklist to the set of must-be-live Instruscions.
   void initialize();
 
+  BlockInfoType &getBlockInfo(BasicBlock *BB) {
+    return BlockInfo[BB->getNumber()];
+  }
+
   /// Return true for operations which are always treated as live.
   bool isAlwaysLive(Instruction &I);
 
@@ -168,7 +169,7 @@ class AggressiveDeadCodeElimination {
 
   /// Mark a block as live.
   void markLive(BlockInfoType &BB);
-  void markLive(BasicBlock *BB) { markLive(BlockInfo[BB]); }
+  void markLive(BasicBlock *BB) { markLive(getBlockInfo(BB)); }
 
   /// Mark terminators of control predecessors of a PHI node live.
   void markPhiLive(PHINode *PN);
@@ -214,18 +215,14 @@ ADCEChanged AggressiveDeadCodeElimination::performDeadCodeElimination() {
 }
 
 void AggressiveDeadCodeElimination::initialize() {
-  auto NumBlocks = F.size();
-
-  // We will have an entry in the map for each block so we grow the
-  // structure to twice that size to keep the load factor low in the hash table.
-  BlockInfo.reserve(NumBlocks);
+  BlockInfo.resize(F.getMaxBlockNumber());
   size_t NumInsts = 0;
 
   // Iterate over blocks and initialize BlockInfoVec entries, count
   // instructions to size the InstInfo hash table.
   for (auto &BB : F) {
     NumInsts += BB.size();
-    auto &Info = BlockInfo[&BB];
+    auto &Info = BlockInfo[BB.getNumber()];
     Info.BB = &BB;
     Info.Terminator = BB.getTerminator();
     Info.UnconditionalBranch = isa<UncondBrInst>(Info.Terminator);
@@ -234,13 +231,15 @@ void AggressiveDeadCodeElimination::initialize() {
   // Initialize instruction map and set pointers to block info.
   InstInfo.reserve(NumInsts);
   for (auto &BBInfo : BlockInfo)
-    for (Instruction &I : *BBInfo.second.BB)
-      InstInfo[&I].Block = &BBInfo.second;
+    if (BBInfo.BB)
+      for (Instruction &I : *BBInfo.BB)
+        InstInfo[&I].Block = &BBInfo;
 
   // Since BlockInfoVec holds pointers into InstInfo and vice-versa, we may not
   // add any more elements to either after this point.
   for (auto &BBInfo : BlockInfo)
-    BBInfo.second.TerminatorLiveInfo = &InstInfo[BBInfo.second.Terminator];
+    if (BBInfo.Terminator)
+      BBInfo.TerminatorLiveInfo = &InstInfo[BBInfo.Terminator];
 
   // Collect the set of "root" instructions that are known live.
   for (Instruction &I : instructions(F))
@@ -264,7 +263,7 @@ void AggressiveDeadCodeElimination::initialize() {
   // program, and for all others, mark the subtree live.
   for (const auto &PDTChild : children<DomTreeNode *>(PDT.getRootNode())) {
     auto *BB = PDTChild->getBlock();
-    auto &Info = BlockInfo[BB];
+    auto &Info = getBlockInfo(BB);
     // Real function return
     if (isa<ReturnInst>(Info.Terminator)) {
       LLVM_DEBUG(dbgs() << "post-dom root child is a return: " << BB->getName()
@@ -274,20 +273,20 @@ void AggressiveDeadCodeElimination::initialize() {
 
     // This child is something else, like an infinite loop.
     for (auto *DFNode : depth_first(PDTChild))
-      markLive(BlockInfo[DFNode->getBlock()].Terminator);
+      markLive(getBlockInfo(DFNode->getBlock()).Terminator);
   }
 
   // Treat the entry block as always live
   auto *BB = &F.getEntryBlock();
-  auto &EntryInfo = BlockInfo[BB];
+  auto &EntryInfo = getBlockInfo(BB);
   EntryInfo.Live = true;
   if (EntryInfo.UnconditionalBranch)
     markLive(EntryInfo.Terminator);
 
   // Build initial collection of blocks with dead terminators
   for (auto &BBInfo : BlockInfo)
-    if (!BBInfo.second.terminatorIsLive())
-      BlocksWithDeadTerminators.insert(BBInfo.second.BB);
+    if (BBInfo.Terminator && !BBInfo.terminatorIsLive())
+      BlocksWithDeadTerminators.insert(BBInfo.BB);
 }
 
 bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
@@ -410,7 +409,7 @@ void AggressiveDeadCodeElimination::collectLiveScopes(const DILocation &DL) {
 }
 
 void AggressiveDeadCodeElimination::markPhiLive(PHINode *PN) {
-  auto &Info = BlockInfo[PN->getParent()];
+  auto &Info = getBlockInfo(PN->getParent());
   // Only need to check this once per block.
   if (Info.HasLivePhiNodes)
     return;
@@ -420,7 +419,7 @@ void AggressiveDeadCodeElimination::markPhiLive(PHINode *PN) {
   // which will trigger marking live branches upon which
   // that block is control dependent.
   for (auto *PredBB : predecessors(Info.BB)) {
-    auto &Info = BlockInfo[PredBB];
+    auto &Info = getBlockInfo(PredBB);
     if (!Info.CFLive) {
       Info.CFLive = true;
       NewLiveBlocks.insert(PredBB);
@@ -550,7 +549,7 @@ bool AggressiveDeadCodeElimination::updateDeadRegions() {
     dbgs() << "final dead terminator blocks: " << '\n';
     for (auto *BB : BlocksWithDeadTerminators)
       dbgs() << '\t' << BB->getName()
-             << (BlockInfo[BB].Live ? " LIVE\n" : "\n");
+             << (getBlockInfo(BB).Live ? " LIVE\n" : "\n");
   });
 
   // Don't compute the post ordering unless we needed it.
@@ -559,7 +558,7 @@ bool AggressiveDeadCodeElimination::updateDeadRegions() {
   SmallVector<DominatorTree::UpdateType, 10> DeletedEdges;
 
   for (auto *BB : BlocksWithDeadTerminators) {
-    auto &Info = BlockInfo[BB];
+    auto &Info = getBlockInfo(BB);
     if (Info.UnconditionalBranch) {
       InstInfo[Info.Terminator].Live = true;
       continue;
@@ -575,7 +574,7 @@ bool AggressiveDeadCodeElimination::updateDeadRegions() {
     // live edge.
     BlockInfoType *PreferredSucc = nullptr;
     for (auto *Succ : successors(BB)) {
-      auto *Info = &BlockInfo[Succ];
+      auto *Info = &getBlockInfo(Succ);
       if (!PreferredSucc || PreferredSucc->PostOrder < Info->PostOrder)
         PreferredSucc = Info;
     }
@@ -632,7 +631,7 @@ void AggressiveDeadCodeElimination::computeReversePostOrder() {
     if (!succ_empty(&BB))
       continue;
     for (BasicBlock *Block : inverse_post_order_ext(&BB,Visited))
-      BlockInfo[Block].PostOrder = PostOrder++;
+      getBlockInfo(Block).PostOrder = PostOrder++;
   }
 }
 
