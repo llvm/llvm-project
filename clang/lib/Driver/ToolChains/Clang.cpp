@@ -3588,8 +3588,15 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
           << A->getOption().getName() << Value << "fs gs";
       return;
     }
-    if (EffectiveTriple.isAArch64() && Value != "sp_el0") {
-      D.Diag(diag::err_drv_invalid_value) << A->getOption().getName() << Value;
+    if (EffectiveTriple.isAArch64() &&
+        llvm::StringSwitch<bool>(Value)
+            .Cases({"sp_el0", "tpidrro_el0", "tpidr_el0", "tpidr_el1",
+                    "tpidr_el2", "far_el1", "far_el2"},
+                   false)
+            .Default(true)) {
+      D.Diag(diag::err_drv_invalid_value_with_suggestion)
+          << A->getOption().getName() << Value
+          << "{sp_el0, tpidrro_el0, tpidr_el[012], far_el[12]}";
       return;
     }
     if (EffectiveTriple.isRISCV() && Value != "tp") {
@@ -4257,6 +4264,32 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
 
   if (Args.hasArg(options::OPT_fobjc_disable_direct_methods_for_testing))
     CmdArgs.push_back("-fobjc-disable-direct-methods-for-testing");
+
+  // Forward constant literal flags to cc1.
+  if (types::isObjC(Input.getType())) {
+    bool EnableConstantLiterals =
+        Args.hasFlag(options::OPT_fobjc_constant_literals,
+                     options::OPT_fno_objc_constant_literals,
+                     /*default=*/true) &&
+        Runtime.hasConstantLiteralClasses();
+    if (EnableConstantLiterals)
+      CmdArgs.push_back("-fobjc-constant-literals");
+    if (Args.hasFlag(options::OPT_fconstant_nsnumber_literals,
+                     options::OPT_fno_constant_nsnumber_literals,
+                     /*default=*/true) &&
+        EnableConstantLiterals)
+      CmdArgs.push_back("-fconstant-nsnumber-literals");
+    if (Args.hasFlag(options::OPT_fconstant_nsarray_literals,
+                     options::OPT_fno_constant_nsarray_literals,
+                     /*default=*/true) &&
+        EnableConstantLiterals)
+      CmdArgs.push_back("-fconstant-nsarray-literals");
+    if (Args.hasFlag(options::OPT_fconstant_nsdictionary_literals,
+                     options::OPT_fno_constant_nsdictionary_literals,
+                     /*default=*/true) &&
+        EnableConstantLiterals)
+      CmdArgs.push_back("-fconstant-nsdictionary-literals");
+  }
 }
 
 static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
@@ -4314,6 +4347,15 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
     std::string Opt =
         std::string("-fdiagnostics-misexpect-tolerance=") + A->getValue();
     CmdArgs.push_back(Args.MakeArgString(Opt));
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fdiagnostics_show_inlining_chain,
+                          options::OPT_fno_diagnostics_show_inlining_chain)) {
+    if (A->getOption().matches(options::OPT_fdiagnostics_show_inlining_chain))
+      CmdArgs.push_back("-fdiagnostics-show-inlining-chain");
+    else
+      CmdArgs.push_back("-fno-diagnostics-show-inlining-chain");
   }
 
   if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_format_EQ)) {
@@ -4408,11 +4450,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                      !isHIP(InputType) && !isObjC(InputType) &&
                      !isOpenCL(InputType);
 
-  if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
-                   options::OPT_fno_debug_info_for_profiling, false) &&
-      checkDebugInfoOption(
-          Args.getLastArg(options::OPT_fdebug_info_for_profiling), Args, D, TC))
-    CmdArgs.push_back("-fdebug-info-for-profiling");
+  addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 
   // The 'g' groups options involve a somewhat intricate sequence of decisions
   // about what to pass from the driver to the frontend, but by the time they
@@ -6561,6 +6599,28 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fconstant_string_class_EQ)) {
     CmdArgs.push_back("-fconstant-string-class");
+    CmdArgs.push_back(A->getValue());
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fconstant_array_class_EQ)) {
+    CmdArgs.push_back("-fconstant-array-class");
+    CmdArgs.push_back(A->getValue());
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fconstant_dictionary_class_EQ)) {
+    CmdArgs.push_back("-fconstant-dictionary-class");
+    CmdArgs.push_back(A->getValue());
+  }
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fconstant_integer_number_class_EQ)) {
+    CmdArgs.push_back("-fconstant-integer-number-class");
+    CmdArgs.push_back(A->getValue());
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fconstant_float_number_class_EQ)) {
+    CmdArgs.push_back("-fconstant-float-number-class");
+    CmdArgs.push_back(A->getValue());
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fconstant_double_number_class_EQ)) {
+    CmdArgs.push_back("-fconstant-double-number-class");
     CmdArgs.push_back(A->getValue());
   }
 
@@ -9504,7 +9564,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back(Args.MakeArgString(
           WrapperOption +
-          ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
+          ToolChain::normalizeOffloadTriple(Val.drop_front()).str() + "=" +
           A->getValue(1)));
   }
   Args.ClaimAllArgs(options::OPT_Xoffload_compiler);

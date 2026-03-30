@@ -2066,7 +2066,12 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
       CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs,
-      CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>
+      CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>,
+    OpBuilder<(ins "const Properties &":$properties,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$discardableAttributes), [{
+      $_state.addRegion();
+      $_state.getOrAddProperties<Properties>() = properties;
+      $_state.addAttributes(discardableAttributes);}]>
   ];
 
   let extraClassDeclaration = [{

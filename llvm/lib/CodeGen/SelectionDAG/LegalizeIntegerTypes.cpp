@@ -2167,10 +2167,6 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
     break;
-  case ISD::CTTZ_ELTS:
-  case ISD::CTTZ_ELTS_ZERO_POISON:
-    Res = PromoteIntOp_CTTZ_ELTS(N);
-    break;
   case ISD::GET_ACTIVE_LANE_MASK:
     Res = PromoteIntOp_GET_ACTIVE_LANE_MASK(N);
     break;
@@ -2999,14 +2995,17 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N,
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
                                                                unsigned OpNo) {
-  SmallVector<SDValue, 1> NewOps(N->ops());
-  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
-  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
-}
+  assert(OpNo == 0 && "Unexpected operand for promotion");
+  SDValue Op = N->getOperand(0);
 
-SDValue DAGTypeLegalizer::PromoteIntOp_CTTZ_ELTS(SDNode *N) {
-  SDValue Op = GetPromotedInteger(N->getOperand(0));
-  return SDValue(DAG.UpdateNodeOperands(N, Op), 0);
+  SDValue NewOp;
+  if (TLI.getBooleanContents(Op.getValueType()) ==
+      TargetLowering::ZeroOrNegativeOneBooleanContent)
+    NewOp = SExtPromotedInteger(Op);
+  else
+    NewOp = ZExtPromotedInteger(Op);
+
+  return SDValue(DAG.UpdateNodeOperands(N, NewOp), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N) {

@@ -498,7 +498,7 @@ public:
 
   /// Return the minimum number of bits required to hold the maximum possible
   /// number of trailing zero vector elements.
-  unsigned getBitWidthForCttzElements(EVT RetVT, ElementCount EC,
+  unsigned getBitWidthForCttzElements(Type *RetTy, ElementCount EC,
                                       bool ZeroIsPoison,
                                       const ConstantRange *VScaleRange) const;
 
@@ -4010,6 +4010,11 @@ public:
 
   bool isPositionIndependent() const;
 
+  // If set to true, SelectionDAG nodes will be consistently processed in
+  // topological order. This is a temporary hook until sorting can be
+  // enabled globally.
+  virtual bool useTopologicalSorting() const { return false; }
+
   virtual bool isSDNodeSourceOfDivergence(const SDNode *N,
                                           FunctionLoweringInfo *FLI,
                                           UniformityInfo *UA) const {
@@ -5819,10 +5824,6 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
-
-  /// Expand a CTTZ_ELTS or CTTZ_ELTS_ZERO_POISON by calculating (VL - i) for
-  /// each active lane (i), getting the maximum and subtracting it from VL.
-  SDValue expandCttzElts(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
   /// consisting of zext/sext, extract_subvector, mul and add operations.

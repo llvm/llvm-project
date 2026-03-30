@@ -517,8 +517,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMINIMUM:
   case ISD::VECREDUCE_FMUL:
-  case ISD::CTTZ_ELTS:
-  case ISD::CTTZ_ELTS_ZERO_POISON:
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
@@ -1355,10 +1353,6 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   }
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
-    return;
-  case ISD::CTTZ_ELTS:
-  case ISD::CTTZ_ELTS_ZERO_POISON:
-    Results.push_back(TLI.expandCttzElts(Node, DAG));
     return;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Results.push_back(TLI.expandVectorFindLastActive(Node, DAG));

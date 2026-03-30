@@ -1255,10 +1255,15 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       fnType = fn.getFunctionType();
     } else if (auto ifunc = dyn_cast<IFuncOp>(callee)) {
       fnType = ifunc.getIFuncType();
+    } else if (isa<AliasOp>(callee)) {
+      // Aliases can alias functions, so calling through an alias is valid.
+      // The function type is determined by the call's operands and result
+      // types.
+      fnType = getCalleeFunctionType();
     } else {
       return emitOpError()
              << "'" << calleeName.getValue()
-             << "' does not reference a valid LLVM function or IFunc";
+             << "' does not reference a valid LLVM function, IFunc, or alias";
     }
   }
 
@@ -3035,6 +3040,15 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
                         builder.getI64IntegerAttr(functionEntryCount.value()));
+#ifndef NDEBUG
+  std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
+  if (duplicate.has_value()) {
+    llvm::report_fatal_error(
+        Twine("LLVMFuncOp propagated an attribute that is meant "
+              "to be constructed by the builder: ") +
+        duplicate->getName().str());
+  }
+#endif
   if (argAttrs.empty())
     return;
 
