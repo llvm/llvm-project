@@ -1564,19 +1564,7 @@ group. Otherwise, the result is false.
 \return True if all values across all lanes are equal, false otherwise
 }];
   let ReturnType = VaryingShape<BoolTy>;
-  let VaryingTypes = [IntTy, UIntTy, FloatTy, Int64Ty, UInt64Ty, DoubleTy];
-  let IsConvergent = 1;
-  let Availability = SM6_0;
-  let VaryingMatDims = [];
-}
-
-// WaveActiveAllEqual — half and 16-bit integer types. The 6.2 availability 
-// annotations for the half and 16-bit types are emitted automatically.
-def hlsl_wave_active_all_equal_16bit :
-    HLSLOneArgBuiltin<"WaveActiveAllEqual",
-                "__builtin_hlsl_wave_active_all_equal"> {
-  let ReturnType = VaryingShape<BoolTy>;
-  let VaryingTypes = [HalfTy, Int16Ty, UInt16Ty];
+  let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
   let Availability = SM6_0;
   let VaryingMatDims = [];
