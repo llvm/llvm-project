@@ -566,27 +566,21 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item
                                                                         IDs
 
-     ``gfx1250``                 ``amdgcn``   APU                     - Architected                   *TBA*
-                                                                        flat
-                                                                        scratch                       .. TODO::
+     ``gfx1250``                 ``amdgcn``   APU   - globally-       - Architected                   *TBA*
+                                                      addressable-      flat
+                                                      scratch           scratch                       .. TODO::
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
-                                                                      - Globally
-                                                                        Accessible
-                                                                        Scratch
                                                                       - Workgroup
                                                                         Clusters
 
-     ``gfx1251``                 ``amdgcn``   APU                     - Architected                   *TBA*
-                                                                        flat
-                                                                        scratch                       .. TODO::
+     ``gfx1251``                 ``amdgcn``   APU   - globally-       - Architected                   *TBA*
+                                                      addressable-      flat
+                                                      scratch           scratch                       .. TODO::
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
-                                                                      - Globally
-                                                                        Accessible
-                                                                        Scratch
                                                                       - Workgroup
                                                                         Clusters
 
@@ -776,64 +770,70 @@ For example:
   .. table:: AMDGPU Target Features
      :name: amdgpu-target-features-table
 
-     =============== ============================ ==================================================
-     Target Feature  Clang Option to Control      Description
+     ============================= ============================ ==================================================
+     Target Feature                Clang Option to Control      Description
      Name
-     =============== ============================ ==================================================
-     cumode          - ``-m[no-]cumode``          Control the wavefront execution mode used
-                                                  when generating code for kernels. When disabled
-                                                  native WGP wavefront execution mode is used,
-                                                  when enabled CU wavefront execution mode is used
-                                                  (see :ref:`amdgpu-amdhsa-memory-model`).
+     ============================= ============================ ==================================================
+     cumode                        - ``-m[no-]cumode``          Control the wavefront execution mode used
+                                                                when generating code for kernels. When disabled
+                                                                native WGP wavefront execution mode is used,
+                                                                when enabled CU wavefront execution mode is used
+                                                                (see :ref:`amdgpu-amdhsa-memory-model`).
 
-     sramecc         - ``-mcpu``                  If specified, generate code that can only be
-                     - ``--offload-arch``         loaded and executed in a process that has a
-                                                  matching setting for SRAMECC.
+     sramecc                       - ``-mcpu``                  If specified, generate code that can only be
+                                   - ``--offload-arch``         loaded and executed in a process that has a
+                                                                matching setting for SRAMECC.
 
-                                                  If not specified for code object V2 to V3, generate
-                                                  code that can be loaded and executed in a process
-                                                  with SRAMECC enabled.
+                                                                If not specified for code object V2 to V3, generate
+                                                                code that can be loaded and executed in a process
+                                                                with SRAMECC enabled.
 
-                                                  If not specified for code object V4 or above, generate
-                                                  code that can be loaded and executed in a process
-                                                  with either setting of SRAMECC.
+                                                                If not specified for code object V4 or above, generate
+                                                                code that can be loaded and executed in a process
+                                                                with either setting of SRAMECC.
 
-     tgsplit           ``-m[no-]tgsplit``         Enable/disable generating code that assumes
-                                                  work-groups are launched in threadgroup split mode.
-                                                  When enabled the waves of a work-group may be
-                                                  launched in different CUs.
+     tgsplit                         ``-m[no-]tgsplit``         Enable/disable generating code that assumes
+                                                                work-groups are launched in threadgroup split mode.
+                                                                When enabled the waves of a work-group may be
+                                                                launched in different CUs.
 
-     wavefrontsize64 - ``-m[no-]wavefrontsize64`` Control the wavefront size used when
-                                                  generating code for kernels. When disabled
-                                                  native wavefront size 32 is used, when enabled
-                                                  wavefront size 64 is used.
+     wavefrontsize64               - ``-m[no-]wavefrontsize64`` Control the wavefront size used when
+                                                                generating code for kernels. When disabled
+                                                                native wavefront size 32 is used, when enabled
+                                                                wavefront size 64 is used.
 
-     xnack           - ``-mcpu``                  If specified, generate code that can only be
-                     - ``--offload-arch``         loaded and executed in a process that has a
-                                                  matching setting for XNACK replay.
+     xnack                         - ``-mcpu``                  If specified, generate code that can only be
+                                   - ``--offload-arch``         loaded and executed in a process that has a
+                                                                matching setting for XNACK replay.
 
-                                                  If not specified for code object V2 to V3, generate
-                                                  code that can be loaded and executed in a process
-                                                  with XNACK replay enabled.
+                                                                If not specified for code object V2 to V3, generate
+                                                                code that can be loaded and executed in a process
+                                                                with XNACK replay enabled.
 
-                                                  If not specified for code object V4 or above, generate
-                                                  code that can be loaded and executed in a process
-                                                  with either setting of XNACK replay.
+                                                                If not specified for code object V4 or above, generate
+                                                                code that can be loaded and executed in a process
+                                                                with either setting of XNACK replay.
 
-                                                  XNACK replay can be used for demand paging and
-                                                  page migration. If enabled in the device, then if
-                                                  a page fault occurs the code may execute
-                                                  incorrectly unless generated with XNACK replay
-                                                  enabled, or generated for code object V4 or above without
-                                                  specifying XNACK replay. Executing code that was
-                                                  generated with XNACK replay enabled, or generated
-                                                  for code object V4 or above without specifying XNACK replay,
-                                                  on a device that does not have XNACK replay
-                                                  enabled will execute correctly but may be less
-                                                  performant than code generated for XNACK replay
-                                                  disabled.
+                                                                XNACK replay can be used for demand paging and
+                                                                page migration. If enabled in the device, then if
+                                                                a page fault occurs the code may execute
+                                                                incorrectly unless generated with XNACK replay
+                                                                enabled, or generated for code object V4 or above without
+                                                                specifying XNACK replay. Executing code that was
+                                                                generated with XNACK replay enabled, or generated
+                                                                for code object V4 or above without specifying XNACK replay,
+                                                                on a device that does not have XNACK replay
+                                                                enabled will execute correctly but may be less
+                                                                performant than code generated for XNACK replay
+                                                                disabled.
 
-     =============== ============================ ==================================================
+     globally-addressable-scratch  - ``--offload-arch``         When enabled, scratch (private) memory can be shared
+                                                                between threads without triggering undefined behavior.
+                                                                Disabled by default as this may incur a performance penalty
+                                                                because the compiler can no longer assume private memory is
+                                                                thread-local when this is enabled.
+
+     ============================= ============================ ==================================================
 
 .. _amdgpu-module-flags:
 
@@ -1082,7 +1082,7 @@ supported for the ``amdgcn`` target.
   access is not supported except by flat and scratch instructions in
   GFX9-GFX11.
 
-  On targets without "Globally Accessible Scratch" (introduced in GFX125x), code that
+  On targets without ``globally-addressable-scratch``, or if the feature is disabled, code that
   manipulates the stack values in other lanes of a wavefront, such as by
   ``addrspacecast``-ing stack pointers to generic ones and taking offsets that reach other
   lanes or by explicitly constructing the scratch buffer descriptor, triggers undefined
@@ -17437,8 +17437,8 @@ For GFX125x:
 
   This section is currently incomplete as work on the compiler is still ongoing.
   The following is a non-exhaustive list of unimplemented/undocumented features:
-  non-volatile bit code sequences, globally accessing scratch atomics,
-  multicast loads, barriers (including split barriers) and cooperative atomics.
+  non-volatile bit code sequences, multicast loads, barriers (including split barriers)
+  and cooperative atomics.
   Scalar operations memory model needs more elaboration as well.
 
 * Vector memory operations are performed as wavefront wide operations, with the
