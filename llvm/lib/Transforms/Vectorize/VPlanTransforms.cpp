@@ -187,12 +187,12 @@ public:
   }
 };
 
-/// Check if a memory operation doesn't alias with memory operations in blocks
-/// between \p FirstBB and \p LastBB using scoped noalias metadata. If
-/// \p SinkInfo is std::nullopt, only recipes that may write to memory are
-/// checked (for load hoisting). Otherwise recipes that both read and write
-/// memory are checked, and SCEV is used to prove no-alias between the group
-/// leader and other replicate recipes (for store sinking).
+/// Check if a memory operation doesn't alias with memory operations using
+/// scoped noalias metadata, in blocks in the single-successor chain between \p
+/// FirstBB and \p LastBB. If \p SinkInfo is std::nullopt, only recipes that may
+/// write to memory are checked (for load hoisting). Otherwise recipes that both
+/// read and write memory are checked, and SCEV is used to prove no-alias
+/// between the group leader and other replicate recipes (for store sinking).
 static bool
 canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
@@ -201,11 +201,8 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   if (!MemLoc.AATags.Scope)
     return false;
 
-  for (VPBlockBase *Block = FirstBB; Block;
-       Block = Block->getSingleSuccessor()) {
-    assert(Block->getNumSuccessors() <= 1 &&
-           "Expected at most one successor in block chain");
-    auto *VPBB = cast<VPBasicBlock>(Block);
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
     for (VPRecipeBase &R : *VPBB) {
       if (SinkInfo && SinkInfo->shouldSkip(R))
         continue;
@@ -223,14 +220,12 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
       if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
-
-    if (Block == LastBB)
-      break;
   }
   return true;
 }
 
-/// Collect either replicated Loads or Stores grouped by their address SCEV.
+/// Collect either replicated Loads or Stores grouped by their address SCEV, in
+/// a deep-traversal of the vector loop region in \p Plan.
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
@@ -241,9 +236,8 @@ collectGroupedReplicateMemOps(
   constexpr bool IsLoad = (Opcode == Instruction::Load);
   SmallDenseMap<const SCEV *, SmallVector<VPReplicateRecipe *, 4>>
       RecipesByAddress;
-  for (VPBlockBase *Block :
-       vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry())) {
-    auto *VPBB = cast<VPBasicBlock>(Block);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (!RepR || RepR->getOpcode() != Opcode || !FilterFn(RepR))
@@ -572,9 +566,7 @@ static void addReplicateRegions(VPlan &Plan) {
   }
 }
 
-/// Remove redundant VPBasicBlocks by merging them into their predecessor if
-/// the predecessor has a single successor.
-static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
+bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   SmallVector<VPBasicBlock *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
@@ -599,10 +591,7 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
     auto *ParentRegion = VPBB->getParent();
     if (ParentRegion && ParentRegion->getExiting() == VPBB)
       ParentRegion->setExiting(PredVPBB);
-    for (auto *Succ : to_vector(VPBB->successors())) {
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
-      VPBlockUtils::connectBlocks(PredVPBB, Succ);
-    }
+    VPBlockUtils::transferSuccessors(VPBB, PredVPBB);
     // VPBB is now dead and will be cleaned up when the plan gets destroyed.
   }
   return !WorkList.empty();
@@ -1580,12 +1569,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
-    if (Phi->getOperand(0) == Phi->getOperand(1))
-      Phi->replaceAllUsesWith(Phi->getOperand(0));
-    return;
-  }
-
   // Simplify MaskedCond with no block mask to its single operand.
   if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
       !cast<VPInstruction>(Def)->isMasked())
@@ -1634,9 +1617,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (isa<VPPhi, VPWidenPHIRecipe>(Def)) {
-    if (Def->getNumOperands() == 1)
+  if (isa<VPPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(Def)) {
+    if (Def->getNumOperands() == 1) {
       Def->replaceAllUsesWith(Def->getOperand(0));
+      return;
+    }
+    if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
+      if (all_equal(Phi->incoming_values()))
+        Phi->replaceAllUsesWith(Phi->getOperand(0));
+    }
     return;
   }
 
@@ -1664,15 +1653,29 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Hoist an invariant increment Y of a phi X, by having X start at Y.
-  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && isa<VPIRValue>(Y) &&
-      isa<VPPhi>(X)) {
+  // Look for cycles where Def is of the form:
+  //  X = phi(0, IVInc)  ; used only by IVInc, or by IVInc and Inc = X + Y
+  //  IVInc = X + Step   ; used by X and Def
+  //  Def = IVInc + Y
+  // Fold the increment Y into the phi's start value, replace Def with IVInc,
+  // and if Inc exists, replace it with X.
+  if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
+      isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) &&
+      match(X, m_VPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
     auto *Phi = cast<VPPhi>(X);
-    if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
-        Phi->getSingleUser() == Def) {
-      Phi->setOperand(0, Y);
-      Def->replaceAllUsesWith(Phi);
-      return;
+    auto *IVInc = Def->getOperand(0);
+    if (IVInc->getNumUsers() == 2) {
+      // If Phi has a second user (besides IVInc's defining recipe), it must
+      // be Inc = Phi + Y for the fold to apply.
+      auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
+          vputils::findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+      if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
+        Def->replaceAllUsesWith(IVInc);
+        if (Inc)
+          Inc->replaceAllUsesWith(Phi);
+        Phi->setOperand(0, Y);
+        return;
+      }
     }
   }
 
@@ -2179,9 +2182,12 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
-  if (match(Term,
-            m_BranchOnCount(m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())),
-                            m_VPValue())) ||
+  auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
+  // Check if the branch condition compares the canonical IV increment (for main
+  // loop), or the canonical IV increment plus an offset (for epilog loop).
+  if (match(Term, m_BranchOnCount(
+                      m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_LiveIn())),
+                      m_VPValue())) ||
       match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                       m_VPValue(), m_VPValue(), m_VPValue()))))) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the
@@ -2208,72 +2214,16 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     return false;
   }
 
-  // The vector loop region only executes once. If possible, completely remove
-  // the region, otherwise replace the terminator controlling the latch with
-  // (BranchOnCond true).
-  // TODO: VPWidenIntOrFpInductionRecipe is only partially supported; add
-  // support for other non-canonical widen induction recipes (e.g.,
-  // VPWidenPointerInductionRecipe).
-  // TODO: fold branch-on-constant after dissolving region.
-  auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
-  if (all_of(Header->phis(), [](VPRecipeBase &Phi) {
-        if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi))
-          return R->isCanonical();
-        return isa<VPCanonicalIVPHIRecipe, VPCurrentIterationPHIRecipe,
-                   VPFirstOrderRecurrencePHIRecipe, VPPhi>(&Phi);
-      })) {
-    for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
-      if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&HeaderR)) {
-        VPBuilder Builder(Plan.getVectorPreheader());
-        VPValue *StepV = Builder.createNaryOp(VPInstruction::StepVector, {},
-                                              R->getScalarType());
-        HeaderR.getVPSingleValue()->replaceAllUsesWith(StepV);
-        HeaderR.eraseFromParent();
-        continue;
-      }
-      auto *Phi = cast<VPPhiAccessors>(&HeaderR);
-      HeaderR.getVPSingleValue()->replaceAllUsesWith(Phi->getIncomingValue(0));
-      HeaderR.eraseFromParent();
-    }
-
-    VPBlockBase *Preheader = VectorRegion->getSinglePredecessor();
-    SmallVector<VPBlockBase *> Exits = to_vector(VectorRegion->getSuccessors());
-    VPBlockUtils::disconnectBlocks(Preheader, VectorRegion);
-    for (VPBlockBase *Exit : Exits)
-      VPBlockUtils::disconnectBlocks(VectorRegion, Exit);
-
-    for (VPBlockBase *B : vp_depth_first_shallow(VectorRegion->getEntry()))
-      B->setParent(nullptr);
-
-    VPBlockUtils::connectBlocks(Preheader, Header);
-
-    for (VPBlockBase *Exit : Exits)
-      VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
-
-    // Replace terminating branch-on-two-conds with branch-on-cond to early
-    // exit.
-    if (Exits.size() != 1) {
-      assert(match(Term, m_BranchOnTwoConds()) && Exits.size() == 2 &&
-             "BranchOnTwoConds needs 2 remaining exits");
-      VPBuilder(Term).createNaryOp(VPInstruction::BranchOnCond,
-                                   Term->getOperand(0));
-    }
-    VPlanTransforms::simplifyRecipes(Plan);
-  } else {
-    // The vector region contains header phis for which we cannot remove the
-    // loop region yet.
-
-    // For BranchOnTwoConds, set the latch exit condition to true directly.
-    if (match(Term, m_BranchOnTwoConds())) {
-      Term->setOperand(1, Plan.getTrue());
-      return true;
-    }
-
-    auto *BOC = new VPInstruction(VPInstruction::BranchOnCond, {Plan.getTrue()},
-                                  {}, {}, Term->getDebugLoc());
-    ExitingVPBB->appendRecipe(BOC);
+  // The vector loop region only executes once. Convert terminator of the
+  // exiting block to exit in the first iteration.
+  if (match(Term, m_BranchOnTwoConds())) {
+    Term->setOperand(1, Plan.getTrue());
+    return true;
   }
 
+  auto *BOC = new VPInstruction(VPInstruction::BranchOnCond, Plan.getTrue(), {},
+                                {}, Term->getDebugLoc());
+  ExitingVPBB->appendRecipe(BOC);
   Term->eraseFromParent();
 
   return true;
@@ -2281,8 +2231,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
 /// From the definition of llvm.experimental.get.vector.length,
 /// VPInstruction::ExplicitVectorLength(%AVL) = %AVL when %AVL <= VF.
-static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
-                             PredicatedScalarEvolution &PSE) {
+bool VPlanTransforms::simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                                       PredicatedScalarEvolution &PSE) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
@@ -2325,7 +2275,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF);
   MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
-  MadeChange |= simplifyKnownEVL(Plan, BestVF, PSE);
 
   if (MadeChange) {
     Plan.setVF(BestVF);
@@ -2739,10 +2688,17 @@ static void licm(VPlan &Plan) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
 
-      // TODO: Support sinking VPReplicateRecipe after ensuring replicateByVF
-      // handles sunk recipes correctly.
-      if (isa<VPReplicateRecipe>(&R))
-        continue;
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
+        assert(!RepR->isPredicated() &&
+               "Expected prior transformation of predicated replicates to "
+               "replicate regions");
+        // narrowToSingleScalarRecipes should have already maximally narrowed
+        // replicates to single-scalar replicates.
+        // TODO: When unrolling, replicateByVF doesn't handle sunk
+        // non-single-scalar replicates correctly.
+        if (!RepR->isSingleScalar())
+          continue;
+      }
 
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
@@ -2882,12 +2838,19 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   }
 }
 
-void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
+void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
+  std::optional<VPDominatorTree> VPDT;
+  if (OnlyLatches)
+    VPDT.emplace(Plan);
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
     VPValue *Cond;
     // Skip blocks that are not terminated by BranchOnCond.
     if (VPBB->empty() || !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
+      continue;
+
+    if (OnlyLatches && !VPBlockUtils::isLatch(VPBB, *VPDT))
       continue;
 
     assert(VPBB->getNumSuccessors() == 2 &&
@@ -2929,7 +2892,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
   RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
-  RUN_VPLAN_PASS(removeBranchOnConst, Plan);
+  RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
@@ -3409,11 +3372,9 @@ void VPlanTransforms::addExplicitVectorLength(
   OpVPEVL = Builder.createScalarZExtOrTrunc(
       OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
 
-  auto *NextIter = Builder.createAdd(OpVPEVL, CurrentIteration,
-                                     CanonicalIVIncrement->getDebugLoc(),
-                                     "current.iteration.next",
-                                     {CanonicalIVIncrement->hasNoUnsignedWrap(),
-                                      CanonicalIVIncrement->hasNoSignedWrap()});
+  auto *NextIter = Builder.createAdd(
+      OpVPEVL, CurrentIteration, CanonicalIVIncrement->getDebugLoc(),
+      "current.iteration.next", CanonicalIVIncrement->getNoWrapFlags());
   CurrentIteration->addOperand(NextIter);
 
   VPValue *NextAVL =
@@ -3839,8 +3800,6 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
     Step = Builder.createScalarCast(Instruction::Trunc, Step, Ty, DL);
     Start = Builder.createScalarCast(Instruction::Trunc, Start, Ty, DL);
-    // Truncation doesn't preserve WrapFlags.
-    Flags.dropPoisonGeneratingFlags();
     StepTy = Ty;
   }
 

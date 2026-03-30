@@ -4909,9 +4909,10 @@ bool HexagonInstrInfo::usesQF32Operand(MachineInstr *MI, unsigned Index) const {
     return Info.Input1 == HexagonII::RegType::QF32 ||
            Info.Input2 == HexagonII::RegType::QF32 ||
            Info.Input3 == HexagonII::RegType::QF32;
-  default:
-    llvm_unreachable("Incorrect input machine operand index encountered!");
+  default: // No instruction with more than 3 operands uses QF32.
+    return false;
   }
+  return false;
 }
 
 bool HexagonInstrInfo::usesQF16Operand(MachineInstr *MI, unsigned Index) const {
@@ -4927,9 +4928,10 @@ bool HexagonInstrInfo::usesQF16Operand(MachineInstr *MI, unsigned Index) const {
     return Info.Input1 == HexagonII::RegType::QF16 ||
            Info.Input2 == HexagonII::RegType::QF16 ||
            Info.Input3 == HexagonII::RegType::QF16;
-  default:
-    llvm_unreachable("Incorrect input machine operand index encountered!");
+  default: // No instruction with more than 3 operands uses QF16.
+    return false;
   }
+  return false;
 }
 
 bool HexagonInstrInfo::usesQFOperand(MachineInstr *MI, unsigned Index) const {

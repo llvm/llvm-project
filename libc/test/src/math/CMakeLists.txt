@@ -2215,6 +2215,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log2p1f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    log2p1f16_test.cpp
+  DEPENDS
+    libc.src.math.log2p1f16
+)
+
+add_fp_unittest(
 log1p_test
  NEED_MPFR
  SUITE
@@ -2513,6 +2524,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpi_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinpi_test.cpp
+  DEPENDS
+    libc.src.math.asinpi
+)
+
+add_fp_unittest(
   asinpif_test
   NEED_MPFR
   SUITE
@@ -2720,6 +2742,18 @@ add_fp_unittest(
     erff16_test.cpp
   DEPENDS
     libc.src.math.erff16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  erfcf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    erfcf16_test.cpp
+  DEPENDS
+    libc.src.math.erfcf16
     libc.src.__support.FPUtil.fp_bits
 )
 
