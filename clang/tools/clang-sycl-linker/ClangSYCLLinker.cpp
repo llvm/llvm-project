@@ -588,7 +588,6 @@ int main(int argc, char **argv) {
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
-  Args.hasArg(OPT_save_temps);
 
   if (!Args.hasArg(OPT_o))
     reportError(createStringError("Output file must be specified"));
