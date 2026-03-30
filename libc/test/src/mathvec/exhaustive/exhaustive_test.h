@@ -63,7 +63,7 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
       bool correct = TEST_FP_EQ(scalar_result, vec_res);
 
       if (!correct) {
-        EXPECT_FP_EQ_ROUNDING_MODE(scalar_result, vec_res, rounding);
+        EXPECT_FP_EQ(scalar_result, vec_res);
         failed++;
       }
     } while (bits++ < stop);
