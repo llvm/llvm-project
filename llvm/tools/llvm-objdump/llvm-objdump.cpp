@@ -3661,6 +3661,7 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   ArchName = InputArgs.getLastArgValue(OTOOL_arch).str();
   if (!ArchName.empty())
     ArchFlags.push_back(ArchName);
+  ArchiveHeaders = InputArgs.hasArg(OTOOL_a);
   LinkOptHints = InputArgs.hasArg(OTOOL_C);
   if (InputArgs.hasArg(OTOOL_d))
     FilterSections.push_back("__DATA,__data");

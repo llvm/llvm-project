@@ -2676,7 +2676,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
   }
   // No architecture flags were specified so if this contains a slice that
   // matches the host architecture dump only that.
-  if (!ArchAll) {
+  if (!ArchAll && !(IsOtool && ArchiveHeaders)) {
     for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                 E = UB->end_objects();
           I != E; ++I) {
