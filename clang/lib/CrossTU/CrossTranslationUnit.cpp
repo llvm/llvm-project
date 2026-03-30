@@ -88,29 +88,6 @@ bool hasEqualKnownFields(const llvm::Triple &Lhs, const llvm::Triple &Rhs) {
   return true;
 }
 
-/// Returns a human-readable language/dialect description for diagnostics.
-/// Checks flags from highest to lowest standard since they are cumulative
-/// (e.g. CPlusPlus20 implies CPlusPlus17).
-/// This does not cover all possible languages (e.g. Obj-C or flavors of C),
-/// because CTU currently does not differentiate between them.
-std::string getLangDescription(const LangOptions &LO) {
-  if (!LO.CPlusPlus)
-    return "non-C++";
-  if (LO.CPlusPlus26)
-    return "C++26";
-  if (LO.CPlusPlus23)
-    return "C++23";
-  if (LO.CPlusPlus20)
-    return "C++20";
-  if (LO.CPlusPlus17)
-    return "C++17";
-  if (LO.CPlusPlus14)
-    return "C++14";
-  if (LO.CPlusPlus11)
-    return "C++11";
-  return "C++98";
-}
-
 // FIXME: This class is will be removed after the transition to llvm::Error.
 class IndexErrorCategory : public std::error_category {
 public:
@@ -164,6 +141,29 @@ public:
 
 static llvm::ManagedStatic<IndexErrorCategory> Category;
 } // end anonymous namespace
+
+/// Returns a human-readable language/dialect description for diagnostics.
+/// Checks flags from highest to lowest standard since they are cumulative
+/// (e.g. CPlusPlus20 implies CPlusPlus17).
+/// This does not cover all possible languages (e.g. Obj-C or flavors of C),
+/// because CTU currently does not differentiate between them.
+static std::string getLangDescription(const LangOptions &LO) {
+  if (!LO.CPlusPlus)
+    return "non-C++";
+  if (LO.CPlusPlus26)
+    return "C++26";
+  if (LO.CPlusPlus23)
+    return "C++23";
+  if (LO.CPlusPlus20)
+    return "C++20";
+  if (LO.CPlusPlus17)
+    return "C++17";
+  if (LO.CPlusPlus14)
+    return "C++14";
+  if (LO.CPlusPlus11)
+    return "C++11";
+  return "C++98";
+}
 
 char IndexError::ID;
 
