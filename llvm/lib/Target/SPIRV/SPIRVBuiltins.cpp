@@ -1286,16 +1286,16 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
   if (ST.isKernel() ||
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
     if (const Function *F = CB.getCalledFunction()) {
-      bool AddNoNan = !!(CB.getRetNoFPClass() & fcNan);
-      bool AddNoInf = !!(CB.getRetNoFPClass() & fcInf);
+      bool AddNoNan = CB.getRetNoFPClass() & fcNan;
+      bool AddNoInf = CB.getRetNoFPClass() & fcInf;
       FunctionType *FTy = F->getFunctionType();
       for (unsigned I = 0, E = FTy->getNumParams();
            I != E && (AddNoNan || AddNoInf); ++I) {
         if (!FTy->getParamType(I)->isFloatingPointTy())
           continue;
         FPClassTest ArgTest = CB.getParamNoFPClass(I);
-        AddNoNan = AddNoNan && !!(ArgTest & fcNan);
-        AddNoInf = AddNoInf && !!(ArgTest & fcInf);
+        AddNoNan = AddNoNan && ArgTest & fcNan;
+        AddNoInf = AddNoInf && ArgTest & fcInf;
       }
       if (AddNoNan)
         MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoNans);
