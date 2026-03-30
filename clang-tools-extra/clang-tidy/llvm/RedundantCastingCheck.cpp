@@ -36,11 +36,14 @@ static constexpr StringRef FunctionNames[] = {
     "dyn_cast", "dyn_cast_or_null", "dyn_cast_if_present"};
 
 void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
+  auto IsInLLVMNamespace = hasDeclContext(
+      namespaceDecl(hasName("llvm"), hasDeclContext(translationUnitDecl())));
   auto AnyCalleeName =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
             callee(expr(ignoringImpCasts(
-                declRefExpr(to(namedDecl(hasAnyName(FunctionNames))),
-                            hasAnyTemplateArgumentLoc(anything()))
+                declRefExpr(
+                    to(namedDecl(hasAnyName(FunctionNames), IsInLLVMNamespace)),
+                    hasAnyTemplateArgumentLoc(anything()))
                     .bind("callee")))));
   auto AnyCalleeNameInUninstantiatedTemplate =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),

@@ -257,21 +257,13 @@ void testCastCRTPUpcast(L& value) {
 CAST_FUNCTION(cast)
 CAST_FUNCTION(dyn_cast)
 
-// FIXME: don't trigger if not in llvm:: ns
 void testCastNonLLVM(A& value) {
   A& a25 = cast<A>(value);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:20: note: source expression has type 'A'
-  // CHECK-FIXES: A& a25 = value;
   (void)a25;
 }
 
-// FIXME: don't trigger if not in llvm:: ns
 void testDynCastNonLLVM(A& value) {
   A& a26 = dyn_cast<A>(value);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'dyn_cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:24: note: source expression has type 'A'
-  // CHECK-FIXES: A& a26 = value;
   (void)a26;
 }
 
