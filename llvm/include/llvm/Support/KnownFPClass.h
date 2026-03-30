@@ -15,7 +15,6 @@
 #define LLVM_SUPPORT_KNOWNFPCLASS_H
 
 #include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 
@@ -227,7 +226,10 @@ struct KnownFPClass {
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
   /// Report known values for a bitcast into a float with provided semantics.
-  LLVM_ABI static KnownFPClass bitcast(const Type *EltTy,
+  /// Set \p IsIEEELikeFP if the FP type has IEEE-compatible layout, and does
+  /// not have non-IEEE values, such as x86_fp80's unnormal values.
+  LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
+                                       bool IsIEEELikeFP,
                                        const KnownBits &Bits);
 
   /// Report known values for fadd

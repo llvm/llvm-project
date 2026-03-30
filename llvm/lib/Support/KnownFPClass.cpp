@@ -234,8 +234,9 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
-KnownFPClass KnownFPClass::bitcast(const Type *EltTy, const KnownBits &Bits) {
-  assert(EltTy->getPrimitiveSizeInBits() == Bits.getBitWidth() &&
+KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
+                                   bool IsIEEELikeFP, const KnownBits &Bits) {
+  assert(FltSemantics.sizeInBits == Bits.getBitWidth() &&
          "Bitcast operand has incorrect bit width");
   KnownFPClass Known;
 
@@ -245,7 +246,7 @@ KnownFPClass KnownFPClass::bitcast(const Type *EltTy, const KnownBits &Bits) {
   else if (Bits.isNegative())
     Known.signBitMustBeOne();
 
-  if (EltTy->isIEEELikeFPTy()) {
+  if (IsIEEELikeFP) {
     // IEEE floats are NaN when all bits of the exponent plus at least one of
     // the fraction bits are 1. This means:
     //   - If we assume unknown bits are 0 and the value is NaN, it will
@@ -253,15 +254,15 @@ KnownFPClass KnownFPClass::bitcast(const Type *EltTy, const KnownBits &Bits) {
     //   - If we assume unknown bits are 1 and the value is not NaN, it can
     //     never be NaN
     // Note: They do not hold for x86_fp80 format.
-    if (APFloat(EltTy->getFltSemantics(), Bits.One).isNaN())
+    if (APFloat(FltSemantics, Bits.One).isNaN())
       Known.KnownFPClasses = fcNan;
-    else if (!APFloat(EltTy->getFltSemantics(), ~Bits.Zero).isNaN())
+    else if (!APFloat(FltSemantics, ~Bits.Zero).isNaN())
       Known.knownNot(fcNan);
 
     // Build KnownBits representing Inf and check if it must be equal or
     // unequal to this value.
-    auto InfKB = KnownBits::makeConstant(
-        APFloat::getInf(EltTy->getFltSemantics()).bitcastToAPInt());
+    auto InfKB =
+        KnownBits::makeConstant(APFloat::getInf(FltSemantics).bitcastToAPInt());
     InfKB.Zero.clearSignBit();
     if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
       assert(!InfResult.value());
@@ -273,7 +274,7 @@ KnownFPClass KnownFPClass::bitcast(const Type *EltTy, const KnownBits &Bits) {
     // Build KnownBits representing Zero and check if it must be equal or
     // unequal to this value.
     auto ZeroKB = KnownBits::makeConstant(
-        APFloat::getZero(EltTy->getFltSemantics()).bitcastToAPInt());
+        APFloat::getZero(FltSemantics).bitcastToAPInt());
     ZeroKB.Zero.clearSignBit();
     if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
       assert(!ZeroResult.value());
