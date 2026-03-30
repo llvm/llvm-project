@@ -168,6 +168,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
+  SmallPtrSet<Instruction *, 8> DeletedInstrs;
   GlobalVariableUsers GVUsers;
   std::unordered_set<Value *> Named;
 
@@ -1491,6 +1492,29 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
     } else if (isMemInstrToReplace(U) || isa<ReturnInst>(U) ||
                isa<CallInst>(U)) {
       U->replaceUsesOfWith(Old, New);
+    } else if (auto *Phi = dyn_cast<PHINode>(U)) {
+      if (Phi->getType() != New->getType()) {
+        Phi->mutateType(New->getType());
+        Phi->replaceUsesOfWith(Old, New);
+        // Convert extractvalue users of the mutated PHI to spv_extractv
+        SmallVector<ExtractValueInst *, 4> EVUsers;
+        for (User *PhiUser : Phi->users())
+          if (auto *EV = dyn_cast<ExtractValueInst>(PhiUser))
+            EVUsers.push_back(EV);
+        for (ExtractValueInst *EV : EVUsers) {
+          B.SetInsertPoint(EV);
+          SmallVector<Value *> Args(EV->operand_values());
+          for (unsigned Idx : EV->indices())
+            Args.push_back(B.getInt32(Idx));
+          auto *NewEV =
+              B.CreateIntrinsic(Intrinsic::spv_extractv, {EV->getType()}, Args);
+          EV->replaceAllUsesWith(NewEV);
+          DeletedInstrs.insert(EV);
+          EV->eraseFromParent();
+        }
+      } else {
+        Phi->replaceUsesOfWith(Old, New);
+      }
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
     }
@@ -2418,7 +2442,8 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           report_fatal_error("Unknown composite intrinsic type");
         TypeToAssign = It->second;
       }
-    }
+    } else if (auto It = AggrConstTypes.find(I); It != AggrConstTypes.end())
+      TypeToAssign = It->second;
     TypeToAssign = restoreMutatedType(GR, I, TypeToAssign);
     GR->buildAssignType(B, TypeToAssign, I);
   }
@@ -3106,6 +3131,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
+  DeletedInstrs.clear();
 
   // Fix GEP result types ahead of inference, and simplify if possible.
   // Data structure for dead instructions that were simplified and replaced.
@@ -3158,6 +3184,14 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   preprocessUndefs(B);
   preprocessCompositeConstants(B);
+
+  for (BasicBlock &BB : Func)
+    for (PHINode &Phi : BB.phis())
+      if (Phi.getType()->isAggregateType()) {
+        AggrConstTypes[&Phi] = Phi.getType();
+        Phi.mutateType(B.getInt32Ty());
+      }
+
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));
@@ -3198,6 +3232,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
         deduceOperandElementType(&Phi, nullptr);
 
   for (auto *I : Worklist) {
+    if (DeletedInstrs.count(I))
+      continue;
     TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       setInsertPointAfterDef(B, I);

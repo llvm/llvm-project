@@ -8241,6 +8241,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
+  LoadExternalExtnameUndeclaredIdentifiers();
+
   if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
@@ -8255,7 +8257,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       if (isDeclExternC(NewVD)) {
         NewVD->addAttr(I->second);
         ExtnameUndeclaredIdentifiers.erase(I);
-      } else
+      } else if (NewVD->getDeclContext()
+                     ->getRedeclContext()
+                     ->isTranslationUnit())
         Diag(NewVD->getLocation(), diag::warn_redefine_extname_not_applied)
             << /*Variable*/ 1 << NewVD;
     }
@@ -10545,6 +10549,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                        isMemberSpecialization ||
                        isFunctionTemplateSpecialization);
 
+  LoadExternalExtnameUndeclaredIdentifiers();
+
   // Handle GNU asm-label extension (encoded as an attribute).
   if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
@@ -10558,7 +10564,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       if (isDeclExternC(NewFD)) {
         NewFD->addAttr(I->second);
         ExtnameUndeclaredIdentifiers.erase(I);
-      } else
+      } else if (NewFD->getDeclContext()
+                     ->getRedeclContext()
+                     ->isTranslationUnit())
         Diag(NewFD->getLocation(), diag::warn_redefine_extname_not_applied)
             << /*Variable*/0 << NewFD;
     }

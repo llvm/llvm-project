@@ -286,6 +286,12 @@ public:
     });
   }
 
+  /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
+  /// to LastBB forms a single-sucessor chain.
+  static SmallVector<VPBasicBlock *>
+  blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                      VPBasicBlock *LastBB);
+
   /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
   /// \p From's successor to \p To to point to \p BlockPtr and \p To's
   /// predecessor from \p From to \p BlockPtr. \p From and \p To are added to \p
