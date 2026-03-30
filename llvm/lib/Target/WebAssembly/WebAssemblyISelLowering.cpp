@@ -3808,7 +3808,7 @@ static SDValue performShiftCombine(SDNode *N,
     if (ShiftAmt.uge(MaxValidShift))
       return SDValue();
 
-    APInt MulAmt = APInt(BitWidth, 1).shl(ShiftAmt);
+    APInt MulAmt = APInt::getOneBitSet(BitWidth, ShiftAmt.getZExtValue());
     MulConsts.push_back(DAG.getConstant(MulAmt, DL, FromVT.getScalarType(),
                                         /*isTarget=*/false, /*isOpaque=*/true));
   }

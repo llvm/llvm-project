@@ -4448,6 +4448,15 @@ public:
   /// NOTE: You must check for implicit extensions of the constant by LD.
   virtual const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const;
 
+  /// Determine floating-point class information for a target node. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  virtual void computeKnownFPClassForTargetNode(const SDValue Op,
+                                                KnownFPClass &Known,
+                                                const APInt &DemandedElts,
+                                                const SelectionDAG &DAG,
+                                                unsigned Depth = 0) const;
+
   /// If \p SNaN is false, \returns true if \p Op is known to never be any
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
   /// NaN.
