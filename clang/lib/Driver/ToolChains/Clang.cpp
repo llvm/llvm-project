@@ -9564,7 +9564,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back(Args.MakeArgString(
           WrapperOption +
-          ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
+          ToolChain::normalizeOffloadTriple(Val.drop_front()).str() + "=" +
           A->getValue(1)));
   }
   Args.ClaimAllArgs(options::OPT_Xoffload_compiler);
