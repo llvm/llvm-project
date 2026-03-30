@@ -12592,9 +12592,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         unsigned Part = (Imm >> (2 * J)) & 3;
         for (unsigned K = 0; K < 4; ++K) {
           Shuffled[I + 4 * J + K] = static_cast<uint8_t>(
-              SourceB.getVectorElt(I + 4 * Part + K)
-                  .getInt()
-                  .getZExtValue());
+              SourceB.getVectorElt(I + 4 * Part + K).getInt().getZExtValue());
         }
       }
     }
