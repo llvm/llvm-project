@@ -3083,9 +3083,8 @@ void SPIRVEmitIntrinsics::emitUnstructuredLoopControls(Function &F,
       // Emit intrinsic: loop control mask + optional parameters.
       B.SetInsertPoint(Term);
       SmallVector<Value *, 4> IntrArgs;
-      IntrArgs.push_back(B.getInt32(LC));
-      for (unsigned I = 1; I < Ops.size(); ++I)
-        IntrArgs.push_back(B.getInt32(Ops[I]));
+      for (unsigned Op : Ops)
+        IntrArgs.push_back(B.getInt32(Op));
       B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, IntrArgs);
     }
     return;
@@ -3118,7 +3117,7 @@ void SPIRVEmitIntrinsics::emitUnstructuredLoopControls(Function &F,
     auto *ContinueAddress = BlockAddress::get(&F, Latch);
     SmallVector<Value *, 4> Args = {MergeAddress, ContinueAddress};
     for (unsigned Imm : LoopControlOps)
-      Args.emplace_back(ConstantInt::get(B.getInt32Ty(), Imm));
+      Args.emplace_back(B.getInt32(Imm));
     B.CreateIntrinsic(Intrinsic::spv_loop_merge, {Args});
   }
 }
