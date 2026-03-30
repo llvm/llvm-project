@@ -1,12 +1,12 @@
 ! Test lowering of complex division according to options
 
 ! REQUIRES: flang-supports-f128-math
-! RUN: bbc -complex-range=full -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,FULL
-! RUN: bbc -complex-range=improved -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
-! RUN: bbc -complex-range=basic -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC
-! RUN: %flang_fc1 -complex-range=full -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,FULL
-! RUN: %flang_fc1 -complex-range=improved -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
-! RUN: %flang_fc1 -complex-range=basic -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC
+! RUN: bbc -complex-range=full -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: bbc -complex-range=improved -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: bbc -complex-range=basic -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: %flang_fc1 -complex-range=full -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: %flang_fc1 -complex-range=improved -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: %flang_fc1 -complex-range=basic -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
 
 
 ! CHECK-LABEL: @_QPdiv_test_quad
@@ -18,14 +18,7 @@
 ! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f128>>
 ! CHECK: %[[VAL_8:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<complex<f128>>
 
-! FULL: %[[VAL_9:.*]] = fir.extract_value %[[VAL_7]], [0 : index] : (complex<f128>) -> f128
-! FULL: %[[VAL_10:.*]] = fir.extract_value %[[VAL_7]], [1 : index] : (complex<f128>) -> f128
-! FULL: %[[VAL_11:.*]] = fir.extract_value %[[VAL_8]], [0 : index] : (complex<f128>) -> f128
-! FULL: %[[VAL_12:.*]] = fir.extract_value %[[VAL_8]], [1 : index] : (complex<f128>) -> f128
-! FULL: %[[VAL_RET:.*]] = fir.call @__divtc3(%[[VAL_9]], %[[VAL_10]], %[[VAL_11]], %[[VAL_12]]) fastmath<contract> : (f128, f128, f128, f128) -> complex<f128>
-
-! IMPRVD: %[[VAL_RET:.*]] = complex.div %[[VAL_7]], %[[VAL_8]] fastmath<contract> : complex<f128>
-! BASIC: %[[VAL_RET:.*]] = complex.div %[[VAL_7]], %[[VAL_8]] fastmath<contract> : complex<f128>
+! CHECK: %[[VAL_RET:.*]] = complex.div %[[VAL_7]], %[[VAL_8]] fastmath<contract> : complex<f128>
 
 ! CHECK: hlfir.assign %[[VAL_RET]] to %[[VAL_4]]#0 : complex<f128>, !fir.ref<complex<f128>>
 ! CHECK: return

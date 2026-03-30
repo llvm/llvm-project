@@ -131,11 +131,7 @@ end subroutine
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
-! CHECK:  %[[VAL_8:.*]] = fir.extract_value %[[VAL_6]], [0 : index] : (complex<f32>) -> f32
-! CHECK:  %[[VAL_9:.*]] = fir.extract_value %[[VAL_6]], [1 : index] : (complex<f32>) -> f32
-! CHECK:  %[[VAL_10:.*]] = fir.extract_value %[[VAL_7]], [0 : index] : (complex<f32>) -> f32
-! CHECK:  %[[VAL_11:.*]] = fir.extract_value %[[VAL_7]], [1 : index] : (complex<f32>) -> f32
-! CHECK:  %[[VAL_12:.*]] = fir.call @__divsc3(%[[VAL_8]], %[[VAL_9]], %[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (f32, f32, f32, f32) -> complex<f32>
+! CHECK:  %[[VAL_8:.*]] = complex.div %[[VAL_6]], %[[VAL_7]] fastmath<contract> : complex<f32>
 
 subroutine int_power(x, y, z)
   integer :: x, y, z

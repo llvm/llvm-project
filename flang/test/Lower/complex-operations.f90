@@ -87,11 +87,7 @@ subroutine div_test_single(a,b,c)
   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg 3 {uniq_name = "_QFdiv_test_singleEc"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
   ! CHECK: %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<complex<f32>>
   ! CHECK: %[[VAL_5:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<complex<f32>>
-  ! CHECK: %[[VAL_6:.*]] = fir.extract_value %[[VAL_4]], [0 : index] : (complex<f32>) -> f32
-  ! CHECK: %[[VAL_7:.*]] = fir.extract_value %[[VAL_4]], [1 : index] : (complex<f32>) -> f32
-  ! CHECK: %[[VAL_8:.*]] = fir.extract_value %[[VAL_5]], [0 : index] : (complex<f32>) -> f32
-  ! CHECK: %[[VAL_9:.*]] = fir.extract_value %[[VAL_5]], [1 : index] : (complex<f32>) -> f32
-  ! CHECK: %[[VAL_10:.*]] = fir.call @__divsc3(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (f32, f32, f32, f32) -> complex<f32>
+  ! CHECK: %[[VAL_10:.*]] = complex.div %[[VAL_4]], %[[VAL_5]] fastmath<contract> : complex<f32>
   ! CHECK: hlfir.assign %[[VAL_10]] to %[[VAL_1]]#0 : complex<f32>, !fir.ref<complex<f32>>
   a = b / c
 end subroutine div_test_single
@@ -106,11 +102,7 @@ subroutine div_test_double(a,b,c)
   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg 3 {uniq_name = "_QFdiv_test_doubleEc"} : (!fir.ref<complex<f64>>, !fir.dscope) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
   ! CHECK: %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<complex<f64>>
   ! CHECK: %[[VAL_5:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<complex<f64>>
-  ! CHECK: %[[VAL_6:.*]] = fir.extract_value %[[VAL_4]], [0 : index] : (complex<f64>) -> f64
-  ! CHECK: %[[VAL_7:.*]] = fir.extract_value %[[VAL_4]], [1 : index] : (complex<f64>) -> f64
-  ! CHECK: %[[VAL_8:.*]] = fir.extract_value %[[VAL_5]], [0 : index] : (complex<f64>) -> f64
-  ! CHECK: %[[VAL_9:.*]] = fir.extract_value %[[VAL_5]], [1 : index] : (complex<f64>) -> f64
-  ! CHECK: %[[VAL_10:.*]] = fir.call @__divdc3(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (f64, f64, f64, f64) -> complex<f64>
+  ! CHECK: %[[VAL_10:.*]] = complex.div %[[VAL_4]], %[[VAL_5]] fastmath<contract> : complex<f64>
   ! CHECK: hlfir.assign %[[VAL_10]] to %[[VAL_1]]#0 : complex<f64>, !fir.ref<complex<f64>>
   a = b / c
 end subroutine div_test_double
@@ -125,11 +117,7 @@ subroutine div_test_extended(a,b,c)
   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg 3 {uniq_name = "_QFdiv_test_extendedEc"} : (!fir.ref<complex<f80>>, !fir.dscope) -> (!fir.ref<complex<f80>>, !fir.ref<complex<f80>>)
   ! CHECK: %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<complex<f80>>
   ! CHECK: %[[VAL_5:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<complex<f80>>
-  ! CHECK: %[[VAL_6:.*]] = fir.extract_value %[[VAL_4]], [0 : index] : (complex<f80>) -> f80
-  ! CHECK: %[[VAL_7:.*]] = fir.extract_value %[[VAL_4]], [1 : index] : (complex<f80>) -> f80
-  ! CHECK: %[[VAL_8:.*]] = fir.extract_value %[[VAL_5]], [0 : index] : (complex<f80>) -> f80
-  ! CHECK: %[[VAL_9:.*]] = fir.extract_value %[[VAL_5]], [1 : index] : (complex<f80>) -> f80
-  ! CHECK: %[[VAL_10:.*]] = fir.call @__divxc3(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (f80, f80, f80, f80) -> complex<f80>
+  ! CHECK: %[[VAL_10:.*]] = complex.div %[[VAL_4]], %[[VAL_5]] fastmath<contract> : complex<f80>
   ! CHECK: hlfir.assign %[[VAL_10]] to %[[VAL_1]]#0 : complex<f80>, !fir.ref<complex<f80>>
   a = b / c
 end subroutine div_test_extended
@@ -144,11 +132,7 @@ subroutine div_test_quad(a,b,c)
   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg 3 {uniq_name = "_QFdiv_test_quadEc"} : (!fir.ref<complex<f128>>, !fir.dscope) -> (!fir.ref<complex<f128>>, !fir.ref<complex<f128>>)
   ! CHECK: %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<complex<f128>>
   ! CHECK: %[[VAL_5:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<complex<f128>>
-  ! CHECK: %[[VAL_6:.*]] = fir.extract_value %[[VAL_4]], [0 : index] : (complex<f128>) -> f128
-  ! CHECK: %[[VAL_7:.*]] = fir.extract_value %[[VAL_4]], [1 : index] : (complex<f128>) -> f128
-  ! CHECK: %[[VAL_8:.*]] = fir.extract_value %[[VAL_5]], [0 : index] : (complex<f128>) -> f128
-  ! CHECK: %[[VAL_9:.*]] = fir.extract_value %[[VAL_5]], [1 : index] : (complex<f128>) -> f128
-  ! CHECK: %[[VAL_10:.*]] = fir.call @__divtc3(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]]) fastmath<contract> : (f128, f128, f128, f128) -> complex<f128>
+  ! CHECK: %[[VAL_10:.*]] = complex.div %[[VAL_4]], %[[VAL_5]] fastmath<contract> : complex<f128>
   ! CHECK: hlfir.assign %[[VAL_10]] to %[[VAL_1]]#0 : complex<f128>, !fir.ref<complex<f128>>
   a = b / c
 end subroutine div_test_quad

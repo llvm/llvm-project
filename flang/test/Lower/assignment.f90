@@ -251,11 +251,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca complex<f32>
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<complex<f32>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<complex<f32>>
-! CHECK:         %[[A_REAL:.*]] = fir.extract_value %[[A_VAL]], [0 : index] : (complex<f32>) -> f32
-! CHECK:         %[[A_IMAG:.*]] = fir.extract_value %[[A_VAL]], [1 : index] : (complex<f32>) -> f32
-! CHECK:         %[[B_REAL:.*]] = fir.extract_value %[[B_VAL]], [0 : index] : (complex<f32>) -> f32
-! CHECK:         %[[B_IMAG:.*]] = fir.extract_value %[[B_VAL]], [1 : index] : (complex<f32>) -> f32
-! CHECK:         %[[DIV:.*]] = fir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) fastmath<contract> : (f32, f32, f32, f32) -> complex<f32>
+! CHECK:         %[[DIV:.*]] = complex.div %[[A_VAL]], %[[B_VAL]] fastmath<contract> : complex<f32>
 ! CHECK:         fir.store %[[DIV]] to %[[FCTRES]] : !fir.ref<complex<f32>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<complex<f32>>
 ! CHECK:         return %[[RET]] : complex<f32>
