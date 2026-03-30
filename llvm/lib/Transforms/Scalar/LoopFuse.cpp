@@ -1676,19 +1676,6 @@ private:
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
 
-    // Move instructions from FC0.Latch to FC1.Latch.
-    // Note: mergeLatch requires an updated DT.
-    mergeLatch(FC0, FC1);
-
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
-    // since merging the latches may affect the dispositions.
-    SE.forgetBlockAndLoopDispositions();
-
-    // Forget the cached SCEV values including the induction variable that may
-    // have changed after the fusion.
-    SE.forgetLoop(FC0.L);
-
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
@@ -1707,6 +1694,19 @@ private:
 
     // Delete the now empty loop L1.
     LI.erase(FC1.L);
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
+
+    // Forget the cached SCEV values including the induction variable that may
+    // have changed after the fusion.
+    SE.forgetLoop(FC0.L);
 
 #ifndef NDEBUG
     assert(!verifyFunction(*FC0.Header->getParent(), &errs()));
@@ -1978,15 +1978,6 @@ private:
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
 
-    // Move instructions from FC0.Latch to FC1.Latch.
-    // Note: mergeLatch requires an updated DT.
-    mergeLatch(FC0, FC1);
-
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
-    // since merging the latches may affect the dispositions.
-    SE.forgetBlockAndLoopDispositions();
-
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
@@ -2005,6 +1996,15 @@ private:
 
     // Delete the now empty loop L1.
     LI.erase(FC1.L);
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
 
 #ifndef NDEBUG
     assert(!verifyFunction(*FC0.Header->getParent(), &errs()));
