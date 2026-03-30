@@ -839,8 +839,8 @@ enum RegisterSetType : uint32_t {
   SME,  // ZA only, because SVCR and SVG are pseudo registers.
   SME2, // ZT only.
   FPMR, // Floating point mode control registers.
-  GCS, // Guarded Control Stack registers.
-  POE, // Permission Overlay registers.
+  GCS,  // Guarded Control Stack registers.
+  POE,  // Permission Overlay registers.
 };
 
 static uint8_t *AddRegisterSetType(uint8_t *dst,
