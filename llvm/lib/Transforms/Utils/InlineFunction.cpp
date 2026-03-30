@@ -113,6 +113,10 @@ static cl::opt<unsigned> InlinerAttributeWindow(
              "attribute inference in inlined body"),
     cl::init(4));
 
+static cl::opt<bool> DisableInlineHistory(
+    "disable-inline-history", cl::init(false), cl::Hidden,
+    cl::desc("Disable adding !inline_history metadata to inlined call sites"));
+
 namespace {
 
   /// A class for recording information about inlining a landing pad.
@@ -2482,6 +2486,18 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
       CalledFunc->isDeclaration()) // call!
     return InlineResult::failure("external or indirect");
 
+  // Don't inline if we've already inlined this callee through this call site
+  // before to prevent infinite inlining through mutually recursive functions.
+  if (MDNode *InlineHistory = CB.getMetadata(LLVMContext::MD_inline_history)) {
+    for (const auto &Op : InlineHistory->operands()) {
+      if (auto *MD = dyn_cast_or_null<ValueAsMetadata>(Op)) {
+        if (MD->getValue() == CalledFunc) {
+          return InlineResult::failure("inline history");
+        }
+      }
+    }
+  }
+
   // The inliner does not know how to inline through calls with operand bundles
   // in general ...
   if (CB.hasOperandBundles()) {
@@ -3225,6 +3241,29 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
             IFI.InlinedCallSites.push_back(CB);
   }
 
+  if (!DisableInlineHistory) {
+    for (CallBase *ICB : IFI.InlinedCallSites) {
+      // !inline_history is {Callee, CB.inline_history, ICB.inline_history}.
+      SmallVector<Metadata *, 4> History;
+      History.push_back(ValueAsMetadata::get(CalledFunc));
+      if (MDNode *CBHistory = CB.getMetadata(LLVMContext::MD_inline_history)) {
+        for (const auto &Op : CBHistory->operands()) {
+          if (Op)
+            History.push_back(Op.get());
+        }
+      }
+      if (MDNode *CBHistory =
+              ICB->getMetadata(LLVMContext::MD_inline_history)) {
+        for (const auto &Op : CBHistory->operands()) {
+          if (Op)
+            History.push_back(Op.get());
+        }
+      }
+      MDNode *NewHistory = MDNode::get(Caller->getContext(), History);
+      ICB->setMetadata(LLVMContext::MD_inline_history, NewHistory);
+    }
+  }
+
   // If we cloned in _exactly one_ basic block, and if that block ends in a
   // return instruction, we splice the body of the inlined callee directly into
   // the calling basic block.
@@ -3443,17 +3482,4 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   return Result;
-}
-
-bool llvm::inlineHistoryIncludes(
-    Function *F, int InlineHistoryID,
-    ArrayRef<std::pair<Function *, int>> InlineHistory) {
-  while (InlineHistoryID != -1) {
-    assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
-           "Invalid inline history ID");
-    if (InlineHistory[InlineHistoryID].first == F)
-      return true;
-    InlineHistoryID = InlineHistory[InlineHistoryID].second;
-  }
-  return false;
 }

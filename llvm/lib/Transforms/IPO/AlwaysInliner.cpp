@@ -140,8 +140,7 @@ bool AlwaysInlineImpl(
         continue;
 
       // Detect recursion.
-      if (Callee == F ||
-          inlineHistoryIncludes(Callee, InlineHistoryID, InlineHistory)) {
+      if (Callee == F) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed("inline", "NotInlined",
                                           CB->getDebugLoc(), CB->getParent())

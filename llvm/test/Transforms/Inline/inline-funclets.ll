@@ -1,4 +1,4 @@
-; RUN: opt -passes=inline -S %s | FileCheck %s
+; RUN: opt -passes=inline -S %s -disable-inline-history | FileCheck %s
 
 declare void @g()
 
