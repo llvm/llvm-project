@@ -673,29 +673,30 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
                                                        VPBlockBase *Entry,
                                                        ElementCount VF) {
   VPValue *Idx0 = Plan.getZero(IdxTy);
+  VPTypeAnalysis TypeInfo(Plan);
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry)) {
     for (VPRecipeBase &OldR : make_early_inc_range(cast<VPBasicBlock>(*VPB))) {
       VPBuilder Builder(&OldR);
       assert(!match(&OldR, m_ExtractElement(m_VPValue(), m_VPValue())) &&
              "must not contain extracts before conversion");
-      for (const auto &[I, Op] : enumerate(OldR.operands())) {
-        // Skip operands that don't need extraction: values defined in the
-        // same block (already scalar), or values that are already single
-        // scalars.
-        auto *DefR = Op->getDefiningRecipe();
-        if ((isa_and_present<VPScalarIVStepsRecipe>(DefR) &&
-             DefR->getParent() == VPB) ||
-            vputils::isSingleScalar(Op))
-          continue;
 
-        // For scalar VF, operands are already scalar; no extraction needed.
-        if (VF.isScalar())
-          continue;
+      // For scalar VF, operands are already scalar; no extraction needed.
+      if (!VF.isScalar()) {
+        for (const auto &[I, Op] : enumerate(OldR.operands())) {
+          // Skip operands that don't need extraction: values defined in the
+          // same block (already scalar), or values that are already single
+          // scalars.
+          auto *DefR = Op->getDefiningRecipe();
+          if ((isa_and_present<VPScalarIVStepsRecipe>(DefR) &&
+               DefR->getParent() == VPB) ||
+              vputils::isSingleScalar(Op))
+            continue;
 
-        // Extract lane zero from values defined outside the region.
-        VPValue *Extract = Builder.createNaryOp(Instruction::ExtractElement,
-                                                {Op, Idx0}, OldR.getDebugLoc());
-        OldR.setOperand(I, Extract);
+          // Extract lane zero from values defined outside the region.
+          VPValue *Extract = Builder.createNaryOp(
+              Instruction::ExtractElement, {Op, Idx0}, OldR.getDebugLoc());
+          OldR.setOperand(I, Extract);
+        }
       }
 
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&OldR)) {
@@ -713,8 +714,8 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         BranchOnMask->eraseFromParent();
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);
-        VPValue *PoisonVal = Plan.getOrAddLiveIn(
-            PoisonValue::get(VPTypeAnalysis(Plan).inferScalarType(PredOp)));
+        Type *PredTy = TypeInfo.inferScalarType(PredOp);
+        VPValue *PoisonVal = Plan.getOrAddLiveIn(PoisonValue::get(PredTy));
 
         VPPhi *NewPhi = Builder.createScalarPhi({PoisonVal, PredOp},
                                                 PredPhi->getDebugLoc());
