@@ -1213,7 +1213,7 @@ public:
   template <typename T> Result operator()(const ConditionalExpr<T> &x) {
     // Contiguity is not a meaningful characteristic of a conditional
     // expression
-    return true;
+    return std::nullopt;
   }
 
 private:

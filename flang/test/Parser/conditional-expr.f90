@@ -254,3 +254,19 @@ subroutine character_lengths(flag)
   ! CHECK: medium1 = ( flag ? short1 : medium2 )
   medium1 = (flag ? short1 : medium2)
 end subroutine
+
+! Verify that '?' inside string literals and comments does not interfere
+! with conditional expression parsing.
+subroutine question_mark_chars(flag, str1, str2, str3)
+  logical :: flag
+  character(len=20) :: str1, str2, str3
+  ! CHECK-LABEL: question_mark_chars
+  ! CHECK: str1 = "HELLO?"
+  str1 = "HELLO?"
+  ! CHECK: str2 = ( flag ? "YES?" : "NO?" )
+  str2 = (flag ? "YES?" : "NO?")
+  ! CHECK: str3 = "WHAT? WHY? HOW?"
+  str3 = "WHAT? WHY? HOW?"  ! ? in a comment
+  ! CHECK: str2 = ( flag ? "MAYBE?" : "NOPE" )
+  str2 = (flag ? "MAYBE?" : "NOPE")  ! ? in a trailing comment
+end subroutine

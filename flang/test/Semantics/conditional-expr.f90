@@ -363,3 +363,23 @@ subroutine valid_mixed_expressions(flag, x, y)
   result = (flag ? x + y : x - y)
   result = (flag ? 2 * x : y / 2)
 end subroutine
+
+! Constant-folding: when the condition is a constant, only the selected
+! branch must be a constant expression (F2023 10.1.12).
+subroutine constant_folding_cases()
+  integer :: non_const = 99
+
+  ! Valid: .true. selects 10; non_const is in the unselected else-branch.
+  integer, parameter :: p_true_const  = (.true.  ? 10 : non_const)
+
+  ! Valid: .false. selects 10; non_const is in the unselected then-branch.
+  integer, parameter :: p_false_const = (.false. ? non_const : 10)
+
+  ! Error: .false. selects non_const — not a constant expression.
+  !ERROR: Must be a constant value
+  integer, parameter :: p_false_nconst = (.false. ? 10 : non_const)
+
+  ! Error: .true. selects non_const — not a constant expression.
+  !ERROR: Must be a constant value
+  integer, parameter :: p_true_nconst  = (.true.  ? non_const : 10)
+end subroutine

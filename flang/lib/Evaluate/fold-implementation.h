@@ -2215,13 +2215,11 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
 
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, ConditionalExpr<T> &&x) {
-  // Fold all sub-expressions first.
   x.condition() = Fold(context, std::move(x.condition()));
-  x.thenValue() = Fold(context, std::move(x.thenValue()));
-  x.elseValue() = Fold(context, std::move(x.elseValue()));
   // If the condition is a scalar logical constant, select the branch.
   if (auto cst{GetScalarConstantValue<LogicalResult>(x.condition())}) {
-    return cst->IsTrue() ? std::move(x.thenValue()) : std::move(x.elseValue());
+    return cst->IsTrue() ? Fold(context, std::move(x.thenValue()))
+                         : Fold(context, std::move(x.elseValue()));
   }
   return Expr<T>{std::move(x)};
 }

@@ -1909,7 +1909,9 @@ struct ConvertCollector
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
-    // For conditional expressions, collect conversions from all values only
+    // ConvertCollector tracks the typed-value conversion chain (for OMP ATOMIC
+    // validation); the condition is a LOGICAL(4) selector, not a value output,
+    // so only the value branches are collected.
     return Combine((*this)(x.thenValue()), (*this)(x.elseValue()));
   }
 

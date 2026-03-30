@@ -27,4 +27,10 @@ module m
 
   ! Character: constant condition selects the branch value.
   logical, parameter :: test_char = (.true. ? 'yes' : 'no') == 'yes'
+
+  ! Non-constant branch: only the selected branch need be constant (F2023 10.1.12).
+  integer :: non_const = 99
+  logical, parameter :: test_true_const_else_nonconstant  = (.true.  ? 10 : non_const) == 10
+  logical, parameter :: test_false_const_then_nonconstant = (.false. ? non_const : 10) == 10
+
 end module
