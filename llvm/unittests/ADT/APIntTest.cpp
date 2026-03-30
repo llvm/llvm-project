@@ -1188,9 +1188,7 @@ TEST(APIntTest, divrem_simple) {
 
 TEST(APIntTest, URemUint64PowerOf2Wide) {
   // Edge case tests for urem with power of two arguments
-  APInt V(128, 0);
-  V.setBit(127);
-  V.setLowBits(12);
+  APInt V(128, "80000000000000000000000000000FFF", 16);
 
   EXPECT_EQ(15u, V.urem(16));
   EXPECT_EQ(255u, V.urem(256));
