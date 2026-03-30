@@ -1292,6 +1292,7 @@ public:
         __state.__flags_ | (__state.__at_first_ ? regex_constants::__at_first : regex_constants::match_flag_type()),
         __state.__first_,
         __state.__last_,
+        __state.__sub_matches_.size(),
         __state.__sub_matches_);
     __state.__do_      = __res.first ? std::__state<_CharT>::__end_state : std::__state<_CharT>::__reject;
     __state.__current_ = __res.second;
@@ -1305,6 +1306,9 @@ public:
     return __machine_.__execute_search(__first, __last, __flags, __marked_count);
   }
 };
+
+static_assert(sizeof(__regex::__global_execution_state<char, regex_traits<char>>) == 40);
+static_assert(sizeof(__regex::__local_execution_state<char, regex_traits<char>>) == 56);
 
 template <class _CharT, class _Traits = regex_traits<_CharT> >
 class basic_regex;

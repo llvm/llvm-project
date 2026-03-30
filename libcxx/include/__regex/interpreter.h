@@ -801,23 +801,26 @@ public:
   __execute(regex_constants::match_flag_type __flags,
             const _CharT* __first,
             const _CharT* __last,
+            size_t __submatch_count,
             vector<sub_match<const _CharT*>>& __sub_matches) const {
     using __local_state = __local_execution_state<_CharT, _Traits>;
 
     auto __copy_to_submatches =
         [&](const vector<pair<const _CharT*, const _CharT*>>& __from, vector<sub_match<const _CharT*>>& __to) {
-          std::transform(__from.begin(), __from.end(), __to.begin(), [&](pair<const _CharT*, const _CharT*> __v) {
-            sub_match<const _CharT*> __ret;
-            __ret.first   = __v.first ? __v.first : __last;
-            __ret.second  = __v.first ? __v.second : __last;
-            __ret.matched = __v.first;
-            return __ret;
-          });
+          __to.clear();
+          std::transform(
+              __from.begin(), __from.end(), std::back_inserter(__to), [&](pair<const _CharT*, const _CharT*> __v) {
+                sub_match<const _CharT*> __ret;
+                __ret.first   = __v.first ? __v.first : __last;
+                __ret.second  = __v.first ? __v.second : __last;
+                __ret.matched = __v.first;
+                return __ret;
+              });
         };
 
     __local_state __base_state{
         .__current_     = __first,
-        .__sub_matches_ = vector<pair<const _CharT*, const _CharT*>>(__sub_matches.size()),
+        .__sub_matches_ = vector<pair<const _CharT*, const _CharT*>>(__submatch_count),
         .__current_pos_ = 0,
         .__loop_values_ = __initial_loop_values_.empty()
                             ? nullptr
@@ -884,12 +887,13 @@ public:
     __unmatched.second  = __last;
     __unmatched.matched = false;
 
-    vector<sub_match<const _CharT*>> __sub_matches(__marked_count, __unmatched);
+    vector<sub_match<const _CharT*>> __sub_matches;
     if (auto [__success, __last_val] = __execute(
             __flags | ((__flags & regex_constants::__no_update_pos) ? regex_constants::match_flag_type()
                                                                     : regex_constants::__at_first),
             __first,
             __last,
+            __marked_count,
             __sub_matches);
         __success) {
       return {__first, __last_val, std::move(__sub_matches)};
@@ -901,14 +905,13 @@ public:
     __flags |= regex_constants::match_prev_avail;
 
     for (++__first; __first != __last; ++__first) {
-      __sub_matches.assign(__marked_count, __unmatched);
-      if (auto [__success, __last_val] = __execute(__flags, __first, __last, __sub_matches); __success) {
+      if (auto [__success, __last_val] = __execute(__flags, __first, __last, __marked_count, __sub_matches);
+          __success) {
         return {__first, __last_val, std::move(__sub_matches)};
       }
     }
 
-    __sub_matches.assign(__marked_count, __unmatched);
-    if (auto [__success, __last_val] = __execute(__flags, __first, __last, __sub_matches); __success) {
+    if (auto [__success, __last_val] = __execute(__flags, __first, __last, __marked_count, __sub_matches); __success) {
       return {__first, __last_val, std::move(__sub_matches)};
     }
 
