@@ -4371,6 +4371,12 @@ static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
         "warn",
         "Warn about debug scripts inside symbol files but do not load them.",
     },
+    {
+        eLoadScriptFromSymFileTrusted,
+        "trusted",
+        "Load debug scripts inside trusted symbol files, and warn about "
+        "scripts from untrusted symbol files.",
+    },
 };
 
 static constexpr OptionEnumValueElement g_load_cwd_lldbinit_values[] = {
