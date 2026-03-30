@@ -599,9 +599,6 @@ struct WgToSgConvertLayoutOp
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-
-    VectorType resultType = op.getResult().getType();
-    ArrayRef<int64_t> wgShape = resultType.getShape();
     auto inputLayout = op.getInputLayout();
     auto targetLayout = op.getTargetLayout();
 
@@ -610,6 +607,16 @@ struct WgToSgConvertLayoutOp
       return rewriter.notifyMatchFailure(
           op, "Input and target layouts must have subgroup layout");
 
+    Type resultType = op.getResult().getType();
+    if (resultType.isIntOrFloat()) {
+      rewriter.replaceOp(op, op.getSource());
+      assert(!inputLayout.dropSgLayoutAndData() &&
+             !targetLayout.dropSgLayoutAndData() &&
+             "unexpected layout attributes for scalar type");
+      return success();
+    }
+
+    ArrayRef<int64_t> wgShape = cast<VectorType>(resultType).getShape();
     SmallVector<int64_t> inputSgLayout =
         inputLayout.getEffectiveSgLayoutAsInt();
     SmallVector<int64_t> inputSgData = inputLayout.getEffectiveSgDataAsInt();

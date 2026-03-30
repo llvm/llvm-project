@@ -198,31 +198,24 @@ requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
     return {};
   }
 
-  // Construct the path for local storage. Configurable cache coming soon.
-  llvm::SmallString<128> cache_file;
-  if (!path::cache_directory(cache_file)) {
-    Debugger::ReportWarning("failed to determine cache directory for SymStore");
-    return {};
-  }
-  path::append(cache_file, "lldb", "SymStore", pdb_name, key);
-  if (std::error_code ec = fs::create_directories(cache_file)) {
-    Debugger::ReportWarning(
-        llvm::formatv("failed to create cache directory '{0}': {1}", cache_file,
-                      ec.message()));
-    return {};
-  }
-  path::append(cache_file, pdb_name);
+  // Download into a temporary file. Cache coming soon.
+  llvm::SmallString<128> tmp_file;
+  std::string tmp_file_name =
+      llvm::formatv("lldb_symstore_{0}_{1}", key, pdb_name);
+  constexpr bool erase_on_reboot = true;
+  path::system_temp_directory(erase_on_reboot, tmp_file);
+  path::append(tmp_file, tmp_file_name);
 
-  // Server has same directory structure with forward slashes as separators.
+  // Server has SymStore directory structure with forward slashes as separators.
   std::string source_url =
       llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
-  if (llvm::Error err = downloadFileHTTP(source_url, cache_file.str())) {
+  if (llvm::Error err = downloadFileHTTP(source_url, tmp_file.str())) {
     LLDB_LOG_ERROR(log, std::move(err),
                    "Failed to download from SymStore '{1}': {0}", source_url);
     return {};
   }
 
-  return FileSpec(cache_file.str());
+  return FileSpec(tmp_file.str());
 }
 
 std::optional<FileSpec> findFileInLocalSymStore(llvm::StringRef root_dir,

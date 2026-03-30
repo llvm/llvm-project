@@ -763,6 +763,24 @@ struct is_inf {
 /// For vectors, this includes constants with undefined elements.
 inline cstfp_pred_ty<is_inf> m_Inf() { return cstfp_pred_ty<is_inf>(); }
 
+template <bool IsNegative> struct is_signed_inf {
+  bool isValue(const APFloat &C) const {
+    return C.isInfinity() && IsNegative == C.isNegative();
+  }
+};
+
+/// Match a positive infinity FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_signed_inf<false>> m_PosInf() {
+  return cstfp_pred_ty<is_signed_inf<false>>();
+}
+
+/// Match a negative infinity FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_signed_inf<true>> m_NegInf() {
+  return cstfp_pred_ty<is_signed_inf<true>>();
+}
+
 struct is_noninf {
   bool isValue(const APFloat &C) const { return !C.isInfinity(); }
 };

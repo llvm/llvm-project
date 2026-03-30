@@ -19,14 +19,12 @@
 ;  A[-4]         | A[-4]  | A[-4]  | A[-4]
 ;  A[(2^62-1)*i] |        | A[-4]  |
 ;
-; FIXME: DependenceAnalysis currently misses the dependency.
-;
 define void @weak_zero_src_siv_addrec_wrap(ptr %A, i64 %n) {
 ; CHECK-LABEL: 'weak_zero_src_siv_addrec_wrap'
 ; CHECK-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-NEXT:    da analyze - output [*]!
 ;
@@ -71,14 +69,12 @@ exit:
 ;  A[(2^62-1)*i] |        | A[-4]  |
 ;  A[-4]         | A[-4]  | A[-4]  | A[-4]
 ;
-; FIXME: DependenceAnalysis currently misses the dependency.
-;
 define void @weak_zero_dst_siv_addrec_wrap(ptr %A, i64 %n) {
 ; CHECK-LABEL: 'weak_zero_dst_siv_addrec_wrap'
 ; CHECK-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-NEXT:    da analyze - output [*]!
 ; CHECK-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-NEXT:    da analyze - output [S]!
 ;

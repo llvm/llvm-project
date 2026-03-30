@@ -71,12 +71,10 @@ void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill) {
 /// \param DRE The declaration reference expression that initiates the borrow.
 /// \return The new Loan on success, nullptr otherwise.
 static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
-  if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
-    AccessPath Path(VD);
-    // The loan is created at the location of the DeclRefExpr.
-    return FactMgr.getLoanMgr().createLoan(Path, DRE);
-  }
-  return nullptr;
+  const ValueDecl *VD = DRE->getDecl();
+  AccessPath Path(VD);
+  // The loan is created at the location of the DeclRefExpr.
+  return FactMgr.getLoanMgr().createLoan(Path, DRE);
 }
 
 /// Creates a loan for the storage location of a temporary object.
