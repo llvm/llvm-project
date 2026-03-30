@@ -147,19 +147,20 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
   return Result->Arch;
 }
 
-llvm::StringRef OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
-                                    OffloadArch ID) {
+llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
+                                 OffloadArch ID) {
   if (ID == OffloadArch::AMDGCNSPIRV)
-    return "spirv64-amd-amdhsa";
+    return llvm::Triple("spirv64-amd-amdhsa");
 
   if (IsNVIDIAOffloadArch(ID))
-    return DefaultToolchainTriple.isArch64Bit() ? "nvptx64-nvidia-cuda"
-                                                : "nvptx-nvidia-cuda";
+    return DefaultToolchainTriple.isArch64Bit()
+               ? llvm::Triple("nvptx64-nvidia-cuda")
+               : llvm::Triple("nvptx-nvidia-cuda");
 
   if (IsAMDOffloadArch(ID))
-    return "amdgcn-amd-amdhsa";
+    return llvm::Triple("amdgcn-amd-amdhsa");
 
-  return "";
+  return {};
 }
 
 } // namespace clang
