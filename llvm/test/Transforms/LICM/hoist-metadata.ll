@@ -10,9 +10,9 @@ define void @test_unconditional(i1 %c, ptr dereferenceable(8) align 8 %p) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META1:![0-9]+]], !noundef [[META1]]
 ; CHECK-NEXT:    [[V3:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable [[META2:![0-9]+]], !align [[META2]]
+; CHECK-NEXT:    call void @foo(i32 [[V1]], ptr [[V2]], ptr [[V3]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    call void @foo(i32 [[V1]], ptr [[V2]], ptr [[V3]])
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

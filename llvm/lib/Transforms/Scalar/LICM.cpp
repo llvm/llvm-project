@@ -634,7 +634,12 @@ bool llvm::hoistRegion(DomTreeNode *N, const LICMDependencies &Deps,
           canSinkOrHoistInst(I, Deps, CurLoop, true, Flags) &&
           isSafeToExecuteUnconditionally(
               I, &Deps.DT, &Deps.TLI, CurLoop, &Deps.SafetyInfo, Deps.ORE,
-              Preheader->getTerminator(), &Deps.AC, AllowSpeculation)) {
+              Preheader->getTerminator(), &Deps.AC, AllowSpeculation) &&
+          // May-throw calls can only be hoisted if there are no memory
+          // writes before them in the loop. Otherwise hoisting would skip
+          // side effects that must happen before the potential throw.
+          (!I.mayThrow() ||
+           Deps.SafetyInfo.doesNotWriteMemoryBefore(I, CurLoop))) {
         hoist(I, &Deps.DT, CurLoop, Preheader, &Deps.SafetyInfo, Deps.MSSAU,
               Deps.SE, Deps.ORE);
         Changed = true;
@@ -947,8 +952,12 @@ bool llvm::canSinkOrHoistInst(Instruction &I,
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     return canHoistLoad(*LI, Deps, CurLoop, TargetExecutesOncePerLoop, Flags);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-    // Don't sink calls which can throw.
-    if (CI->mayThrow())
+    // Don't sink calls which can throw. When hoisting, may-throw calls are
+    // allowed because the caller verifies the instruction is guaranteed to
+    // execute via isSafeToExecuteUnconditionally. If it would throw, it would
+    // have thrown on the first loop iteration, so hoisting to the preheader is
+    // safe.
+    if (Flags.getIsSink() && CI->mayThrow())
       return false;
 
     // Convergent attribute has been used on operations that involve
