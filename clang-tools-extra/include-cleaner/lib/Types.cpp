@@ -10,6 +10,7 @@
 #include "TypesInternal.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -107,6 +108,22 @@ llvm::SmallString<128> normalizePath(llvm::StringRef Path) {
   path::remove_dots(P, /*remove_dot_dot=*/true);
   path::native(P, path::Style::posix);
   return P;
+}
+
+MainFileLocation locateInMainFile(SourceLocation Loc, const SourceManager &SM) {
+  const SourceLocation ExpandedLoc = SM.getExpansionLoc(Loc);
+  const FileID FID = SM.getFileID(ExpandedLoc);
+  if (FID == SM.getMainFileID() || FID == SM.getPreambleFileID())
+    return MainFileLocation::MainFile;
+  const SourceLocation IncludeLoc = SM.getIncludeLoc(FID);
+  if (!IncludeLoc.isValid())
+    return MainFileLocation::Other;
+  const FileID IncludeFID = SM.getFileID(SM.getExpansionLoc(IncludeLoc));
+  if (IncludeFID == SM.getMainFileID() ||
+      IncludeFID == SM.getPreambleFileID()) {
+    return MainFileLocation::DirectInclude;
+  }
+  return MainFileLocation::Other;
 }
 
 void Includes::addSearchDirectory(llvm::StringRef Path) {

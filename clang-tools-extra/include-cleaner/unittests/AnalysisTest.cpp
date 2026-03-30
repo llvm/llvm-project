@@ -39,6 +39,14 @@
 #include <vector>
 
 namespace clang::include_cleaner {
+
+static std::vector<Decl *> topLevelDecls(TestAST &AST) {
+  std::vector<Decl *> Decls;
+  for (auto *D : AST.context().getTranslationUnitDecl()->decls())
+    Decls.push_back(D);
+  return Decls;
+}
+
 namespace {
 using testing::_;
 using testing::AllOf;
@@ -269,7 +277,8 @@ int x = a + c;
 
   const Include *B = PP.Includes.atLine(3);
   ASSERT_EQ(B->Spelled, "b.h");
-  EXPECT_THAT(Results.Missing, ElementsAre(Pair("\"c.h\"", Header(CHeader))));
+  EXPECT_THAT(Results.MissingIncludes,
+              ElementsAre(Pair("\"c.h\"", Header(CHeader))));
   EXPECT_THAT(Results.Unused, ElementsAre(B));
 }
 
@@ -317,7 +326,7 @@ TEST_F(AnalyzeTest, ResourceDirIsIgnored) {
   TestAST AST(Inputs);
   auto Results = analyze({}, {}, PP.Includes, &PI, AST.preprocessor());
   EXPECT_THAT(Results.Unused, testing::IsEmpty());
-  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+  EXPECT_THAT(Results.MissingIncludes, testing::IsEmpty());
 }
 
 TEST_F(AnalyzeTest, DifferentHeaderSameSpelling) {
@@ -342,7 +351,7 @@ TEST_F(AnalyzeTest, DifferentHeaderSameSpelling) {
     DeclsInTU.push_back(D);
   auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
   EXPECT_THAT(Results.Unused, testing::IsEmpty());
-  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+  EXPECT_THAT(Results.MissingIncludes, testing::IsEmpty());
 }
 
 TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
@@ -368,33 +377,361 @@ TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
                            /*ModificationTime=*/{});
 
   TestAST AST(Inputs);
-  std::vector<Decl *> DeclsInTU;
-  for (auto *D : AST.context().getTranslationUnitDecl()->decls())
-    DeclsInTU.push_back(D);
+  std::vector<Decl *> DeclsInTU = topLevelDecls(AST);
   auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
   // Check that we're spelling header using the symlink, and not underlying
   // path.
-  EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+  EXPECT_THAT(Results.MissingIncludes,
+              testing::ElementsAre(Pair("\"inner.h\"", _)));
   // header.h should be unused.
   EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
 
   {
     // Make sure filtering is also applied to symlink, not underlying file.
-    auto HeaderFilter = [](llvm::StringRef Path) { return Path == "inner.h"; };
-    Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(),
-                      HeaderFilter);
-    EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+    AnalysisOptions Options;
+    Options.HeaderFilter = [](const Header &H) {
+      return H.resolvedPath() == "inner.h";
+    };
+    Results =
+        analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(), Options);
+    EXPECT_THAT(Results.MissingIncludes,
+                testing::ElementsAre(Pair("\"inner.h\"", _)));
     // header.h should be unused.
     EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
   }
   {
-    auto HeaderFilter = [](llvm::StringRef Path) { return Path == "header.h"; };
-    Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(),
-                      HeaderFilter);
+    AnalysisOptions Options;
+    Options.HeaderFilter = [](const Header &H) {
+      return H.resolvedPath() == "header.h";
+    };
+    Results =
+        analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(), Options);
     // header.h should be ignored now.
     EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
-    EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
+    EXPECT_THAT(Results.MissingIncludes,
+                testing::ElementsAre(Pair("\"inner.h\"", _)));
   }
+}
+
+TEST_F(AnalyzeTest, FragmentDeclUsePreservesInclude) {
+  Inputs.Code = R"cpp(
+#include "support.h"
+#include "gen.inc"
+Holder H;
+)cpp";
+  Inputs.ExtraFiles["support.h"] = guard(R"cpp(
+  namespace support {
+  template <typename> struct vector {};
+  }
+  )cpp");
+  Inputs.ExtraFiles["gen.inc"] = guard(R"cpp(
+  struct Holder {
+    support::vector<int> Values;
+  };
+  )cpp");
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Vector = PP.Includes.atLine(2);
+  const Include *Fragment = PP.Includes.atLine(3);
+  ASSERT_NE(Vector, nullptr);
+  ASSERT_NE(Fragment, nullptr);
+  EXPECT_THAT(Results.Unused, testing::IsEmpty());
+  ASSERT_THAT(Results.FragmentDependencies, testing::SizeIs(1));
+  EXPECT_EQ(Results.FragmentDependencies.front().Preserved, Vector);
+  EXPECT_THAT(Results.FragmentDependencies.front().Fragments,
+              ElementsAre(Fragment));
+}
+
+TEST_F(AnalyzeTest, FragmentDependencyExcludedWhenAlsoUsedInMainFile) {
+  Inputs.Code = R"cpp(
+#include "support.h"
+#include "gen.inc"
+support::vector<int> MainValues;
+)cpp";
+  Inputs.ExtraFiles["support.h"] = guard(R"cpp(
+  namespace support {
+  template <typename> struct vector {};
+  }
+  )cpp");
+  Inputs.ExtraFiles["gen.inc"] = guard(R"cpp(
+  struct Holder {
+    support::vector<int> Values;
+  };
+  )cpp");
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Support = PP.Includes.atLine(2);
+  ASSERT_NE(Support, nullptr);
+  EXPECT_THAT(Results.Unused, testing::Not(Contains(Support)));
+  EXPECT_THAT(Results.FragmentDependencies, testing::IsEmpty());
+}
+
+TEST_F(AnalyzeTest, MultipleFragmentsPreserveSingleInclude) {
+  Inputs.Code = R"cpp(
+#include "support.h"
+#include "a.inc"
+#include "b.inc"
+A AValue;
+B BValue;
+)cpp";
+  Inputs.ExtraFiles["support.h"] = guard(R"cpp(
+  namespace support {
+  template <typename> struct vector {};
+  }
+  )cpp");
+  Inputs.ExtraFiles["a.inc"] = guard(R"cpp(
+  struct A {
+    support::vector<int> Values;
+  };
+  )cpp");
+  Inputs.ExtraFiles["b.inc"] = guard(R"cpp(
+  struct B {
+    support::vector<int> Values;
+  };
+  )cpp");
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Support = PP.Includes.atLine(2);
+  const Include *FragmentA = PP.Includes.atLine(3);
+  const Include *FragmentB = PP.Includes.atLine(4);
+  ASSERT_NE(Support, nullptr);
+  ASSERT_NE(FragmentA, nullptr);
+  ASSERT_NE(FragmentB, nullptr);
+  EXPECT_THAT(Results.Unused, testing::IsEmpty());
+  ASSERT_THAT(Results.FragmentDependencies, testing::SizeIs(1));
+  EXPECT_EQ(Results.FragmentDependencies.front().Preserved, Support);
+  EXPECT_THAT(Results.FragmentDependencies.front().Fragments,
+              ElementsAre(FragmentA, FragmentB));
+}
+
+TEST_F(AnalyzeTest, FragmentDependencyDeduplicatesFragmentReason) {
+  Inputs.Code = R"cpp(
+#include "support.h"
+#include "gen.inc"
+Holder H;
+)cpp";
+  Inputs.ExtraFiles["support.h"] = guard(R"cpp(
+  namespace support {
+  template <typename> struct vector {};
+  }
+  )cpp");
+  Inputs.ExtraFiles["gen.inc"] = guard(R"cpp(
+  struct Holder {
+    support::vector<int> First;
+    support::vector<int> Second;
+  };
+  )cpp");
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Fragment = PP.Includes.atLine(3);
+  ASSERT_NE(Fragment, nullptr);
+  ASSERT_THAT(Results.FragmentDependencies, testing::SizeIs(1));
+  EXPECT_THAT(Results.FragmentDependencies.front().Fragments,
+              ElementsAre(Fragment));
+}
+
+TEST_F(AnalyzeTest, DuplicateFragmentIncludesPreserveIncludeWithoutProvenance) {
+  Inputs.Code = R"cpp(
+#include "support.h"
+#include "gen.inc"
+#include "./gen.inc"
+)cpp";
+  Inputs.ExtraFiles["support.h"] = guard("struct SupportType {};");
+  Inputs.ExtraFiles["gen.inc"] = "void use(SupportType);\n";
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Support = PP.Includes.atLine(2);
+  ASSERT_NE(Support, nullptr);
+  EXPECT_THAT(Results.Unused, testing::Not(Contains(Support)));
+  EXPECT_THAT(Results.FragmentDependencies, testing::IsEmpty());
+}
+
+TEST_F(AnalyzeTest, FragmentMacroUsePreservesInclude) {
+  Inputs.Code = R"cpp(
+#include "macro.h"
+#include "gen.inc"
+)cpp";
+  Inputs.ExtraFiles["macro.h"] = guard("#define FOO 42");
+  Inputs.ExtraFiles["gen.inc"] = guard("int Value = FOO;");
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Macro = PP.Includes.atLine(2);
+  const Include *Fragment = PP.Includes.atLine(3);
+  ASSERT_NE(Macro, nullptr);
+  ASSERT_NE(Fragment, nullptr);
+  EXPECT_THAT(Results.Unused, testing::IsEmpty());
+  ASSERT_THAT(Results.FragmentDependencies, testing::SizeIs(1));
+  EXPECT_EQ(Results.FragmentDependencies.front().Preserved, Macro);
+  EXPECT_THAT(Results.FragmentDependencies.front().Fragments,
+              ElementsAre(Fragment));
+}
+
+TEST_F(AnalyzeTest, FragmentHeadersAreNotRecursive) {
+  Inputs.Code = R"cpp(
+#include "support.h"
+#include "outer.inc"
+)cpp";
+  Inputs.ExtraFiles["support.h"] = guard(R"cpp(
+  namespace support {
+  template <typename> struct vector {};
+  }
+  )cpp");
+  Inputs.ExtraFiles["outer.inc"] = guard(R"cpp(
+  #include "inner.inc"
+  )cpp");
+  Inputs.ExtraFiles["inner.inc"] = guard(R"cpp(
+  struct Inner {
+    support::vector<int> Values;
+  };
+  )cpp");
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Support = PP.Includes.atLine(2);
+  ASSERT_NE(Support, nullptr);
+  EXPECT_THAT(Results.Unused, Contains(Support));
+  EXPECT_THAT(Results.FragmentDependencies, testing::IsEmpty());
+}
+
+TEST_F(AnalyzeTest, FragmentHeaderMatcherFallsBackToSpelledPath) {
+  Inputs.ExtraArgs.push_back("-I/headers");
+  Inputs.Code = R"cpp(
+#include "support.h"
+#include "generated/gen.inc"
+Holder H;
+)cpp";
+  Inputs.ExtraFiles["/headers/support.h"] = guard(R"cpp(
+  namespace support {
+  template <typename> struct vector {};
+  }
+  )cpp");
+  Inputs.ExtraFiles["/headers/generated/gen.inc"] = guard(R"cpp(
+  struct Holder {
+    support::vector<int> Values;
+  };
+  )cpp");
+
+  TestAST AST(Inputs);
+  const Include *Fragment = PP.Includes.atLine(3);
+  ASSERT_NE(Fragment, nullptr);
+  ASSERT_TRUE(Fragment->Resolved.has_value());
+  EXPECT_NE(normalizePath(Fragment->Resolved->getName()).str(),
+            "generated/gen.inc");
+
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path == "generated/gen.inc";
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Support = PP.Includes.atLine(2);
+  ASSERT_NE(Support, nullptr);
+  ASSERT_THAT(Results.FragmentDependencies, testing::SizeIs(1));
+  EXPECT_EQ(Results.FragmentDependencies.front().Preserved, Support);
+  EXPECT_THAT(Results.FragmentDependencies.front().Fragments,
+              ElementsAre(Fragment));
+}
+
+TEST_F(AnalyzeTest, FragmentMissingIncludeRecordsOrigin) {
+  Inputs.Code = R"cpp(
+#include "gen.inc"
+)cpp";
+  Inputs.ExtraFiles["foo.h"] = guard("int foo();");
+  Inputs.ExtraFiles["gen.inc"] = guard(R"cpp(
+  #include "foo.h"
+  int Value = foo();
+  )cpp");
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  const Include *Fragment = PP.Includes.atLine(2);
+  ASSERT_NE(Fragment, nullptr);
+  ASSERT_THAT(Results.MissingRefs, testing::SizeIs(1));
+  EXPECT_EQ(Results.MissingRefs.front().Origin,
+            SymbolReferenceOrigin::Fragment);
+  EXPECT_EQ(Results.MissingRefs.front().FragmentInclude, Fragment);
+  EXPECT_EQ(Results.MissingIncludes.front().first, "\"foo.h\"");
+}
+
+TEST_F(AnalyzeTest, DuplicateFragmentIncludesSuppressMissingProvenance) {
+  Inputs.Code = R"cpp(
+#include "gen.inc"
+#include "./gen.inc"
+)cpp";
+  Inputs.ExtraFiles["foo.h"] = guard("int foo();");
+  Inputs.ExtraFiles["gen.inc"] = R"cpp(
+  #include "foo.h"
+  auto useFoo() -> decltype(foo());
+  )cpp";
+
+  TestAST AST(Inputs);
+  AnalysisOptions Options;
+  Options.FragmentHeaderFilter = [](llvm::StringRef Path) {
+    return Path.ends_with(".inc");
+  };
+  auto Results = analyze(topLevelDecls(AST), PP.MacroReferences, PP.Includes,
+                         &PI, AST.preprocessor(), Options);
+
+  ASSERT_FALSE(Results.MissingRefs.empty());
+  EXPECT_EQ(Results.MissingRefs.front().Origin,
+            SymbolReferenceOrigin::Fragment);
+  EXPECT_EQ(Results.MissingRefs.front().FragmentInclude, nullptr);
+  EXPECT_EQ(Results.MissingIncludes.front().first, "\"foo.h\"");
 }
 
 // Make sure that the references to implicit operator new/delete are reported as
@@ -422,7 +759,7 @@ TEST_F(AnalyzeTest, ImplicitOperatorNewDeleteNotMissing) {
   for (auto *D : AST.context().getTranslationUnitDecl()->decls())
     DeclsInTU.push_back(D);
   auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
-  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+  EXPECT_THAT(Results.MissingIncludes, testing::IsEmpty());
 }
 
 TEST_F(AnalyzeTest, ImplicitOperatorNewDeleteNotUnused) {
@@ -467,14 +804,14 @@ TEST(FixIncludes, Basic) {
   Inc.add(I);
 
   AnalysisResults Results;
-  Results.Missing.emplace_back("\"aa.h\"", Header(""));
-  Results.Missing.emplace_back("\"ab.h\"", Header(""));
-  Results.Missing.emplace_back("<e.h>", Header(""));
+  Results.MissingIncludes.emplace_back("\"aa.h\"", Header(""));
+  Results.MissingIncludes.emplace_back("\"ab.h\"", Header(""));
+  Results.MissingIncludes.emplace_back("<e.h>", Header(""));
   Results.Unused.push_back(Inc.atLine(3));
   Results.Unused.push_back(Inc.atLine(4));
 
   EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
-R"cpp(#include "d.h"
+            R"cpp(#include "d.h"
 #include "a.h"
 #include "aa.h"
 #include "ab.h"
@@ -482,11 +819,208 @@ R"cpp(#include "d.h"
 )cpp");
 
   Results = {};
-  Results.Missing.emplace_back("\"d.h\"", Header(""));
+  Results.MissingIncludes.emplace_back("\"d.h\"", Header(""));
   Code = R"cpp(#include "a.h")cpp";
   EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
-R"cpp(#include "d.h"
+            R"cpp(#include "d.h"
 #include "a.h")cpp");
+}
+
+TEST(FixIncludes, FragmentDependencyComments) {
+  llvm::StringRef Code = R"cpp(#include "a.h"
+#include "gen.inc"
+#include "existing.h" // needed by "gen.inc"
+#include "conflict.h" // keep me
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+  Include Existing;
+  Existing.Spelled = "existing.h";
+  Existing.Line = 3;
+  Inc.add(Existing);
+  Include Conflict;
+  Conflict.Spelled = "conflict.h";
+  Conflict.Line = 4;
+  Inc.add(Conflict);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+  Results.FragmentDependencies.push_back({Inc.atLine(3), {Inc.atLine(2)}});
+  Results.FragmentDependencies.push_back({Inc.atLine(4), {Inc.atLine(2)}});
+
+  FixIncludesOptions Options;
+  Options.FragmentDependencyCommentFormat = "needed by {0}";
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(3));
+  EXPECT_EQ(Fixes.FragmentComments[0].Status,
+            FragmentDependencyCommentStatus::CanInsert);
+  ASSERT_TRUE(Fixes.FragmentComments[0].Replacement.has_value());
+  EXPECT_EQ(Fixes.FragmentComments[1].Status,
+            FragmentDependencyCommentStatus::AlreadyPresent);
+  EXPECT_FALSE(Fixes.FragmentComments[1].Replacement.has_value());
+  EXPECT_EQ(Fixes.FragmentComments[2].Status,
+            FragmentDependencyCommentStatus::ConflictingComment);
+  EXPECT_FALSE(Fixes.FragmentComments[2].Replacement.has_value());
+
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle(), Options),
+            R"cpp(#include "a.h" // needed by "gen.inc"
+#include "gen.inc"
+#include "existing.h" // needed by "gen.inc"
+#include "conflict.h" // keep me
+)cpp");
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsEmptyFormat) {
+  llvm::StringRef Code = R"cpp(#include "a.h"
+#include "gen.inc"
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+
+  IncludeFixes Fixes =
+      computeIncludeFixes(Results, "d.cc", Code, format::getLLVMStyle(), {});
+  EXPECT_THAT(Fixes.FragmentComments, testing::IsEmpty());
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()), Code);
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsLiteralFormat) {
+  llvm::StringRef Code = R"cpp(#include "a.h"
+#include "gen.inc"
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+
+  FixIncludesOptions Options;
+  Options.FragmentDependencyCommentFormat = "IWYU pragma: keep";
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(1));
+  EXPECT_EQ(Fixes.FragmentComments.front().Text, "IWYU pragma: keep");
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle(), Options),
+            R"cpp(#include "a.h" // IWYU pragma: keep
+#include "gen.inc"
+)cpp");
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsMultipleFragments) {
+  llvm::StringRef Code = R"cpp(#include "a.h"
+#include "a.inc"
+#include "b.inc"
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include FragmentA;
+  FragmentA.Spelled = "a.inc";
+  FragmentA.Line = 2;
+  Inc.add(FragmentA);
+  Include FragmentB;
+  FragmentB.Spelled = "b.inc";
+  FragmentB.Line = 3;
+  Inc.add(FragmentB);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back(
+      {Inc.atLine(1), {Inc.atLine(2), Inc.atLine(3)}});
+
+  FixIncludesOptions Options;
+  Options.FragmentDependencyCommentFormat = "needed by {0}";
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(1));
+  EXPECT_EQ(Fixes.FragmentComments.front().Text,
+            "needed by \"a.inc\", \"b.inc\"");
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsBlockCommentConflict) {
+  llvm::StringRef Code = R"cpp(#include "a.h" /* keep me */
+#include "gen.inc"
+)cpp";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+
+  FixIncludesOptions Options;
+  Options.FragmentDependencyCommentFormat = "needed by {0}";
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(1));
+  EXPECT_EQ(Fixes.FragmentComments.front().Status,
+            FragmentDependencyCommentStatus::ConflictingComment);
+  EXPECT_FALSE(Fixes.FragmentComments.front().Replacement.has_value());
+}
+
+TEST(FixIncludes, FragmentDependencyCommentsCRLFAndTrailingWhitespace) {
+  llvm::StringRef Code = "#include \"a.h\"  \r\n#include \"gen.inc\"\r\n";
+
+  Includes Inc;
+  Include A;
+  A.Spelled = "a.h";
+  A.Line = 1;
+  Inc.add(A);
+  Include Gen;
+  Gen.Spelled = "gen.inc";
+  Gen.Line = 2;
+  Inc.add(Gen);
+
+  AnalysisResults Results;
+  Results.FragmentDependencies.push_back({Inc.atLine(1), {Inc.atLine(2)}});
+
+  FixIncludesOptions Options;
+  Options.FragmentDependencyCommentFormat = "needed by {0}";
+  IncludeFixes Fixes = computeIncludeFixes(Results, "d.cc", Code,
+                                           format::getLLVMStyle(), Options);
+  ASSERT_THAT(Fixes.FragmentComments, testing::SizeIs(1));
+  ASSERT_TRUE(Fixes.FragmentComments.front().Replacement.has_value());
+  size_t ExpectedOffset = Code.find("  \r\n");
+  ASSERT_NE(ExpectedOffset, llvm::StringRef::npos);
+  EXPECT_EQ(Fixes.FragmentComments.front().Replacement->getOffset(),
+            ExpectedOffset);
 }
 
 MATCHER_P3(expandedAt, FileID, Offset, SM, "") {
