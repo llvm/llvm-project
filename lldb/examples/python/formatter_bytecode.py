@@ -318,7 +318,7 @@ class BytecodeSection:
             file=output,
         )
         var_name = re.sub(r"\W", "_", self.type_name)
-        print(f"unsigned char {var_name}_formatter[] =", file=output)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
         for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
