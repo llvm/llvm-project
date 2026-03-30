@@ -849,19 +849,15 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  // For SPIR-V we want to retain the pristine output of Clang CodeGen, since
-  // optimizations might lose structure / information that is necessary for
-  // generating optimal concrete AMDGPU code.
-  // TODO: using the below option is a temporary placeholder until Clang
-  //       provides the required functionality, which essentially boils down to
-  //       -O0 being refactored / reworked to not imply optnone / remove TBAA.
-  //       Once that is added, we should pivot to that functionality, being
-  //       mindful to not corrupt the user provided and subsequently embedded
-  //       command-line (i.e. if the user asks for -O3 this is what the
-  //       finalisation should use).
+  // For SPIR-V, enable basic optimizations but disable target-specific
+  // transformations that could harm JIT performance.
   if (getTriple().isSPIRV() &&
-      !DriverArgs.hasArg(options::OPT_disable_llvm_optzns))
-    CC1Args.push_back("-disable-llvm-optzns");
+      !DriverArgs.hasArg(options::OPT_disable_llvm_optzns)) {
+    CC1Args.append({"-mllvm", "-vectorize-loops=false"});
+    CC1Args.append({"-mllvm", "-vectorize-slp=false"});
+    CC1Args.push_back("-fno-unroll-loops");
+    CC1Args.append({"-mllvm", "-interleave-loops=false"});
+  }
 
   if (DeviceOffloadingKind == Action::OFK_None)
     addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);

@@ -177,7 +177,9 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     const char *Triple =
         C.getArgs().MakeArgString("-triple=spirv64-amd-amdhsa");
 
-    CmdArgs.append({"-cc1", Triple, "-emit-obj", "-disable-llvm-optzns",
+    CmdArgs.append({"-cc1", Triple, "-emit-obj", "-mllvm",
+                    "-vectorize-loops=false", "-mllvm", "-vectorize-slp=false",
+                    "-fno-unroll-loops", "-mllvm", "-interleave-loops=false",
                     LinkedBCFile.getFilename(), "-o", Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
@@ -272,12 +274,18 @@ void HIPAMDToolChain::addClangTargetOptions(
     // with options that match the user-supplied ones.
     if (!DriverArgs.hasArg(options::OPT_fembed_bitcode_marker))
       CC1Args.push_back("-fembed-bitcode=marker");
-    // For SPIR-V we want to retain the pristine output of Clang CodeGen, since
-    // optimizations might lose structure / information that is necessary for
-    // generating optimal concrete AMDGPU code. We duplicate this because the
-    // HIP TC doesn't invoke the base AMDGPU TC addClangTargetOptions.
-    if (!DriverArgs.hasArg(options::OPT_disable_llvm_passes))
-      CC1Args.push_back("-disable-llvm-passes");
+    // Enable basic optimizations but disable target-specific transformations
+    // that could harm JIT performance. The JIT will make target-specific
+    // decisions. Users can pass -disable-llvm-passes to disable all opts.
+    if (!DriverArgs.hasArg(options::OPT_disable_llvm_passes)) {
+      // Disable vectorization (problematic with SPIR-V, let JIT decide)
+      CC1Args.append({"-mllvm", "-vectorize-loops=false"});
+      CC1Args.append({"-mllvm", "-vectorize-slp=false"});
+      // Disable loop unrolling (let JIT decide based on target)
+      CC1Args.push_back("-fno-unroll-loops");
+      // Disable loop interleaving
+      CC1Args.append({"-mllvm", "-interleave-loops=false"});
+    }
     return; // No DeviceLibs for SPIR-V.
   }
 
@@ -314,6 +322,14 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   if (!Args.hasArg(options::OPT_flto_partitions_EQ))
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
                       "8");
+
+  // For SPIR-V, apply the default -O3 optimization level if no optimization
+  // level is specified, matching the behavior of OpenCL compilation.
+  if (getTriple().isSPIRV() &&
+      !Args.hasArg(options::OPT_O, options::OPT_O0, options::OPT_O4,
+                   options::OPT_Ofast))
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O),
+                      getOptionDefault(options::OPT_O));
 
   return DAL;
 }
