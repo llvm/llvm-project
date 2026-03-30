@@ -49,5 +49,10 @@
     "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
       "value": false
     }
+  },
+  "assert": {
+    "LIBC_COPT_USE_C_ASSERT": {
+      "value": true
+    }
   }
 }
