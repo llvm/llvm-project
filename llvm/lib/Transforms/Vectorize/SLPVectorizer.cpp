@@ -15549,7 +15549,7 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, VectorType *VecTy,
   };
 
   if (E->State == TreeEntry::SplitVectorize) {
-    for (const auto [Idx, _] : E->CombinedEntriesWithIndices) {
+    for (const auto &[Idx, _] : E->CombinedEntriesWithIndices) {
       const TreeEntry *OpTE = VectorizableTree[Idx].get();
 
       if (!CountedOpEntries.insert(OpTE).second)
