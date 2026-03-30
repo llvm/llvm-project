@@ -7297,7 +7297,9 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Or", 4, "or">,
     I32EnumAttrCase<"Nand", 5, "nand">,
     I32EnumAttrCase<"Max", 6, "max">,
-    I32EnumAttrCase<"Min", 7, "min">
+    I32EnumAttrCase<"Min", 7, "min">,
+    I32EnumAttrCase<"UIncWrap", 8, "uinc_wrap">,
+    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
@@ -7310,7 +7312,8 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     C/C++ atomic fetch-and-update operation. This operation implements the C/C++
     builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
     `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
-    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, and `min`.
+    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, `min`,
+    `uinc_wrap`, and `udec_wrap`.
 
     This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
     type of `val` must match the pointee type of `ptr`. If the binary operation
