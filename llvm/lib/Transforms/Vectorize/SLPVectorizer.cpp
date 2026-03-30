@@ -26032,7 +26032,8 @@ bool SLPVectorizerPass::vectorizeStores(
         }
         unsigned Key = GetChainsKey(Status.Stride + Dist);
         Chains[Key].push_back({/*AddedToAllContexts*/ true,
-                               Status.AllContextsIdx, /*FirstStore*/ nullptr,
+                               {Status.AllContextsIdx},
+                               /*FirstStore*/ nullptr,
                                Status.Stride});
         FoundStrides[Status.Stride] = true;
       }
@@ -26044,7 +26045,8 @@ bool SLPVectorizerPass::vectorizeStores(
           continue;
         unsigned Key = GetChainsKey(Dist + Stride);
         Chains[Key].push_back({/*AddedToAllContexts*/ false,
-                               /*StoreSeqIdx*/ (unsigned)Idx, Stores[InstIdx],
+                               {/*StoreSeqIdx*/ (unsigned)Idx},
+                               Stores[InstIdx],
                                Stride});
       }
     }
