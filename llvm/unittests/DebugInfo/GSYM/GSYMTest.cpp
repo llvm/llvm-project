@@ -1073,18 +1073,25 @@ static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
   Compare(GC, **GR);
 }
 
+/// Test address offset encoding with a given target byte size.
+/// Uses an address delta of (1 << ((TargetByteSize-1) * 8)) to force the
+/// creator to use at least TargetByteSize bytes for address offsets.
 template <typename CreatorT>
-static void TestGsymCreator1ByteAddrOffsetsImpl(uint8_t ExpAddrOffSize,
-                                                uint8_t ExpAddrInfoOffSize,
-                                                uint8_t ExpStrOffSize) {
+static void TestGsymCreatorAddrOffsetsImpl(uint8_t TargetByteSize,
+                                            uint8_t ExpAddrOffSize,
+                                            uint8_t ExpAddrInfoOffSize,
+                                            uint8_t ExpStrOffSize) {
   uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   CreatorT GC;
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
+  const uint64_t AddrDelta = (TargetByteSize == 1)
+                                  ? 0x20ULL
+                                  : (1ULL << ((TargetByteSize - 1) * 8));
   const uint32_t Func1Name = GC.insertString("foo");
   const uint32_t Func2Name = GC.insertString("bar");
-  GC.addFunctionInfo(FunctionInfo(BaseAddr+0x00, 0x10, Func1Name));
-  GC.addFunctionInfo(FunctionInfo(BaseAddr+0x20, 0x10, Func2Name));
+  GC.addFunctionInfo(FunctionInfo(BaseAddr, 0x10, Func1Name));
+  GC.addFunctionInfo(FunctionInfo(BaseAddr + AddrDelta, 0x10, Func2Name));
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(Err);
@@ -1094,95 +1101,56 @@ static void TestGsymCreator1ByteAddrOffsetsImpl(uint8_t ExpAddrOffSize,
                    ExpAddrOffSize, ExpAddrInfoOffSize, ExpStrOffSize);
 }
 
+// V1 tests (power-of-two AddrOffSize: 1, 2, 4, 8)
 TEST(GSYMTest, TestGsymCreatorV11ByteAddrOffsets) {
-  TestGsymCreator1ByteAddrOffsetsImpl<GsymCreatorV1>(1, 4, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(1, 1, 4, 4);
 }
-TEST(GSYMTest, TestGsymCreatorV21ByteAddrOffsets) {
-  TestGsymCreator1ByteAddrOffsetsImpl<GsymCreatorV2>(1, 1, 4);
-}
-
-template <typename CreatorT>
-static void TestGsymCreator2ByteAddrOffsetsImpl(uint8_t ExpAddrOffSize,
-                                                uint8_t ExpAddrInfoOffSize,
-                                                uint8_t ExpStrOffSize) {
-  uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  CreatorT GC;
-  GC.setUUID(UUID);
-  constexpr uint64_t BaseAddr = 0x1000;
-  const uint32_t Func1Name = GC.insertString("foo");
-  const uint32_t Func2Name = GC.insertString("bar");
-  GC.addFunctionInfo(FunctionInfo(BaseAddr+0x000, 0x100, Func1Name));
-  GC.addFunctionInfo(FunctionInfo(BaseAddr+0x200, 0x100, Func2Name));
-  OutputAggregator Null(nullptr);
-  Error Err = GC.finalize(Null);
-  ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, BaseAddr, 2,
-                   ExpAddrOffSize, ExpAddrInfoOffSize, ExpStrOffSize);
-  TestEncodeDecode(GC, llvm::endianness::big, BaseAddr, 2,
-                   ExpAddrOffSize, ExpAddrInfoOffSize, ExpStrOffSize);
-}
-
 TEST(GSYMTest, TestGsymCreatorV12ByteAddrOffsets) {
-  TestGsymCreator2ByteAddrOffsetsImpl<GsymCreatorV1>(2, 4, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(2, 2, 4, 4);
+}
+TEST(GSYMTest, TestGsymCreatorV13ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(3, 4, 4, 4);
+}
+TEST(GSYMTest, TestGsymCreatorV14ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(4, 4, 4, 4);
+}
+TEST(GSYMTest, TestGsymCreatorV15ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(5, 8, 4, 4);
+}
+TEST(GSYMTest, TestGsymCreatorV16ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(6, 8, 4, 4);
+}
+TEST(GSYMTest, TestGsymCreatorV17ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(7, 8, 4, 4);
+}
+TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV1>(8, 8, 4, 4);
+}
+
+// V2 tests (optimal AddrOffSize: 1-8)
+TEST(GSYMTest, TestGsymCreatorV21ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(1, 1, 1, 4);
 }
 TEST(GSYMTest, TestGsymCreatorV22ByteAddrOffsets) {
-  TestGsymCreator2ByteAddrOffsetsImpl<GsymCreatorV2>(2, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(2, 2, 1, 4);
 }
-
-template <typename CreatorT>
-static void TestGsymCreator4ByteAddrOffsetsImpl(uint8_t ExpAddrOffSize,
-                                                uint8_t ExpAddrInfoOffSize,
-                                                uint8_t ExpStrOffSize) {
-  uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  CreatorT GC;
-  GC.setUUID(UUID);
-  constexpr uint64_t BaseAddr = 0x1000;
-  const uint32_t Func1Name = GC.insertString("foo");
-  const uint32_t Func2Name = GC.insertString("bar");
-  GC.addFunctionInfo(FunctionInfo(BaseAddr+0x000, 0x100, Func1Name));
-  GC.addFunctionInfo(FunctionInfo(BaseAddr+0x20000, 0x100, Func2Name));
-  OutputAggregator Null(nullptr);
-  Error Err = GC.finalize(Null);
-  ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, BaseAddr, 2,
-                   ExpAddrOffSize, ExpAddrInfoOffSize, ExpStrOffSize);
-  TestEncodeDecode(GC, llvm::endianness::big, BaseAddr, 2,
-                   ExpAddrOffSize, ExpAddrInfoOffSize, ExpStrOffSize);
-}
-
-TEST(GSYMTest, TestGsymCreatorV14ByteAddrOffsets) {
-  TestGsymCreator4ByteAddrOffsetsImpl<GsymCreatorV1>(4, 4, 4);
+TEST(GSYMTest, TestGsymCreatorV23ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(3, 3, 1, 4);
 }
 TEST(GSYMTest, TestGsymCreatorV24ByteAddrOffsets) {
-  TestGsymCreator4ByteAddrOffsetsImpl<GsymCreatorV2>(3, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(4, 4, 1, 4);
 }
-
-template <typename CreatorT>
-static void TestGsymCreator8ByteAddrOffsetsImpl(uint8_t ExpAddrOffSize,
-                                                uint8_t ExpAddrInfoOffSize,
-                                                uint8_t ExpStrOffSize) {
-  uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  CreatorT GC;
-  GC.setUUID(UUID);
-  constexpr uint64_t BaseAddr = 0x1000;
-  const uint32_t Func1Name = GC.insertString("foo");
-  const uint32_t Func2Name = GC.insertString("bar");
-  GC.addFunctionInfo(FunctionInfo(BaseAddr+0x000, 0x100, Func1Name));
-  GC.addFunctionInfo(FunctionInfo(BaseAddr+0x100000000, 0x100, Func2Name));
-  OutputAggregator Null(nullptr);
-  Error Err = GC.finalize(Null);
-  ASSERT_FALSE(Err);
-  TestEncodeDecode(GC, llvm::endianness::little, BaseAddr, 2,
-                   ExpAddrOffSize, ExpAddrInfoOffSize, ExpStrOffSize);
-  TestEncodeDecode(GC, llvm::endianness::big, BaseAddr, 2,
-                   ExpAddrOffSize, ExpAddrInfoOffSize, ExpStrOffSize);
+TEST(GSYMTest, TestGsymCreatorV25ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(5, 5, 1, 4);
 }
-
-TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
-  TestGsymCreator8ByteAddrOffsetsImpl<GsymCreatorV1>(8, 4, 4);
+TEST(GSYMTest, TestGsymCreatorV26ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(6, 6, 1, 4);
+}
+TEST(GSYMTest, TestGsymCreatorV27ByteAddrOffsets) {
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(7, 7, 1, 4);
 }
 TEST(GSYMTest, TestGsymCreatorV28ByteAddrOffsets) {
-  TestGsymCreator8ByteAddrOffsetsImpl<GsymCreatorV2>(5, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(8, 8, 1, 4);
 }
 
 static void VerifyFunctionInfo(const GsymReader &GR, uint64_t Addr,
