@@ -997,12 +997,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
       return {};
     }
 
-    llvm::StringRef TripleStr =
+    llvm::Triple Triple =
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
-    if (TripleStr.empty())
-      continue;
-
-    llvm::Triple Triple = ToolChain::normalizeOffloadTriple(TripleStr);
 
     // Make a new argument that dispatches this argument to the appropriate
     // toolchain. This is required when we infer it and create potentially
@@ -1015,7 +1011,10 @@ static TripleSet inferOffloadToolchains(Compilation &C,
     A->claim();
     C.getArgs().append(A);
     C.getArgs().AddSynthesizedArg(A);
-    Triples.insert(Triple);
+
+    auto It = Triples.lower_bound(Triple);
+    if (It == Triples.end() || *It != Triple)
+      Triples.insert(It, Triple);
   }
 
   // Infer the default target triple if no specific architectures are given.
