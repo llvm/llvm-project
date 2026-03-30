@@ -767,12 +767,6 @@ APInt APInt::byteSwap() const {
 
 APInt APInt::reverseBits() const {
   switch (BitWidth) {
-  case 128: {
-    APInt Result(BitWidth, 0);
-    Result.U.pVal[0] = llvm::reverseBits<uint64_t>(U.pVal[1]);
-    Result.U.pVal[1] = llvm::reverseBits<uint64_t>(U.pVal[0]);
-    return Result;
-  }
   case 64:
     return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
   case 32:
@@ -787,18 +781,24 @@ APInt APInt::reverseBits() const {
     break;
   }
 
-  APInt Val(*this);
-  APInt Reversed(BitWidth, 0);
-  unsigned S = BitWidth;
-
-  for (; Val != 0; Val.lshrInPlace(1)) {
-    Reversed <<= 1;
-    Reversed |= Val[0];
-    --S;
+  APInt Result(BitWidth, 0);
+  unsigned NumWords = getNumWords();
+  unsigned ExcessBits = NumWords * 64 - BitWidth;
+  if (LLVM_UNLIKELY(ExcessBits == 0)) {
+    // Fast path. No cross-word shift needed.
+    for (unsigned I = 0; I < NumWords; ++I)
+      Result.U.pVal[I] = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1 - I]);
+    return Result;
   }
-
-  Reversed <<= S;
-  return Reversed;
+  // Holds reversed bits of the previous (more significant) word.
+  uint64_t PrevRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1]);
+  for (unsigned I = 0; I < NumWords - 1; ++I) {
+    uint64_t CurrRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 2 - I]);
+    Result.U.pVal[I] = (CurrRev >> ExcessBits) | (PrevRev << (64 - ExcessBits));
+    PrevRev = CurrRev;
+  }
+  Result.U.pVal[NumWords - 1] = PrevRev >> ExcessBits;
+  return Result;
 }
 
 APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
