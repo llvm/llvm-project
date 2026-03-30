@@ -471,6 +471,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     SSELevel = std::max(SSELevel, Level);
 
     HasFloat16 = SSELevel >= SSE2;
+    if (HasFloat16)
+      HasFastHalfType = true;
 
     // X86 target has bfloat16 emulation support in the backend, where
     // bfloat16 is treated as a 32-bit float, arithmetic operations are
