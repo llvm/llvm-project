@@ -58,12 +58,6 @@ public:
         Recorded.Includes.addSearchDirectory(Dir.getDirRef()->getName());
   }
 
-  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
-                   SrcMgr::CharacteristicKind FileType,
-                   FileID PrevFID) override {
-    Active = SM.isWrittenInMainFile(Loc);
-  }
-
   void InclusionDirective(SourceLocation Hash, const Token &IncludeTok,
                           StringRef SpelledFilename, bool IsAngled,
                           CharSourceRange FilenameRange,
@@ -71,7 +65,7 @@ public:
                           StringRef RelativePath, const Module *SuggestedModule,
                           bool ModuleImported,
                           SrcMgr::CharacteristicKind) override {
-    if (!Active)
+    if (locateInMainFile(Hash, SM) != MainFileLocation::MainFile)
       return;
 
     Include I;
@@ -171,8 +165,6 @@ private:
         SymbolReference{Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()},
                         Tok.getLocation(), RT});
   }
-
-  bool Active = false;
   RecordedPP &Recorded;
   const Preprocessor &PP;
   const SourceManager &SM;
@@ -196,7 +188,7 @@ public:
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override {
-    InMainFile = SM.isWrittenInMainFile(Loc);
+    InMainFile = locateInMainFile(Loc, SM) == MainFileLocation::MainFile;
 
     if (Reason == PPCallbacks::ExitFile) {
       // At file exit time HeaderSearchInfo is valid and can be used to
