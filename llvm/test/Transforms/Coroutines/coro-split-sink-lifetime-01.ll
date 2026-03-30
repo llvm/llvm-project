@@ -105,6 +105,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca %"struct.lean_future<int>::Awaiter", align 8
+; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @a_optnone.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
