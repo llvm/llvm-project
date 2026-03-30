@@ -1433,6 +1433,7 @@ void ScopBuilder::addUserAssumptions(
     // add RTCs, so using setContext would remove the RTC that would ensure the
     // correctness of AssumptionCtx. Using DefinedBehaviorContext which does not
     // gist the other contexts.
+    // TODO: Use recordAssumption() for adding context/assumptions
     if (NumAssumptions == RecordedAssumptions.size()) {
       isl::set newContext =
           scop->getContext().intersect(isl::manage(AssumptionCtx));
