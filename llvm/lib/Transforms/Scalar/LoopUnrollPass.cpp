@@ -1390,6 +1390,38 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (!UP.Count) {
     LLVM_DEBUG(dbgs().indent(1)
                << "Not unrolling: no viable strategy found.\n");
+    // If the loop was vectorized or interleaved, emit a remark explaining why
+    // unrolling was skipped.
+    if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized")) {
+      bool HasVectorInstr = any_of(L->blocks(), [](BasicBlock *BB) {
+        return any_of(*BB, [](Instruction &I) {
+          return I.getType()->isVectorTy();
+        });
+      });
+      if (!HasVectorInstr) {
+        // Scalar remainder loop — don't emit a remark; it's expected not to
+        // unroll the remainder.
+      } else {
+        std::optional<int> IC =
+            getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
+        if (IC && *IC > 1)
+          ORE.emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE,
+                                            "UnrollSkippedInterleaved",
+                                            L->getStartLoc(), L->getHeader())
+                   << "loop not unrolled: interleaved by the vectorizer with "
+                      "interleave count "
+                   << ore::NV("InterleaveCount", *IC);
+          });
+        else
+          ORE.emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE,
+                                            "UnrollSkippedVectorized",
+                                            L->getStartLoc(), L->getHeader())
+                   << "loop not unrolled: already vectorized";
+          });
+      }
+    }
     return LoopUnrollResult::Unmodified;
   }
 
