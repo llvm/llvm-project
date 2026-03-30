@@ -189,6 +189,9 @@ define double @external_use_with_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; AUTO_VEC-NEXT:  [[ENTRY:.*]]:
 ; AUTO_VEC-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[SMAX]], 4
+; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AUTO_VEC:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 16
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AUTO_VEC:       [[VECTOR_PH]]:
@@ -219,22 +222,50 @@ define double @external_use_with_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC:       [[MIDDLE_BLOCK]]:
 ; AUTO_VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
 ; AUTO_VEC-NEXT:    [[TMP7:%.*]] = fsub fast double [[TMP6]], 3.000000e+00
-; AUTO_VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; AUTO_VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AUTO_VEC:       [[VEC_EPILOG_ITER_CHECK]]:
+; AUTO_VEC-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
+; AUTO_VEC-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[SCALAR_PH]], !prof [[PROF7:![0-9]+]]
 ; AUTO_VEC:       [[SCALAR_PH]]:
-; AUTO_VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; AUTO_VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi double [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; AUTO_VEC-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AUTO_VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi double [ [[TMP6]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AUTO_VEC-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[SMAX]], 4
+; AUTO_VEC-NEXT:    [[N_VEC3:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF2]]
+; AUTO_VEC-NEXT:    [[DOTCAST4:%.*]] = sitofp i64 [[N_VEC3]] to double
+; AUTO_VEC-NEXT:    [[TMP8:%.*]] = fmul fast double 3.000000e+00, [[DOTCAST4]]
+; AUTO_VEC-NEXT:    [[TMP9:%.*]] = fadd fast double 0.000000e+00, [[TMP8]]
+; AUTO_VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[BC_RESUME_VAL]], i64 0
+; AUTO_VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
+; AUTO_VEC-NEXT:    [[INDUCTION:%.*]] = fadd fast <4 x double> [[BROADCAST_SPLAT]], <double 0.000000e+00, double 3.000000e+00, double 6.000000e+00, double 9.000000e+00>
 ; AUTO_VEC-NEXT:    br label %[[LOOP:.*]]
 ; AUTO_VEC:       [[LOOP]]:
-; AUTO_VEC-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; AUTO_VEC-NEXT:    [[J:%.*]] = phi double [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[J_NEXT:%.*]], %[[LOOP]] ]
+; AUTO_VEC-NEXT:    [[I:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDEX_NEXT7:%.*]], %[[LOOP]] ]
+; AUTO_VEC-NEXT:    [[VEC_IND6:%.*]] = phi <4 x double> [ [[INDUCTION]], %[[SCALAR_PH]] ], [ [[VEC_IND_NEXT8:%.*]], %[[LOOP]] ]
 ; AUTO_VEC-NEXT:    [[T0:%.*]] = getelementptr double, ptr [[A]], i64 [[I]]
-; AUTO_VEC-NEXT:    store double [[J]], ptr [[T0]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND6]], ptr [[T0]], align 8
+; AUTO_VEC-NEXT:    [[INDEX_NEXT7]] = add nuw i64 [[I]], 4
+; AUTO_VEC-NEXT:    [[VEC_IND_NEXT8]] = fadd fast <4 x double> [[VEC_IND6]], splat (double 1.200000e+01)
+; AUTO_VEC-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT7]], [[N_VEC3]]
+; AUTO_VEC-NEXT:    br i1 [[TMP11]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; AUTO_VEC:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; AUTO_VEC-NEXT:    [[CMP_N9:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC3]]
+; AUTO_VEC-NEXT:    [[TMP12:%.*]] = fsub fast double [[TMP9]], 3.000000e+00
+; AUTO_VEC-NEXT:    br i1 [[CMP_N9]], label %[[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AUTO_VEC:       [[VEC_EPILOG_SCALAR_PH]]:
+; AUTO_VEC-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ENTRY]] ]
+; AUTO_VEC-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi double [ [[TMP9]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP6]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; AUTO_VEC-NEXT:    br label %[[LOOP1:.*]]
+; AUTO_VEC:       [[LOOP1]]:
+; AUTO_VEC-NEXT:    [[I1:%.*]] = phi i64 [ [[BC_RESUME_VAL10]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP1]] ]
+; AUTO_VEC-NEXT:    [[J:%.*]] = phi double [ [[BC_RESUME_VAL11]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[J_NEXT:%.*]], %[[LOOP1]] ]
+; AUTO_VEC-NEXT:    [[T1:%.*]] = getelementptr double, ptr [[A]], i64 [[I1]]
+; AUTO_VEC-NEXT:    store double [[J]], ptr [[T1]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT]] = add i64 [[I1]], 1
 ; AUTO_VEC-NEXT:    [[J_NEXT]] = fadd fast double [[J]], 3.000000e+00
 ; AUTO_VEC-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; AUTO_VEC-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[FOR_END]], !llvm.loop [[LOOP7:![0-9]+]]
+; AUTO_VEC-NEXT:    br i1 [[COND]], label %[[LOOP1]], label %[[FOR_END]], !llvm.loop [[LOOP9:![0-9]+]]
 ; AUTO_VEC:       [[FOR_END]]:
-; AUTO_VEC-NEXT:    [[J_LCSSA:%.*]] = phi double [ [[J]], %[[LOOP]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
+; AUTO_VEC-NEXT:    [[J_LCSSA:%.*]] = phi double [ [[J]], %[[LOOP1]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ [[TMP12]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    ret double [[J_LCSSA]]
 ;
 entry:
