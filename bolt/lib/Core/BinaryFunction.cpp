@@ -4745,10 +4745,21 @@ MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
     if (!BB)
       return nullptr;
 
+    MCInst *PreInst = nullptr;
     for (MCInst &Inst : *BB) {
       constexpr uint32_t InvalidOffset = std::numeric_limits<uint32_t>::max();
-      if (Offset == BC.MIB->getOffsetWithDefault(Inst, InvalidOffset))
+      uint32_t InstOffset = BC.MIB->getOffsetWithDefault(Inst, InvalidOffset);
+
+      if (Offset == InstOffset)
         return &Inst;
+
+      // If it's a RISCV PseudoCALL - fix it
+      if (PreInst != nullptr && Offset == InstOffset - 4) {
+        if (BC.MIB->isRISCVCall(PreInst, Inst))
+          return &Inst;
+      }
+
+      PreInst = &Inst;
     }
 
     if (MCInst *LastInstr = BB->getLastNonPseudoInstr()) {
