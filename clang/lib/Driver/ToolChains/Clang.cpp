@@ -5006,7 +5006,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add the "effective" target triple.
   CmdArgs.push_back("-triple");
-  CmdArgs.push_back(Args.MakeArgString(TripleStr));
+  CmdArgs.push_back(Args.MakeArgStringRef(TripleStr));
 
   if (const Arg *MJ = Args.getLastArg(options::OPT_MJ)) {
     DumpCompilationDatabase(C, MJ->getValue(), TripleStr, Output, Input, Args);
@@ -5048,7 +5048,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             Args.getLastArgValue(options::OPT_mprintf_kind_EQ)));
         // Force compiler error on invalid conversion specifiers
         CmdArgs.push_back(
-            Args.MakeArgString("-Werror=format-invalid-specifier"));
+            Args.MakeArgStringRef("-Werror=format-invalid-specifier"));
       }
     }
   }
@@ -5275,7 +5275,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
               : "ifs-v1";
       CmdArgs.push_back("-emit-interface-stubs");
       CmdArgs.push_back(
-          Args.MakeArgString(Twine("-interface-stub-version=") + ArgStr.str()));
+          Args.MakeArgString(Twine("-interface-stub-version=") + ArgStr));
     } else if (JA.getType() == types::TY_PP_Asm) {
       CmdArgs.push_back("-S");
     } else if (JA.getType() == types::TY_AST) {
@@ -5561,7 +5561,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   assert(FunctionAlignment <= 31 && "function alignment will be truncated!");
   if (FunctionAlignment) {
     CmdArgs.push_back("-function-alignment");
-    CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
+    CmdArgs.push_back(Args.MakeArgString(Twine(FunctionAlignment)));
   }
 
   if (const Arg *A =
@@ -6229,11 +6229,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-sys-header-deps");
     CmdArgs.push_back(Args.MakeArgString(
         "-header-include-format=" +
-        std::string(headerIncludeFormatKindToString(D.CCPrintHeadersFormat))));
-    CmdArgs.push_back(
-        Args.MakeArgString("-header-include-filtering=" +
-                           std::string(headerIncludeFilteringKindToString(
-                               D.CCPrintHeadersFiltering))));
+        Twine(headerIncludeFormatKindToString(D.CCPrintHeadersFormat))));
+    CmdArgs.push_back(Args.MakeArgString(
+        "-header-include-filtering=" +
+        Twine(headerIncludeFilteringKindToString(D.CCPrintHeadersFiltering))));
   }
   Args.AddLastArg(CmdArgs, options::OPT_P);
   Args.AddLastArg(CmdArgs, options::OPT_print_ivar_layout);
@@ -7630,9 +7629,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Honor -fpack-struct= and -fpack-struct, if given. Note that
   // -fno-pack-struct doesn't apply to -fpack-struct=.
   if (Arg *A = Args.getLastArg(options::OPT_fpack_struct_EQ)) {
-    std::string PackStructStr = "-fpack-struct=";
-    PackStructStr += A->getValue();
-    CmdArgs.push_back(Args.MakeArgString(PackStructStr));
+    CmdArgs.push_back(
+        Args.MakeArgString("-fpack-struct=" + Twine(A->getValue())));
   } else if (Args.hasFlag(options::OPT_fpack_struct,
                           options::OPT_fno_pack_struct, false)) {
     CmdArgs.push_back("-fpack-struct=1");
