@@ -46,21 +46,25 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
-namespace {
-struct MissingIncludeInfo {
-  include_cleaner::SymbolReference SymRef;
-  include_cleaner::Header Missing;
-};
-} // namespace
+static bool matchesAnyRegex(llvm::ArrayRef<llvm::Regex> Regexes,
+                            llvm::StringRef Path) {
+  return llvm::any_of(Regexes,
+                      [&](const llvm::Regex &R) { return R.match(Path); });
+}
 
 IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreHeaders(
           utils::options::parseStringList(Options.get("IgnoreHeaders", ""))),
+      FragmentDependencyCommentFormat(
+          Options.get("FragmentDependencyCommentFormat", "")),
       DeduplicateFindings(Options.get("DeduplicateFindings", true)),
       UnusedIncludes(Options.get("UnusedIncludes", true)),
       MissingIncludes(Options.get("MissingIncludes", true)) {
+  for (const StringRef Pattern :
+       utils::options::parseStringList(Options.get("FragmentHeaders", "")))
+    FragmentHeaderPatterns.push_back(Pattern.str());
   for (const auto &Header : IgnoreHeaders) {
     if (!llvm::Regex{Header}.isValid())
       configurationDiag("Invalid ignore headers regex '%0'") << Header;
@@ -68,6 +72,12 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
     if (!Header.ends_with('$'))
       HeaderSuffix += '$';
     IgnoreHeadersRegex.emplace_back(HeaderSuffix);
+  }
+  for (const auto &Pattern : FragmentHeaderPatterns) {
+    llvm::Regex CompiledRegex(Pattern);
+    if (!CompiledRegex.isValid())
+      configurationDiag("Invalid fragment headers regex '%0'") << Pattern;
+    FragmentHeaderRegexes.push_back(std::move(CompiledRegex));
   }
 
   if (UnusedIncludes == false && MissingIncludes == false)
@@ -79,6 +89,14 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
 void IncludeCleanerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreHeaders",
                 utils::options::serializeStringList(IgnoreHeaders));
+  llvm::SmallVector<StringRef> FragmentHeaderRefs;
+  FragmentHeaderRefs.reserve(FragmentHeaderPatterns.size());
+  for (const auto &Pattern : FragmentHeaderPatterns)
+    FragmentHeaderRefs.push_back(Pattern);
+  Options.store(Opts, "FragmentHeaders",
+                utils::options::serializeStringList(FragmentHeaderRefs));
+  Options.store(Opts, "FragmentDependencyCommentFormat",
+                FragmentDependencyCommentFormat);
   Options.store(Opts, "DeduplicateFindings", DeduplicateFindings);
   Options.store(Opts, "UnusedIncludes", UnusedIncludes);
   Options.store(Opts, "MissingIncludes", MissingIncludes);
@@ -121,84 +139,23 @@ bool IncludeCleanerCheck::shouldIgnore(const include_cleaner::Header &H) {
 void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager *SM = Result.SourceManager;
   const FileEntry *MainFile = SM->getFileEntryForID(SM->getMainFileID());
-  llvm::DenseSet<const include_cleaner::Include *> Used;
-  std::vector<MissingIncludeInfo> Missing;
-  SmallVector<Decl *> MainFileDecls;
+  llvm::SmallVector<Decl *> RootDecls;
   for (Decl *D : Result.Nodes.getNodeAs<TranslationUnitDecl>("top")->decls()) {
-    if (!SM->isWrittenInMainFile(SM->getExpansionLoc(D->getLocation())))
-      continue;
     // FIXME: Filter out implicit template specializations.
-    MainFileDecls.push_back(D);
+    RootDecls.push_back(D);
   }
-  llvm::DenseSet<include_cleaner::Symbol> SeenSymbols;
-  OptionalDirectoryEntryRef ResourceDir =
-      PP->getHeaderSearchInfo().getModuleMap().getBuiltinDir();
-  // FIXME: Find a way to have less code duplication between include-cleaner
-  // analysis implementation and the below code.
-  walkUsed(MainFileDecls, RecordedPreprocessor.MacroReferences, &RecordedPI,
-           *PP,
-           [&](const include_cleaner::SymbolReference &Ref,
-               llvm::ArrayRef<include_cleaner::Header> Providers) {
-             // Process each symbol once to reduce noise in the findings.
-             // Tidy checks are used in two different workflows:
-             // - Ones that show all the findings for a given file. For such
-             // workflows there is not much point in showing all the occurences,
-             // as one is enough to indicate the issue.
-             // - Ones that show only the findings on changed pieces. For such
-             // workflows it's useful to show findings on every reference of a
-             // symbol as otherwise tools might give incosistent results
-             // depending on the parts of the file being edited. But it should
-             // still help surface findings for "new violations" (i.e.
-             // dependency did not exist in the code at all before).
-             if (DeduplicateFindings && !SeenSymbols.insert(Ref.Target).second)
-               return;
-             bool Satisfied = false;
-             for (const include_cleaner::Header &H : Providers) {
-               if (H.kind() == include_cleaner::Header::Physical &&
-                   (H.physical() == MainFile ||
-                    H.physical().getDir() == ResourceDir)) {
-                 Satisfied = true;
-                 continue;
-               }
-
-               for (const include_cleaner::Include *I :
-                    RecordedPreprocessor.Includes.match(H)) {
-                 Used.insert(I);
-                 Satisfied = true;
-               }
-             }
-             if (!Satisfied && !Providers.empty() &&
-                 Ref.RT == include_cleaner::RefType::Explicit &&
-                 !shouldIgnore(Providers.front()))
-               Missing.push_back({Ref, Providers.front()});
-           });
-
-  std::vector<const include_cleaner::Include *> Unused;
-  for (const include_cleaner::Include &I :
-       RecordedPreprocessor.Includes.all()) {
-    if (Used.contains(&I) || !I.Resolved || I.Resolved->getDir() == ResourceDir)
-      continue;
-    if (RecordedPI.shouldKeep(*I.Resolved))
-      continue;
-    // Check if main file is the public interface for a private header. If so
-    // we shouldn't diagnose it as unused.
-    if (auto PHeader = RecordedPI.getPublic(*I.Resolved); !PHeader.empty()) {
-      PHeader = PHeader.trim("<>\"");
-      // Since most private -> public mappings happen in a verbatim way, we
-      // check textually here. This might go wrong in presence of symlinks or
-      // header mappings. But that's not different than rest of the places.
-      if (getCurrentMainFile().ends_with(PHeader))
-        continue;
-    }
-    auto StdHeader = tooling::stdlib::Header::named(
-        I.quote(), PP->getLangOpts().CPlusPlus ? tooling::stdlib::Lang::CXX
-                                               : tooling::stdlib::Lang::C);
-    if (StdHeader && shouldIgnore(*StdHeader))
-      continue;
-    if (shouldIgnore(*I.Resolved))
-      continue;
-    Unused.push_back(&I);
+  include_cleaner::AnalysisOptions AnalyzeOptions;
+  AnalyzeOptions.HeaderFilter = [&](const include_cleaner::Header &H) {
+    return shouldIgnore(H);
+  };
+  if (!FragmentHeaderRegexes.empty()) {
+    AnalyzeOptions.FragmentHeaderFilter = [&](llvm::StringRef Path) {
+      return matchesAnyRegex(FragmentHeaderRegexes, Path);
+    };
   }
+  const include_cleaner::AnalysisResults Results =
+      analyze(RootDecls, RecordedPreprocessor.MacroReferences,
+              RecordedPreprocessor.Includes, &RecordedPI, *PP, AnalyzeOptions);
 
   const StringRef Code = SM->getBufferData(SM->getMainFileID());
   auto FileStyle =
@@ -209,7 +166,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     FileStyle = format::getLLVMStyle();
 
   if (UnusedIncludes) {
-    for (const auto *Inc : Unused) {
+    for (const auto *Inc : Results.Unused) {
       diag(Inc->HashLocation, "included header %0 is not used directly")
           << llvm::sys::path::filename(Inc->Spelled,
                                        llvm::sys::path::Style::posix)
@@ -224,9 +181,35 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
                                                  FileStyle->IncludeStyle);
     // Deduplicate insertions when running in bulk fix mode.
     llvm::StringSet<> InsertedHeaders{};
-    for (const auto &Inc : Missing) {
+    llvm::DenseSet<include_cleaner::Symbol> SeenSymbols;
+    auto DiagLocation = [&](const include_cleaner::MissingIncludeRef &Missing) {
+      if (Missing.Origin == include_cleaner::SymbolReferenceOrigin::Fragment &&
+          Missing.FragmentInclude) {
+        // Fragment refs are reported on their direct include site in the main
+        // file to preserve the main-file-only diagnostics contract.
+        return Missing.FragmentInclude->FilenameLocation.isValid()
+                   ? Missing.FragmentInclude->FilenameLocation
+                   : Missing.FragmentInclude->HashLocation;
+      }
+      return SM->getSpellingLoc(Missing.Ref.RefLocation);
+    };
+    for (const auto &Missing : Results.MissingRefs) {
+      // Process each symbol once to reduce noise in the findings.
+      // Tidy checks are used in two different workflows:
+      // - Ones that show all the findings for a given file. For such
+      // workflows there is not much point in showing all the occurences,
+      // as one is enough to indicate the issue.
+      // - Ones that show only the findings on changed pieces. For such
+      // workflows it's useful to show findings on every reference of a
+      // symbol as otherwise tools might give incosistent results
+      // depending on the parts of the file being edited. But it should
+      // still help surface findings for "new violations" (i.e.
+      // dependency did not exist in the code at all before).
+      if (DeduplicateFindings && !SeenSymbols.insert(Missing.Ref.Target).second)
+        continue;
+      assert(!Missing.Providers.empty() && "missing include without provider");
       const std::string Spelling = include_cleaner::spellHeader(
-          {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
+          {Missing.Providers.front(), PP->getHeaderSearchInfo(), MainFile});
       const bool Angled = StringRef{Spelling}.starts_with('<');
       // We might suggest insertion of an existing include in edge cases, e.g.,
       // include is present in a PP-disabled region, or spelling of the header
@@ -236,15 +219,46 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
               HeaderIncludes.insert(StringRef{Spelling}.trim("\"<>"), Angled,
                                     tooling::IncludeDirective::Include)) {
         const DiagnosticBuilder DB =
-            diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
+            diag(DiagLocation(Missing),
                  "no header providing \"%0\" is directly included")
-            << Inc.SymRef.Target.name();
+            << Missing.Ref.Target.name();
         if (areDiagsSelfContained() ||
             InsertedHeaders.insert(Replacement->getReplacementText()).second) {
           DB << FixItHint::CreateInsertion(
               SM->getComposedLoc(SM->getMainFileID(), Replacement->getOffset()),
               Replacement->getReplacementText());
         }
+      }
+    }
+  }
+
+  if (!FragmentDependencyCommentFormat.empty()) {
+    include_cleaner::FixIncludesOptions FixOptions;
+    FixOptions.FragmentDependencyCommentFormat =
+        FragmentDependencyCommentFormat;
+    const include_cleaner::IncludeFixes Fixes = computeIncludeFixes(
+        Results, getCurrentMainFile(), Code, *FileStyle, FixOptions);
+    for (const auto &Comment : Fixes.FragmentComments) {
+      if (Comment.Status ==
+          include_cleaner::FragmentDependencyCommentStatus::AlreadyPresent) {
+        continue;
+      }
+      std::string FragmentList;
+      for (const auto *Fragment : Comment.Fragments) {
+        if (!FragmentList.empty())
+          FragmentList += ", ";
+        FragmentList += Fragment->quote();
+      }
+      const DiagnosticBuilder DB =
+          diag(Comment.Preserved->HashLocation,
+               "included header %0 is used only by fragment header(s) %1")
+          << llvm::sys::path::filename(Comment.Preserved->Spelled,
+                                       llvm::sys::path::Style::posix)
+          << FragmentList;
+      if (const auto Replacement = Comment.Replacement) {
+        DB << FixItHint::CreateInsertion(
+            SM->getComposedLoc(SM->getMainFileID(), Replacement->getOffset()),
+            Replacement->getReplacementText());
       }
     }
   }

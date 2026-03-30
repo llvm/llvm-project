@@ -76,6 +76,7 @@ public:
 
     Include I;
     I.HashLocation = Hash;
+    I.FilenameLocation = FilenameRange.getBegin();
     I.Resolved = File;
     I.Line = SM.getSpellingLineNumber(Hash);
     I.Spelled = SpelledFilename;

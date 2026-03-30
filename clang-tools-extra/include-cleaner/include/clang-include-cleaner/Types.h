@@ -155,13 +155,14 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Header &);
 
 /// A single #include directive written in the main file.
 struct Include {
-  llvm::StringRef Spelled;             // e.g. vector
-  OptionalFileEntryRef Resolved;       // e.g. /path/to/c++/v1/vector
-                                       // nullopt if the header was not found
-  SourceLocation HashLocation;         // of hash in #include <vector>
-  unsigned Line = 0;                   // 1-based line number for #include
-  bool Angled = false;                 // True if spelled with <angle> quotes.
-  std::string quote() const;           // e.g. <vector>
+  llvm::StringRef Spelled;         // e.g. vector
+  OptionalFileEntryRef Resolved;   // e.g. /path/to/c++/v1/vector
+                                   // nullopt if the header was not found
+  SourceLocation HashLocation;     // of hash in #include <vector>
+  SourceLocation FilenameLocation; // of the filename token in #include
+  unsigned Line = 0;               // 1-based line number for #include
+  bool Angled = false;             // True if spelled with <angle> quotes.
+  std::string quote() const;       // e.g. <vector>
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Include &);
 
