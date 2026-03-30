@@ -239,6 +239,7 @@ def ArgKind {
   int AnyFloat   = 2;
   int AnyVector  = 3;
   int AnyPointer = 4;
+  int AnyOf      = 5;
 
   int MatchType  = 7;
 }
@@ -446,6 +447,22 @@ class LLVMQualPointerType<int addrspace>
 
 class LLVMAnyPointerType : LLVMAnyType<pAny> {
   assert isAny, "pAny should have isOverloaded";
+}
+
+// AnyTypeOf: Constrain overloaded type to specific set of allowed types.
+// Encoding follows the pattern: [IIT_ARG, EncAnyType<ArgKind.AnyOf>, count, type_sigs...].
+class AnyTypeOf<list<LLVMType> allowed_types> : LLVMAnyType<Any> {
+  list<LLVMType> AllowedTypes = allowed_types;
+  
+  // Limit to 255 allowed types since it is encoded as a single byte.
+  assert !le(!size(allowed_types), 255),
+         "AnyTypeOf cannot exceed 255 allowed types";
+  
+  let Sig = !listconcat(
+    [IIT_ARG.Number, EncAnyType<ArgKind.AnyOf>.ret, !size(allowed_types)],
+    !foldl([]<int>, allowed_types, accum, ty,
+      !listconcat(accum, ty.Sig))
+  );
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
