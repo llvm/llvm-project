@@ -5,11 +5,13 @@
 # LLVM libc project.
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
     "libc_function",
     "libc_generated_header",
+    "libc_header_info",
     "libc_header_library",
     "libc_math_function",
     "libc_support_library",
@@ -83,6 +85,22 @@ config_setting(
     flag_values = {":mpc": "system"},
 )
 
+# A flag to enable modular format for printf.
+# Usage: `--@llvm-project//libc:modular_format=<disable|enable>`.
+string_flag(
+    name = "modular_format",
+    build_setting_default = "disable",
+    values = [
+        "disable",
+        "enable",
+    ],
+)
+
+config_setting(
+    name = "modular_format_enable",
+    flag_values = {":modular_format": "enable"},
+)
+
 ########################### Header Generation ##################################
 
 py_binary(
@@ -93,23 +111,205 @@ py_binary(
     deps = ["@pyyaml//:yaml"],
 )
 
+LLVM_LIBC_HEADERS = [
+    libc_header_info(
+        "arpa/inet",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "assert",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "complex",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "elf",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "errno",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "fcntl",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "inttypes",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "link",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "math",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "netinet/in",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "poll",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sched",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "signal",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdbit",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdfix",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdio",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sysexits",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sys/prctl",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sys/syscall",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "termios",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "unistd",
+        has_def_template = True,
+    ),
+    libc_header_info("ctype"),
+    libc_header_info("dirent"),
+    libc_header_info("dlfcn"),
+    libc_header_info("endian"),
+    libc_header_info("features"),
+    libc_header_info("fenv"),
+    libc_header_info("float"),
+    libc_header_info("limits"),
+    libc_header_info("locale"),
+    libc_header_info("nl_types"),
+    libc_header_info("pthread"),
+    libc_header_info("search"),
+    libc_header_info("setjmp"),
+    libc_header_info("spawn"),
+    libc_header_info("stdckdint"),
+    libc_header_info("stdint"),
+    libc_header_info("string"),
+    libc_header_info("strings"),
+    libc_header_info("sys/auxv"),
+    libc_header_info("sys/epoll"),
+    libc_header_info("sys/ioctl"),
+    libc_header_info("sys/ipc"),
+    libc_header_info("sys/mman"),
+    libc_header_info("sys/random"),
+    libc_header_info("sys/resource"),
+    libc_header_info("sys/select"),
+    libc_header_info("sys/socket"),
+    libc_header_info("sys/stat"),
+    libc_header_info("sys/statvfs"),
+    libc_header_info("sys/time"),
+    libc_header_info("sys/types"),
+    libc_header_info("sys/utsname"),
+    libc_header_info("sys/wait"),
+    libc_header_info("threads"),
+    libc_header_info("time"),
+    libc_header_info("uchar"),
+    libc_header_info("wchar"),
+    libc_header_info("wctype"),
+    libc_header_info(
+        "stdlib",
+        has_def_template = True,
+        other_srcs = ["include/stdlib-malloc.yaml"],
+    ),
+    libc_header_info(
+        "malloc",
+        other_srcs = ["include/stdlib-malloc.yaml"],
+    ),
+]
+
+[
+    libc_generated_header(
+        name = info.target_name,
+        hdr = info.staging_path,
+        other_srcs = info.other_srcs,
+        yaml_template = info.yaml_template,
+    )
+    for info in LLVM_LIBC_HEADERS
+]
+
+# needed for startup and VDSO. Doesn't get placed in /include so is handled separately.
 libc_generated_header(
-    name = "include_stdbit_h",
-    hdr = "staging/include/stdbit.h",
-    other_srcs = ["include/stdbit.h.def"],
-    yaml_template = "include/stdbit.yaml",
+    name = "hdr_elf_proxy_h",
+    hdr = "staging/hdr/elf_proxy.h",
+    proxy = True,
+    yaml_template = "include/elf.yaml",
 )
 
-# Library containing all headers that can be transitively included by generated llvm-libc
-# public headers (or by the unit tests).
+# Static headers that need to be in staging/include
+STATIC_HEADERS = glob(
+    ["include/llvm-libc-types/**/*.h"],
+) + glob(
+    ["include/llvm-libc-macros/**/*.h"],
+    exclude = [
+        "include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+        "include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h",
+    ],
+) + ["include/__llvm-libc-common.h"]
+
+genrule(
+    name = "copy_llvm_libc_static_headers",
+    srcs = STATIC_HEADERS,
+    outs = ["staging/" + f for f in STATIC_HEADERS],
+    cmd = """srcs=($(SRCS))\n outs=($(OUTS))\n for i in "$${!srcs[@]}"; do cp "$${srcs[$$i]}" "$${outs[$$i]}"; done""",
+)
+
+genrule(
+    name = "copy_modular_format_header",
+    srcs = select({
+        ":modular_format_enable": ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"],
+        "//conditions:default": ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h"],
+    }),
+    outs = ["staging/include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"],
+    cmd = "cp $< $@",
+)
+
+STATIC_AND_CONDITIONAL_HEADERS = STATIC_HEADERS + ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"]
+
+cc_library(
+    name = "public_headers",
+    hdrs = [header.target_name for header in LLVM_LIBC_HEADERS],
+    includes = ["staging/include"],
+    textual_hdrs = ["staging/" + f for f in STATIC_AND_CONDITIONAL_HEADERS],
+    deps = [
+        ":copy_llvm_libc_static_headers",
+        ":copy_modular_format_header",
+    ],
+)
+
+# Textual versions of the static headers. These are taken from the source tree
+# and are separate from the generated headers above. They are used for
+# testing purposes.
 libc_support_library(
     name = "public_headers_deps",
-    textual_hdrs = [
-        "include/__llvm-libc-common.h",
-    ] + glob([
-        "include/llvm-libc-types/**/*.h",
-        "include/llvm-libc-macros/**/*.h",
-    ]),
+    textual_hdrs = STATIC_AND_CONDITIONAL_HEADERS,
 )
 
 ################################## Base Config #################################
@@ -2707,6 +2907,7 @@ libc_support_library(
     name = "__support_math_acoshf",
     hdrs = ["src/__support/math/acoshf.h"],
     deps = [
+        ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
@@ -2985,6 +3186,25 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_math_acoshf_utils",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_asinpi",
+    hdrs = ["src/__support/math/asinpi.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_double_double",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_asin_utils",
     ],
 )
 
@@ -3825,6 +4045,21 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_common_constants",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_erfcf16",
+    hdrs = ["src/__support/math/erfcf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -4960,6 +5195,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_acosh_float_constants",
+        ":__support_math_acoshf_utils",
         ":__support_math_common_constants",
     ],
 )
@@ -6350,6 +6586,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "asinpi",
+    additional_deps = [
+        ":__support_math_asinpi",
+    ],
+)
+
+libc_math_function(
     name = "asinpif",
     additional_deps = [
         ":__support_math_asinpif",
@@ -6764,6 +7007,13 @@ libc_math_function(
     name = "erff16",
     additional_deps = [
         ":__support_math_erff16",
+    ],
+)
+
+libc_math_function(
+    name = "erfcf16",
+    additional_deps = [
+        ":__support_math_erfcf16",
     ],
 )
 

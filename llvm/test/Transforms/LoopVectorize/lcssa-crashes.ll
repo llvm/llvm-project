@@ -200,7 +200,6 @@ define i32 @exit_phi_sunk_def(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    store i32 1, ptr [[DST:%.*]], align 4
@@ -223,6 +222,7 @@ define i32 @exit_phi_sunk_def(ptr noalias %src, ptr noalias %dst) {
 ; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
 ; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[SEL]], i32 0
 ; CHECK-NEXT:    br label [[EXIT:%.*]]

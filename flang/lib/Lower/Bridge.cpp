@@ -4503,10 +4503,6 @@ private:
     bool hasLocalScope = false;
     llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
 
-    const auto selectorIsVolatile = [&selector]() {
-      return fir::isa_volatile_type(fir::getBase(selector).getType());
-    };
-
     const auto &typeCaseList =
         std::get<std::list<Fortran::parser::SelectTypeConstruct::TypeCase>>(
             selectTypeConstruct.t);
@@ -4634,10 +4630,8 @@ private:
         };
 
         mlir::Type baseTy = fir::getBase(selector).getType();
-        bool isPointer = fir::isPointerType(baseTy);
-        bool isAllocatable = fir::isAllocatableType(baseTy);
-        bool isArray =
-            mlir::isa<fir::SequenceType>(fir::dyn_cast_ptrOrBoxEleTy(baseTy));
+        auto selectorBoxType = llvm::cast<fir::BaseBoxType>(baseTy);
+        const bool isArray = selectorBoxType.isArray();
         const fir::BoxValue *selectorBox = selector.getBoxOf<fir::BoxValue>();
         if (std::holds_alternative<Fortran::parser::Default>(guard.u)) {
           // CLASS DEFAULT
@@ -4647,72 +4641,55 @@ private:
           // TYPE IS
           fir::ExactTypeAttr attr =
               mlir::dyn_cast<fir::ExactTypeAttr>(typeGuardAttr);
-          mlir::Value exactValue;
-          mlir::Type addrTy = attr.getType();
-          if (isArray) {
-            auto seqTy = mlir::dyn_cast<fir::SequenceType>(
-                fir::dyn_cast_ptrOrBoxEleTy(baseTy));
-            addrTy = fir::SequenceType::get(seqTy.getShape(), attr.getType());
-          }
-          if (isPointer)
-            addrTy = fir::PointerType::get(addrTy);
-          if (isAllocatable)
-            addrTy = fir::HeapType::get(addrTy);
+          fir::BaseBoxType newBoxType =
+              selectorBoxType.getBoxTypeWithNewElementType(
+                  attr.getType(), /*polymorphic=*/false);
+          mlir::Type addrTy =
+              newBoxType.getBaseAddressType(/*dropHeapOrPtr=*/true);
+
+          mlir::Value rawPointer = fir::BoxAddrOp::create(
+              *builder, loc, addrTy, fir::getBase(selector));
           if (std::holds_alternative<Fortran::parser::IntrinsicTypeSpec>(
                   typeSpec->u)) {
-            mlir::Type refTy =
-                fir::ReferenceType::get(addrTy, selectorIsVolatile());
-            if (isPointer || isAllocatable)
-              refTy = addrTy;
-            exactValue = fir::BoxAddrOp::create(*builder, loc, refTy,
-                                                fir::getBase(selector));
             const Fortran::semantics::IntrinsicTypeSpec *intrinsic =
                 typeSpec->declTypeSpec->AsIntrinsic();
             if (isArray) {
-              mlir::Value exact = fir::ConvertOp::create(
-                  *builder, loc,
-                  fir::BoxType::get(addrTy, selectorIsVolatile()),
-                  fir::getBase(selector));
-              addAssocEntitySymbol(selectorBox->clone(exact));
+              mlir::Value boxCast = fir::ConvertOp::create(
+                  *builder, loc, newBoxType, fir::getBase(selector));
+              addAssocEntitySymbol(selectorBox->clone(boxCast));
             } else if (intrinsic->category() ==
                        Fortran::common::TypeCategory::Character) {
               auto charTy = mlir::dyn_cast<fir::CharacterType>(attr.getType());
               mlir::Value charLen =
                   fir::factory::CharacterExprHelper(*builder, loc)
                       .readLengthFromBox(fir::getBase(selector), charTy);
-              addAssocEntitySymbol(fir::CharBoxValue(exactValue, charLen));
+              addAssocEntitySymbol(fir::CharBoxValue(rawPointer, charLen));
             } else {
-              addAssocEntitySymbol(exactValue);
+              addAssocEntitySymbol(rawPointer);
             }
           } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                          typeSpec->u)) {
-            exactValue = fir::ConvertOp::create(
-                *builder, loc, fir::BoxType::get(addrTy, selectorIsVolatile()),
-                fir::getBase(selector));
-            addAssocEntitySymbol(selectorBox->clone(exactValue));
+            if (isArray) {
+              mlir::Value boxCast = fir::ConvertOp::create(
+                  *builder, loc, newBoxType, fir::getBase(selector));
+              addAssocEntitySymbol(selectorBox->clone(boxCast));
+            } else {
+              addAssocEntitySymbol(rawPointer);
+            }
           }
         } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                        guard.u)) {
           // CLASS IS
           fir::SubclassAttr attr =
               mlir::dyn_cast<fir::SubclassAttr>(typeGuardAttr);
-          mlir::Type addrTy = attr.getType();
-          if (isArray) {
-            auto seqTy = mlir::dyn_cast<fir::SequenceType>(
-                fir::dyn_cast_ptrOrBoxEleTy(baseTy));
-            addrTy = fir::SequenceType::get(seqTy.getShape(), attr.getType());
-          }
-          if (isPointer)
-            addrTy = fir::PointerType::get(addrTy);
-          if (isAllocatable)
-            addrTy = fir::HeapType::get(addrTy);
-          mlir::Type classTy =
-              fir::ClassType::get(addrTy, selectorIsVolatile());
-          if (classTy == baseTy) {
+          fir::BaseBoxType newClassType =
+              selectorBoxType.getBoxTypeWithNewElementType(
+                  attr.getType(), /*polymorphic=*/true);
+          if (newClassType == baseTy) {
             addAssocEntitySymbol(selector);
           } else {
             mlir::Value derived = fir::ConvertOp::create(
-                *builder, loc, classTy, fir::getBase(selector));
+                *builder, loc, newClassType, fir::getBase(selector));
             addAssocEntitySymbol(selectorBox->clone(derived));
           }
         }
