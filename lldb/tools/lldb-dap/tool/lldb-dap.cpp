@@ -369,7 +369,7 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   // Start the process in a suspended state, while we attach the debugger.
   BOOL result = CreateProcessW(
-      /*lpApplicationName=*/NULL, /*lpCommandLine=*/&(*wcommand_line_or_err)[0],
+      /*lpApplicationName=*/NULL, /*lpCommandLine=*/wcommand_line_or_err->data(),
       /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
       /*bInheritHandles=*/!inherited_handles.empty(),
       /*dwCreationFlags=*/CREATE_SUSPENDED, /*lpEnvironment=*/NULL,
