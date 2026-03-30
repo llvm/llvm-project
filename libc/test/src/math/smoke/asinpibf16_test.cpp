@@ -13,7 +13,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-class LlvmLibcAsinBf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+class LlvmLibcAsinpiBf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   DECLARE_SPECIAL_CONSTANTS(bfloat16)
 public:
   void test_special_numbers() {
@@ -37,4 +37,4 @@ public:
     EXPECT_MATH_ERRNO(EDOM);
   }
 };
-TEST_F(LlvmLibcAsinBf16Test, SpecialNumbers) { test_special_numbers(); }
+TEST_F(LlvmLibcAsinpiBf16Test, SpecialNumbers) { test_special_numbers(); }
