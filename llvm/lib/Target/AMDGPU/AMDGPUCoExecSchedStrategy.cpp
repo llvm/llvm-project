@@ -106,10 +106,15 @@ SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
 }
 
 void HardwareUnitInfo::insert(SUnit *SU, unsigned BlockingCycles) {
-  [[maybe_unused]] bool Inserted = AllSUs.insert(SU);
+#ifndef NDEBUG
+  bool Inserted = AllSUs.insert(SU);
+  assert(Inserted);
+#else
+  AllSUs.insert(SU);
+#endif
+
   TotalCycles += BlockingCycles;
 
-  assert(Inserted);
   if (PrioritySUs.empty()) {
     PrioritySUs.insert(SU);
     return;
@@ -448,7 +453,9 @@ SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
 
   bool PickedPending = false;
   SUnit *SU = nullptr;
-  [[maybe_unused]] SchedCandidate *PickedCand = nullptr;
+#ifndef NDEBUG
+  SchedCandidate *PickedCand = nullptr;
+#endif
   do {
     PickedPending = false;
     SU = pickOnlyChoice(Top);
@@ -459,7 +466,9 @@ SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
                         PickedPending, /*IsBottomUp=*/false);
       assert(TopCand.Reason != NoCand && "failed to find a candidate");
       SU = TopCand.SU;
+#ifndef NDEBUG
       PickedCand = &TopCand;
+#endif
     }
     IsTopNode = true;
   } while (SU->isScheduled);
