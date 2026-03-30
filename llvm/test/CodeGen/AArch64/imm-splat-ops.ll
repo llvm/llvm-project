@@ -20,6 +20,60 @@ entry:
   ret <4 x i32> %and
 }
 
+define <4 x i32> @and_low_8(<4 x i32> %a) {
+; CHECK-NEON-LABEL: and_low_8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2d, #0x0000ff000000ff
+; CHECK-NEON-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: and_low_8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %and = and <4 x i32> %a, splat (i32 255)
+  ret <4 x i32> %and
+}
+
+define <4 x i32> @and_low_16(<4 x i32> %a) {
+; CHECK-NEON-LABEL: and_low_16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEON-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: and_low_16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %and = and <4 x i32> %a, splat (i32 65535)
+  ret <4 x i32> %and
+}
+
+define <2 x i64> @and_low_32(<2 x i64> %a) {
+; CHECK-NEON-LABEL: and_low_32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-NEON-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: and_low_32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %and = and <2 x i64> %a, splat (i64 4294967295)
+  ret <2 x i64> %and
+}
+
 define <4 x i32> @xor(<4 x i32> %a) {
 ; CHECK-NEON-LABEL: xor:
 ; CHECK-NEON:       // %bb.0: // %entry

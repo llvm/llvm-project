@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
 // Tests multiple arrays with different variable strides in single update
 // clause.
 

@@ -98,6 +98,8 @@ public:
   bool operator==(const EntityPointerLevelSet &Other) const {
     return UnsafeBuffers == Other;
   }
+
+  bool empty() const { return UnsafeBuffers.empty(); }
 };
 } // namespace clang::ssaf
 

@@ -899,7 +899,7 @@ const StackSafetyInfo::InfoTy &StackSafetyInfo::getInfo() const {
 }
 
 void StackSafetyInfo::print(raw_ostream &O) const {
-  getInfo().Info.print(O, F->getName(), dyn_cast<Function>(F));
+  getInfo().Info.print(O, F->getName(), F);
   O << "\n";
 }
 
