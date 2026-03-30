@@ -6192,6 +6192,10 @@ LogicalResult GatherOp::verify() {
     return emitOpError("expected result dim to match mask dim");
   if (resVType != getPassThruVectorType())
     return emitOpError("expected pass_thru of same type as result type");
+  if (getAlignmentAttr() && !isa<MemRefType>(baseType)) {
+    return emitOpError(
+        "alignment is only supported for memref bases, not tensor bases");
+  }
   return success();
 }
 
@@ -6300,6 +6304,10 @@ LogicalResult ScatterOp::verify() {
     return emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore dim to match mask dim");
+  if (getAlignmentAttr() && !isa<MemRefType>(baseType)) {
+    return emitOpError(
+        "alignment is only supported for memref bases, not tensor bases");
+  }
   return success();
 }
 namespace {
