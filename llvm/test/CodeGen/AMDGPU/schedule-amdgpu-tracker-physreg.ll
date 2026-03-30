@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0  < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -amdgpu-use-amdgpu-trackers=1  < %s | FileCheck --check-prefix=GCN-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -debug-only=machine-scheduler < %s 2>&1 | FileCheck --check-prefix=SCHED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler < %s 2>&1 | FileCheck --check-prefix=SCHED-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -debug-only=machine-scheduler < %s 2> %t | FileCheck --check-prefix=GCN %s
+; RUN: FileCheck --check-prefix=SCHED %s < %t
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler < %s 2> %t | FileCheck --check-prefix=GCN-GCNTRACKERS %s
+; RUN: FileCheck --check-prefix=SCHED-GCNTRACKERS %s < %t
 ; REQUIRES: asserts
 ; CHECK-LABEL: {{^}}spill:
 ; GCN:    NumSgprs: 104
