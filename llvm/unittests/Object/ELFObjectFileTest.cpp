@@ -555,7 +555,8 @@ Sections:
   {
     SCOPED_TRACE("zero bb ranges");
     DoCheck(ZeroBBRangesYamlString,
-            "invalid zero number of BB ranges at offset 3");
+            "invalid zero number of BB ranges at offset 3 in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   SmallString<128> CommonVersionedYamlString(CommonYamlString);

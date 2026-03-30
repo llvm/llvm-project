@@ -14,7 +14,6 @@
 #ifndef LLVM_OBJECT_BBADDRMAP_H
 #define LLVM_OBJECT_BBADDRMAP_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -253,19 +252,39 @@ struct PGOAnalysisMap {
   }
 };
 
+/// Extracts addresses from a data stream.
+/// The base implementation reads the address directly.
+/// Subclasses can override to handle format-specific details such as relocation
+/// resolution.
+class AddressExtractor {
+  DataExtractor Data;
+
+public:
+  AddressExtractor(DataExtractor Data) : Data(std::move(Data)) {}
+  virtual ~AddressExtractor() = default;
+
+  DataExtractor &getDataExtractor() { return Data; }
+
+  /// Returns a description of the underlying section.
+  virtual std::string getSectionDescription() const { return ""; }
+
+  /// Extract and resolve an address at the current \p Cur position.
+  virtual Expected<uint64_t> extractAddress(DataExtractor::Cursor &Cur) {
+    uint64_t Address = Data.getAddress(Cur);
+    if (!Cur)
+      return Cur.takeError();
+    return Address;
+  }
+};
+
 /// Decodes one BB address map section payload.
 ///
-/// \p Data a DataExtractor wrapping the raw section payload.
-/// \p ExtractAddress callback that reads and resolves an address from \p Data
-///   at the current cursor position. Handles format-specific details such as
-///   relocation resolution.
+/// \p Extractor provides address extraction and the underlying DataExtractor.
 /// \p PGOAnalyses if non-null, receives the decoded PGO analysis data. On
 ///   error, \p PGOAnalyses may be partially populated.
-Expected<std::vector<BBAddrMap>> decodeBBAddrMapPayload(
-    DataExtractor &Data,
-    function_ref<Expected<uint64_t>(DataExtractor &, DataExtractor::Cursor &)>
-        ExtractAddress,
-    std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
+Expected<std::vector<BBAddrMap>>
+decodeBBAddrMapPayload(AddressExtractor &Extractor,
+                       std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
 
 } // end namespace object.
 } // end namespace llvm.

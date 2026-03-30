@@ -43,11 +43,10 @@ static IntTy readULEB128As(DataExtractor &Data, DataExtractor::Cursor &Cur,
 }
 } // end anonymous namespace
 
-Expected<std::vector<BBAddrMap>> llvm::object::decodeBBAddrMapPayload(
-    DataExtractor &Data,
-    function_ref<Expected<uint64_t>(DataExtractor &, DataExtractor::Cursor &)>
-        ExtractAddress,
-    std::vector<PGOAnalysisMap> *PGOAnalyses) {
+Expected<std::vector<BBAddrMap>>
+llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
+                                     std::vector<PGOAnalysisMap> *PGOAnalyses) {
+  DataExtractor &Data = Extractor.getDataExtractor();
   std::vector<BBAddrMap> FunctionEntries;
 
   DataExtractor::Cursor Cur(0);
@@ -94,11 +93,14 @@ Expected<std::vector<BBAddrMap>> llvm::object::decodeBBAddrMapPayload(
       NumBBRanges = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       if (!Cur || ULEBSizeErr)
         break;
-      if (!NumBBRanges)
+      if (!NumBBRanges) {
+        std::string SecDesc = Extractor.getSectionDescription();
         return createError("invalid zero number of BB ranges at offset " +
-                           Twine::utohexstr(Cur.tell()));
+                           Twine::utohexstr(Cur.tell()) +
+                           (SecDesc.empty() ? "" : " in " + SecDesc));
+      }
     } else {
-      auto AddressOrErr = ExtractAddress(Data, Cur);
+      auto AddressOrErr = Extractor.extractAddress(Cur);
       if (!AddressOrErr)
         return AddressOrErr.takeError();
       RangeBaseAddress = *AddressOrErr;
@@ -110,7 +112,7 @@ Expected<std::vector<BBAddrMap>> llvm::object::decodeBBAddrMapPayload(
          ++BBRangeIndex) {
       uint32_t PrevBBEndOffset = 0;
       if (FeatEnable.MultiBBRange) {
-        auto AddressOrErr = ExtractAddress(Data, Cur);
+        auto AddressOrErr = Extractor.extractAddress(Cur);
         if (!AddressOrErr)
           return AddressOrErr.takeError();
         RangeBaseAddress = *AddressOrErr;
