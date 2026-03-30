@@ -19,16 +19,13 @@ EventImpl::~EventImpl() {
 }
 
 backend EventImpl::getBackend() const noexcept {
-  // TODO: to handle default cosntructed
-  //  The event is constructed as though it were created from a
-  //  default-constructed queue. Therefore, its backend is the same as the
-  //  backend of the device selected by default_selector_v.
+  // TODO: to handle default constructed.
   return MPlatform.getBackend();
 }
 
 void EventImpl::wait() {
-  // MOffloadEvent == nullptr when event is default constructed. Default
-  // constructed event is immediately  ready.
+  // MOffloadEvent == nullptr when the event is default constructed. Default
+  // constructed event is immediately ready.
   if (!MOffloadEvent)
     return;
 

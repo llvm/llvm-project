@@ -33,6 +33,6 @@ device queue::get_device() const {
 
 bool queue::is_in_order() const { return impl->isInOrder(); }
 
-void queue::wait() { return impl->wait(); }
+void queue::wait() { impl->wait(); }
 
 _LIBSYCL_END_NAMESPACE_SYCL

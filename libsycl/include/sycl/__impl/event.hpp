@@ -53,7 +53,7 @@ public:
     return !(lhs == rhs);
   }
 
-  /// \return the backend associated with this platform.
+  /// \return the backend associated with this event.
   backend get_backend() const noexcept;
 
   /// Blocks until all commands associated with this event and any dependent

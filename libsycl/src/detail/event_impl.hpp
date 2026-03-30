@@ -9,8 +9,8 @@
 #ifndef _LIBSYCL_EVENT_IMPL
 #define _LIBSYCL_EVENT_IMPL
 
+#include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/detail/config.hpp>
-#include <sycl/__impl/queue.hpp>
 
 #include <OffloadAPI.h>
 
@@ -28,32 +28,32 @@ class EventImpl {
   };
 
 public:
-  /// Constructs a SYCL event  instance using the provided
+  /// Constructs a SYCL event instance using the provided
   /// offload event instance.
   ///
-  /// \param Event is a raw offload library handle representing event.
-  /// \param Platform is a platform this event belongs to.
+  /// \param Event is the raw offload library handle representing the event.
+  /// \param Platform is the platform this event belongs to.
   EventImpl(ol_event_handle_t Event, PlatformImpl &Platform, PrivateTag)
       : MOffloadEvent(Event), MPlatform(Platform) {}
 
   static std::shared_ptr<EventImpl>
-  createEventWithHandle(ol_event_handle_t Event, PlatformImpl &Queue) {
-    return std::make_shared<EventImpl>(Event, Queue, PrivateTag{});
+  createEventWithHandle(ol_event_handle_t Event, PlatformImpl &Platform) {
+    return std::make_shared<EventImpl>(Event, Platform, PrivateTag{});
   }
 
-  /// Releases handle to the corresponding liboffload event.
+  /// Releases the handle to the corresponding liboffload event.
   ~EventImpl();
 
   /// \return the sycl::backend associated with this event.
   backend getBackend() const noexcept;
 
-  /// Waits for completion of the corresponding kernel and its dependencies.
+  /// Waits for completion of the corresponding command and its dependencies.
   void wait();
 
-  /// \return liboffload handle that this SYCL event represents.
+  /// \return the liboffload handle that this SYCL event represents.
   ol_event_handle_t getHandle() { return MOffloadEvent; }
 
-  /// \return a platform implementation object this event belongs to.
+  /// \return the platform implementation object this event belongs to.
   const PlatformImpl &getPlatformImpl() const { return MPlatform; }
 
 private:

@@ -20,6 +20,6 @@ void event::wait(const std::vector<event> &EventList) {
   }
 }
 
-void event::wait() { return impl->wait(); }
+void event::wait() { impl->wait(); }
 
 _LIBSYCL_END_NAMESPACE_SYCL

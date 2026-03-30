@@ -30,7 +30,6 @@ class context;
 
 namespace detail {
 class QueueImpl;
-
 } // namespace detail
 
 // SYCL 2020 4.6.5. Queue class.
