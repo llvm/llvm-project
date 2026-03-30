@@ -927,3 +927,101 @@ func.func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: me
 // CHECK:      scf.reduce.return %[[RES]] : i64
 // CHECK:    }
 // CHECK:  }
+
+/////////////////////////////////////////////////////////////////////
+
+// CHECK-LABEL:   func.func @parallel_maxsi_reduce(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<100xi32>) -> i32 {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant -2147483648 : i32
+// CHECK:           %[[PARALLEL_0:.*]] = scf.parallel (%[[VAL_0:.*]]) = (%[[CONSTANT_0]]) to (%[[CONSTANT_1]]) step (%[[CONSTANT_2]]) init (%[[CONSTANT_3]]) -> i32 {
+// CHECK:             %[[LOAD_0:.*]] = memref.load %[[ARG0]]{{\[}}%[[VAL_0]]] : memref<100xi32>
+// CHECK:             scf.reduce(%[[LOAD_0]] : i32) {
+// CHECK:             ^bb0(%[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32):
+// CHECK:               %[[MAXSI_0:.*]] = arith.maxsi %[[VAL_1]], %[[VAL_2]] : i32
+// CHECK:               scf.reduce.return %[[MAXSI_0]] : i32
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return %[[PARALLEL_0]] : i32
+// CHECK:         }
+func.func @parallel_maxsi_reduce(%arg0: memref<100xi32>) -> (i32) {
+  %12 = affine.parallel (%i) = (0) to (100) reduce ("maxs") -> (i32) {
+    %2 = affine.load %arg0[%i] : memref<100xi32>
+    affine.yield %2 : i32
+  }
+  return %12 : i32
+}
+
+// CHECK-LABEL:   func.func @parallel_minsi_reduce(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<100xi32>) -> i32 {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 2147483647 : i32
+// CHECK:           %[[PARALLEL_0:.*]] = scf.parallel (%[[VAL_0:.*]]) = (%[[CONSTANT_0]]) to (%[[CONSTANT_1]]) step (%[[CONSTANT_2]]) init (%[[CONSTANT_3]]) -> i32 {
+// CHECK:             %[[LOAD_0:.*]] = memref.load %[[ARG0]]{{\[}}%[[VAL_0]]] : memref<100xi32>
+// CHECK:             scf.reduce(%[[LOAD_0]] : i32) {
+// CHECK:             ^bb0(%[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32):
+// CHECK:               %[[MINSI_0:.*]] = arith.minsi %[[VAL_1]], %[[VAL_2]] : i32
+// CHECK:               scf.reduce.return %[[MINSI_0]] : i32
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return %[[PARALLEL_0]] : i32
+// CHECK:         }
+func.func @parallel_minsi_reduce(%arg0: memref<100xi32>) -> (i32) {
+  %12 = affine.parallel (%i) = (0) to (100) reduce ("mins") -> (i32) {
+    %2 = affine.load %arg0[%i] : memref<100xi32>
+    affine.yield %2 : i32
+  }
+  return %12 : i32
+}
+
+// CHECK-LABEL:   func.func @parallel_maxui_reduce(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<100xi32>) -> i32 {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : i32
+// CHECK:           %[[PARALLEL_0:.*]] = scf.parallel (%[[VAL_0:.*]]) = (%[[CONSTANT_0]]) to (%[[CONSTANT_1]]) step (%[[CONSTANT_2]]) init (%[[CONSTANT_3]]) -> i32 {
+// CHECK:             %[[LOAD_0:.*]] = memref.load %[[ARG0]]{{\[}}%[[VAL_0]]] : memref<100xi32>
+// CHECK:             scf.reduce(%[[LOAD_0]] : i32) {
+// CHECK:             ^bb0(%[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32):
+// CHECK:               %[[MAXUI_0:.*]] = arith.maxui %[[VAL_1]], %[[VAL_2]] : i32
+// CHECK:               scf.reduce.return %[[MAXUI_0]] : i32
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return %[[PARALLEL_0]] : i32
+// CHECK:         }
+func.func @parallel_maxui_reduce(%arg0: memref<100xi32>) -> (i32) {
+  %12 = affine.parallel (%i) = (0) to (100) reduce ("maxu") -> (i32) {
+    %2 = affine.load %arg0[%i] : memref<100xi32>
+    affine.yield %2 : i32
+  }
+  return %12 : i32
+}
+
+// CHECK-LABEL:   func.func @parallel_minui_reduce(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<100xi32>) -> i32 {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant -1 : i32
+// CHECK:           %[[PARALLEL_0:.*]] = scf.parallel (%[[VAL_0:.*]]) = (%[[CONSTANT_0]]) to (%[[CONSTANT_1]]) step (%[[CONSTANT_2]]) init (%[[CONSTANT_3]]) -> i32 {
+// CHECK:             %[[LOAD_0:.*]] = memref.load %[[ARG0]]{{\[}}%[[VAL_0]]] : memref<100xi32>
+// CHECK:             scf.reduce(%[[LOAD_0]] : i32) {
+// CHECK:             ^bb0(%[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32):
+// CHECK:               %[[MINUI_0:.*]] = arith.minui %[[VAL_1]], %[[VAL_2]] : i32
+// CHECK:               scf.reduce.return %[[MINUI_0]] : i32
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return %[[PARALLEL_0]] : i32
+// CHECK:         }
+func.func @parallel_minui_reduce(%arg0: memref<100xi32>) -> (i32) {
+  %12 = affine.parallel (%i) = (0) to (100) reduce ("minu") -> (i32) {
+    %2 = affine.load %arg0[%i] : memref<100xi32>
+    affine.yield %2 : i32
+  }
+  return %12 : i32
+}

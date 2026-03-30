@@ -4218,19 +4218,19 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
     return isa<FloatType>(resultType);
   case arith::AtomicRMWKind::maxs: {
     auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isSigned();
+    return intType && (intType.isSigned() || intType.isSignless());
   }
   case arith::AtomicRMWKind::mins: {
     auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isSigned();
+    return intType && (intType.isSigned() || intType.isSignless());
   }
   case arith::AtomicRMWKind::maxu: {
     auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isUnsigned();
+    return intType && (intType.isUnsigned() || intType.isSignless());
   }
   case arith::AtomicRMWKind::minu: {
     auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isUnsigned();
+    return intType && (intType.isUnsigned() || intType.isSignless());
   }
   case arith::AtomicRMWKind::ori:
   case arith::AtomicRMWKind::andi:
