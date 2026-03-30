@@ -811,10 +811,16 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
   }
 }
 
+template <typename T>
+using compare_nullptr_t = decltype(std::declval<T &>() == nullptr);
+
+template <typename T>
+using is_nullptr_comparable = llvm::is_detected<compare_nullptr_t, T>;
+
 /// Calls llvm_unreachable if Pointer is null, otherwise returns the
 /// pointer as is.
-template <typename T, typename = std::enable_if_t<std::is_convertible_v<
-                          decltype(std::declval<T>() != nullptr), bool>>>
+template <typename T,
+          typename = std::enable_if_t<is_nullptr_comparable<T>::value>>
 [[nodiscard]] decltype(auto) checkNotNull(
     T &&Pointer,
     const char *Msg = "Expected a non-null pointer but got a null pointer") {
