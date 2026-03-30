@@ -16,11 +16,11 @@
 ; (i128 returned via hidden pointer as first arg; all args on stack)
 ; RUN: %if x86-registered-target      %{ llc < %s -mtriple=i386-linux-gnu                | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-X86 %}
 ; RUN: %if x86-registered-target      %{ llc < %s -mtriple=i686-linux-gnu                | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-X86 %}
-; RUN: %if riscv-registered-target    %{ llc < %s -mtriple=riscv32-linux-gnu             | FileCheck %s --check-prefixes=CHECK,INLINE %}
-; RUN: %if riscv-registered-target    %{ llc < %s -mtriple=riscv32-linux-gnu -mattr=+m   | FileCheck %s --check-prefixes=CHECK,INLINE %}
-; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv6-linux-gnueabihf         | FileCheck %s --check-prefixes=CHECK,INLINE %}
-; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-linux-gnueabi           | FileCheck %s --check-prefixes=CHECK,INLINE %}
-; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-none-eabi               | FileCheck %s --check-prefixes=CHECK,INLINE %}
+; RUN: %if riscv-registered-target    %{ llc < %s -mtriple=riscv32-linux-gnu             | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-RV32 %}
+; RUN: %if riscv-registered-target    %{ llc < %s -mtriple=riscv32-linux-gnu -mattr=+m   | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-RV32 %}
+; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv6-linux-gnueabihf         | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-ARM32 %}
+; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-linux-gnueabi           | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-ARM32 %}
+; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-none-eabi               | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-ARM32 %}
 
 ; Win32: fused ___divmodti4 (extra underscore from Windows cdecl decoration, same sret ABI)
 ; RUN: %if x86-registered-target      %{ llc < %s -mtriple=i686-pc-windows-msvc          | FileCheck %s --check-prefixes=CHECK,WIN32 %}
@@ -47,6 +47,10 @@
 ;             x4, quotient returned in x0:x1.
 ;   SYSV-X86  (x86 Linux): i128 returned via sret hidden pointer at (%esp);
 ;             all args on stack; symbol is __divmodti4.
+;   SYSV-ARM32 (ARM Linux/EABI): i128 returned via sret hidden pointer in r0,
+;             materialized from sp; symbol is __divmodti4.
+;   SYSV-RV32 (RISC-V Linux): i128 returned via sret hidden pointer in a0,
+;             materialized from sp with addi; symbol is __divmodti4.
 ;   Win32 (i686-windows-msvc): same sret stack convention as SYSV-X86;
 ;             symbol has an extra leading underscore (___divmodti4).
 ;   32-bit targets that lack the fused call may lower to:
@@ -55,6 +59,8 @@
 
 define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: sdivrem_i128:
+; SYSV-ARM32:      add     r0, sp,
+; SYSV-RV32:       addi    a0, sp,
 ; SYSV-X64:        movq    %rsp, %r8
 ; SYSV-A64:        mov     x4, sp
 ; SYSV-X86:        movl    %{{.*}}, (%esp)
@@ -93,6 +99,8 @@ define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 
 define void @udivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: udivrem_i128:
+; SYSV-ARM32:      add     r0, sp,
+; SYSV-RV32:       addi    a0, sp,
 ; SYSV-X64:        movq    %rsp, %r8
 ; SYSV-A64:        mov     x4, sp
 ; SYSV-X86:        movl    %{{.*}}, (%esp)

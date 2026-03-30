@@ -1166,7 +1166,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setMaxAtomicSizeInBitsSupported(0);
   }
 
-  setMaxDivRemBitWidthSupported(64);
+  // i128 div/rem can be lowered via __divmodti4 / __udivmodti4 libcalls on
+  // 32-bit ARM targets that provide the compiler-rt entry points.
+  setMaxDivRemBitWidthSupported(128);
 
   setOperationAction(ISD::PREFETCH,         MVT::Other, Custom);
 

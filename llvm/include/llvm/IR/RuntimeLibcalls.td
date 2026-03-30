@@ -2689,6 +2689,8 @@ def ARMSystemLibrary
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
                                                   (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
+           __divmodti4,
+           __udivmodti4,
            DefaultStackProtector,
            DefaultSafeStackGlobals)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
@@ -3240,7 +3242,9 @@ def RISCVSystemLibrary
       (add DefaultRuntimeLibcallImpls,
            exp10f, exp10, exp10l_f128,
            __riscv_flush_icache,
-           LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
+           __divmodti4, __udivmodti4,
+           LibcallImpls<(add __ashlti3, __lshrti3, __ashrti3, __multi3),
+                        isRISCV64>,
            DefaultStackProtector,
            DefaultSafeStackGlobals)>;
 

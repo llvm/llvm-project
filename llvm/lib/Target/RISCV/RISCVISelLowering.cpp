@@ -381,7 +381,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   setOperationAction({ISD::SDIVREM, ISD::UDIVREM}, XLenVT, Expand);
-
   // On RV32, the P extension has a WMUL(U) instruction we can use for
   // (S/U)MUL_LOHI.
   // FIXME: Does P imply Zmmul?
@@ -1937,7 +1936,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.useRVVForFixedLengthVectors())
     setTargetDAGCombine(ISD::BITCAST);
 
-  setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
+  // i128 div/rem can be lowered via __divmodti4 / __udivmodti4 libcalls on
+  // both RV32 and RV64 when the runtime library provides them.
+  setMaxDivRemBitWidthSupported(128);
 
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
