@@ -48,11 +48,11 @@ private:
 
   struct DirectAttrInfo {
     unsigned Offset;
-    MaybeAlign Align;
+    MaybeAlign Alignment;
   };
 
   struct IndirectAttrInfo {
-    Align Align;
+    Align Alignment;
     unsigned AddrSpace;
   };
 
@@ -85,7 +85,7 @@ public:
     ArgInfo AI(Direct);
     AI.CoercionType = T;
     AI.DirectAttr.Offset = Offset;
-    AI.DirectAttr.Align = Align;
+    AI.DirectAttr.Alignment = Align;
     return AI;
   }
 
@@ -96,7 +96,7 @@ public:
     ArgInfo AI(Extend);
     AI.CoercionType = T;
     AI.DirectAttr.Offset = 0;
-    AI.DirectAttr.Align = std::nullopt;
+    AI.DirectAttr.Alignment = std::nullopt;
 
     const IntegerType *IntTy = cast<IntegerType>(T);
     if (IntTy->isSigned())
@@ -112,7 +112,7 @@ public:
   static ArgInfo getIndirect(Align Align, bool ByVal, unsigned AddrSpace = 0,
                              bool Realign = false) {
     ArgInfo AI(Indirect);
-    AI.IndirectAttr.Align = Align;
+    AI.IndirectAttr.Alignment = Align;
     AI.IndirectAttr.AddrSpace = AddrSpace;
     AI.IndirectByVal = ByVal;
     AI.IndirectRealign = Realign;
@@ -148,12 +148,12 @@ public:
 
   MaybeAlign getDirectAlign() const {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
-    return DirectAttr.Align;
+    return DirectAttr.Alignment;
   }
 
   Align getIndirectAlign() const {
     assert(isIndirect() && "Invalid Kind!");
-    return IndirectAttr.Align;
+    return IndirectAttr.Alignment;
   }
 
   unsigned getIndirectAddrSpace() const {
