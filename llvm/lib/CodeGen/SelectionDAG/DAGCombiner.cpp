@@ -16422,8 +16422,9 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
 
   // Bail early when looking through a multi-use freeze, since other users of
   // the freeze can depend on the full load value. But its still safe to change
-  // the extension type.
-  if (FreezeNode && !FreezeNode.hasOneUse() && LN0->getMemoryVT().bitsGT(ExtVT))
+  // the extension type from anyext to zext.
+  if (FreezeNode && !FreezeNode.hasOneUse() &&
+      (LN0->getMemoryVT().bitsGT(ExtVT) || ExtType != ISD::ZEXTLOAD))
     return SDValue();
 
   auto AdjustBigEndianShift = [&](unsigned ShAmt) {
@@ -16487,8 +16488,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   WorklistRemover DeadNodes(*this);
   DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
 
-  // For multi-use freeze, propogate the stronger sign extension. This is safe
-  // because zext is a valid refinement of anyext.
+  // Replace old load value for multi-use freeze so all users benefit.
   if (FreezeNode && !FreezeNode.hasOneUse())
     DAG.ReplaceAllUsesOfValueWith(N0.getValue(0), Load.getValue(0));
 
