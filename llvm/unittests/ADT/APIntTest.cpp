@@ -1197,9 +1197,9 @@ TEST(APIntTest, URemUint64PowerOf2Wide) {
   EXPECT_EQ(4095u, V.urem(4096));
 
   APInt AllOnes = APInt::getAllOnes(128);
-  EXPECT_EQ(static_cast<uint64_t>(63), AllOnes.urem(64));
-  EXPECT_EQ(static_cast<uint64_t>(255), AllOnes.urem(256));
-  EXPECT_EQ(static_cast<uint64_t>(4095), AllOnes.urem(4096));
+  EXPECT_EQ(63u, AllOnes.urem(64));
+  EXPECT_EQ(255u, AllOnes.urem(256));
+  EXPECT_EQ(4095u, AllOnes.urem(4096));
 }
 
 TEST(APIntTest, fromString) {
