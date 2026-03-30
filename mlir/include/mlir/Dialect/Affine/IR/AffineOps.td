@@ -1071,6 +1071,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 
 def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
     [Pure, Elementwise,
+     // Infer linear_index type from the first result type during parsing.
      TypesMatchWith<"linear_index type must match result types",
                     "multi_index", "linear_index", "$_self[0]">
     ]> {
@@ -1178,6 +1179,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
 //===----------------------------------------------------------------------===//
 def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     [Pure, AttrSizedOperandSegments, Elementwise,
+     // Infer multi_index types from result type during parsing.
      TypesMatchWith<"multi_index types must match result type",
                     "linear_index", "multi_index", "$_self",
                     "[](::mlir::Type a, ::mlir::TypeRange b) { "
