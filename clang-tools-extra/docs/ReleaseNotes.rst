@@ -411,11 +411,15 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-implicit-bool-conversion
-  <clang-tidy/checks/readability/implicit-bool-conversion>` check by fixing a
-  false positive where `AllowPointerConditions` and `AllowIntegerConditions`
-  options did not suppress warnings when the condition expression involved
-  temporaries (e.g. passing a string literal to a ``const std::string&``
-  parameter)
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check:
+
+  - Fixed a false positive where `AllowPointerConditions` and
+    `AllowIntegerConditions` options did not suppress warnings when the
+    condition expression involved temporaries (e.g. passing a string literal to
+    a ``const std::string&`` parameter).
+
+  - Warn and provide fix-its when a macro defined in a system header (e.g.
+    ``NULL``) is implicitly converted to ``bool``.
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
