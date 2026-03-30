@@ -360,14 +360,23 @@ void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
             : std::next(
                   VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
   }
-
-  for (auto [Lane, Elm] : VecUtils::enumerateLanes(Bndl)) {
+  unsigned Lane = 0;
+  for (Value *Elm : Bndl) {
     for (User *U : Elm->users()) {
       // Skip users that we just vectorized.
       if (IMaps->isVectorized(U))
         continue;
       auto *LastUnpackV = VecUtils::unpack(Vec, Elm->getType(), Lane, WhereIt);
       Elm->replaceAllUsesWith(LastUnpackV);
+    }
+
+    // Increment Lane.
+    auto *ElmTy = Utils::getExpectedType(Elm);
+    if (auto *VecTy = dyn_cast<FixedVectorType>(ElmTy)) {
+      Lane += VecTy->getNumElements();
+    } else {
+      assert(!isa<VectorType>(ElmTy) && "Expected scalar type!");
+      Lane += 1;
     }
   }
 }
