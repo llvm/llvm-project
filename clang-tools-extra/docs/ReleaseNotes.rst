@@ -418,12 +418,15 @@ Changes in existing checks
     ``[[noreturn]]`` functions.
 
 - Improved :doc:`readability-enum-initial-value
-  <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
-  now uses separate note diagnostics for each uninitialized enumerator, making
-  it easier to see which specific enumerators need explicit initialization.
-  Added :option:`AllowExplicitReferencedInitialValues` option to support the
-  `INT09-C-EX1` exception, allowing enumerators initialized by referencing
-  another enumerator in the same enum (e.g., ``last = first``).
+  <clang-tidy/checks/readability/enum-initial-value>` check:
+
+  - The warning message now uses separate note diagnostics for each
+    uninitialized enumerator, making it easier to see which specific
+    enumerators need explicit initialization.
+
+  - Added :option:`AllowExplicitReferencedInitialValues` option to support
+    the `INT09-C-EX1` exception, allowing enumerators initialized by
+    referencing another enumerator in the same enum (e.g., ``last = first``).
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:

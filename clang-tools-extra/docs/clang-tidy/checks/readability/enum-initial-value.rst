@@ -98,7 +98,7 @@ Options
 
   If set to `true`, enumerators initialized by referencing another enumerator
   in the same enum are allowed, and the remaining enumerators are checked for
-  consistency. This implements the ``INT09-C-EX1`` exception from the CERT C
+  consistency. This implements the `INT09-C-EX1` exception from the CERT C
   Coding Standard.
   Default is `false`.
 
