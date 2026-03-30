@@ -1978,6 +1978,10 @@ def AMDGPU_GlobalPrefetchOp :
     ```
   }];
 
+  let extraClassDeclaration = [{
+    static int32_t getLLVMEncoding(amdgpu::TemporalHint hint, amdgpu::Scope scope, bool isSpeculative);
+  }];
+
   let assemblyFormat = [{
     $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
   }];

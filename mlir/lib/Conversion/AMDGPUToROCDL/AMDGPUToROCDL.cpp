@@ -3961,22 +3961,9 @@ struct GlobalPrefetchOpLowering
     if (chipset < kGfx1250)
       return op->emitOpError("is only supported on gfx1250+");
 
-    const TemporalHint hint = op.getTemporalHint();
     const bool isSpeculative = op.getSpeculative();
-
-    int32_t immArgValue = static_cast<int32_t>(hint);
-
-    // Note that only RT and HT can operate in both speculative and
-    // non-speculative modes. The other variants (NT_RT, RT_NT, NT_HT, etc.)
-    // operate only in the speculative mode and, therefore, do not require
-    // toggling the least significant bit for mode changes
-    // Temporal hint is encoded in lower bits - i.e. [2:0]
-    if (llvm::is_contained({TemporalHint::RT, TemporalHint::HT}, hint))
-      immArgValue = isSpeculative ? immArgValue : immArgValue | 1;
-
-    // Prefetch scope level is encoded in upper bits - i.e., [4:3]
-    immArgValue = static_cast<int32_t>(op.getCacheScope()) << 3 | immArgValue;
-
+    const int32_t immArgValue = GlobalPrefetchOp::getLLVMEncoding(
+        op.getTemporalHint(), op.getCacheScope(), isSpeculative);
     IntegerAttr immArgAttr = rewriter.getI32IntegerAttr(immArgValue);
 
     ValueRange indices = adaptor.getIndices();
