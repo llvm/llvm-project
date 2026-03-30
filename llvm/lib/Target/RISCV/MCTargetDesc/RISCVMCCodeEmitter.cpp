@@ -64,7 +64,7 @@ public:
                       SmallVectorImpl<MCFixup> &Fixups,
                       const MCSubtargetInfo &STI) const;
 
-  void expandAddGPRel(const MCInst &MI, SmallVectorImpl<char> &CB,
+  void expandAddREGRel(const MCInst &MI, SmallVectorImpl<char> &CB,
                       SmallVectorImpl<MCFixup> &Fixups,
                       const MCSubtargetInfo &STI) const;
   void expandLongCondBr(const MCInst &MI, SmallVectorImpl<char> &CB,
@@ -263,37 +263,37 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
-static std::pair<unsigned, uint16_t> getAddOpAndFixups(unsigned AddOp) {
+static unsigned getAddOpAndFixups(unsigned AddOp) {
   switch (AddOp) {
   default:
     llvm_unreachable("Unexpected ADD or SHXADD Opcode on GP-relative!");
-  case RISCV::PseudoAddGPRel:
-    return std::make_pair(RISCV::ADD, ELF::R_RISCV_GPREL_ADD);
-  case RISCV::PseudoAddUWGPRel:
-    return std::make_pair(RISCV::ADD_UW, ELF::R_RISCV_GPREL_ADD);
-  case RISCV::PseudoSh1AddGPRel:
-    return std::make_pair(RISCV::SH1ADD, ELF::R_RISCV_GPREL_SHXADD);
-  case RISCV::PseudoSh2AddGPRel:
-    return std::make_pair(RISCV::SH2ADD, ELF::R_RISCV_GPREL_SHXADD);
-  case RISCV::PseudoSh3AddGPRel:
-    return std::make_pair(RISCV::SH3ADD, ELF::R_RISCV_GPREL_SHXADD);
-  case RISCV::PseudoSh1AddUWGPRel:
-    return std::make_pair(RISCV::SH1ADD_UW, ELF::R_RISCV_GPREL_SHXADD);
-  case RISCV::PseudoSh2AddUWGPRel:
-    return std::make_pair(RISCV::SH2ADD_UW, ELF::R_RISCV_GPREL_SHXADD);
-  case RISCV::PseudoSh3AddUWGPRel:
-    return std::make_pair(RISCV::SH3ADD_UW, ELF::R_RISCV_GPREL_SHXADD);
+  case RISCV::PseudoAddREGRel:
+    return RISCV::ADD;
+  case RISCV::PseudoAddUWREGRel:
+    return RISCV::ADD_UW;
+  case RISCV::PseudoSh1AddREGRel:
+    return RISCV::SH1ADD;
+  case RISCV::PseudoSh2AddREGRel:
+    return RISCV::SH2ADD;
+  case RISCV::PseudoSh3AddREGRel:
+    return RISCV::SH3ADD;
+  case RISCV::PseudoSh1AddUWREGRel:
+    return RISCV::SH1ADD_UW;
+  case RISCV::PseudoSh2AddUWREGRel:
+    return RISCV::SH2ADD_UW;
+  case RISCV::PseudoSh3AddUWREGRel:
+    return RISCV::SH3ADD_UW;
   }
 }
 
-// PseudoAddGPRel/PseudoAddUWGPRel/PseudoSh1AddGPRel/PseudoSh2AddGPRel/PseudoSh3AddGPRel/PseudoSh1AddUWGPRel/PseudoSh2AddUWGPRel/PseudoSh3AddUWGPRel
+// PseudoAddREGRel/PseudoAddUWREGRel/PseudoSh1AddREGRel/PseudoSh2AddREGRel/PseudoSh3AddREGRel/PseudoSh1AddUWREGRel/PseudoSh2AddUWREGRel/PseudoSh3AddUWREGRel
 // to a simple ADD or SHXADD with the correct relocation.
-void RISCVMCCodeEmitter::expandAddGPRel(const MCInst &MI,
+void RISCVMCCodeEmitter::expandAddREGRel(const MCInst &MI,
                                         SmallVectorImpl<char> &CB,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
   MCOperand DestReg = MI.getOperand(0);
-  // If the global array can be accessed by GP, src1 or src2 needs to be
+  // If the global array can be accessed by GP, src2 needs to be
   // replaced with X3 reg in link time.
   MCOperand Src1 = MI.getOperand(1);
   MCOperand Src2 = MI.getOperand(2);
@@ -304,23 +304,22 @@ void RISCVMCCodeEmitter::expandAddGPRel(const MCInst &MI,
 
   const auto *Expr = dyn_cast<MCSpecifierExpr>(SrcSymbol.getExpr());
   assert(Expr &&
-         (Expr->getSpecifier() == ELF::R_RISCV_GPREL_ADD ||
-          Expr->getSpecifier() == ELF::R_RISCV_GPREL_SHXADD) &&
-         "Expected gprel_add or gprel_shxadd relocation on GP-relative symbol");
+         (Expr->getSpecifier() == ELF::R_RISCV_REGREL_ADD) &&
+         "Expected regrel_add relocation on GP-relative symbol");
 
-  std::pair<unsigned, uint16_t> Res = getAddOpAndFixups(MI.getOpcode());
+  unsigned BuildOpcode = getAddOpAndFixups(MI.getOpcode());
 
-  // Emit the correct gprel_add or gprel_shxadd relocation for the symbol.
-  addFixup(Fixups, 0, Expr, Res.second);
+  // Emit the correct regrel_add relocation for the symbol.
+  addFixup(Fixups, 0, Expr, ELF::R_RISCV_REGREL_ADD);
 
-  // Emit fixup_riscv_relax for gprel_add where the relax feature is enabled.
+  // Emit fixup_riscv_relax for regrel_add where the relax feature is enabled.
   if (STI.hasFeature(RISCV::FeatureRelax)) {
     Fixups.back().setLinkerRelaxable();
   }
 
-  // Emit a normal ADD or SHXADD instruction with the given operands.
+  // Emit a normal ADD instruction with the given operands.
   MCInst TmpInst =
-      MCInstBuilder(Res.first).addOperand(DestReg).addOperand(Src1).addOperand(
+      MCInstBuilder(BuildOpcode).addOperand(DestReg).addOperand(Src1).addOperand(
           Src2);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
   support::endian::write(CB, Binary, llvm::endianness::little);
@@ -506,15 +505,15 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
     expandAddTPRel(MI, CB, Fixups, STI);
     MCNumEmitted += 1;
     return;
-  case RISCV::PseudoAddGPRel:
-  case RISCV::PseudoAddUWGPRel:
-  case RISCV::PseudoSh1AddGPRel:
-  case RISCV::PseudoSh2AddGPRel:
-  case RISCV::PseudoSh3AddGPRel:
-  case RISCV::PseudoSh1AddUWGPRel:
-  case RISCV::PseudoSh2AddUWGPRel:
-  case RISCV::PseudoSh3AddUWGPRel:
-    expandAddGPRel(MI, CB, Fixups, STI);
+  case RISCV::PseudoAddREGRel:
+  case RISCV::PseudoAddUWREGRel:
+  case RISCV::PseudoSh1AddREGRel:
+  case RISCV::PseudoSh2AddREGRel:
+  case RISCV::PseudoSh3AddREGRel:
+  case RISCV::PseudoSh1AddUWREGRel:
+  case RISCV::PseudoSh2AddUWREGRel:
+  case RISCV::PseudoSh3AddUWREGRel:
+    expandAddREGRel(MI, CB, Fixups, STI);
     MCNumEmitted += 1;
     return;
   case RISCV::PseudoLongBEQ:
@@ -713,16 +712,14 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
              "invalid specifier");
       break;
     case ELF::R_RISCV_TPREL_ADD:
-    case ELF::R_RISCV_GPREL_ADD:
-    case ELF::R_RISCV_GPREL_SHXADD:
+    case ELF::R_RISCV_REGREL_ADD:
       // tprel_add is only used to indicate that a relocation should be emitted
       // for an add instruction used in TP-relative addressing. It should not be
       // expanded as if representing an actual instruction operand and so to
       // encounter it here is an error.
 
-      llvm_unreachable("ELF::R_RISCV_TPREL_ADD or ELF::R_RISCV_GPREL_ADD or "
-                       "ELF::R_RISCV_GPREL_SHXADD should not represent an "
-                       "instruction operand");
+      llvm_unreachable("ELF::R_RISCV_TPREL_ADD or ELF::R_RISCV_REGREL_ADD or "
+                       "should not represent an instruction operand");
     case RISCV::S_LO:
       if (MIFrm == RISCVII::InstFormatI)
         FixupKind = RISCV::fixup_riscv_lo12_i;
@@ -732,13 +729,13 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
         llvm_unreachable("VK_LO used with unexpected instruction format");
       RelaxCandidate = true;
       break;
-    case RISCV::S_GPREL_LO:
+    case RISCV::S_REGREL_LO:
       if (MIFrm == RISCVII::InstFormatI)
-        FixupKind = RISCV::fixup_riscv_gprel_lo12_i;
+        FixupKind = RISCV::fixup_riscv_regrel_lo12_i;
       else if (MIFrm == RISCVII::InstFormatS)
-        FixupKind = RISCV::fixup_riscv_gprel_lo12_s;
+        FixupKind = RISCV::fixup_riscv_regrel_lo12_s;
       else
-        llvm_unreachable("S_GPREL_LO used with unexpected instruction format");
+        llvm_unreachable("S_REGREL_LO used with unexpected instruction format");
       RelaxCandidate = true;
       break;
     case ELF::R_RISCV_HI20:

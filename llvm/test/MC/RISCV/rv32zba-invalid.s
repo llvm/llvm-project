@@ -12,7 +12,7 @@ sh1add.uw t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the foll
 sh2add.uw t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 sh3add.uw t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 
-# GP-relative symbol names require a %gprel_add modifier.
-sh1add a0, a0, a1, %hi(foo) # CHECK: :[[@LINE]]:20: error: operand must be a symbol with %gprel_add or %gprel_shxadd specifier
-sh2add a0, a0, a1, %hi(foo) # CHECK: :[[@LINE]]:20: error: operand must be a symbol with %gprel_add or %gprel_shxadd specifier
-sh3add a0, a0, a1, %hi(foo) # CHECK: :[[@LINE]]:20: error: operand must be a symbol with %gprel_add or %gprel_shxadd specifier
+# GP-relative symbol names require a %regrel_add modifier.
+sh1add a0, a0, a1, %hi(foo) # CHECK: :[[@LINE]]:20: error: operand must be a symbol with %regrel_add or %regrel_add specifier
+sh2add a0, a0, a1, %hi(foo) # CHECK: :[[@LINE]]:20: error: operand must be a symbol with %regrel_add or %regrel_add specifier
+sh3add a0, a0, a1, %hi(foo) # CHECK: :[[@LINE]]:20: error: operand must be a symbol with %regrel_add or %regrel_add specifier

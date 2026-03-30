@@ -719,25 +719,24 @@ static unsigned getSHXADDShiftAmount(unsigned Opc) {
   }
 }
 
-static std::pair<unsigned, unsigned>
-getTargetFlagsAndPattern(MachineInstr &MI) {
+static unsigned getTargetFlagsAndPattern(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case RISCV::ADD:
-    return std::make_pair(RISCVII::MO_GPREL_ADD, RISCV::PseudoAddGPRel);
+    return RISCV::PseudoAddREGRel;
   case RISCV::ADD_UW:
-    return std::make_pair(RISCVII::MO_GPREL_ADD, RISCV::PseudoAddUWGPRel);
+    return RISCV::PseudoAddUWREGRel;
   case RISCV::SH1ADD:
-    return std::make_pair(RISCVII::MO_GPREL_SHXADD, RISCV::PseudoSh1AddGPRel);
+    return RISCV::PseudoSh1AddREGRel;
   case RISCV::SH2ADD:
-    return std::make_pair(RISCVII::MO_GPREL_SHXADD, RISCV::PseudoSh2AddGPRel);
+    return RISCV::PseudoSh2AddREGRel;
   case RISCV::SH3ADD:
-    return std::make_pair(RISCVII::MO_GPREL_SHXADD, RISCV::PseudoSh3AddGPRel);
+    return RISCV::PseudoSh3AddREGRel;
   case RISCV::SH1ADD_UW:
-    return std::make_pair(RISCVII::MO_GPREL_SHXADD, RISCV::PseudoSh1AddUWGPRel);
+    return RISCV::PseudoSh1AddUWREGRel;
   case RISCV::SH2ADD_UW:
-    return std::make_pair(RISCVII::MO_GPREL_SHXADD, RISCV::PseudoSh2AddUWGPRel);
+    return RISCV::PseudoSh2AddUWREGRel;
   case RISCV::SH3ADD_UW:
-    return std::make_pair(RISCVII::MO_GPREL_SHXADD, RISCV::PseudoSh3AddUWGPRel);
+    return RISCV::PseudoSh3AddUWREGRel;
   default:
     llvm_unreachable("Unexpected ADD or SHXADD Opcode");
   }
@@ -766,13 +765,13 @@ getTargetFlagsAndPattern(MachineInstr &MI) {
 //                      /                                    \
 //                     /                                      \
 //                    /                                        \
-//              Add the %gprel_add/%gprel_shxadd/%gprel_lo used as a linker
-//  add vr3,vr2,vrx,%gprel_add(s+voff)  shxadd vr3,vrx,vr2,%gprel_shxadd(s+voff)
+//              Add the %regrel_add/%regrel_lo used as a linker
+//  add vr3,vr2,vrx,%regrel_add(s+voff)  shxadd vr3,vrx,vr2,%regrel_add(s+voff)
 //                    \                                        /
 //                     \                                      /
 //                      \                                    /
 //                       \                                  /
-//                        MemOps vr4, %gprel_lo(s+voff)(vr3)
+//                        MemOps vr4, %regrel_lo(s+voff)(vr3)
 //
 // If the global variable is placed in the gp addressable range, We can complete
 // the operation with fewer instructions
@@ -858,8 +857,8 @@ bool RISCVMergeBaseOffsetOpt::foldGPIntoMemoryOps(MachineInstr &Hi,
   // memops vr3, off(vr2)
   // ----Transform----
   // lui    vr1, %hi(s+off+offAddi)
-  // add    vr2, vr0, vr1, %gprel_add(s+off+offAddi)
-  // memops vr3, %gprel_lo(s+off+offAddi)(vr2)
+  // add    vr2, vr0, vr1, %regrel_add(s+off+offAddi)
+  // memops vr3, %regrel_lo(s+off+offAddi)(vr2)
   int64_t OffAddi = 0;
   bool AddiToRemove = false;
   if (AddMI.getOpcode() == RISCV::ADD || AddMI.getOpcode() == RISCV::ADD_UW ||
@@ -910,7 +909,7 @@ bool RISCVMergeBaseOffsetOpt::foldGPIntoMemoryOps(MachineInstr &Hi,
     // use to emit a relocation on a symbol relating to this instruction
     for (MachineInstr &UseMI :
          llvm::make_early_inc_range(MRI->use_instructions(LoDstReg))) {
-      std::pair<unsigned, unsigned> Res = getTargetFlagsAndPattern(UseMI);
+      unsigned Res = getTargetFlagsAndPattern(UseMI);
       // Considering the implementation of gcc, the assembly output is unified
       // here to adapt to GNU LD and LLD implementations.
       Register Rt = UseMI.getOperand(1).getReg();
@@ -924,9 +923,9 @@ bool RISCVMergeBaseOffsetOpt::foldGPIntoMemoryOps(MachineInstr &Hi,
       }
       UseMI.addOperand(ImmOp);
       MachineOperand &MO = UseMI.getOperand(3);
-      MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), Res.first);
+      MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), RISCVII::MO_REGREL_ADD);
       auto *TII = ST->getInstrInfo();
-      UseMI.setDesc(TII->get(Res.second));
+      UseMI.setDesc(TII->get(Res));
     }
 
     // Update the immediate in the load/store instructions to add the
@@ -934,7 +933,7 @@ bool RISCVMergeBaseOffsetOpt::foldGPIntoMemoryOps(MachineInstr &Hi,
     for (MachineInstr &UseMI :
          llvm::make_early_inc_range(MRI->use_instructions(AddDstReg))) {
       MachineOperand &MO = UseMI.getOperand(2);
-      MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), RISCVII::MO_GPREL_LO);
+      MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), RISCVII::MO_REGREL_LO);
     }
   }
 

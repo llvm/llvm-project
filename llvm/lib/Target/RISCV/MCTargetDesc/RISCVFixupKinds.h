@@ -24,18 +24,14 @@ enum Fixups {
   fixup_riscv_12_i,
   // 12-bit fixup corresponding to %lo(foo) for the S-type store instructions
   fixup_riscv_lo12_s,
-  // 12-bit fixup corresponding to %gprel_lo(foo) for instructions like addi
-  fixup_riscv_gprel_lo12_i,
-  // 12-bit fixup corresponding to %gprel_lo(foo) for the S-type store
+  // 12-bit fixup corresponding to %regrel_lo(foo) for instructions like addi
+  fixup_riscv_regrel_lo12_i,
+  // 12-bit fixup corresponding to %regrel_lo(foo) for the S-type store
   // instructions
-  fixup_riscv_gprel_lo12_s,
-  // Fixup corresponding to %gprel_add(foo) for PseudoAddGPRel/PseudoAddUWGPRel,
+  fixup_riscv_regrel_lo12_s,
+  // Fixup corresponding to %regrel_add(foo) for PseudoAddGPRel/PseudoAddUWGPRel,
   // used as a linker hint
-  fixup_riscv_gprel_add,
-  // Fixup corresponding to %gprel_shxadd(foo) for
-  // PseudoSh1AddGPRel/PseudoSh2AddGPRel/PseudoSh3AddGPRel/PseudoSh1AddUWGPRel/PseudoSh2AddUWGPRel/PseudoSh3AddUWGPRel,
-  // used as a linker hint
-  fixup_riscv_gprel_shxadd,
+  fixup_riscv_regrel_add,
   // 20-bit fixup corresponding to %pcrel_hi(foo) for instructions like auipc
   fixup_riscv_pcrel_hi20,
   // 12-bit fixup corresponding to %pcrel_lo(foo) for instructions like addi

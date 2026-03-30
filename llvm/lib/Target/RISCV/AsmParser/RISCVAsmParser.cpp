@@ -608,7 +608,7 @@ public:
            VK == ELF::R_RISCV_TPREL_ADD;
   }
 
-  bool isGPRelAddSymbol() const {
+  bool isREGRelAddSymbol() const {
     int64_t Imm;
     // Must be of 'immediate' type but not a constant.
     if (!isExpr() || evaluateConstantExpr(getExpr(), Imm))
@@ -616,7 +616,7 @@ public:
 
     RISCV::Specifier VK = RISCV::S_None;
     return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
-           (VK == ELF::R_RISCV_GPREL_ADD || VK == ELF::R_RISCV_GPREL_SHXADD);
+           VK == ELF::R_RISCV_REGREL_ADD;
   }
 
   bool isTLSDESCCallSymbol() const {
@@ -881,7 +881,7 @@ public:
     RISCV::Specifier VK = RISCV::S_None;
     return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
            (VK == RISCV::S_LO || VK == RISCV::S_PCREL_LO ||
-            VK == RISCV::S_GPREL_LO || VK == RISCV::S_TPREL_LO ||
+            VK == RISCV::S_REGREL_LO || VK == RISCV::S_TPREL_LO ||
             VK == ELF::R_RISCV_TLSDESC_LOAD_LO12 ||
             VK == ELF::R_RISCV_TLSDESC_ADD_LO12);
   }

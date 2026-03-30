@@ -357,9 +357,9 @@ class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
 }
 
 // Pseudo add or shxadd instructions.
-class PseudoGPRel<string opcodestr>
+class PseudoREGRel<string opcodestr>
     : Pseudo<(outs GPR:$rd),
-             (ins GPR:$rs1, GPR:$rs2, gprel_add_symbol:$src), [], opcodestr,
+             (ins GPR:$rs1, GPR:$rs2, regrel_add_symbol:$src), [], opcodestr,
              "$rd, $rs1, $rs2, $src"> {
   let hasSideEffects = 0;
   let mayLoad = 1;

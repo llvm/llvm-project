@@ -24,9 +24,8 @@ RISCV::Specifier RISCV::parseSpecifierName(StringRef name) {
   return StringSwitch<RISCV::Specifier>(name)
       .Case("lo", RISCV::S_LO)
       .Case("hi", ELF::R_RISCV_HI20)
-      .Case("gprel_lo", RISCV::S_GPREL_LO)
-      .Case("gprel_add", ELF::R_RISCV_GPREL_ADD)
-      .Case("gprel_shxadd", ELF::R_RISCV_GPREL_SHXADD)
+      .Case("regrel_lo", RISCV::S_REGREL_LO)
+      .Case("regrel_add", ELF::R_RISCV_REGREL_ADD)
       .Case("pcrel_lo", RISCV::S_PCREL_LO)
       .Case("pcrel_hi", RISCV::S_PCREL_HI)
       .Case("got_pcrel_hi", RISCV::S_GOT_HI)
@@ -54,12 +53,10 @@ StringRef RISCV::getSpecifierName(Specifier S) {
     return "lo";
   case ELF::R_RISCV_HI20:
     return "hi";
-  case RISCV::S_GPREL_LO:
-    return "gprel_lo";
-  case ELF::R_RISCV_GPREL_ADD:
-    return "gprel_add";
-  case ELF::R_RISCV_GPREL_SHXADD:
-    return "gprel_shxadd";
+  case RISCV::S_REGREL_LO:
+    return "regrel_lo";
+  case ELF::R_RISCV_REGREL_ADD:
+    return "regrel_add";
   case RISCV::S_PCREL_LO:
     return "pcrel_lo";
   case RISCV::S_PCREL_HI:

@@ -17,29 +17,29 @@ define i8 @char_load(i32 %index) {
 ; RV32I-LABEL: char_load:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g1)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g1)
-; RV32I-NEXT:    lbu a0, %gprel_lo(g1)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g1)
+; RV32I-NEXT:    lbu a0, %regrel_lo(g1)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: char_load:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g1)
-; RV32ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1)
-; RV32ZBA-NEXT:    lbu a0, %gprel_lo(g1)(a0)
+; RV32ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1)
+; RV32ZBA-NEXT:    lbu a0, %regrel_lo(g1)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: char_load:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a1, %hi(g1)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g1)
-; RV64I-NEXT:    lbu a0, %gprel_lo(g1)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g1)
+; RV64I-NEXT:    lbu a0, %regrel_lo(g1)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: char_load:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g1)
-; RV64ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1)
-; RV64ZBA-NEXT:    lbu a0, %gprel_lo(g1)(a0)
+; RV64ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1)
+; RV64ZBA-NEXT:    lbu a0, %regrel_lo(g1)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -52,29 +52,29 @@ define i8 @char_load_offset(i32 %index) {
 ; RV32I-LABEL: char_load_offset:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g1+4)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g1+4)
-; RV32I-NEXT:    lbu a0, %gprel_lo(g1+4)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g1+4)
+; RV32I-NEXT:    lbu a0, %regrel_lo(g1+4)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: char_load_offset:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g1+4)
-; RV32ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1+4)
-; RV32ZBA-NEXT:    lbu a0, %gprel_lo(g1+4)(a0)
+; RV32ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1+4)
+; RV32ZBA-NEXT:    lbu a0, %regrel_lo(g1+4)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: char_load_offset:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a1, %hi(g1+4)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g1+4)
-; RV64I-NEXT:    lbu a0, %gprel_lo(g1+4)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g1+4)
+; RV64I-NEXT:    lbu a0, %regrel_lo(g1+4)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: char_load_offset:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g1+4)
-; RV64ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1+4)
-; RV64ZBA-NEXT:    lbu a0, %gprel_lo(g1+4)(a0)
+; RV64ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1+4)
+; RV64ZBA-NEXT:    lbu a0, %regrel_lo(g1+4)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add nsw i32 %index, 4
@@ -88,15 +88,15 @@ define i8 @char_load_uw(i32 %index) {
 ; RV32I-LABEL: char_load_uw:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g1)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g1)
-; RV32I-NEXT:    lbu a0, %gprel_lo(g1)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g1)
+; RV32I-NEXT:    lbu a0, %regrel_lo(g1)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: char_load_uw:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g1)
-; RV32ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1)
-; RV32ZBA-NEXT:    lbu a0, %gprel_lo(g1)(a0)
+; RV32ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1)
+; RV32ZBA-NEXT:    lbu a0, %regrel_lo(g1)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: char_load_uw:
@@ -104,15 +104,15 @@ define i8 @char_load_uw(i32 %index) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    lui a1, %hi(g1)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g1)
-; RV64I-NEXT:    lbu a0, %gprel_lo(g1)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g1)
+; RV64I-NEXT:    lbu a0, %regrel_lo(g1)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: char_load_uw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g1)
-; RV64ZBA-NEXT:    add.uw a0, a0, a1, %gprel_add(g1)
-; RV64ZBA-NEXT:    lbu a0, %gprel_lo(g1)(a0)
+; RV64ZBA-NEXT:    add.uw a0, a0, a1, %regrel_add(g1)
+; RV64ZBA-NEXT:    lbu a0, %regrel_lo(g1)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = zext i32 %index to i64
@@ -126,15 +126,15 @@ define i16 @short_load(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, %hi(g2)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g2)
-; RV32I-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g2)
+; RV32I-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: short_load:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g2)
-; RV32ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
-; RV32ZBA-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV32ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
+; RV32ZBA-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: short_load:
@@ -142,15 +142,15 @@ define i16 @short_load(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    lui a1, %hi(g2)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g2)
-; RV64I-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g2)
+; RV64I-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: short_load:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g2)
-; RV64ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
-; RV64ZBA-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV64ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
+; RV64ZBA-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -164,15 +164,15 @@ define i16 @short_load_offset(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, %hi(g2+8)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g2+8)
-; RV32I-NEXT:    lh a0, %gprel_lo(g2+8)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g2+8)
+; RV32I-NEXT:    lh a0, %regrel_lo(g2+8)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: short_load_offset:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g2+8)
-; RV32ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2+8)
-; RV32ZBA-NEXT:    lh a0, %gprel_lo(g2+8)(a0)
+; RV32ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2+8)
+; RV32ZBA-NEXT:    lh a0, %regrel_lo(g2+8)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: short_load_offset:
@@ -180,15 +180,15 @@ define i16 @short_load_offset(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    lui a1, %hi(g2+8)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g2+8)
-; RV64I-NEXT:    lh a0, %gprel_lo(g2+8)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g2+8)
+; RV64I-NEXT:    lh a0, %regrel_lo(g2+8)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: short_load_offset:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g2+8)
-; RV64ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2+8)
-; RV64ZBA-NEXT:    lh a0, %gprel_lo(g2+8)(a0)
+; RV64ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2+8)
+; RV64ZBA-NEXT:    lh a0, %regrel_lo(g2+8)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add nsw i32 %index, 4
@@ -203,15 +203,15 @@ define i16 @short_load_uw(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, %hi(g2)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g2)
-; RV32I-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g2)
+; RV32I-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: short_load_uw:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g2)
-; RV32ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
-; RV32ZBA-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV32ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
+; RV32ZBA-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: short_load_uw:
@@ -219,15 +219,15 @@ define i16 @short_load_uw(i32 %index) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 31
 ; RV64I-NEXT:    lui a1, %hi(g2)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g2)
-; RV64I-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g2)
+; RV64I-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: short_load_uw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g2)
-; RV64ZBA-NEXT:    sh1add.uw a0, a0, a1, %gprel_shxadd(g2)
-; RV64ZBA-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV64ZBA-NEXT:    sh1add.uw a0, a0, a1, %regrel_shxadd(g2)
+; RV64ZBA-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = zext i32 %index to i64
@@ -241,15 +241,15 @@ define i32 @int_load(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    lui a1, %hi(g3)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g3)
-; RV32I-NEXT:    lw a0, %gprel_lo(g3)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g3)
+; RV32I-NEXT:    lw a0, %regrel_lo(g3)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: int_load:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g3)
-; RV32ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3)
-; RV32ZBA-NEXT:    lw a0, %gprel_lo(g3)(a0)
+; RV32ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3)
+; RV32ZBA-NEXT:    lw a0, %regrel_lo(g3)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: int_load:
@@ -257,15 +257,15 @@ define i32 @int_load(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    lui a1, %hi(g3)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g3)
-; RV64I-NEXT:    lw a0, %gprel_lo(g3)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g3)
+; RV64I-NEXT:    lw a0, %regrel_lo(g3)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: int_load:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g3)
-; RV64ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3)
-; RV64ZBA-NEXT:    lw a0, %gprel_lo(g3)(a0)
+; RV64ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3)
+; RV64ZBA-NEXT:    lw a0, %regrel_lo(g3)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -279,15 +279,15 @@ define i32 @int_load_offset(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    lui a1, %hi(g3+16)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g3+16)
-; RV32I-NEXT:    lw a0, %gprel_lo(g3+16)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g3+16)
+; RV32I-NEXT:    lw a0, %regrel_lo(g3+16)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: int_load_offset:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g3+16)
-; RV32ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3+16)
-; RV32ZBA-NEXT:    lw a0, %gprel_lo(g3+16)(a0)
+; RV32ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3+16)
+; RV32ZBA-NEXT:    lw a0, %regrel_lo(g3+16)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: int_load_offset:
@@ -295,15 +295,15 @@ define i32 @int_load_offset(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    lui a1, %hi(g3+16)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g3+16)
-; RV64I-NEXT:    lw a0, %gprel_lo(g3+16)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g3+16)
+; RV64I-NEXT:    lw a0, %regrel_lo(g3+16)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: int_load_offset:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g3+16)
-; RV64ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3+16)
-; RV64ZBA-NEXT:    lw a0, %gprel_lo(g3+16)(a0)
+; RV64ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3+16)
+; RV64ZBA-NEXT:    lw a0, %regrel_lo(g3+16)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add nsw i32 %index, 4
@@ -318,15 +318,15 @@ define i32 @int_load_uw(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    lui a1, %hi(g3)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g3)
-; RV32I-NEXT:    lw a0, %gprel_lo(g3)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g3)
+; RV32I-NEXT:    lw a0, %regrel_lo(g3)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: int_load_uw:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g3)
-; RV32ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3)
-; RV32ZBA-NEXT:    lw a0, %gprel_lo(g3)(a0)
+; RV32ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3)
+; RV32ZBA-NEXT:    lw a0, %regrel_lo(g3)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: int_load_uw:
@@ -334,15 +334,15 @@ define i32 @int_load_uw(i32 %index) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 30
 ; RV64I-NEXT:    lui a1, %hi(g3)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g3)
-; RV64I-NEXT:    lw a0, %gprel_lo(g3)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g3)
+; RV64I-NEXT:    lw a0, %regrel_lo(g3)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: int_load_uw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g3)
-; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1, %gprel_shxadd(g3)
-; RV64ZBA-NEXT:    lw a0, %gprel_lo(g3)(a0)
+; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1, %regrel_shxadd(g3)
+; RV64ZBA-NEXT:    lw a0, %regrel_lo(g3)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = zext i32 %index to i64
@@ -376,15 +376,15 @@ define i64 @long_long_load(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    lui a1, %hi(g4)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g4)
-; RV64I-NEXT:    ld a0, %gprel_lo(g4)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g4)
+; RV64I-NEXT:    ld a0, %regrel_lo(g4)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: long_long_load:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g4)
-; RV64ZBA-NEXT:    sh3add a0, a0, a1, %gprel_shxadd(g4)
-; RV64ZBA-NEXT:    ld a0, %gprel_lo(g4)(a0)
+; RV64ZBA-NEXT:    sh3add a0, a0, a1, %regrel_shxadd(g4)
+; RV64ZBA-NEXT:    ld a0, %regrel_lo(g4)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -418,15 +418,15 @@ define i64 @long_long_load_offset(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    lui a1, %hi(g4+32)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g4+32)
-; RV64I-NEXT:    ld a0, %gprel_lo(g4+32)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g4+32)
+; RV64I-NEXT:    ld a0, %regrel_lo(g4+32)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: long_long_load_offset:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g4+32)
-; RV64ZBA-NEXT:    sh3add a0, a0, a1, %gprel_shxadd(g4+32)
-; RV64ZBA-NEXT:    ld a0, %gprel_lo(g4+32)(a0)
+; RV64ZBA-NEXT:    sh3add a0, a0, a1, %regrel_shxadd(g4+32)
+; RV64ZBA-NEXT:    ld a0, %regrel_lo(g4+32)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add nsw i32 %index, 4
@@ -461,15 +461,15 @@ define i64 @long_long_load_uw(i32 %index) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 29
 ; RV64I-NEXT:    lui a1, %hi(g4)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g4)
-; RV64I-NEXT:    ld a0, %gprel_lo(g4)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g4)
+; RV64I-NEXT:    ld a0, %regrel_lo(g4)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: long_long_load_uw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g4)
-; RV64ZBA-NEXT:    sh3add.uw a0, a0, a1, %gprel_shxadd(g4)
-; RV64ZBA-NEXT:    ld a0, %gprel_lo(g4)(a0)
+; RV64ZBA-NEXT:    sh3add.uw a0, a0, a1, %regrel_shxadd(g4)
+; RV64ZBA-NEXT:    ld a0, %regrel_lo(g4)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = zext i32 %index to i64
@@ -540,8 +540,8 @@ define i64 @test_nesting_load(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, %hi(g2)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g2)
-; RV32I-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g2)
+; RV32I-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV32I-NEXT:    lui a1, %hi(g4)
 ; RV32I-NEXT:    addi a1, a1, %lo(g4)
 ; RV32I-NEXT:    slli a0, a0, 3
@@ -553,8 +553,8 @@ define i64 @test_nesting_load(i32 %index) {
 ; RV32ZBA-LABEL: test_nesting_load:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g2)
-; RV32ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
-; RV32ZBA-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV32ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
+; RV32ZBA-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV32ZBA-NEXT:    lui a1, %hi(g4)
 ; RV32ZBA-NEXT:    addi a1, a1, %lo(g4)
 ; RV32ZBA-NEXT:    sh3add a1, a0, a1
@@ -567,22 +567,22 @@ define i64 @test_nesting_load(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    lui a1, %hi(g2)
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g2)
-; RV64I-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g2)
+; RV64I-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    lui a1, %hi(g4)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g4)
-; RV64I-NEXT:    ld a0, %gprel_lo(g4)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g4)
+; RV64I-NEXT:    ld a0, %regrel_lo(g4)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: test_nesting_load:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g2)
-; RV64ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
-; RV64ZBA-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV64ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
+; RV64ZBA-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV64ZBA-NEXT:    lui a1, %hi(g4)
-; RV64ZBA-NEXT:    sh3add a0, a0, a1, %gprel_shxadd(g4)
-; RV64ZBA-NEXT:    ld a0, %gprel_lo(g4)(a0)
+; RV64ZBA-NEXT:    sh3add a0, a0, a1, %regrel_shxadd(g4)
+; RV64ZBA-NEXT:    ld a0, %regrel_lo(g4)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -598,33 +598,33 @@ define void @char_store(i32 %index) {
 ; RV32I-LABEL: char_store:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g1)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g1)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g1)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sb a1, %gprel_lo(g1)(a0)
+; RV32I-NEXT:    sb a1, %regrel_lo(g1)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: char_store:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g1)
-; RV32ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1)
+; RV32ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sb a1, %gprel_lo(g1)(a0)
+; RV32ZBA-NEXT:    sb a1, %regrel_lo(g1)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: char_store:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a1, %hi(g1)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g1)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g1)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sb a1, %gprel_lo(g1)(a0)
+; RV64I-NEXT:    sb a1, %regrel_lo(g1)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: char_store:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g1)
-; RV64ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1)
+; RV64ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sb a1, %gprel_lo(g1)(a0)
+; RV64ZBA-NEXT:    sb a1, %regrel_lo(g1)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -637,33 +637,33 @@ define void @char_store_offset(i32 %index) {
 ; RV32I-LABEL: char_store_offset:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g1+4)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g1+4)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g1+4)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sb a1, %gprel_lo(g1+4)(a0)
+; RV32I-NEXT:    sb a1, %regrel_lo(g1+4)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: char_store_offset:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g1+4)
-; RV32ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1+4)
+; RV32ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1+4)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sb a1, %gprel_lo(g1+4)(a0)
+; RV32ZBA-NEXT:    sb a1, %regrel_lo(g1+4)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: char_store_offset:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a1, %hi(g1+4)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g1+4)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g1+4)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sb a1, %gprel_lo(g1+4)(a0)
+; RV64I-NEXT:    sb a1, %regrel_lo(g1+4)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: char_store_offset:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g1+4)
-; RV64ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1+4)
+; RV64ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1+4)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sb a1, %gprel_lo(g1+4)(a0)
+; RV64ZBA-NEXT:    sb a1, %regrel_lo(g1+4)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add nsw i32 %index, 4
@@ -677,17 +677,17 @@ define void @char_store_uw(i32 %index) {
 ; RV32I-LABEL: char_store_uw:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g1)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g1)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g1)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sb a1, %gprel_lo(g1)(a0)
+; RV32I-NEXT:    sb a1, %regrel_lo(g1)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: char_store_uw:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g1)
-; RV32ZBA-NEXT:    add a0, a0, a1, %gprel_add(g1)
+; RV32ZBA-NEXT:    add a0, a0, a1, %regrel_add(g1)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sb a1, %gprel_lo(g1)(a0)
+; RV32ZBA-NEXT:    sb a1, %regrel_lo(g1)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: char_store_uw:
@@ -695,17 +695,17 @@ define void @char_store_uw(i32 %index) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    lui a1, %hi(g1)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g1)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g1)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sb a1, %gprel_lo(g1)(a0)
+; RV64I-NEXT:    sb a1, %regrel_lo(g1)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: char_store_uw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g1)
-; RV64ZBA-NEXT:    add.uw a0, a0, a1, %gprel_add(g1)
+; RV64ZBA-NEXT:    add.uw a0, a0, a1, %regrel_add(g1)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sb a1, %gprel_lo(g1)(a0)
+; RV64ZBA-NEXT:    sb a1, %regrel_lo(g1)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = zext i32 %index to i64
@@ -719,17 +719,17 @@ define void @short_store(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, %hi(g2)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g2)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g2)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sh a1, %gprel_lo(g2)(a0)
+; RV32I-NEXT:    sh a1, %regrel_lo(g2)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: short_store:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g2)
-; RV32ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
+; RV32ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sh a1, %gprel_lo(g2)(a0)
+; RV32ZBA-NEXT:    sh a1, %regrel_lo(g2)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: short_store:
@@ -737,17 +737,17 @@ define void @short_store(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    lui a1, %hi(g2)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g2)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g2)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sh a1, %gprel_lo(g2)(a0)
+; RV64I-NEXT:    sh a1, %regrel_lo(g2)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: short_store:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g2)
-; RV64ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
+; RV64ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sh a1, %gprel_lo(g2)(a0)
+; RV64ZBA-NEXT:    sh a1, %regrel_lo(g2)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -761,17 +761,17 @@ define void @short_store_offset(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, %hi(g2+8)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g2+8)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g2+8)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sh a1, %gprel_lo(g2+8)(a0)
+; RV32I-NEXT:    sh a1, %regrel_lo(g2+8)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: short_store_offset:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g2+8)
-; RV32ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2+8)
+; RV32ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2+8)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sh a1, %gprel_lo(g2+8)(a0)
+; RV32ZBA-NEXT:    sh a1, %regrel_lo(g2+8)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: short_store_offset:
@@ -779,17 +779,17 @@ define void @short_store_offset(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    lui a1, %hi(g2+8)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g2+8)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g2+8)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sh a1, %gprel_lo(g2+8)(a0)
+; RV64I-NEXT:    sh a1, %regrel_lo(g2+8)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: short_store_offset:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g2+8)
-; RV64ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2+8)
+; RV64ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2+8)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sh a1, %gprel_lo(g2+8)(a0)
+; RV64ZBA-NEXT:    sh a1, %regrel_lo(g2+8)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add nsw i32 %index, 4
@@ -804,17 +804,17 @@ define void @short_store_uw(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, %hi(g2)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g2)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g2)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sh a1, %gprel_lo(g2)(a0)
+; RV32I-NEXT:    sh a1, %regrel_lo(g2)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: short_store_uw:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g2)
-; RV32ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
+; RV32ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sh a1, %gprel_lo(g2)(a0)
+; RV32ZBA-NEXT:    sh a1, %regrel_lo(g2)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: short_store_uw:
@@ -822,17 +822,17 @@ define void @short_store_uw(i32 %index) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 31
 ; RV64I-NEXT:    lui a1, %hi(g2)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g2)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g2)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sh a1, %gprel_lo(g2)(a0)
+; RV64I-NEXT:    sh a1, %regrel_lo(g2)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: short_store_uw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g2)
-; RV64ZBA-NEXT:    sh1add.uw a0, a0, a1, %gprel_shxadd(g2)
+; RV64ZBA-NEXT:    sh1add.uw a0, a0, a1, %regrel_shxadd(g2)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sh a1, %gprel_lo(g2)(a0)
+; RV64ZBA-NEXT:    sh a1, %regrel_lo(g2)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = zext i32 %index to i64
@@ -846,17 +846,17 @@ define void @int_store(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    lui a1, %hi(g3)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g3)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g3)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sw a1, %gprel_lo(g3)(a0)
+; RV32I-NEXT:    sw a1, %regrel_lo(g3)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: int_store:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g3)
-; RV32ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3)
+; RV32ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sw a1, %gprel_lo(g3)(a0)
+; RV32ZBA-NEXT:    sw a1, %regrel_lo(g3)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: int_store:
@@ -864,17 +864,17 @@ define void @int_store(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    lui a1, %hi(g3)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g3)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g3)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sw a1, %gprel_lo(g3)(a0)
+; RV64I-NEXT:    sw a1, %regrel_lo(g3)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: int_store:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g3)
-; RV64ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3)
+; RV64ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sw a1, %gprel_lo(g3)(a0)
+; RV64ZBA-NEXT:    sw a1, %regrel_lo(g3)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -888,17 +888,17 @@ define void @int_store_offset(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    lui a1, %hi(g3+16)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g3+16)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g3+16)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sw a1, %gprel_lo(g3+16)(a0)
+; RV32I-NEXT:    sw a1, %regrel_lo(g3+16)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: int_store_offset:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g3+16)
-; RV32ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3+16)
+; RV32ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3+16)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sw a1, %gprel_lo(g3+16)(a0)
+; RV32ZBA-NEXT:    sw a1, %regrel_lo(g3+16)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: int_store_offset:
@@ -906,17 +906,17 @@ define void @int_store_offset(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    lui a1, %hi(g3+16)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g3+16)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g3+16)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sw a1, %gprel_lo(g3+16)(a0)
+; RV64I-NEXT:    sw a1, %regrel_lo(g3+16)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: int_store_offset:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g3+16)
-; RV64ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3+16)
+; RV64ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3+16)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sw a1, %gprel_lo(g3+16)(a0)
+; RV64ZBA-NEXT:    sw a1, %regrel_lo(g3+16)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add nsw i32 %index, 4
@@ -931,17 +931,17 @@ define void @int_store_uw(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    lui a1, %hi(g3)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g3)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g3)
 ; RV32I-NEXT:    li a1, 100
-; RV32I-NEXT:    sw a1, %gprel_lo(g3)(a0)
+; RV32I-NEXT:    sw a1, %regrel_lo(g3)(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: int_store_uw:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g3)
-; RV32ZBA-NEXT:    sh2add a0, a0, a1, %gprel_shxadd(g3)
+; RV32ZBA-NEXT:    sh2add a0, a0, a1, %regrel_shxadd(g3)
 ; RV32ZBA-NEXT:    li a1, 100
-; RV32ZBA-NEXT:    sw a1, %gprel_lo(g3)(a0)
+; RV32ZBA-NEXT:    sw a1, %regrel_lo(g3)(a0)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64I-LABEL: int_store_uw:
@@ -949,17 +949,17 @@ define void @int_store_uw(i32 %index) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 30
 ; RV64I-NEXT:    lui a1, %hi(g3)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g3)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g3)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sw a1, %gprel_lo(g3)(a0)
+; RV64I-NEXT:    sw a1, %regrel_lo(g3)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: int_store_uw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g3)
-; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1, %gprel_shxadd(g3)
+; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1, %regrel_shxadd(g3)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sw a1, %gprel_lo(g3)(a0)
+; RV64ZBA-NEXT:    sw a1, %regrel_lo(g3)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = zext i32 %index to i64
@@ -995,17 +995,17 @@ define void @long_long_store(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    lui a1, %hi(g4)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g4)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g4)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sd a1, %gprel_lo(g4)(a0)
+; RV64I-NEXT:    sd a1, %regrel_lo(g4)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: long_long_store:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g4)
-; RV64ZBA-NEXT:    sh3add a0, a0, a1, %gprel_shxadd(g4)
+; RV64ZBA-NEXT:    sh3add a0, a0, a1, %regrel_shxadd(g4)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sd a1, %gprel_lo(g4)(a0)
+; RV64ZBA-NEXT:    sd a1, %regrel_lo(g4)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64
@@ -1041,17 +1041,17 @@ define void @long_long_store_offset(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    lui a1, %hi(g4+32)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g4+32)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g4+32)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sd a1, %gprel_lo(g4+32)(a0)
+; RV64I-NEXT:    sd a1, %regrel_lo(g4+32)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: long_long_store_offset:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g4+32)
-; RV64ZBA-NEXT:    sh3add a0, a0, a1, %gprel_shxadd(g4+32)
+; RV64ZBA-NEXT:    sh3add a0, a0, a1, %regrel_shxadd(g4+32)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sd a1, %gprel_lo(g4+32)(a0)
+; RV64ZBA-NEXT:    sd a1, %regrel_lo(g4+32)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add nsw i32 %index, 4
@@ -1088,17 +1088,17 @@ define void @long_long_store_uw(i32 %index) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 29
 ; RV64I-NEXT:    lui a1, %hi(g4)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g4)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g4)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sd a1, %gprel_lo(g4)(a0)
+; RV64I-NEXT:    sd a1, %regrel_lo(g4)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: long_long_store_uw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g4)
-; RV64ZBA-NEXT:    sh3add.uw a0, a0, a1, %gprel_shxadd(g4)
+; RV64ZBA-NEXT:    sh3add.uw a0, a0, a1, %regrel_shxadd(g4)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sd a1, %gprel_lo(g4)(a0)
+; RV64ZBA-NEXT:    sd a1, %regrel_lo(g4)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = zext i32 %index to i64
@@ -1173,8 +1173,8 @@ define void @test_nesting_store(i32 %index) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, %hi(g2)
-; RV32I-NEXT:    add a0, a0, a1, %gprel_add(g2)
-; RV32I-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV32I-NEXT:    add a0, a0, a1, %regrel_add(g2)
+; RV32I-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV32I-NEXT:    lui a1, %hi(g4)
 ; RV32I-NEXT:    addi a1, a1, %lo(g4)
 ; RV32I-NEXT:    slli a0, a0, 3
@@ -1187,8 +1187,8 @@ define void @test_nesting_store(i32 %index) {
 ; RV32ZBA-LABEL: test_nesting_store:
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    lui a1, %hi(g2)
-; RV32ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
-; RV32ZBA-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV32ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
+; RV32ZBA-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV32ZBA-NEXT:    lui a1, %hi(g4)
 ; RV32ZBA-NEXT:    addi a1, a1, %lo(g4)
 ; RV32ZBA-NEXT:    sh3add a0, a0, a1
@@ -1202,24 +1202,24 @@ define void @test_nesting_store(i32 %index) {
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    lui a1, %hi(g2)
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g2)
-; RV64I-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g2)
+; RV64I-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    lui a1, %hi(g4)
-; RV64I-NEXT:    add a0, a0, a1, %gprel_add(g4)
+; RV64I-NEXT:    add a0, a0, a1, %regrel_add(g4)
 ; RV64I-NEXT:    li a1, 100
-; RV64I-NEXT:    sd a1, %gprel_lo(g4)(a0)
+; RV64I-NEXT:    sd a1, %regrel_lo(g4)(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: test_nesting_store:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a1, %hi(g2)
-; RV64ZBA-NEXT:    sh1add a0, a0, a1, %gprel_shxadd(g2)
-; RV64ZBA-NEXT:    lh a0, %gprel_lo(g2)(a0)
+; RV64ZBA-NEXT:    sh1add a0, a0, a1, %regrel_shxadd(g2)
+; RV64ZBA-NEXT:    lh a0, %regrel_lo(g2)(a0)
 ; RV64ZBA-NEXT:    lui a1, %hi(g4)
-; RV64ZBA-NEXT:    sh3add a0, a0, a1, %gprel_shxadd(g4)
+; RV64ZBA-NEXT:    sh3add a0, a0, a1, %regrel_shxadd(g4)
 ; RV64ZBA-NEXT:    li a1, 100
-; RV64ZBA-NEXT:    sd a1, %gprel_lo(g4)(a0)
+; RV64ZBA-NEXT:    sd a1, %regrel_lo(g4)(a0)
 ; RV64ZBA-NEXT:    ret
 entry:
   %idxprom = sext i32 %index to i64

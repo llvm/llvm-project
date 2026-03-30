@@ -51,13 +51,13 @@ addi t1, t1, %tprel_lo(foo+4)
 # RELOC: R_RISCV_TPREL_LO12_I foo 0x4
 # INSTR: addi t1, t1, %tprel_lo(foo+4)
 
-addi t1, t1, %gprel_lo(foo)
-# RELOC: R_RISCV_GPREL_LO12_I foo 0x0
-# INSTR: addi t1, t1, %gprel_lo(foo)
+addi t1, t1, %regrel_lo(foo)
+# RELOC: R_RISCV_REGREL_LO12_I foo 0x0
+# INSTR: addi t1, t1, %regrel_lo(foo)
 
-addi t1, t1, %gprel_lo(foo+4)
-# RELOC: R_RISCV_GPREL_LO12_I foo 0x4
-# INSTR: addi t1, t1, %gprel_lo(foo+4)
+addi t1, t1, %regrel_lo(foo+4)
+# RELOC: R_RISCV_REGREL_LO12_I foo 0x4
+# INSTR: addi t1, t1, %regrel_lo(foo+4)
 
 sb t1, %lo(foo)(a2)
 # RELOC: R_RISCV_LO12_S foo 0x0
@@ -75,13 +75,13 @@ sb t1, %tprel_lo(foo+4)(a2)
 # RELOC: R_RISCV_TPREL_LO12_S foo 0x4
 # INSTR: sb t1, %tprel_lo(foo+4)(a2)
 
-sb t1, %gprel_lo(foo)(a2)
-# RELOC: R_RISCV_GPREL_LO12_S foo 0x0
-# INSTR: sb t1, %gprel_lo(foo)(a2)
+sb t1, %regrel_lo(foo)(a2)
+# RELOC: R_RISCV_REGREL_LO12_S foo 0x0
+# INSTR: sb t1, %regrel_lo(foo)(a2)
 
-sb t1, %gprel_lo(foo+4)(a2)
-# RELOC: R_RISCV_GPREL_LO12_S foo 0x4
-# INSTR: sb t1, %gprel_lo(foo+4)(a2)
+sb t1, %regrel_lo(foo+4)(a2)
+# RELOC: R_RISCV_REGREL_LO12_S foo 0x4
+# INSTR: sb t1, %regrel_lo(foo+4)(a2)
 
 .L0:
 auipc t1, %pcrel_hi(foo)
@@ -158,37 +158,37 @@ add t1, t1, tp, %tprel_add(foo)
 # RELOC: R_RISCV_TPREL_ADD foo 0x0
 # INSTR: add t1, t1, tp, %tprel_add(foo)
 
-add t1, t1, t2, %gprel_add(foo)
-# RELOC: R_RISCV_GPREL_ADD foo 0x0
-# INSTR: add t1, t1, t2, %gprel_add(foo)
+add t1, t1, t2, %regrel_add(foo)
+# RELOC: R_RISCV_REGREL_ADD foo 0x0
+# INSTR: add t1, t1, t2, %regrel_add(foo)
 
-add.uw t1, t1, t2, %gprel_add(foo)
-# RELOC: R_RISCV_GPREL_ADD foo 0x0
-# INSTR: add t1, t1, t2, %gprel_add(foo)
+add.uw t1, t1, t2, %regrel_add(foo)
+# RELOC: R_RISCV_REGREL_ADD foo 0x0
+# INSTR: add t1, t1, t2, %regrel_add(foo)
 
-sh1add t1, t1, t2, %gprel_shxadd(foo)
-# RELOC: R_RISCV_GPREL_SHXADD foo 0x0
-# INSTR: add t1, t1, t2, %gprel_shxadd(foo)
+sh1add t1, t1, t2, %regrel_shxadd(foo)
+# RELOC: R_RISCV_REGREL_SHXADD foo 0x0
+# INSTR: add t1, t1, t2, %regrel_shxadd(foo)
 
-sh1add.uw t1, t1, t2, %gprel_shxadd(foo)
-# RELOC: R_RISCV_GPREL_SHXADD foo 0x0
-# INSTR: add t1, t1, t2, %gprel_shxadd(foo)
+sh1add.uw t1, t1, t2, %regrel_shxadd(foo)
+# RELOC: R_RISCV_REGREL_SHXADD foo 0x0
+# INSTR: add t1, t1, t2, %regrel_shxadd(foo)
 
-sh2add t1, t1, t2, %gprel_shxadd(foo)
-# RELOC: R_RISCV_GPREL_SHXADD foo 0x0
-# INSTR: add t1, t1, t2, %gprel_shxadd(foo)
+sh2add t1, t1, t2, %regrel_shxadd(foo)
+# RELOC: R_RISCV_REGREL_SHXADD foo 0x0
+# INSTR: add t1, t1, t2, %regrel_shxadd(foo)
 
-sh2add.uw t1, t1, t2, %gprel_shxadd(foo)
-# RELOC: R_RISCV_GPREL_SHXADD foo 0x0
-# INSTR: add t1, t1, t2, %gprel_shxadd(foo)
+sh2add.uw t1, t1, t2, %regrel_shxadd(foo)
+# RELOC: R_RISCV_REGREL_SHXADD foo 0x0
+# INSTR: add t1, t1, t2, %regrel_shxadd(foo)
 
-sh3add t1, t1, t2, %gprel_shxadd(foo)
-# RELOC: R_RISCV_GPREL_SHXADD foo 0x0
-# INSTR: add t1, t1, t2, %gprel_shxadd(foo)
+sh3add t1, t1, t2, %regrel_shxadd(foo)
+# RELOC: R_RISCV_REGREL_SHXADD foo 0x0
+# INSTR: add t1, t1, t2, %regrel_shxadd(foo)
 
-sh3add.uw t1, t1, t2, %gprel_shxadd(foo)
-# RELOC: R_RISCV_GPREL_SHXADD foo 0x0
-# INSTR: add t1, t1, t2, %gprel_shxadd(foo)
+sh3add.uw t1, t1, t2, %regrel_shxadd(foo)
+# RELOC: R_RISCV_REGREL_SHXADD foo 0x0
+# INSTR: add t1, t1, t2, %regrel_shxadd(foo)
 
 jal zero, foo
 # RELOC: R_RISCV_JAL
