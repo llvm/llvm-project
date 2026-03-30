@@ -1236,6 +1236,60 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
 
 //===----------------------------------------------------------------------===//
+// fused multiply-add builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn double fma(double a, double b, double c)
+/// \brief Returns the double-precision fused multiply-addition of a * b + c.
+/// \param a The first value in the fused multiply-addition.
+/// \param b The second value in the fused multiply-addition.
+/// \param c The third value in the fused multiply-addition.
+
+// double scalars and vectors
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double fma(double, double, double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2 fma(double2, double2, double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3 fma(double3, double3, double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4 fma(double4, double4, double4);
+
+// double matrices
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x1 fma(double1x1, double1x1, double1x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x2 fma(double1x2, double1x2, double1x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x3 fma(double1x3, double1x3, double1x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double1x4 fma(double1x4, double1x4, double1x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x1 fma(double2x1, double2x1, double2x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x2 fma(double2x2, double2x2, double2x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x3 fma(double2x3, double2x3, double2x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double2x4 fma(double2x4, double2x4, double2x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x1 fma(double3x1, double3x1, double3x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x2 fma(double3x2, double3x2, double3x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x3 fma(double3x3, double3x3, double3x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double3x4 fma(double3x4, double3x4, double3x4);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x1 fma(double4x1, double4x1, double4x1);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x2 fma(double4x2, double4x2, double4x2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x3 fma(double4x3, double4x3, double4x3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)
+double4x4 fma(double4x4, double4x4, double4x4);
+
+//===----------------------------------------------------------------------===//
 // frac builtins
 //===----------------------------------------------------------------------===//
 
@@ -3871,6 +3925,17 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float3 radians(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
 float4 radians(float4);
+
+//===----------------------------------------------------------------------===//
+// GroupMemoryBarrierbuiltins
+//===----------------------------------------------------------------------===//
+
+/// \fn void GroupMemoryBarrier(void)
+/// \brief Blocks execution of all threads in a group until all group shared
+/// accesses have been completed.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier)
+__attribute__((convergent)) void GroupMemoryBarrier(void);
 
 //===----------------------------------------------------------------------===//
 // GroupMemoryBarrierWithGroupSync builtins

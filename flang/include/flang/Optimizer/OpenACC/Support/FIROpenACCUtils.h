@@ -60,7 +60,7 @@ bool areAllBoundsConstant(llvm::ArrayRef<mlir::Value> bounds);
 /// \return The existing or created PrivateRecipeOp symbol
 mlir::SymbolRefAttr
 createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                         mlir::Type ty,
+                         mlir::Value var,
                          llvm::SmallVector<mlir::Value> &dataBoundOps);
 
 /// Create or get a firstprivate recipe for the given type and name.
@@ -71,7 +71,7 @@ createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \return The existing or created FirstprivateRecipeOp symbol
 mlir::SymbolRefAttr
 createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                              mlir::Type ty,
+                              mlir::Value var,
                               llvm::SmallVector<mlir::Value> &dataBoundOps);
 
 /// Create or get a reduction recipe for the given type, name and operator.
@@ -84,7 +84,7 @@ createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \return The existing or created ReductionRecipeOp symbol
 mlir::SymbolRefAttr
 createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                           mlir::Type ty, mlir::acc::ReductionOperator op,
+                           mlir::Value var, mlir::acc::ReductionOperator op,
                            llvm::SmallVector<mlir::Value> &dataBoundOps,
                            mlir::Attribute fastMathAttr = {});
 

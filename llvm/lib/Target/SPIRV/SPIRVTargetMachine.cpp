@@ -223,6 +223,10 @@ void SPIRVPassConfig::addISelPrepare() {
     // 5. Reduce the amount of variables required by pushing some operations
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
+  } else {
+    // Canonicalize loops so they have a single latch and preheader.
+    // This enables OpLoopMerge emission for non-shader targets.
+    addPass(createLoopSimplifyPass());
   }
   SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
@@ -261,15 +265,14 @@ bool SPIRVPassConfig::addRegBankSelect() {
 
 static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
-    cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
-             "instructions"),
+    cl::desc("Emit SPIR-V NonSemantic.Shader.DebugInfo.100 instructions"),
     cl::Optional, cl::init(false));
 
 void SPIRVPassConfig::addPreEmitPass() {
-  // The SPIRVEmitNonSemanticDI pass self-activates when the module contains
-  // debug info (llvm.dbg.cu). --spv-emit-nonsemantic-debug-info is a
-  // deprecated synonym for -g.
-  addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
+  if (SPVEnableNonSemanticDI ||
+      getSPIRVTargetMachine().getTargetTriple().getVendor() == Triple::AMD) {
+    addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
+  }
 }
 
 namespace {

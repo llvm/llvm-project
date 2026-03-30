@@ -1509,6 +1509,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
            "clip operands types mismatch");
     return handleHlslClip(E, this);
+  case Builtin::BI__builtin_hlsl_group_memory_barrier: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getGroupMemoryBarrierIntrinsic();
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
   case Builtin::BI__builtin_hlsl_group_memory_barrier_with_group_sync: {
     Intrinsic::ID ID =
         CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();

@@ -1,8 +1,14 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fobjc-runtime=macosx-10.14.0 -I %S/Inputs -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck --check-prefix CHECK-ALL-DISABLED %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fobjc-runtime=macosx-10.14.0 -I %S/Inputs -emit-llvm -no-enable-noundef-analysis -o - %s -fexperimental-new-constant-interpreter | FileCheck --check-prefix CHECK-ALL-DISABLED %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -I %S/Inputs -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck --check-prefix CHECK-ALL-DISABLED-CONST-ON %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -I %S/Inputs -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck --check-prefix CHECK-NUMBERS-DISABLED %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -I %S/Inputs -emit-llvm -no-enable-noundef-analysis -o - %s | FileCheck --check-prefix CHECK-DICT-DISABLED %s
+
+// RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -I %S/Inputs -emit-llvm -no-enable-noundef-analysis -o - %s -fexperimental-new-constant-interpreter | FileCheck --check-prefix CHECK-ALL-DISABLED-CONST-ON %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -I %S/Inputs -emit-llvm -no-enable-noundef-analysis -o - %s -fexperimental-new-constant-interpreter | FileCheck --check-prefix CHECK-NUMBERS-DISABLED %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -I %S/Inputs -emit-llvm -no-enable-noundef-analysis -o - %s -fexperimental-new-constant-interpreter | FileCheck --check-prefix CHECK-DICT-DISABLED %s
+
 
 #if __has_feature(objc_bool)
 #define YES __objc_yes

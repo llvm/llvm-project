@@ -62,6 +62,7 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXRegisterInfo.cpp",
     "NVPTXReplaceImageHandles.cpp",
     "NVPTXSelectionDAGInfo.cpp",
+    "NVPTXSetByValParamAlign.cpp",
     "NVPTXSubtarget.cpp",
     "NVPTXTagInvariantLoads.cpp",
     "NVPTXTargetMachine.cpp",
