@@ -798,7 +798,7 @@ APInt APInt::reverseBits() const {
   uint64_t PrevRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1]);
   for (unsigned I = 0; I < NumWords - 1; ++I) {
     uint64_t CurrRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 2 - I]);
-    Result.U.pVal[I] = (CurrRev >> ExcessBits) | (PrevRev << (64 - ExcessBits));
+    Result.U.pVal[I] = (PrevRev >> ExcessBits) | (CurrRev << (64 - ExcessBits));
     PrevRev = CurrRev;
   }
   Result.U.pVal[NumWords - 1] = PrevRev >> ExcessBits;
