@@ -21,6 +21,7 @@ namespace llvm {
 class raw_pwrite_stream;
 
 namespace gsym {
+class GsymCreator;
 
 /// A simplified binary data writer class that doesn't require targets, target
 /// definitions, architectures, or require any other optional compile time
@@ -30,10 +31,14 @@ namespace gsym {
 class FileWriter {
   llvm::raw_pwrite_stream &OS;
   llvm::endianness ByteOrder;
+  /// The size of string table offsets. The value is 4 unless a GsymCreator is
+  /// provided to the class' constructor, in which case the value of
+  /// GsymCreator::getStringOffsetSize() is used.
+  uint8_t StrpSize;
 
 public:
-  FileWriter(llvm::raw_pwrite_stream &S, llvm::endianness B)
-      : OS(S), ByteOrder(B) {}
+  LLVM_ABI FileWriter(llvm::raw_pwrite_stream &S, llvm::endianness B,
+                      const GsymCreator *GC = nullptr);
   LLVM_ABI ~FileWriter();
   /// Write a single uint8_t value into the stream at the current file
   /// position.
@@ -83,6 +88,11 @@ public:
   ///          don't fit into ByteSize should be zero.
   /// \param   ByteSize The size of the value to write in bytes. Can be 1-8.
   LLVM_ABI void writeUnsigned(uint64_t Value, size_t ByteSize);
+
+  /// Write a string table offset (strp) of size StrpSize into the stream.
+  ///
+  /// \param   Value The string table offset to write.
+  LLVM_ABI void writeStrp(uint64_t Value);
 
   /// Write an array of uint8_t values into the stream at the current file
   /// position.

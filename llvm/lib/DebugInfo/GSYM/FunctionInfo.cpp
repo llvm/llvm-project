@@ -154,8 +154,8 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
   // Write the size in bytes of this function as a uint32_t. This can be zero
   // if we just have a symbol from a symbol table and that symbol has no size.
   Out.writeU32(size());
-  // Write the name of this function as a uint32_t string table offset.
-  Out.writeU32(Name);
+  // Write the name of this function as a string table offset.
+  Out.writeStrp(Name);
 
   if (OptLineTable) {
     Out.writeU32(InfoType::LineTableInfo);

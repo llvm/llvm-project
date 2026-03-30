@@ -230,7 +230,7 @@ llvm::Error InlineInfo::encode(FileWriter &O, uint64_t BaseAddr) const {
   encodeRanges(Ranges, O, BaseAddr);
   bool HasChildren = !Children.empty();
   O.writeU8(HasChildren);
-  O.writeU32(Name);
+  O.writeStrp(Name);
   O.writeULEB(CallFile);
   O.writeULEB(CallLine);
   if (HasChildren) {

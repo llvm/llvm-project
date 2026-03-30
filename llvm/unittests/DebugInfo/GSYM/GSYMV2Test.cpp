@@ -47,7 +47,7 @@ static Expected<SmallString<512>> encodeV2(const GsymCreatorV2 &GC,
                                            llvm::endianness ByteOrder) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder);
+  FileWriter FW(OutStrm, ByteOrder, &GC);
   if (auto Err = GC.encode(FW))
     return std::move(Err);
   return Str;
@@ -674,7 +674,7 @@ createAndReadV2(GsymCreatorV2 &GC,
 
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder);
+  FileWriter FW(OutStrm, ByteOrder, &GC);
   if (auto Err = GC.encode(FW))
     return std::move(Err);
 

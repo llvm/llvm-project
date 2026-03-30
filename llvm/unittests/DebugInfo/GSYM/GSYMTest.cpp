@@ -1054,7 +1054,7 @@ static void TestGsymCreatorV1EncodeError(llvm::endianness ByteOrder,
                                        std::string ExpectedErrorMsg) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder);
+  FileWriter FW(OutStrm, ByteOrder, &GC);
   llvm::Error Err = GC.encode(FW);
   ASSERT_TRUE(bool(Err));
   checkError(ExpectedErrorMsg, std::move(Err));
@@ -1130,7 +1130,7 @@ static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
                              uint8_t ExpStrOffSize) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder);
+  FileWriter FW(OutStrm, ByteOrder, &GC);
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
   auto GR = GsymReader::copyBuffer(OutStrm.str());

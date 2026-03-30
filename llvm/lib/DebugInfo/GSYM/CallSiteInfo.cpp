@@ -27,7 +27,7 @@ Error CallSiteInfo::encode(FileWriter &O) const {
   O.writeU8(Flags);
   O.writeU32(MatchRegex.size());
   for (uint32_t Entry : MatchRegex)
-    O.writeU32(Entry);
+    O.writeStrp(Entry);
   return Error::success();
 }
 

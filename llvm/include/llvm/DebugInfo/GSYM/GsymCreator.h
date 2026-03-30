@@ -325,6 +325,11 @@ public:
   LLVM_ABI GsymCreator(bool Quiet = false);
   virtual ~GsymCreator() = default;
 
+  /// Get the size in bytes of string table references (strp offsets).
+  ///
+  /// \returns The size in bytes of each string table offset.
+  virtual uint8_t getStringOffsetSize() const = 0;
+
   /// Save a GSYM file to a stand alone file.
   ///
   /// \param Path The file path to save the GSYM file to.

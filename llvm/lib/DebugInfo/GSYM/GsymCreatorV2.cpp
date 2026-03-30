@@ -32,6 +32,10 @@ std::unique_ptr<GsymCreator> GsymCreatorV2::createNew(bool Quiet) const {
   return std::make_unique<GsymCreatorV2>(Quiet);
 }
 
+uint8_t GsymCreatorV2::getStringOffsetSize() const {
+  return (StrTab.getSize() > UINT32_MAX) ? 8 : 4;
+}
+
 uint8_t GsymCreatorV2::getAddressOffsetSize() const {
   const std::optional<uint64_t> BaseAddress = getBaseAddress();
   const std::optional<uint64_t> LastFuncAddr = getLastFunctionAddress();
@@ -70,7 +74,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   // total FunctionInfo section size and each function's offset within it.
   SmallVector<char, 0> FIBuf;
   raw_svector_ostream FIOS(FIBuf);
-  FileWriter FIFW(FIOS, O.getByteOrder());
+  FileWriter FIFW(FIOS, O.getByteOrder(), this);
   std::vector<uint64_t> FIRelativeOffsets;
   for (const auto &FI : Funcs) {
     if (auto OffOrErr = FI.encode(FIFW))
@@ -81,7 +85,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const uint64_t FISectionSize = FIBuf.size();
   const uint64_t StringTableSize = StrTab.getSize();
 
-  const uint8_t StrpSize = (StringTableSize > UINT32_MAX) ? 8 : 4;
+  const uint8_t StrpSize = getStringOffsetSize();
 
   const bool HasUUID = !UUID.empty();
   const uint32_t NumGlobalDataEntries = 5 + (HasUUID ? 1 : 0) + 1;

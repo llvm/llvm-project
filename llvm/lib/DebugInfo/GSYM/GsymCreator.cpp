@@ -74,7 +74,7 @@ llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
   raw_fd_ostream OutStrm(Path, EC);
   if (EC)
     return llvm::errorCodeToError(EC);
-  FileWriter O(OutStrm, ByteOrder);
+  FileWriter O(OutStrm, ByteOrder, this);
   return encode(O);
 }
 
@@ -386,8 +386,8 @@ llvm::Error GsymCreator::encodeFileTable(FileWriter &O) const {
     return createStringError(std::errc::invalid_argument, "too many files");
   O.writeU32(static_cast<uint32_t>(Files.size()));
   for (const auto &File : Files) {
-    O.writeU32(File.Dir);
-    O.writeU32(File.Base);
+    O.writeStrp(File.Dir);
+    O.writeStrp(File.Base);
   }
   return Error::success();
 }
