@@ -718,8 +718,7 @@ public:
               thread->SetResumeState(eStateSuspended);
             }
           }
-          result.AppendMessageWithFormat("in process %" PRIu64 "\n",
-                                         process->GetID());
+          result.AppendMessageWithFormatv("in process {0}", process->GetID());
         }
       } else {
         // These two lines appear at the beginning of both blocks in this
@@ -737,9 +736,9 @@ public:
         for (uint32_t idx = 0; idx < num_threads; ++idx) {
           Thread *thread = process->GetThreadList().GetThreadAtIndex(idx).get();
           if (thread == current_thread) {
-            result.AppendMessageWithFormat("Resuming thread 0x%4.4" PRIx64
-                                           " in process %" PRIu64 "\n",
-                                           thread->GetID(), process->GetID());
+            result.AppendMessageWithFormatv(
+                "Resuming thread {0:x4} in process {1}", thread->GetID(),
+                process->GetID());
             const bool override_suspend = true;
             thread->SetResumeState(eStateRunning, override_suspend);
           } else {
@@ -757,8 +756,8 @@ public:
 
       // We should not be holding the thread list lock when we do this.
       if (error.Success()) {
-        result.AppendMessageWithFormat("Process %" PRIu64 " resuming\n",
-                                       process->GetID());
+        result.AppendMessageWithFormatv("Process {0} resuming",
+                                        process->GetID());
         if (synchronous_execution) {
           // If any state changed events had anything to say, add that to the
           // result
@@ -1026,8 +1025,8 @@ protected:
         }
 
         new_plan_sp = thread->QueueThreadPlanForStepUntil(
-            abort_other_plans, &address_list.front(), address_list.size(),
-            m_options.m_stop_others, m_options.m_frame_idx, new_plan_status);
+            abort_other_plans, address_list, m_options.m_stop_others,
+            m_options.m_frame_idx, new_plan_status);
         if (new_plan_sp) {
           // User level plans should be controlling plans so they can be
           // interrupted
@@ -1062,8 +1061,8 @@ protected:
         error = process->Resume();
 
       if (error.Success()) {
-        result.AppendMessageWithFormat("Process %" PRIu64 " resuming\n",
-                                       process->GetID());
+        result.AppendMessageWithFormatv("Process {0} resuming",
+                                        process->GetID());
         if (synchronous_execution) {
           // If any state changed events had anything to say, add that to the
           // result

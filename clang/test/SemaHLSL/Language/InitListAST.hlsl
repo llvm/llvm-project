@@ -1059,3 +1059,120 @@ float case17() {
   float Floats[] = {Structs, Structs};
   return Floats[7];
 }
+
+// Tests which use explicit casts
+
+// CHECK-LABEL: Dumping case18
+// CHECK: VarDecl {{.*}} used TF 'TwoFloats' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoFloats'
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.000000e+00
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} used TI 'TwoInts' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoInts'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .Z
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue Var {{.*}} 'TF' 'TwoFloats'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .W
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue Var {{.*}} 'TF' 'TwoFloats'
+int case18() {
+  TwoFloats TF = {1.0,2.0};
+  TwoInts TI = {(TwoInts)TF};
+  return TI.Z;
+}
+
+// CHECK-LABEL: Dumping case19
+// CHECK: VarDecl {{.*}} used FF 'FourFloats' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'FourFloats'
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoFloats'
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 3.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 4.000000e+00
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} used Ints 'int[4]' cinit
+// CHECK-NEXT: ExprWithCleanups {{.*}} 'int[4]'
+// CHECK-NEXT: InitListExpr {{.*}} 'int[4]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
+int case19() {
+  FourFloats FF = {1.0,2.0,3.0,4.0};
+  int Ints[4] = {(int[4])FF};
+  return Ints[0];
+}
+
+// CHECK-LABEL: Dumping case20
+// CHECK: VarDecl {{.*}} used Arr 'float[4]' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'float[4]'
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 3.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 4.000000e+00
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} used TI 'TwoInts' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoInts'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .Z
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[4]' <HLSLArrayRValue> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float[4]' lvalue Var {{.*}} 'Arr' 'float[4]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .W
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[4]' <HLSLArrayRValue> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float[4]' lvalue Var {{.*}} 'Arr' 'float[4]'
+int case20() {
+  float Arr[4] = {1.0,2.0,3.0,4.0};
+  TwoInts TI = {(TwoInts)Arr};
+  return TI.Z;
+}
+
+// CHECK-LABEL: Dumping case21
+// CHECK: VarDecl {{.*}} used F 'float' cinit
+// CHECK-NEXT: {{.*}} 'float' 1.000000e+00
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} used SB 'SlicyBits' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'SlicyBits'
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int' <NoOp>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral> part_of_explicit_cast
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue Var {{.*}} 'F' 'float'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 2
+int case21() {
+  float F = 1.0;
+  SlicyBits SB = {(int)F, 2};
+  return SB.Z;
+}

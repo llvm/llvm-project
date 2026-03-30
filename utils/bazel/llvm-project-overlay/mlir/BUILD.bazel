@@ -4214,6 +4214,7 @@ cc_library(
         ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
+        ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
@@ -10235,6 +10236,7 @@ td_library(
     name = "OpenAccOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/OpenACC/AccCommon.td",
+        "include/mlir/Dialect/OpenACC/OpenACCAttributes.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
         "include/mlir/Dialect/OpenACC/OpenACCCGAttributes.td",
         "include/mlir/Dialect/OpenACC/OpenACCCGOps.td",

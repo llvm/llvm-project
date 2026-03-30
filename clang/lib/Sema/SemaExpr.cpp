@@ -5174,7 +5174,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // Issue a better diagnostic if we tried to pass multiple arguments to
   // a builtin subscript operator rather than diagnosing this as a generic
   // overload resolution failure.
-  if (ArgExprs.size() != 1 && !base->getType()->isRecordType() &&
+  if (ArgExprs.size() != 1 && !base->getType()->isDependentType() &&
+      !base->getType()->isRecordType() &&
       !base->getType()->isObjCObjectPointerType()) {
     Diag(base->getExprLoc(), diag::err_ovl_builtin_subscript_expects_single_arg)
         << base->getType() << base->getSourceRange();
@@ -13993,10 +13994,10 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   if (!DRE) return NCCK_None;
   if (!DRE->refersToEnclosingVariableOrCapture()) return NCCK_None;
 
-  ValueDecl *Value = dyn_cast<ValueDecl>(DRE->getDecl());
+  ValueDecl *Value = DRE->getDecl();
 
   // The declaration must be a value which is not declared 'const'.
-  if (!Value || Value->getType().isConstQualified())
+  if (Value->getType().isConstQualified())
     return NCCK_None;
 
   BindingDecl *Binding = dyn_cast<BindingDecl>(Value);

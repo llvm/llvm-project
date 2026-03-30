@@ -306,10 +306,10 @@ buildCacheControlPayloads(ArrayRef<Attribute> attrs) {
 
     // Produce: {SPIR-V decoration token:"L1 cache control,L3 cache control"}
     // The quote char (0x22) is embedded literally; LLVM IR prints it as \22.
-    std::string entry = llvm::formatv("'{'{0}:\"{1},{2}\"'}'",
-                                      tokenAttr.getValue().getZExtValue(),
-                                      secondAttr.getValue().getZExtValue(),
-                                      thirdAttr.getValue().getZExtValue());
+    std::string entry =
+        llvm::formatv("{{{0}:\"{1},{2}\"}", tokenAttr.getValue().getZExtValue(),
+                      secondAttr.getValue().getZExtValue(),
+                      thirdAttr.getValue().getZExtValue());
 
     // Deduplicate identical annotations.
     if (!seen.insert({entry, true}).second)
@@ -915,7 +915,7 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
     std::optional<ArrayAttr> optCacheControls =
         getCacheControlMetadata(rewriter, op);
     if (!optCacheControls) {
-      op->removeAttr("cache_control");
+      rewriter.modifyOpInPlace(op, [&]() { op->removeAttr("cache_control"); });
       return success();
     }
 
@@ -929,8 +929,10 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, op->getLoc(), ptr, *optCacheControls, moduleOp);
 
     // Replace the pointer operand with the annotated one.
-    op->setOperand(ptrIdx, annotatedPtr);
-    op->removeAttr("cache_control");
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setOperand(ptrIdx, annotatedPtr);
+      op->removeAttr("cache_control");
+    });
     return success();
   }
 };
