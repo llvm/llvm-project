@@ -217,12 +217,6 @@ public:
         CI.getASTReader()->getModuleManager().lookupByFileName(Filename);
     assert(MF && "missing module file for loaded module?");
 
-#if !defined(__APPLE__)
-    // Workaround for ext4 file system.
-    if (auto Bypass = CI.getFileManager().getBypassFile(*File))
-      File = *Bypass;
-#endif
-
     // Only rewrite each module file once.
     if (!Rewritten.insert(MF).second)
       return;
