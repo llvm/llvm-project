@@ -5285,9 +5285,8 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
       DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
-    DAG.getAtomic(NT, dl, MemVT, InChain,
-                  getValue(I.getPointerOperand()), getValue(I.getValOperand()),
-                  MMO, I.isElementwise());
+      DAG.getAtomic(NT, dl, MemVT, InChain, getValue(I.getPointerOperand()),
+                    getValue(I.getValOperand()), MMO, I.isElementwise());
 
   SDValue OutChain = L.getValue(1);
 

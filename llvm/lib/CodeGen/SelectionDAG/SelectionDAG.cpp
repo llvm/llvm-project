@@ -9894,8 +9894,7 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDVTList VTList, ArrayRef<SDValue> Ops,
                                 MachineMemOperand *MMO,
-                                ISD::LoadExtType ExtType,
-                                bool IsElementwise) {
+                                ISD::LoadExtType ExtType, bool IsElementwise) {
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opcode, VTList, Ops);
   ID.AddInteger(MemVT.getRawBits());
