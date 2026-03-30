@@ -2026,8 +2026,11 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
       NeedTrans = !IsDevice;
       Skip = IsDevice;
     } else if (A->getOption().matches(options::OPT_Xarch__)) {
-      NeedTrans = A->getValue() == getArchName() ||
-                  (!BoundArch.empty() && A->getValue() == BoundArch);
+      StringRef Val = A->getValue();
+      NeedTrans = Val == getArchName() ||
+                  (!BoundArch.empty() && A->getValue() == BoundArch) ||
+                  // Match any triple recognized arch aliases.
+                  Triple.getArch() == llvm::Triple::parseArch(Val);
       Skip = !NeedTrans;
     }
     if (NeedTrans || Skip)
