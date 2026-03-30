@@ -339,7 +339,7 @@ static bool isGenericKernel(Function &Fn) {
 /// * \p Source is a degenerate block (no terminator because the BB is
 ///             the current head of the IR construction).
 static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
-  if (Instruction *Term = Source->getTerminatorOrNull()) {
+  if (Instruction *Term = Source->getTerminator()) {
     auto *Br = cast<UncondBrInst>(Term);
     BasicBlock *Succ = Br->getSuccessor();
     Succ->removePredecessor(Source, /*KeepOneInputPHIs=*/true);
@@ -1006,8 +1006,9 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
         if (I.isTerminator()) {
           // Absorb any debug value that terminator may have
-          if (Instruction *TI = OI.EntryBB->getTerminatorOrNull())
-            TI->adoptDbgRecords(&ArtificialEntry, I.getIterator(), false);
+          if (OI->EntryBB->getTerminator())
+            OI->EntryBB->getTerminator()->adoptDbgRecords(
+                &ArtificialEntry, I.getIterator(), false);
           continue;
         }
 
@@ -5166,7 +5167,7 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
   BasicBlock *InputBB = Builder.GetInsertBlock();
-  if (InputBB->hasTerminator())
+  if (InputBB->getTerminator())
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
   if (!AfterIP)
@@ -5201,8 +5202,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
   // called for variables which have destructors/finalizers.
   auto FiniCB = [&](InsertPointTy CodeGenIP) { return llvm::Error::success(); };
 
-  if (Instruction *TI = ScanRedInfo->OMPScanFinish->getTerminatorOrNull())
-    Builder.SetInsertPoint(TI);
+  if (ScanRedInfo->OMPScanFinish->getTerminator())
+    Builder.SetInsertPoint(ScanRedInfo->OMPScanFinish->getTerminator());
   else
     Builder.SetInsertPoint(ScanRedInfo->OMPScanFinish);
 
@@ -5214,7 +5215,7 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
   BasicBlock *InputBB = Builder.GetInsertBlock();
-  if (InputBB->hasTerminator())
+  if (InputBB->getTerminator())
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
   if (!AfterIP)
@@ -5844,7 +5845,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
-    if (!BB.hasTerminator())
+    if (!BB.getTerminator())
       UIs.push_back(new UnreachableInst(F->getContext(), &BB));
   FunctionAnalysisManager FAM;
   FAM.registerPass([]() { return DominatorTreeAnalysis(); });
@@ -7142,7 +7143,7 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
-    if (!BB.hasTerminator())
+    if (!BB.getTerminator())
       UIs.push_back(new UnreachableInst(F->getContext(), &BB));
 
   // TODO: We should not rely on pass manager. Currently we use pass manager
@@ -7281,7 +7282,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
-    if (!BB.hasTerminator())
+    if (!BB.getTerminator())
       UIs.push_back(new UnreachableInst(F->getContext(), &BB));
 
   FunctionAnalysisManager FAM;
@@ -7691,7 +7692,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   // Create inlined region's entry and body blocks, in preparation
   // for conditional creation
   BasicBlock *EntryBB = Builder.GetInsertBlock();
-  Instruction *SplitPos = EntryBB->getTerminatorOrNull();
+  Instruction *SplitPos = EntryBB->getTerminator();
   if (!isa_and_nonnull<UncondBrInst, CondBrInst>(SplitPos))
     SplitPos = new UnreachableInst(Builder.getContext(), EntryBB);
   BasicBlock *ExitBB = EntryBB->splitBasicBlock(SplitPos, "omp_region.end");
@@ -7822,7 +7823,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCopyinClauseBlocks(
 
   // If entry block is terminated, split to preserve the branch to following
   // basic block (i.e. OMP.Entry.Next), otherwise, leave everything as is.
-  if (isa_and_nonnull<CondBrInst>(OMP_Entry->getTerminatorOrNull())) {
+  if (isa_and_nonnull<CondBrInst>(OMP_Entry->getTerminator())) {
     CopyEnd = OMP_Entry->splitBasicBlock(OMP_Entry->getTerminator(),
                                          "copyin.not.master.end");
     OMP_Entry->getTerminator()->eraseFromParent();
@@ -10530,7 +10531,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
 void OpenMPIRBuilder::emitBranch(BasicBlock *Target) {
   BasicBlock *CurBB = Builder.GetInsertBlock();
 
-  if (!CurBB || CurBB->hasTerminator()) {
+  if (!CurBB || CurBB->getTerminator()) {
     // If there is no insert point or the previous block is already
     // terminated, don't touch it.
   } else {
@@ -10886,7 +10887,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
         OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
     BasicBlock *CurBB = Builder.GetInsertBlock();
-    Instruction *CurBBTI = CurBB->getTerminatorOrNull();
+    Instruction *CurBBTI = CurBB->getTerminator();
     CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
     BasicBlock *ExitBB =
         CurBB->splitBasicBlock(CurBBTI, X->getName() + ".atomic.exit");
@@ -10935,7 +10936,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     // |     \---/
     // ExitBB
     BasicBlock *CurBB = Builder.GetInsertBlock();
-    Instruction *CurBBTI = CurBB->getTerminatorOrNull();
+    Instruction *CurBBTI = CurBB->getTerminator();
     CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
     BasicBlock *ExitBB =
         CurBB->splitBasicBlock(CurBBTI, X->getName() + ".atomic.exit");
@@ -11094,7 +11095,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
           //
           // where ContBB only contains the store of old value to 'v'.
           BasicBlock *CurBB = Builder.GetInsertBlock();
-          Instruction *CurBBTI = CurBB->getTerminatorOrNull();
+          Instruction *CurBBTI = CurBB->getTerminator();
           CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
           BasicBlock *ExitBB = CurBB->splitBasicBlock(
               CurBBTI, X.Var->getName() + ".atomic.exit");
@@ -12008,7 +12009,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
 
   InsertPointTy SplitIP = Builder.saveIP();
   if (SplitIP.getPoint() == CurBB->end())
-    if (Instruction *Terminator = CurBB->getTerminatorOrNull())
+    if (Instruction *Terminator = CurBB->getTerminator())
       SplitIP = InsertPointTy(CurBB, Terminator->getIterator());
 
   BasicBlock *ContBB =
@@ -12024,7 +12025,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
   redirectTo(CurBB, CLI->getPreheader(), Builder.getCurrentDebugLocation());
 
   // Remove the unconditional branch inserted by createLoopSkeleton in the body
-  if (Instruction *T = CLI->getBody()->getTerminatorOrNull())
+  if (Instruction *T = CLI->getBody()->getTerminator())
     T->eraseFromParent();
 
   InsertPointTy BodyIP = CLI->getBodyIP();
@@ -12032,7 +12033,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
     return Err;
 
   // Body must either fallthrough to the latch or branch directly to it.
-  if (Instruction *BodyTerminator = CLI->getBody()->getTerminatorOrNull()) {
+  if (Instruction *BodyTerminator = CLI->getBody()->getTerminator()) {
     auto *BodyBr = dyn_cast<UncondBrInst>(BodyTerminator);
     if (!BodyBr || BodyBr->getSuccessor() != CLI->getLatch()) {
       return make_error<StringError>(
@@ -12048,7 +12049,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
 
   // Link After -> ContBB
   Builder.SetInsertPoint(CLI->getAfter(), CLI->getAfter()->begin());
-  if (!CLI->getAfter()->hasTerminator())
+  if (!CLI->getAfter()->getTerminator())
     Builder.CreateBr(ContBB);
 
   return InsertPointTy{ContBB, ContBB->begin()};

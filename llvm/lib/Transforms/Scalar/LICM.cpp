@@ -823,7 +823,7 @@ public:
     BasicBlock *HoistCommonSucc = CreateHoistedBlock(CommonSucc);
 
     // Link up these blocks with branches.
-    if (!HoistCommonSucc->hasTerminator()) {
+    if (!HoistCommonSucc->getTerminator()) {
       // The new common successor we've generated will branch to whatever that
       // hoist target branched to.
       BasicBlock *TargetSucc = HoistTarget->getSingleSuccessor();
@@ -831,11 +831,11 @@ public:
       HoistCommonSucc->moveBefore(TargetSucc);
       UncondBrInst::Create(TargetSucc, HoistCommonSucc);
     }
-    if (!HoistTrueDest->hasTerminator()) {
+    if (!HoistTrueDest->getTerminator()) {
       HoistTrueDest->moveBefore(HoistCommonSucc);
       UncondBrInst::Create(HoistCommonSucc, HoistTrueDest);
     }
-    if (!HoistFalseDest->hasTerminator()) {
+    if (!HoistFalseDest->getTerminator()) {
       HoistFalseDest->moveBefore(HoistCommonSucc);
       UncondBrInst::Create(HoistCommonSucc, HoistFalseDest);
     }

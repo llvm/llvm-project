@@ -1024,7 +1024,7 @@ void StructurizeCFG::simplifyAffectedPhis() {
 
 /// Remove phi values from all successors and then remove the terminator.
 DebugLoc StructurizeCFG::killTerminator(BasicBlock *BB) {
-  Instruction *Term = BB->getTerminatorOrNull();
+  Instruction *Term = BB->getTerminator();
   if (!Term)
     return DebugLoc();
 
