@@ -75,16 +75,18 @@ body:             |
     ; AVX: liveins: $ymm0, $ymm1
     ; AVX-NEXT: {{  $}}
     ; AVX-NEXT: [[COPY:%[0-9]+]]:vr128 = COPY $xmm1
-    ; AVX-NEXT: undef [[COPY1:%[0-9]+]].sub_xmm:vr256 = COPY [[COPY]]
-    ; AVX-NEXT: $ymm0 = COPY [[COPY1]]
+    ; AVX-NEXT: [[DEF:%[0-9]+]]:vr256 = IMPLICIT_DEF
+    ; AVX-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vr256 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_xmm
+    ; AVX-NEXT: $ymm0 = COPY [[INSERT_SUBREG]]
     ; AVX-NEXT: RET 0, implicit $ymm0
     ;
     ; AVX512VL-LABEL: name: test_insert_128_idx0_undef
     ; AVX512VL: liveins: $ymm0, $ymm1
     ; AVX512VL-NEXT: {{  $}}
     ; AVX512VL-NEXT: [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
-    ; AVX512VL-NEXT: undef [[COPY1:%[0-9]+]].sub_xmm:vr256x = COPY [[COPY]]
-    ; AVX512VL-NEXT: $ymm0 = COPY [[COPY1]]
+    ; AVX512VL-NEXT: [[DEF:%[0-9]+]]:vr256x = IMPLICIT_DEF
+    ; AVX512VL-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vr256x = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_xmm
+    ; AVX512VL-NEXT: $ymm0 = COPY [[INSERT_SUBREG]]
     ; AVX512VL-NEXT: RET 0, implicit $ymm0
     %0(<8 x s32>) = IMPLICIT_DEF
     %1(<4 x s32>) = COPY $xmm1

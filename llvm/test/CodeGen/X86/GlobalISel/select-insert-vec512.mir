@@ -80,8 +80,9 @@ body:             |
     ; ALL: liveins: $ymm0, $ymm1
     ; ALL-NEXT: {{  $}}
     ; ALL-NEXT: [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
-    ; ALL-NEXT: undef [[COPY1:%[0-9]+]].sub_xmm:vr512 = COPY [[COPY]]
-    ; ALL-NEXT: $zmm0 = COPY [[COPY1]]
+    ; ALL-NEXT: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
+    ; ALL-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vr512 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_xmm
+    ; ALL-NEXT: $zmm0 = COPY [[INSERT_SUBREG]]
     ; ALL-NEXT: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<4 x s32>) = COPY $xmm1
@@ -189,8 +190,9 @@ body:             |
     ; ALL: liveins: $ymm0, $ymm1
     ; ALL-NEXT: {{  $}}
     ; ALL-NEXT: [[COPY:%[0-9]+]]:vr256x = COPY $ymm1
-    ; ALL-NEXT: undef [[COPY1:%[0-9]+]].sub_ymm:vr512 = COPY [[COPY]]
-    ; ALL-NEXT: $zmm0 = COPY [[COPY1]]
+    ; ALL-NEXT: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
+    ; ALL-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vr512 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_ymm
+    ; ALL-NEXT: $zmm0 = COPY [[INSERT_SUBREG]]
     ; ALL-NEXT: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<8 x s32>) = COPY $ymm1
