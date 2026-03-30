@@ -109,6 +109,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURegisterBankInfo.cpp
   AMDGPURemoveIncompatibleFunctions.cpp
   AMDGPUReserveWWMRegs.cpp
+  AMDGPUResourceDistanceMap.cpp
   AMDGPUResourceUsageAnalysis.cpp
   AMDGPURewriteAGPRCopyMFMA.cpp
   AMDGPURewriteOutArguments.cpp

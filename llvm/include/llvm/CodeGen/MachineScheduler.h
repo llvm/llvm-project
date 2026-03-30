@@ -1089,6 +1089,13 @@ public:
   /// Dump the state of the information that tracks resource usage.
   LLVM_ABI void dumpReservedCycles() const;
   LLVM_ABI void dumpScheduledState() const;
+
+  /// Count nodes in the Available + Pending queues that satisfy \p P.
+  /// Hides the underlying queue storage from callers.
+  template <typename Predicate> unsigned countReadyNodes(Predicate P) {
+    return llvm::count_if(Available.elements(), P) +
+           llvm::count_if(Pending.elements(), P);
+  }
 };
 
 /// Base class for GenericScheduler. This class maintains information about

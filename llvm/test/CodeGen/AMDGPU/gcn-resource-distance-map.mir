@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx942 -run-pass=machine-scheduler \
+# RUN:   -misched=gcn-resource -verify-misched %s -o - | FileCheck %s
+
+# Smoke test for the resource distance map (ResourceReduce heuristic).
+# Region has two independent producer chains feeding distinct MFMA roots;
+# the analysis must build a per-resource distance map without crashing
+# and the strategy must pick a valid order.
+
+---
+name: two_mfma_roots
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: two_mfma_roots
+    ; CHECK: V_MFMA_F32_16X16X16F16_e64
+    ; CHECK: V_MFMA_F32_16X16X16F16_e64
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    %2:areg_128_align2 = IMPLICIT_DEF
+    %3:vreg_64_align2 = IMPLICIT_DEF
+    %4:vreg_64_align2 = IMPLICIT_DEF
+    %5:areg_128_align2 = IMPLICIT_DEF
+    %6:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %0, %1, %2, 0, 0, 0, implicit $mode, implicit $exec
+    %7:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %3, %4, %5, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...

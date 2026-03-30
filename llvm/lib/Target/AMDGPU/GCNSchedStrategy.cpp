@@ -803,7 +803,8 @@ static unsigned getResourceUseCount(unsigned ResId, const MCSchedClassDesc *SC,
 }
 
 void GCNPreRACriticalResource::initialize(ScheduleDAGMI *DAG) {
-  GCNMaxOccupancySchedStrategy::initialize(DAG);
+  GCNSchedStrategy::initialize(DAG);
+  ResDistMap.initialize(DAG);
   // TrackRemCriticalRes is set per-region by GCNSchedStage::initGCNRegion
   // before this initialize() runs.
   updateRemainderCriticalRes();
@@ -818,6 +819,41 @@ void GCNPreRACriticalResource::updateRemainderCriticalRes() {
 void GCNPreRACriticalResource::schedNode(SUnit *SU, bool IsTopNode) {
   GCNSchedStrategy::schedNode(SU, IsTopNode);
   updateRemainderCriticalRes();
+  ResDistMap.schedNode(SU, Top.getCurrCycle());
+  PendingResInstrs.reset();
+}
+
+SUnit *GCNPreRACriticalResource::pickNode(bool &IsTopNode) {
+  if (RemCriticalRes && !PendingResInstrs) {
+    PendingResInstrs = Top.countReadyNodes(
+        [&](SUnit *SU) { return ResDistMap.isRoot(SU); });
+  }
+  return GCNSchedStrategy::pickNode(IsTopNode);
+}
+
+template <typename T>
+static bool tryLessGeneric(const T &TryVal, const T &CandVal,
+                           GenericSchedulerBase::SchedCandidate &TryCand,
+                           GenericSchedulerBase::SchedCandidate &Cand,
+                           GenericSchedulerBase::CandReason Reason) {
+  if (TryVal < CandVal) {
+    TryCand.Reason = Reason;
+    return true;
+  }
+  if (TryVal > CandVal) {
+    if (Cand.Reason > Reason)
+      Cand.Reason = Reason;
+    return true;
+  }
+  return false;
+}
+
+GCNPreRACriticalResource::GCNPreRACriticalResource(const MachineSchedContext *C)
+    : GCNSchedStrategy(C) {
+  SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
+  if (!DisableRewriteMFMAFormSchedStage)
+    SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
+  SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
 }
 
 bool GCNPreRACriticalResource::tryCandidate(SchedCandidate &Cand,
@@ -853,13 +889,6 @@ bool GCNPreRACriticalResource::tryCandidate(SchedCandidate &Cand,
   // "tie-breaking" in nature.
   bool SameBoundary = Zone != nullptr;
   if (SameBoundary) {
-    // For loops that are acyclic path limited, aggressively schedule for
-    // latency. Within an single cycle, whenever CurrMOps > 0, allow normal
-    // heuristics to take precedence.
-    if (Rem.IsAcyclicLatencyLimited && !Zone->getCurrMOps() &&
-        tryLatency(TryCand, Cand, *Zone))
-      return TryCand.Reason != NoCand;
-
     // Prioritize instructions that read unbuffered or reserved resources by
     // stall cycles.
     if (tryLess(getLatencyStallCycles(*Zone, TryCand.SU),
@@ -868,7 +897,6 @@ bool GCNPreRACriticalResource::tryCandidate(SchedCandidate &Cand,
   }
 
   if (RemCriticalRes) {
-
     // Prioritize instructions that use critical resource
     if (tryGreater(getResourceUseCount(RemCriticalRes,
                                        DAG->getSchedClass(TryCand.SU),
@@ -876,6 +904,34 @@ bool GCNPreRACriticalResource::tryCandidate(SchedCandidate &Cand,
                    getResourceUseCount(RemCriticalRes,
                                        DAG->getSchedClass(Cand.SU), SchedModel),
                    TryCand, Cand, ResourceDemand))
+      return TryCand.Reason != NoCand;
+  }
+
+  if (SameBoundary) {
+    // For loops that are acyclic path limited, aggressively schedule for
+    // latency. Within an single cycle, whenever CurrMOps > 0, allow normal
+    // heuristics to take precedence.
+    if ((!PendingResInstrs || *PendingResInstrs >= 2) &&
+        Rem.IsAcyclicLatencyLimited && !Zone->getCurrMOps() &&
+        tryLatency(TryCand, Cand, *Zone))
+      return TryCand.Reason != NoCand;
+  }
+
+  if (RemCriticalRes) {
+    LLVM_DEBUG({
+      dbgs() << "try ResourceReduce\n";
+      DAG->dumpNode(*TryCand.SU);
+      DAG->dumpNode(*Cand.SU);
+      auto r1 = ResDistMap.getSUnitRankForRes(TryCand.SU, RemCriticalRes);
+      auto r2 = ResDistMap.getSUnitRankForRes(Cand.SU, RemCriticalRes);
+      dbgs() << r1.OrderOfRoot << "@" << r1.DistToRoot << " " << r2.OrderOfRoot
+             << "@" << r2.DistToRoot << "\n";
+    });
+    // Prefer nodes closer to critical resource roots.
+    if (tryLessGeneric(
+            ResDistMap.getSUnitRankForRes(TryCand.SU, RemCriticalRes),
+            ResDistMap.getSUnitRankForRes(Cand.SU, RemCriticalRes), TryCand,
+            Cand, ResourceReduce))
       return TryCand.Reason != NoCand;
   }
 
@@ -1183,7 +1239,6 @@ bool GCNPostRACriticalResource::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   if (RemCriticalRes) {
-
     // Prioritize instructions that use critical resource
     if (tryGreater(getResourceUseCount(RemCriticalRes,
                                        DAG->getSchedClass(TryCand.SU),
@@ -1191,6 +1246,13 @@ bool GCNPostRACriticalResource::tryCandidate(SchedCandidate &Cand,
                    getResourceUseCount(RemCriticalRes,
                                        DAG->getSchedClass(Cand.SU), SchedModel),
                    TryCand, Cand, ResourceDemand))
+      return TryCand.Reason != NoCand;
+
+    // Prefer nodes closer to critical resource roots.
+    if (tryLessGeneric(
+            ResDistMap.getSUnitRankForRes(TryCand.SU, RemCriticalRes),
+            ResDistMap.getSUnitRankForRes(Cand.SU, RemCriticalRes), TryCand,
+            Cand, ResourceReduce))
       return TryCand.Reason != NoCand;
   }
 
@@ -1234,6 +1296,7 @@ bool GCNPostRACriticalResource::tryCandidate(SchedCandidate &Cand,
 
 void GCNPostRACriticalResource::initialize(ScheduleDAGMI *Dag) {
   PostGenericScheduler::initialize(Dag);
+  ResDistMap.initialize(DAG);
   setTrackRemainderCriticalRes(
       Context->MF->getSubtarget<GCNSubtarget>(),
       !static_cast<GCNPostScheduleDAGMILive *>(Dag)->hasIGLPInstrs());
@@ -1243,6 +1306,7 @@ void GCNPostRACriticalResource::initialize(ScheduleDAGMI *Dag) {
 void GCNPostRACriticalResource::schedNode(SUnit *SU, bool IsTopNode) {
   PostGenericScheduler::schedNode(SU, IsTopNode);
   updateRemainderCriticalRes();
+  ResDistMap.schedNode(SU, Top.getCurrCycle());
 }
 
 GCNScheduleDAGMILive::GCNScheduleDAGMILive(
