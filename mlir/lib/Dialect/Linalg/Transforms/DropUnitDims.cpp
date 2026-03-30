@@ -578,10 +578,8 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
     b.cloneRegionBefore(genericOp.getRegion(), replacementOp.getRegion(),
                         replacementOp.getRegion().begin());
     // 5a. Replace `linalg.index` operations that refer to the dropped unit
-    //     dimensions. Use a fresh IRRewriter to avoid inheriting any listener
-    //     from the builder (e.g., WalkPatternRewriter's erasure listener),
-    //     since the ops being erased here are newly cloned, not the matched op.
-    IRRewriter rewriter(b.getContext());
+    //     dimensions.
+    IRRewriter rewriter(b);
     replaceUnitDimIndexOps(replacementOp, droppedDims, rewriter);
 
     return replacementOp;

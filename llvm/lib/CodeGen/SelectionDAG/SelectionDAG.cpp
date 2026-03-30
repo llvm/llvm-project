@@ -4706,7 +4706,7 @@ ConstantRange SelectionDAG::computeConstantRangeIncludingKnownBits(
     unsigned Depth) const {
   KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
   ConstantRange CR1 = ConstantRange::fromKnownBits(Known, ForSigned);
-  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, Depth);
+  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, ForSigned, Depth);
   ConstantRange::PreferredRangeType RangeType =
       ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
   return CR1.intersectWith(CR2, RangeType);
@@ -4821,6 +4821,11 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
            isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
                                   Depth + 1);
+  }
+
+  case ISD::TRUNCATE: {
+    return (OrZero || isKnownNeverZero(Val, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), OrZero, Depth + 1);
   }
 
   case ISD::ROTL:

@@ -660,7 +660,7 @@ APInt APInt::getSplat(unsigned NewLen, const APInt &V) {
 
 unsigned APInt::countLeadingZerosSlowCase() const {
   unsigned Count = 0;
-  for (int i = getNumWords()-1; i >= 0; --i) {
+  for (int i = getNumWords() - 1; i >= 0; --i) {
     uint64_t V = U.pVal[i];
     if (V == 0)
       Count += APINT_BITS_PER_WORD;
@@ -725,6 +725,16 @@ unsigned APInt::countPopulationSlowCase() const {
   for (unsigned i = 0; i < getNumWords(); ++i)
     Count += llvm::popcount(U.pVal[i]);
   return Count;
+}
+
+bool APInt::isPowerOf2SlowCase() const {
+  unsigned Count = 0;
+  for (unsigned i = 0; i < getNumWords(); ++i) {
+    Count += llvm::popcount(U.pVal[i]);
+    if (Count > 1)
+      return false;
+  }
+  return Count == 1;
 }
 
 bool APInt::intersectsSlowCase(const APInt &RHS) const {
