@@ -6112,6 +6112,16 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     }
     break;
   }
+  case ISD::BITCAST: {
+    // Try to infer NaN from known bits, but only for detecting signaling or
+    // nonsignaling NaNs
+    EVT VT = Op.getValueType();
+    if (VT.isFloatingPoint()) {
+      KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
+      Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
+    }
+    break;
+  }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
@@ -6316,17 +6326,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
     if (SNaN && (NoFPClass & fcSNan) == fcSNan)
       return true;
     return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
-  }
-  case ISD::BITCAST: {
-    // Try to infer NaN from known bits, but only for detecting signaling or
-    // nonsignaling NaNs
-    EVT VT = Op.getValueType();
-    if (!SNaN && VT.isFloatingPoint()) {
-      KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
-      const auto FPClass = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
-      return FPClass.isKnownNeverNaN();
-    }
-    return false;
   }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
