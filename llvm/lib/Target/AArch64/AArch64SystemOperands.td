@@ -860,13 +860,11 @@ def SysAliasRegUse : GenericEnum {
   let FilterClass = "RegValue";
 }
 
-class RegValue<bits<2> value> {
-  bits<2> Value = value;
-}
+class RegValue;
 
-def REG_NONE     : RegValue<0b00>;
-def REG_OPTIONAL : RegValue<0b01>;
-def REG_REQUIRED : RegValue<0b10>;
+def REG_NONE     : RegValue;
+def REG_OPTIONAL : RegValue;
+def REG_REQUIRED : RegValue;
 
 class TLBICommon<string name, bits<3> op1, bits<4> crn, bits<4> crm,
                  bits<3> op2, RegValue reguse> {
