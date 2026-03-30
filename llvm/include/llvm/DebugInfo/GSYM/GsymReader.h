@@ -300,24 +300,23 @@ protected:
                        AddrOffsets.size()/sizeof(T));
   }
 
-  /// Get an appropriate address from the address table.
+  /// Get an unsigned integer of any byte size 1-8 from a byte array.
   ///
-  /// The address table in the GSYM file is stored as array of 1-8 byte address
-  /// offsets from the base address. The table is stored internally as a array
-  /// of bytes that are in the correct endianness. In order to extract an
-  /// address from the address table we must access the address offset using
-  /// the correct size and then add it to the base address.
-  ///
-  /// \param Index An index into the AddrOffsets array.
-  /// \returns An virtual address that matches the original object file for the
-  /// address as the specified index, or std::nullopt if Index is out of bounds.
-  template <class T>
-  std::optional<uint64_t> addressForIndex(size_t Index) const {
-    ArrayRef<T> AIO = getAddrOffsets<T>();
-    if (Index < AIO.size())
-      return AIO[Index] + getBaseAddress();
-    return std::nullopt;
+  /// \param Data The raw byte array in the correct endianness.
+  /// \param ElementByteSize The size in bytes of each element (1-8).
+  /// \param Index The element index to extract.
+  /// \returns The element value, or std::nullopt if Index is out of bounds.
+  static std::optional<uint64_t>
+  getUnsigned(ArrayRef<uint8_t> Data, uint8_t ElementByteSize, size_t Index) {
+    uint64_t Offset = Index * ElementByteSize;
+    if (Offset + ElementByteSize > Data.size())
+      return std::nullopt;
+    DataExtractor DE(StringRef(reinterpret_cast<const char *>(Data.data()),
+                               Data.size()),
+                     llvm::endianness::native == llvm::endianness::little, 8);
+    return DE.getUnsigned(&Offset, ElementByteSize);
   }
+
   /// Lookup an address offset in the AddrOffsets table.
   ///
   /// Given an address offset, look it up using a binary search of the

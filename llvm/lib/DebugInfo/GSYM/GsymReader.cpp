@@ -112,13 +112,10 @@ GsymReader::copyBuffer(StringRef Bytes) {
 }
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
-  switch (getAddressOffsetByteSize()) {
-  case 1: return addressForIndex<uint8_t>(Index);
-  case 2: return addressForIndex<uint16_t>(Index);
-  case 4: return addressForIndex<uint32_t>(Index);
-  case 8: return addressForIndex<uint64_t>(Index);
-  }
-  return std::nullopt;
+  std::optional<uint64_t> AddressOffset = getUnsigned(AddrOffsets, getAddressOffsetByteSize(), Index);
+  if (!AddressOffset)
+    return std::nullopt;
+  return *AddressOffset + getBaseAddress();
 }
 
 std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
