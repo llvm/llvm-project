@@ -1308,7 +1308,7 @@ public:
 };
 
 static_assert(sizeof(__regex::__global_execution_state<char, regex_traits<char>>) == 40);
-static_assert(sizeof(__regex::__local_execution_state<char, regex_traits<char>>) == 56);
+static_assert(sizeof(__regex::__local_execution_state<char, regex_traits<char>>) == 48);
 
 template <class _CharT, class _Traits = regex_traits<_CharT> >
 class basic_regex;

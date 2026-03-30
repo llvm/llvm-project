@@ -146,6 +146,16 @@ struct __search_result {
   ~__search_result() {}
 };
 
+template <class _CharT>
+union __loop_value {
+  __loop_value() = default;
+  __loop_value(size_t __v) : __int_(__v) {}
+  __loop_value(const _CharT* __v) : __ptr_(__v) {}
+
+  size_t __int_;
+  const _CharT* __ptr_;
+};
+
 template <class _CharT, class _Traits>
 struct __global_execution_state;
 
@@ -156,8 +166,7 @@ struct __local_execution_state {
   const _CharT* __current_;
   vector<pair<const _CharT*, const _CharT*>> __sub_matches_;
   size_t __current_pos_;
-  unique_ptr<size_t[]> __loop_values_;
-  unique_ptr<const _CharT*[]> __loop_starts_;
+  unique_ptr<__loop_value<_CharT>[]> __loop_values_;
 
   static pair<size_t, size_t>
   __read_uleb_impl(_LIBCPP_NOESCAPE const __interpreter_info<_CharT>* __machine, size_t __current_pos) {
@@ -185,12 +194,9 @@ struct __local_execution_state {
 
   void __copy_to(const _CharT* const __current, vector<__local_execution_state>& __vec, __global_state& __gstate) {
     auto __loop_value_count = __gstate.__machine_.__initial_loop_values_.size();
-    auto __loop_values_copy = std::make_unique_for_overwrite<size_t[]>(__loop_value_count);
+    auto __loop_values_copy = std::make_unique_for_overwrite<__loop_value<_CharT>[]>(__loop_value_count);
     std::copy_n(__loop_values_.get(), __loop_value_count, __loop_values_copy.get());
-    auto __loop_starts_copy = std::make_unique_for_overwrite<const _CharT*[]>(__loop_value_count);
-    std::copy_n(__loop_starts_.get(), __loop_value_count, __loop_starts_copy.get());
-    __vec.emplace_back(
-        __current, __sub_matches_, __current_pos_, std::move(__loop_values_copy), std::move(__loop_starts_copy));
+    __vec.emplace_back(__current, __sub_matches_, __current_pos_, std::move(__loop_values_copy));
   }
 
   static bool __is_word_boundary(
@@ -357,7 +363,7 @@ struct __local_execution_state {
     auto __submatch_base  = __read_uleb(__code, __current_pos);
     auto __loop_count     = __read_uleb(__code, __current_pos);
 
-    unique_ptr<size_t[]> __initial_loop_values = std::make_unique_for_overwrite<size_t[]>(__loop_count);
+    auto __initial_loop_values = std::make_unique_for_overwrite<__loop_value<_CharT>[]>(__loop_count);
 
     for (size_t __i = 0; __i != __loop_count; ++__i)
       __initial_loop_values[__i] = __read_uleb(__code, __current_pos);
@@ -369,7 +375,6 @@ struct __local_execution_state {
       __s.__sub_matches_.resize(__submatch_count);
     __s.__current_     = __current_;
     __s.__loop_values_ = std::move(__initial_loop_values);
-    __s.__loop_starts_ = std::make_unique<const _CharT*[]>(__loop_count);
     __s.__current_pos_ = __current_pos;
     if (__gexec_state.__execute(__first, __last) != __is_positive)
       return {false, __current_pos};
@@ -392,14 +397,14 @@ struct __local_execution_state {
     auto __loop_index     = __read_uleb(__code, __current_pos);
     auto __again_pos_base = __current_pos;
     auto __again_pos      = __again_pos_base - __read_uleb(__code, __current_pos);
-    if (__loop_values_[__loop_index] > 0) {
-      --__loop_values_[__loop_index];
+    if (__loop_values_[__loop_index + 1].__int_ > 0) {
+      --__loop_values_[__loop_index + 1].__int_;
       __current_pos = __again_pos;
       return __current_pos;
     }
-    if (__loop_starts_[__loop_index] != __current && __loop_values_[__loop_index + 1] > 0) {
-      --__loop_values_[__loop_index + 1];
-      __loop_starts_[__loop_index] = __current;
+    if (__loop_values_[__loop_index].__ptr_ != __current && __loop_values_[__loop_index + 2].__int_ > 0) {
+      --__loop_values_[__loop_index + 2].__int_;
+      __loop_values_[__loop_index] = __current;
       __copy_to(__current, __gstate.__states_, __gstate);
       if (!__is_greedy) {
         __gstate.__states_.back().__current_pos_ = __again_pos;
@@ -640,7 +645,7 @@ class __interpreter {
   friend __global_execution_state<_CharT, _Traits>;
 
   vector<__interpreter_info<_CharT> > __machine_;
-  vector<size_t> __initial_loop_values_;
+  vector<__loop_value<_CharT>> __initial_loop_values_;
   _Traits __traits_;
   bool __find_longest_;
 
@@ -720,6 +725,7 @@ public:
     push_back(__greedy ? __state::__branch_n_to_m_matcher : __state::__branch_nongreedy_n_to_m_matcher);
     __write_uleb(__machine_, __initial_loop_values_.size());
     __write_uleb(__machine_, size() - __expr_start);
+    __initial_loop_values_.push_back(nullptr);
     __initial_loop_values_.push_back(__min);
     __initial_loop_values_.push_back(__max - __min);
   }
@@ -771,7 +777,7 @@ public:
   void __push_no_word_boundary() { push_back(__state::__match_no_word_boundary); }
 
   struct __lookahead_info {
-    vector<size_t> __initial_loop_values_;
+    vector<__loop_value<_CharT>> __initial_loop_values_;
     size_t __lookahead_start_;
   };
 
@@ -790,8 +796,8 @@ public:
     __write_uleb(__buffer, __marked_count);
     __write_uleb(__buffer, __marked_base);
     __write_uleb(__buffer, __initial_loop_values_.size());
-    for (size_t __val : __initial_loop_values_)
-      __write_uleb(__buffer, __val);
+    for (__loop_value<_CharT> __val : __initial_loop_values_)
+      __write_uleb(__buffer, __val.__int_);
     insert(__info.__lookahead_start_, __buffer);
   }
 
@@ -824,9 +830,7 @@ public:
         .__current_pos_ = 0,
         .__loop_values_ = __initial_loop_values_.empty()
                             ? nullptr
-                            : std::make_unique_for_overwrite<size_t[]>(__initial_loop_values_.size()),
-        .__loop_starts_ =
-            __initial_loop_values_.empty() ? nullptr : std::make_unique<const _CharT*[]>(__initial_loop_values_.size()),
+                            : std::make_unique_for_overwrite<__loop_value<_CharT>[]>(__initial_loop_values_.size()),
     };
     if (!__initial_loop_values_.empty())
       std::copy(__initial_loop_values_.begin(), __initial_loop_values_.end(), __base_state.__loop_values_.get());
