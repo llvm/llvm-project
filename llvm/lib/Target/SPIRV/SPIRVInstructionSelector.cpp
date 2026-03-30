@@ -19,6 +19,7 @@
 #include "SPIRVInstrInfo.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
+#include "SPIRVTypeInst.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -192,8 +193,8 @@ private:
   bool selectBitreverse16(Register ResVReg, SPIRVTypeInst ResType,
                           MachineInstr &I, Register Op) const;
 
-  bool selectBitreverse32(Register ResVReg, SPIRVTypeInst ResType,
-                          MachineInstr &I, Register Op) const;
+  bool selectBitreverseNative(Register ResVReg, SPIRVTypeInst ResType,
+                              MachineInstr &I, Register Op) const;
 
   bool selectBuildVector(Register ResVReg, SPIRVTypeInst ResType,
                          MachineInstr &I) const;
@@ -360,6 +361,9 @@ private:
 
   bool selectWaveOpInst(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, unsigned Opcode) const;
+
+  bool selectBarrierInst(MachineInstr &I, unsigned Scope, unsigned MemSem,
+                         bool WithGroupSync) const;
 
   bool selectWaveActiveCountBits(Register ResVReg, SPIRVTypeInst ResType,
                                  MachineInstr &I) const;
@@ -2229,6 +2233,7 @@ static bool isASCastInGVar(MachineRegisterInfo *MRI, Register ResVReg) {
       llvm::all_of(MRI->use_instructions(ResVReg), [&IsGRef](auto const &It) {
         unsigned Opcode = It.getOpcode();
         if (Opcode == SPIRV::OpConstantComposite ||
+            Opcode == SPIRV::OpSpecConstantComposite ||
             Opcode == SPIRV::OpVariable ||
             isSpvIntrinsic(It, Intrinsic::spv_init_global))
           return IsGRef = true;
@@ -2893,6 +2898,41 @@ bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectBarrierInst(MachineInstr &I,
+                                                 unsigned Scope,
+                                                 unsigned MemSem,
+                                                 bool WithGroupSync) const {
+  auto BarrierType =
+      WithGroupSync ? SPIRV::OpControlBarrier : SPIRV::OpMemoryBarrier;
+
+  MemSem |= SPIRV::MemorySemantics::AcquireRelease;
+
+  assert(((Scope != SPIRV::Scope::Workgroup) ||
+          ((MemSem & SPIRV::MemorySemantics::WorkgroupMemory) > 0)) &&
+         "Workgroup Scope must set WorkGroupMemory semantic "
+         "in Barrier instruction");
+
+  assert(((Scope != SPIRV::Scope::Device) ||
+          ((MemSem & SPIRV::MemorySemantics::UniformMemory) > 0 &&
+           (MemSem & SPIRV::MemorySemantics::ImageMemory) > 0)) &&
+         "Device Scope must set UniformMemory and ImageMemory semantic "
+         "in Barrier instruction");
+
+  Register MemSemReg = buildI32Constant(MemSem, I);
+  Register ScopeReg = buildI32Constant(Scope, I);
+  MachineBasicBlock &BB = *I.getParent();
+  auto MI =
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(BarrierType)).addUse(ScopeReg);
+
+  // OpControlBarrier needs to also set Execution Scope
+  if (WithGroupSync) {
+    MI.addUse(ScopeReg);
+  }
+
+  MI.addUse(MemSemReg).constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectWaveActiveCountBits(
     Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
 
@@ -3256,7 +3296,7 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
 
   // Perform bitreverse on the i32 value
   Register BitrevReg = MRI->createVirtualRegister(GR.getRegClass(Int32Type));
-  if (!selectBitreverse32(BitrevReg, Int32Type, I, ExtReg))
+  if (!selectBitreverseNative(BitrevReg, Int32Type, I, ExtReg))
     return false;
 
   // Shift the bit-reversed value to get the final result.
@@ -3269,10 +3309,10 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
   return selectOpWithSrcs(ResVReg, ResType, I, {ShiftReg}, ExtendOpcode);
 }
 
-bool SPIRVInstructionSelector::selectBitreverse32(Register ResVReg,
-                                                  SPIRVTypeInst ResType,
-                                                  MachineInstr &I,
-                                                  Register Op) const {
+bool SPIRVInstructionSelector::selectBitreverseNative(Register ResVReg,
+                                                      SPIRVTypeInst ResType,
+                                                      MachineInstr &I,
+                                                      Register Op) const {
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpBitReverse))
       .addDef(ResVReg)
@@ -3286,13 +3326,81 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I) const {
   Register OpReg = I.getOperand(1).getReg();
-  SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpReg);
-  switch (GR.getScalarOrVectorBitWidth(OpType)) {
-  case 16:
-    return selectBitreverse16(ResVReg, ResType, I, OpReg);
-  default:
-    return selectBitreverse32(ResVReg, ResType, I, OpReg);
+
+  // TODO: Fix shader behavior in case of VK_KHR_maintenance9 extension is set
+  if (STI.isShader()) {
+    SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpReg);
+    switch (GR.getScalarOrVectorBitWidth(OpType)) {
+    case 16:
+      return selectBitreverse16(ResVReg, ResType, I, OpReg);
+    default:
+      return selectBitreverseNative(ResVReg, ResType, I, OpReg);
+    }
   }
+
+  if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions))
+    return selectBitreverseNative(ResVReg, ResType, I, OpReg);
+
+  // Expansion bitreverse using bit manipulation operations
+  // Algo: https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
+  const unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+  // TODO: add support for any bit width and bitwidth more than 64.
+  if (BitWidth > 64 || !isPowerOf2_32(BitWidth))
+    return false;
+
+  const unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+
+  unsigned AndOp = SPIRV::OpBitwiseAndS;
+  unsigned OrOp = SPIRV::OpBitwiseOrS;
+  unsigned ShlOp = SPIRV::OpShiftLeftLogicalS;
+  unsigned ShrOp = SPIRV::OpShiftRightLogicalS;
+  if (N > 1) {
+    AndOp = SPIRV::OpBitwiseAndV;
+    OrOp = SPIRV::OpBitwiseOrV;
+    ShlOp = SPIRV::OpShiftLeftLogicalV;
+    ShrOp = SPIRV::OpShiftRightLogicalV;
+  }
+
+  // Helper, one swap per step: ((input>>shift)&mask)|((input&mask)<<shift),
+  // RPN: input shift >> mask & input mask & shift << |
+  auto SwapBits = [&](const Register Input, const uint64_t Mask,
+                      const unsigned Shift) -> Register {
+    auto CreateConst = [&](const uint64_t Value) -> Register {
+      if (N == 1)
+        return GR.getOrCreateConstInt(
+            Value, I, GR.retrieveScalarOrVectorIntType(ResType), TII);
+      return GR.getOrCreateConstVector(Value, I, ResType, TII);
+    };
+
+    Register MaskReg = CreateConst(Mask);
+    Register ShiftReg = CreateConst(Shift);
+    Register T1 = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    Register T2 = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    Register T3 = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    Register T4 = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    Register Result = MRI->createVirtualRegister(GR.getRegClass(ResType));
+
+    if (!selectOpWithSrcs(T1, ResType, I, {Input, ShiftReg}, ShrOp) ||
+        !selectOpWithSrcs(T2, ResType, I, {T1, MaskReg}, AndOp) ||
+        !selectOpWithSrcs(T3, ResType, I, {Input, MaskReg}, AndOp) ||
+        !selectOpWithSrcs(T4, ResType, I, {T3, ShiftReg}, ShlOp) ||
+        !selectOpWithSrcs(Result, ResType, I, {T2, T4}, OrOp))
+      return Register();
+
+    return Result;
+  };
+
+  unsigned Shift = BitWidth;
+  Register Result = OpReg;
+  uint64_t Mask = ~0ull;
+  while ((Shift >>= 1) > 0) {
+    Mask ^= (Mask << Shift);
+    Result = SwapBits(Result, Mask, Shift);
+    if (!Result.isValid())
+      return false;
+  }
+
+  return BuildCOPY(ResVReg, Result, I);
 }
 
 bool SPIRVInstructionSelector::selectFreeze(Register ResVReg,
@@ -4149,10 +4257,34 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     if (!IsNull) {
       if (!wrapIntoSpecConstantOp(I, CompositeArgs))
         return false;
+      std::function<bool(Register)> HasSpecConstOperand =
+          [&](Register Reg) -> bool {
+        MachineInstr *Def = MRI->getVRegDef(Reg);
+        if (!Def)
+          return false;
+        if (!isConstReg(MRI, Def))
+          return true;
+        // Recurse into not-yet-selected spv_const_composite intrinsics
+        // to detect transitive spec constant operands.
+        if (isSpvIntrinsic(*Def, Intrinsic::spv_const_composite)) {
+          for (unsigned J = Def->getNumExplicitDefs() + 1;
+               J < Def->getNumExplicitOperands(); ++J) {
+            if (Def->getOperand(J).isReg() &&
+                HasSpecConstOperand(Def->getOperand(J).getReg()))
+              return true;
+          }
+        }
+        return false;
+      };
+      bool HasSpecConst = llvm::any_of(CompositeArgs, HasSpecConstOperand);
+      unsigned CompositeOpc = HasSpecConst ? SPIRV::OpSpecConstantComposite
+                                           : SPIRV::OpConstantComposite;
+      unsigned ContinuedOpc = HasSpecConst
+                                  ? SPIRV::OpSpecConstantCompositeContinuedINTEL
+                                  : SPIRV::OpConstantCompositeContinuedINTEL;
       MachineIRBuilder MIR(I);
       SmallVector<MachineInstr *, 4> Instructions = createContinuedInstructions(
-          MIR, SPIRV::OpConstantComposite, 3,
-          SPIRV::OpConstantCompositeContinuedINTEL, CompositeArgs, ResVReg,
+          MIR, CompositeOpc, 3, ContinuedOpc, CompositeArgs, ResVReg,
           GR.getSPIRVTypeID(ResType));
       for (auto *Instr : Instructions) {
         Instr->setDebugLoc(I.getDebugLoc());
@@ -4379,18 +4511,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectFirstBitHigh(ResVReg, ResType, I, /*IsSigned=*/true);
   case Intrinsic::spv_firstbitlow: // There is no CL equivlent of FindILsb
     return selectFirstBitLow(ResVReg, ResType, I);
-  case Intrinsic::spv_group_memory_barrier_with_group_sync: {
-    Register MemSemReg =
-        buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
-    Register ScopeReg = buildI32Constant(SPIRV::Scope::Workgroup, I);
-    MachineBasicBlock &BB = *I.getParent();
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpControlBarrier))
-        .addUse(ScopeReg)
-        .addUse(ScopeReg)
-        .addUse(MemSemReg)
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
-  }
+  case Intrinsic::spv_group_memory_barrier:
+    return selectBarrierInst(I, SPIRV::Scope::Workgroup,
+                             SPIRV::MemorySemantics::WorkgroupMemory,
+                             /*WithGroupSync*/ false);
+  case Intrinsic::spv_group_memory_barrier_with_group_sync:
+    return selectBarrierInst(I, SPIRV::Scope::Workgroup,
+                             SPIRV::MemorySemantics::WorkgroupMemory,
+                             /*WithGroupSync*/ true);
   case Intrinsic::spv_generic_cast_to_ptr_explicit: {
     Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 1).getReg();
     SPIRV::StorageClass::StorageClass ResSC =

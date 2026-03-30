@@ -694,9 +694,7 @@ static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
 
   llvm::dwarf::SourceLanguage LangTag;
   if (LO.CPlusPlus) {
-    if (LO.HLSL)
-      LangTag = llvm::dwarf::DW_LANG_HLSL;
-    else if (LO.HIP)
+    if (LO.HIP)
       LangTag = llvm::dwarf::DW_LANG_HIP;
     else if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
@@ -734,9 +732,7 @@ GetDISourceLanguageName(const CodeGenModule &CGM) {
   uint32_t LangVersion = 0;
   llvm::dwarf::SourceLanguageName LangTag;
   if (LO.CPlusPlus) {
-    if (LO.HLSL) {
-      LangTag = llvm::dwarf::DW_LNAME_HLSL;
-    } else if (LO.HIP) {
+    if (LO.HIP) {
       LangTag = llvm::dwarf::DW_LNAME_HIP;
     } else if (LO.ObjC) {
       LangTag = llvm::dwarf::DW_LNAME_ObjC_plus_plus;
@@ -5983,15 +5979,14 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
-    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
-      if (!ED->getIdentifier()) {
-        Reconstitutable = false;
-        return false;
-      }
-      if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
-        Reconstitutable = false;
-        return false;
-      }
+    const EnumDecl *ED = ET->getDecl();
+    if (!ED->getIdentifier()) {
+      Reconstitutable = false;
+      return false;
+    }
+    if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
+      Reconstitutable = false;
+      return false;
     }
     return true;
   }
