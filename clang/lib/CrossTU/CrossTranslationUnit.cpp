@@ -496,8 +496,7 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(
     return;
 
   case index_error_code::success:
-    llvm_unreachable("There should not be a success error. This case should "
-                     "have been handled by the caller.");
+    llvm_unreachable("Success is not an error.");
     return;
   }
   llvm_unreachable("Unrecognized index_error_code.");
