@@ -1609,6 +1609,20 @@ private:
 
   void genBranch(mlir::Block *targetBlock) {
     assert(targetBlock && "missing unconditional target block");
+    if (!accRegionExitStack.empty()) {
+      mlir::Region *curRegion = builder->getBlock()->getParent();
+      if (targetBlock->getParent() != curRegion) {
+        auto &exitInfo = accRegionExitStack.back();
+        int exitId = exitInfo.nextId++;
+        exitInfo.exits.push_back({exitId, targetBlock});
+        mlir::Value id = builder->createIntegerConstant(
+            toLocation(), builder->getI32Type(), exitId);
+        fir::StoreOp::create(*builder, toLocation(), id, exitInfo.selector);
+        Fortran::lower::genOpenACCRegionExitBranch(*builder, toLocation(),
+                                                   targetBlock);
+        return;
+      }
+    }
     mlir::cf::BranchOp::create(*builder, toLocation(), targetBlock);
   }
 
@@ -3575,6 +3589,19 @@ private:
 
     if (!isCacheConstruct)
       localSymbols.pushScope();
+    // Allocate exit selector for GOTO jump table if the construct is
+    // unstructured (may contain GOTOs that exit the ACC region).
+    bool needsExitSelector = getEval().lowerAsUnstructured();
+    if (needsExitSelector) {
+      AccRegionExitInfo exitInfo;
+      exitInfo.selector =
+          builder->createTemporary(toLocation(), builder->getI32Type());
+      mlir::Value zero = builder->createIntegerConstant(
+          toLocation(), builder->getI32Type(), 0);
+      fir::StoreOp::create(*builder, toLocation(), zero, exitInfo.selector);
+      accRegionExitStack.push_back(std::move(exitInfo));
+    }
+
     mlir::Value exitCond = genOpenACCConstruct(
         *this, bridge.getSemanticsContext(), getEval(), acc, localSymbols);
 
@@ -3676,6 +3703,25 @@ private:
     if (!isCacheConstruct)
       localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
+
+    // Generate jump table for GOTO exits from the ACC region.
+    if (needsExitSelector) {
+      auto exitInfo = accRegionExitStack.pop_back_val();
+      if (!exitInfo.exits.empty()) {
+        mlir::Location loc = toLocation();
+        mlir::Value sel = fir::LoadOp::create(*builder, loc, exitInfo.selector);
+        for (auto &[id, target] : exitInfo.exits) {
+          mlir::Value idVal =
+              builder->createIntegerConstant(loc, builder->getI32Type(), id);
+          mlir::Value cmp = mlir::arith::CmpIOp::create(
+              *builder, loc, mlir::arith::CmpIPredicate::eq, sel, idVal);
+          mlir::Block *nextBlock =
+              builder->getBlock()->splitBlock(builder->getBlock()->end());
+          mlir::cf::CondBranchOp::create(*builder, loc, cmp, target, nextBlock);
+          builder->setInsertionPointToEnd(nextBlock);
+        }
+      }
+    }
 
     if (accLoop && exitCond) {
       Fortran::lower::pft::FunctionLikeUnit *funit =
@@ -7212,6 +7258,14 @@ private:
 
   // Stack to manage object deallocation and finalization at construct exits.
   llvm::SmallVector<ConstructContext> activeConstructStack;
+
+  /// Track GOTO exits from ACC regions for jump table generation.
+  struct AccRegionExitInfo {
+    mlir::Value selector{}; // alloca i32 for exit selector
+    llvm::SmallVector<std::pair<int, mlir::Block *>> exits; // {id, target}
+    int nextId = 1;
+  };
+  llvm::SmallVector<AccRegionExitInfo> accRegionExitStack;
 
   /// BLOCK name mangling component map
   int blockId = 0;
