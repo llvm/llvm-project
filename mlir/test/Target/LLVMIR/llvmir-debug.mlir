@@ -394,7 +394,7 @@ llvm.func @imp_fn() {
 #di_subprogram = #llvm.di_subprogram<id = distinct[2]<>, recId = distinct[1]<>,
   compileUnit = #di_compile_unit, scope = #di_file, name = "imp_fn",
   file = #di_file, subprogramFlags = Definition, type = #di_subroutine_type,
-  retainedNodes = #di_imported_entity_1, #di_imported_entity_2>
+  retainedNodes = [#di_imported_entity_1, #di_imported_entity_2]>
 #loc1 = loc("test.f90":12:14)
 #loc2 = loc(fused<#di_subprogram>[#loc1])
 

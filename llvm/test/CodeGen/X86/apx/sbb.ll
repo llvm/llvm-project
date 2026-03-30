@@ -59,16 +59,18 @@ define i64 @sbb64rr(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 define i8 @sbb8rm(i8 %a, ptr %ptr, i8 %x, i8 %y) nounwind {
 ; NDD-LABEL: sbb8rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
+; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
 ; NDD-NEXT:    cmpb %dl, %cl # encoding: [0x38,0xd1]
-; NDD-NEXT:    sbbb %al, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x18,0xc7]
+; NDD-NEXT:    sbbb (%rsi), %al # encoding: [0x1a,0x06]
+; NDD-NEXT:    # kill: def $al killed $al killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb8rm:
 ; IMMONLY:       # %bb.0:
-; IMMONLY-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
+; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
 ; IMMONLY-NEXT:    cmpb %dl, %cl # encoding: [0x38,0xd1]
-; IMMONLY-NEXT:    sbbb %al, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x18,0xc7]
+; IMMONLY-NEXT:    sbbb (%rsi), %al # encoding: [0x1a,0x06]
+; IMMONLY-NEXT:    # kill: def $al killed $al killed $eax
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb8rm:
@@ -87,16 +89,18 @@ define i8 @sbb8rm(i8 %a, ptr %ptr, i8 %x, i8 %y) nounwind {
 define i16 @sbb16rm(i16 %a, ptr %ptr, i16 %x, i16 %y) nounwind {
 ; NDD-LABEL: sbb16rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
+; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
 ; NDD-NEXT:    cmpw %dx, %cx # encoding: [0x66,0x39,0xd1]
-; NDD-NEXT:    sbbw %ax, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x19,0xc7]
+; NDD-NEXT:    sbbw (%rsi), %ax # encoding: [0x66,0x1b,0x06]
+; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb16rm:
 ; IMMONLY:       # %bb.0:
-; IMMONLY-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
+; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
 ; IMMONLY-NEXT:    cmpw %dx, %cx # encoding: [0x66,0x39,0xd1]
-; IMMONLY-NEXT:    sbbw %ax, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x19,0xc7]
+; IMMONLY-NEXT:    sbbw (%rsi), %ax # encoding: [0x66,0x1b,0x06]
+; IMMONLY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb16rm:
@@ -115,16 +119,16 @@ define i16 @sbb16rm(i16 %a, ptr %ptr, i16 %x, i16 %y) nounwind {
 define i32 @sbb32rm(i32 %a, ptr %ptr, i32 %x, i32 %y) nounwind {
 ; NDD-LABEL: sbb32rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
+; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
 ; NDD-NEXT:    cmpl %edx, %ecx # encoding: [0x39,0xd1]
-; NDD-NEXT:    sbbl %eax, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x19,0xc7]
+; NDD-NEXT:    sbbl (%rsi), %eax # encoding: [0x1b,0x06]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb32rm:
 ; IMMONLY:       # %bb.0:
-; IMMONLY-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
+; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
 ; IMMONLY-NEXT:    cmpl %edx, %ecx # encoding: [0x39,0xd1]
-; IMMONLY-NEXT:    sbbl %eax, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x19,0xc7]
+; IMMONLY-NEXT:    sbbl (%rsi), %eax # encoding: [0x1b,0x06]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb32rm:
@@ -143,16 +147,16 @@ define i32 @sbb32rm(i32 %a, ptr %ptr, i32 %x, i32 %y) nounwind {
 define i64 @sbb64rm(i64 %a, ptr %ptr, i64 %x, i64 %y) nounwind {
 ; NDD-LABEL: sbb64rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
+; NDD-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
 ; NDD-NEXT:    cmpq %rdx, %rcx # encoding: [0x48,0x39,0xd1]
-; NDD-NEXT:    sbbq %rax, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x19,0xc7]
+; NDD-NEXT:    sbbq (%rsi), %rax # encoding: [0x48,0x1b,0x06]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: sbb64rm:
 ; IMMONLY:       # %bb.0:
-; IMMONLY-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
+; IMMONLY-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
 ; IMMONLY-NEXT:    cmpq %rdx, %rcx # encoding: [0x48,0x39,0xd1]
-; IMMONLY-NEXT:    sbbq %rax, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x19,0xc7]
+; IMMONLY-NEXT:    sbbq (%rsi), %rax # encoding: [0x48,0x1b,0x06]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: sbb64rm:
