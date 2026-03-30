@@ -52,7 +52,7 @@ private:
   };
 
   struct IndirectAttrInfo {
-    Align Alignment;
+    Align RequiredAlign;
     unsigned AddrSpace;
   };
 
@@ -112,7 +112,7 @@ public:
   static ArgInfo getIndirect(Align Align, bool ByVal, unsigned AddrSpace = 0,
                              bool Realign = false) {
     ArgInfo AI(Indirect);
-    AI.IndirectAttr.Alignment = Align;
+    AI.IndirectAttr.RequiredAlign = Align;
     AI.IndirectAttr.AddrSpace = AddrSpace;
     AI.IndirectByVal = ByVal;
     AI.IndirectRealign = Realign;
@@ -153,7 +153,7 @@ public:
 
   Align getIndirectAlign() const {
     assert(isIndirect() && "Invalid Kind!");
-    return IndirectAttr.Alignment;
+    return IndirectAttr.RequiredAlign;
   }
 
   unsigned getIndirectAddrSpace() const {
