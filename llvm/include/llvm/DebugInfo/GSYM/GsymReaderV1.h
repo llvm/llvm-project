@@ -23,6 +23,7 @@ class GsymReaderV1 : public GsymReader {
   llvm::Error parse();
 
   const Header *Hdr = nullptr;
+  ArrayRef<uint32_t> AddrInfoOffsets;
   struct SwappedData {
     Header Hdr;
     std::vector<uint8_t> AddrOffsets;
@@ -49,6 +50,9 @@ public:
   uint64_t getAddressOffsetByteSize() const override { return getHeader().AddrOffSize; }
   uint64_t getAddressInfoOffsetByteSize() const override { return 4; }
   uint64_t getStringOffsetByteSize() const override { return 4; }
+
+  // GlobalData accessors
+  std::optional<uint64_t> getAddressInfoOffset(size_t Index) const override;
 
   using GsymReader::dump;
   LLVM_ABI void dump(raw_ostream &OS) override;

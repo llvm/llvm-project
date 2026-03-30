@@ -80,12 +80,14 @@ parseGlobalDataEntries(DataExtractor &DE, uint64_t &Offset, uint64_t BufSize,
 llvm::Error GsymReaderV2::parse() {
   const StringRef Buf = MemBuffer->getBuffer();
   const uint64_t BufSize = Buf.size();
-
   if (BufSize < sizeof(HeaderV2))
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GSYM V2 header");
-
   const auto HostByteOrder = llvm::endianness::native;
+
+  // Check for the magic bytes. This file format is designed to be mmap'ed
+  // into a process and accessed as read only. This is done for performance
+  // and efficiency for symbolicating and parsing GSYM data.
   uint32_t Magic;
   memcpy(&Magic, Buf.data(), 4);
 
@@ -94,6 +96,7 @@ llvm::Error GsymReaderV2::parse() {
     Endian = HostByteOrder;
     break;
   case GSYM_CIGAM:
+    // This is a GSYM file, but not native endianness.
     Endian = sys::IsBigEndianHost ? llvm::endianness::little
                                   : llvm::endianness::big;
     Swap.reset(new SwappedData);
@@ -103,7 +106,7 @@ llvm::Error GsymReaderV2::parse() {
   }
 
   const bool IsLittleEndian = (Endian == llvm::endianness::little);
-
+  // Read a correctly byte swapped header if we need to.
   DataExtractor DE(Buf, IsLittleEndian, 8);
   if (Swap) {
     auto ExpectedHdr = HeaderV2::decode(DE);
@@ -115,6 +118,9 @@ llvm::Error GsymReaderV2::parse() {
     Hdr = reinterpret_cast<const HeaderV2 *>(Buf.data());
   }
 
+  // Detect errors in the header and report any that are found. If we make it
+  // past this without errors, we know we have a good magic value, a supported
+  // version number, verified address offset size and a valid UUID size.
   if (Error Err = Hdr->checkForError())
     return Err;
 
@@ -147,22 +153,18 @@ llvm::Error GsymReaderV2::parse() {
     return createStringError(std::errc::invalid_argument,
                              "AddrInfoOffsets section size mismatch");
 
+  // Set up the data references for various GlobalData sections.
+  // Handles both swapped and non-swapped cases.
   if (!Swap) {
     AddrOffsets = ArrayRef<uint8_t>(
         reinterpret_cast<const uint8_t *>(Buf.data() +
                                           AddrOffsetsGD.FileOffset),
         AddrOffsetsGD.FileSize);
 
-    if (Hdr->AddrInfoOffSize == 4) {
-      AddrInfoOffsets = ArrayRef<uint32_t>(
-          reinterpret_cast<const uint32_t *>(Buf.data() +
-                                             AddrInfoOffsetsGD.FileOffset),
-          Hdr->NumAddresses);
-    } else {
-      return createStringError(std::errc::not_supported,
-                               "non-4-byte AddrInfoOffsets not yet supported "
-                               "in non-swap path");
-    }
+    AddrInfoOffsets = ArrayRef<uint8_t>(
+        reinterpret_cast<const uint8_t *>(Buf.data() +
+                                          AddrInfoOffsetsGD.FileOffset),
+        AddrInfoOffsetsGD.FileSize);
 
     if (FileTableGD.FileSize < 4)
       return createStringError(std::errc::invalid_argument,
@@ -181,49 +183,32 @@ llvm::Error GsymReaderV2::parse() {
     StrTab.Data = Buf.substr(StringTableGD.FileOffset,
                              StringTableGD.FileSize);
   } else {
-    uint64_t AOff = AddrOffsetsGD.FileOffset;
-    Swap->AddrOffsets.resize(AddrOffsetsGD.FileSize);
-    switch (Hdr->AddrOffSize) {
-    case 1:
-      if (!DE.getU8(&AOff, Swap->AddrOffsets.data(), Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address table");
-      break;
-    case 2:
-      if (!DE.getU16(&AOff,
-                     reinterpret_cast<uint16_t *>(Swap->AddrOffsets.data()),
-                     Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address table");
-      break;
-    case 4:
-      if (!DE.getU32(&AOff,
-                     reinterpret_cast<uint32_t *>(Swap->AddrOffsets.data()),
-                     Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address table");
-      break;
-    case 8:
-      if (!DE.getU64(&AOff,
-                     reinterpret_cast<uint64_t *>(Swap->AddrOffsets.data()),
-                     Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address table");
-      break;
+    // Do the byte-swapping for the AddrOffsets section for byte size 1-8.
+    {
+      uint64_t AOff = AddrOffsetsGD.FileOffset;
+      const size_t TotalBytes =
+          static_cast<size_t>(Hdr->NumAddresses) * Hdr->AddrOffSize;
+      Swap->AddrOffsets.resize(TotalBytes);
+      for (uint32_t I = 0; I < Hdr->NumAddresses; ++I) {
+        uint64_t Val = DE.getUnsigned(&AOff, Hdr->AddrOffSize);
+        memcpy(Swap->AddrOffsets.data() + I * Hdr->AddrOffSize,
+               &Val, Hdr->AddrOffSize);
+      }
+      AddrOffsets = ArrayRef<uint8_t>(Swap->AddrOffsets);
     }
-    AddrOffsets = ArrayRef<uint8_t>(Swap->AddrOffsets);
 
-    if (Hdr->AddrInfoOffSize == 4) {
+    // Do the byte-swapping for the AddrInfoOffsets section for byte size 1-8.
+    {
       uint64_t AIOff = AddrInfoOffsetsGD.FileOffset;
-      Swap->AddrInfoOffsets.resize(Hdr->NumAddresses);
-      if (!DE.getU32(&AIOff, Swap->AddrInfoOffsets.data(), Hdr->NumAddresses))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read address info offsets");
-      AddrInfoOffsets = ArrayRef<uint32_t>(Swap->AddrInfoOffsets);
-    } else {
-      return createStringError(std::errc::not_supported,
-                               "non-4-byte AddrInfoOffsets not yet supported "
-                               "in swap path");
+      const size_t TotalBytes =
+          static_cast<size_t>(Hdr->NumAddresses) * Hdr->AddrInfoOffSize;
+      Swap->AddrInfoOffsets.resize(TotalBytes);
+      for (uint32_t I = 0; I < Hdr->NumAddresses; ++I) {
+        uint64_t Val = DE.getUnsigned(&AIOff, Hdr->AddrInfoOffSize);
+        memcpy(Swap->AddrInfoOffsets.data() + I * Hdr->AddrInfoOffSize,
+               &Val, Hdr->AddrInfoOffSize);
+      }
+      AddrInfoOffsets = ArrayRef<uint8_t>(Swap->AddrInfoOffsets);
     }
 
     uint64_t FTOff = FileTableGD.FileOffset;
@@ -248,10 +233,12 @@ const HeaderV2 &GsymReaderV2::getHeader() const {
 }
 
 std::optional<uint64_t> GsymReaderV2::getAddressInfoOffset(size_t Index) const {
-  if (Index < AddrInfoOffsets.size())
-    return AddrInfoOffsets[Index] +
-           GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
-  return std::nullopt;
+  auto RelOff = getUnsigned(AddrInfoOffsets, getAddressInfoOffsetByteSize(),
+                            Index);
+  if (!RelOff)
+    return std::nullopt;
+  return *RelOff +
+         GlobalDataSections.at(GlobalInfoType::FunctionInfo).FileOffset;
 }
 
 void GsymReaderV2::dump(raw_ostream &OS) {

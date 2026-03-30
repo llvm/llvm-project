@@ -52,6 +52,9 @@ GsymReaderV1::create(std::unique_ptr<MemoryBuffer> &MB) {
 
 llvm::Error GsymReaderV1::parse() {
   BinaryStreamReader FileData(MemBuffer->getBuffer(), llvm::endianness::native);
+  // Check for the magic bytes. This file format is designed to be mmap'ed
+  // into a process and accessed as read only. This is done for performance
+  // and efficiency for symbolicating and parsing GSYM data.
   if (FileData.readObject(Hdr))
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GSYM header");
@@ -62,6 +65,7 @@ llvm::Error GsymReaderV1::parse() {
       Endian = HostByteOrder;
       break;
     case GSYM_CIGAM:
+      // This is a GSYM file, but not native endianness.
       Endian = sys::IsBigEndianHost ? llvm::endianness::little
                                     : llvm::endianness::big;
       Swap.reset(new SwappedData);
@@ -72,6 +76,7 @@ llvm::Error GsymReaderV1::parse() {
   }
 
   bool DataIsLittleEndian = HostByteOrder != llvm::endianness::little;
+  // Read a correctly byte swapped header if we need to.
   if (Swap) {
     DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
     if (auto ExpectedHdr = Header::decode(Data))
@@ -81,6 +86,9 @@ llvm::Error GsymReaderV1::parse() {
     Hdr = &Swap->Hdr;
   }
 
+  // Detect errors in the header and report any that are found. If we make it
+  // past this without errors, we know we have a good magic value, a supported
+  // version number, verified address offset size and a valid UUID size.
   if (Error Err = Hdr->checkForError())
     return Err;
 
@@ -169,6 +177,12 @@ llvm::Error GsymReaderV1::parse() {
 const Header &GsymReaderV1::getHeader() const {
   assert(Hdr);
   return *Hdr;
+}
+
+std::optional<uint64_t> GsymReaderV1::getAddressInfoOffset(size_t Index) const {
+  if (Index < AddrInfoOffsets.size())
+    return AddrInfoOffsets[Index];
+  return std::nullopt;
 }
 
 void GsymReaderV1::dump(raw_ostream &OS) {

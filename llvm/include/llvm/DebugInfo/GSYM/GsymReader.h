@@ -51,7 +51,6 @@ protected:
   std::unique_ptr<MemoryBuffer> MemBuffer;
   llvm::endianness Endian;
   ArrayRef<uint8_t> AddrOffsets;
-  ArrayRef<uint32_t> AddrInfoOffsets;
   ArrayRef<FileEntry> Files;
   StringTable StrTab;
 
@@ -375,7 +374,7 @@ protected:
   /// \param Index An index into the address table.
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
-  LLVM_ABI virtual std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+  virtual std::optional<uint64_t> getAddressInfoOffset(size_t Index) const = 0;
 
   /// Given an address, find the correct function info data and function
   /// address.

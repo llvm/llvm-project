@@ -118,12 +118,6 @@ std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   return *AddressOffset + getBaseAddress();
 }
 
-std::optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
-  if (Index < AddrInfoOffsets.size())
-    return AddrInfoOffsets[Index];
-  return std::nullopt;
-}
-
 Expected<uint64_t>
 GsymReader::getAddressIndex(const uint64_t Addr) const {
   const uint64_t BaseAddress = getBaseAddress();

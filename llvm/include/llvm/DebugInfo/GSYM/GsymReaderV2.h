@@ -28,10 +28,11 @@ class GsymReaderV2 : public GsymReader {
   const HeaderV2 *Hdr = nullptr;
   /// Parsed GlobalData section descriptors, keyed by type.
   std::map<GlobalInfoType, GlobalData> GlobalDataSections;
+  ArrayRef<uint8_t> AddrInfoOffsets;
   struct SwappedData {
     HeaderV2 Hdr;
     std::vector<uint8_t> AddrOffsets;
-    std::vector<uint32_t> AddrInfoOffsets;
+    std::vector<uint8_t> AddrInfoOffsets;
     std::vector<FileEntry> Files;
   };
   std::unique_ptr<SwappedData> Swap;
