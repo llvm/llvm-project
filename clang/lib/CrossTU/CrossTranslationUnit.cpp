@@ -93,7 +93,7 @@ bool hasEqualKnownFields(const llvm::Triple &Lhs, const llvm::Triple &Rhs) {
 /// (e.g. CPlusPlus20 implies CPlusPlus17).
 /// This does not cover all possible languages (e.g. Obj-C or flavors of C),
 /// because CTU currently does not differentiate between them.
-static std::string getLangDescription(const LangOptions &LO) {
+std::string getLangDescription(const LangOptions &LO) {
   if (!LO.CPlusPlus)
     return "non-C++";
   if (LO.CPlusPlus26)
@@ -406,10 +406,14 @@ CrossTranslationUnitContext::getCrossTUDefinition(const VarDecl *VD,
                                   DisplayCTUProgress);
 }
 
-void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
-                                                         SourceLocation Loc) {
+void CrossTranslationUnitContext::emitCrossTUDiagnostics(
+    const IndexError &IE, SourceLocation Loc) const {
   switch (IE.getCode()) {
   case index_error_code::missing_index_file:
+  case index_error_code::invocation_list_file_not_found:
+    // If the external def-map refers to source files, you must provide an
+    // invocation list file. Otherwise, CTU does not work at all, so you should
+    // check your build and analysis configuration.
     Context.getDiagnostics().Report(Loc, diag::err_ctu_error_opening)
         << IE.getFileName();
     return;
@@ -452,14 +456,6 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
     // defmap, so it should exist.
     Context.getDiagnostics().Report(Loc, diag::err_ctu_import_failure)
         << Category->message(static_cast<int>(IE.getCode()));
-    return;
-
-  case index_error_code::invocation_list_file_not_found:
-    // If the external def-map refers to source files, you must provide an
-    // invocation list file. Otherwise, CTU does not work at all, so you should
-    // check your build and analysis configuration.
-    Context.getDiagnostics().Report(Loc, diag::err_ctu_error_opening)
-        << IE.getFileName();
     return;
 
   case index_error_code::load_threshold_reached:
@@ -744,10 +740,10 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
   llvm::SourceMgr SM;
   llvm::yaml::Stream InvocationFile(FileContent, SM);
 
-  auto getLine = [&SM](llvm::yaml::Node *N) -> int {
+  auto getLine = [&SM](const llvm::yaml::Node *N) -> int {
     return N ? SM.FindLineNumber(N->getSourceRange().Start) : 0;
   };
-  auto wrongFormat = [&](llvm::yaml::Node *N) {
+  auto wrongFormat = [&](const llvm::yaml::Node *N) {
     return llvm::make_error<IndexError>(
         index_error_code::invocation_list_wrong_format, std::string(FilePath),
         getLine(N));
@@ -839,8 +835,9 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
       ContentBuffer->getBuffer(), PathStyle, InvocationListFilePath);
 
   if (!ExpectedInvocationList) {
-    llvm::handleAllErrors(ExpectedInvocationList.takeError(),
-                          [&](const IndexError &E) { PreviousError = E; });
+    llvm::handleAllErrors(
+        ExpectedInvocationList.takeError(),
+        [this](const IndexError &E) { this->PreviousError = E; });
     return llvm::make_error<IndexError>(*PreviousError);
   }
 

@@ -185,7 +185,7 @@ public:
   static std::optional<std::string> getLookupName(const Decl *D);
 
   /// Emit diagnostics for the user for potential configuration errors.
-  void emitCrossTUDiagnostics(const IndexError &IE, SourceLocation Loc);
+  void emitCrossTUDiagnostics(const IndexError &IE, SourceLocation Loc) const;
 
   /// Returns the MacroExpansionContext for the imported TU to which the given
   /// source-location corresponds.
