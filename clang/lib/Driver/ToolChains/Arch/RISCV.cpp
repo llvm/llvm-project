@@ -185,9 +185,9 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       if (A->getOption().matches(options::OPT_mno_strict_align) ||
           A->getOption().matches(options::OPT_mno_scalar_strict_align) ||
           A->getOption().matches(options::OPT_mzilsd_word_align)) {
-        Features.push_back("+zilsd-4byte-align");
+        Features.push_back("+zilsd-word-align");
       } else {
-        Features.push_back("-zilsd-4byte-align");
+        Features.push_back("-zilsd-word-align");
       }
     }
   } else {

@@ -246,7 +246,7 @@ public:
 
   Align getZilsdAlign() const {
     return Align(enableUnalignedScalarMem() ? 1
-                 : allowZilsd4ByteAlign()   ? 4
+                 : allowZilsdWordAlign()   ? 4
                                             : 8);
   }
 
