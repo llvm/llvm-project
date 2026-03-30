@@ -69,7 +69,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   const bool HasUUID = !UUID.empty();
   const uint32_t NumGlobalDataEntries = 5 + (HasUUID ? 1 : 0) + 1;
   const uint64_t GlobalDataArraySize =
-      static_cast<uint64_t>(NumGlobalDataEntries) * 24;
+      static_cast<uint64_t>(NumGlobalDataEntries) * 20;
 
   const uint64_t HeaderSize = sizeof(HeaderV2);
   uint64_t CurOffset = HeaderSize + GlobalDataArraySize;
@@ -138,23 +138,19 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
     return Err;
 
   // Write GlobalData entries.
-  SmallVector<GlobalData, 8> GDEntries;
   if (HasUUID)
-    GDEntries.push_back({GlobalInfoType::UUID, 0, UUIDOffset, UUIDSectionSize});
-  GDEntries.push_back({GlobalInfoType::AddrOffsets, 0,
-                        AddrOffsetsOffset, AddrOffsetsSize});
-  GDEntries.push_back({GlobalInfoType::AddrInfoOffsets, 0,
-                        AddrInfoOffsetsOffset, AddrInfoOffsetsSize});
-  GDEntries.push_back({GlobalInfoType::FileTable, 0,
-                        FileTableOffset, FileTableSize});
-  GDEntries.push_back({GlobalInfoType::StringTable, 0,
-                        StringTableOffset, StringTableSize});
-  GDEntries.push_back({GlobalInfoType::FunctionInfo, 0,
-                        FISectionOffset, FISectionSize});
-  GDEntries.push_back({GlobalInfoType::EndOfList, 0, 0, 0});
-  for (const GlobalData &GD : GDEntries)
-    if (auto Err = GD.encode(O))
-      return Err;
+    GlobalData{GlobalInfoType::UUID, UUIDOffset, UUIDSectionSize}.encode(O);
+  GlobalData{GlobalInfoType::AddrOffsets,
+             AddrOffsetsOffset, AddrOffsetsSize}.encode(O);
+  GlobalData{GlobalInfoType::AddrInfoOffsets,
+             AddrInfoOffsetsOffset, AddrInfoOffsetsSize}.encode(O);
+  GlobalData{GlobalInfoType::FileTable,
+             FileTableOffset, FileTableSize}.encode(O);
+  GlobalData{GlobalInfoType::StringTable,
+             StringTableOffset, StringTableSize}.encode(O);
+  GlobalData{GlobalInfoType::FunctionInfo,
+             FISectionOffset, FISectionSize}.encode(O);
+  GlobalData{GlobalInfoType::EndOfList, 0, 0}.encode(O);
 
   // Write UUID section.
   if (HasUUID) {

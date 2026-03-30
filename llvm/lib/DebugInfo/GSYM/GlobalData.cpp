@@ -13,31 +13,20 @@
 using namespace llvm;
 using namespace gsym;
 
-llvm::Error GlobalData::encode(FileWriter &O) const {
-  if (Padding != 0)
-    return createStringError(std::errc::invalid_argument,
-                             "GlobalData entry padding must be zero, got %u",
-                             Padding);
+void GlobalData::encode(FileWriter &O) const {
   O.writeU32(static_cast<uint32_t>(Type));
-  O.writeU32(Padding);
   O.writeU64(FileOffset);
   O.writeU64(FileSize);
-  return Error::success();
 }
 
 llvm::Expected<GlobalData> GlobalData::decode(DataExtractor &Data,
                                               uint64_t &Offset) {
-  if (!Data.isValidOffsetForDataOfSize(Offset, 24))
+  if (!Data.isValidOffsetForDataOfSize(Offset, 20))
     return createStringError(std::errc::invalid_argument,
                              "not enough data for a GlobalData entry");
   GlobalData GD;
   GD.Type = static_cast<GlobalInfoType>(Data.getU32(&Offset));
-  GD.Padding = Data.getU32(&Offset);
   GD.FileOffset = Data.getU64(&Offset);
   GD.FileSize = Data.getU64(&Offset);
-  if (GD.Padding != 0)
-    return createStringError(std::errc::invalid_argument,
-                             "GlobalData entry padding must be zero, got %u",
-                             GD.Padding);
   return GD;
 }

@@ -51,15 +51,13 @@ enum class GlobalInfoType : uint32_t {
 /// sections can be located at arbitrary file offsets.
 struct GlobalData {
   GlobalInfoType Type;
-  uint32_t Padding;
   uint64_t FileOffset;
   uint64_t FileSize;
 
   /// Encode this GlobalData entry into a FileWriter stream.
   ///
   /// \param O The binary stream to write the data to.
-  /// \returns An error if the entry is invalid (e.g., non-zero padding).
-  LLVM_ABI llvm::Error encode(FileWriter &O) const;
+  LLVM_ABI void encode(FileWriter &O) const;
 
   /// Decode a GlobalData entry from a binary data stream.
   ///

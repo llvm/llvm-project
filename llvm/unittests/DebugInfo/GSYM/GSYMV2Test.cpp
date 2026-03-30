@@ -66,7 +66,6 @@ static GlobalData decodeGlobalDataEntry(StringRef Data, uint64_t &Offset,
   DataExtractor DE(Data, ByteOrder == llvm::endianness::little, 8);
   GlobalData GD;
   GD.Type = static_cast<GlobalInfoType>(DE.getU32(&Offset));
-  GD.Padding = DE.getU32(&Offset);
   GD.FileOffset = DE.getU64(&Offset);
   GD.FileSize = DE.getU64(&Offset);
   return GD;
@@ -153,7 +152,6 @@ static void TestV2HeaderAndGlobalData(llvm::endianness ByteOrder,
 
   while (Offset < Data.size()) {
     GlobalData GD = decodeGlobalDataEntry(Data, Offset, ByteOrder);
-    EXPECT_EQ(GD.Padding, 0u);
 
     switch (GD.Type) {
     case GlobalInfoType::EndOfList:
@@ -386,12 +384,12 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   raw_svector_ostream OS(Str);
   FileWriter FW(OS, llvm::endianness::native);
 
-  // We'll build: header (24) + GlobalData entries (6 entries * 24 = 144) +
+  // We'll build: header (24) + GlobalData entries (6 entries * 20 = 120) +
   // sections. Total GlobalData entries: AddrOffsets, AddrInfoOffsets,
   // StringTable, FileTable, FunctionInfo, EndOfList = 6.
   constexpr uint64_t HeaderSize = 24;
   constexpr uint64_t NumGlobalEntries = 6;
-  constexpr uint64_t GlobalDataSize = NumGlobalEntries * 24;
+  constexpr uint64_t GlobalDataSize = NumGlobalEntries * 20;
   constexpr uint8_t AddrOffSize = 1;
   constexpr uint8_t AddrInfoOffSize = 4;
   constexpr uint32_t NumAddresses = 1;
@@ -457,7 +455,6 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   // GlobalData entries.
   auto writeGD = [&](GlobalInfoType Type, uint64_t Off, uint64_t Size) {
     FW.writeU32(static_cast<uint32_t>(Type));
-    FW.writeU32(0); // Padding
     FW.writeU64(Off);
     FW.writeU64(Size);
   };
