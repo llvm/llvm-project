@@ -1,7 +1,11 @@
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,SLOW %s
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,FAST %s
 ;
-; Test that the relavent (differing) subsets of `call.ll` function correctly under Wasm64
+; Test that the relavent (differing) subsets of `call.ll` function correctly under Wasm64.
+
+; NOTE: Any additions/changes made to `call.ll` should be also made here if the
+; IR or codegen differs between Wasm32 and Wasm64
+; (namely anything using `ptr` or indirect calls).
 
 target triple = "wasm64-unknown-unknown"
 
