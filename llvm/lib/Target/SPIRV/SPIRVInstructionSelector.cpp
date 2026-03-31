@@ -5096,7 +5096,7 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(SPIRV::OpCompositeConstruct))
       .addDef(CompositeReg)
-      .addUse(GR.getSPIRVTypeID(IsFloat ? IntResTy : ResType))
+      .addUse(GR.getSPIRVTypeID(IntResTy))
       .addUse(SizeReg)
       .addUse(LevelsReg)
       .constrainAllUses(TII, TRI, RBI);
