@@ -63,7 +63,8 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
                 functionDecl(returns(qualType(hasDeclaration(OwnerDecl)))))),
             CreatesLegacyOwner, LegacyOwnerCast);
 
-  const auto ConsideredOwner = eachOf(IsOwnerType, CreatesOwner);
+  const auto CreatesOwnerWithCasts = ignoringImpCasts(CreatesOwner);
+  const auto ConsideredOwner = eachOf(IsOwnerType, CreatesOwnerWithCasts);
   const auto ScopeDeclaration = anyOf(translationUnitDecl(), namespaceDecl(),
                                       recordDecl(), functionDecl());
 
@@ -127,14 +128,14 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // but the LHS is not an owner.
   Finder->addMatcher(binaryOperator(isAssignmentOperator(),
                                     hasLHS(unless(IsOwnerType)),
-                                    hasRHS(CreatesOwner))
+                                    hasRHS(CreatesOwnerWithCasts))
                          .bind("bad_owner_creation_assignment"),
                      this);
 
   // Matching on initialization operations where the initial value is a newly
   // created owner, but the LHS is not an owner.
   Finder->addMatcher(
-      traverse(TK_AsIs, namedDecl(varDecl(hasInitializer(CreatesOwner),
+      traverse(TK_AsIs, namedDecl(varDecl(hasInitializer(CreatesOwnerWithCasts),
                                           unless(IsOwnerType))
                                       .bind("bad_owner_creation_variable"))),
       this);
@@ -149,11 +150,12 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
 
   // Matching for function calls where one argument is a created owner, but the
   // parameter type is not an owner.
-  Finder->addMatcher(callExpr(forEachArgumentWithParam(
-                         expr(CreatesOwner).bind("bad_owner_creation_argument"),
-                         parmVarDecl(unless(IsOwnerType))
-                             .bind("bad_owner_creation_parameter"))),
-                     this);
+  Finder->addMatcher(
+      callExpr(forEachArgumentWithParam(
+          expr(CreatesOwnerWithCasts).bind("bad_owner_creation_argument"),
+          parmVarDecl(unless(IsOwnerType))
+              .bind("bad_owner_creation_parameter"))),
+      this);
 
   auto IsNotInSubLambda = stmt(
       hasAncestor(
