@@ -8543,7 +8543,7 @@ void LoopVectorizationPlanner::addIterationCountCheckBlock(VPlan &Plan,
                                                            unsigned UF) const {
   const uint32_t *BranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
-          ? &MinItersBypassWeights[0]
+          ? MinItersBypassWeights
           : nullptr;
   VPlanTransforms::addIterationCountCheckBlock(
       Plan, VF, UF, CM.requiresScalarEpilogue(VF.isVector()), OrigLoop,
