@@ -595,7 +595,7 @@ public:
     // to allow checking the environment text encoding without needing to use the data tables.
 
 #      if defined(__ANDROID__)
-    return __Id == std::text_encoding::id::UTF8;
+    return _Id == std::text_encoding::id::UTF8;
 #      else
     return environment() == _Id;
 #      endif

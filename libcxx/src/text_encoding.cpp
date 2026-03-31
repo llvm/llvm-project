@@ -230,24 +230,27 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
   wchar_t __number_buffer[11]{};
 
   string_view __sv(__name);
-  unsigned long long __name_size = __sv.size();
-  bool __is_ansi                 = ::AreFileApisANSI();
 
   // locale :: "locale-name"
   // | "language"[_country-region[.code-page]]
   // | ".code-page"
   // GetLocaleInfoEx doesn't accept anything other than BCP-47 locale names, e.g. "en_US",
   // so we'll try to do a best-attempt to derive the text encoding from the name.
-  if (auto __dot = __sv.find('.'); __dot != std::string_view::npos) {
+  if (__sv == "C" || __sv == "") {
+    // "A locale argument value of C specifies the minimal ANSI conforming environment for C translation.""
+    // TODO: Figure out what to do for an empty string:
+    // "If locale points to an empty string, the locale is the implementation-defined native environment."
+    return __get_win32_acp(::GetACP());
+  } else if (auto __dot = __sv.find('.'); __dot != std::string_view::npos) {
     string_view __code_page(__name + __dot + 1);
 
     // Windows allows the codepage number as part of the name,
     // e.g. "en_US.1252" for English US, Windows-1252.
     if (std::isdigit(__code_page[0])) {
       unsigned int __cpage{};
-      auto res = std::from_chars(__code_page.data(), __code_page.data() + __code_page.size(), res);
-      if (res) {
-        return __get_win32_acp(__cpage)
+      auto __res = std::from_chars(__code_page.data(), __code_page.data() + __code_page.size(), __cpage);
+      if (__res) {
+        return __get_win32_acp(__cpage);
       }
     } else { // POSIX-style name
       std::text_encoding __te = std::text_encoding(__code_page);
@@ -257,9 +260,10 @@ _LIBCPP_EXPORTED_FROM_ABI std::text_encoding __get_locale_encoding(const char* _
     }
   }
 
+  bool __is_ansi  = ::AreFileApisANSI();
   auto __codepage = __is_ansi ? CP_ACP : CP_OEMCP;
   int __ret       = ::MultiByteToWideChar(
-      __codepage, MB_ERR_INVALID_CHARS, __name, __name_size, __locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
+      __codepage, MB_ERR_INVALID_CHARS, __name, __sv.size(), __locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
 
   if (__ret <= 0)
     return std::text_encoding();
