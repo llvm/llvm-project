@@ -163,6 +163,11 @@ New checks
   Finds redundant identity type aliases that re-expose a qualified name and can
   be replaced with a ``using`` declaration.
 
+- New :doc:`readability-redundant-const
+  <clang-tidy/checks/readability/redundant-const>` check.
+
+  Detects redundant ``const`` specifiers on variable declarations.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 
