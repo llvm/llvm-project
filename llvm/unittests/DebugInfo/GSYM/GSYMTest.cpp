@@ -1202,28 +1202,28 @@ TEST(GSYMTest, TestGsymCreatorV18ByteAddrOffsets) {
 
 // V2 tests (optimal AddrOffSize: 1-8)
 TEST(GSYMTest, TestGsymCreatorV21ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(1, 1, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(1, 1, 1, 1);
 }
 TEST(GSYMTest, TestGsymCreatorV22ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(2, 2, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(2, 2, 1, 1);
 }
 TEST(GSYMTest, TestGsymCreatorV23ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(3, 3, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(3, 3, 1, 1);
 }
 TEST(GSYMTest, TestGsymCreatorV24ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(4, 4, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(4, 4, 1, 1);
 }
 TEST(GSYMTest, TestGsymCreatorV25ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(5, 5, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(5, 5, 1, 1);
 }
 TEST(GSYMTest, TestGsymCreatorV26ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(6, 6, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(6, 6, 1, 1);
 }
 TEST(GSYMTest, TestGsymCreatorV27ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(7, 7, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(7, 7, 1, 1);
 }
 TEST(GSYMTest, TestGsymCreatorV28ByteAddrOffsets) {
-  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(8, 8, 1, 4);
+  TestGsymCreatorAddrOffsetsImpl<GsymCreatorV2>(8, 8, 1, 1);
 }
 
 static void VerifyFunctionInfo(const GsymReader &GR, uint64_t Addr,
@@ -1258,7 +1258,7 @@ template <typename CreatorT> static void TestGsymReaderImpl() {
   ASSERT_FALSE(FinalizeErr);
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder);
+  FileWriter FW(OutStrm, ByteOrder, &GC);
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
   if (auto ExpectedGR = GsymReader::copyBuffer(OutStrm.str())) {
@@ -1327,7 +1327,7 @@ template <typename CreatorT> static void TestGsymLookupsImpl() {
   ASSERT_FALSE(FinalizeErr);
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder);
+  FileWriter FW(OutStrm, ByteOrder, &GC);
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
   auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
@@ -2565,7 +2565,7 @@ TEST(GSYMTest, TestGsymCreatorV1MultipleSymbolsWithNoSize) {
   TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV1>(1, 4, 4);
 }
 TEST(GSYMTest, TestGsymCreatorV2MultipleSymbolsWithNoSize) {
-  TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV2>(1, 1, 4);
+  TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV2>(1, 1, 1);
 }
 
 // Helper function to quickly create a FunctionInfo in a GsymCreatorV1 for

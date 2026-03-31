@@ -29,11 +29,12 @@ class GsymReaderV2 : public GsymReader {
   /// Parsed GlobalData section descriptors, keyed by type.
   std::map<GlobalInfoType, GlobalData> GlobalDataSections;
   ArrayRef<uint8_t> AddrInfoOffsets;
+  /// File entries read with variable-width StrpSize for Dir/Base fields.
+  std::vector<FileEntry> ResolvedFiles;
   struct SwappedData {
     HeaderV2 Hdr;
     std::vector<uint8_t> AddrOffsets;
     std::vector<uint8_t> AddrInfoOffsets;
-    std::vector<FileEntry> Files;
   };
   std::unique_ptr<SwappedData> Swap;
 

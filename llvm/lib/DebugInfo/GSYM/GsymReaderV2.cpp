@@ -168,19 +168,6 @@ llvm::Error GsymReaderV2::parse() {
                               Buf.data() + AddrInfoOffsetsGD.FileOffset),
                           AddrInfoOffsetsGD.FileSize);
 
-    if (FileTableGD.FileSize < 4)
-      return createStringError(std::errc::invalid_argument,
-                               "FileTable section too small");
-    uint32_t NumFiles;
-    memcpy(&NumFiles, Buf.data() + FileTableGD.FileOffset, 4);
-    if (FileTableGD.FileSize < 4 + NumFiles * sizeof(FileEntry))
-      return createStringError(std::errc::invalid_argument,
-                               "FileTable section too small for %u files",
-                               NumFiles);
-    Files = ArrayRef<FileEntry>(reinterpret_cast<const FileEntry *>(
-                                    Buf.data() + FileTableGD.FileOffset + 4),
-                                NumFiles);
-
     StrTab.Data = Buf.substr(StringTableGD.FileOffset, StringTableGD.FileSize);
   } else {
     // Do the byte-swapping for the AddrOffsets section for byte size 1-8.
@@ -211,17 +198,21 @@ llvm::Error GsymReaderV2::parse() {
       AddrInfoOffsets = ArrayRef<uint8_t>(Swap->AddrInfoOffsets);
     }
 
+    StrTab.Data = Buf.substr(StringTableGD.FileOffset, StringTableGD.FileSize);
+  }
+
+  // Read file table using StrpSize for Dir/Base fields. This handles both
+  // swap and non-swap paths since variable StrpSize prevents mmap-casting.
+  {
     uint64_t FTOff = FileTableGD.FileOffset;
     uint32_t NumFiles = DE.getU32(&FTOff);
-    if (NumFiles > 0) {
-      Swap->Files.resize(NumFiles);
-      if (!DE.getU32(&FTOff, &Swap->Files[0].Dir, NumFiles * 2))
-        return createStringError(std::errc::invalid_argument,
-                                 "failed to read file table");
-      Files = ArrayRef<FileEntry>(Swap->Files);
+    const uint8_t SP = Hdr->StrpSize;
+    ResolvedFiles.resize(NumFiles);
+    for (uint32_t I = 0; I < NumFiles; ++I) {
+      ResolvedFiles[I].Dir = DE.getUnsigned(&FTOff, SP);
+      ResolvedFiles[I].Base = DE.getUnsigned(&FTOff, SP);
     }
-
-    StrTab.Data = Buf.substr(StringTableGD.FileOffset, StringTableGD.FileSize);
+    Files = ArrayRef<FileEntry>(ResolvedFiles);
   }
   return Error::success();
 }

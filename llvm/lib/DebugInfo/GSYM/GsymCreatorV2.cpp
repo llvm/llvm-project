@@ -33,7 +33,9 @@ std::unique_ptr<GsymCreator> GsymCreatorV2::createNew(bool Quiet) const {
 }
 
 uint8_t GsymCreatorV2::getStringOffsetSize() const {
-  return (StrTab.getSize() > UINT32_MAX) ? 8 : 4;
+  // In theory, we should use the last string's offset to do this calculation.
+  // The string table size is easy to get and is a good approximation.
+  return bytesRequiredForUnsigned(StrTab.getSize());
 }
 
 uint8_t GsymCreatorV2::getAddressOffsetSize() const {
@@ -56,7 +58,7 @@ uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   Size = llvm::alignTo(Size, 4);
   Size += NumFuncs * 4;
   Size = llvm::alignTo(Size, 4);
-  Size += 4 + Files.size() * sizeof(FileEntry);
+  Size += 4 + Files.size() * 2 * getStringOffsetSize();
   Size += StrTab.getSize();
   Size += UUID.size();
   return Size;
@@ -120,7 +122,7 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   // FileTable section.
   CurOffset = llvm::alignTo(CurOffset, 4);
   const uint64_t FileTableOffset = CurOffset;
-  const uint64_t FileTableSize = 4 + Files.size() * sizeof(FileEntry);
+  const uint64_t FileTableSize = 4 + Files.size() * 2 * StrpSize;
   CurOffset += FileTableSize;
 
   // StringTable section.

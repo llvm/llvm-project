@@ -276,6 +276,61 @@ TEST(GSYMV2Test, TestCreatorV2AddrOffSize5Byte) {
   TestV2AddrOffSize(0x1000, 0x100000000ULL, 5);
 }
 
+/// StrpSize tests
+
+/// Test that a given StrpSize produces a correct round-trip. Creates a string
+/// table large enough to require the specified StrpSize by inserting a string
+/// of (1 << ((StrpSize-1) * 8)) bytes, followed by a one-character string
+/// whose offset exceeds what (StrpSize-1) bytes can hold.
+static void TestV2StrpSize(uint8_t ExpectedStrpSize,
+                           llvm::endianness ByteOrder) {
+  GsymCreatorV2 GC;
+  // Insert a large string to push the string table past the threshold.
+  // The string table starts with a '\0' byte, so the first string is at
+  // offset 1. We want the second string's offset to require ExpectedStrpSize
+  // bytes, so the first string needs to be at least (1 << ((ExpSize-1)*8))-1
+  // bytes long (including its null terminator).
+  const size_t FirstStrLen = 1ULL << ((ExpectedStrpSize - 1) * 8);
+  std::string LargeStr(FirstStrLen, 'x');
+  GC.insertString(LargeStr);
+  const uint32_t FuncName = GC.insertString("f");
+  GC.addFunctionInfo(FunctionInfo(0x1000, 0x10, FuncName));
+  OutputAggregator Null(nullptr);
+  ASSERT_FALSE(GC.finalize(Null));
+
+  auto Result = encodeV2(GC, ByteOrder);
+  ASSERT_THAT_EXPECTED(Result, Succeeded());
+  StringRef Data = *Result;
+
+  auto HdrOrErr = decodeHeaderV2(Data, ByteOrder);
+  ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
+  EXPECT_EQ(HdrOrErr->StrpSize, ExpectedStrpSize);
+
+  // Verify round-trip: decode and look up the function.
+  auto GR = GsymReaderV2::copyBuffer(Data);
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+
+  auto FI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(FI, Succeeded());
+  EXPECT_EQ(GR->getString(FI->Name), "f");
+}
+
+// Only test StrpSize 1-3. Larger sizes would require string tables of
+// 16MB+ (size 4), 4GB+ (size 5), etc., which is unnecessary for unit tests.
+TEST(GSYMV2Test, TestCreatorV2StrpSize1) {
+  TestV2StrpSize(1, llvm::endianness::little);
+  TestV2StrpSize(1, llvm::endianness::big);
+}
+TEST(GSYMV2Test, TestCreatorV2StrpSize2) {
+  TestV2StrpSize(2, llvm::endianness::little);
+  TestV2StrpSize(2, llvm::endianness::big);
+}
+TEST(GSYMV2Test, TestCreatorV2StrpSize3) {
+  TestV2StrpSize(3, llvm::endianness::little);
+  TestV2StrpSize(3, llvm::endianness::big);
+}
+
 /// AddrInfoOffsets verification
 
 TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
@@ -999,7 +1054,7 @@ static void transferFunctions(const GsymReader &Reader, GsymCreator &Creator) {
 static SmallString<1024> encodeCreator(const GsymCreator &GC) {
   SmallString<1024> Str;
   raw_svector_ostream OS(Str);
-  FileWriter FW(OS, llvm::endianness::native);
+  FileWriter FW(OS, llvm::endianness::native, &GC);
   llvm::Error Err = GC.encode(FW);
   EXPECT_FALSE(bool(Err));
   return Str;
