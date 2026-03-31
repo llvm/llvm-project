@@ -352,6 +352,12 @@ Attribute Operation::getPropertiesAsAttribute() {
     return *getPropertiesStorage().as<Attribute *>();
   return info->getOpPropertiesAsAttribute(this);
 }
+FailureOr<Attribute> Operation::getPropertyAsAttribute(StringRef name) {
+  std::optional<RegisteredOperationName> info = getRegisteredInfo();
+  assert(info &&
+         "`getPropertyAsAttribute` only works for registered operations.");
+  return info->getOpPropertyAsAttribute(this, name);
+}
 LogicalResult Operation::setPropertiesFromAttribute(
     Attribute attr, function_ref<InFlightDiagnostic()> emitError) {
   std::optional<RegisteredOperationName> info = getRegisteredInfo();
@@ -361,6 +367,15 @@ LogicalResult Operation::setPropertiesFromAttribute(
   }
   return info->setOpPropertiesFromAttribute(
       this->getName(), this->getPropertiesStorage(), attr, emitError);
+}
+LogicalResult Operation::setPropertyFromAttribute(
+    StringRef name, Attribute attr,
+    function_ref<InFlightDiagnostic()> emitError) {
+  std::optional<RegisteredOperationName> info = getRegisteredInfo();
+  assert(info &&
+         "`setPropertyFromAttribute` only works for registered operations.");
+  return info->setOpPropertyFromAttribute(
+      this->getName(), this->getPropertiesStorage(), name, attr, emitError);
 }
 
 void Operation::copyProperties(OpaqueProperties rhs) {

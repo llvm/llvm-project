@@ -1758,6 +1758,17 @@ public:
                         function_ref<InFlightDiagnostic()> emitError) {
     return setPropertiesFromAttribute(prop, attr, emitError);
   }
+  /// Convert the provided attribute to a property and assigned it to the
+  /// corresponding property. This default implementation forwards to a free
+  /// function `setPropertiesFromAttribute` that can be looked up with ADL in
+  /// the namespace where the properties are defined. It can also be overridden
+  /// in the derived ConcreteOp.
+  template <typename PropertiesTy>
+  static LogicalResult
+  setPropertyFromAttr(PropertiesTy &prop, StringRef name, Attribute attr,
+                      function_ref<InFlightDiagnostic()> emitError) {
+    return setPropertyFromAttribute(prop, name, attr, emitError);
+  }
   /// Convert the provided properties to an attribute. This default
   /// implementation forwards to a free function `getPropertiesAsAttribute` that
   /// can be looked up with ADL in the namespace where the properties are
@@ -1766,6 +1777,16 @@ public:
   static Attribute getPropertiesAsAttr(MLIRContext *ctx,
                                        const PropertiesTy &prop) {
     return getPropertiesAsAttribute(ctx, prop);
+  }
+  /// Convert the provided named property to an attribute. This default
+  /// implementation forwards to a free function `getPropertiesAsAttribute` that
+  /// can be looked up with ADL in the namespace where the properties are
+  /// defined. It can also be overridden in the derived ConcreteOp.
+  template <typename PropertiesTy>
+  static FailureOr<Attribute> getPropertyAsAttr(MLIRContext *ctx,
+                                                const PropertiesTy &prop,
+                                                StringRef name) {
+    return getPropertyAsAttribute(ctx, prop, name);
   }
   /// Hash the provided properties. This default implementation forwards to a
   /// free function `computeHash` that can be looked up with ADL in the
