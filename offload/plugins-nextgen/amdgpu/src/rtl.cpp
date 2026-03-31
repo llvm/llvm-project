@@ -690,11 +690,14 @@ struct AMDGPUSignalTy {
   /// plugin thread or the HSA runtime.
   void reset() { hsa_signal_store_screlease(HSASignal, 1); }
 
-  /// Increase the number of concurrent uses.
-  void increaseUseCount() { UseCount.increase(); }
+  /// Increase the number of concurrent uses by \p Amount.
+  void increaseUseCount(uint32_t Amount = 1) { UseCount.increase(Amount); }
 
-  /// Decrease the number of concurrent uses and return whether was the last.
-  bool decreaseUseCount() { return UseCount.decrease(); }
+  /// Decrease the number of concurrent uses by \p Amount and return whether it
+  /// became zero.
+  bool decreaseUseCount(uint32_t Amount = 1) {
+    return UseCount.decrease(Amount);
+  }
 
   hsa_signal_t get() const { return HSASignal; }
 
@@ -704,7 +707,7 @@ private:
 
   /// Reference counter for tracking the concurrent use count. This is mainly
   /// used for knowing how many streams are using the signal.
-  RefCountTy<> UseCount;
+  RefCountTy<uint32_t> UseCount;
 };
 
 /// Classes for holding AMDGPU signals and managing signals.
@@ -1801,12 +1804,15 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
     return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
                          "target queue was nullptr");
 
+  const bool RetainTimingSignal = Queue->isProfilingEnabled();
+  const uint32_t SignalUses = 1 + RetainTimingSignal;
+
   // Retrieve an available signal for the operation's output.
   AMDGPUSignalTy *OutputSignal = nullptr;
   if (auto Err = SignalManager.getResource(OutputSignal))
     return Err;
   OutputSignal->reset();
-  OutputSignal->increaseUseCount();
+  OutputSignal->increaseUseCount(SignalUses);
 
   std::lock_guard<std::mutex> StreamLock(Mutex);
 
@@ -1818,7 +1824,7 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
   if (auto Err = Queue->pushBarrier(OutputSignal, InputSignal, nullptr)) {
     rollbackConsumedSlot(Curr);
 
-    if (OutputSignal->decreaseUseCount())
+    if (OutputSignal->decreaseUseCount(SignalUses))
       if (auto ReturnErr = SignalManager.returnResource(OutputSignal))
         return joinErrors(std::move(Err), std::move(ReturnErr));
 
@@ -1827,13 +1833,7 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
 
   Event.RecordedSlot = Curr;
   Event.RecordedSyncCycle = SyncCycle;
-
-  if (Queue->isProfilingEnabled()) {
-    OutputSignal->increaseUseCount();
-    Event.TimingSignal = OutputSignal;
-  } else {
-    Event.TimingSignal = nullptr;
-  }
+  Event.TimingSignal = RetainTimingSignal ? OutputSignal : nullptr;
 
   assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
   assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
