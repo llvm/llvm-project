@@ -136,7 +136,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     ParentTy = ParentCast->getType();
   } else {
     // IgnoreUnlessSpelledInSource prevents matching implicit casts
-    TraversalKindScope TmpTraversalKind(*Result.Context, TK_AsIs);
+    const TraversalKindScope TmpTraversalKind(*Result.Context, TK_AsIs);
     for (const auto Parent : Result.Context->getParents(*Call)) {
       if (const auto *ParentCastExpr = Parent.get<CastExpr>()) {
         ParentTy = ParentCastExpr->getType();
