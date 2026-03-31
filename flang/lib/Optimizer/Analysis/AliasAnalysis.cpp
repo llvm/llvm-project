@@ -13,8 +13,11 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -24,6 +27,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -680,6 +684,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
     auto opResult = mlir::cast<OpResult>(v);
     assert(opResult.getOwner() == defOp && "v must be a result of defOp");
     ty = opResult.getType();
+    std::optional<AliasAnalysis::Source> accSourceReturn;
     llvm::TypeSwitch<Operation *>(defOp)
         .Case([&](hlfir::AsExprOp op) {
           // TODO: we should probably always report hlfir.as_expr
@@ -937,10 +942,21 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
               !mlir::isa<fir::BaseBoxType>(ty))
             followBoxData = true;
         })
+        .Case<ACC_DATA_ENTRY_AND_INIT_OPS>([&](auto op) {
+          accSourceReturn = fir::acc::getSourceFromACCValue(
+              v, op.getOperation(),
+              [&](mlir::Value x) {
+                return getSource(x, getLastInstantiationPoint);
+              },
+              followingData, attributes);
+          breakFromLoop = true;
+        })
         .Default([&](auto op) {
           defOp = nullptr;
           breakFromLoop = true;
         });
+    if (accSourceReturn)
+      return *accSourceReturn;
   }
   if (!defOp && type == SourceKind::Unknown) {
     // Check if the memory source is coming through a dummy argument.
@@ -956,6 +972,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       // hlfir.eval_in_mem block operands is allocated by the operation.
       type = SourceKind::Allocate;
       ty = v.getType();
+    } else if (mlir::Operation *accOp =
+                   mlir::acc::getACCDataClauseOpForBlockArg(v)) {
+      return fir::acc::getSourceFromACCValue(
+          v, accOp,
+          [&](mlir::Value x) {
+            return getSource(x, getLastInstantiationPoint);
+          },
+          followingData, attributes);
     }
   }
 
