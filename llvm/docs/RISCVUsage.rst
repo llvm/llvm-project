@@ -578,29 +578,6 @@ line.  This currently applies to the following extensions:
 
 No extensions have experimental intrinsics.
 
-Vector Intrinsic Detection Macros
-==================================
-
-Clang defines preprocessor macros ``__riscv_v_intrinsic_<extension>`` to indicate
-toolchain support for RISC-V vector intrinsics. These macros are defined for all
-vector extensions that have intrinsics, allowing code to detect whether the compiler
-supports intrinsics for a specific extension.
-
-Note: These macros are defined unconditionally because it's intended to show capabilities
-of this compiler instead of showing whether extension is enabled.
-
-Example usage:
-
-.. code-block:: c
-
-    #if defined(__riscv_v_intrinsic_zvbb)
-    // Compiler supports Zvbb intrinsics - can use them
-    #include <riscv_vector.h>
-    void use_zvbb_intrinsics() {
-      // Use Zvbb intrinsics here
-    }
-    #endif
-
 Long (>32-bit) Instruction Support
 ==================================
 
