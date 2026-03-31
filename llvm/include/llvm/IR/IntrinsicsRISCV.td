@@ -1947,10 +1947,8 @@ let TargetPrefix = "riscv" in {
     // Input: (passthru, vector_in, vector_in, vl)
     def "int_riscv_" # NAME :
       DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                            [LLVMMatchType<0>,
-                             LLVMOneNthElementsVectorType<0, 2>,
-                             LLVMOneNthElementsVectorType<0, 2>,
-                             llvm_anyint_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMMatchType<1>, llvm_anyint_ty],
                             [IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 3;
     }
@@ -1970,9 +1968,8 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVUnzip {
     // Input: (passthru, vector_in, vl)
     def "int_riscv_" # NAME :
-      DefaultAttrsIntrinsic<[LLVMOneNthElementsVectorType<0, 2>],
-                            [LLVMOneNthElementsVectorType<0, 2>,
-                             llvm_anyvector_ty,
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
                              llvm_anyint_ty],
                             [IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 2;
