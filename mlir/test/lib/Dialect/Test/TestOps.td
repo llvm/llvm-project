@@ -3887,6 +3887,14 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
   }];
 }
 
+def TestAllocWithTwoMemRefResults : TEST_Op<"alloc_with_two_memref_results"> {
+  let results = (outs Res<AnyMemRef, "", [MemAlloc]>:$memref0,
+                      Res<AnyMemRef, "", [MemAlloc]>:$memref1);
+  let assemblyFormat = [{
+     attr-dict `:` type($memref0) `,` type($memref1)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test Ops bufferization
 //===----------------------------------------------------------------------===//
