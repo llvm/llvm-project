@@ -1659,10 +1659,17 @@ public:
 
   // Target Hooks
   //
-  // Hooks fire on target lifecycle events. Each hook must explicitly specify
-  // which triggers it responds to via --on-load, --on-unload, and/or --on-stop.
-  // All trigger types are coequal, meaning none is privileged or implied by
-  // default.
+  // Hooks fire on target lifecycle events. There are two flows:
+  //
+  // Command-based hooks: the user specifies which triggers the hook responds
+  //   to (--on-load, --on-unload, --on-stop) and provides a list of commands.
+  //   All commands run for every trigger the hook is signed up for.
+  //
+  // Python class hooks: the user provides a Python class name and optional
+  //   extra_args (-k key -v value). The class controls which events it
+  //   handles by implementing the corresponding callback methods
+  //   (handle_module_loaded, handle_module_unloaded, handle_stop).
+  //   Triggers are set automatically based on which methods exist.
   class Hook : public UserID {
   public:
     Hook(const Hook &rhs);
@@ -1670,7 +1677,7 @@ public:
 
     enum class HookKind : uint32_t { CommandBased = 0, ScriptBased };
 
-    /// Individual trigger bits. Combine with OR to form a trigger mask.
+    /// Individual trigger bits. Combine with bitwise OR to form a trigger mask.
     // FIXME: Add kProcessExit, kProcessDetach, etc. as needed.
     enum TriggerBit : uint32_t {
       kModulesLoaded = (1u << 0),
@@ -1683,10 +1690,20 @@ public:
     bool IsEnabled() { return m_enabled; }
     void SetIsEnabled(bool enabled) { m_enabled = enabled; }
 
+    /// Return the bitmask of triggers this hook responds to.
+    /// Each bit corresponds to a TriggerBit value.
     uint32_t GetTriggerMask() const { return m_trigger_mask; }
+
+    /// Replace the trigger mask. \a mask is a bitwise OR of TriggerBit values.
     void SetTriggerMask(uint32_t mask) { m_trigger_mask = mask; }
+
+    /// Add a trigger to the mask. \a trigger is a single TriggerBit value.
     void AddTrigger(uint32_t trigger) { m_trigger_mask |= trigger; }
+
+    /// Remove a trigger from the mask. \a trigger is a single TriggerBit value.
     void RemoveTrigger(uint32_t trigger) { m_trigger_mask &= ~trigger; }
+
+    /// Return true if this hook fires on the given trigger.
     bool FiresOn(uint32_t trigger) const { return m_trigger_mask & trigger; }
 
     // Filter fields

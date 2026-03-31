@@ -5473,41 +5473,54 @@ public:
                                    IOHandlerDelegate::Completion::LLDBCommand),
         m_python_class_options("scripted hook", false, 'P') {
     SetHelpLong(R"help(
-Hooks fire on target lifecycle events. At least one trigger must be specified:
---on-load (-L), --on-unload (-u), or --on-stop (-S). Multiple triggers can be
-combined.
-
 Command-based hooks:
+--------------------
+  Specify which triggers the hook responds to with --on-load (-L),
+  --on-unload (-u), and/or --on-stop (-S).  At least one trigger is required.
+  Provide commands with --one-liner (-o), or omit -o to enter an interactive
+  command editor.  All commands run for every trigger the hook is signed up
+  for; there is no per-trigger command list.
 
+  Examples:
     target hook add -L -o "script print('module loaded')"
     target hook add -L -u -o "script print('module event')"
     target hook add -S -o "bt"
     target hook add -L -u -S -o "script print('all events')"
-
-Stop-event filters can be specified inline:
-
     target hook add -S -s mylib.so -n main -o "bt"
     target hook add -S -G true -o "thread info"
 
-Python-based hooks:
+Python class hooks:
+-------------------
+  Provide a Python class with --python-class (-P).  The class controls which
+  events it handles by implementing the corresponding methods; you do not
+  specify triggers on the command line.  Use -k <key> -v <value> to pass
+  extra_args to the class constructor.
 
-    target hook add -L -P mymodule.MyHook
-    target hook add -L -u -S -P mymodule.MyHook
+  Examples:
+    target hook add -P mymodule.MyHook
+    target hook add -P mymodule.MyHook -k verbose -v true
 
-The Python class should implement:
+  The Python class should implement at least one of these methods:
 
     class MyHook:
         def __init__(self, target, extra_args, internal_dict):
             self.target = target
-        def handle_module_loaded(self, stream):    # for --on-load
+        def handle_module_loaded(self, stream):
             pass
-        def handle_module_unloaded(self, stream):  # for --on-unload
+        def handle_module_unloaded(self, stream):
             pass
-        def handle_stop(self, exe_ctx, stream):    # for --on-stop, return bool
-            return True  # True = should_stop
+        def handle_stop(self, exe_ctx, stream):
+            return True  # True = should_stop, False = continue
 
-Each handler is only called for the triggers that were specified.
+Filter options:
+---------------
+  Filters (-s, -f, -l, -e, -c, -n, -x, -t, -T, -q) restrict when the hook
+  fires.  They apply to both command-based and Python class hooks.
 )help");
+    // Python class options (-P, -k, -v) are placed in Set 2 (dst_mask).
+    // src_mask must cover Set 1 | Set 2 to match the internal usage masks of
+    // OptionGroupPythonClassWithDict (class=Set1, key/value=Set2).
+    // Since -o, -L, -u, -S are Group<1> only, the parser prevents mixing.
     m_all_options.Append(&m_python_class_options,
                          LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_2);
     m_all_options.Append(&m_options);
@@ -5561,31 +5574,39 @@ protected:
     m_hook_sp.reset();
     Target &target = GetTarget();
 
-    // At least one trigger must be specified.
-    if (!m_options.m_on_load && !m_options.m_on_unload &&
+    bool is_python_class = !m_python_class_options.GetName().empty();
+
+    // Command-based hooks require at least one explicit trigger.
+    if (!is_python_class && !m_options.m_on_load && !m_options.m_on_unload &&
         !m_options.m_on_stop) {
       result.AppendError("at least one trigger must be specified: "
                          "--on-load (-L), --on-unload (-u), or --on-stop (-S)");
       return;
     }
 
-    Target::Hook::HookKind hook_kind;
-    if (m_python_class_options.GetName().empty())
-      hook_kind = Target::Hook::HookKind::CommandBased;
-    else
-      hook_kind = Target::Hook::HookKind::ScriptBased;
+    Target::Hook::HookKind hook_kind =
+        is_python_class ? Target::Hook::HookKind::ScriptBased
+                        : Target::Hook::HookKind::CommandBased;
 
     Target::HookSP new_hook_sp = target.CreateHook(hook_kind);
 
-    // Build trigger mask from explicit flags.
-    uint32_t trigger_mask = 0;
-    if (m_options.m_on_load)
-      trigger_mask |= Target::Hook::kModulesLoaded;
-    if (m_options.m_on_unload)
-      trigger_mask |= Target::Hook::kModulesUnloaded;
-    if (m_options.m_on_stop)
-      trigger_mask |= Target::Hook::kProcessStop;
-    new_hook_sp->SetTriggerMask(trigger_mask);
+    if (is_python_class) {
+      // Python class hooks respond to all triggers; the class controls
+      // behavior by which callback methods it implements.
+      new_hook_sp->SetTriggerMask(Target::Hook::kModulesLoaded |
+                                  Target::Hook::kModulesUnloaded |
+                                  Target::Hook::kProcessStop);
+    } else {
+      // Build trigger mask from explicit command-line flags.
+      uint32_t trigger_mask = 0;
+      if (m_options.m_on_load)
+        trigger_mask |= Target::Hook::kModulesLoaded;
+      if (m_options.m_on_unload)
+        trigger_mask |= Target::Hook::kModulesUnloaded;
+      if (m_options.m_on_stop)
+        trigger_mask |= Target::Hook::kProcessStop;
+      new_hook_sp->SetTriggerMask(trigger_mask);
+    }
 
     // Set up symbol context specifier if filter options were provided.
     if (m_options.m_sym_ctx_specified) {
@@ -5656,7 +5677,7 @@ protected:
           hook->SetScriptCallback(m_python_class_options.GetName(),
                                   m_python_class_options.GetStructuredData());
       if (callback_error.Fail()) {
-        result.AppendErrorWithFormat("error: couldn't add hook: %s\n",
+        result.AppendErrorWithFormat("Couldn't add hook: %s",
                                      callback_error.AsCString());
         target.UndoCreateHook(new_hook_sp->GetID());
         return;

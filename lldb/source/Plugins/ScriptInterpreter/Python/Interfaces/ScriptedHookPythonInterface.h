@@ -24,10 +24,11 @@ public:
   CreatePluginObject(llvm::StringRef class_name, lldb::TargetSP target_sp,
                      const StructuredDataImpl &args_sp) override;
 
+  /// A hook class must implement at least one callback. All three are
+  /// individually optional; hooks that implement none will simply never fire.
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {
-    return llvm::SmallVector<AbstractMethodRequirement>(
-        {{"handle_module_loaded", 1}});
+    return {};
   }
 
   void HandleModuleLoaded(lldb::StreamSP &output_sp) override;

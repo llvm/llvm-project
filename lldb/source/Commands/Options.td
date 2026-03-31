@@ -1902,20 +1902,26 @@ let Command = "target stop_hook list" in {
 }
 
 let Command = "target hook add" in {
+  // Command-based options (Group 1 only -- mutually exclusive with -P).
   def target_hook_add_one_liner
       : Option<"one-liner", "o">,
+        Group<1>,
         Arg<"OneLiner">,
         Desc<"Add a command for the hook. Can be specified more than "
              "once, and commands will be run in the order they appear.">;
   def target_hook_add_on_load
       : Option<"on-load", "L">,
+        Group<1>,
         Desc<"Fire the hook when modules are ${L}oaded.">;
   def target_hook_add_on_unload
       : Option<"on-unload", "u">,
+        Group<1>,
         Desc<"Fire the hook when modules are ${u}nloaded.">;
   def target_hook_add_on_stop
       : Option<"on-stop", "S">,
+        Group<1>,
         Desc<"Fire the hook when the process ${S}tops.">;
+  // Shared options (both command-based and Python class hooks).
   def target_hook_add_shlib
       : Option<"shlib", "s">,
         Arg<"ShlibName">,
