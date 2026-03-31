@@ -947,8 +947,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
 
     VSETVLIInfo CurrInfo = VIA.computeInfoForInstr(MI);
 
-    unsigned OpNum = 0;
-    unsigned Opcode = 0;
+    unsigned Opcode = 0, OpNum = 0;
     switch (Mode) {
     case VSETTK:
       if (!RISCVII::hasTKOp(TSFlags))
