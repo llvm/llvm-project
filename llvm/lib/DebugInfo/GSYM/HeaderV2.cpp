@@ -109,5 +109,6 @@ bool llvm::gsym::operator==(const HeaderV2 &LHS, const HeaderV2 &RHS) {
          LHS.NumAddresses == RHS.NumAddresses &&
          LHS.AddrOffSize == RHS.AddrOffSize &&
          LHS.AddrInfoOffSize == RHS.AddrInfoOffSize &&
-         LHS.StrpSize == RHS.StrpSize && LHS.StrTableEncoding == RHS.StrTableEncoding;
+         LHS.StrpSize == RHS.StrpSize &&
+         LHS.StrTableEncoding == RHS.StrTableEncoding;
 }

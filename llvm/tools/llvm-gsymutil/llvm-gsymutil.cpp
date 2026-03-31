@@ -229,8 +229,7 @@ static void parseArgs(int argc, char **argv) {
     else if (Val == "v2")
       ForceOutputVersion = OutputVersion::V2;
     else {
-      llvm::errs() << ToolName
-                   << ": for the --output-version option: '" << Val
+      llvm::errs() << ToolName << ": for the --output-version option: '" << Val
                    << "' is invalid. Use 'v1' or 'v2'.\n";
       std::exit(1);
     }
@@ -520,8 +519,9 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
 
 /// Check if a file starts with the GSYM magic bytes.
 static bool isGSYMFile(StringRef Filename) {
-  auto BuffOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/false,
-                                                /*RequiresNullTerminator=*/false);
+  auto BuffOrErr =
+      MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/false,
+                                   /*RequiresNullTerminator=*/false);
   if (!BuffOrErr)
     return false;
   StringRef Data = (*BuffOrErr)->getBuffer();
@@ -534,8 +534,8 @@ static bool isGSYMFile(StringRef Filename) {
 
 /// Re-insert a file entry from a reader into a creator, reconstructing the
 /// full path from separate Dir and Base components.
-static uint32_t transferFile(const GsymReader &Reader,
-                             GsymCreator &Creator, uint32_t FileIdx) {
+static uint32_t transferFile(const GsymReader &Reader, GsymCreator &Creator,
+                             uint32_t FileIdx) {
   auto FE = Reader.getFile(FileIdx);
   if (!FE)
     return FileIdx;
@@ -553,8 +553,8 @@ static uint32_t transferFile(const GsymReader &Reader,
 
 /// Fix up string and file references in an InlineInfo tree so they refer to
 /// the creator's tables instead of the reader's.
-static void fixupInlineInfo(const GsymReader &Reader,
-                            GsymCreator &Creator, InlineInfo &II) {
+static void fixupInlineInfo(const GsymReader &Reader, GsymCreator &Creator,
+                            InlineInfo &II) {
   II.Name = Creator.insertString(Reader.getString(II.Name));
   if (II.CallFile != 0)
     II.CallFile = transferFile(Reader, Creator, II.CallFile);
@@ -564,8 +564,8 @@ static void fixupInlineInfo(const GsymReader &Reader,
 
 /// Fix up all string and file references in a FunctionInfo so they refer to
 /// the creator's tables instead of the reader's.
-static void fixupFunctionInfo(const GsymReader &Reader,
-                              GsymCreator &Creator, FunctionInfo &FI) {
+static void fixupFunctionInfo(const GsymReader &Reader, GsymCreator &Creator,
+                              FunctionInfo &FI) {
   FI.Name = Creator.insertString(Reader.getString(FI.Name));
   if (FI.OptLineTable) {
     for (size_t J = 0; J < FI.OptLineTable->size(); ++J) {
@@ -616,7 +616,8 @@ static llvm::Error handleGSYMConversion(StringRef Filename,
   if (auto Err = Creator.finalize(Out))
     return Err;
 
-  Out << "Output file (" << (ForceOutputVersion == OutputVersion::V2 ? "v2" : "v1")
+  Out << "Output file ("
+      << (ForceOutputVersion == OutputVersion::V2 ? "v2" : "v1")
       << "): " << OutFile << "\n";
 
   if (auto Err = Creator.save(OutFile, llvm::endianness::native))

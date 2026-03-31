@@ -14,5 +14,4 @@ using namespace gsym;
 
 GsymDataExtractor::GsymDataExtractor(const DataExtractor &DE,
                                      const GsymReader *GR)
-    : DataExtractor(DE),
-      StrpSize(GR ? GR->getStringOffsetByteSize() : 4) {}
+    : DataExtractor(DE), StrpSize(GR ? GR->getStringOffsetByteSize() : 4) {}

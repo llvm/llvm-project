@@ -354,8 +354,8 @@ FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
   // We have inline information. Try to augment the lookup result with this
   // data.
   GsymDataExtractor InlineGDE(*InlineInfoData, &GR);
-  llvm::Error Err = InlineInfo::lookup(GR, InlineGDE, FuncAddr, Addr,
-                                       LR.Locations);
+  llvm::Error Err =
+      InlineInfo::lookup(GR, InlineGDE, FuncAddr, Addr, LR.Locations);
   if (Err)
     return std::move(Err);
   return LR;

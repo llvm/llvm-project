@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_GSYM_MERGEDFUNCTIONSINFO_H
 #define LLVM_DEBUGINFO_GSYM_MERGEDFUNCTIONSINFO_H
 
-#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <stdint.h>

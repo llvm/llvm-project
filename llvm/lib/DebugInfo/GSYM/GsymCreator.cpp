@@ -343,8 +343,8 @@ uint64_t GsymCreator::getMaxAddressOffset() const {
   return (static_cast<uint64_t>(1) << (Size * 8)) - 1;
 }
 
-llvm::Error GsymCreator::validateForEncoding(
-    std::optional<uint64_t> &BaseAddr) const {
+llvm::Error
+GsymCreator::validateForEncoding(std::optional<uint64_t> &BaseAddr) const {
   if (Funcs.empty())
     return createStringError(std::errc::invalid_argument,
                              "no functions to encode");

@@ -735,7 +735,8 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
                                      OutputAggregator &Out) {
   Out << "Verifying GSYM file \"" << GsymPath << "\":\n";
 
-  llvm::Expected<std::unique_ptr<GsymReader>> GsymOrErr = GsymReader::openFile(GsymPath);
+  llvm::Expected<std::unique_ptr<GsymReader>> GsymOrErr =
+      GsymReader::openFile(GsymPath);
   if (!GsymOrErr)
     return GsymOrErr.takeError();
   auto &Gsym = *GsymOrErr;

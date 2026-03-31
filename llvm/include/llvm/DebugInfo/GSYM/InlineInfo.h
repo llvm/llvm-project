@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_GSYM_INLINEINFO_H
 #define LLVM_DEBUGINFO_GSYM_INLINEINFO_H
 
-#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/Support/Compiler.h"
@@ -120,9 +120,8 @@ struct InlineInfo {
   ///          Error::success() for all other cases, even when no information
   ///          is added to \a SrcLocs.
   LLVM_ABI static llvm::Error lookup(const GsymReader &GR,
-                                     GsymDataExtractor &Data,
-                                     uint64_t BaseAddr, uint64_t Addr,
-                                     SourceLocations &SrcLocs);
+                                     GsymDataExtractor &Data, uint64_t BaseAddr,
+                                     uint64_t Addr, SourceLocations &SrcLocs);
 
   /// Lookup an address in the InlineInfo object
   ///

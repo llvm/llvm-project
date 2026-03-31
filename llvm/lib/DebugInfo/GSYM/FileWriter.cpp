@@ -15,14 +15,13 @@
 using namespace llvm;
 using namespace gsym;
 
-FileWriter::FileWriter(raw_pwrite_stream &S, endianness B, const GsymCreator *GC)
+FileWriter::FileWriter(raw_pwrite_stream &S, endianness B,
+                       const GsymCreator *GC)
     : OS(S), ByteOrder(B), StrpSize(GC ? GC->getStringOffsetSize() : 4) {}
 
 FileWriter::~FileWriter() { OS.flush(); }
 
-void FileWriter::writeStrp(uint64_t Value) {
-  writeUnsigned(Value, StrpSize);
-}
+void FileWriter::writeStrp(uint64_t Value) { writeUnsigned(Value, StrpSize); }
 
 void FileWriter::writeSLEB(int64_t S) {
   uint8_t Bytes[32];

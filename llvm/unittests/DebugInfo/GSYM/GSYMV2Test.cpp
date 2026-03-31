@@ -247,8 +247,7 @@ static void TestV2AddrOffSize(uint64_t BaseAddr, uint64_t Func2Offset,
   const uint32_t Func1Name = GC.insertString("foo");
   const uint32_t Func2Name = GC.insertString("bar");
   GC.addFunctionInfo(FunctionInfo(BaseAddr, 0x10, Func1Name));
-  GC.addFunctionInfo(
-      FunctionInfo(BaseAddr + Func2Offset, 0x10, Func2Name));
+  GC.addFunctionInfo(FunctionInfo(BaseAddr + Func2Offset, 0x10, Func2Name));
   OutputAggregator Null(nullptr);
   Error Err = GC.finalize(Null);
   ASSERT_FALSE(bool(Err));
@@ -308,7 +307,8 @@ TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
   uint64_t AIOffsetsOffset = 0;
   uint64_t FISize = 0;
   while (Offset < Data.size()) {
-    GlobalData GD = decodeGlobalDataEntry(Data, Offset, llvm::endianness::little);
+    GlobalData GD =
+        decodeGlobalDataEntry(Data, Offset, llvm::endianness::little);
     if (GD.Type == GlobalInfoType::AddrInfoOffsets) {
       AIOffsetsOffset = GD.FileOffset;
     } else if (GD.Type == GlobalInfoType::FunctionInfo) {
@@ -362,7 +362,8 @@ TEST(GSYMV2Test, TestCreatorV2UUIDSection) {
   uint64_t Offset = 24;
   uint64_t UUIDOffset = 0, UUIDSize = 0;
   while (Offset < Data.size()) {
-    GlobalData GD = decodeGlobalDataEntry(Data, Offset, llvm::endianness::little);
+    GlobalData GD =
+        decodeGlobalDataEntry(Data, Offset, llvm::endianness::little);
     if (GD.Type == GlobalInfoType::UUID) {
       UUIDOffset = GD.FileOffset;
       UUIDSize = GD.FileSize;
@@ -375,8 +376,8 @@ TEST(GSYMV2Test, TestCreatorV2UUIDSection) {
 
   // Verify the UUID bytes match.
   StringRef UUIDData = Data.substr(UUIDOffset, UUIDSize);
-  EXPECT_EQ(UUIDData, StringRef(reinterpret_cast<const char *>(UUID),
-                                sizeof(UUID)));
+  EXPECT_EQ(UUIDData,
+            StringRef(reinterpret_cast<const char *>(UUID), sizeof(UUID)));
 }
 
 /// Verify that all sections in a V2 GSYM are correctly aligned.
@@ -389,12 +390,9 @@ TEST(GSYMV2Test, TestCreatorV2SectionAlignment) {
   GsymCreatorV2 GC;
   GC.setUUID(UUID);
   // Addresses far apart to force 8-byte AddrOffSize.
-  GC.addFunctionInfo(
-      FunctionInfo(0x1000, 0x100, GC.insertString("foo")));
-  GC.addFunctionInfo(
-      FunctionInfo(0x100001000, 0x100, GC.insertString("bar")));
-  GC.addFunctionInfo(
-      FunctionInfo(0x200002000, 0x100, GC.insertString("baz")));
+  GC.addFunctionInfo(FunctionInfo(0x1000, 0x100, GC.insertString("foo")));
+  GC.addFunctionInfo(FunctionInfo(0x100001000, 0x100, GC.insertString("bar")));
+  GC.addFunctionInfo(FunctionInfo(0x200002000, 0x100, GC.insertString("baz")));
   OutputAggregator Null(nullptr);
   ASSERT_FALSE(GC.finalize(Null));
 
@@ -508,7 +506,8 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   {
     raw_svector_ostream FIOS(FIBuf);
     FileWriter FIFW(FIOS, llvm::endianness::native);
-    FunctionInfo FI(BaseAddr, FuncSize, /*Name=*/1); // "main" at strtab offset 1
+    FunctionInfo FI(BaseAddr, FuncSize,
+                    /*Name=*/1); // "main" at strtab offset 1
     auto OffOrErr = FI.encode(FIFW);
     assert(OffOrErr && "FunctionInfo encode failed");
     (void)OffOrErr;
@@ -516,15 +515,15 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   const uint64_t FuncInfoSize = FIBuf.size();
 
   // Write header.
-  FW.writeU32(GSYM_MAGIC);           // Magic
-  FW.writeU16(GSYM_VERSION_2);       // Version
-  FW.writeU16(0);                    // Padding
-  FW.writeU64(BaseAddr);             // BaseAddress
-  FW.writeU32(NumAddresses);         // NumAddresses
-  FW.writeU8(AddrOffSize);           // AddrOffSize
-  FW.writeU8(AddrInfoOffSize);       // AddrInfoOffSize
-  FW.writeU8(4);                     // StrpSize
-  FW.writeU8(0);                     // StrTableEncoding
+  FW.writeU32(GSYM_MAGIC);     // Magic
+  FW.writeU16(GSYM_VERSION_2); // Version
+  FW.writeU16(0);              // Padding
+  FW.writeU64(BaseAddr);       // BaseAddress
+  FW.writeU32(NumAddresses);   // NumAddresses
+  FW.writeU8(AddrOffSize);     // AddrOffSize
+  FW.writeU8(AddrInfoOffSize); // AddrInfoOffSize
+  FW.writeU8(4);               // StrpSize
+  FW.writeU8(0);               // StrTableEncoding
 
   // GlobalData entries.
   auto writeGD = [&](GlobalInfoType Type, uint64_t Off, uint64_t Size) {
@@ -533,7 +532,8 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
     FW.writeU64(Size);
   };
   writeGD(GlobalInfoType::AddrOffsets, AddrOffsetsOff, AddrOffsetsSize);
-  writeGD(GlobalInfoType::AddrInfoOffsets, AddrInfoOffsetsOff, AddrInfoOffsetsSize);
+  writeGD(GlobalInfoType::AddrInfoOffsets, AddrInfoOffsetsOff,
+          AddrInfoOffsetsSize);
   writeGD(GlobalInfoType::StringTable, StringTableOff, StringTableSize);
   writeGD(GlobalInfoType::FileTable, FileTableOff, FileTableSize);
   writeGD(GlobalInfoType::FunctionInfo, FuncInfoOff, FuncInfoSize);
@@ -551,22 +551,20 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   // FileTable.
   FW.alignTo(4);
   assert(FW.tell() == FileTableOff);
-  FW.writeU32(1);  // NumFiles = 1
-  FW.writeU32(0);  // File[0].Dir = 0
-  FW.writeU32(0);  // File[0].Base = 0
+  FW.writeU32(1); // NumFiles = 1
+  FW.writeU32(0); // File[0].Dir = 0
+  FW.writeU32(0); // File[0].Base = 0
 
   // StringTable.
   assert(FW.tell() == StringTableOff);
-  FW.writeData(
-      ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(StrTabData),
-                        StringTableSize));
+  FW.writeData(ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(StrTabData),
+                                 StringTableSize));
 
   // FunctionInfo.
   FW.alignTo(4);
   assert(FW.tell() == FuncInfoOff);
-  FW.writeData(
-      ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(FIBuf.data()),
-                        FIBuf.size()));
+  FW.writeData(ArrayRef<uint8_t>(
+      reinterpret_cast<const uint8_t *>(FIBuf.data()), FIBuf.size()));
 
   return Str;
 }
@@ -938,8 +936,7 @@ TEST(GSYMV2Test, TestRoundTripSwappedAddressTable) {
 /// Recursively re-insert inline info strings and files from a reader into a
 /// creator.
 static void fixupInlineInfoForTransfer(const GsymReader &Reader,
-                                       GsymCreator &Creator,
-                                       InlineInfo &II) {
+                                       GsymCreator &Creator, InlineInfo &II) {
   II.Name = Creator.insertString(Reader.getString(II.Name));
   if (II.CallFile != 0) {
     if (auto FE = Reader.getFile(II.CallFile)) {
@@ -961,8 +958,7 @@ static void fixupInlineInfoForTransfer(const GsymReader &Reader,
 
 /// Transfer all function infos from a reader into a creator, re-inserting
 /// all strings and files so that offsets are valid in the new creator.
-static void transferFunctions(const GsymReader &Reader,
-                              GsymCreator &Creator) {
+static void transferFunctions(const GsymReader &Reader, GsymCreator &Creator) {
   for (uint32_t I = 0; I < Reader.getNumAddresses(); ++I) {
     auto FI = Reader.getFunctionInfoAtIndex(I);
     ASSERT_THAT_EXPECTED(FI, Succeeded());
@@ -1010,9 +1006,8 @@ static SmallString<1024> encodeCreator(const GsymCreator &GC) {
 }
 
 /// Collect lookup results for a set of addresses from a reader.
-static std::vector<LookupResult>
-collectLookups(const GsymReader &Reader,
-               ArrayRef<uint64_t> Addrs) {
+static std::vector<LookupResult> collectLookups(const GsymReader &Reader,
+                                                ArrayRef<uint64_t> Addrs) {
   std::vector<LookupResult> Results;
   for (auto Addr : Addrs) {
     auto LR = Reader.lookup(Addr);

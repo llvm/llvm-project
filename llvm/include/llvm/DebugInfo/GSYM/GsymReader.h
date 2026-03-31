@@ -292,14 +292,13 @@ public:
     uint64_t Offset = Index * ElementByteSize;
     if (Offset + ElementByteSize > Data.size())
       return std::nullopt;
-    DataExtractor DE(StringRef(reinterpret_cast<const char *>(Data.data()),
-                               Data.size()),
-                     llvm::endianness::native == llvm::endianness::little, 8);
+    DataExtractor DE(
+        StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()),
+        llvm::endianness::native == llvm::endianness::little, 8);
     return DE.getUnsigned(&Offset, ElementByteSize);
   }
 
 protected:
-
   /// Get an appropriate address info offsets array.
   ///
   /// The address table in the GSYM file is stored as array of 1-8 byte offsets
@@ -341,12 +340,32 @@ protected:
     uint64_t operator[](difference_type N) const {
       return getUnsigned(Data, ByteSize, Index + N).value_or(0);
     }
-    AddrOffsetIterator &operator++() { ++Index; return *this; }
-    AddrOffsetIterator operator++(int) { auto T = *this; ++Index; return T; }
-    AddrOffsetIterator &operator--() { --Index; return *this; }
-    AddrOffsetIterator operator--(int) { auto T = *this; --Index; return T; }
-    AddrOffsetIterator &operator+=(difference_type N) { Index += N; return *this; }
-    AddrOffsetIterator &operator-=(difference_type N) { Index -= N; return *this; }
+    AddrOffsetIterator &operator++() {
+      ++Index;
+      return *this;
+    }
+    AddrOffsetIterator operator++(int) {
+      auto T = *this;
+      ++Index;
+      return T;
+    }
+    AddrOffsetIterator &operator--() {
+      --Index;
+      return *this;
+    }
+    AddrOffsetIterator operator--(int) {
+      auto T = *this;
+      --Index;
+      return T;
+    }
+    AddrOffsetIterator &operator+=(difference_type N) {
+      Index += N;
+      return *this;
+    }
+    AddrOffsetIterator &operator-=(difference_type N) {
+      Index -= N;
+      return *this;
+    }
     AddrOffsetIterator operator+(difference_type N) const {
       return AddrOffsetIterator(Data, ByteSize, Index + N);
     }
@@ -357,12 +376,24 @@ protected:
       return static_cast<difference_type>(Index) -
              static_cast<difference_type>(RHS.Index);
     }
-    bool operator==(const AddrOffsetIterator &RHS) const { return Index == RHS.Index; }
-    bool operator!=(const AddrOffsetIterator &RHS) const { return Index != RHS.Index; }
-    bool operator<(const AddrOffsetIterator &RHS) const { return Index < RHS.Index; }
-    bool operator>(const AddrOffsetIterator &RHS) const { return Index > RHS.Index; }
-    bool operator<=(const AddrOffsetIterator &RHS) const { return Index <= RHS.Index; }
-    bool operator>=(const AddrOffsetIterator &RHS) const { return Index >= RHS.Index; }
+    bool operator==(const AddrOffsetIterator &RHS) const {
+      return Index == RHS.Index;
+    }
+    bool operator!=(const AddrOffsetIterator &RHS) const {
+      return Index != RHS.Index;
+    }
+    bool operator<(const AddrOffsetIterator &RHS) const {
+      return Index < RHS.Index;
+    }
+    bool operator>(const AddrOffsetIterator &RHS) const {
+      return Index > RHS.Index;
+    }
+    bool operator<=(const AddrOffsetIterator &RHS) const {
+      return Index <= RHS.Index;
+    }
+    bool operator>=(const AddrOffsetIterator &RHS) const {
+      return Index >= RHS.Index;
+    }
 
     size_t getIndex() const { return Index; }
   };

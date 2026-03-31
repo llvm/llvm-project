@@ -52,9 +52,15 @@ public:
   // Header accessors
   uint64_t getBaseAddress() const override { return getHeader().BaseAddress; }
   uint64_t getNumAddresses() const override { return getHeader().NumAddresses; }
-  uint64_t getAddressOffsetByteSize() const override { return getHeader().AddrOffSize; }
-  uint64_t getAddressInfoOffsetByteSize() const override { return getHeader().AddrInfoOffSize; }
-  uint64_t getStringOffsetByteSize() const override { return getHeader().StrpSize; }
+  uint64_t getAddressOffsetByteSize() const override {
+    return getHeader().AddrOffSize;
+  }
+  uint64_t getAddressInfoOffsetByteSize() const override {
+    return getHeader().AddrInfoOffSize;
+  }
+  uint64_t getStringOffsetByteSize() const override {
+    return getHeader().StrpSize;
+  }
 
   // GlobalData accessors
   std::optional<uint64_t> getAddressInfoOffset(size_t Index) const override;

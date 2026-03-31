@@ -67,13 +67,15 @@ struct HeaderV2 {
   /// is a GSYM file by scanning the first 4 bytes of a file or section.
   /// This value might appear byte swapped when endianness is swapped.
   uint32_t Magic;
-  /// The version number determines how the header is decoded. As version numbers increase,
-  /// "Magic" and "Version" members should always appear at offset zero and 4
-  /// respectively to ensure clients figure out if they can parse the format.
+  /// The version number determines how the header is decoded. As version
+  /// numbers increase, "Magic" and "Version" members should always appear at
+  /// offset zero and 4 respectively to ensure clients figure out if they can
+  /// parse the format.
   uint16_t Version;
-  /// Padding for alignment of BaseAddress to 8 bytes. Must be zero. Without this padding,
-  /// one of the size fields (AddrOffSize, AddrInfoOffSize, StrpSize) would need
-  /// to be placed here, separating it from the other size fields.
+  /// Padding for alignment of BaseAddress to 8 bytes. Must be zero. Without
+  /// this padding, one of the size fields (AddrOffSize, AddrInfoOffSize,
+  /// StrpSize) would need to be placed here, separating it from the other size
+  /// fields.
   uint16_t Padding;
   /// The 64 bit base address that all address offsets in the address offsets
   /// table are relative to. Storing a full 64 bit address allows our address
@@ -136,7 +138,8 @@ struct HeaderV2 {
 };
 
 LLVM_ABI bool operator==(const HeaderV2 &LHS, const HeaderV2 &RHS);
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const llvm::gsym::HeaderV2 &H);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const llvm::gsym::HeaderV2 &H);
 
 } // namespace gsym
 } // namespace llvm

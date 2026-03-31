@@ -36,7 +36,8 @@ static Expected<uint16_t> checkMagicAndDetectVersion(StringRef Data) {
   if (Data.size() < 6)
     return createStringError(std::errc::invalid_argument,
                              "data too small to be a GSYM file");
-  const bool IsHostLittleEndian = llvm::endianness::native == llvm::endianness::little;
+  const bool IsHostLittleEndian =
+      llvm::endianness::native == llvm::endianness::little;
   DataExtractor DE(Data, IsHostLittleEndian, 4);
   uint64_t Offset = 0;
   uint32_t Magic = DE.getU32(&Offset);
@@ -66,23 +67,21 @@ GsymReader::openFile(StringRef Path) {
   if (!VersionOrErr)
     return VersionOrErr.takeError();
   switch (*VersionOrErr) {
-    case GSYM_VERSION_1:
-    {
-      auto R = GsymReaderV1::openFile(Path);
-      if (!R)
-        return R.takeError();
-      return std::make_unique<GsymReaderV1>(std::move(*R));
-    }
-    case GSYM_VERSION_2:
-    {
-      auto R = GsymReaderV2::openFile(Path);
-      if (!R)
-        return R.takeError();
-      return std::make_unique<GsymReaderV2>(std::move(*R));
-    }
-    default:
-      return createStringError(std::errc::invalid_argument,
-                               "unsupported GSYM version %u", *VersionOrErr);
+  case GSYM_VERSION_1: {
+    auto R = GsymReaderV1::openFile(Path);
+    if (!R)
+      return R.takeError();
+    return std::make_unique<GsymReaderV1>(std::move(*R));
+  }
+  case GSYM_VERSION_2: {
+    auto R = GsymReaderV2::openFile(Path);
+    if (!R)
+      return R.takeError();
+    return std::make_unique<GsymReaderV2>(std::move(*R));
+  }
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "unsupported GSYM version %u", *VersionOrErr);
   }
 }
 
@@ -92,28 +91,27 @@ GsymReader::copyBuffer(StringRef Bytes) {
   if (!VersionOrErr)
     return VersionOrErr.takeError();
   switch (*VersionOrErr) {
-    case GSYM_VERSION_1:
-    {
-      auto R = GsymReaderV1::copyBuffer(Bytes);
-      if (!R)
-        return R.takeError();
-      return std::make_unique<GsymReaderV1>(std::move(*R));
-    }
-    case GSYM_VERSION_2:
-    {
-      auto R = GsymReaderV2::copyBuffer(Bytes);
-      if (!R)
-        return R.takeError();
-      return std::make_unique<GsymReaderV2>(std::move(*R));
-    }
-    default:
-      return createStringError(std::errc::invalid_argument,
-                               "unsupported GSYM version %u", *VersionOrErr);
+  case GSYM_VERSION_1: {
+    auto R = GsymReaderV1::copyBuffer(Bytes);
+    if (!R)
+      return R.takeError();
+    return std::make_unique<GsymReaderV1>(std::move(*R));
+  }
+  case GSYM_VERSION_2: {
+    auto R = GsymReaderV2::copyBuffer(Bytes);
+    if (!R)
+      return R.takeError();
+    return std::make_unique<GsymReaderV2>(std::move(*R));
+  }
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "unsupported GSYM version %u", *VersionOrErr);
   }
 }
 
 std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
-  std::optional<uint64_t> AddressOffset = getUnsigned(AddrOffsets, getAddressOffsetByteSize(), Index);
+  std::optional<uint64_t> AddressOffset =
+      getUnsigned(AddrOffsets, getAddressOffsetByteSize(), Index);
   if (!AddressOffset)
     return std::nullopt;
   return *AddressOffset + getBaseAddress();

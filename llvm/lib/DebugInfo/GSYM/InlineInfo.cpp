@@ -75,7 +75,7 @@ static bool skip(GsymDataExtractor &Data, uint64_t &Offset,
       return false;
   }
   bool HasChildren = Data.getU8(&Offset) != 0;
-  Data.getStrp(&Offset); // Skip Inline.Name.
+  Data.getStrp(&Offset);    // Skip Inline.Name.
   Data.getULEB128(&Offset); // Skip Inline.CallFile.
   Data.getULEB128(&Offset); // Skip Inline.CallLine.
   if (HasChildren) {
@@ -173,8 +173,7 @@ llvm::Error InlineInfo::lookup(const GsymReader &GR, GsymDataExtractor &Data,
 /// \returns An InlineInfo or an error describing the issue that was
 /// encountered during decoding.
 static llvm::Expected<InlineInfo> decode(GsymDataExtractor &Data,
-                                         uint64_t &Offset,
-                                         uint64_t BaseAddr) {
+                                         uint64_t &Offset, uint64_t BaseAddr) {
   InlineInfo Inline;
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
@@ -189,7 +188,8 @@ static llvm::Expected<InlineInfo> decode(GsymDataExtractor &Data,
   bool HasChildren = Data.getU8(&Offset) != 0;
   if (!Data.isValidOffsetForDataOfSize(Offset, Data.getStrpSize()))
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": missing InlineInfo name", Offset);
+                             "0x%8.8" PRIx64 ": missing InlineInfo name",
+                             Offset);
   Inline.Name = Data.getStrp(&Offset);
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,

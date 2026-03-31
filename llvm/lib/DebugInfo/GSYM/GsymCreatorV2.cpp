@@ -149,16 +149,17 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   // Write GlobalData entries.
   if (HasUUID)
     GlobalData{GlobalInfoType::UUID, UUIDOffset, UUIDSectionSize}.encode(O);
-  GlobalData{GlobalInfoType::AddrOffsets,
-             AddrOffsetsOffset, AddrOffsetsSize}.encode(O);
-  GlobalData{GlobalInfoType::AddrInfoOffsets,
-             AddrInfoOffsetsOffset, AddrInfoOffsetsSize}.encode(O);
-  GlobalData{GlobalInfoType::FileTable,
-             FileTableOffset, FileTableSize}.encode(O);
-  GlobalData{GlobalInfoType::StringTable,
-             StringTableOffset, StringTableSize}.encode(O);
-  GlobalData{GlobalInfoType::FunctionInfo,
-             FISectionOffset, FISectionSize}.encode(O);
+  GlobalData{GlobalInfoType::AddrOffsets, AddrOffsetsOffset, AddrOffsetsSize}
+      .encode(O);
+  GlobalData{GlobalInfoType::AddrInfoOffsets, AddrInfoOffsetsOffset,
+             AddrInfoOffsetsSize}
+      .encode(O);
+  GlobalData{GlobalInfoType::FileTable, FileTableOffset, FileTableSize}.encode(
+      O);
+  GlobalData{GlobalInfoType::StringTable, StringTableOffset, StringTableSize}
+      .encode(O);
+  GlobalData{GlobalInfoType::FunctionInfo, FISectionOffset, FISectionSize}
+      .encode(O);
   GlobalData{GlobalInfoType::EndOfList, 0, 0}.encode(O);
 
   // Write UUID section.
