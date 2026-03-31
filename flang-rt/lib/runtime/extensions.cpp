@@ -459,8 +459,8 @@ double RTNAME(Timef)() {
     return duration;
   }
 #else
-// TODO: Windows implementation
-return 0.0;
+  // TODO: Windows implementation
+  return 0.0;
 #endif
 }
 
