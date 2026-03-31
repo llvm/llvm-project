@@ -18632,13 +18632,13 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
                InvertedSpaceStyle);
 }
 
-TEST_F(FormatTest, EnumUnderlyingTypeUsesInheritanceColonSpacing) {
+TEST_F(FormatTest, EnumUnderlyingTypeColonSpacing) {
   FormatStyle Style = getLLVMStyle();
 
-  Style.SpaceBeforeInheritanceColon = true;
+  Style.SpaceBeforeEnumUnderlyingTypeColon = true;
   verifyFormat("enum A : int {};", Style);
 
-  Style.SpaceBeforeInheritanceColon = false;
+  Style.SpaceBeforeEnumUnderlyingTypeColon = false;
   verifyFormat("enum A: int {};", Style);
 }
 

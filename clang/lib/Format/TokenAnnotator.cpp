@@ -5552,7 +5552,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Right.is(TT_InheritanceColon) && !Style.SpaceBeforeInheritanceColon)
     return false;
   if (Right.is(TT_EnumUnderlyingTypeColon) &&
-      !Style.SpaceBeforeInheritanceColon) {
+      !Style.SpaceBeforeEnumUnderlyingTypeColon) {
     return false;
   }
   if (Right.is(TT_RangeBasedForLoopColon) &&
