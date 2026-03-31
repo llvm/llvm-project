@@ -27,7 +27,7 @@ void llvm::clearDebugInfoForSpillFIs(MachineFrameInfo &MFI,
     for (MachineOperand &Op : MI.debug_operands()) {
       if (Op.isFI() && !MFI.isFixedObjectIndex(Op.getIndex()) &&
           SpillFIs[Op.getIndex()]) {
-        Op.ChangeToRegister(Register(), false /*isDef*/);
+        Op.ChangeToRegister(Register(), /*isDef=*/false);
       }
     }
   }
