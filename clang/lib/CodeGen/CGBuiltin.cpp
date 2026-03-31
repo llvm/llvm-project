@@ -69,6 +69,19 @@ static bool shouldEmitBuiltinAsIR(unsigned BuiltinID,
   return false;
 }
 
+static bool shouldPreserveLibCallForDeclareSimd(const FunctionDecl *FD,
+                                                const LangOptions &LangOpts) {
+  if (!FD || !LangOpts.OpenMP)
+    return false;
+
+  for (const FunctionDecl *Redecl : FD->redecls()) {
+    if (Redecl->hasAttr<OMPDeclareSimdDeclAttr>())
+      return true;
+  }
+
+  return false;
+}
+
 static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue,
@@ -2646,6 +2659,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       getContext().BuiltinInfo.shouldGenerateFPMathIntrinsic(
           BuiltinID, CGM.getTriple(), ErrnoOverriden, getLangOpts().MathErrno,
           OptNone, IsOptimizationEnabled);
+
+  if (GenerateFPMathIntrinsics &&
+      shouldPreserveLibCallForDeclareSimd(FD, getLangOpts()))
+    GenerateFPMathIntrinsics = false;
 
   if (GenerateFPMathIntrinsics) {
     switch (BuiltinIDIfNoAsmLabel) {

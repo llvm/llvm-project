@@ -5963,7 +5963,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         break;
       }
 
-      if (TLI && VecFunc && !CI->isNoBuiltin())
+      if (VecFunc)
         VectorCost = TTI.getCallInstrCost(nullptr, RetTy, Tys, CostKind);
 
       // Find the cost of an intrinsic; some targets may have instructions that

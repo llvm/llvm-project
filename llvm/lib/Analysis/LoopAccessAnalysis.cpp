@@ -2575,9 +2575,10 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
         // If the function has an explicit vectorized counterpart, and does not
         // take output/input pointers, we can safely assume that it can be
-        // vectorized.
-        if (Call && !Call->isNoBuiltin() && Call->getCalledFunction() &&
-            !hasPointerArgs(Call) && !VFDatabase::getMappings(*Call).empty())
+        // vectorized. This remains valid even when the scalar call is marked
+        // no-builtin, because the explicit mapping supplies the vector variant.
+        if (Call && Call->getCalledFunction() && !hasPointerArgs(Call) &&
+            !VFDatabase::getMappings(*Call).empty())
           continue;
 
         auto *Ld = dyn_cast<LoadInst>(&I);
