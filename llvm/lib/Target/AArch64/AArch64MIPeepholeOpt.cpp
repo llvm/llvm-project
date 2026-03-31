@@ -679,7 +679,10 @@ bool AArch64MIPeepholeOptImpl::removeRedundantAndMask(MachineInstr &MI) {
   if (!AArch64InstrInfo::isZExtLoad(*SrcMI))
     return false;
 
-  uint64_t LoadSize = MMO->getSizeInBits().getValue();
+  LocationSize Bits = MMO->getSizeInBits();
+  if (!Bits.hasValue() || Bits.isScalable())
+    return false;
+  uint64_t LoadSize = Bits.getValue().getFixedValue();
   if (Mask != maskTrailingOnes<uint64_t>(LoadSize))
     return false;
 
