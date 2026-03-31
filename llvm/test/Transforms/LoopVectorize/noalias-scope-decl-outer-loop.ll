@@ -37,10 +37,12 @@ define void @test_noalias_scope_decl(ptr %a, ptr %b, i64 %n) {
 ;
 entry:
   br label %outer.header
+
 outer.header:
   %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
   call void @llvm.experimental.noalias.scope.decl(metadata !3)
   br label %inner
+
 inner:
   %k = phi i64 [ 0, %outer.header ], [ %k.next, %inner ]
   %idx = add i64 %j, %k
@@ -51,10 +53,12 @@ inner:
   %k.next = add i64 %k, 1
   %inner.cond = icmp eq i64 %k.next, %n
   br i1 %inner.cond, label %outer.latch, label %inner
+
 outer.latch:
   %j.next = add i64 %j, 1
   %outer.cond = icmp eq i64 %j.next, %n
   br i1 %outer.cond, label %exit, label %outer.header, !llvm.loop !0
+
 exit:
   ret void
 }

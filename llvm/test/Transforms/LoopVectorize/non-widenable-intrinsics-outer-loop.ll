@@ -68,11 +68,13 @@ define void @test_assume(ptr %arr, i64 %n) {
 ;
 entry:
   br label %outer.header
+
 outer.header:
   %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
   %cmp = icmp sgt i64 %j, 0
   call void @llvm.assume(i1 %cmp)
   br label %inner
+
 inner:
   %k = phi i64 [ 0, %outer.header ], [ %k.next, %inner ]
   %idx = add i64 %j, %k
@@ -81,10 +83,12 @@ inner:
   %k.next = add i64 %k, 1
   %inner.cond = icmp eq i64 %k.next, %n
   br i1 %inner.cond, label %outer.latch, label %inner
+
 outer.latch:
   %j.next = add i64 %j, 1
   %outer.cond = icmp eq i64 %j.next, %n
   br i1 %outer.cond, label %exit, label %outer.header, !llvm.loop !0
+
 exit:
   ret void
 }
@@ -164,6 +168,7 @@ define void @test_assume_non_canonical_iv(ptr %arr, i64 %n) {
 ;
 entry:
   br label %outer.header
+
 outer.header:
   %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
   %m = phi i64 [ 10, %entry ], [ %m.next, %outer.latch ]
@@ -171,6 +176,7 @@ outer.header:
   %cmp = icmp sge i64 %m, 0
   call void @llvm.assume(i1 %cmp)
   br label %inner
+
 inner:
   %k = phi i64 [ 0, %outer.header ], [ %k.next, %inner ]
   %idx = add i64 %m, %k
@@ -182,10 +188,12 @@ inner:
   %k.next = add i64 %k, 1
   %inner.cond = icmp eq i64 %k.next, %n
   br i1 %inner.cond, label %outer.latch, label %inner
+
 outer.latch:
   %j.next = add i64 %j, 1
   %outer.cond = icmp eq i64 %j.next, %n
   br i1 %outer.cond, label %exit, label %outer.header, !llvm.loop !0
+
 exit:
   ret void
 }
@@ -252,10 +260,12 @@ define void @test_lifetime(ptr %arr, i64 %n) {
 entry:
   %a = alloca i32
   br label %outer.header
+
 outer.header:
   %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
   call void @llvm.lifetime.start.p0(i64 4, ptr %a)
   br label %inner
+
 inner:
   %k = phi i64 [ 0, %outer.header ], [ %k.next, %inner ]
   %idx = add i64 %j, %k
@@ -264,11 +274,13 @@ inner:
   %k.next = add i64 %k, 1
   %inner.cond = icmp eq i64 %k.next, %n
   br i1 %inner.cond, label %outer.latch, label %inner
+
 outer.latch:
   call void @llvm.lifetime.end.p0(i64 4, ptr %a)
   %j.next = add i64 %j, 1
   %outer.cond = icmp eq i64 %j.next, %n
   br i1 %outer.cond, label %exit, label %outer.header, !llvm.loop !0
+
 exit:
   ret void
 }
@@ -331,10 +343,12 @@ define void @test_sideeffect(ptr %arr, i64 %n) {
 ;
 entry:
   br label %outer.header
+
 outer.header:
   %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
   call void @llvm.sideeffect()
   br label %inner
+
 inner:
   %k = phi i64 [ 0, %outer.header ], [ %k.next, %inner ]
   %idx = add i64 %j, %k
@@ -343,10 +357,12 @@ inner:
   %k.next = add i64 %k, 1
   %inner.cond = icmp eq i64 %k.next, %n
   br i1 %inner.cond, label %outer.latch, label %inner
+
 outer.latch:
   %j.next = add i64 %j, 1
   %outer.cond = icmp eq i64 %j.next, %n
   br i1 %outer.cond, label %exit, label %outer.header, !llvm.loop !0
+
 exit:
   ret void
 }
@@ -411,10 +427,12 @@ define void @test_pseudoprobe(ptr %arr, i64 %n) {
 ;
 entry:
   br label %outer.header
+
 outer.header:
   %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1)
   br label %inner
+
 inner:
   %k = phi i64 [ 0, %outer.header ], [ %k.next, %inner ]
   %idx = add i64 %j, %k
@@ -423,10 +441,12 @@ inner:
   %k.next = add i64 %k, 1
   %inner.cond = icmp eq i64 %k.next, %n
   br i1 %inner.cond, label %outer.latch, label %inner
+
 outer.latch:
   %j.next = add i64 %j, 1
   %outer.cond = icmp eq i64 %j.next, %n
   br i1 %outer.cond, label %exit, label %outer.header, !llvm.loop !0
+
 exit:
   ret void
 }
