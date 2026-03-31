@@ -64,10 +64,16 @@ void test_stmt_suppress() {
 void bad_justification();
 
 // ===================================================================
-// No diagnostic for a profile that is not enforced
+// Enforce at block scope: error (this is a null-statement at block
+// scope, so enforce cannot appertain to it)
 // ===================================================================
-// test::type_cast IS enforced, but test::not_enforced is not, so the
-// reinterpret_cast warning fires for the enforced profile only.
+void test_block_scope() {
+  [[profiles::enforce(test::type_cast)]]; // expected-error {{'profiles::enforce' attribute cannot be applied to a statement}}
+}
+
+// ===================================================================
+// Diagnostic fires when profile IS enforced
+// ===================================================================
 void test_enforced_profile_warns() {
   int *p = reinterpret_cast<int*>(0); // expected-warning {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
