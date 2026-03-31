@@ -11,7 +11,7 @@
 // <numeric>
 
 // template<class T>
-// constexpr T div_sat(T x, T y) noexcept;                     // freestanding
+// constexpr T saturating_div(T x, T y) noexcept;                     // freestanding
 
 #include <concepts>
 #include <numeric>
@@ -23,7 +23,7 @@
 
 template <typename T, typename U>
 concept CanDo = requires(T x, U y) {
-  { std::div_sat(x, y) } -> std::same_as<T>;
+  { std::saturating_div(x, y) } -> std::same_as<T>;
 };
 
 template <typename T, typename U>
@@ -82,7 +82,7 @@ constexpr void test() {
 //  A function call expression that violates the precondition in the Preconditions: element is not a core constant expression (7.7 [expr.const]).
 
 template <auto N>
-using QuotT = std::integral_constant<decltype(N), std::div_sat(N, N)>;
+using QuotT = std::integral_constant<decltype(N), std::saturating_div(N, N)>;
 
 template <auto N>
 QuotT<N> div_by_zero();

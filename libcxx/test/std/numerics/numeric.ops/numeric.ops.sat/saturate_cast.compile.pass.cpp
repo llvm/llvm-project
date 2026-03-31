@@ -11,7 +11,7 @@
 // <numeric>
 
 // template<class R, class T>
-//   constexpr R saturate_cast(T x) noexcept;                    // freestanding
+//   constexpr R saturating_cast(T x) noexcept;                    // freestanding
 
 #include <concepts>
 #include <numeric>
@@ -20,7 +20,7 @@
 
 template <typename R, typename T>
 concept CanDo = requires(T x) {
-  { std::saturate_cast<R>(x) } -> std::same_as<R>;
+  { std::saturating_cast<R>(x) } -> std::same_as<R>;
 };
 
 template <typename R, typename T>

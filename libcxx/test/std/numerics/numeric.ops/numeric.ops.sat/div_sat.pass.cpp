@@ -11,7 +11,7 @@
 // <numeric>
 
 // template<class T>
-// constexpr T div_sat(T x, T y) noexcept;                     // freestanding
+// constexpr T saturating_div(T x, T y) noexcept;                     // freestanding
 
 #include <cassert>
 #include <concepts>
@@ -25,56 +25,56 @@ constexpr bool test_signed() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
-  std::same_as<IntegerT> decltype(auto) _ = std::div_sat(minVal, maxVal);
+  std::same_as<IntegerT> decltype(auto) _ = std::saturating_div(minVal, maxVal);
 
-  static_assert(noexcept(std::div_sat(minVal, maxVal)));
+  static_assert(noexcept(std::saturating_div(minVal, maxVal)));
 
   // clang-format off
 
   // Limit values (-1, 0, 1, min, max)
 
-  assert(std::div_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{ 1});
-  assert(std::div_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{-1});
-  assert(std::div_sat(IntegerT{-1},       minVal) == IntegerT{ 0});
-  assert(std::div_sat(IntegerT{-1},       maxVal) == IntegerT{ 0});
-  assert(std::div_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{ 0});
-  assert(std::div_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 0});
-  assert(std::div_sat(IntegerT{ 0},       minVal) == IntegerT{ 0});
-  assert(std::div_sat(IntegerT{ 0},       maxVal) == IntegerT{ 0});
-  assert(std::div_sat(IntegerT{ 1}, IntegerT{-1}) == IntegerT{-1});
-  assert(std::div_sat(IntegerT{ 1}, IntegerT{ 1}) == IntegerT{ 1});
-  assert(std::div_sat(IntegerT{ 1},       minVal) == IntegerT{ 0});
-  assert(std::div_sat(IntegerT{ 1},       maxVal) == IntegerT{ 0});
-  assert(std::div_sat(      minVal, IntegerT{ 1}) == minVal);
-  assert(std::div_sat(      minVal, IntegerT{-1}) == maxVal); // saturated
-  assert(std::div_sat(      minVal,       minVal) == IntegerT{ 1});
-  assert(std::div_sat(      minVal,       maxVal) == (minVal / maxVal));
-  assert(std::div_sat(      maxVal, IntegerT{-1}) == -maxVal);
-  assert(std::div_sat(      maxVal, IntegerT{ 1}) == maxVal);
-  assert(std::div_sat(      maxVal,       minVal) == IntegerT{ 0});
-  assert(std::div_sat(      maxVal,       maxVal) == IntegerT{ 1});
+  assert(std::saturating_div(IntegerT{-1}, IntegerT{-1}) == IntegerT{ 1});
+  assert(std::saturating_div(IntegerT{-1}, IntegerT{ 1}) == IntegerT{-1});
+  assert(std::saturating_div(IntegerT{-1},       minVal) == IntegerT{ 0});
+  assert(std::saturating_div(IntegerT{-1},       maxVal) == IntegerT{ 0});
+  assert(std::saturating_div(IntegerT{ 0}, IntegerT{-1}) == IntegerT{ 0});
+  assert(std::saturating_div(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 0});
+  assert(std::saturating_div(IntegerT{ 0},       minVal) == IntegerT{ 0});
+  assert(std::saturating_div(IntegerT{ 0},       maxVal) == IntegerT{ 0});
+  assert(std::saturating_div(IntegerT{ 1}, IntegerT{-1}) == IntegerT{-1});
+  assert(std::saturating_div(IntegerT{ 1}, IntegerT{ 1}) == IntegerT{ 1});
+  assert(std::saturating_div(IntegerT{ 1},       minVal) == IntegerT{ 0});
+  assert(std::saturating_div(IntegerT{ 1},       maxVal) == IntegerT{ 0});
+  assert(std::saturating_div(      minVal, IntegerT{ 1}) == minVal);
+  assert(std::saturating_div(      minVal, IntegerT{-1}) == maxVal); // saturated
+  assert(std::saturating_div(      minVal,       minVal) == IntegerT{ 1});
+  assert(std::saturating_div(      minVal,       maxVal) == (minVal / maxVal));
+  assert(std::saturating_div(      maxVal, IntegerT{-1}) == -maxVal);
+  assert(std::saturating_div(      maxVal, IntegerT{ 1}) == maxVal);
+  assert(std::saturating_div(      maxVal,       minVal) == IntegerT{ 0});
+  assert(std::saturating_div(      maxVal,       maxVal) == IntegerT{ 1});
 
   // No saturation (no limit values)
 
-  assert(std::div_sat(IntegerT{27}, IntegerT{28}) == IntegerT{0});
-  assert(std::div_sat(IntegerT{28}, IntegerT{27}) == IntegerT{1});
+  assert(std::saturating_div(IntegerT{27}, IntegerT{28}) == IntegerT{0});
+  assert(std::saturating_div(IntegerT{28}, IntegerT{27}) == IntegerT{1});
   {
     constexpr IntegerT lesserVal = minVal / IntegerT{2} + IntegerT{-28};
     constexpr IntegerT biggerVal = minVal / IntegerT{2} + IntegerT{-27};
-    assert(std::div_sat(lesserVal, biggerVal) == IntegerT{1});
-    assert(std::div_sat(biggerVal, lesserVal) == IntegerT{0});
+    assert(std::saturating_div(lesserVal, biggerVal) == IntegerT{1});
+    assert(std::saturating_div(biggerVal, lesserVal) == IntegerT{0});
   }
   {
     constexpr IntegerT lesserVal = minVal / IntegerT{2} + IntegerT{-27};
     constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::div_sat(lesserVal, biggerVal) == IntegerT{-1});
-    assert(std::div_sat(biggerVal, lesserVal) == IntegerT{-1});
+    assert(std::saturating_div(lesserVal, biggerVal) == IntegerT{-1});
+    assert(std::saturating_div(biggerVal, lesserVal) == IntegerT{-1});
   }
   {
     constexpr IntegerT lesserVal = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::div_sat(lesserVal, biggerVal) == IntegerT{0});
-    assert(std::div_sat(biggerVal, lesserVal) == IntegerT{1});
+    assert(std::saturating_div(lesserVal, biggerVal) == IntegerT{0});
+    assert(std::saturating_div(biggerVal, lesserVal) == IntegerT{1});
   }
 
   // clang-format on
@@ -87,34 +87,34 @@ constexpr bool test_unsigned() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
-  std::same_as<IntegerT> decltype(auto) _ = std::div_sat(minVal, maxVal);
-  static_assert(noexcept(std::div_sat(minVal, maxVal)));
+  std::same_as<IntegerT> decltype(auto) _ = std::saturating_div(minVal, maxVal);
+  static_assert(noexcept(std::saturating_div(minVal, maxVal)));
 
   // clang-format off
 
   // No limit values (0, 1, min, max)
 
-  assert(std::div_sat(IntegerT{0}, IntegerT{1}) == IntegerT{0});
-  assert(std::div_sat(IntegerT{0},      maxVal) == IntegerT{0});
+  assert(std::saturating_div(IntegerT{0}, IntegerT{1}) == IntegerT{0});
+  assert(std::saturating_div(IntegerT{0},      maxVal) == IntegerT{0});
 
-  assert(std::div_sat(IntegerT{1}, IntegerT{1}) == IntegerT{1});
-  assert(std::div_sat(IntegerT{1},      maxVal) == IntegerT{0});
+  assert(std::saturating_div(IntegerT{1}, IntegerT{1}) == IntegerT{1});
+  assert(std::saturating_div(IntegerT{1},      maxVal) == IntegerT{0});
 
-  assert(std::div_sat(     minVal, IntegerT{1}) == minVal);
-  assert(std::div_sat(     minVal,      maxVal) == IntegerT{0});
+  assert(std::saturating_div(     minVal, IntegerT{1}) == minVal);
+  assert(std::saturating_div(     minVal,      maxVal) == IntegerT{0});
 
-  assert(std::div_sat(     maxVal, IntegerT{1}) == maxVal);
-  assert(std::div_sat(     maxVal,      maxVal) == IntegerT{1});
+  assert(std::saturating_div(     maxVal, IntegerT{1}) == maxVal);
+  assert(std::saturating_div(     maxVal,      maxVal) == IntegerT{1});
 
   // No saturation (no limit values)
 
-  assert(std::div_sat(IntegerT{27}, IntegerT{28}) == IntegerT{0});
-  assert(std::div_sat(IntegerT{28}, IntegerT{27}) == IntegerT{1});
+  assert(std::saturating_div(IntegerT{27}, IntegerT{28}) == IntegerT{0});
+  assert(std::saturating_div(IntegerT{28}, IntegerT{27}) == IntegerT{1});
   {
     constexpr IntegerT lesserVal = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::div_sat(lesserVal, biggerVal) == IntegerT{0});
-    assert(std::div_sat(biggerVal, lesserVal) == IntegerT{1});
+    assert(std::saturating_div(lesserVal, biggerVal) == IntegerT{0});
+    assert(std::saturating_div(biggerVal, lesserVal) == IntegerT{1});
   }
 
   // Unsigned integer division never overflows

@@ -11,7 +11,7 @@
 // <numeric>
 
 // template<class T>
-// constexpr T mul_sat(T x, T y) noexcept;                     // freestanding
+// constexpr T saturating_mul(T x, T y) noexcept;                     // freestanding
 
 #include <concepts>
 #include <numeric>
@@ -20,7 +20,7 @@
 
 template <typename T, typename U>
 concept CanDo = requires(T x, U y) {
-  { std::mul_sat(x, y) } -> std::same_as<T>;
+  { std::saturating_mul(x, y) } -> std::same_as<T>;
 };
 
 template <typename T, typename U>

@@ -11,7 +11,7 @@
 // <numeric>
 
 // template<class T>
-// constexpr T add_sat(T x, T y) noexcept;                     // freestanding
+// constexpr T saturating_add(T x, T y) noexcept;                     // freestanding
 
 #include <cassert>
 #include <concepts>
@@ -25,52 +25,52 @@ constexpr bool test_signed() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
-  std::same_as<IntegerT> decltype(auto) _ = std::add_sat(minVal, maxVal);
+  std::same_as<IntegerT> decltype(auto) _ = std::saturating_add(minVal, maxVal);
 
-  static_assert(noexcept(std::add_sat(minVal, maxVal)));
+  static_assert(noexcept(std::saturating_add(minVal, maxVal)));
 
   // clang-format off
 
   // Limit values (-1, 0, 1, min, max)
 
-  assert(std::add_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{-2});
-  assert(std::add_sat(IntegerT{-1}, IntegerT{ 0}) == IntegerT{-1});
-  assert(std::add_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{ 0});
-  assert(std::add_sat(IntegerT{-1},       minVal) == minVal); // saturated
-  assert(std::add_sat(IntegerT{-1},       maxVal) == IntegerT{-1} + maxVal);
+  assert(std::saturating_add(IntegerT{-1}, IntegerT{-1}) == IntegerT{-2});
+  assert(std::saturating_add(IntegerT{-1}, IntegerT{ 0}) == IntegerT{-1});
+  assert(std::saturating_add(IntegerT{-1}, IntegerT{ 1}) == IntegerT{ 0});
+  assert(std::saturating_add(IntegerT{-1},       minVal) == minVal); // saturated
+  assert(std::saturating_add(IntegerT{-1},       maxVal) == IntegerT{-1} + maxVal);
 
-  assert(std::add_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{-1});
-  assert(std::add_sat(IntegerT{ 0}, IntegerT{ 0}) == IntegerT{ 0});
-  assert(std::add_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 1});
-  assert(std::add_sat(IntegerT{ 0},       minVal) == minVal);
-  assert(std::add_sat(IntegerT{ 0},       maxVal) == maxVal);
+  assert(std::saturating_add(IntegerT{ 0}, IntegerT{-1}) == IntegerT{-1});
+  assert(std::saturating_add(IntegerT{ 0}, IntegerT{ 0}) == IntegerT{ 0});
+  assert(std::saturating_add(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 1});
+  assert(std::saturating_add(IntegerT{ 0},       minVal) == minVal);
+  assert(std::saturating_add(IntegerT{ 0},       maxVal) == maxVal);
 
-  assert(std::add_sat(IntegerT{ 1}, IntegerT{-1}) == IntegerT{ 0});
-  assert(std::add_sat(IntegerT{ 1}, IntegerT{ 0}) == IntegerT{ 1});
-  assert(std::add_sat(IntegerT{ 1}, IntegerT{ 1}) == IntegerT{ 2});
-  assert(std::add_sat(IntegerT{ 1},       minVal) == IntegerT{ 1} + minVal);
-  assert(std::add_sat(IntegerT{ 1},       maxVal) == maxVal); // saturated
+  assert(std::saturating_add(IntegerT{ 1}, IntegerT{-1}) == IntegerT{ 0});
+  assert(std::saturating_add(IntegerT{ 1}, IntegerT{ 0}) == IntegerT{ 1});
+  assert(std::saturating_add(IntegerT{ 1}, IntegerT{ 1}) == IntegerT{ 2});
+  assert(std::saturating_add(IntegerT{ 1},       minVal) == IntegerT{ 1} + minVal);
+  assert(std::saturating_add(IntegerT{ 1},       maxVal) == maxVal); // saturated
 
-  assert(std::add_sat(      minVal, IntegerT{-1}) == minVal); // saturated
-  assert(std::add_sat(      minVal, IntegerT{ 0}) == minVal);
-  assert(std::add_sat(      minVal, IntegerT{ 1}) == minVal + IntegerT{ 1});
-  assert(std::add_sat(      minVal,       minVal) == minVal); // saturated
-  assert(std::add_sat(      minVal,       maxVal) == IntegerT{-1});
+  assert(std::saturating_add(      minVal, IntegerT{-1}) == minVal); // saturated
+  assert(std::saturating_add(      minVal, IntegerT{ 0}) == minVal);
+  assert(std::saturating_add(      minVal, IntegerT{ 1}) == minVal + IntegerT{ 1});
+  assert(std::saturating_add(      minVal,       minVal) == minVal); // saturated
+  assert(std::saturating_add(      minVal,       maxVal) == IntegerT{-1});
 
-  assert(std::add_sat(      maxVal, IntegerT{-1}) == maxVal + IntegerT{-1});
-  assert(std::add_sat(      maxVal, IntegerT{ 0}) == maxVal);
-  assert(std::add_sat(      maxVal, IntegerT{ 1}) == maxVal); // saturated
-  assert(std::add_sat(      maxVal,       minVal) == IntegerT{-1});
-  assert(std::add_sat(      maxVal,       maxVal) == maxVal); // saturated
+  assert(std::saturating_add(      maxVal, IntegerT{-1}) == maxVal + IntegerT{-1});
+  assert(std::saturating_add(      maxVal, IntegerT{ 0}) == maxVal);
+  assert(std::saturating_add(      maxVal, IntegerT{ 1}) == maxVal); // saturated
+  assert(std::saturating_add(      maxVal,       minVal) == IntegerT{-1});
+  assert(std::saturating_add(      maxVal,       maxVal) == maxVal); // saturated
 
   // No saturation (no limit values)
 
-  assert(std::add_sat(IntegerT{-27}, IntegerT{28})== IntegerT{ 1});
-  assert(std::add_sat(IntegerT{ 27}, IntegerT{28})== IntegerT{55});
+  assert(std::saturating_add(IntegerT{-27}, IntegerT{28})== IntegerT{ 1});
+  assert(std::saturating_add(IntegerT{ 27}, IntegerT{28})== IntegerT{55});
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::add_sat(x, y) == maxVal);
+    assert(std::saturating_add(x, y) == maxVal);
   }
 
   // Saturation (no limit values)
@@ -78,12 +78,12 @@ constexpr bool test_signed() {
   {
     constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
     constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{-28};
-    assert(std::add_sat(x, y) == minVal); // saturated
+    assert(std::saturating_add(x, y) == minVal); // saturated
   }
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::add_sat(x, y) == maxVal); // saturated
+    assert(std::saturating_add(x, y) == maxVal); // saturated
   }
 
   // clang-format on
@@ -96,43 +96,43 @@ constexpr bool test_unsigned() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
-  std::same_as<IntegerT> decltype(auto) _ = std::add_sat(minVal, maxVal);
+  std::same_as<IntegerT> decltype(auto) _ = std::saturating_add(minVal, maxVal);
 
-  static_assert(noexcept(std::add_sat(minVal, maxVal)));
+  static_assert(noexcept(std::saturating_add(minVal, maxVal)));
 
   // clang-format off
 
   // Litmit values (0, 1, min, max)
 
-  assert(std::add_sat(IntegerT{0}, IntegerT{0}) == IntegerT{0});
-  assert(std::add_sat(IntegerT{0}, IntegerT{1}) == IntegerT{1});
-  assert(std::add_sat(IntegerT{0},      minVal) == IntegerT{0});
-  assert(std::add_sat(IntegerT{0},      maxVal) == maxVal);
-  assert(std::add_sat(IntegerT{1}, IntegerT{0}) == IntegerT{1});
-  assert(std::add_sat(IntegerT{1}, IntegerT{1}) == IntegerT{2});
-  assert(std::add_sat(IntegerT{1},      minVal) == IntegerT{1});
-  assert(std::add_sat(IntegerT{1},      maxVal) == maxVal); // saturated
-  assert(std::add_sat(     minVal, IntegerT{0}) == IntegerT{0});
-  assert(std::add_sat(     minVal, IntegerT{1}) == IntegerT{1});
-  assert(std::add_sat(     minVal,      minVal) == minVal);
-  assert(std::add_sat(     minVal,      maxVal) == maxVal);
-  assert(std::add_sat(     maxVal, IntegerT{0}) == maxVal);
-  assert(std::add_sat(     maxVal, IntegerT{1}) == maxVal); // saturated
-  assert(std::add_sat(     maxVal,      minVal) == maxVal);
-  assert(std::add_sat(     maxVal,      maxVal) == maxVal); // saturated
+  assert(std::saturating_add(IntegerT{0}, IntegerT{0}) == IntegerT{0});
+  assert(std::saturating_add(IntegerT{0}, IntegerT{1}) == IntegerT{1});
+  assert(std::saturating_add(IntegerT{0},      minVal) == IntegerT{0});
+  assert(std::saturating_add(IntegerT{0},      maxVal) == maxVal);
+  assert(std::saturating_add(IntegerT{1}, IntegerT{0}) == IntegerT{1});
+  assert(std::saturating_add(IntegerT{1}, IntegerT{1}) == IntegerT{2});
+  assert(std::saturating_add(IntegerT{1},      minVal) == IntegerT{1});
+  assert(std::saturating_add(IntegerT{1},      maxVal) == maxVal); // saturated
+  assert(std::saturating_add(     minVal, IntegerT{0}) == IntegerT{0});
+  assert(std::saturating_add(     minVal, IntegerT{1}) == IntegerT{1});
+  assert(std::saturating_add(     minVal,      minVal) == minVal);
+  assert(std::saturating_add(     minVal,      maxVal) == maxVal);
+  assert(std::saturating_add(     maxVal, IntegerT{0}) == maxVal);
+  assert(std::saturating_add(     maxVal, IntegerT{1}) == maxVal); // saturated
+  assert(std::saturating_add(     maxVal,      minVal) == maxVal);
+  assert(std::saturating_add(     maxVal,      maxVal) == maxVal); // saturated
 
   // No saturation (no limit values)
 
-  assert(std::add_sat(IntegerT{27}, IntegerT{28}) == IntegerT{55});
+  assert(std::saturating_add(IntegerT{27}, IntegerT{28}) == IntegerT{55});
 
   // Saturation (no limit values)
 
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::add_sat(     x,           y) == maxVal); // saturated
-    assert(std::add_sat(     x,      maxVal) == maxVal); // saturated
-    assert(std::add_sat(maxVal,           y) == maxVal); // saturated
+    assert(std::saturating_add(     x,           y) == maxVal); // saturated
+    assert(std::saturating_add(     x,      maxVal) == maxVal); // saturated
+    assert(std::saturating_add(maxVal,           y) == maxVal); // saturated
   }
 
   // clang-format on
