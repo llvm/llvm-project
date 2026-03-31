@@ -11,4 +11,7 @@ macro(add_offload_tool_symlink name)
 endmacro()
 
 add_subdirectory(deviceinfo)
+
+if(OPENMP_ENABLED)
 add_subdirectory(kernelreplay)
+endif()
