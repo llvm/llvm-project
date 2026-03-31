@@ -48,6 +48,12 @@ int main(int argc, char **argv) {
   // --- 16-byte alignment checks ---
 
   else if (strcmp(argv[1], "align") == 0) {
+    // Perturb the heap with small odd-sized allocations to advance the
+    // allocator's per-size-class pointer by a non-16-byte amount.
+    void *perturb[8];
+    for (int i = 0; i < 8; i++)
+      perturb[i] = malloc(i + 1);
+
     void *vm = vec_malloc(32);
     check_align("vec_malloc", vm);
     // CHECK-ALIGN: OK: vec_malloc
@@ -96,6 +102,8 @@ int main(int argc, char **argv) {
     free(re_null);
     free(re_m);
     free(re_vm);
+    for (int i = 0; i < 8; i++)
+      free(perturb[i]);
     return 0;
   } else {
     return 1;
