@@ -7,6 +7,12 @@ import {Command} from '../../command';
 import {MLIRContext} from '../../mlirContext';
 import * as config from '../../config';
 
+/** One entry in `mlir.litSuites`: source dir on disk maps to lit cwd in build tree. */
+interface LitSuite {
+  source: string;
+  build: string;
+}
+
 /**
  * A command that runs lit with IR dump on the current MLIR file.
  */
@@ -28,203 +34,238 @@ export class RunTestCommand extends Command {
   }
 
   /**
-   * Check if a command is available in the system PATH
+   * Resolve a command name to an absolute path using PATH (which / where).
    */
-  private async checkCommandAvailable(command: string): Promise<boolean> {
+  private async resolveInPath(command: string): Promise<string | null> {
+    const tool = process.platform === 'win32' ? 'where' : 'which';
     return new Promise((resolve) => {
-      const childProcess = spawn('which', [command], {shell: true});
+      const childProcess = spawn(tool, [command], {shell: true});
+      let out = '';
+      childProcess.stdout?.on('data', (data) => {
+        out += data.toString();
+      });
       childProcess.on('close', (code) => {
-        resolve(code === 0);
+        if (code !== 0) {
+          resolve(null);
+          return;
+        }
+        const firstLine = out.trim().split(/\r?\n/)[0]?.trim();
+        resolve(firstLine && firstLine.length > 0 ? firstLine : null);
       });
       childProcess.on('error', () => {
-        resolve(false);
+        resolve(null);
       });
     });
   }
 
   /**
-   * Get or setup lit executable and construct the command
+   * Resolve the lit or llvm-lit executable: workspace setting, then PATH, then user prompt.
+   */
+  private async resolveLitExecutablePath(
+      workspaceFolder: vscode.WorkspaceFolder,
+      outputChannel: vscode.OutputChannel
+  ): Promise<string | null> {
+    const workspacePath = workspaceFolder.uri.fsPath;
+    const settingsLitPath = config.get<string>('litExecutablePath', workspaceFolder);
+    const trimmedSetting = settingsLitPath?.trim() ?? '';
+
+    if (trimmedSetting) {
+      const resolved = path.isAbsolute(trimmedSetting) ?
+          trimmedSetting :
+          path.join(workspacePath, trimmedSetting);
+      outputChannel.appendLine(
+          `[RunTest] mlir.litExecutablePath (resolved): ${resolved}`);
+
+      if (!fs.existsSync(resolved)) {
+        const msg =
+            `Lit executable does not exist: ${resolved} (from mlir.litExecutablePath)`;
+        vscode.window.showErrorMessage(msg);
+        outputChannel.appendLine(`[RunTest] ERROR: ${msg}`);
+        return null;
+      }
+      if (fs.statSync(resolved).isDirectory()) {
+        const msg =
+            'mlir.litExecutablePath must be the full path to the lit or llvm-lit executable, not a directory.';
+        vscode.window.showErrorMessage(msg);
+        outputChannel.appendLine(`[RunTest] ERROR: ${msg}`);
+        return null;
+      }
+      if (!this.isExecutable(resolved)) {
+        const msg = `Lit executable is not executable: ${resolved}`;
+        vscode.window.showErrorMessage(msg);
+        outputChannel.appendLine(`[RunTest] ERROR: ${msg}`);
+        return null;
+      }
+      return resolved;
+    }
+
+    for (const cmd of ['lit', 'llvm-lit']) {
+      const found = await this.resolveInPath(cmd);
+      if (found && fs.existsSync(found) && !fs.statSync(found).isDirectory() &&
+          this.isExecutable(found)) {
+        outputChannel.appendLine(`[RunTest] Using ${cmd} from PATH: ${found}`);
+        return found;
+      }
+    }
+
+    const input = await vscode.window.showInputBox({
+      title: 'Lit or llvm-lit executable',
+      prompt:
+          'lit and llvm-lit were not found in PATH. Enter the full path to lit or llvm-lit.',
+      ignoreFocusOut: true,
+      validateInput: (value) => {
+        const t = value.trim();
+        if (!t) {
+          return 'Enter a path, or cancel.';
+        }
+        const candidate =
+            path.isAbsolute(t) ? t : path.join(workspacePath, t);
+        if (!fs.existsSync(candidate)) {
+          return 'Path does not exist.';
+        }
+        if (fs.statSync(candidate).isDirectory()) {
+          return 'Path must be the executable file, not a directory.';
+        }
+        if (!this.isExecutable(candidate)) {
+          return 'File is not executable.';
+        }
+        return null;
+      },
+    });
+
+    if (!input?.trim()) {
+      outputChannel.appendLine('[RunTest] No lit path: cancelled or empty input');
+      return null;
+    }
+
+    const resolved = path.isAbsolute(input.trim()) ?
+        input.trim() :
+        path.join(workspacePath, input.trim());
+    outputChannel.appendLine(`[RunTest] Using lit from user input: ${resolved}`);
+    return resolved;
+  }
+
+  /**
+   * Get lit executable and construct the command
    * @param workspaceFolder The workspace folder (for reading settings)
    * @param relativePath The relative path to the test file (for lit command)
    * @param outputChannel The output channel for command output
-   * @returns The lit command and activation string, or null if setup failed
+   * @returns The lit shell command, or null if setup failed
    */
   private async getLitSetup(
       workspaceFolder: vscode.WorkspaceFolder,
       relativePath: string,
       outputChannel: vscode.OutputChannel
-  ): Promise<{litCommand: string; pythonEnvActivate: string | null} | null> {
-    let litExecutable: string | null = null;
-    let pythonEnvActivate: string | null = null;
-
-    // Get lit executable path from workspace settings only
-    const settingsLitPath = config.get<string>('litExecutablePath', workspaceFolder);
-    
-    if (!settingsLitPath || settingsLitPath.trim() === '') {
-      const errorMsg = 'Lit executable path not found in workspace settings. Please set "mlir.litExecutablePath" in .vscode/settings.json';
-      vscode.window.showErrorMessage(errorMsg);
-      outputChannel.appendLine(`[RunTest] ERROR: ${errorMsg}`);
+  ): Promise<{litCommand: string} | null> {
+    const litExecutable = await this.resolveLitExecutablePath(
+        workspaceFolder, outputChannel);
+    if (!litExecutable) {
       return null;
     }
 
-    const workspacePath = workspaceFolder.uri.fsPath;
-    const trimmedPath = settingsLitPath.trim();
-    outputChannel.appendLine(`[RunTest] Using lit path from settings: ${trimmedPath}`);
-
-    // Resolve the path - handle both absolute and relative paths
-    let userPath: string;
-    if (path.isAbsolute(trimmedPath)) {
-      // Absolute path - use as is
-      userPath = trimmedPath;
-    } else {
-      // Relative path - resolve relative to workspace directory
-      userPath = path.join(workspacePath, trimmedPath);
-    }
-
-    outputChannel.appendLine(`[RunTest] Resolved path: ${userPath}`);
-
-    // Validate that the path exists
-    if (!fs.existsSync(userPath)) {
-      const errorMsg = `Lit executable path does not exist: ${userPath} (resolved from: ${trimmedPath})`;
-      vscode.window.showErrorMessage(errorMsg);
-      outputChannel.appendLine(`[RunTest] ERROR: ${errorMsg}`);
-      return null;
-    }
-
-    const stats = fs.statSync(userPath);
-
-    if (!stats.isDirectory()) {
-      const errorMsg = `Path is not a directory: ${userPath}`;
-      vscode.window.showErrorMessage(errorMsg);
-      outputChannel.appendLine(`[RunTest] ERROR: ${errorMsg}`);
-      return null;
-    }
-
-    // It's a directory - check if it's a virtual env or contains lit executables
-    outputChannel.appendLine(`[RunTest] lit executable directory: ${userPath}`);
-
-    // First, check if it's a virtual env (has bin/activate)
-    const activateScript = path.join(userPath, 'bin', 'activate');
-    const litInBin = path.join(userPath, 'bin', 'lit');
-    const llvmLitInBin = path.join(userPath, 'bin', 'llvm-lit');
-
-    if (fs.existsSync(activateScript)) {
-      // It's a virtual env - check for lit or llvm-lit in bin/
-      if (fs.existsSync(llvmLitInBin) && this.isExecutable(llvmLitInBin)) {
-        litExecutable = llvmLitInBin;
-        outputChannel.appendLine(`[RunTest] Using llvm-lit from virtual env: ${litExecutable}`);
-      } else if (fs.existsSync(litInBin) && this.isExecutable(litInBin)) {
-        litExecutable = litInBin;
-        outputChannel.appendLine(`[RunTest] Using lit from virtual env: ${litExecutable}`);
-      } else {
-        // Virtual env exists but lit not found - will activate and use lit from PATH
-        pythonEnvActivate = `source ${activateScript} && `;
-        outputChannel.appendLine(`[RunTest] Will activate virtual env: ${userPath}`);
-      }
-    } else {
-      // Not a virtual env - check if directory contains llvm-lit or lit executables directly
-      const litInDir = path.join(userPath, 'lit');
-      const llvmLitInDir = path.join(userPath, 'llvm-lit');
-
-      if (fs.existsSync(llvmLitInDir) && this.isExecutable(llvmLitInDir)) {
-        litExecutable = llvmLitInDir;
-        outputChannel.appendLine(`[RunTest] Using llvm-lit executable: ${litExecutable}`);
-      } else if (fs.existsSync(litInDir) && this.isExecutable(litInDir)) {
-        litExecutable = litInDir;
-        outputChannel.appendLine(`[RunTest] Using lit executable: ${litExecutable}`);
-      } else {
-        const errorMsg = `Directory does not contain a valid lit/llvm-lit executable: ${userPath}`;
-        vscode.window.showErrorMessage(errorMsg);
-        outputChannel.appendLine(`[RunTest] ERROR: ${errorMsg}`);
-        return null;
-      }
-    }
-
-    // Construct the final lit command
-    let litCommand: string;
-    if (litExecutable) {
-      litCommand = `${litExecutable} -vv -a ${relativePath}`;
-    } else if (pythonEnvActivate) {
-      litCommand = `lit -vv -a ${relativePath}`;
-      outputChannel.appendLine(`[RunTest] Will activate Python environment before running lit`);
-    } else {
-      const errorMsg = 'Failed to determine lit executable or activation method';
-      vscode.window.showErrorMessage(errorMsg);
-      outputChannel.appendLine(`[RunTest] ERROR: ${errorMsg}`);
-      return null;
-    }
-
-    return {
-      litCommand,
-      pythonEnvActivate,
-    };
+    const quoted =
+        litExecutable.includes(' ') ? JSON.stringify(litExecutable) : litExecutable;
+    const litCommand = `${quoted} -vv -a ${relativePath}`;
+    return {litCommand};
   }
 
   /**
-   * Get the build directory from workspace settings
-   * @param workspaceFolder The workspace folder
-   * @param outputChannel The output channel for logging
-   * @returns The resolved build directory path, or null if not found in settings or invalid
+   * Resolve a workspace-relative or absolute path string against the workspace root.
    */
-  private async getBuildDirectory(
-      workspaceFolder: vscode.WorkspaceFolder,
+  private resolveWorkspacePath(workspacePath: string, p: string): string {
+    const t = p.trim();
+    if (!t) {
+      return '';
+    }
+    return path.isAbsolute(t) ? path.normalize(t) :
+                                path.normalize(path.join(workspacePath, t));
+  }
+
+  /**
+   * True if `filePath` is `sourceDir` or a file/directory under it.
+   */
+  private isPathUnderDirectory(filePath: string, sourceDir: string): boolean {
+    const normFile = path.normalize(filePath);
+    const normDir = path.normalize(sourceDir);
+    const rel = path.relative(normDir, normFile);
+    return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+  }
+
+  /**
+   * Validate resolved build directory exists and return it, or null with error.
+   */
+  private finishBuildDirectory(
+      buildDir: string,
       outputChannel: vscode.OutputChannel
-  ): Promise<string | null> {
-    // workspacePath: /workspaces/TensorRT-Incubator/mlir-tensorrt
-    const workspacePath = workspaceFolder.uri.fsPath;
-    // Get build directory from workspace settings only
-    const settingsBuildDir = config.get<string>('litBuildDirectory', workspaceFolder);
-    
-    if (!settingsBuildDir || settingsBuildDir.trim() === '') {
-      const errorMsg = 'Build directory not found in workspace settings. Please set "mlir.litBuildDirectory" in .vscode/settings.json';
-      vscode.window.showErrorMessage(errorMsg);
-      outputChannel.appendLine(`[RunTest] ERROR: ${errorMsg}`);
-      return null;
-    }
-
-    // Resolve the build directory path
-    let buildDir: string;
-    const trimmedPath = settingsBuildDir.trim();
-    if (path.isAbsolute(trimmedPath)) {
-      // Absolute path - use as is
-      buildDir = trimmedPath;
-    } else {
-      // Relative path - resolve relative to workspace's directory
-      const candidatePaths = [
-        path.join(workspacePath, trimmedPath),
-      ];
-      
-      // Check if any candidate exists
-      let found = false;
-      for (const candidate of candidatePaths) {
-        if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
-          buildDir = candidate;
-          found = true;
-          break;
-        }
-      }
-      
-      // If not found, use workspace path as default (will validate existence below)
-      if (!found) {
-        buildDir = path.join(workspacePath, trimmedPath);
-      }
-    }
-
-    // Validate that the build directory exists
+  ): string | null {
     if (!fs.existsSync(buildDir)) {
       vscode.window.showErrorMessage(
           `Build directory does not exist: ${buildDir}`);
       return null;
     }
-
     if (!fs.statSync(buildDir).isDirectory()) {
       vscode.window.showErrorMessage(
-          `Build Path is not a directory: ${buildDir}`);
+          `Build path is not a directory: ${buildDir}`);
+      return null;
+    }
+    outputChannel.appendLine(`[RunTest] Using build directory: ${buildDir}`);
+    return buildDir;
+  }
+
+  /**
+   * Resolve lit cwd from the first matching `mlir.litSuites` entry for this file.
+   * @param workspaceFolder The workspace folder
+   * @param filePath Absolute path to the .mlir file being tested
+   * @param outputChannel The output channel for logging
+   * @returns The resolved build directory path, or null if not found or invalid
+   */
+  private async getBuildDirectory(
+      workspaceFolder: vscode.WorkspaceFolder,
+      filePath: string,
+      outputChannel: vscode.OutputChannel
+  ): Promise<string | null> {
+    const workspacePath = workspaceFolder.uri.fsPath;
+    const suites = config.get<LitSuite[]>('litSuites', workspaceFolder, []);
+
+    if (!Array.isArray(suites) || suites.length === 0) {
+      const errorMsg =
+          'mlir.litSuites is empty or missing. Add at least one { "source", "build" } entry in workspace settings.';
+      vscode.window.showErrorMessage(errorMsg);
+      outputChannel.appendLine(`[RunTest] ERROR: ${errorMsg}`);
       return null;
     }
 
-    outputChannel.appendLine(`[RunTest] Using build directory: ${buildDir}`);
-    return buildDir;
+    for (const suite of suites) {
+      if (!suite || typeof suite.source !== 'string' ||
+          typeof suite.build !== 'string') {
+        continue;
+      }
+      const sourceResolved = this.resolveWorkspacePath(
+          workspacePath, suite.source);
+      if (!sourceResolved) {
+        continue;
+      }
+      if (!fs.existsSync(sourceResolved) ||
+          !fs.statSync(sourceResolved).isDirectory()) {
+        outputChannel.appendLine(
+            `[RunTest] Skip suite (source missing or not a dir): ${sourceResolved}`);
+        continue;
+      }
+      if (!this.isPathUnderDirectory(filePath, sourceResolved)) {
+        continue;
+      }
+      const buildDir =
+          this.resolveWorkspacePath(workspacePath, suite.build);
+      outputChannel.appendLine(
+          `[RunTest] Matched lit suite source="${suite.source}" -> build="${suite.build}"`);
+      return this.finishBuildDirectory(buildDir, outputChannel);
+    }
+
+    const errorMsg =
+        'No mlir.litSuites entry contains this file. Add or reorder a suite so its source directory includes the test path.';
+    vscode.window.showErrorMessage(errorMsg);
+    outputChannel.appendLine(`[RunTest] ERROR: ${errorMsg}`);
+    return null;
   }
 
   /**
@@ -326,8 +367,9 @@ export class RunTestCommand extends Command {
       return;
     }
 
-    // Get build directory from user
-    const buildDir = await this.getBuildDirectory(workspaceFolder, outputChannel);
+    // Resolve build directory from mlir.litSuites (first matching source)
+    const buildDir =
+        await this.getBuildDirectory(workspaceFolder, filePath, outputChannel);
     if (!buildDir) {
       return;
     }
@@ -351,7 +393,7 @@ export class RunTestCommand extends Command {
       return;
     }
 
-    const {litCommand, pythonEnvActivate} = litSetup;
+    const {litCommand} = litSetup;
     outputChannel.appendLine(`[RunTest] Lit command: ${litCommand}`);
     outputChannel.appendLine(`[RunTest] Build directory (cwd): ${buildDir}`);
 
@@ -362,13 +404,7 @@ export class RunTestCommand extends Command {
     });
 
     terminal.show();
-    
-    // Send command with environment activation if needed
-    if (pythonEnvActivate) {
-      terminal.sendText(`${pythonEnvActivate}${litCommand}`);
-    } else {
-      terminal.sendText(litCommand);
-    }
+    terminal.sendText(litCommand);
     
     outputChannel.appendLine(`[RunTest] Terminal command sent successfully`);
     outputChannel.appendLine(`[RunTest] Running MLIR lit on: ${relativePath}`);

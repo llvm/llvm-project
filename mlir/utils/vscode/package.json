@@ -5,6 +5,7 @@
   "version": "0.0.14",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -208,15 +209,33 @@
             "Do nothing"
           ]
         },
-        "mlir.litBuildDirectory": {
+        "mlir.litSuites": {
           "scope": "resource",
-          "type": "string",
-          "description": "The build directory path for running lit tests. Can be absolute or relative to workspace root. If not set, user will be prompted."
+          "type": "array",
+          "markdownDescription": "Required for **mlir: Run Test**. Ordered list of suites: the first entry whose `source` directory contains the open `.mlir` file supplies the `build` directory (lit cwd). Paths are absolute or relative to the workspace root.",
+          "items": {
+            "type": "object",
+            "required": [
+              "source",
+              "build"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "Source tree d irectory for this suite (e.g. mlir/test)."
+              },
+              "build": {
+                "type": "string",
+                "description": "Corresponding build output directory for lit cwd (e.g. build/tools/mlir/test)."
+              }
+            }
+          },
+          "default": []
         },
         "mlir.litExecutablePath": {
           "scope": "resource",
           "type": "string",
-          "description": "The path to llvm-lit or lit executable, or path to a virtual environment containing lit. If not set, user will be prompted or a venv will be auto-created."
+          "description": "Full path to the lit or llvm-lit executable (file path, not a directory). Can be absolute or relative to the workspace root. If unset, the extension looks for lit or llvm-lit on PATH, then prompts for a path."
         }
       }
     },
