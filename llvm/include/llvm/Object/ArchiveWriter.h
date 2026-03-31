@@ -53,19 +53,20 @@ enum class SymtabWritingMode {
 LLVM_ABI void warnToStderr(Error Err);
 
 // Write an archive directly to an output stream.
-LLVM_ABI Error writeArchiveToStream(
-    raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
-    SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
-    bool Deterministic, bool Thin, std::optional<bool> IsEC = std::nullopt,
-    function_ref<void(Error)> Warn = warnToStderr);
-
 LLVM_ABI Error
-writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
-             SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
-             bool Deterministic, bool Thin,
-             std::unique_ptr<MemoryBuffer> OldArchiveBuf = nullptr,
-             std::optional<bool> IsEC = std::nullopt,
-             function_ref<void(Error)> Warn = warnToStderr);
+writeArchiveToStream(raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
+                     SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
+                     bool Deterministic, bool Thin, bool IsWholeArchive = false,
+                     std::optional<bool> IsEC = std::nullopt,
+                     function_ref<void(Error)> Warn = warnToStderr);
+
+LLVM_ABI Error writeArchive(
+    StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
+    SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
+    bool Deterministic, bool Thin,
+    std::unique_ptr<MemoryBuffer> OldArchiveBuf = nullptr,
+    bool IsWholeArchive = false, std::optional<bool> IsEC = std::nullopt,
+    function_ref<void(Error)> Warn = warnToStderr);
 
 // writeArchiveToBuffer is similar to writeArchive but returns the Archive in a
 // buffer instead of writing it out to a file.

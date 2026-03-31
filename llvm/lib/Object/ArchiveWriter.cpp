@@ -1029,7 +1029,8 @@ Error writeArchiveToStream(raw_ostream &Out,
                            ArrayRef<NewArchiveMember> NewMembers,
                            SymtabWritingMode WriteSymtab,
                            object::Archive::Kind Kind, bool Deterministic,
-                           bool Thin, std::optional<bool> IsEC,
+                           bool Thin, bool IsWholeArchive,
+                           std::optional<bool> IsEC,
                            function_ref<void(Error)> Warn) {
   assert((!Thin || !isBSDLike(Kind)) && "Only the gnu format has a thin mode");
 
@@ -1050,6 +1051,8 @@ Error writeArchiveToStream(raw_ostream &Out,
   // reference to it, thus SymbolicFile should be destroyed first.
   LLVMContext Context;
 
+  if (IsWholeArchive)
+    StringTable << "-wholearchive" << '\0';
   Expected<std::vector<MemberData>> DataOrErr = computeMemberData(
       StringTable, SymNames, Kind, Thin, Deterministic, WriteSymtab,
       isCOFFArchive(Kind) ? &SymMap : nullptr, Context, NewMembers, IsEC, Warn);
@@ -1129,7 +1132,7 @@ Error writeArchiveToStream(raw_ostream &Out,
         // Since this changes the headers, we need to recalculate everything.
         return writeArchiveToStream(Out, NewMembers, WriteSymtab,
                                     object::Archive::K_GNU64, Deterministic,
-                                    Thin, IsEC, Warn);
+                                    Thin, false, IsEC, Warn);
       case object::Archive::K_DARWIN:
         Kind = object::Archive::K_DARWIN64;
         break;
@@ -1319,7 +1322,8 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,
                    std::unique_ptr<MemoryBuffer> OldArchiveBuf,
-                   std::optional<bool> IsEC, function_ref<void(Error)> Warn) {
+                   bool IsWholeArchive, std::optional<bool> IsEC,
+                   function_ref<void(Error)> Warn) {
   Expected<sys::fs::TempFile> Temp =
       sys::fs::TempFile::create(ArcName + ".temp-archive-%%%%%%%.a");
   if (!Temp)
@@ -1327,7 +1331,8 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
   raw_fd_ostream Out(Temp->FD, false);
 
   if (Error E = writeArchiveToStream(Out, NewMembers, WriteSymtab, Kind,
-                                     Deterministic, Thin, IsEC, Warn)) {
+                                     Deterministic, Thin, IsWholeArchive, IsEC,
+                                     Warn)) {
     if (Error DiscardError = Temp->discard())
       return joinErrors(std::move(E), std::move(DiscardError));
     return E;
@@ -1358,7 +1363,7 @@ writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers,
 
   if (Error E =
           writeArchiveToStream(ArchiveStream, NewMembers, WriteSymtab, Kind,
-                               Deterministic, Thin, std::nullopt, Warn))
+                               Deterministic, Thin, false, std::nullopt, Warn))
     return std::move(E);
 
   return std::make_unique<SmallVectorMemoryBuffer>(

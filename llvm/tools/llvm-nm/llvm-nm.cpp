@@ -2085,6 +2085,9 @@ static void dumpArchive(Archive *A, std::vector<NMSymbol> &SymbolList,
   if (ArchiveMap)
     dumpArchiveMap(A, Filename);
 
+  if (A->isWholeArchive())
+    outs() << "Archive is marked with -wholearchive\n\n";
+
   Error Err = Error::success();
   for (auto &C : A->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary(ContextPtr);

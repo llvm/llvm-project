@@ -524,10 +524,11 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
                     ? SymtabWritingMode::NormalSymtab
                     : SymtabWritingMode::NoSymtab;
 
-  if (Error E = writeArchive(
-          OutputPath, Members, Symtab,
-          Thin ? object::Archive::K_GNU : object::Archive::K_COFF,
-          /*Deterministic=*/true, Thin, nullptr, COFF::isArm64EC(LibMachine))) {
+  if (Error E =
+          writeArchive(OutputPath, Members, Symtab,
+                       Thin ? object::Archive::K_GNU : object::Archive::K_COFF,
+                       /*Deterministic=*/true, Thin, nullptr, false,
+                       COFF::isArm64EC(LibMachine))) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
       llvm::errs() << OutputPath << ": " << EI.message() << "\n";
     });

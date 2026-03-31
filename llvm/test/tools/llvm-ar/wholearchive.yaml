@@ -1,0 +1,47 @@
+## Test -wholearchive marker
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: yaml2obj %s -o %t2.obj
+
+## Create -wholearchive archive.
+# RUN: rm -f %t.a
+# RUN: llvm-ar cr --whole-archive %t.a %t.obj
+# RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefixes=MAP,WHOLEARCH %s
+
+# MAP:       Archive map
+# MAP-NEXT:  test in wholearchive.yaml.tmp.obj
+# MAP-EMPTY:
+# WHOLEARCH:  Archive is marked with -wholearchive
+# WHOLEARCH-EMPTY:
+
+## Create an archive containing -wholearchive archive.
+# RUN: rm -f %t-merged.a
+# RUN: llvm-ar cr %t-merged.a %t.a
+# RUN: llvm-nm --print-armap %t-merged.a | FileCheck --check-prefixes=MAP,NOWHOLEARCH %s
+# NOWHOLEARCH-NOT:  Archive is marked with -wholearchive
+
+## Modify an existing archive to add a -wholearchive marker.
+# RUN: llvm-ar r --whole-archive %t-merged.a
+# RUN: llvm-nm --print-armap %t-merged.a | FileCheck --check-prefix=WHOLEARCH %s
+
+## Remove the -wholearchive marker from an existing archive.
+# RUN: llvm-ar r --whole-archive %t-merged.a
+# RUN: llvm-nm --print-armap %t-merged.a | FileCheck --check-prefix=WHOLEARCH %s
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+symbols:
+  - Name:            test
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

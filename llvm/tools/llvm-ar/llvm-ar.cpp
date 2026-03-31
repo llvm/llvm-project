@@ -92,6 +92,7 @@ static void printArHelp(StringRef ToolName) {
     =windows            -   windows
   --thin                - create a thin archive
   --version             - print the version and exit
+  --whole-archive       - add a hint indicating that the archive is intended to be linked with whole-archive semantics
   -X{32|64|32_64|any}   - object mode (only for AIX OS)
   @<file>               - read options from <file>
 
@@ -251,6 +252,8 @@ static std::string ArchiveName;
 
 // Output directory specified by --output.
 static std::string OutputDir;
+
+static bool IsWholeArchive;
 
 static std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
 static std::vector<std::unique_ptr<object::Archive>> Archives;
@@ -819,11 +822,10 @@ static void addMember(std::vector<NewArchiveMember> &Members,
     return;
   }
 
-  if (FlattenArchive &&
-      identify_magic(NM.Buf->getBuffer()) == file_magic::archive) {
+  if (identify_magic(NM.Buf->getBuffer()) == file_magic::archive) {
     object::Archive &Lib = readLibrary(FileName);
     // When creating thin archives, only flatten if the member is also thin.
-    if (!Thin || Lib.isThin()) {
+    if ((FlattenArchive || Lib.isWholeArchive()) && (!Thin || Lib.isThin())) {
       Error Err = Error::success();
       // Only Thin archives are recursively flattened.
       for (auto &Child : Lib.children(Err))
@@ -1075,9 +1077,9 @@ static void performWriteOperation(ArchiveOperation Operation,
     llvm_unreachable("");
   }
 
-  Error E =
-      writeArchive(ArchiveName, NewMembersP ? *NewMembersP : NewMembers, Symtab,
-                   Kind, Deterministic, Thin, std::move(OldArchiveBuf));
+  Error E = writeArchive(ArchiveName, NewMembersP ? *NewMembersP : NewMembers,
+                         Symtab, Kind, Deterministic, Thin,
+                         std::move(OldArchiveBuf), IsWholeArchive);
   failIfError(std::move(E), ArchiveName);
 }
 
@@ -1377,6 +1379,11 @@ static int ar_main(int argc, char **argv) {
 
     if (strcmp(*ArgIt, "--thin") == 0) {
       Thin = true;
+      continue;
+    }
+
+    if (strcmp(*ArgIt, "--whole-archive") == 0) {
+      IsWholeArchive = true;
       continue;
     }
 

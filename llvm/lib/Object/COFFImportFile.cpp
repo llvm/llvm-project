@@ -800,7 +800,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
   return writeArchive(Path, Members, SymtabWritingMode::NormalSymtab,
                       object::Archive::K_COFF,
                       /*Deterministic*/ true, /*Thin*/ false,
-                      /*OldArchiveBuf*/ nullptr, isArm64EC(Machine));
+                      /*OldArchiveBuf*/ nullptr, false, isArm64EC(Machine));
 }
 
 } // namespace object
