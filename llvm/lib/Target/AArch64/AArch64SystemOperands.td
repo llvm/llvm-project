@@ -880,9 +880,10 @@ class TLBIEntry<string name, bits<3> op1, bits<4> crm, bits<3> op2, bit nxs,
   : TLBICommon<name, op1, crm, op2, nxs, reguse>;
 
 class TLBIPEntry<string name, bits<3> op1, bits<4> crm, bits<3> op2, bit nxs,
-                 RegValue reguse, bit allowWithTLBID>
+                 RegValue reguse>
   : TLBICommon<name, op1, crm, op2, nxs, reguse> {
-  bit AllowWithTLBID = allowWithTLBID;
+  // TLBIP insns matching regex below allow either FEAT_D128 or FEAT_TLBID.
+  bit AllowWithTLBID = !match(name, ".*E[12][IO]S.*");
 }
 
 multiclass TLBITableBase<list<string> fields> {
@@ -959,12 +960,9 @@ foreach I = TLBIBase in {
   }
 
   if I.HasTLBIP then {
-    // These TLBIP aliases accept either FEAT_D128 or FEAT_TLBID.
-    defvar AllowWithTLBID = !match(I.Name, ".*E[12][IO]S.*");
-    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse,
-                     AllowWithTLBID>;
+    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
     def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1,
-                     I.RegUse, AllowWithTLBID>;
+                     I.RegUse>;
   }
 }
 
@@ -1029,11 +1027,9 @@ foreach I = TLBIRMI in {
   }
 
   if I.HasTLBIP then {
-    defvar AllowWithTLBID = !match(I.Name, ".*E[12][IO]S.*");
-    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse,
-                     AllowWithTLBID>;
+    def : TLBIPEntry<I.Name, I.Op1, I.CRm, I.Op2, 0, I.RegUse>;
     def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRm, I.Op2, 1,
-                     I.RegUse, AllowWithTLBID>;
+                     I.RegUse>;
   }
 }
 
