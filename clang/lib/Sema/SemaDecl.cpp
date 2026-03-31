@@ -9086,6 +9086,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
+  LoadExternalExtnameUndeclaredIdentifiers();
+
   if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
@@ -11460,6 +11462,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                        D.getCXXScopeSpec().isNotEmpty() ||
                        isMemberSpecialization ||
                        isFunctionTemplateSpecialization);
+
+  LoadExternalExtnameUndeclaredIdentifiers();
 
   // Handle GNU asm-label extension (encoded as an attribute).
   if (Expr *E = D.getAsmLabel()) {

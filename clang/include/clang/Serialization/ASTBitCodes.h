@@ -758,6 +758,9 @@ enum ASTRecordTypes {
 
   /// Record code for availability domain table.
   AVAILABILITY_DOMAIN_TABLE = 79,
+
+  /// Record code for extname-redefined undeclared identifiers.
+  EXTNAME_UNDECLARED_IDENTIFIERS = 80,
 };
 
 /// Record types used within a source manager block.
