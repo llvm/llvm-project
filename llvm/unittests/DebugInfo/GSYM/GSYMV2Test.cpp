@@ -331,6 +331,81 @@ TEST(GSYMV2Test, TestCreatorV2StrpSize3) {
   TestV2StrpSize(3, llvm::endianness::big);
 }
 
+/// AddrInfoOffSize tests
+
+/// Test that a given AddrInfoOffSize produces a correct round-trip. Creates
+/// enough functions so that the FunctionInfo section size requires the
+/// specified AddrInfoOffSize. Each function gets a unique name and a line
+/// table entry to increase its encoded size.
+static void TestV2AddrInfoOffSize(uint8_t ExpectedSize,
+                                   llvm::endianness ByteOrder) {
+  GsymCreatorV2 GC;
+  // We need FISectionSize >= (1 << ((ExpectedSize-1) * 8)).
+  // Each FunctionInfo is roughly 20-30 bytes with a line table entry.
+  // For size 1: any small number of functions works.
+  // For size 2: need FI section > 255 bytes → ~20 functions.
+  // For size 3: need FI section > 65535 bytes → ~5000 functions.
+  size_t NumFuncs;
+  if (ExpectedSize == 1)
+    NumFuncs = 2;
+  else if (ExpectedSize == 2)
+    NumFuncs = 20;
+  else
+    NumFuncs = 5000;
+
+  const uint64_t BaseAddr = 0x1000;
+  const uint32_t FileIdx = GC.insertFile("/tmp/test.c");
+  for (size_t I = 0; I < NumFuncs; ++I) {
+    std::string Name = "func_" + std::to_string(I);
+    uint32_t NameOff = GC.insertString(Name);
+    FunctionInfo FI(BaseAddr + I * 0x10, 0x10, NameOff);
+    FI.OptLineTable = LineTable();
+    FI.OptLineTable->push(LineEntry(BaseAddr + I * 0x10, FileIdx, I + 1));
+    GC.addFunctionInfo(std::move(FI));
+  }
+
+  OutputAggregator Null(nullptr);
+  ASSERT_FALSE(GC.finalize(Null));
+
+  auto Result = encodeV2(GC, ByteOrder);
+  ASSERT_THAT_EXPECTED(Result, Succeeded());
+  StringRef Data = *Result;
+
+  auto HdrOrErr = decodeHeaderV2(Data, ByteOrder);
+  ASSERT_THAT_EXPECTED(HdrOrErr, Succeeded());
+  EXPECT_EQ(HdrOrErr->AddrInfoOffSize, ExpectedSize);
+
+  // Verify round-trip: decode and look up a few functions.
+  auto GR = GsymReaderV2::copyBuffer(Data);
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  EXPECT_EQ(GR->getNumAddresses(), NumFuncs);
+
+  // Check first and last functions.
+  auto FI0 = GR->getFunctionInfo(BaseAddr);
+  ASSERT_THAT_EXPECTED(FI0, Succeeded());
+  EXPECT_EQ(GR->getString(FI0->Name), "func_0");
+
+  auto FILast = GR->getFunctionInfo(BaseAddr + (NumFuncs - 1) * 0x10);
+  ASSERT_THAT_EXPECTED(FILast, Succeeded());
+  EXPECT_EQ(GR->getString(FILast->Name),
+            "func_" + std::to_string(NumFuncs - 1));
+}
+
+// Only test AddrInfoOffSize 1-3. Larger sizes would require FunctionInfo
+// sections of 16MB+ (size 4), which is unnecessary for unit tests.
+TEST(GSYMV2Test, TestCreatorV2AddrInfoOffSize1) {
+  TestV2AddrInfoOffSize(1, llvm::endianness::little);
+  TestV2AddrInfoOffSize(1, llvm::endianness::big);
+}
+TEST(GSYMV2Test, TestCreatorV2AddrInfoOffSize2) {
+  TestV2AddrInfoOffSize(2, llvm::endianness::little);
+  TestV2AddrInfoOffSize(2, llvm::endianness::big);
+}
+TEST(GSYMV2Test, TestCreatorV2AddrInfoOffSize3) {
+  TestV2AddrInfoOffSize(3, llvm::endianness::little);
+  TestV2AddrInfoOffSize(3, llvm::endianness::big);
+}
+
 /// AddrInfoOffsets verification
 
 TEST(GSYMV2Test, TestCreatorV2AddrInfoOffsetsPointToFunctionInfo) {
