@@ -138,6 +138,7 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
+#include "llvm/Transforms/Utils/DeleteDebugRecordPass.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
@@ -640,6 +641,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
   FPM.addPass(AggressiveInstCombinePass());
+
+  if (Level.getSpeedupLevel() >= 2)
+    FPM.addPass(DeleteDebugRecordPass());
 
   if (!Level.isOptimizingForSize())
     FPM.addPass(LibCallsShrinkWrapPass());
