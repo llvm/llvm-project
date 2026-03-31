@@ -9077,12 +9077,12 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
         !ScalarTy->isPointerTy()) {
       return error(
           ValLoc,
-          OpName + " operand must be an integer, floating point, or pointer type");
+          OpName +
+              " operand must be an integer, floating point, or pointer type");
     }
   } else if (IsFP) {
     if (!ScalarTy->isFPOrFPVectorTy()) {
-      return error(ValLoc,
-                   OpName + " operand must be a floating point type");
+      return error(ValLoc, OpName + " operand must be a floating point type");
     }
   } else {
     if (!ScalarTy->isIntegerTy()) {

@@ -4794,9 +4794,8 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
           ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
     Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
-          OpName +
-              " operand must have floating-point or fixed vector of "
-              "floating-point type!",
+          OpName + " operand must have floating-point or fixed vector of "
+                   "floating-point type!",
           &RMWI, ElTy);
   } else {
     Check(ScalarTy->isIntegerTy(), OpName + " operand must have integer type!",
