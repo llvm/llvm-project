@@ -14364,7 +14364,7 @@ void BoUpSLP::transformNodes() {
                });
       };
       if (!IsOneUseVectorFMulOperand(LHS) &&
-          (E.getOpcode() == Instruction::Sub ||
+          (E.getOpcode() == Instruction::FSub ||
            !IsOneUseVectorFMulOperand(RHS)))
         break;
       if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI)
