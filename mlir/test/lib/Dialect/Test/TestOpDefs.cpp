@@ -501,6 +501,22 @@ void SideEffectOp::getEffects(
   testSideEffectOpGetEffect(getOperation(), effects);
 }
 
+//===----------------------------------------------------------------------===//
+// ConditionalSideEffectOp
+//===----------------------------------------------------------------------===//
+
+void ConditionalSideEffectOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (!getHasEffects())
+    return;
+
+  SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+  effects.emplace_back(MemoryEffects::Read::get(), resource);
+  effects.emplace_back(MemoryEffects::Write::get(), resource);
+  effects.emplace_back(MemoryEffects::Free::get(), resource);
+  effects.emplace_back(MemoryEffects::Allocate::get(), resource);
+}
+
 void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
