@@ -529,6 +529,7 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineInstr *NewMI = BuildMI(MBB, InsPt, DL, TII->get(Opcode), LMC.ExecReg)
                             .addReg(LMC.ExecReg)
                             .add(MI.getOperand(0));
+
   if (LV) {
     LV->replaceKillInstruction(DataReg, MI, *NewMI);
 
@@ -851,6 +852,9 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
       LIS->createAndComputeVirtRegInterval(Reg);
     }
   }
+
+  for (MachineInstr *MI : LoweredEndCf)
+    moveInsBeforePhis(*MI);
 
   RecomputeRegs.clear();
   LoweredEndCf.clear();
