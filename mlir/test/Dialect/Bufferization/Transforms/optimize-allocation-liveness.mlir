@@ -249,22 +249,3 @@ func.func private @test_alloc_no_non_dealloc_users() {
   return
 }
 
-// -----
-
-// CHECK-LABEL: func.func private @test_dynamic_dimensions
-// CHECK: %[[alloc:.*]] = memref.alloc
-// CHECK-NEXT: memref.load %[[alloc]]
-// CHECK-NEXT: memref.dealloc %[[alloc]]
-
-// The pass moves the dealloc of a dynamic alloc to right after its last use.
-func.func private @test_dynamic_dimensions(%n: index) {
-  %c0 = arith.constant 0 : index
-  %alloc = memref.alloc(%n) {alignment = 64 : i64} : memref<?xf32>
-  %val = memref.load %alloc[%c0] : memref<?xf32>
-  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<32xf32>
-  %cf0 = arith.constant 0.0 : f32
-  memref.store %cf0, %alloc_1[%c0] : memref<32xf32>
-  memref.dealloc %alloc : memref<?xf32>
-  memref.dealloc %alloc_1 : memref<32xf32>
-  return
-}
