@@ -9,8 +9,8 @@
 define void @test_demanded_haddps_128(<4 x float> %a0, <4 x float> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_haddps_128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -29,8 +29,8 @@ define void @test_demanded_haddps_128(<4 x float> %a0, <4 x float> %a1, ptr%a2) 
 define void @test_demanded_hsubps_128(<4 x float> %a0, <4 x float> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_hsubps_128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vhsubps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vextractps $2, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -49,8 +49,8 @@ define void @test_demanded_hsubps_128(<4 x float> %a0, <4 x float> %a1, ptr%a2) 
 define void @test_demanded_haddpd_128(<2 x double> %a0, <2 x double> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_haddpd_128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -69,8 +69,8 @@ define void @test_demanded_haddpd_128(<2 x double> %a0, <2 x double> %a1, ptr%a2
 define void @test_demanded_hsubpd_128(<2 x double> %a0, <2 x double> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_hsubpd_128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vhsubpd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -89,8 +89,8 @@ define void @test_demanded_hsubpd_128(<2 x double> %a0, <2 x double> %a1, ptr%a2
 define void @test_demanded_phaddd_128(<4 x i32> %a0, <4 x i32> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phaddd_128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -109,8 +109,8 @@ define void @test_demanded_phaddd_128(<4 x i32> %a0, <4 x i32> %a1, ptr%a2) noun
 define void @test_demanded_phsubd_128(<4 x i32> %a0, <4 x i32> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phsubd_128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vphsubd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrd $1, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -129,8 +129,8 @@ define void @test_demanded_phsubd_128(<4 x i32> %a0, <4 x i32> %a1, ptr%a2) noun
 define void @test_demanded_phaddw_128(<8 x i16> %a0, <8 x i16> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phaddw_128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrw $0, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -149,8 +149,8 @@ define void @test_demanded_phaddw_128(<8 x i16> %a0, <8 x i16> %a1, ptr%a2) noun
 define void @test_demanded_phsubw_128(<8 x i16> %a0, <8 x i16> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phsubw_128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vphsubw %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrw $2, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -173,9 +173,9 @@ define void @test_demanded_phsubw_128(<8 x i16> %a0, <8 x i16> %a1, ptr%a2) noun
 define void @test_demanded_haddps_256(<8 x float> %a0, <8 x float> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_haddps_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -197,9 +197,9 @@ define void @test_demanded_haddps_256(<8 x float> %a0, <8 x float> %a1, ptr%a2) 
 define void @test_demanded_hsubps_256(<8 x float> %a0, <8 x float> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_hsubps_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vhsubps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vextractps $3, %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -221,9 +221,9 @@ define void @test_demanded_hsubps_256(<8 x float> %a0, <8 x float> %a1, ptr%a2) 
 define void @test_demanded_haddpd_256(<4 x double> %a0, <4 x double> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_haddpd_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vhaddpd %ymm0, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -245,9 +245,9 @@ define void @test_demanded_haddpd_256(<4 x double> %a0, <4 x double> %a1, ptr%a2
 define void @test_demanded_hsubpd_256(<4 x double> %a0, <4 x double> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_hsubpd_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vhsubpd %ymm0, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -269,9 +269,9 @@ define void @test_demanded_hsubpd_256(<4 x double> %a0, <4 x double> %a1, ptr%a2
 define void @test_demanded_phaddd_256(<8 x i32> %a0, <8 x i32> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phaddd_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrd $3, %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -293,9 +293,9 @@ define void @test_demanded_phaddd_256(<8 x i32> %a0, <8 x i32> %a1, ptr%a2) noun
 define void @test_demanded_phsubd_256(<8 x i32> %a0, <8 x i32> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phsubd_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vphsubd %ymm0, %ymm0, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrd $1, %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -317,9 +317,9 @@ define void @test_demanded_phsubd_256(<8 x i32> %a0, <8 x i32> %a1, ptr%a2) noun
 define void @test_demanded_phaddw_256(<16 x i16> %a0, <16 x i16> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phaddw_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpbroadcastw %xmm1, %xmm0
 ; X86-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrw $4, %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -341,8 +341,8 @@ define void @test_demanded_phaddw_256(<16 x i16> %a0, <16 x i16> %a1, ptr%a2) no
 define void @test_demanded_phsubw_256(<16 x i16> %a0, <16 x i16> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phsubw_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vphsubw %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrw $6, %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl

@@ -11,8 +11,8 @@ define float @tst1(float %a, float %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll copysignf
 ; X86-NEXT:    addl $8, %esp
@@ -33,11 +33,11 @@ define double @tst2(double %a, float %b, float %c) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    addss {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    cvtss2sd %xmm1, %xmm1
 ; X86-NEXT:    movsd %xmm0, (%esp)
-; X86-NEXT:    movsd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    addss {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    cvtss2sd %xmm0, %xmm0
+; X86-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll copysign
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    retl
@@ -58,8 +58,8 @@ define x86_fp80 @tst3(x86_fp80 %a, x86_fp80 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    calll copysignl
 ; X86-NEXT:    addl $24, %esp
@@ -118,14 +118,14 @@ define double @int2(double %a, float %b, float %c) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    addss 20(%ebp), %xmm0
-; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-NEXT:    cvtss2sd %xmm0, %xmm0
+; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    orps %xmm1, %xmm0
-; X86-NEXT:    movlps %xmm0, (%esp)
+; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    addss 20(%ebp), %xmm1
+; X86-NEXT:    cvtss2sd %xmm1, %xmm1
+; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    orps %xmm0, %xmm1
+; X86-NEXT:    movlps %xmm1, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -150,8 +150,8 @@ define x86_fp80 @int3(x86_fp80 %a, x86_fp80 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fabs
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fchs
@@ -237,9 +237,9 @@ define void @PR41749() {
 ; X86-NEXT:    fldz
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fstpt (%esp)
-; X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fchs
+; X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fcmovne %st(1), %st
 ; X86-NEXT:    fstp %st(1)

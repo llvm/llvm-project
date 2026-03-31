@@ -163,11 +163,11 @@ define x86_fp80 @test_f80(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) #0 {
 ; FMA32-LABEL: test_f80:
 ; FMA32:       ## %bb.0: ## %entry
 ; FMA32-NEXT:    subl $60, %esp ## encoding: [0x83,0xec,0x3c]
-; FMA32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x40]
-; FMA32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x50]
 ; FMA32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x60]
 ; FMA32-NEXT:    fstpt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x7c,0x24,0x20]
+; FMA32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x50]
 ; FMA32-NEXT:    fstpt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x7c,0x24,0x10]
+; FMA32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x40]
 ; FMA32-NEXT:    fstpt (%esp) ## encoding: [0xdb,0x3c,0x24]
 ; FMA32-NEXT:    calll _fmal ## encoding: [0xe8,A,A,A,A]
 ; FMA32-NEXT:    ## fixup A - offset: 1, value: _fmal, kind: FK_PCRel_4
@@ -177,11 +177,11 @@ define x86_fp80 @test_f80(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) #0 {
 ; FMACALL32-LABEL: test_f80:
 ; FMACALL32:       ## %bb.0: ## %entry
 ; FMACALL32-NEXT:    subl $60, %esp ## encoding: [0x83,0xec,0x3c]
-; FMACALL32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x40]
-; FMACALL32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x50]
 ; FMACALL32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x60]
 ; FMACALL32-NEXT:    fstpt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x7c,0x24,0x20]
+; FMACALL32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x50]
 ; FMACALL32-NEXT:    fstpt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x7c,0x24,0x10]
+; FMACALL32-NEXT:    fldt {{[0-9]+}}(%esp) ## encoding: [0xdb,0x6c,0x24,0x40]
 ; FMACALL32-NEXT:    fstpt (%esp) ## encoding: [0xdb,0x3c,0x24]
 ; FMACALL32-NEXT:    calll _fmal ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32-NEXT:    ## fixup A - offset: 1, value: _fmal, kind: FK_PCRel_4

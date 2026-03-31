@@ -50,11 +50,11 @@ define void @shl144sar48(ptr %p) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movswl (%eax), %ecx
+; CHECK-NEXT:    leal (,%ecx,4), %edx
+; CHECK-NEXT:    movl %edx, 12(%eax)
 ; CHECK-NEXT:    movl %ecx, %edx
 ; CHECK-NEXT:    sarl $31, %edx
 ; CHECK-NEXT:    shldl $2, %ecx, %edx
-; CHECK-NEXT:    shll $2, %ecx
-; CHECK-NEXT:    movl %ecx, 12(%eax)
 ; CHECK-NEXT:    movl %edx, 16(%eax)
 ; CHECK-NEXT:    movl $0, 8(%eax)
 ; CHECK-NEXT:    movl $0, 4(%eax)

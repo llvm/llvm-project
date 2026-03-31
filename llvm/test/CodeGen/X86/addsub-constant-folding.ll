@@ -276,15 +276,16 @@ define i32 @add_const_const_sub_extrause(i32 %arg) {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    leal 8(%esi), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $-6, %esi
+; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    addl $8, %eax
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -4
-; X86-NEXT:    movl $-6, %eax
-; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -646,15 +647,16 @@ define i32 @sub_const_const_sub_extrause(i32 %arg) {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    leal -8(%esi), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $10, %esi
+; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    addl $-8, %eax
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -4
-; X86-NEXT:    movl $10, %eax
-; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -774,16 +776,17 @@ define i32 @const_sub_add_const_extrause(i32 %arg) {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl $8, %eax
-; X86-NEXT:    subl %esi, %eax
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $8, %ecx
+; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    movl $10, %esi
+; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -4
-; X86-NEXT:    movl $10, %eax
-; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -908,16 +911,17 @@ define i32 @const_sub_sub_const_extrause(i32 %arg) {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl $8, %eax
-; X86-NEXT:    subl %esi, %eax
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $8, %ecx
+; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    movl $6, %esi
+; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -4
-; X86-NEXT:    movl $6, %eax
-; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -1042,15 +1046,16 @@ define i32 @const_sub_const_sub_extrause(i32 %arg) {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl $8, %esi
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl $8, %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $2, %esi
+; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -4
-; X86-NEXT:    movl $2, %eax
-; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl

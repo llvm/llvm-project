@@ -44,13 +44,13 @@ define i32 @length2(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    movzwl (%eax), %edx
-; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    rolw $8, %dx
-; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movzwl %ax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 2) nounwind
@@ -90,9 +90,9 @@ define i1 @length2_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length2_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    cmpw (%eax), %cx
+; X86-NEXT:    cmpw (%ecx), %ax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 2) nounwind
@@ -104,13 +104,13 @@ define i1 @length2_lt(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length2_lt:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    movzwl (%eax), %edx
-; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    rolw $8, %dx
-; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movzwl %ax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -124,13 +124,13 @@ define i1 @length2_gt(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length2_gt:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    rolw $8, %ax
 ; X86-NEXT:    movzwl %cx, %ecx
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    setg %al
@@ -155,9 +155,11 @@ define i1 @length2_eq_const(ptr %X) nounwind {
 define i1 @length2_eq_nobuiltin_attr(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length2_eq_nobuiltin_attr:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $2
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -174,15 +176,15 @@ define i32 @length3(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %edx
-; X86-NEXT:    movzwl (%ecx), %esi
+; X86-NEXT:    movzwl (%ecx), %edx
 ; X86-NEXT:    rolw $8, %dx
+; X86-NEXT:    movzwl (%eax), %esi
 ; X86-NEXT:    rolw $8, %si
-; X86-NEXT:    cmpw %si, %dx
+; X86-NEXT:    cmpw %dx, %si
 ; X86-NEXT:    jne .LBB11_3
 ; X86-NEXT:  # %bb.1: # %loadbb1
-; X86-NEXT:    movzbl 2(%eax), %eax
 ; X86-NEXT:    movzbl 2(%ecx), %ecx
+; X86-NEXT:    movzbl 2(%eax), %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -200,13 +202,13 @@ define i1 @length3_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length3_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %edx
-; X86-NEXT:    xorw (%eax), %dx
-; X86-NEXT:    movzbl 2(%ecx), %ecx
-; X86-NEXT:    xorb 2(%eax), %cl
-; X86-NEXT:    movzbl %cl, %eax
-; X86-NEXT:    orw %dx, %ax
+; X86-NEXT:    movzwl (%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorw (%edx), %cx
+; X86-NEXT:    movzbl 2(%eax), %eax
+; X86-NEXT:    xorb 2(%edx), %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    orw %cx, %ax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 3) nounwind
@@ -218,11 +220,11 @@ define i32 @length4(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    bswapl %ecx
-; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    cmpl %eax, %ecx
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    sbbb $0, %al
@@ -236,9 +238,9 @@ define i1 @length4_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length4_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    cmpl (%eax), %ecx
+; X86-NEXT:    cmpl (%ecx), %eax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 4) nounwind
@@ -250,11 +252,11 @@ define i1 @length4_lt(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length4_lt:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    bswapl %ecx
-; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    cmpl %eax, %ecx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
@@ -267,11 +269,11 @@ define i1 @length4_gt(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length4_gt:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    bswapl %ecx
-; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    cmpl %eax, %ecx
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    retl
@@ -298,15 +300,15 @@ define i32 @length5(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %edx
-; X86-NEXT:    movl (%ecx), %esi
+; X86-NEXT:    movl (%ecx), %edx
 ; X86-NEXT:    bswapl %edx
+; X86-NEXT:    movl (%eax), %esi
 ; X86-NEXT:    bswapl %esi
-; X86-NEXT:    cmpl %esi, %edx
+; X86-NEXT:    cmpl %edx, %esi
 ; X86-NEXT:    jne .LBB18_3
 ; X86-NEXT:  # %bb.1: # %loadbb1
-; X86-NEXT:    movzbl 4(%eax), %eax
 ; X86-NEXT:    movzbl 4(%ecx), %ecx
+; X86-NEXT:    movzbl 4(%eax), %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -324,13 +326,13 @@ define i1 @length5_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length5_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    movzbl 4(%ecx), %ecx
-; X86-NEXT:    xorb 4(%eax), %cl
-; X86-NEXT:    movzbl %cl, %eax
-; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl (%edx), %ecx
+; X86-NEXT:    movzbl 4(%eax), %eax
+; X86-NEXT:    xorb 4(%edx), %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 5) nounwind
@@ -344,15 +346,15 @@ define i1 @length5_lt(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %edx
-; X86-NEXT:    movl (%ecx), %esi
+; X86-NEXT:    movl (%ecx), %edx
 ; X86-NEXT:    bswapl %edx
+; X86-NEXT:    movl (%eax), %esi
 ; X86-NEXT:    bswapl %esi
-; X86-NEXT:    cmpl %esi, %edx
+; X86-NEXT:    cmpl %edx, %esi
 ; X86-NEXT:    jne .LBB20_3
 ; X86-NEXT:  # %bb.1: # %loadbb1
-; X86-NEXT:    movzbl 4(%eax), %eax
 ; X86-NEXT:    movzbl 4(%ecx), %ecx
+; X86-NEXT:    movzbl 4(%eax), %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    jmp .LBB20_2
 ; X86-NEXT:  .LBB20_3: # %res_block
@@ -373,25 +375,25 @@ define i32 @length7(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length7:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%esi), %ecx
-; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    bswapl %edx
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    jne .LBB21_2
 ; X86-NEXT:  # %bb.1: # %loadbb1
 ; X86-NEXT:    movl 3(%esi), %ecx
-; X86-NEXT:    movl 3(%eax), %edx
 ; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    movl 3(%eax), %edx
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    je .LBB21_3
 ; X86-NEXT:  .LBB21_2: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    leal -1(%eax,%eax), %eax
 ; X86-NEXT:  .LBB21_3: # %endblock
@@ -405,25 +407,25 @@ define i1 @length7_lt(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length7_lt:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%esi), %ecx
-; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    bswapl %edx
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    jne .LBB22_2
 ; X86-NEXT:  # %bb.1: # %loadbb1
 ; X86-NEXT:    movl 3(%esi), %ecx
-; X86-NEXT:    movl 3(%eax), %edx
 ; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    movl 3(%eax), %edx
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    je .LBB22_3
 ; X86-NEXT:  .LBB22_2: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    leal -1(%eax,%eax), %eax
 ; X86-NEXT:  .LBB22_3: # %endblock
@@ -440,12 +442,12 @@ define i1 @length7_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length7_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 3(%ecx), %ecx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    xorl 3(%eax), %ecx
-; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 3(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl 3(%edx), %eax
+; X86-NEXT:    xorl (%edx), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 7) nounwind
@@ -457,25 +459,25 @@ define i32 @length8(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%esi), %ecx
-; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    bswapl %edx
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    jne .LBB24_2
 ; X86-NEXT:  # %bb.1: # %loadbb1
 ; X86-NEXT:    movl 4(%esi), %ecx
-; X86-NEXT:    movl 4(%eax), %edx
 ; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    movl 4(%eax), %edx
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    je .LBB24_3
 ; X86-NEXT:  .LBB24_2: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    leal -1(%eax,%eax), %eax
 ; X86-NEXT:  .LBB24_3: # %endblock
@@ -489,12 +491,12 @@ define i1 @length8_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length8_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    xorl 4(%eax), %ecx
-; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl 4(%edx), %eax
+; X86-NEXT:    xorl (%edx), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 8) nounwind
@@ -506,10 +508,10 @@ define i1 @length8_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length8_eq_const:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $858927408, %ecx # imm = 0x33323130
-; X86-NEXT:    xorl (%eax), %ecx
-; X86-NEXT:    movl $926299444, %edx # imm = 0x37363534
-; X86-NEXT:    xorl 4(%eax), %edx
+; X86-NEXT:    movl $926299444, %ecx # imm = 0x37363534
+; X86-NEXT:    xorl 4(%eax), %ecx
+; X86-NEXT:    movl $858927408, %edx # imm = 0x33323130
+; X86-NEXT:    xorl (%eax), %edx
 ; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
@@ -521,9 +523,11 @@ define i1 @length8_eq_const(ptr %X) nounwind {
 define i1 @length9_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length9_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $9
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -537,9 +541,11 @@ define i1 @length9_eq(ptr %X, ptr %Y) nounwind {
 define i1 @length10_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length10_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $10
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -553,9 +559,11 @@ define i1 @length10_eq(ptr %X, ptr %Y) nounwind {
 define i1 @length11_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length11_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $11
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -569,9 +577,11 @@ define i1 @length11_eq(ptr %X, ptr %Y) nounwind {
 define i1 @length12_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length12_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $12
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -585,9 +595,11 @@ define i1 @length12_eq(ptr %X, ptr %Y) nounwind {
 define i32 @length12(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length12:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $12
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -598,9 +610,11 @@ define i32 @length12(ptr %X, ptr %Y) nounwind {
 define i1 @length13_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length13_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $13
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -614,9 +628,11 @@ define i1 @length13_eq(ptr %X, ptr %Y) nounwind {
 define i1 @length14_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length14_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $14
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -630,9 +646,11 @@ define i1 @length14_eq(ptr %X, ptr %Y) nounwind {
 define i32 @length15(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length15:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $15
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -643,9 +661,11 @@ define i32 @length15(ptr %X, ptr %Y) nounwind {
 define i1 @length15_lt(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length15_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $15
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -659,9 +679,10 @@ define i1 @length15_lt(ptr %X, ptr %Y) nounwind {
 define i32 @length15_const(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length15_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $15
 ; X86-NEXT:    pushl $.L.str+1
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -672,9 +693,11 @@ define i32 @length15_const(ptr %X, ptr %Y) nounwind {
 define i1 @length15_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length15_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $15
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -688,9 +711,10 @@ define i1 @length15_eq(ptr %X, ptr %Y) nounwind {
 define i1 @length15_gt_const(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length15_gt_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $15
 ; X86-NEXT:    pushl $.L.str+1
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -706,9 +730,11 @@ define i1 @length15_gt_const(ptr %X, ptr %Y) nounwind {
 define i32 @length16(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length16:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $16
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -719,9 +745,11 @@ define i32 @length16(ptr %X, ptr %Y) nounwind {
 define i1 @length16_eq(ptr %x, ptr %y) nounwind {
 ; X86-NOSSE-LABEL: length16_eq:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    pushl $16
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    pushl %ecx
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -730,9 +758,11 @@ define i1 @length16_eq(ptr %x, ptr %y) nounwind {
 ;
 ; X86-SSE1-LABEL: length16_eq:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    pushl $16
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    pushl %ecx
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -742,8 +772,8 @@ define i1 @length16_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE2-LABEL: length16_eq:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm1
 ; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; X86-SSE2-NEXT:    pmovmskb %xmm1, %eax
@@ -754,8 +784,8 @@ define i1 @length16_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE41-LABEL: length16_eq:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm1
 ; X86-SSE41-NEXT:    pxor %xmm0, %xmm1
 ; X86-SSE41-NEXT:    ptest %xmm1, %xmm1
@@ -769,9 +799,11 @@ define i1 @length16_eq(ptr %x, ptr %y) nounwind {
 define i1 @length16_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length16_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $16
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -785,9 +817,11 @@ define i1 @length16_lt(ptr %x, ptr %y) nounwind {
 define i1 @length16_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length16_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $16
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -801,9 +835,10 @@ define i1 @length16_gt(ptr %x, ptr %y) nounwind {
 define i1 @length16_eq_const(ptr %X) nounwind {
 ; X86-NOSSE-LABEL: length16_eq_const:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    pushl $16
 ; X86-NOSSE-NEXT:    pushl $.L.str
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -812,9 +847,10 @@ define i1 @length16_eq_const(ptr %X) nounwind {
 ;
 ; X86-SSE1-LABEL: length16_eq_const:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    pushl $16
 ; X86-SSE1-NEXT:    pushl $.L.str
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -849,9 +885,11 @@ define i1 @length16_eq_const(ptr %X) nounwind {
 define i32 @length24(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length24:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $24
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -862,9 +900,11 @@ define i32 @length24(ptr %X, ptr %Y) nounwind {
 define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ; X86-NOSSE-LABEL: length24_eq:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    pushl $24
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    pushl %ecx
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -873,9 +913,11 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ;
 ; X86-SSE1-LABEL: length24_eq:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    pushl $24
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    pushl %ecx
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -885,9 +927,9 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE2-LABEL: length24_eq:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE2-NEXT:    movdqu 8(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu 8(%eax), %xmm1
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X86-SSE2-NEXT:    movdqu 8(%eax), %xmm0
@@ -901,9 +943,9 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE41-LABEL: length24_eq:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE41-NEXT:    movdqu 8(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu 8(%eax), %xmm1
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
 ; X86-SSE41-NEXT:    movdqu 8(%eax), %xmm0
@@ -920,9 +962,11 @@ define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 define i1 @length24_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length24_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $24
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -936,9 +980,11 @@ define i1 @length24_lt(ptr %x, ptr %y) nounwind {
 define i1 @length24_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length24_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $24
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -952,9 +998,10 @@ define i1 @length24_gt(ptr %x, ptr %y) nounwind {
 define i1 @length24_eq_const(ptr %X) nounwind {
 ; X86-NOSSE-LABEL: length24_eq_const:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    pushl $24
 ; X86-NOSSE-NEXT:    pushl $.L.str
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -963,9 +1010,10 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 ;
 ; X86-SSE1-LABEL: length24_eq_const:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    pushl $24
 ; X86-SSE1-NEXT:    pushl $.L.str
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -1004,9 +1052,11 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 define i32 @length31(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length31:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $31
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1017,9 +1067,11 @@ define i32 @length31(ptr %X, ptr %Y) nounwind {
 define i1 @length31_eq(ptr %x, ptr %y) nounwind {
 ; X86-NOSSE-LABEL: length31_eq:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    pushl $31
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    pushl %ecx
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -1028,9 +1080,11 @@ define i1 @length31_eq(ptr %x, ptr %y) nounwind {
 ;
 ; X86-SSE1-LABEL: length31_eq:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    pushl $31
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    pushl %ecx
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -1040,9 +1094,9 @@ define i1 @length31_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE2-LABEL: length31_eq:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE2-NEXT:    movdqu 15(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu 15(%eax), %xmm1
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X86-SSE2-NEXT:    movdqu 15(%eax), %xmm0
@@ -1056,9 +1110,9 @@ define i1 @length31_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE41-LABEL: length31_eq:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE41-NEXT:    movdqu 15(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu 15(%eax), %xmm1
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
 ; X86-SSE41-NEXT:    movdqu 15(%eax), %xmm0
@@ -1075,9 +1129,11 @@ define i1 @length31_eq(ptr %x, ptr %y) nounwind {
 define i1 @length31_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length31_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $31
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1091,9 +1147,11 @@ define i1 @length31_lt(ptr %x, ptr %y) nounwind {
 define i1 @length31_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length31_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $31
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1107,9 +1165,11 @@ define i1 @length31_gt(ptr %x, ptr %y) nounwind {
 define i1 @length31_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"="128" {
 ; X86-NOSSE-LABEL: length31_eq_prefer128:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    pushl $31
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    pushl %ecx
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -1118,9 +1178,11 @@ define i1 @length31_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 ;
 ; X86-SSE1-LABEL: length31_eq_prefer128:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    pushl $31
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    pushl %ecx
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -1130,9 +1192,9 @@ define i1 @length31_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 ; X86-SSE2-LABEL: length31_eq_prefer128:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE2-NEXT:    movdqu 15(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu 15(%eax), %xmm1
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X86-SSE2-NEXT:    movdqu 15(%eax), %xmm0
@@ -1146,9 +1208,9 @@ define i1 @length31_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 ; X86-SSE41-LABEL: length31_eq_prefer128:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE41-NEXT:    movdqu 15(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu 15(%eax), %xmm1
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
 ; X86-SSE41-NEXT:    movdqu 15(%eax), %xmm0
@@ -1165,9 +1227,10 @@ define i1 @length31_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 define i1 @length31_eq_const(ptr %X) nounwind {
 ; X86-NOSSE-LABEL: length31_eq_const:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    pushl $31
 ; X86-NOSSE-NEXT:    pushl $.L.str
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -1176,9 +1239,10 @@ define i1 @length31_eq_const(ptr %X) nounwind {
 ;
 ; X86-SSE1-LABEL: length31_eq_const:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    pushl $31
 ; X86-SSE1-NEXT:    pushl $.L.str
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -1217,9 +1281,11 @@ define i1 @length31_eq_const(ptr %X) nounwind {
 define i32 @length32(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $32
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1232,9 +1298,11 @@ define i32 @length32(ptr %X, ptr %Y) nounwind {
 define i1 @length32_eq(ptr %x, ptr %y) nounwind {
 ; X86-NOSSE-LABEL: length32_eq:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    pushl $32
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    pushl %ecx
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -1243,9 +1311,11 @@ define i1 @length32_eq(ptr %x, ptr %y) nounwind {
 ;
 ; X86-SSE1-LABEL: length32_eq:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    pushl $32
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    pushl %ecx
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -1255,9 +1325,9 @@ define i1 @length32_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE2-LABEL: length32_eq:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm1
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
@@ -1271,9 +1341,9 @@ define i1 @length32_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE41-LABEL: length32_eq:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm1
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
 ; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm0
@@ -1290,9 +1360,11 @@ define i1 @length32_eq(ptr %x, ptr %y) nounwind {
 define i1 @length32_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length32_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $32
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1306,9 +1378,11 @@ define i1 @length32_lt(ptr %x, ptr %y) nounwind {
 define i1 @length32_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length32_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $32
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1322,9 +1396,11 @@ define i1 @length32_gt(ptr %x, ptr %y) nounwind {
 define i1 @length32_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"="128" {
 ; X86-NOSSE-LABEL: length32_eq_prefer128:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    pushl $32
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    pushl %ecx
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -1333,9 +1409,11 @@ define i1 @length32_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 ;
 ; X86-SSE1-LABEL: length32_eq_prefer128:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    pushl $32
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    pushl %ecx
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -1345,9 +1423,9 @@ define i1 @length32_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 ; X86-SSE2-LABEL: length32_eq_prefer128:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm1
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
@@ -1361,9 +1439,9 @@ define i1 @length32_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 ; X86-SSE41-LABEL: length32_eq_prefer128:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm1
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
 ; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
 ; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm0
@@ -1380,9 +1458,10 @@ define i1 @length32_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 define i1 @length32_eq_const(ptr %X) nounwind {
 ; X86-NOSSE-LABEL: length32_eq_const:
 ; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    pushl $32
 ; X86-NOSSE-NEXT:    pushl $.L.str
-; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl %eax
 ; X86-NOSSE-NEXT:    calll memcmp
 ; X86-NOSSE-NEXT:    addl $12, %esp
 ; X86-NOSSE-NEXT:    testl %eax, %eax
@@ -1391,9 +1470,10 @@ define i1 @length32_eq_const(ptr %X) nounwind {
 ;
 ; X86-SSE1-LABEL: length32_eq_const:
 ; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    pushl $32
 ; X86-SSE1-NEXT:    pushl $.L.str
-; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl %eax
 ; X86-SSE1-NEXT:    calll memcmp
 ; X86-SSE1-NEXT:    addl $12, %esp
 ; X86-SSE1-NEXT:    testl %eax, %eax
@@ -1432,9 +1512,11 @@ define i1 @length32_eq_const(ptr %X) nounwind {
 define i32 @length48(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length48:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $48
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1445,9 +1527,11 @@ define i32 @length48(ptr %X, ptr %Y) nounwind {
 define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length48_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $48
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1461,9 +1545,11 @@ define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 define i1 @length48_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length48_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $48
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1477,9 +1563,11 @@ define i1 @length48_lt(ptr %x, ptr %y) nounwind {
 define i1 @length48_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length48_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $48
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1493,9 +1581,11 @@ define i1 @length48_gt(ptr %x, ptr %y) nounwind {
 define i1 @length48_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"="128" {
 ; X86-LABEL: length48_eq_prefer128:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $48
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1509,9 +1599,10 @@ define i1 @length48_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 define i1 @length48_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length48_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $48
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1525,9 +1616,11 @@ define i1 @length48_eq_const(ptr %X) nounwind {
 define i32 @length63(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length63:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $63
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1538,9 +1631,11 @@ define i32 @length63(ptr %X, ptr %Y) nounwind {
 define i1 @length63_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length63_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $63
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1554,9 +1649,11 @@ define i1 @length63_eq(ptr %x, ptr %y) nounwind {
 define i1 @length63_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length63_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $63
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1570,9 +1667,11 @@ define i1 @length63_lt(ptr %x, ptr %y) nounwind {
 define i1 @length63_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length63_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $63
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1586,9 +1685,10 @@ define i1 @length63_gt(ptr %x, ptr %y) nounwind {
 define i1 @length63_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length63_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $63
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1602,9 +1702,11 @@ define i1 @length63_eq_const(ptr %X) nounwind {
 define i32 @length64(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length64:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $64
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1615,9 +1717,11 @@ define i32 @length64(ptr %X, ptr %Y) nounwind {
 define i1 @length64_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length64_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $64
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1631,9 +1735,11 @@ define i1 @length64_eq(ptr %x, ptr %y) nounwind {
 define i1 @length64_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length64_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $64
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1647,9 +1753,11 @@ define i1 @length64_lt(ptr %x, ptr %y) nounwind {
 define i1 @length64_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length64_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $64
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1663,9 +1771,10 @@ define i1 @length64_gt(ptr %x, ptr %y) nounwind {
 define i1 @length64_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length64_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $64
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1679,9 +1788,11 @@ define i1 @length64_eq_const(ptr %X) nounwind {
 define i32 @length96(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length96:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $96
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1692,9 +1803,11 @@ define i32 @length96(ptr %X, ptr %Y) nounwind {
 define i1 @length96_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length96_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $96
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1708,9 +1821,11 @@ define i1 @length96_eq(ptr %x, ptr %y) nounwind {
 define i1 @length96_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length96_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $96
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1724,9 +1839,11 @@ define i1 @length96_lt(ptr %x, ptr %y) nounwind {
 define i1 @length96_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length96_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $96
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1740,9 +1857,10 @@ define i1 @length96_gt(ptr %x, ptr %y) nounwind {
 define i1 @length96_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length96_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $96
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1756,9 +1874,11 @@ define i1 @length96_eq_const(ptr %X) nounwind {
 define i32 @length127(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length127:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $127
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1769,9 +1889,11 @@ define i32 @length127(ptr %X, ptr %Y) nounwind {
 define i1 @length127_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length127_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $127
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1785,9 +1907,11 @@ define i1 @length127_eq(ptr %x, ptr %y) nounwind {
 define i1 @length127_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length127_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $127
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1801,9 +1925,11 @@ define i1 @length127_lt(ptr %x, ptr %y) nounwind {
 define i1 @length127_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length127_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $127
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1817,9 +1943,10 @@ define i1 @length127_gt(ptr %x, ptr %y) nounwind {
 define i1 @length127_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length127_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $127
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1833,9 +1960,11 @@ define i1 @length127_eq_const(ptr %X) nounwind {
 define i32 @length128(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length128:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $128
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1846,9 +1975,11 @@ define i32 @length128(ptr %X, ptr %Y) nounwind {
 define i1 @length128_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length128_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $128
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1862,9 +1993,11 @@ define i1 @length128_eq(ptr %x, ptr %y) nounwind {
 define i1 @length128_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length128_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $128
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1878,9 +2011,11 @@ define i1 @length128_lt(ptr %x, ptr %y) nounwind {
 define i1 @length128_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length128_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $128
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1894,9 +2029,10 @@ define i1 @length128_gt(ptr %x, ptr %y) nounwind {
 define i1 @length128_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length128_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $128
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1910,9 +2046,11 @@ define i1 @length128_eq_const(ptr %X) nounwind {
 define i32 @length192(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length192:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $192
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -1923,9 +2061,11 @@ define i32 @length192(ptr %X, ptr %Y) nounwind {
 define i1 @length192_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length192_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $192
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1939,9 +2079,11 @@ define i1 @length192_eq(ptr %x, ptr %y) nounwind {
 define i1 @length192_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length192_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $192
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -1955,9 +2097,11 @@ define i1 @length192_lt(ptr %x, ptr %y) nounwind {
 define i1 @length192_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length192_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $192
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1971,9 +2115,10 @@ define i1 @length192_gt(ptr %x, ptr %y) nounwind {
 define i1 @length192_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length192_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $192
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -1987,9 +2132,11 @@ define i1 @length192_eq_const(ptr %X) nounwind {
 define i32 @length255(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length255:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $255
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -2000,9 +2147,11 @@ define i32 @length255(ptr %X, ptr %Y) nounwind {
 define i1 @length255_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length255_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $255
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2016,9 +2165,11 @@ define i1 @length255_eq(ptr %x, ptr %y) nounwind {
 define i1 @length255_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length255_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $255
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -2032,9 +2183,11 @@ define i1 @length255_lt(ptr %x, ptr %y) nounwind {
 define i1 @length255_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length255_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $255
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2048,9 +2201,10 @@ define i1 @length255_gt(ptr %x, ptr %y) nounwind {
 define i1 @length255_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length255_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $255
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2064,9 +2218,11 @@ define i1 @length255_eq_const(ptr %X) nounwind {
 define i32 @length256(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length256:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $256 # imm = 0x100
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -2077,9 +2233,11 @@ define i32 @length256(ptr %X, ptr %Y) nounwind {
 define i1 @length256_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length256_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $256 # imm = 0x100
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2093,9 +2251,11 @@ define i1 @length256_eq(ptr %x, ptr %y) nounwind {
 define i1 @length256_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length256_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $256 # imm = 0x100
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -2109,9 +2269,11 @@ define i1 @length256_lt(ptr %x, ptr %y) nounwind {
 define i1 @length256_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length256_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $256 # imm = 0x100
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2125,9 +2287,10 @@ define i1 @length256_gt(ptr %x, ptr %y) nounwind {
 define i1 @length256_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length256_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $256 # imm = 0x100
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2141,9 +2304,11 @@ define i1 @length256_eq_const(ptr %X) nounwind {
 define i32 @length384(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length384:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $384 # imm = 0x180
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -2154,9 +2319,11 @@ define i32 @length384(ptr %X, ptr %Y) nounwind {
 define i1 @length384_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length384_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $384 # imm = 0x180
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2170,9 +2337,11 @@ define i1 @length384_eq(ptr %x, ptr %y) nounwind {
 define i1 @length384_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length384_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $384 # imm = 0x180
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -2186,9 +2355,11 @@ define i1 @length384_lt(ptr %x, ptr %y) nounwind {
 define i1 @length384_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length384_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $384 # imm = 0x180
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2202,9 +2373,10 @@ define i1 @length384_gt(ptr %x, ptr %y) nounwind {
 define i1 @length384_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length384_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $384 # imm = 0x180
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2218,9 +2390,11 @@ define i1 @length384_eq_const(ptr %X) nounwind {
 define i32 @length511(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length511:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $511 # imm = 0x1FF
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -2231,9 +2405,11 @@ define i32 @length511(ptr %X, ptr %Y) nounwind {
 define i1 @length511_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length511_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $511 # imm = 0x1FF
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2247,9 +2423,11 @@ define i1 @length511_eq(ptr %x, ptr %y) nounwind {
 define i1 @length511_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length511_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $511 # imm = 0x1FF
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -2263,9 +2441,11 @@ define i1 @length511_lt(ptr %x, ptr %y) nounwind {
 define i1 @length511_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length511_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $511 # imm = 0x1FF
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2279,9 +2459,10 @@ define i1 @length511_gt(ptr %x, ptr %y) nounwind {
 define i1 @length511_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length511_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $511 # imm = 0x1FF
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2295,9 +2476,11 @@ define i1 @length511_eq_const(ptr %X) nounwind {
 define i32 @length512(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: length512:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $512 # imm = 0x200
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -2308,9 +2491,11 @@ define i32 @length512(ptr %X, ptr %Y) nounwind {
 define i1 @length512_eq(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length512_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $512 # imm = 0x200
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2324,9 +2509,11 @@ define i1 @length512_eq(ptr %x, ptr %y) nounwind {
 define i1 @length512_lt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length512_lt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $512 # imm = 0x200
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    shrl $31, %eax
@@ -2340,9 +2527,11 @@ define i1 @length512_lt(ptr %x, ptr %y) nounwind {
 define i1 @length512_gt(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: length512_gt:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $512 # imm = 0x200
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2356,9 +2545,10 @@ define i1 @length512_gt(ptr %x, ptr %y) nounwind {
 define i1 @length512_eq_const(ptr %X) nounwind {
 ; X86-LABEL: length512_eq_const:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl $512 # imm = 0x200
 ; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2373,9 +2563,11 @@ define i1 @length512_eq_const(ptr %X) nounwind {
 define i32 @huge_length(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: huge_length:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $-1
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -2386,9 +2578,11 @@ define i32 @huge_length(ptr %X, ptr %Y) nounwind {
 define i1 @huge_length_eq(ptr %X, ptr %Y) nounwind {
 ; X86-LABEL: huge_length_eq:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $-1
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax
@@ -2411,9 +2605,12 @@ define i32 @nonconst_length(ptr %X, ptr %Y, i32 %size) nounwind {
 define i1 @nonconst_length_eq(ptr %X, ptr %Y, i32 %size) nounwind {
 ; X86-LABEL: nonconst_length_eq:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll memcmp
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    testl %eax, %eax

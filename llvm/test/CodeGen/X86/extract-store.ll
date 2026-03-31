@@ -11,9 +11,9 @@
 define void @extract_i8_0(ptr nocapture %dst, <16 x i8> %foo) nounwind {
 ; SSE2-X86-LABEL: extract_i8_0:
 ; SSE2-X86:       # %bb.0:
-; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-X86-NEXT:    movd %xmm0, %ecx
-; SSE2-X86-NEXT:    movb %cl, (%eax)
+; SSE2-X86-NEXT:    movd %xmm0, %eax
+; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE2-X86-NEXT:    movb %al, (%ecx)
 ; SSE2-X86-NEXT:    retl
 ;
 ; SSE2-X64-LABEL: extract_i8_0:
@@ -51,10 +51,10 @@ define void @extract_i8_0(ptr nocapture %dst, <16 x i8> %foo) nounwind {
 define void @extract_i8_3(ptr nocapture %dst, <16 x i8> %foo) nounwind {
 ; SSE2-X86-LABEL: extract_i8_3:
 ; SSE2-X86:       # %bb.0:
-; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-X86-NEXT:    movd %xmm0, %ecx
-; SSE2-X86-NEXT:    shrl $24, %ecx
-; SSE2-X86-NEXT:    movb %cl, (%eax)
+; SSE2-X86-NEXT:    movd %xmm0, %eax
+; SSE2-X86-NEXT:    shrl $24, %eax
+; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE2-X86-NEXT:    movb %al, (%ecx)
 ; SSE2-X86-NEXT:    retl
 ;
 ; SSE2-X64-LABEL: extract_i8_3:
@@ -93,9 +93,9 @@ define void @extract_i8_3(ptr nocapture %dst, <16 x i8> %foo) nounwind {
 define void @extract_i8_15(ptr nocapture %dst, <16 x i8> %foo) nounwind {
 ; SSE2-X86-LABEL: extract_i8_15:
 ; SSE2-X86:       # %bb.0:
-; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-X86-NEXT:    pextrw $7, %xmm0, %ecx
-; SSE2-X86-NEXT:    movb %ch, (%eax)
+; SSE2-X86-NEXT:    pextrw $7, %xmm0, %eax
+; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE2-X86-NEXT:    movb %ah, (%ecx)
 ; SSE2-X86-NEXT:    retl
 ;
 ; SSE2-X64-LABEL: extract_i8_15:
@@ -133,9 +133,9 @@ define void @extract_i8_15(ptr nocapture %dst, <16 x i8> %foo) nounwind {
 define void @extract_i16_0(ptr nocapture %dst, <8 x i16> %foo) nounwind {
 ; SSE2-X86-LABEL: extract_i16_0:
 ; SSE2-X86:       # %bb.0:
-; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-X86-NEXT:    movd %xmm0, %ecx
-; SSE2-X86-NEXT:    movw %cx, (%eax)
+; SSE2-X86-NEXT:    movd %xmm0, %eax
+; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE2-X86-NEXT:    movw %ax, (%ecx)
 ; SSE2-X86-NEXT:    retl
 ;
 ; SSE2-X64-LABEL: extract_i16_0:
@@ -173,9 +173,9 @@ define void @extract_i16_0(ptr nocapture %dst, <8 x i16> %foo) nounwind {
 define void @extract_i16_7(ptr nocapture %dst, <8 x i16> %foo) nounwind {
 ; SSE2-X86-LABEL: extract_i16_7:
 ; SSE2-X86:       # %bb.0:
-; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-X86-NEXT:    pextrw $7, %xmm0, %ecx
-; SSE2-X86-NEXT:    movw %cx, (%eax)
+; SSE2-X86-NEXT:    pextrw $7, %xmm0, %eax
+; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE2-X86-NEXT:    movw %ax, (%ecx)
 ; SSE2-X86-NEXT:    retl
 ;
 ; SSE2-X64-LABEL: extract_i16_7:
@@ -240,8 +240,8 @@ define void @extract_i32_0(ptr nocapture %dst, <4 x i32> %foo) nounwind {
 define void @extract_i32_3(ptr nocapture %dst, <4 x i32> %foo) nounwind {
 ; SSE2-X86-LABEL: extract_i32_3:
 ; SSE2-X86:       # %bb.0:
-; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-X86-NEXT:    movd %xmm0, (%eax)
 ; SSE2-X86-NEXT:    retl
 ;
@@ -307,8 +307,8 @@ define void @extract_i64_0(ptr nocapture %dst, <2 x i64> %foo) nounwind {
 define void @extract_i64_1(ptr nocapture %dst, <2 x i64> %foo) nounwind {
 ; SSE-X86-LABEL: extract_i64_1:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    movq %xmm0, (%eax)
 ; SSE-X86-NEXT:    retl
 ;
@@ -325,8 +325,8 @@ define void @extract_i64_1(ptr nocapture %dst, <2 x i64> %foo) nounwind {
 ;
 ; AVX-X86-LABEL: extract_i64_1:
 ; AVX-X86:       # %bb.0:
-; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-X86-NEXT:    vmovlps %xmm0, (%eax)
 ; AVX-X86-NEXT:    retl
 ;
@@ -369,8 +369,8 @@ define void @extract_f32_0(ptr nocapture %dst, <4 x float> %foo) nounwind {
 define void @extract_f32_3(ptr nocapture %dst, <4 x float> %foo) nounwind {
 ; SSE2-X86-LABEL: extract_f32_3:
 ; SSE2-X86:       # %bb.0:
-; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSE2-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-X86-NEXT:    movss %xmm0, (%eax)
 ; SSE2-X86-NEXT:    retl
 ;
@@ -463,19 +463,15 @@ define void @extract_f64_1(ptr nocapture %dst, <2 x double> %foo) nounwind {
 define void @extract_f128_0(ptr nocapture %dst, <2 x fp128> %foo) nounwind {
 ; SSE-X86-LABEL: extract_f128_0:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    pushl %edi
-; SSE-X86-NEXT:    pushl %esi
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SSE-X86-NEXT:    movl %esi, 12(%edi)
-; SSE-X86-NEXT:    movl %edx, 8(%edi)
-; SSE-X86-NEXT:    movl %ecx, 4(%edi)
-; SSE-X86-NEXT:    movl %eax, (%edi)
-; SSE-X86-NEXT:    popl %esi
-; SSE-X86-NEXT:    popl %edi
+; SSE-X86-NEXT:    movl %ecx, 12(%edx)
+; SSE-X86-NEXT:    movl %eax, 8(%edx)
+; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE-X86-NEXT:    movl %ecx, 4(%edx)
+; SSE-X86-NEXT:    movl %eax, (%edx)
 ; SSE-X86-NEXT:    retl
 ;
 ; SSE-X64-LABEL: extract_f128_0:
@@ -502,19 +498,15 @@ define void @extract_f128_0(ptr nocapture %dst, <2 x fp128> %foo) nounwind {
 define void @extract_f128_1(ptr nocapture %dst, <2 x fp128> %foo) nounwind {
 ; SSE-X86-LABEL: extract_f128_1:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    pushl %edi
-; SSE-X86-NEXT:    pushl %esi
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SSE-X86-NEXT:    movl %esi, 12(%edi)
-; SSE-X86-NEXT:    movl %edx, 8(%edi)
-; SSE-X86-NEXT:    movl %ecx, 4(%edi)
-; SSE-X86-NEXT:    movl %eax, (%edi)
-; SSE-X86-NEXT:    popl %esi
-; SSE-X86-NEXT:    popl %edi
+; SSE-X86-NEXT:    movl %ecx, 12(%edx)
+; SSE-X86-NEXT:    movl %eax, 8(%edx)
+; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SSE-X86-NEXT:    movl %ecx, 4(%edx)
+; SSE-X86-NEXT:    movl %eax, (%edx)
 ; SSE-X86-NEXT:    retl
 ;
 ; SSE-X64-LABEL: extract_f128_1:

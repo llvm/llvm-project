@@ -5,8 +5,8 @@
 define void @big_nonzero_16_bytes(ptr nocapture %a) {
 ; X32-LABEL: big_nonzero_16_bytes:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [1,2,3,4]
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovups %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
@@ -33,8 +33,8 @@ define void @big_nonzero_16_bytes(ptr nocapture %a) {
 define void @big_nonzero_16_bytes_big64bit_constants(ptr nocapture %a) {
 ; X32-LABEL: big_nonzero_16_bytes_big64bit_constants:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,3]
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovups %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
@@ -57,8 +57,8 @@ define void @big_nonzero_16_bytes_big64bit_constants(ptr nocapture %a) {
 define void @big_nonzero_32_bytes_splat(ptr nocapture %a) {
 ; X32-LABEL: big_nonzero_32_bytes_splat:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovups %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
@@ -93,16 +93,16 @@ define void @big_nonzero_32_bytes_splat(ptr nocapture %a) {
 define void @big_nonzero_63_bytes(ptr nocapture %a) {
 ; X32-LABEL: big_nonzero_63_bytes:
 ; X32:       # %bb.0:
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [5,0,6,0]
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovups %xmm0, 32(%eax)
 ; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [1,0,2,0,3,0,4,0]
 ; X32-NEXT:    vmovups %ymm0, (%eax)
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [5,0,6,0]
-; X32-NEXT:    vmovups %xmm0, 32(%eax)
 ; X32-NEXT:    movl $0, 52(%eax)
 ; X32-NEXT:    movl $7, 48(%eax)
-; X32-NEXT:    movl $8, 56(%eax)
-; X32-NEXT:    movw $9, 60(%eax)
 ; X32-NEXT:    movb $10, 62(%eax)
+; X32-NEXT:    movw $9, 60(%eax)
+; X32-NEXT:    movl $8, 56(%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;

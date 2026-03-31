@@ -472,19 +472,19 @@ define i32 @load_i32_by_i8_bswap_store_in_between(ptr %arg, ptr %arg1) {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %esi, -8
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzbl 1(%eax), %ecx
 ; CHECK-NEXT:    movzbl (%eax), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl $0, (%esi)
 ; CHECK-NEXT:    shll $24, %edx
-; CHECK-NEXT:    movzbl 1(%eax), %esi
-; CHECK-NEXT:    movl $0, (%ecx)
-; CHECK-NEXT:    shll $16, %esi
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movzbl 2(%eax), %ecx
-; CHECK-NEXT:    shll $8, %ecx
-; CHECK-NEXT:    orl %esi, %ecx
+; CHECK-NEXT:    shll $16, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
+; CHECK-NEXT:    movzbl 2(%eax), %edx
+; CHECK-NEXT:    shll $8, %edx
+; CHECK-NEXT:    orl %ecx, %edx
 ; CHECK-NEXT:    movzbl 3(%eax), %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    orl %edx, %eax
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
@@ -532,17 +532,17 @@ define i32 @load_i32_by_i8_bswap_unrelated_load(ptr %arg, ptr %arg1) {
 ; CHECK-LABEL: load_i32_by_i8_bswap_unrelated_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzbl (%ecx), %edx
-; CHECK-NEXT:    shll $24, %edx
-; CHECK-NEXT:    movzbl 1(%eax), %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    movzbl 2(%ecx), %edx
-; CHECK-NEXT:    shll $8, %edx
-; CHECK-NEXT:    orl %eax, %edx
-; CHECK-NEXT:    movzbl 3(%ecx), %eax
-; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    movzbl (%eax), %ecx
+; CHECK-NEXT:    shll $24, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movzbl 1(%edx), %edx
+; CHECK-NEXT:    shll $16, %edx
+; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    movzbl 2(%eax), %ecx
+; CHECK-NEXT:    shll $8, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
+; CHECK-NEXT:    movzbl 3(%eax), %eax
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_bswap_unrelated_load:
@@ -894,7 +894,7 @@ define i32 @load_i32_by_i8_base_offset_index(ptr %arg, i32 %i) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
+; CHECK-NEXT:    movl 12(%ecx,%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_base_offset_index:
@@ -939,7 +939,7 @@ define i32 @load_i32_by_i8_base_offset_index_2(ptr %arg, i32 %i) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 13(%eax,%ecx), %eax
+; CHECK-NEXT:    movl 13(%ecx,%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_base_offset_index_2:
@@ -995,7 +995,7 @@ define i32 @load_i32_by_i8_zaext_loads(ptr %arg, i32 %arg1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
+; CHECK-NEXT:    movl 12(%ecx,%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_zaext_loads:
@@ -1051,7 +1051,7 @@ define i32 @load_i32_by_i8_zsext_loads(ptr %arg, i32 %arg1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
+; CHECK-NEXT:    movl 12(%ecx,%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_zsext_loads:
@@ -1288,11 +1288,11 @@ define i32 @pr80911_vector_load_multiuse(ptr %ptr, ptr %clobber) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl (%edx), %esi
-; CHECK-NEXT:    movzwl (%edx), %eax
-; CHECK-NEXT:    movl $0, (%ecx)
-; CHECK-NEXT:    movl %esi, (%edx)
+; CHECK-NEXT:    movzwl (%ecx), %eax
+; CHECK-NEXT:    movl (%ecx), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl $0, (%esi)
+; CHECK-NEXT:    movl %edx, (%ecx)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 ;

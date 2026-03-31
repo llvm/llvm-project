@@ -13,11 +13,11 @@ define float @ldexpf_too_many_args(float %a, i32 %b, i32 %c) nounwind {
 ; CHECK-WIN-LABEL: ldexpf_too_many_args:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    subl $12, %esp
-; CHECK-WIN-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-WIN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-WIN-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-WIN-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-WIN-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    fstps (%esp)
 ; CHECK-WIN-NEXT:    calll _ldexpf
 ; CHECK-WIN-NEXT:    addl $12, %esp
@@ -37,9 +37,9 @@ define float @ldexp_wrong_fp_type(float %a, i32 %b) nounwind {
 ; CHECK-WIN-LABEL: ldexp_wrong_fp_type:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    subl $8, %esp
-; CHECK-WIN-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-WIN-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-WIN-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    fstps (%esp)
 ; CHECK-WIN-NEXT:    calll _ldexp
 ; CHECK-WIN-NEXT:    addl $8, %esp

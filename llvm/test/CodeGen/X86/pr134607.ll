@@ -6,8 +6,8 @@
 define void @store_v2f32_constant(ptr %v) {
 ; X86-LABEL: store_v2f32_constant:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movaps {{.*#+}} xmm0 = [2.56E+2,5.12E+2,u,u]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movlps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

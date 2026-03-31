@@ -342,13 +342,13 @@ define void @add() strictfp {
 ;
 ; X86-F16C-LABEL: add:
 ; X86-F16C:       # %bb.0:
-; X86-F16C-NEXT:    movzwl a, %eax
+; X86-F16C-NEXT:    movzwl b, %eax
 ; X86-F16C-NEXT:    vmovd %eax, %xmm0
 ; X86-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; X86-F16C-NEXT:    movzwl b, %eax
+; X86-F16C-NEXT:    movzwl a, %eax
 ; X86-F16C-NEXT:    vmovd %eax, %xmm1
 ; X86-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; X86-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; X86-F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; X86-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0

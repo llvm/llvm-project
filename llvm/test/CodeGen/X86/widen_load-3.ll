@@ -13,14 +13,14 @@ define <7 x i64> @load7_aligned(ptr %x) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl 52(%ecx), %edx
+; X86-SSE-NEXT:    movl %edx, 52(%eax)
+; X86-SSE-NEXT:    movl 48(%ecx), %edx
+; X86-SSE-NEXT:    movl %edx, 48(%eax)
+; X86-SSE-NEXT:    movaps 32(%ecx), %xmm0
+; X86-SSE-NEXT:    movaps %xmm0, 32(%eax)
 ; X86-SSE-NEXT:    movaps (%ecx), %xmm0
 ; X86-SSE-NEXT:    movaps 16(%ecx), %xmm1
-; X86-SSE-NEXT:    movaps 32(%ecx), %xmm2
-; X86-SSE-NEXT:    movl 48(%ecx), %edx
-; X86-SSE-NEXT:    movl 52(%ecx), %ecx
-; X86-SSE-NEXT:    movl %ecx, 52(%eax)
-; X86-SSE-NEXT:    movl %edx, 48(%eax)
-; X86-SSE-NEXT:    movaps %xmm2, 32(%eax)
 ; X86-SSE-NEXT:    movaps %xmm1, 16(%eax)
 ; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl $4
@@ -29,12 +29,12 @@ define <7 x i64> @load7_aligned(ptr %x) nounwind {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    vmovaps 48(%ecx), %xmm0
+; X86-AVX-NEXT:    vextractps $1, %xmm0, 52(%eax)
+; X86-AVX-NEXT:    vmovss %xmm0, 48(%eax)
+; X86-AVX-NEXT:    vmovaps 32(%ecx), %xmm0
+; X86-AVX-NEXT:    vmovaps %xmm0, 32(%eax)
 ; X86-AVX-NEXT:    vmovaps (%ecx), %ymm0
-; X86-AVX-NEXT:    vmovaps 48(%ecx), %xmm1
-; X86-AVX-NEXT:    vextractps $1, %xmm1, 52(%eax)
-; X86-AVX-NEXT:    vmovss %xmm1, 48(%eax)
-; X86-AVX-NEXT:    vmovaps 32(%ecx), %xmm1
-; X86-AVX-NEXT:    vmovaps %xmm1, 32(%eax)
 ; X86-AVX-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl $4
@@ -72,14 +72,14 @@ define <7 x i64> @load7_unaligned(ptr %x) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl 52(%ecx), %edx
+; X86-SSE-NEXT:    movl %edx, 52(%eax)
+; X86-SSE-NEXT:    movl 48(%ecx), %edx
+; X86-SSE-NEXT:    movl %edx, 48(%eax)
+; X86-SSE-NEXT:    movups 32(%ecx), %xmm0
+; X86-SSE-NEXT:    movaps %xmm0, 32(%eax)
 ; X86-SSE-NEXT:    movups (%ecx), %xmm0
 ; X86-SSE-NEXT:    movups 16(%ecx), %xmm1
-; X86-SSE-NEXT:    movups 32(%ecx), %xmm2
-; X86-SSE-NEXT:    movl 48(%ecx), %edx
-; X86-SSE-NEXT:    movl 52(%ecx), %ecx
-; X86-SSE-NEXT:    movl %ecx, 52(%eax)
-; X86-SSE-NEXT:    movl %edx, 48(%eax)
-; X86-SSE-NEXT:    movaps %xmm2, 32(%eax)
 ; X86-SSE-NEXT:    movaps %xmm1, 16(%eax)
 ; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl $4
@@ -88,13 +88,13 @@ define <7 x i64> @load7_unaligned(ptr %x) nounwind {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    vmovups (%ecx), %ymm0
-; X86-AVX-NEXT:    vmovups 32(%ecx), %xmm1
+; X86-AVX-NEXT:    movl 52(%ecx), %edx
+; X86-AVX-NEXT:    movl %edx, 52(%eax)
 ; X86-AVX-NEXT:    movl 48(%ecx), %edx
-; X86-AVX-NEXT:    movl 52(%ecx), %ecx
-; X86-AVX-NEXT:    movl %ecx, 52(%eax)
 ; X86-AVX-NEXT:    movl %edx, 48(%eax)
-; X86-AVX-NEXT:    vmovaps %xmm1, 32(%eax)
+; X86-AVX-NEXT:    vmovups 32(%ecx), %xmm0
+; X86-AVX-NEXT:    vmovaps %xmm0, 32(%eax)
+; X86-AVX-NEXT:    vmovups (%ecx), %ymm0
 ; X86-AVX-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl $4
@@ -133,21 +133,21 @@ define void @load_split(ptr %ld, ptr %st1, ptr %st2) nounwind {
 ; X86-SSE-LABEL: load_split:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movups (%edx), %xmm0
-; X86-SSE-NEXT:    movups 16(%edx), %xmm1
-; X86-SSE-NEXT:    movups %xmm0, (%ecx)
+; X86-SSE-NEXT:    movups (%eax), %xmm0
+; X86-SSE-NEXT:    movups 16(%eax), %xmm1
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movups %xmm0, (%eax)
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movups %xmm1, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: load_split:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX-NEXT:    vmovups (%edx), %ymm0
-; X86-AVX-NEXT:    vmovups %xmm0, (%ecx)
+; X86-AVX-NEXT:    vmovups (%eax), %ymm0
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    vmovups %xmm0, (%eax)
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vextractf128 $1, %ymm0, (%eax)
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
@@ -179,26 +179,26 @@ define void @load_split_more(ptr %src, ptr %idx, ptr %dst) nounwind {
 ; X86-SSE-LABEL: load_split_more:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl (%eax), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movups (%edx), %xmm0
 ; X86-SSE-NEXT:    movups 16(%edx), %xmm1
-; X86-SSE-NEXT:    movl (%ecx), %edx
-; X86-SSE-NEXT:    movups %xmm0, (%eax,%edx,4)
-; X86-SSE-NEXT:    movl 4(%ecx), %ecx
-; X86-SSE-NEXT:    movups %xmm1, (%eax,%ecx,4)
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    movups %xmm0, (%edx,%ecx,4)
+; X86-SSE-NEXT:    movl 4(%eax), %eax
+; X86-SSE-NEXT:    movups %xmm1, (%edx,%eax,4)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: load_split_more:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    movl (%eax), %ecx
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX-NEXT:    vmovups (%edx), %ymm0
-; X86-AVX-NEXT:    movl (%ecx), %edx
-; X86-AVX-NEXT:    vmovups %xmm0, (%eax,%edx,4)
-; X86-AVX-NEXT:    movl 4(%ecx), %ecx
-; X86-AVX-NEXT:    vextractf128 $1, %ymm0, (%eax,%ecx,4)
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-AVX-NEXT:    vmovups %xmm0, (%edx,%ecx,4)
+; X86-AVX-NEXT:    movl 4(%eax), %eax
+; X86-AVX-NEXT:    vextractf128 $1, %ymm0, (%edx,%eax,4)
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
 ;

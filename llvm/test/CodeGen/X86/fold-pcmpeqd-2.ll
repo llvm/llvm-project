@@ -26,7 +26,11 @@ define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 
 ; X86-NEXT:    retl
 ; X86-NEXT:  LBB0_3: ## %forbody
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $88, %esp
+; X86-NEXT:    subl $104, %esp
+; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, (%esp)
 ; X86-NEXT:    movaps {{.*#+}} xmm1 = [1.28E+2,1.28E+2,1.28E+2,1.28E+2]
 ; X86-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    cvttps2dq %xmm1, %xmm0
@@ -51,45 +55,43 @@ define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; X86-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; X86-NEXT:    mulps %xmm0, %xmm0
-; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; X86-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; X86-NEXT:    cmpunordps %xmm0, %xmm0
+; X86-NEXT:    mulps %xmm0, %xmm0
 ; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; X86-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $0, (%esp)
+; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
+; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
+; X86-NEXT:    cmpunordps %xmm0, %xmm0
+; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    xorps %xmm3, %xmm3
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 ## 16-byte Reload
+; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 ## 16-byte Reload
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 ## 16-byte Reload
 ; X86-NEXT:    calll *%esi
+; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, (%esp)
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; X86-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    psubd {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 ## 16-byte Folded Reload
+; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
+; X86-NEXT:    psubd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Folded Reload
+; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; X86-NEXT:    pxor %xmm0, %xmm0
-; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $0, (%esp)
+; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
+; X86-NEXT:    orps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Folded Reload
+; X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; X86-NEXT:    xorps %xmm3, %xmm3
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 ## 16-byte Reload

@@ -578,9 +578,9 @@ define <32 x half> @fneg_v32f16(ptr %p) nounwind {
 ;
 ; X86-AVX512VL-LABEL: fneg_v32f16:
 ; X86-AVX512VL:       # %bb.0:
-; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VL-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VL-NEXT:    vpxorq (%eax), %zmm0, %zmm0
 ; X86-AVX512VL-NEXT:    retl
 ;
@@ -593,9 +593,9 @@ define <32 x half> @fneg_v32f16(ptr %p) nounwind {
 ;
 ; X86-AVX512VLDQ-LABEL: fneg_v32f16:
 ; X86-AVX512VLDQ:       # %bb.0:
-; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VLDQ-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-AVX512VLDQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VLDQ-NEXT:    vpxorq (%eax), %zmm0, %zmm0
 ; X86-AVX512VLDQ-NEXT:    retl
 ;

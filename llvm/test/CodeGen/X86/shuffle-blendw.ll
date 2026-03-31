@@ -15,9 +15,9 @@ define <16 x i16> @blendw_to_blendd_32(<16 x i16> %x, <16 x i16> %y, <16 x i16> 
 ; X86-SSE41-NEXT:    movl %esp, %ebp
 ; X86-SSE41-NEXT:    andl $-16, %esp
 ; X86-SSE41-NEXT:    subl $16, %esp
-; X86-SSE41-NEXT:    paddw 40(%ebp), %xmm1
 ; X86-SSE41-NEXT:    paddw 24(%ebp), %xmm0
 ; X86-SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; X86-SSE41-NEXT:    paddw 40(%ebp), %xmm1
 ; X86-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],mem[2,3],xmm1[4,5],mem[6,7]
 ; X86-SSE41-NEXT:    movl %ebp, %esp
 ; X86-SSE41-NEXT:    popl %ebp
@@ -139,9 +139,9 @@ define <16 x i16> @blendw_to_blendd_fail_32(<16 x i16> %x, <16 x i16> %y, <16 x 
 ; X86-SSE41-NEXT:    movl %esp, %ebp
 ; X86-SSE41-NEXT:    andl $-16, %esp
 ; X86-SSE41-NEXT:    subl $16, %esp
-; X86-SSE41-NEXT:    paddw 40(%ebp), %xmm1
 ; X86-SSE41-NEXT:    paddw 24(%ebp), %xmm0
 ; X86-SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[3],xmm0[4,5],xmm2[6,7]
+; X86-SSE41-NEXT:    paddw 40(%ebp), %xmm1
 ; X86-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2],mem[3],xmm1[4,5],mem[6,7]
 ; X86-SSE41-NEXT:    movl %ebp, %esp
 ; X86-SSE41-NEXT:    popl %ebp

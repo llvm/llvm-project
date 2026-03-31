@@ -14,14 +14,14 @@ target triple = "i686-apple-darwin8"
 define void @test(ptr byval({ double, double })  %z, ptr %P) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [NaN,NaN]
+; CHECK-NEXT:    movsd _G, %xmm1 ## xmm1 = mem[0],zero
+; CHECK-NEXT:    andpd %xmm0, %xmm1
 ; CHECK-NEXT:    movl 20(%esp), %eax
-; CHECK-NEXT:    movsd _G, %xmm0 ## xmm0 = mem[0],zero
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
-; CHECK-NEXT:    andpd %xmm1, %xmm0
-; CHECK-NEXT:    movlpd %xmm0, (%eax)
+; CHECK-NEXT:    movlpd %xmm1, (%eax)
 ; CHECK-NEXT:    movsd 4(%esp), %xmm2 ## xmm2 = mem[0],zero
-; CHECK-NEXT:    andpd %xmm1, %xmm2
-; CHECK-NEXT:    addsd %xmm0, %xmm2
+; CHECK-NEXT:    andpd %xmm0, %xmm2
+; CHECK-NEXT:    addsd %xmm1, %xmm2
 ; CHECK-NEXT:    movsd %xmm2, (%eax)
 ; CHECK-NEXT:    retl
 entry:
@@ -56,12 +56,11 @@ define <2 x double> @test3(<2 x double> %x, <2 x double> %y) alignstack(32) noun
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-32, %esp
-; CHECK-NEXT:    subl $64, %esp
-; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
+; CHECK-NEXT:    subl $32, %esp
+; CHECK-NEXT:    mulpd %xmm1, %xmm0
+; CHECK-NEXT:    movapd %xmm0, (%esp) ## 16-byte Spill
 ; CHECK-NEXT:    calll _test2
-; CHECK-NEXT:    movapd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; CHECK-NEXT:    mulpd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Folded Reload
+; CHECK-NEXT:    movaps (%esp), %xmm0 ## 16-byte Reload
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl

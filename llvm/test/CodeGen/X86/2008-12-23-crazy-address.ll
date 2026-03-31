@@ -29,18 +29,16 @@ entry:
 define void @bar(i32 %i) nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    subl $40, %esp
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll frob@PLT
 ; CHECK-NEXT:    addl $4, %esp
-; CHECK-NEXT:    leal X(%esp,%esi,4), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    leal X(%esp,%eax,4), %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll borf@PLT
 ; CHECK-NEXT:    addl $44, %esp
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:
 	%Y = alloca [10 x i32]

@@ -43,8 +43,8 @@ define <8 x i32> @cmp_ne_sitofp(<8 x i32> %x) {
 define <8 x i32> @cmp_slt_fail_no_const(<8 x i32> %x, <8 x i32> %y) {
 ; X86-LABEL: cmp_slt_fail_no_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; X86-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
@@ -95,17 +95,29 @@ define <8 x i32> @cmp_sgt_fail_no_bounds(<8 x i32> %x, <8 x i32> %y) {
 }
 
 define <8 x i32> @cmp_sgt_bitcast(<8 x i32> %xx, <8 x i32> %yy) {
-; CHECK-LABEL: cmp_sgt_bitcast:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040]
-; CHECK-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; CHECK-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: cmp_sgt_bitcast:
+; X86:       # %bb.0:
+; X86-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040]
+; X86-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; X86-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X86-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; X86-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; X86-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
+; X86-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: cmp_sgt_bitcast:
+; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040]
+; X64-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; X64-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; X64-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; X64-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
+; X64-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-NEXT:    retq
   %x = and <8 x i32> %xx, <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>
   %y = and <8 x i32> %yy, <i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040, i32 2139095040>
 

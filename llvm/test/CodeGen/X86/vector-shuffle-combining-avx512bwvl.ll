@@ -169,13 +169,21 @@ define <8 x i32> @concat_vrotli_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
 }
 
 define <8 x i32> @concat_vrotlv_v4i32(<4 x i32> %a0, <4 x i32> %a1, <8 x i32> %a2) {
-; CHECK-LABEL: concat_vrotlv_v4i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; CHECK-NEXT:    vprolvd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vprolvd %xmm3, %xmm1, %xmm1
-; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: concat_vrotlv_v4i32:
+; X86:       # %bb.0:
+; X86-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; X86-NEXT:    vprolvd %xmm3, %xmm1, %xmm1
+; X86-NEXT:    vprolvd %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: concat_vrotlv_v4i32:
+; X64:       # %bb.0:
+; X64-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; X64-NEXT:    vprolvd %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vprolvd %xmm3, %xmm1, %xmm1
+; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    retq
   %lo = shufflevector <8 x i32> %a2, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %hi = shufflevector <8 x i32> %a2, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %r0 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> %lo)
@@ -199,15 +207,15 @@ define <8 x i16> @demandedelts_vpermvar_32i16_v8i16(<32 x i16> %x0) {
 define void @PR46178(ptr %0) {
 ; X86-LABEL: PR46178:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqu 0, %ymm0
-; X86-NEXT:    vmovdqu (%eax), %ymm1
 ; X86-NEXT:    vpmovqw %ymm0, %xmm0
+; X86-NEXT:    vmovdqu (%eax), %ymm1
 ; X86-NEXT:    vpmovqw %ymm1, %xmm1
 ; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    vpsllw $8, %ymm0, %ymm0
 ; X86-NEXT:    vpsraw $8, %ymm0, %ymm0
 ; X86-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqu %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl

@@ -4,18 +4,18 @@
 define void @PR111170(<16 x i32> %x_load, ptr %offsetsPtr.i) {
 ; CHECK-LABEL: PR111170:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2.80259693E-44,2.80259693E-44,2.80259693E-44,2.80259693E-44]
+; CHECK-NEXT:    vpmulld %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2.80259693E-44,2.80259693E-44,2.80259693E-44,2.80259693E-44]
-; CHECK-NEXT:    vpmulld %xmm2, %xmm1, %xmm3
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpmulld %xmm2, %xmm0, %xmm4
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqu %xmm0, 16(%eax)
-; CHECK-NEXT:    vmovdqu %xmm4, (%eax)
-; CHECK-NEXT:    vmovdqu %xmm1, 48(%eax)
-; CHECK-NEXT:    vmovdqu %xmm3, 32(%eax)
+; CHECK-NEXT:    vmovdqu %xmm2, 16(%eax)
+; CHECK-NEXT:    vpmulld %xmm3, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqu %xmm0, (%eax)
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; CHECK-NEXT:    vpmulld %xmm3, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqu %xmm0, 48(%eax)
+; CHECK-NEXT:    vpmulld %xmm3, %xmm1, %xmm0
+; CHECK-NEXT:    vmovdqu %xmm0, 32(%eax)
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqu %xmm0, 16
 ; CHECK-NEXT:    vmovdqu %xmm0, 0

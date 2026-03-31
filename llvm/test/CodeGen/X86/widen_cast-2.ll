@@ -14,14 +14,14 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:  .LBB0_2: # %forbody
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    shll $5, %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movdqa (%edx,%eax), %xmm1
-; CHECK-NEXT:    movdqa 16(%edx,%eax), %xmm2
-; CHECK-NEXT:    psubw %xmm0, %xmm2
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movdqa (%ecx,%eax), %xmm1
+; CHECK-NEXT:    movdqa 16(%ecx,%eax), %xmm2
 ; CHECK-NEXT:    psubw %xmm0, %xmm1
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movdqa %xmm1, (%ecx,%eax)
+; CHECK-NEXT:    psubw %xmm0, %xmm2
 ; CHECK-NEXT:    movd %xmm2, 16(%ecx,%eax)
 ; CHECK-NEXT:    pextrd $1, %xmm2, 20(%ecx,%eax)
 ; CHECK-NEXT:    pextrd $2, %xmm2, 24(%ecx,%eax)

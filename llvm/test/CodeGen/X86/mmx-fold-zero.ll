@@ -11,9 +11,9 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movq 8(%ebp), %mm0
 ; X86-NEXT:    movq 16(%ebp), %mm5
 ; X86-NEXT:    movq %mm5, (%esp) # 8-byte Spill
+; X86-NEXT:    movq 8(%ebp), %mm0
 ; X86-NEXT:    movq %mm0, %mm3
 ; X86-NEXT:    paddd %mm5, %mm3
 ; X86-NEXT:    pxor %mm1, %mm1

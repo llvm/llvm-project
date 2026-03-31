@@ -13,9 +13,9 @@ define void @test1(<2 x float> %Q, ptr%P2) nounwind {
 ;
 ; X86-LABEL: test1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; X86-NEXT:    addss %xmm0, %xmm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movss %xmm1, (%eax)
 ; X86-NEXT:    retl
   %a = extractelement <2 x float> %Q, i32 0

@@ -482,9 +482,9 @@ define <64 x i8> @test_buildvector_v64i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 define <8 x double> @test_buildvector_8f64_2_var(double %a0, double %a1) {
 ; AVX512F-32-LABEL: test_buildvector_8f64_2_var:
 ; AVX512F-32:       # %bb.0:
-; AVX512F-32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0
 ; AVX512F-32-NEXT:    movb $-126, %al
 ; AVX512F-32-NEXT:    kmovw %eax, %k1
+; AVX512F-32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0
 ; AVX512F-32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0 {%k1}
 ; AVX512F-32-NEXT:    retl
 ;
@@ -498,9 +498,9 @@ define <8 x double> @test_buildvector_8f64_2_var(double %a0, double %a1) {
 ;
 ; AVX512BW-32-LABEL: test_buildvector_8f64_2_var:
 ; AVX512BW-32:       # %bb.0:
-; AVX512BW-32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0
 ; AVX512BW-32-NEXT:    movb $-126, %al
 ; AVX512BW-32-NEXT:    kmovd %eax, %k1
+; AVX512BW-32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0
 ; AVX512BW-32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0 {%k1}
 ; AVX512BW-32-NEXT:    retl
 ;
@@ -525,11 +525,11 @@ define <8 x double> @test_buildvector_8f64_2_var(double %a0, double %a1) {
 define <8 x double> @test_buildvector_8f64_2_load(ptr %p0, ptr %p1) {
 ; AVX512F-32-LABEL: test_buildvector_8f64_2_load:
 ; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    movb $-126, %al
+; AVX512F-32-NEXT:    kmovw %eax, %k1
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX512F-32-NEXT:    vbroadcastsd (%ecx), %zmm0
-; AVX512F-32-NEXT:    movb $-126, %cl
-; AVX512F-32-NEXT:    kmovw %ecx, %k1
+; AVX512F-32-NEXT:    vbroadcastsd (%eax), %zmm0
+; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vbroadcastsd (%eax), %zmm0 {%k1}
 ; AVX512F-32-NEXT:    retl
 ;
@@ -543,11 +543,11 @@ define <8 x double> @test_buildvector_8f64_2_load(ptr %p0, ptr %p1) {
 ;
 ; AVX512BW-32-LABEL: test_buildvector_8f64_2_load:
 ; AVX512BW-32:       # %bb.0:
+; AVX512BW-32-NEXT:    movb $-126, %al
+; AVX512BW-32-NEXT:    kmovd %eax, %k1
 ; AVX512BW-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512BW-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX512BW-32-NEXT:    vbroadcastsd (%ecx), %zmm0
-; AVX512BW-32-NEXT:    movb $-126, %cl
-; AVX512BW-32-NEXT:    kmovd %ecx, %k1
+; AVX512BW-32-NEXT:    vbroadcastsd (%eax), %zmm0
+; AVX512BW-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512BW-32-NEXT:    vbroadcastsd (%eax), %zmm0 {%k1}
 ; AVX512BW-32-NEXT:    retl
 ;
@@ -622,10 +622,10 @@ define <16 x float> @test_buildvector_16f32_2_var(float %a0, float %a1) {
 define <16 x float> @test_buildvector_16f32_2_load(ptr %p0, ptr %p1) {
 ; AVX-32-LABEL: test_buildvector_16f32_2_load:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,17,0,0]
-; AVX-32-NEXT:    vbroadcastss (%ecx), %xmm1
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX-32-NEXT:    vbroadcastss (%eax), %xmm1
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-32-NEXT:    vpermi2ps %zmm1, %zmm2, %zmm0
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm3 = xmm2[0],xmm1[1,2,3]

@@ -49,36 +49,34 @@ define <4 x double> @concat_vpermv3_ops_vpermv_swap_v4f64(ptr %p0, <4 x i64> %m)
 define void @PR142995(ptr %p0, ptr %p1, ptr %p2) nounwind #0 {
 ; X86-LABEL: PR142995:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    movw $1031, %ax # imm = 0x407
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movb $17, %bl
-; X86-NEXT:    kmovw %ebx, %k1
-; X86-NEXT:    vmovdqu32 (%edx), %ymm0 {%k1} {z}
+; X86-NEXT:    vmovdqu32 (%eax), %zmm0 {%k1} {z}
 ; X86-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    movw $6144, %dx # imm = 0x1800
-; X86-NEXT:    kmovw %edx, %k1
-; X86-NEXT:    vmovdqu32 128(%ecx), %zmm2 {%k1} {z}
-; X86-NEXT:    movw $1031, %dx # imm = 0x407
-; X86-NEXT:    kmovw %edx, %k1
-; X86-NEXT:    vmovdqu32 (%ecx), %zmm3 {%k1} {z}
-; X86-NEXT:    vpbroadcastd 252(%ecx), %zmm4
-; X86-NEXT:    vpbroadcastd %xmm1, %xmm5
-; X86-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm5[4,5,6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; X86-NEXT:    vpunpckldq {{.*#+}} zmm2 = zmm4[0],zmm2[0],zmm4[1],zmm2[1],zmm4[4],zmm2[4],zmm4[5],zmm2[5],zmm4[8],zmm2[8],zmm4[9],zmm2[9],zmm4[12],zmm2[12],zmm4[13],zmm2[13]
-; X86-NEXT:    vextracti32x4 $3, %zmm2, %xmm2
-; X86-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
-; X86-NEXT:    vpaddd %xmm1, %xmm5, %xmm1
+; X86-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    movw $6144, %cx # imm = 0x1800
+; X86-NEXT:    kmovw %ecx, %k1
+; X86-NEXT:    vmovdqu32 128(%eax), %zmm3 {%k1} {z}
+; X86-NEXT:    vpbroadcastd 252(%eax), %zmm0
+; X86-NEXT:    vpunpckldq {{.*#+}} zmm3 = zmm0[0],zmm3[0],zmm0[1],zmm3[1],zmm0[4],zmm3[4],zmm0[5],zmm3[5],zmm0[8],zmm3[8],zmm0[9],zmm3[9],zmm0[12],zmm3[12],zmm0[13],zmm3[13]
+; X86-NEXT:    vextracti32x4 $3, %zmm3, %xmm3
+; X86-NEXT:    vpblendd {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3]
+; X86-NEXT:    vpbroadcastd %xmm1, %xmm1
+; X86-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[4,5,6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero
+; X86-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; X86-NEXT:    movb $17, %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovdqu32 (%eax), %ymm2 {%k1} {z}
 ; X86-NEXT:    vmovdqu %xmm1, (%eax)
-; X86-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [4,0,10,0,4,4,14,0]
-; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vpermi2d %ymm2, %ymm0, %ymm1
-; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm4[1],ymm1[2,3,4,5,6,7]
-; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2],ymm2[3],ymm0[4,5,6,7]
+; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [4,0,10,0,4,4,14,0]
+; X86-NEXT:    vpermi2d %ymm1, %ymm2, %ymm3
+; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2,3,4,5,6,7]
+; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqu %ymm0, (%eax)
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -142,11 +140,11 @@ define <8 x double> @PR143606(ptr %px, ptr %py) {
 ; X86-LABEL: PR143606:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovapd (%ecx), %ymm0
-; X86-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0],mem[1,2],ymm0[3]
-; X86-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],mem[0],ymm0[2],mem[3]
-; X86-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; X86-NEXT:    vmovapd (%eax), %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vshufpd {{.*#+}} ymm1 = ymm0[1],mem[0],ymm0[2],mem[3]
+; X86-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3]
+; X86-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR143606:

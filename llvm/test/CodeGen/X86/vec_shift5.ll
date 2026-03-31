@@ -175,8 +175,8 @@ define <2 x i64> @test16() {
 define <4 x i32> @test17(<4 x i32> %a0, ptr %dummy) {
 ; X86-LABEL: test17:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -194,8 +194,8 @@ define <4 x i32> @test17(<4 x i32> %a0, ptr %dummy) {
 define <4 x i32> @test18(<4 x i32> %a0, ptr %dummy) {
 ; X86-LABEL: test18:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -252,17 +252,29 @@ define <4 x i32> @extelt1_add_psrli_v4i32(<4 x i32> %x, <4 x i32> %y){
 }
 
 define i32 @extelt1_add_psrai_v4i32_uses(<4 x i32> %x, <4 x i32> %y){
-; CHECK-LABEL: extelt1_add_psrai_v4i32_uses:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    addl $3, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; CHECK-NEXT:    psrad %xmm1, %xmm0
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    imull %ecx, %eax
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: extelt1_add_psrai_v4i32_uses:
+; X86:       # %bb.0:
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X86-NEXT:    movd %xmm1, %ecx
+; X86-NEXT:    addl $3, %ecx
+; X86-NEXT:    movd %ecx, %xmm1
+; X86-NEXT:    psrad %xmm1, %xmm0
+; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    imull %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: extelt1_add_psrai_v4i32_uses:
+; X64:       # %bb.0:
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X64-NEXT:    movd %xmm1, %ecx
+; X64-NEXT:    addl $3, %ecx
+; X64-NEXT:    movd %ecx, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-NEXT:    psrad %xmm1, %xmm0
+; X64-NEXT:    movd %xmm0, %eax
+; X64-NEXT:    imull %ecx, %eax
+; X64-NEXT:    retq
   %ext = extractelement <4 x i32> %y, i64 1
   %bo = add i32 %ext, 3
   %r = tail call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %x, i32 %bo)
@@ -272,14 +284,23 @@ define i32 @extelt1_add_psrai_v4i32_uses(<4 x i32> %x, <4 x i32> %y){
 }
 
 define <4 x i32> @extelt0_twice_sub_pslli_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z){
-; CHECK-LABEL: extelt0_twice_sub_pslli_v4i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
-; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    pslld %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: extelt0_twice_sub_pslli_v4i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movd %xmm2, %eax
+; X86-NEXT:    movd %xmm1, %ecx
+; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    movd %ecx, %xmm1
+; X86-NEXT:    pslld %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: extelt0_twice_sub_pslli_v4i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movd %xmm1, %eax
+; X64-NEXT:    movd %xmm2, %ecx
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    movd %eax, %xmm1
+; X64-NEXT:    pslld %xmm1, %xmm0
+; X64-NEXT:    retq
   %ext1 = extractelement <4 x i32> %y, i64 0
   %ext2 = extractelement <4 x i32> %z, i64 0
   %bo = sub i32 %ext1, %ext2

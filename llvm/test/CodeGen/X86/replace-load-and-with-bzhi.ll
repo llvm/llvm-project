@@ -91,10 +91,10 @@ define i64 @f64_bzhi(i64 %x, i64 %y) local_unnamed_addr {
 ;
 ; X86-LABEL: f64_bzhi:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl fill_table64+4(,%eax,8), %edx
-; X86-NEXT:    movl fill_table64(,%eax,8), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl fill_table64(,%ecx,8), %eax
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table64+4(,%ecx,8), %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 entry:
@@ -133,10 +133,10 @@ define i64 @f64_bzhi_partial(i64 %x, i64 %y) local_unnamed_addr {
 ;
 ; X86-LABEL: f64_bzhi_partial:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl fill_table64_partial+4(,%eax,8), %edx
-; X86-NEXT:    movl fill_table64_partial(,%eax,8), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl fill_table64_partial(,%ecx,8), %eax
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table64_partial+4(,%ecx,8), %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 entry:

@@ -97,8 +97,8 @@ define <4 x double> @test_x86_avx2_gather_d_pd_256(ptr %a1, <4 x i32> %idx, <4 x
 define <2 x i64> @test_mm_i32gather_epi32(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i32gather_epi32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vpgatherdd %xmm2, (%eax,%xmm0,2), %xmm1
 ; X86-NEXT:    vmovdqa %xmm1, %xmm0
@@ -123,9 +123,9 @@ declare <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32>, ptr, <4 x i32>, <4 x i32>
 define <2 x double> @test_mm_i32gather_pd(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm_i32gather_pd:
 ; X86:       # %bb.0:
+; X86-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; X86-NEXT:    vgatherdpd %xmm2, (%eax,%xmm0,2), %xmm1
 ; X86-NEXT:    vmovapd %xmm1, %xmm0
 ; X86-NEXT:    retl

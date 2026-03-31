@@ -110,10 +110,10 @@ define i1 @xor_not_bools(i1 zeroext %x, i1 zeroext %y) nounwind {
 define zeroext i1 @xor_not_cmps(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: xor_not_cmps:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $42, {{[0-9]+}}(%esp)
-; X86-NEXT:    setne %cl
 ; X86-NEXT:    cmpl $235, {{[0-9]+}}(%esp)
-; X86-NEXT:    sete %al
+; X86-NEXT:    sete %cl
+; X86-NEXT:    cmpl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    setne %al
 ; X86-NEXT:    xorb %cl, %al
 ; X86-NEXT:    xorb $1, %al
 ; X86-NEXT:    retl
@@ -137,14 +137,14 @@ define zeroext i1 @xor_not_cmps(i32 %x, i32 %y) nounwind {
 define zeroext i1 @xor_not_cmps_extra_use(i32 %x, i32 %y, ptr %p) nounwind {
 ; X86-LABEL: xor_not_cmps_extra_use:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpl $42, {{[0-9]+}}(%esp)
-; X86-NEXT:    setne %dl
 ; X86-NEXT:    cmpl $235, {{[0-9]+}}(%esp)
-; X86-NEXT:    sete %al
-; X86-NEXT:    xorb %dl, %al
-; X86-NEXT:    movzbl %al, %edx
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    sete %cl
+; X86-NEXT:    cmpl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    setne %al
+; X86-NEXT:    xorb %cl, %al
+; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, (%edx)
 ; X86-NEXT:    xorb $1, %al
 ; X86-NEXT:    retl
 ;

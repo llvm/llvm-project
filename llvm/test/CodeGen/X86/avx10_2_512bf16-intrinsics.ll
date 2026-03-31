@@ -171,8 +171,8 @@ define <32 x bfloat>@test_int_x86_avx512_mask_getexp_bf16_512(<32 x bfloat> %x0,
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_getexp_bf16_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vgetexpbf16 %zmm0, %zmm0 # encoding: [0x62,0xf6,0x7c,0x48,0x42,0xc0]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0xff,0x49,0x6f,0xc8]
 ; X86-NEXT:    vaddbf16 %zmm0, %zmm1, %zmm0 # encoding: [0x62,0xf5,0x75,0x48,0x58,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -219,8 +219,8 @@ define <32 x bfloat>@test_int_x86_avx512_mask_scalef_bf16_512(<32 x bfloat> %x0,
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_scalef_bf16_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vscalefbf16 %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf6,0x7c,0x48,0x2c,0xc1]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vmovdqu16 %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x49,0x6f,0xd0]
 ; X86-NEXT:    vaddbf16 %zmm0, %zmm2, %zmm0 # encoding: [0x62,0xf5,0x6d,0x48,0x58,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]

@@ -29,12 +29,12 @@ define i32 @rev16(i32 %a) {
 define i32 @not_rev16(i32 %a) {
 ; X86-LABEL: not_rev16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shll $8, %eax
-; X86-NEXT:    shrl $8, %ecx
-; X86-NEXT:    andl $65280, %ecx # imm = 0xFF00
-; X86-NEXT:    andl $16711680, %eax # imm = 0xFF0000
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shll $8, %ecx
+; X86-NEXT:    andl $16711680, %ecx # imm = 0xFF0000
+; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    andl $65280, %eax # imm = 0xFF00
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -61,8 +61,8 @@ define i32 @extra_maskop_uses2(i32 %a) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shll $8, %ecx
-; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    andl $-16711936, %ecx # imm = 0xFF00FF00
+; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    andl $16711935, %eax # imm = 0xFF00FF
 ; X86-NEXT:    leal (%eax,%ecx), %edx
 ; X86-NEXT:    imull %ecx, %eax
@@ -119,10 +119,10 @@ define i32 @different_shift_amount(i32 %a) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $9, %ecx
-; X86-NEXT:    shrl $8, %eax
-; X86-NEXT:    andl $-16712192, %ecx # imm = 0xFF00FE00
-; X86-NEXT:    andl $16711935, %eax # imm = 0xFF00FF
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $16711935, %ecx # imm = 0xFF00FF
+; X86-NEXT:    shll $9, %eax
+; X86-NEXT:    andl $-16712192, %eax # imm = 0xFF00FE00
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -170,10 +170,10 @@ define i32 @different_op(i32 %a) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $8, %ecx
-; X86-NEXT:    shrl $8, %eax
-; X86-NEXT:    addl $16711936, %ecx # imm = 0xFF0100
-; X86-NEXT:    andl $16711935, %eax # imm = 0xFF00FF
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $16711935, %ecx # imm = 0xFF00FF
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    addl $16711936, %eax # imm = 0xFF0100
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -197,12 +197,12 @@ define i32 @different_op(i32 %a) {
 define i32 @different_vars(i32 %a, i32 %b) {
 ; X86-LABEL: different_vars:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $8, %ecx
-; X86-NEXT:    shrl $8, %eax
-; X86-NEXT:    andl $-16711936, %ecx # imm = 0xFF00FF00
-; X86-NEXT:    andl $16711935, %eax # imm = 0xFF00FF
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $16711935, %ecx # imm = 0xFF00FF
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;

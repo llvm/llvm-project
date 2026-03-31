@@ -47,8 +47,8 @@ define i1 @hoeq_mem(ptr %xp, ptr %yp) {
 ; X86-LABEL: hoeq_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vucomxsh (%eax), %xmm0
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
@@ -69,8 +69,8 @@ define i1 @hune_mem(ptr %xp, ptr %yp) {
 ; X86-LABEL: hune_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vucomxsh (%eax), %xmm0
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
@@ -125,8 +125,8 @@ define i1 @foeq_mem(ptr %xp, ptr %yp) {
 ; X86-LABEL: foeq_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vucomxss (%eax), %xmm0
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
@@ -147,8 +147,8 @@ define i1 @fune_mem(ptr %xp, ptr %yp) {
 ; X86-LABEL: fune_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vucomxss (%eax), %xmm0
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
@@ -203,8 +203,8 @@ define i1 @doeq_mem(ptr %xp, ptr %yp) {
 ; X86-LABEL: doeq_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vucomxsd (%eax), %xmm0
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
@@ -225,8 +225,8 @@ define i1 @dune_mem(ptr %xp, ptr %yp) {
 ; X86-LABEL: dune_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vucomxsd (%eax), %xmm0
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
@@ -253,11 +253,12 @@ define i32 @PR118606(x86_fp80 %val1) #0 {
 ;
 ; X86-LABEL: PR118606:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    fld1
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldz
 ; X86-NEXT:    fucomi %st(1), %st
 ; X86-NEXT:    fstp %st(1)
-; X86-NEXT:    fld1
+; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fcmovne %st(1), %st
 ; X86-NEXT:    fcmovu %st(1), %st
 ; X86-NEXT:    fucompi %st(1), %st

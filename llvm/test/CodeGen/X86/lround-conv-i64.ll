@@ -193,15 +193,21 @@ define i64 @test_lround_i64_f128(fp128 %x) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    pushl 20(%ebp)
-; X86-NEXT:    pushl 16(%ebp)
-; X86-NEXT:    pushl 12(%ebp)
-; X86-NEXT:    pushl 8(%ebp)
+; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl 20(%ebp), %ecx
+; X86-NEXT:    movl 8(%ebp), %edx
+; X86-NEXT:    movl 12(%ebp), %esi
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll lroundl
 ; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    leal -4(%ebp), %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;

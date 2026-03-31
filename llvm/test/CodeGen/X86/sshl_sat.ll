@@ -32,18 +32,18 @@ define i16 @func(i16 %x, i16 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    movswl %dx, %edi
+; X86-NEXT:    shll %cl, %esi
+; X86-NEXT:    movswl %si, %edi
 ; X86-NEXT:    sarl %cl, %edi
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testw %si, %si
+; X86-NEXT:    testw %dx, %dx
 ; X86-NEXT:    sets %al
 ; X86-NEXT:    addl $32767, %eax # imm = 0x7FFF
-; X86-NEXT:    cmpw %di, %si
-; X86-NEXT:    cmovel %edx, %eax
+; X86-NEXT:    cmpw %di, %dx
+; X86-NEXT:    cmovel %esi, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -77,9 +77,9 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X86-LABEL: func2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    movswl %dx, %esi
@@ -128,9 +128,9 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shll $7, %ecx
-; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    movswl %dx, %esi
@@ -179,9 +179,9 @@ define i4 @func4(i4 %x, i4 %y) nounwind {
 ; X86-LABEL: func4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shlb $4, %dl
 ; X86-NEXT:    movb %dl, %ch
 ; X86-NEXT:    shlb %cl, %ch
@@ -288,9 +288,9 @@ define i18 @func6(i16 %x, i16 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shll $14, %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    shll %cl, %esi
 ; X86-NEXT:    movl %esi, %edi

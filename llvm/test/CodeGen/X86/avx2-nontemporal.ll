@@ -9,29 +9,29 @@ define i32 @f(<8 x float> %A, ptr %B, <4 x double> %C, <4 x i64> %E, <8 x i32> %
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-32, %esp
 ; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    vmovdqa 104(%ebp), %ymm3
-; X86-NEXT:    vmovdqa 72(%ebp), %ymm4
-; X86-NEXT:    vmovdqa 40(%ebp), %ymm5
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movl 136(%ebp), %edx
-; X86-NEXT:    movl (%edx), %eax
+; X86-NEXT:    movl 136(%ebp), %ecx
+; X86-NEXT:    movl (%ecx), %eax
 ; X86-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-NEXT:    vmovntps %ymm0, (%ecx)
+; X86-NEXT:    movl 8(%ebp), %edx
+; X86-NEXT:    vmovntps %ymm0, (%edx)
+; X86-NEXT:    addl (%ecx), %eax
 ; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm0
-; X86-NEXT:    addl (%edx), %eax
-; X86-NEXT:    vmovntdq %ymm0, (%ecx)
+; X86-NEXT:    vmovntdq %ymm0, (%edx)
+; X86-NEXT:    addl (%ecx), %eax
 ; X86-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
-; X86-NEXT:    addl (%edx), %eax
-; X86-NEXT:    vmovntpd %ymm0, (%ecx)
-; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm5, %ymm0
-; X86-NEXT:    addl (%edx), %eax
-; X86-NEXT:    vmovntdq %ymm0, (%ecx)
-; X86-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}, %ymm4, %ymm0
-; X86-NEXT:    addl (%edx), %eax
-; X86-NEXT:    vmovntdq %ymm0, (%ecx)
-; X86-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm0
-; X86-NEXT:    addl (%edx), %eax
-; X86-NEXT:    vmovntdq %ymm0, (%ecx)
+; X86-NEXT:    vmovntpd %ymm0, (%edx)
+; X86-NEXT:    addl (%ecx), %eax
+; X86-NEXT:    vmovdqa 40(%ebp), %ymm0
+; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vmovntdq %ymm0, (%edx)
+; X86-NEXT:    addl (%ecx), %eax
+; X86-NEXT:    vmovdqa 72(%ebp), %ymm0
+; X86-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vmovntdq %ymm0, (%edx)
+; X86-NEXT:    addl (%ecx), %eax
+; X86-NEXT:    vmovdqa 104(%ebp), %ymm0
+; X86-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vmovntdq %ymm0, (%edx)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    vzeroupper

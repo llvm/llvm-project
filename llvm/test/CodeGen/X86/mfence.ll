@@ -21,8 +21,8 @@ define void @test() {
 define i32 @fence(ptr %ptr) {
 ; X86-LABEL: fence:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mfence
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
 ;

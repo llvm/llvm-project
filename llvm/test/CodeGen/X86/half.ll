@@ -25,10 +25,10 @@ define void @test_load_store(ptr %in, ptr %out) #0 {
 ; CHECK-I686-LABEL: test_load_store:
 ; CHECK-I686:       # %bb.0:
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-I686-NEXT:    pinsrw $0, (%ecx), %xmm0
-; CHECK-I686-NEXT:    pextrw $0, %xmm0, %ecx
-; CHECK-I686-NEXT:    movw %cx, (%eax)
+; CHECK-I686-NEXT:    movw %ax, (%ecx)
 ; CHECK-I686-NEXT:    retl
   %val = load half, ptr %in
   store half %val, ptr %out
@@ -151,16 +151,14 @@ define void @test_trunc32(float %in, ptr %addr) #0 {
 ;
 ; CHECK-I686-LABEL: test_trunc32:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    subl $8, %esp
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    subl $12, %esp
 ; CHECK-I686-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    movd %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-I686-NEXT:    movw %ax, (%esi)
-; CHECK-I686-NEXT:    addl $8, %esp
-; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    movw %ax, (%ecx)
+; CHECK-I686-NEXT:    addl $12, %esp
 ; CHECK-I686-NEXT:    retl
   %val16 = fptrunc float %in to half
   store half %val16, ptr %addr
@@ -189,16 +187,14 @@ define void @test_trunc64(double %in, ptr %addr) #0 {
 ;
 ; CHECK-I686-LABEL: test_trunc64:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    subl $8, %esp
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    subl $12, %esp
 ; CHECK-I686-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-I686-NEXT:    movq %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncdfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-I686-NEXT:    movw %ax, (%esi)
-; CHECK-I686-NEXT:    addl $8, %esp
-; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    movw %ax, (%ecx)
+; CHECK-I686-NEXT:    addl $12, %esp
 ; CHECK-I686-NEXT:    retl
   %val16 = fptrunc double %in to half
   store half %val16, ptr %addr
@@ -269,9 +265,7 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ;
 ; CHECK-I686-LABEL: test_sitofp_i64:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    subl $24, %esp
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    subl $28, %esp
 ; CHECK-I686-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-I686-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    fildll {{[0-9]+}}(%esp)
@@ -280,9 +274,9 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ; CHECK-I686-NEXT:    movd %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-I686-NEXT:    movw %ax, (%esi)
-; CHECK-I686-NEXT:    addl $24, %esp
-; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    movw %ax, (%ecx)
+; CHECK-I686-NEXT:    addl $28, %esp
 ; CHECK-I686-NEXT:    retl
   %r = sitofp i64 %a to half
   store half %r, ptr %p
@@ -327,8 +321,8 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss %xmm1, %xmm0
 ; CHECK-I686-NEXT:    jae .LBB9_2
 ; CHECK-I686-NEXT:  # %bb.1:
@@ -401,21 +395,19 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ;
 ; CHECK-I686-LABEL: test_uitofp_i64:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    subl $24, %esp
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    subl $28, %esp
 ; CHECK-I686-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-I686-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-I686-NEXT:    shrl $31, %eax
 ; CHECK-I686-NEXT:    fildll {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; CHECK-I686-NEXT:    fstps (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-I686-NEXT:    movw %ax, (%esi)
-; CHECK-I686-NEXT:    addl $24, %esp
-; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    movw %ax, (%ecx)
+; CHECK-I686-NEXT:    addl $28, %esp
 ; CHECK-I686-NEXT:    retl
   %r = uitofp i64 %a to half
   store half %r, ptr %p
@@ -459,27 +451,24 @@ define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ;
 ; CHECK-I686-LABEL: test_extend32_vec4:
 ; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    pushl %edi
 ; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    subl $88, %esp
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
-; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    pinsrw $0, 6(%eax), %xmm0
-; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    pinsrw $0, 4(%eax), %xmm0
-; CHECK-I686-NEXT:    pinsrw $0, 2(%eax), %xmm1
-; CHECK-I686-NEXT:    pextrw $0, %xmm1, %eax
+; CHECK-I686-NEXT:    subl $52, %esp
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    pinsrw $0, 2(%esi), %xmm0
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
-; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
+; CHECK-I686-NEXT:    pinsrw $0, 4(%esi), %xmm0
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %edi
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; CHECK-I686-NEXT:    movw %si, (%esp)
-; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
+; CHECK-I686-NEXT:    movw %di, (%esp)
+; CHECK-I686-NEXT:    pinsrw $0, 6(%esi), %xmm0
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %edi
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; CHECK-I686-NEXT:    movw %si, (%esp)
-; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movw %di, (%esp)
+; CHECK-I686-NEXT:    pinsrw $0, (%esi), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    movw %si, (%esp)
@@ -497,8 +486,9 @@ define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-I686-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-I686-NEXT:    addl $88, %esp
+; CHECK-I686-NEXT:    addl $52, %esp
 ; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    popl %edi
 ; CHECK-I686-NEXT:    retl
   %a = load <4 x half>, ptr %p, align 8
   %b = fpext <4 x half> %a to <4 x float>
@@ -546,27 +536,24 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ;
 ; CHECK-I686-LABEL: test_extend64_vec4:
 ; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    pushl %edi
 ; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    subl $104, %esp
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-I686-NEXT:    pinsrw $0, 6(%eax), %xmm0
-; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
-; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    pinsrw $0, 2(%eax), %xmm0
-; CHECK-I686-NEXT:    pinsrw $0, 4(%eax), %xmm1
-; CHECK-I686-NEXT:    pextrw $0, %xmm1, %eax
+; CHECK-I686-NEXT:    subl $68, %esp
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    pinsrw $0, 4(%esi), %xmm0
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
-; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
+; CHECK-I686-NEXT:    pinsrw $0, 2(%esi), %xmm0
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %edi
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; CHECK-I686-NEXT:    movw %si, (%esp)
-; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
+; CHECK-I686-NEXT:    movw %di, (%esp)
+; CHECK-I686-NEXT:    pinsrw $0, (%esi), %xmm0
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %edi
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; CHECK-I686-NEXT:    movw %si, (%esp)
-; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    movw %di, (%esp)
+; CHECK-I686-NEXT:    pinsrw $0, 6(%esi), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    movw %si, (%esp)
@@ -581,8 +568,9 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; CHECK-I686-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; CHECK-I686-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-I686-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; CHECK-I686-NEXT:    addl $104, %esp
+; CHECK-I686-NEXT:    addl $68, %esp
 ; CHECK-I686-NEXT:    popl %esi
+; CHECK-I686-NEXT:    popl %edi
 ; CHECK-I686-NEXT:    retl
   %a = load <4 x half>, ptr %p, align 8
   %b = fpext <4 x half> %a to <4 x double>
@@ -632,17 +620,11 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; CHECK-I686-LABEL: test_trunc32_vec4:
 ; CHECK-I686:       # %bb.0:
 ; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    subl $88, %esp
+; CHECK-I686-NEXT:    subl $72, %esp
 ; CHECK-I686-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-I686-NEXT:    movaps %xmm0, %xmm1
-; CHECK-I686-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
+; CHECK-I686-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; CHECK-I686-NEXT:    movss %xmm1, (%esp)
-; CHECK-I686-NEXT:    calll __truncsfhf2
-; CHECK-I686-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-I686-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-I686-NEXT:    movss %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -653,7 +635,11 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-I686-NEXT:    movd %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-I686-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; CHECK-I686-NEXT:    movss %xmm1, (%esp)
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-I686-NEXT:    movw %ax, (%esi)
 ; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
@@ -661,10 +647,10 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, 4(%esi)
-; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, 2(%esi)
-; CHECK-I686-NEXT:    addl $88, %esp
+; CHECK-I686-NEXT:    addl $72, %esp
 ; CHECK-I686-NEXT:    popl %esi
 ; CHECK-I686-NEXT:    retl
   %v = fptrunc <4 x float> %a to <4 x half>
@@ -747,11 +733,6 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; CHECK-I686-NEXT:    subl $88, %esp
 ; CHECK-I686-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; CHECK-I686-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-I686-NEXT:    movlps %xmm0, (%esp)
-; CHECK-I686-NEXT:    calll __truncdfhf2
-; CHECK-I686-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-I686-NEXT:    movhps %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncdfhf2
 ; CHECK-I686-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -762,7 +743,10 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-I686-NEXT:    movhps %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncdfhf2
+; CHECK-I686-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-I686-NEXT:    movlps %xmm1, (%esp)
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-I686-NEXT:    movw %ax, 6(%esi)
 ; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
@@ -770,7 +754,7 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, 2(%esi)
-; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    calll __truncdfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esi)
 ; CHECK-I686-NEXT:    addl $88, %esp
@@ -854,18 +838,16 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ;
 ; CHECK-I686-LABEL: test_sitofp_fadd_i32:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    subl $60, %esp
-; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
-; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    xorps %xmm0, %xmm0
+; CHECK-I686-NEXT:    pushl %esi
+; CHECK-I686-NEXT:    subl $40, %esp
 ; CHECK-I686-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
+; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
 ; CHECK-I686-NEXT:    calll __truncsfhf2
-; CHECK-I686-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-I686-NEXT:    movw %ax, (%esp)
+; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    movw %si, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
@@ -880,7 +862,8 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
-; CHECK-I686-NEXT:    addl $60, %esp
+; CHECK-I686-NEXT:    addl $40, %esp
+; CHECK-I686-NEXT:    popl %esi
 ; CHECK-I686-NEXT:    retl
   %tmp0 = load half, ptr %b
   %tmp1 = sitofp i32 %a to half
@@ -924,14 +907,14 @@ define half @PR40273(half) #0 {
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-I686-NEXT:    xorl %eax, %eax
-; CHECK-I686-NEXT:    xorps %xmm1, %xmm1
-; CHECK-I686-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-I686-NEXT:    movl $15360, %ecx # imm = 0x3C00
-; CHECK-I686-NEXT:    cmovnel %ecx, %eax
-; CHECK-I686-NEXT:    cmovpl %ecx, %eax
-; CHECK-I686-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-I686-NEXT:    movl $15360, %eax # imm = 0x3C00
+; CHECK-I686-NEXT:    xorl %ecx, %ecx
+; CHECK-I686-NEXT:    pxor %xmm0, %xmm0
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    ucomiss %xmm0, %xmm1
+; CHECK-I686-NEXT:    cmovnel %eax, %ecx
+; CHECK-I686-NEXT:    cmovpl %eax, %ecx
+; CHECK-I686-NEXT:    pinsrw $0, %ecx, %xmm0
 ; CHECK-I686-NEXT:    addl $12, %esp
 ; CHECK-I686-NEXT:    retl
   %2 = fcmp une half %0, 0xH0000
@@ -976,9 +959,9 @@ define void @brcond(half %0) #0 {
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-I686-NEXT:    xorps %xmm1, %xmm1
-; CHECK-I686-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-I686-NEXT:    pxor %xmm0, %xmm0
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    ucomiss %xmm0, %xmm1
 ; CHECK-I686-NEXT:    setp %al
 ; CHECK-I686-NEXT:    setne %cl
 ; CHECK-I686-NEXT:    orb %al, %cl
@@ -1078,14 +1061,14 @@ define void @main.158() #0 {
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    xorps %xmm0, %xmm0
+; CHECK-I686-NEXT:    pxor %xmm0, %xmm0
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm1
 ; CHECK-I686-NEXT:    jae .LBB20_2
 ; CHECK-I686-NEXT:  # %bb.1: # %entry
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-I686-NEXT:    movd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-I686-NEXT:  .LBB20_2: # %entry
-; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    movd %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%eax)
@@ -1162,9 +1145,9 @@ define void @main.45() #0 {
 ; CHECK-I686-NEXT:    movw %si, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movl $32256, %eax # imm = 0x7E00
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-I686-NEXT:    movl $32256, %eax # imm = 0x7E00
 ; CHECK-I686-NEXT:    cmovnpl %esi, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%eax)
 ; CHECK-I686-NEXT:    addl $8, %esp
@@ -1204,9 +1187,9 @@ define half @fcopysign(half %x, half %y) {
 ;
 ; CHECK-I686-LABEL: fcopysign:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
 ; CHECK-I686-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-I686-NEXT:    por %xmm1, %xmm0
 ; CHECK-I686-NEXT:    retl
@@ -1302,14 +1285,12 @@ define half @pr61271(half %0, half %1) #0 {
 ;
 ; CHECK-I686-LABEL: pr61271:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    subl $44, %esp
-; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    subl $12, %esp
 ; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
-; CHECK-I686-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -1319,7 +1300,7 @@ define half @pr61271(half %0, half %1) #0 {
 ; CHECK-I686-NEXT:    minss {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    movss %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
-; CHECK-I686-NEXT:    addl $44, %esp
+; CHECK-I686-NEXT:    addl $12, %esp
 ; CHECK-I686-NEXT:    retl
   %3 = call fast half @llvm.minnum.f16(half %0, half %1)
   ret half %3
@@ -2055,38 +2036,38 @@ define void @pr63114() {
 ;
 ; CHECK-I686-LABEL: pr63114:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    movdqu (%eax), %xmm6
-; CHECK-I686-NEXT:    pshuflw {{.*#+}} xmm0 = xmm6[0,1,3,3,4,5,6,7]
-; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
-; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
-; CHECK-I686-NEXT:    pand %xmm1, %xmm0
-; CHECK-I686-NEXT:    movq {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
-; CHECK-I686-NEXT:    por %xmm2, %xmm0
-; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
-; CHECK-I686-NEXT:    pand %xmm3, %xmm0
-; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm4 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,60]
-; CHECK-I686-NEXT:    por %xmm4, %xmm0
-; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm5 = xmm6[0,1,2,3,4,5,7,7]
-; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
-; CHECK-I686-NEXT:    pand %xmm1, %xmm5
-; CHECK-I686-NEXT:    por %xmm2, %xmm5
-; CHECK-I686-NEXT:    pand %xmm3, %xmm5
-; CHECK-I686-NEXT:    por %xmm4, %xmm5
-; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm7 = xmm6[0,1,2,3,5,5,5,5]
-; CHECK-I686-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,3,0,3]
-; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,5,5,5]
-; CHECK-I686-NEXT:    pand %xmm1, %xmm6
-; CHECK-I686-NEXT:    por %xmm2, %xmm6
-; CHECK-I686-NEXT:    pand %xmm3, %xmm6
-; CHECK-I686-NEXT:    por %xmm4, %xmm6
-; CHECK-I686-NEXT:    pand %xmm1, %xmm7
-; CHECK-I686-NEXT:    por %xmm2, %xmm7
-; CHECK-I686-NEXT:    pand %xmm3, %xmm7
-; CHECK-I686-NEXT:    por %xmm4, %xmm7
-; CHECK-I686-NEXT:    movdqu %xmm7, 0
-; CHECK-I686-NEXT:    movdqu %xmm6, 32
-; CHECK-I686-NEXT:    movdqu %xmm5, 48
-; CHECK-I686-NEXT:    movdqu %xmm0, 16
+; CHECK-I686-NEXT:    movdqu (%eax), %xmm4
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm5 = xmm4[0,1,2,3,5,5,5,5]
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,0,65535,65535,65535,65535]
+; CHECK-I686-NEXT:    pand %xmm0, %xmm5
+; CHECK-I686-NEXT:    movq {{.*#+}} xmm1 = [0,0,0,15360,0,0,0,0]
+; CHECK-I686-NEXT:    por %xmm1, %xmm5
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,65535,65535,65535,65535,0]
+; CHECK-I686-NEXT:    pand %xmm2, %xmm5
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm3 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,60]
+; CHECK-I686-NEXT:    por %xmm3, %xmm5
+; CHECK-I686-NEXT:    movdqu %xmm5, 0
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm5 = xmm4[0,1,2,3,4,5,7,7]
+; CHECK-I686-NEXT:    pshuflw {{.*#+}} xmm6 = xmm4[0,1,3,3,4,5,6,7]
+; CHECK-I686-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,3,0,3]
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,5,5,5]
+; CHECK-I686-NEXT:    pand %xmm0, %xmm4
+; CHECK-I686-NEXT:    por %xmm1, %xmm4
+; CHECK-I686-NEXT:    pand %xmm2, %xmm4
+; CHECK-I686-NEXT:    por %xmm3, %xmm4
+; CHECK-I686-NEXT:    movdqu %xmm4, 32
+; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[0,2,2,3]
+; CHECK-I686-NEXT:    pand %xmm0, %xmm4
+; CHECK-I686-NEXT:    por %xmm1, %xmm4
+; CHECK-I686-NEXT:    pand %xmm2, %xmm4
+; CHECK-I686-NEXT:    por %xmm3, %xmm4
+; CHECK-I686-NEXT:    movdqu %xmm4, 48
+; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[0,0,2,1]
+; CHECK-I686-NEXT:    pand %xmm0, %xmm4
+; CHECK-I686-NEXT:    por %xmm1, %xmm4
+; CHECK-I686-NEXT:    pand %xmm2, %xmm4
+; CHECK-I686-NEXT:    por %xmm3, %xmm4
+; CHECK-I686-NEXT:    movdqu %xmm4, 16
 ; CHECK-I686-NEXT:    retl
   %1 = load <24 x half>, ptr poison, align 2
   %2 = shufflevector <24 x half> %1, <24 x half> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>

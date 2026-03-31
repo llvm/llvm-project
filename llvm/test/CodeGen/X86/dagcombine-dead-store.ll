@@ -76,8 +76,8 @@ define void @output_indexed_fs_diff(i32 %v, ptr %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %eax, 168(%ecx)
 ; CHECK-NEXT:    movl %eax, %fs:184(%ecx)
+; CHECK-NEXT:    movl %eax, 168(%ecx)
 ; CHECK-NEXT:    retl
   %p = getelementptr i32, ptr %b, i64 42
   %pa = addrspacecast ptr %p to ptr addrspace(257)

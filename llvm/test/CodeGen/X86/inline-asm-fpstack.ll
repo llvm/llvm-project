@@ -70,19 +70,19 @@ define void @test6(double %A, double %B, double %C, double %D, double %E) nounwi
 ; CHECK-LABEL: test6:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    foo %st %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    bar %st(1) %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    fstp %st(0)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    baz %st(1) %st
 ; CHECK-NEXT:    ## InlineAsm End
@@ -461,8 +461,8 @@ define void @test_live_st(i32 %a1) nounwind {
 ; CHECK-NEXT:    fldcw (%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fildl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl L_fpu$non_lazy_ptr, %eax
+; CHECK-NEXT:    fildl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpt 128(%eax)
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl

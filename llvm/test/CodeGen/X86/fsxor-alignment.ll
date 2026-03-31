@@ -8,16 +8,14 @@
 define void @foo(ptr %p, ptr %q, float %s, float %y) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    xorl %edx, %esi
-; CHECK-NEXT:    movl %esi, (%ecx)
-; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl %edx, (%eax)
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    xorl %eax, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl %ecx, (%edx)
+; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    retl
   %ss = fsub float -0.0, %s
   %yy = fsub float -0.0, %y

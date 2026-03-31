@@ -64,8 +64,8 @@ define <4 x float> @test_mask_andnot_ps_rm_128(<4 x float> %a, ptr %ptr_b) {
 define <4 x float> @test_mask_andnot_ps_rmk_128(<4 x float> %a, ptr %ptr_b, <4 x float> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_andnot_ps_rmk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vandnps (%eax), %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x09,0x55,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -84,8 +84,8 @@ define <4 x float> @test_mask_andnot_ps_rmk_128(<4 x float> %a, ptr %ptr_b, <4 x
 define <4 x float> @test_mask_andnot_ps_rmkz_128(<4 x float> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_andnot_ps_rmkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vandnps (%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0x89,0x55,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -120,8 +120,8 @@ define <4 x float> @test_mask_andnot_ps_rmb_128(<4 x float> %a, ptr %ptr_b) {
 define <4 x float> @test_mask_andnot_ps_rmbk_128(<4 x float> %a, ptr %ptr_b, <4 x float> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_andnot_ps_rmbk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vandnps (%eax){1to4}, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x19,0x55,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -142,8 +142,8 @@ define <4 x float> @test_mask_andnot_ps_rmbk_128(<4 x float> %a, ptr %ptr_b, <4 
 define <4 x float> @test_mask_andnot_ps_rmbkz_128(<4 x float> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_andnot_ps_rmbkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vandnps (%eax){1to4}, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0x99,0x55,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -541,8 +541,8 @@ define <4 x float> @test_mask_and_ps_rm_128(<4 x float> %a, ptr %ptr_b) {
 define <4 x float> @test_mask_and_ps_rmk_128(<4 x float> %a, ptr %ptr_b, <4 x float> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_and_ps_rmk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vandps (%eax), %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x09,0x54,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -561,8 +561,8 @@ define <4 x float> @test_mask_and_ps_rmk_128(<4 x float> %a, ptr %ptr_b, <4 x fl
 define <4 x float> @test_mask_and_ps_rmkz_128(<4 x float> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_and_ps_rmkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vandps (%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0x89,0x54,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -597,8 +597,8 @@ define <4 x float> @test_mask_and_ps_rmb_128(<4 x float> %a, ptr %ptr_b) {
 define <4 x float> @test_mask_and_ps_rmbk_128(<4 x float> %a, ptr %ptr_b, <4 x float> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_and_ps_rmbk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vandps (%eax){1to4}, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x19,0x54,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -619,8 +619,8 @@ define <4 x float> @test_mask_and_ps_rmbk_128(<4 x float> %a, ptr %ptr_b, <4 x f
 define <4 x float> @test_mask_and_ps_rmbkz_128(<4 x float> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_and_ps_rmbkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vandps (%eax){1to4}, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0x99,0x54,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1018,8 +1018,8 @@ define <4 x float> @test_mask_or_ps_rm_128(<4 x float> %a, ptr %ptr_b) {
 define <4 x float> @test_mask_or_ps_rmk_128(<4 x float> %a, ptr %ptr_b, <4 x float> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_or_ps_rmk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vorps (%eax), %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x09,0x56,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -1038,8 +1038,8 @@ define <4 x float> @test_mask_or_ps_rmk_128(<4 x float> %a, ptr %ptr_b, <4 x flo
 define <4 x float> @test_mask_or_ps_rmkz_128(<4 x float> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_or_ps_rmkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vorps (%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0x89,0x56,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1074,8 +1074,8 @@ define <4 x float> @test_mask_or_ps_rmb_128(<4 x float> %a, ptr %ptr_b) {
 define <4 x float> @test_mask_or_ps_rmbk_128(<4 x float> %a, ptr %ptr_b, <4 x float> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_or_ps_rmbk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vorps (%eax){1to4}, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x19,0x56,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -1096,8 +1096,8 @@ define <4 x float> @test_mask_or_ps_rmbk_128(<4 x float> %a, ptr %ptr_b, <4 x fl
 define <4 x float> @test_mask_or_ps_rmbkz_128(<4 x float> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_or_ps_rmbkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vorps (%eax){1to4}, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0x99,0x56,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1495,8 +1495,8 @@ define <4 x float> @test_mask_xor_ps_rm_128(<4 x float> %a, ptr %ptr_b) {
 define <4 x float> @test_mask_xor_ps_rmk_128(<4 x float> %a, ptr %ptr_b, <4 x float> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_xor_ps_rmk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vxorps (%eax), %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x09,0x57,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -1515,8 +1515,8 @@ define <4 x float> @test_mask_xor_ps_rmk_128(<4 x float> %a, ptr %ptr_b, <4 x fl
 define <4 x float> @test_mask_xor_ps_rmkz_128(<4 x float> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_xor_ps_rmkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vxorps (%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0x89,0x57,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1551,8 +1551,8 @@ define <4 x float> @test_mask_xor_ps_rmb_128(<4 x float> %a, ptr %ptr_b) {
 define <4 x float> @test_mask_xor_ps_rmbk_128(<4 x float> %a, ptr %ptr_b, <4 x float> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_xor_ps_rmbk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vxorps (%eax){1to4}, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf1,0x7c,0x19,0x57,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -1573,8 +1573,8 @@ define <4 x float> @test_mask_xor_ps_rmbk_128(<4 x float> %a, ptr %ptr_b, <4 x f
 define <4 x float> @test_mask_xor_ps_rmbkz_128(<4 x float> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_xor_ps_rmbkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vxorps (%eax){1to4}, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0x99,0x57,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -2130,8 +2130,8 @@ define <4 x i64> @test_mask_mullo_epi64_rm_256(<4 x i64> %a, ptr %ptr_b) {
 define <4 x i64> @test_mask_mullo_epi64_rmk_256(<4 x i64> %a, ptr %ptr_b, <4 x i64> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_mullo_epi64_rmk_256:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpmullq (%eax), %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x40,0x08]
 ; X86-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -2150,8 +2150,8 @@ define <4 x i64> @test_mask_mullo_epi64_rmk_256(<4 x i64> %a, ptr %ptr_b, <4 x i
 define <4 x i64> @test_mask_mullo_epi64_rmkz_256(<4 x i64> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_mullo_epi64_rmkz_256:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpmullq (%eax), %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0xa9,0x40,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -2186,8 +2186,8 @@ define <4 x i64> @test_mask_mullo_epi64_rmb_256(<4 x i64> %a, ptr %ptr_b) {
 define <4 x i64> @test_mask_mullo_epi64_rmbk_256(<4 x i64> %a, ptr %ptr_b, <4 x i64> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_mullo_epi64_rmbk_256:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpmullq (%eax){1to4}, %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x39,0x40,0x08]
 ; X86-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -2208,8 +2208,8 @@ define <4 x i64> @test_mask_mullo_epi64_rmbk_256(<4 x i64> %a, ptr %ptr_b, <4 x 
 define <4 x i64> @test_mask_mullo_epi64_rmbkz_256(<4 x i64> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_mullo_epi64_rmbkz_256:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpmullq (%eax){1to4}, %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0xb9,0x40,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -2289,8 +2289,8 @@ define <2 x i64> @test_mask_mullo_epi64_rm_128(<2 x i64> %a, ptr %ptr_b) {
 define <2 x i64> @test_mask_mullo_epi64_rmk_128(<2 x i64> %a, ptr %ptr_b, <2 x i64> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_mullo_epi64_rmk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpmullq (%eax), %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x40,0x08]
 ; X86-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -2309,8 +2309,8 @@ define <2 x i64> @test_mask_mullo_epi64_rmk_128(<2 x i64> %a, ptr %ptr_b, <2 x i
 define <2 x i64> @test_mask_mullo_epi64_rmkz_128(<2 x i64> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_mullo_epi64_rmkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpmullq (%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0x40,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -2345,8 +2345,8 @@ define <2 x i64> @test_mask_mullo_epi64_rmb_128(<2 x i64> %a, ptr %ptr_b) {
 define <2 x i64> @test_mask_mullo_epi64_rmbk_128(<2 x i64> %a, ptr %ptr_b, <2 x i64> %passThru, i8 %mask) {
 ; X86-LABEL: test_mask_mullo_epi64_rmbk_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpmullq (%eax){1to2}, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x19,0x40,0x08]
 ; X86-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -2367,8 +2367,8 @@ define <2 x i64> @test_mask_mullo_epi64_rmbk_128(<2 x i64> %a, ptr %ptr_b, <2 x 
 define <2 x i64> @test_mask_mullo_epi64_rmbkz_128(<2 x i64> %a, ptr %ptr_b, i8 %mask) {
 ; X86-LABEL: test_mask_mullo_epi64_rmbkz_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpmullq (%eax){1to2}, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x99,0x40,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -2654,8 +2654,8 @@ define <4 x double>@test_int_x86_avx512_maskz_broadcastf64x2_256(<2 x double> %x
 define <4 x double>@test_int_x86_avx512_mask_broadcastf64x2_256_load(ptr %x0ptr, <4 x double> %x2, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_broadcastf64x2_256_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vbroadcastf64x2 (%eax), %ymm0 {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x1a,0x00]
 ; X86-NEXT:    # ymm0 {%k1} = mem[0,1,0,1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -2728,8 +2728,8 @@ define <4 x i64>@test_int_x86_avx512_maskz_broadcasti64x2_256(<2 x i64> %x0, i8 
 define <4 x i64>@test_int_x86_avx512_mask_broadcasti64x2_256_load(ptr %x0ptr, <4 x i64> %x2, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_broadcasti64x2_256_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vbroadcasti64x2 (%eax), %ymm0 {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x5a,0x00]
 ; X86-NEXT:    # ymm0 {%k1} = mem[0,1,0,1]
 ; X86-NEXT:    retl # encoding: [0xc3]

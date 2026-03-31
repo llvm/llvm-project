@@ -58,19 +58,19 @@ entry:
 define void @t3(<4 x float> %a, <4 x float> %b, ptr %c, ptr %d) {
 ; SSE-LABEL: t3:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-NEXT:    andnps %xmm1, %xmm0
-; SSE-NEXT:    orps (%ecx), %xmm0
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    orps (%eax), %xmm0
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    movaps %xmm0, (%eax)
 ; SSE-NEXT:    retl
 ;
 ; AVX-LABEL: t3:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-NEXT:    vandnps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vorps (%ecx), %xmm0, %xmm0
+; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX-NEXT:    vorps (%eax), %xmm0, %xmm0
+; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-NEXT:    vmovaps %xmm0, (%eax)
 ; AVX-NEXT:    retl
 entry:

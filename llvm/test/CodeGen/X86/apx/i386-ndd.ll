@@ -3,9 +3,9 @@
 define i32 @test(i1 %cmp, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    cmovnel %eax, %ecx
 ; CHECK-NEXT:    movl (%ecx), %eax
 ; CHECK-NEXT:    retl

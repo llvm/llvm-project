@@ -14,8 +14,8 @@ define i32 @main() {
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %go
 ; CHECK-NEXT:    movl $-1, %ecx
-; CHECK-NEXT:    movsbl b, %edx
 ; CHECK-NEXT:    notl %ecx
+; CHECK-NEXT:    movsbl b, %edx
 ; CHECK-NEXT:    movzwl %dx, %edx
 ; CHECK-NEXT:    cmpl $-1, %edx
 ; CHECK-NEXT:    sbbl %ecx, %eax

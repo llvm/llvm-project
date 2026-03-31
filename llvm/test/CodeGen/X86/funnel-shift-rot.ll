@@ -277,9 +277,9 @@ define i64 @rotr_i64(i64 %x, i64 %z) nounwind {
 ; X86-SSE2-LABEL: rotr_i64:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    testb $32, %cl
 ; X86-SSE2-NEXT:    movl %eax, %edx
 ; X86-SSE2-NEXT:    cmovel %esi, %edx

@@ -692,17 +692,17 @@ define dso_local x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i1> %x, 
 ; X32-LABEL: test_CallargRet128Vector:
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $44, %esp
-; X32-NEXT:    vmovups %xmm4, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32-NEXT:    vmovups %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
 ; X32-NEXT:    vmovdqa %xmm1, %xmm4
-; X32-NEXT:    vpslld $31, %xmm0, %xmm1
-; X32-NEXT:    vpmovd2m %xmm1, %k1
-; X32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X32-NEXT:    vmovdqa %xmm4, %xmm1
-; X32-NEXT:    vmovdqa %xmm4, %xmm2
+; X32-NEXT:    vmovdqa %xmm0, %xmm5
+; X32-NEXT:    vmovdqa %xmm1, %xmm2
 ; X32-NEXT:    calll _test_argRet128Vector
-; X32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
+; X32-NEXT:    vpslld $31, %xmm5, %xmm1
+; X32-NEXT:    vpmovd2m %xmm1, %k1
 ; X32-NEXT:    vmovdqa32 %xmm4, %xmm0 {%k1}
-; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm4 # 16-byte Reload
+; X32-NEXT:    vmovups (%esp), %xmm4 # 16-byte Reload
+; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm5 # 16-byte Reload
 ; X32-NEXT:    addl $44, %esp
 ; X32-NEXT:    retl
 ;
@@ -913,20 +913,18 @@ define dso_local x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i1> %x
 define dso_local x86_regcallcc <32 x float> @testf32_inp(<32 x float> %a, <32 x float> %b, <32 x float> %c) nounwind {
 ; X32-LABEL: testf32_inp:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $44, %esp
-; X32-NEXT:    vmovups %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32-NEXT:    subl $28, %esp
 ; X32-NEXT:    vmovups %xmm6, (%esp) # 16-byte Spill
-; X32-NEXT:    vaddps %zmm2, %zmm0, %zmm6
-; X32-NEXT:    vaddps %zmm3, %zmm1, %zmm7
-; X32-NEXT:    vmulps %zmm2, %zmm0, %zmm0
-; X32-NEXT:    vsubps %zmm0, %zmm6, %zmm0
-; X32-NEXT:    vmulps %zmm3, %zmm1, %zmm1
-; X32-NEXT:    vsubps %zmm1, %zmm7, %zmm1
+; X32-NEXT:    vmulps %zmm2, %zmm0, %zmm6
+; X32-NEXT:    vaddps %zmm2, %zmm0, %zmm0
+; X32-NEXT:    vsubps %zmm6, %zmm0, %zmm0
 ; X32-NEXT:    vaddps %zmm4, %zmm0, %zmm0
+; X32-NEXT:    vmulps %zmm3, %zmm1, %zmm2
+; X32-NEXT:    vaddps %zmm3, %zmm1, %zmm1
+; X32-NEXT:    vsubps %zmm2, %zmm1, %zmm1
 ; X32-NEXT:    vaddps %zmm5, %zmm1, %zmm1
 ; X32-NEXT:    vmovups (%esp), %xmm6 # 16-byte Reload
-; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
-; X32-NEXT:    addl $44, %esp
+; X32-NEXT:    addl $28, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: testf32_inp:
@@ -965,46 +963,46 @@ define dso_local x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    pushl %ebx
-; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    subl $20, %esp
 ; X32-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; X32-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl %eax, %ebp
-; X32-NEXT:    leal (%edx,%edi), %eax
-; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl %edx, %eax
-; X32-NEXT:    subl %edi, %eax
-; X32-NEXT:    movl %ebp, %edx
-; X32-NEXT:    subl %ecx, %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    subl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    imull %edx, %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, %edx
-; X32-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    imull %eax, %edx
-; X32-NEXT:    addl %ebx, %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl (%esp), %edi # 4-byte Reload
-; X32-NEXT:    subl %ebx, %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, %eax
-; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    imull %edi, %eax
-; X32-NEXT:    addl %edx, %eax
-; X32-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
-; X32-NEXT:    addl (%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    addl %ebx, %esi
+; X32-NEXT:    leal (%edx,%edi), %ebp
+; X32-NEXT:    imull %esi, %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    imull %edx, %ebp
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    imull {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X32-NEXT:    addl %esi, %ebp
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    imull %ebx, %ecx
-; X32-NEXT:    addl %ecx, %ebp
-; X32-NEXT:    addl %eax, %ebp
-; X32-NEXT:    movl %ebp, %eax
-; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    addl %eax, %ecx
+; X32-NEXT:    imull %edx, %ecx
+; X32-NEXT:    addl %ebp, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X32-NEXT:    addl %ebp, %edx
+; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    addl %edi, %edx
+; X32-NEXT:    imull {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X32-NEXT:    subl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X32-NEXT:    imull %ecx, %ebx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    subl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
+; X32-NEXT:    imull %esi, %eax
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ebp
+; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    imull %ecx, %ebp
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    addl %edx, %eax
+; X32-NEXT:    addl $20, %esp
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
@@ -1131,21 +1129,21 @@ define dso_local x86_regcallcc <32 x float> @testf32_stack(<32 x float> %a0, <32
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-64, %esp
 ; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    vaddps %zmm3, %zmm1, %zmm1
 ; X32-NEXT:    vaddps %zmm2, %zmm0, %zmm0
 ; X32-NEXT:    vaddps %zmm0, %zmm4, %zmm0
-; X32-NEXT:    vaddps %zmm1, %zmm5, %zmm1
-; X32-NEXT:    vaddps %zmm1, %zmm7, %zmm1
 ; X32-NEXT:    vaddps %zmm0, %zmm6, %zmm0
 ; X32-NEXT:    vaddps 8(%ebp), %zmm0, %zmm0
-; X32-NEXT:    vaddps 72(%ebp), %zmm1, %zmm1
-; X32-NEXT:    vaddps 200(%ebp), %zmm1, %zmm1
 ; X32-NEXT:    vaddps 136(%ebp), %zmm0, %zmm0
 ; X32-NEXT:    vaddps 264(%ebp), %zmm0, %zmm0
-; X32-NEXT:    vaddps 328(%ebp), %zmm1, %zmm1
-; X32-NEXT:    vaddps 456(%ebp), %zmm1, %zmm1
 ; X32-NEXT:    vaddps 392(%ebp), %zmm0, %zmm0
 ; X32-NEXT:    vaddps 520(%ebp), %zmm0, %zmm0
+; X32-NEXT:    vaddps %zmm3, %zmm1, %zmm1
+; X32-NEXT:    vaddps %zmm1, %zmm5, %zmm1
+; X32-NEXT:    vaddps %zmm1, %zmm7, %zmm1
+; X32-NEXT:    vaddps 72(%ebp), %zmm1, %zmm1
+; X32-NEXT:    vaddps 200(%ebp), %zmm1, %zmm1
+; X32-NEXT:    vaddps 328(%ebp), %zmm1, %zmm1
+; X32-NEXT:    vaddps 456(%ebp), %zmm1, %zmm1
 ; X32-NEXT:    vaddps 584(%ebp), %zmm1, %zmm1
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
@@ -1217,12 +1215,10 @@ define dso_local x86_regcallcc <32 x float> @testf32_stack(<32 x float> %a0, <32
 define dso_local x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signext, i32, i64, i16 signext, ptr) #0 {
 ; X32-LABEL: test_argRetMixTypes:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    vcvtsi2sd %eax, %xmm3, %xmm2
 ; X32-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vcvtsi2sd %eax, %xmm3, %xmm1
-; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; X32-NEXT:    vaddsd %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    vcvtsi2sd %ecx, %xmm3, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vmovd %edx, %xmm1
@@ -1231,10 +1227,10 @@ define dso_local x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signex
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vcvtsi2sd %esi, %xmm3, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vcvtsi2sdl (%ebx), %xmm3, %xmm1
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vcvtsi2sdl (%eax), %xmm3, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vcvttsd2si %xmm0, %eax
-; X32-NEXT:    popl %ebx
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;

@@ -19,15 +19,15 @@ define dso_local void @funbf16(ptr readonly %src, ptr writeonly %dst) {
 ; X86-LABEL: funbf16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovups (%eax), %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovups (%ecx), %xmm0
-; X86-NEXT:    vmovups %xmm0, (%eax)
-; X86-NEXT:    vmovaps (%ecx), %xmm0
-; X86-NEXT:    vmovaps %xmm0, (%eax)
-; X86-NEXT:    vmovups (%ecx), %ymm0
-; X86-NEXT:    vmovups %ymm0, (%eax)
-; X86-NEXT:    vmovaps (%ecx), %ymm0
-; X86-NEXT:    vmovaps %ymm0, (%eax)
+; X86-NEXT:    vmovups %xmm0, (%ecx)
+; X86-NEXT:    vmovaps (%eax), %xmm0
+; X86-NEXT:    vmovaps %xmm0, (%ecx)
+; X86-NEXT:    vmovups (%eax), %ymm0
+; X86-NEXT:    vmovups %ymm0, (%ecx)
+; X86-NEXT:    vmovaps (%eax), %ymm0
+; X86-NEXT:    vmovaps %ymm0, (%ecx)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 entry:

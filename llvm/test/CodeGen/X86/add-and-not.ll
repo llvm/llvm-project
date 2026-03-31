@@ -131,20 +131,23 @@ define i8 @add_and_xor_extra_use(i8 %x, i8 %y) nounwind {
 ; X86-LABEL: add_and_xor_extra_use:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X86-NEXT:    notb %bh
-; X86-NEXT:    movzbl %bh, %eax
-; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    movb %bh, %al
+; X86-NEXT:    notb %al
+; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    movl %ecx, (%esp)
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; X86-NEXT:    andb %bl, %al
+; X86-NEXT:    movzbl %al, %esi
 ; X86-NEXT:    calll use@PLT
-; X86-NEXT:    andb %bl, %bh
-; X86-NEXT:    movzbl %bh, %eax
-; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    movl %esi, (%esp)
+; X86-NEXT:    orb %bh, %bl
 ; X86-NEXT:    calll use@PLT
-; X86-NEXT:    orb {{[0-9]+}}(%esp), %bl
 ; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
@@ -199,10 +202,10 @@ define i64 @add_and_xor_const(i64 %x) {
 define i64 @add_and_xor_const_wrong_op(i64 %x, i64 %y) {
 ; X86-LABEL: add_and_xor_const_wrong_op:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    notl %eax
 ; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    retl
@@ -332,9 +335,9 @@ define i64 @add_and_xor_const_zext_trunc(i64 %x) {
 define i64 @add_and_xor_const_zext_trunc_var(i64 %x, i64 %y) {
 ; X86-LABEL: add_and_xor_const_zext_trunc_var:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_and_xor_const_zext_trunc_var:

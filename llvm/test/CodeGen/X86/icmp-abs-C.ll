@@ -14,29 +14,32 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    sarl $31, %eax
-; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %eax, %esi
-; X86-NEXT:    subl %eax, %esi
-; X86-NEXT:    sbbl %eax, %edx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    xorl %ecx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sbbl %ecx, %edx
+; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    xorl $64, %esi
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    sete %bl
+; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
 ; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    movl $2344, %edi # imm = 0x928
 ; X86-NEXT:    cmpl %eax, %edi
 ; X86-NEXT:    sbbl %edx, %esi
 ; X86-NEXT:    jb .LBB0_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movb %bl, %cl
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:  .LBB0_2:
+; X86-NEXT:    jb .LBB0_4
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    movb %bl, %cl
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB0_4:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -69,16 +72,15 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 define i32 @eq_or_with_dom_abs_non_po2(i32 %x) nounwind {
 ; X86-LABEL: eq_or_with_dom_abs_non_po2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    sarl $31, %eax
-; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpl $123, %edx
+; X86-NEXT:    cmpl $123, %eax
 ; X86-NEXT:    sete %dl
+; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
 ; X86-NEXT:    cmpl $2345, %eax # imm = 0x929
 ; X86-NEXT:    jae .LBB1_2
 ; X86-NEXT:  # %bb.1:
@@ -114,15 +116,14 @@ define i32 @eq_or_with_dom_abs_non_po2(i32 %x) nounwind {
 define i8 @ne_and_with_dom_abs_non_pow2(i8 %x) nounwind {
 ; X86-LABEL: ne_and_with_dom_abs_non_pow2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    sarb $7, %al
-; X86-NEXT:    xorb %al, %cl
-; X86-NEXT:    subb %al, %cl
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    xorb $12, %al
-; X86-NEXT:    cmpb $121, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    sarb $7, %cl
+; X86-NEXT:    xorb %cl, %al
+; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    cmpb $121, %al
 ; X86-NEXT:    setne %cl
+; X86-NEXT:    xorb $12, %al
 ; X86-NEXT:    cmpb $24, %al
 ; X86-NEXT:    jae .LBB2_2
 ; X86-NEXT:  # %bb.1:
@@ -166,12 +167,11 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X86-NEXT:    sarl $15, %ecx
 ; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    cmpw $64, %ax
+; X86-NEXT:    setne %dl
 ; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
 ; X86-NEXT:    movzwl %ax, %esi
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpw $64, %dx
-; X86-NEXT:    setne %dl
 ; X86-NEXT:    cmpl $2345, %esi # imm = 0x929
 ; X86-NEXT:    jae .LBB3_2
 ; X86-NEXT:  # %bb.1:

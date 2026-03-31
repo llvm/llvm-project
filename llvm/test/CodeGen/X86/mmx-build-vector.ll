@@ -17,11 +17,11 @@ declare <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64>, <1 x i64>)
 define void @build_v2i32_01(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-LABEL: build_v2i32_01:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
 ; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-NEXT:    paddd %mm1, %mm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm1, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -44,9 +44,9 @@ define void @build_v2i32_01(ptr%p0, i32 %a0, i32 %a1) nounwind {
 define void @build_v2i32_0z(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-LABEL: build_v2i32_0z:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -67,19 +67,19 @@ define void @build_v2i32_0z(ptr%p0, i32 %a0, i32 %a1) nounwind {
 define void @build_v2i32_u1(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-MMX-LABEL: build_v2i32_u1:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm0 # mm0 = mm0[0,0]
 ; X86-MMX-NEXT:    paddd %mm0, %mm0
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm0, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v2i32_u1:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-SSE-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -101,11 +101,11 @@ define void @build_v2i32_u1(ptr%p0, i32 %a0, i32 %a1) nounwind {
 define void @build_v2i32_z1(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-LABEL: build_v2i32_z1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    pxor %mm1, %mm1
 ; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-NEXT:    paddd %mm1, %mm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm1, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -128,19 +128,19 @@ define void @build_v2i32_z1(ptr%p0, i32 %a0, i32 %a1) nounwind {
 define void @build_v2i32_00(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X86-MMX-LABEL: build_v2i32_00:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm0 # mm0 = mm0[0,0]
 ; X86-MMX-NEXT:    paddd %mm0, %mm0
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm0, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v2i32_00:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-SSE-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -166,7 +166,6 @@ define void @build_v2i32_00(ptr%p0, i32 %a0, i32 %a1) nounwind {
 define void @build_v4i16_0123(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_0123:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
 ; X86-NEXT:    punpcklwd %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1]
@@ -175,6 +174,7 @@ define void @build_v4i16_0123(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 ; X86-NEXT:    punpcklwd %mm0, %mm2 # mm2 = mm2[0],mm0[0],mm2[1],mm0[1]
 ; X86-NEXT:    punpckldq %mm1, %mm2 # mm2 = mm2[0],mm1[0]
 ; X86-NEXT:    paddd %mm2, %mm2
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm2, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -203,7 +203,6 @@ define void @build_v4i16_0123(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 define void @build_v4i16_01zz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_01zz:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
 ; X86-NEXT:    punpcklwd %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1]
@@ -211,6 +210,7 @@ define void @build_v4i16_01zz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 ; X86-NEXT:    punpcklwd %mm0, %mm0 # mm0 = mm0[0,0,1,1]
 ; X86-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-NEXT:    paddd %mm1, %mm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm1, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -238,9 +238,9 @@ define void @build_v4i16_01zz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 define void @build_v4i16_0uuz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_0uuz:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -265,8 +265,8 @@ define void @build_v4i16_0zuz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd %eax, %mm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    paddd %mm0, %mm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -290,7 +290,6 @@ define void @build_v4i16_0zuz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 define void @build_v4i16_012u(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-LABEL: build_v4i16_012u:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    punpcklwd %mm0, %mm0 # mm0 = mm0[0,0,1,1]
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
@@ -298,6 +297,7 @@ define void @build_v4i16_012u(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 ; X86-NEXT:    punpcklwd %mm1, %mm2 # mm2 = mm2[0],mm1[0],mm2[1],mm1[1]
 ; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
 ; X86-NEXT:    paddd %mm2, %mm2
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm2, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -325,20 +325,20 @@ define void @build_v4i16_012u(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 define void @build_v4i16_0u00(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwind {
 ; X86-MMX-LABEL: build_v4i16_0u00:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-MMX-NEXT:    punpcklwd %mm0, %mm0 # mm0 = mm0[0,0,1,1]
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm0 # mm0 = mm0[0,0]
 ; X86-MMX-NEXT:    paddd %mm0, %mm0
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm0, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v4i16_0u00:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-SSE-NEXT:    pshufw $0, %mm0, %mm0 # mm0 = mm0[0,0,0,0]
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -366,7 +366,6 @@ define void @build_v4i16_0u00(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
 define void @build_v8i8_01234567(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_01234567:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
 ; X86-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
@@ -383,6 +382,7 @@ define void @build_v8i8_01234567(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; X86-NEXT:    punpcklwd %mm1, %mm3 # mm3 = mm3[0],mm1[0],mm3[1],mm1[1]
 ; X86-NEXT:    punpckldq %mm2, %mm3 # mm3 = mm3[0],mm2[0]
 ; X86-NEXT:    paddd %mm3, %mm3
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm3, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -423,7 +423,6 @@ define void @build_v8i8_01234567(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 define void @build_v8i8_0u2345z7(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_0u2345z7:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    pxor %mm1, %mm1
 ; X86-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
@@ -439,6 +438,7 @@ define void @build_v8i8_0u2345z7(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; X86-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 ; X86-NEXT:    punpckldq %mm2, %mm0 # mm0 = mm0[0],mm2[0]
 ; X86-NEXT:    paddd %mm0, %mm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -478,22 +478,22 @@ define void @build_v8i8_0u2345z7(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 define void @build_v8i8_0123zzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_0123zzzu:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm1
 ; X86-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm2
-; X86-NEXT:    punpcklbw %mm0, %mm2 # mm2 = mm2[0],mm0[0],mm2[1],mm0[1],mm2[2],mm0[2],mm2[3],mm0[3]
-; X86-NEXT:    punpcklwd %mm1, %mm2 # mm2 = mm2[0],mm1[0],mm2[1],mm1[1]
-; X86-NEXT:    pxor %mm0, %mm0
-; X86-NEXT:    pxor %mm1, %mm1
-; X86-NEXT:    punpcklbw %mm1, %mm1 # mm1 = mm1[0,0,1,1,2,2,3,3]
-; X86-NEXT:    punpcklbw %mm0, %mm0 # mm0 = mm0[0,0,1,1,2,2,3,3]
+; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
+; X86-NEXT:    punpcklbw %mm2, %mm0 # mm0 = mm0[0],mm2[0],mm0[1],mm2[1],mm0[2],mm2[2],mm0[3],mm2[3]
 ; X86-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
-; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
-; X86-NEXT:    paddd %mm2, %mm2
-; X86-NEXT:    movq %mm2, (%eax)
+; X86-NEXT:    pxor %mm1, %mm1
+; X86-NEXT:    pxor %mm2, %mm2
+; X86-NEXT:    punpcklbw %mm2, %mm2 # mm2 = mm2[0,0,1,1,2,2,3,3]
+; X86-NEXT:    punpcklbw %mm1, %mm1 # mm1 = mm1[0,0,1,1,2,2,3,3]
+; X86-NEXT:    punpcklwd %mm2, %mm1 # mm1 = mm1[0],mm2[0],mm1[1],mm2[1]
+; X86-NEXT:    punpckldq %mm1, %mm0 # mm0 = mm0[0],mm1[0]
+; X86-NEXT:    paddd %mm0, %mm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: build_v8i8_0123zzzu:
@@ -531,9 +531,9 @@ define void @build_v8i8_0123zzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 define void @build_v8i8_0uuuuzzz(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-LABEL: build_v8i8_0uuuuzzz:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -562,8 +562,8 @@ define void @build_v8i8_0zzzzzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd %eax, %mm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    paddd %mm0, %mm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -591,22 +591,22 @@ define void @build_v8i8_0zzzzzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 define void @build_v8i8_00000000(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; X86-MMX-LABEL: build_v8i8_00000000:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-MMX-NEXT:    punpcklbw %mm0, %mm0 # mm0 = mm0[0,0,1,1,2,2,3,3]
 ; X86-MMX-NEXT:    punpcklwd %mm0, %mm0 # mm0 = mm0[0,0,1,1]
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm0 # mm0 = mm0[0,0]
 ; X86-MMX-NEXT:    paddd %mm0, %mm0
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm0, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v8i8_00000000:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-SSE-NEXT:    punpcklbw %mm0, %mm0 # mm0 = mm0[0,0,1,1,2,2,3,3]
 ; X86-SSE-NEXT:    pshufw $0, %mm0, %mm0 # mm0 = mm0[0,0,0,0]
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -639,23 +639,23 @@ define void @build_v8i8_00000000(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 define void @build_v2f32_01(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_01:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm1
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-MMX-NEXT:    paddd %mm1, %mm1
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm1, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v2f32_01:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movdq2q %xmm0, %mm0
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movdq2q %xmm0, %mm1
 ; X86-SSE-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-SSE-NEXT:    paddd %mm1, %mm1
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm1, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -678,22 +678,22 @@ define void @build_v2f32_01(ptr%p0, float %a0, float %a1) nounwind {
 define void @build_v2f32_0z(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_0z:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    pxor %mm0, %mm0
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm1
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-MMX-NEXT:    paddd %mm1, %mm1
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm1, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v2f32_0z:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movdq2q %xmm0, %mm0
 ; X86-SSE-NEXT:    pxor %mm1, %mm1
 ; X86-SSE-NEXT:    punpckldq %mm1, %mm0 # mm0 = mm0[0],mm1[0]
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -716,20 +716,20 @@ define void @build_v2f32_0z(ptr%p0, float %a0, float %a1) nounwind {
 define void @build_v2f32_u1(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_u1:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm0 # mm0 = mm0[0,0]
 ; X86-MMX-NEXT:    paddd %mm0, %mm0
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm0, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v2f32_u1:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movdq2q %xmm0, %mm0
 ; X86-SSE-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -751,22 +751,22 @@ define void @build_v2f32_u1(ptr%p0, float %a0, float %a1) nounwind {
 define void @build_v2f32_z1(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_z1:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-MMX-NEXT:    pxor %mm1, %mm1
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-MMX-NEXT:    paddd %mm1, %mm1
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm1, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v2f32_z1:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movdq2q %xmm0, %mm0
 ; X86-SSE-NEXT:    pxor %mm1, %mm1
 ; X86-SSE-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-SSE-NEXT:    paddd %mm1, %mm1
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm1, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -789,20 +789,20 @@ define void @build_v2f32_z1(ptr%p0, float %a0, float %a1) nounwind {
 define void @build_v2f32_00(ptr%p0, float %a0, float %a1) nounwind {
 ; X86-MMX-LABEL: build_v2f32_00:
 ; X86-MMX:       # %bb.0:
-; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-MMX-NEXT:    punpckldq %mm0, %mm0 # mm0 = mm0[0,0]
 ; X86-MMX-NEXT:    paddd %mm0, %mm0
+; X86-MMX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MMX-NEXT:    movq %mm0, (%eax)
 ; X86-MMX-NEXT:    retl
 ;
 ; X86-SSE-LABEL: build_v2f32_00:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movdq2q %xmm0, %mm0
 ; X86-SSE-NEXT:    pshufw $68, %mm0, %mm0 # mm0 = mm0[0,1,0,1]
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;

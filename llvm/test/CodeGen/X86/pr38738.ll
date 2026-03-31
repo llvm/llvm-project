@@ -129,8 +129,8 @@ define void @tryset(ptr nocapture %x) {
 ;
 ; X86SSE2-LABEL: tryset:
 ; X86SSE2:       # %bb.0:
-; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86SSE2-NEXT:    xorps %xmm0, %xmm0
+; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86SSE2-NEXT:    movsd %xmm0, 56(%eax)
 ; X86SSE2-NEXT:    movsd %xmm0, 48(%eax)
 ; X86SSE2-NEXT:    movsd %xmm0, 40(%eax)
@@ -151,8 +151,8 @@ define void @tryset(ptr nocapture %x) {
 ;
 ; X86AVX-LABEL: tryset:
 ; X86AVX:       # %bb.0:
-; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX-NEXT:    vmovups %ymm0, 32(%eax)
 ; X86AVX-NEXT:    vmovups %ymm0, (%eax)
 ; X86AVX-NEXT:    vzeroupper
@@ -177,23 +177,23 @@ define void @trycpy(ptr nocapture %x, ptr nocapture readonly %y) {
 ; X86SSE-LABEL: trycpy:
 ; X86SSE:       # %bb.0:
 ; X86SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86SSE-NEXT:    movl 28(%eax), %edx
 ; X86SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86SSE-NEXT:    movl 28(%ecx), %edx
-; X86SSE-NEXT:    movl %edx, 28(%eax)
-; X86SSE-NEXT:    movl 24(%ecx), %edx
-; X86SSE-NEXT:    movl %edx, 24(%eax)
-; X86SSE-NEXT:    movl 20(%ecx), %edx
-; X86SSE-NEXT:    movl %edx, 20(%eax)
-; X86SSE-NEXT:    movl 16(%ecx), %edx
-; X86SSE-NEXT:    movl %edx, 16(%eax)
-; X86SSE-NEXT:    movl 12(%ecx), %edx
-; X86SSE-NEXT:    movl %edx, 12(%eax)
-; X86SSE-NEXT:    movl 8(%ecx), %edx
-; X86SSE-NEXT:    movl %edx, 8(%eax)
-; X86SSE-NEXT:    movl (%ecx), %edx
-; X86SSE-NEXT:    movl 4(%ecx), %ecx
-; X86SSE-NEXT:    movl %ecx, 4(%eax)
-; X86SSE-NEXT:    movl %edx, (%eax)
+; X86SSE-NEXT:    movl %edx, 28(%ecx)
+; X86SSE-NEXT:    movl 24(%eax), %edx
+; X86SSE-NEXT:    movl %edx, 24(%ecx)
+; X86SSE-NEXT:    movl 20(%eax), %edx
+; X86SSE-NEXT:    movl %edx, 20(%ecx)
+; X86SSE-NEXT:    movl 16(%eax), %edx
+; X86SSE-NEXT:    movl %edx, 16(%ecx)
+; X86SSE-NEXT:    movl 12(%eax), %edx
+; X86SSE-NEXT:    movl %edx, 12(%ecx)
+; X86SSE-NEXT:    movl 8(%eax), %edx
+; X86SSE-NEXT:    movl %edx, 8(%ecx)
+; X86SSE-NEXT:    movl (%eax), %edx
+; X86SSE-NEXT:    movl 4(%eax), %eax
+; X86SSE-NEXT:    movl %eax, 4(%ecx)
+; X86SSE-NEXT:    movl %edx, (%ecx)
 ; X86SSE-NEXT:    retl
 ;
 ; X64SSE2-LABEL: trycpy:
@@ -211,15 +211,15 @@ define void @trycpy(ptr nocapture %x, ptr nocapture readonly %y) {
 ; X86SSE2-LABEL: trycpy:
 ; X86SSE2:       # %bb.0:
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86SSE2-NEXT:    movsd %xmm0, 24(%ecx)
 ; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86SSE2-NEXT:    movsd %xmm0, 24(%eax)
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86SSE2-NEXT:    movsd %xmm0, 16(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 16(%ecx)
 ; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X86SSE2-NEXT:    movsd %xmm1, 8(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, (%eax)
+; X86SSE2-NEXT:    movsd %xmm1, 8(%ecx)
+; X86SSE2-NEXT:    movsd %xmm0, (%ecx)
 ; X86SSE2-NEXT:    retl
 ;
 ; X64AVX-LABEL: trycpy:
@@ -232,8 +232,8 @@ define void @trycpy(ptr nocapture %x, ptr nocapture readonly %y) {
 ; X86AVX-LABEL: trycpy:
 ; X86AVX:       # %bb.0:
 ; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86AVX-NEXT:    vmovups (%ecx), %ymm0
+; X86AVX-NEXT:    vmovups (%eax), %ymm0
+; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX-NEXT:    vmovups %ymm0, (%eax)
 ; X86AVX-NEXT:    vzeroupper
 ; X86AVX-NEXT:    retl

@@ -170,30 +170,20 @@ define <2 x float> @f6(<2 x float> %a) {
 define dso_local fp128 @foo(ptr nocapture readonly %qr) local_unnamed_addr{
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl 12(%ecx), %edx
-; X86-NEXT:    movl 8(%ecx), %esi
-; X86-NEXT:    movl (%ecx), %edi
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    #ARITH_FENCE
-; X86-NEXT:    #ARITH_FENCE
-; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    movl %edx, 12(%eax)
-; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl 8(%ecx), %edx
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    movl (%ecx), %edx
+; X86-NEXT:    movl 4(%ecx), %ecx
+; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    movl %ecx, 4(%eax)
-; X86-NEXT:    movl %edi, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: foo:

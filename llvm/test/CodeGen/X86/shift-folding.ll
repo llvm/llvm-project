@@ -55,9 +55,9 @@ define fastcc i32 @test4(ptr %d) {
 define i64 @test5(i16 %i, ptr %arr) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    shrl $11, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    addl (%ecx,%eax,4), %eax
 ; CHECK-NEXT:    setb %dl

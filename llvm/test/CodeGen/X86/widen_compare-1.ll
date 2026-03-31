@@ -24,9 +24,9 @@ define <2 x i16> @compare_v2i64_to_v2i16_binary(ptr %src0, ptr %src1) nounwind {
 ; X86-LABEL: compare_v2i64_to_v2i16_binary:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    pmaxuw %xmm1, %xmm0
 ; X86-NEXT:    pcmpeqw %xmm1, %xmm0
 ; X86-NEXT:    retl

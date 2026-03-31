@@ -42,50 +42,52 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X86-LABEL: multiple_flt_rounds:
 ; SDAG-X86:       # %bb.0: # %entry
 ; SDAG-X86-NEXT:    pushl %ebx
+; SDAG-X86-NEXT:    pushl %edi
 ; SDAG-X86-NEXT:    pushl %esi
-; SDAG-X86-NEXT:    subl $20, %esp
+; SDAG-X86-NEXT:    subl $16, %esp
 ; SDAG-X86-NEXT:    movl $1024, (%esp) # imm = 0x400
 ; SDAG-X86-NEXT:    calll fesetround
 ; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; SDAG-X86-NEXT:    shrl $9, %ecx
-; SDAG-X86-NEXT:    andb $6, %cl
-; SDAG-X86-NEXT:    movl $45, %esi
-; SDAG-X86-NEXT:    movl $45, %eax
-; SDAG-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
-; SDAG-X86-NEXT:    shrl %cl, %eax
-; SDAG-X86-NEXT:    andl $3, %eax
-; SDAG-X86-NEXT:    xorl %ebx, %ebx
-; SDAG-X86-NEXT:    cmpl $3, %eax
-; SDAG-X86-NEXT:    setne %bl
+; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
 ; SDAG-X86-NEXT:    movl $0, (%esp)
 ; SDAG-X86-NEXT:    calll fesetround
 ; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
+; SDAG-X86-NEXT:    movl $3072, (%esp) # imm = 0xC00
+; SDAG-X86-NEXT:    calll fesetround
+; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl $2048, (%esp) # imm = 0x800
+; SDAG-X86-NEXT:    shrl $9, %ebx
+; SDAG-X86-NEXT:    andb $6, %bl
+; SDAG-X86-NEXT:    movl $45, %esi
+; SDAG-X86-NEXT:    movl $45, %edx
+; SDAG-X86-NEXT:    movl %ebx, %ecx
+; SDAG-X86-NEXT:    shrl %cl, %edx
+; SDAG-X86-NEXT:    andl $3, %edx
+; SDAG-X86-NEXT:    xorl %ebx, %ebx
+; SDAG-X86-NEXT:    cmpl $3, %edx
+; SDAG-X86-NEXT:    setne %bl
+; SDAG-X86-NEXT:    movl %edi, %ecx
 ; SDAG-X86-NEXT:    shrl $9, %ecx
 ; SDAG-X86-NEXT:    andb $6, %cl
-; SDAG-X86-NEXT:    movl $45, %eax
+; SDAG-X86-NEXT:    movl $45, %edx
 ; SDAG-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
-; SDAG-X86-NEXT:    shrl %cl, %eax
-; SDAG-X86-NEXT:    andl $3, %eax
-; SDAG-X86-NEXT:    cmpl $1, %eax
+; SDAG-X86-NEXT:    shrl %cl, %edx
+; SDAG-X86-NEXT:    andl $3, %edx
+; SDAG-X86-NEXT:    cmpl $1, %edx
 ; SDAG-X86-NEXT:    je .LBB1_2
 ; SDAG-X86-NEXT:  # %bb.1: # %entry
 ; SDAG-X86-NEXT:    incl %ebx
 ; SDAG-X86-NEXT:  .LBB1_2: # %entry
-; SDAG-X86-NEXT:    movl $3072, (%esp) # imm = 0xC00
-; SDAG-X86-NEXT:    calll fesetround
-; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; SDAG-X86-NEXT:    shrl $9, %ecx
-; SDAG-X86-NEXT:    andb $6, %cl
-; SDAG-X86-NEXT:    movl $45, %eax
-; SDAG-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
-; SDAG-X86-NEXT:    shrl %cl, %eax
-; SDAG-X86-NEXT:    andl $3, %eax
-; SDAG-X86-NEXT:    cmpl $1, %eax
+; SDAG-X86-NEXT:    shrl $9, %eax
+; SDAG-X86-NEXT:    andb $6, %al
+; SDAG-X86-NEXT:    movl $45, %edx
+; SDAG-X86-NEXT:    movl %eax, %ecx
+; SDAG-X86-NEXT:    shrl %cl, %edx
+; SDAG-X86-NEXT:    andl $3, %edx
+; SDAG-X86-NEXT:    cmpl $1, %edx
 ; SDAG-X86-NEXT:    sbbl $-1, %ebx
-; SDAG-X86-NEXT:    movl $2048, (%esp) # imm = 0x800
 ; SDAG-X86-NEXT:    calll fesetround
 ; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
@@ -101,8 +103,9 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X86-NEXT:    xorl %eax, %eax
 ; SDAG-X86-NEXT:    cmpl %ecx, %ebx
 ; SDAG-X86-NEXT:    setne %al
-; SDAG-X86-NEXT:    addl $20, %esp
+; SDAG-X86-NEXT:    addl $16, %esp
 ; SDAG-X86-NEXT:    popl %esi
+; SDAG-X86-NEXT:    popl %edi
 ; SDAG-X86-NEXT:    popl %ebx
 ; SDAG-X86-NEXT:    retl
 ;

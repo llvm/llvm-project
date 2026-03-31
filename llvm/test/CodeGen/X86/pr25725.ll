@@ -17,8 +17,8 @@ define void @f(ptr nocapture %s) #0 {
 ;
 ; X86-LABEL: f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movups %xmm0, 48(%eax)
 ; X86-NEXT:    movups %xmm0, 32(%eax)
 ; X86-NEXT:    movups %xmm0, 16(%eax)

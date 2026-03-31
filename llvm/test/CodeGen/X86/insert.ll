@@ -6,9 +6,10 @@ define i64 @sub8(i64 noundef %res, ptr %byte) {
 ; X86-LABEL: sub8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl (%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb (%ecx), %al
+; X86-NEXT:    movb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sub8:
@@ -27,12 +28,12 @@ entry:
 define i64 @sub16(i64 noundef %res, ptr %byte) {
 ; X86-LABEL: sub16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    movzwl (%eax), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
 ; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sub16:
@@ -52,8 +53,9 @@ define i32 @sub8_32(i32 noundef %res, ptr %byte) {
 ; X86-LABEL: sub8_32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb (%ecx), %al
+; X86-NEXT:    movzbl (%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sub8_32:
@@ -72,10 +74,10 @@ entry:
 define i32 @sub16_32(i32 noundef %res, ptr %byte) {
 ; X86-LABEL: sub16_32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $16, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    movzwl (%eax), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;

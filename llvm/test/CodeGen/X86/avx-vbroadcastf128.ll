@@ -105,8 +105,8 @@ define void @subv_reuse_is_ok(ptr %a, ptr %b) {
 ; X86-LABEL: subv_reuse_is_ok:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovups %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -127,8 +127,8 @@ define <4 x double> @test_broadcast_2f64_4f64_reuse(ptr %p0, ptr %p1) {
 ; X86-LABEL: test_broadcast_2f64_4f64_reuse:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -147,8 +147,8 @@ define <4 x i64> @test_broadcast_2i64_4i64_reuse(ptr %p0, ptr %p1) {
 ; X86-LABEL: test_broadcast_2i64_4i64_reuse:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -167,8 +167,8 @@ define <8 x float> @test_broadcast_4f32_8f32_reuse(ptr %p0, ptr %p1) {
 ; X86-LABEL: test_broadcast_4f32_8f32_reuse:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -187,8 +187,8 @@ define <8 x i32> @test_broadcast_4i32_8i32_reuse(ptr %p0, ptr %p1) {
 ; X86-LABEL: test_broadcast_4i32_8i32_reuse:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -207,8 +207,8 @@ define <16 x i16> @test_broadcast_8i16_16i16_reuse(ptr%p0, ptr%p1) nounwind {
 ; X86-LABEL: test_broadcast_8i16_16i16_reuse:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -227,8 +227,8 @@ define <32 x i8> @test_broadcast_16i8_32i8_reuse(ptr%p0, ptr%p1) nounwind {
 ; X86-LABEL: test_broadcast_16i8_32i8_reuse:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -247,9 +247,9 @@ define <8 x i32> @PR29088(ptr %p0, ptr %p1) {
 ; X86-LABEL: PR29088:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %ymm1, (%eax)
 ; X86-NEXT:    retl
 ;

@@ -493,9 +493,9 @@ define i32 @PR39657(ptr %p, i64 %x) {
 ; X86-LABEL: PR39657:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    notl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    notl %ecx
-; X86-NEXT:    movl (%eax,%ecx,4), %eax
+; X86-NEXT:    movl (%ecx,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LIN-LABEL: PR39657:

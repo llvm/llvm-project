@@ -20,7 +20,8 @@ define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(ptr %0, ptr inall
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl %ecx, %esi
 ; CHECK-NEXT:    subl -4(%ecx), %esi
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl $_methodWithVtorDisp_thunk
 ; CHECK-NEXT:    calll ___cyg_profile_func_exit
 ; CHECK-NEXT:    addl $8, %esp

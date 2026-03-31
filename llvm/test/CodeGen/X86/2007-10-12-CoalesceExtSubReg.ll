@@ -12,12 +12,12 @@ define signext i16 @f(ptr %bp, ptr %ss)   {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %cond_next127
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl (%eax), %edx
-; CHECK-NEXT:    movl (%ecx), %esi
+; CHECK-NEXT:    movl (%ecx), %edx
 ; CHECK-NEXT:    andl $15, %edx
+; CHECK-NEXT:    movl (%eax), %esi
 ; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    addl %esi, (%ecx)
-; CHECK-NEXT:    cmpl $63, %edx
+; CHECK-NEXT:    addl %edx, (%ecx)
+; CHECK-NEXT:    cmpl $63, %esi
 ; CHECK-NEXT:    jb .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; CHECK-NEXT:    xorl %eax, %eax

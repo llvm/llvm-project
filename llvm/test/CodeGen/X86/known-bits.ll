@@ -7,11 +7,11 @@ define void @knownbits_zext_in_reg(ptr) nounwind {
 ; X86:       # %bb.0: # %BB
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl (%eax), %ecx
-; X86-NEXT:    imull $101, %ecx, %eax
-; X86-NEXT:    shrl $14, %eax
-; X86-NEXT:    imull $177, %ecx, %edx
+; X86-NEXT:    movzbl (%eax), %eax
+; X86-NEXT:    imull $177, %eax, %edx
 ; X86-NEXT:    shrl $14, %edx
+; X86-NEXT:    imull $101, %eax, %eax
+; X86-NEXT:    shrl $14, %eax
 ; X86-NEXT:    movzbl %al, %ecx
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    .p2align 4
@@ -88,26 +88,24 @@ define i32 @knownbits_mask_add_lshr(i32 %a0, i32 %a1) nounwind {
 define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-LABEL: knownbits_mask_addc_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl $-1024, %ecx # imm = 0xFC00
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl $-1024, %esi # imm = 0xFC00
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    andl %esi, %edi
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    addl %edi, %esi
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    adcl $0, %ecx
-; X86-NEXT:    shldl $22, %edx, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    shrdl $10, %esi, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ecx, 8(%eax)
 ; X86-NEXT:    shldl $22, %esi, %edx
-; X86-NEXT:    movl %edx, 8(%eax)
-; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    movl %edx, 12(%eax)
 ; X86-NEXT:    movl $0, 4(%eax)
 ; X86-NEXT:    movl $0, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: knownbits_mask_addc_shl:
@@ -136,8 +134,8 @@ define {i32, i1} @knownbits_uaddo_saddo(i64 %a0, i64 %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    setb %al
-; X86-NEXT:    seto %dl
+; X86-NEXT:    seto %al
+; X86-NEXT:    setb %dl
 ; X86-NEXT:    orb %al, %dl
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
@@ -173,8 +171,8 @@ define {i32, i1} @knownbits_usubo_ssubo(i64 %a0, i64 %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    setb %al
-; X86-NEXT:    seto %dl
+; X86-NEXT:    seto %al
+; X86-NEXT:    setb %dl
 ; X86-NEXT:    orb %al, %dl
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl

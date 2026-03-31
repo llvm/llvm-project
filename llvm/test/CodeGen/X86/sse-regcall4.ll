@@ -80,34 +80,33 @@ define x86_regcallcc <16 x float> @testf32_inp(<16 x float> %a, <16 x float> %b,
 ; WIN32-NEXT:    movaps %xmm6, %xmm7
 ; WIN32-NEXT:    movaps %xmm5, %xmm6
 ; WIN32-NEXT:    movaps %xmm4, %xmm5
-; WIN32-NEXT:    movaps %xmm1, %xmm4
-; WIN32-NEXT:    movaps %xmm0, %xmm1
+; WIN32-NEXT:    movaps %xmm3, %xmm4
+; WIN32-NEXT:    movaps %xmm0, %xmm3
+; WIN32-NEXT:    mulps %xmm5, %xmm3
 ; WIN32-NEXT:    addps %xmm5, %xmm0
-; WIN32-NEXT:    mulps %xmm5, %xmm1
-; WIN32-NEXT:    subps %xmm1, %xmm0
-; WIN32-NEXT:    movups 8(%ebp), %xmm1
-; WIN32-NEXT:    addps %xmm1, %xmm0
-; WIN32-NEXT:    movaps %xmm4, %xmm1
+; WIN32-NEXT:    subps %xmm3, %xmm0
+; WIN32-NEXT:    movups 8(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm0
+; WIN32-NEXT:    movaps %xmm1, %xmm3
+; WIN32-NEXT:    mulps %xmm6, %xmm3
 ; WIN32-NEXT:    addps %xmm6, %xmm1
-; WIN32-NEXT:    mulps %xmm6, %xmm4
-; WIN32-NEXT:    subps %xmm4, %xmm1
-; WIN32-NEXT:    movups 24(%ebp), %xmm4
-; WIN32-NEXT:    addps %xmm4, %xmm1
-; WIN32-NEXT:    movaps %xmm2, %xmm4
-; WIN32-NEXT:    addps %xmm7, %xmm4
-; WIN32-NEXT:    mulps %xmm7, %xmm2
-; WIN32-NEXT:    subps %xmm2, %xmm4
-; WIN32-NEXT:    movups 40(%ebp), %xmm2
-; WIN32-NEXT:    addps %xmm2, %xmm4
-; WIN32-NEXT:    movaps %xmm3, %xmm5
-; WIN32-NEXT:    movaps (%esp), %xmm2 # 16-byte Reload
-; WIN32-NEXT:    addps %xmm2, %xmm5
-; WIN32-NEXT:    mulps %xmm2, %xmm3
-; WIN32-NEXT:    subps %xmm3, %xmm5
-; WIN32-NEXT:    movups 56(%ebp), %xmm2
-; WIN32-NEXT:    addps %xmm2, %xmm5
-; WIN32-NEXT:    movaps %xmm4, %xmm2
-; WIN32-NEXT:    movaps %xmm5, %xmm3
+; WIN32-NEXT:    subps %xmm3, %xmm1
+; WIN32-NEXT:    movups 24(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm1
+; WIN32-NEXT:    movaps %xmm2, %xmm3
+; WIN32-NEXT:    mulps %xmm7, %xmm3
+; WIN32-NEXT:    addps %xmm7, %xmm2
+; WIN32-NEXT:    subps %xmm3, %xmm2
+; WIN32-NEXT:    movups 40(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm2
+; WIN32-NEXT:    movaps %xmm4, %xmm3
+; WIN32-NEXT:    movaps (%esp), %xmm5 # 16-byte Reload
+; WIN32-NEXT:    mulps %xmm5, %xmm3
+; WIN32-NEXT:    addps %xmm5, %xmm4
+; WIN32-NEXT:    subps %xmm3, %xmm4
+; WIN32-NEXT:    movups 56(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm4
+; WIN32-NEXT:    movaps %xmm4, %xmm3
 ; WIN32-NEXT:    movl %ebp, %esp
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
@@ -198,46 +197,45 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    pushl %ebx
-; WIN32-NEXT:    subl $8, %esp
-; WIN32-NEXT:    movl %edi, %eax
-; WIN32-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; WIN32-NEXT:    movl %ecx, %edi
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; WIN32-NEXT:    leal (%eax,%esi), %ecx
-; WIN32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; WIN32-NEXT:    movl %eax, %ebx
-; WIN32-NEXT:    subl %esi, %ebx
-; WIN32-NEXT:    movl %edi, %eax
-; WIN32-NEXT:    subl %edx, %eax
-; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ebp
-; WIN32-NEXT:    imull %eax, %ebp
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movl %edx, %esi
-; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    imull %ebx, %esi
-; WIN32-NEXT:    addl %ebp, %esi
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; WIN32-NEXT:    movl %ebp, %ebx
-; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ebx
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:    movl %ecx, %eax
-; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    imull %ebx, %eax
-; WIN32-NEXT:    addl %esi, %eax
-; WIN32-NEXT:    addl (%esp), %edi # 4-byte Folded Reload
-; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %ebp
+; WIN32-NEXT:    subl $16, %esp
+; WIN32-NEXT:    movl %esi, %ebp
+; WIN32-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; WIN32-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; WIN32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    imull %esi, %edi
-; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    imull {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
-; WIN32-NEXT:    addl %edx, %edi
-; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    addl %esi, %eax
+; WIN32-NEXT:    leal (%edi,%ebp), %ebx
+; WIN32-NEXT:    imull %eax, %ebx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; WIN32-NEXT:    leal (%ebp,%eax), %edi
+; WIN32-NEXT:    leal (%ecx,%edx), %eax
+; WIN32-NEXT:    imull %edi, %eax
+; WIN32-NEXT:    addl %ebx, %eax
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; WIN32-NEXT:    addl %edi, %edx
+; WIN32-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; WIN32-NEXT:    addl %edx, %ebx
+; WIN32-NEXT:    imull (%esp), %ebx # 4-byte Folded Reload
+; WIN32-NEXT:    addl %eax, %ebx
+; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %esi
+; WIN32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; WIN32-NEXT:    subl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
+; WIN32-NEXT:    imull %eax, %esi
+; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ebp
+; WIN32-NEXT:    subl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; WIN32-NEXT:    imull %ebp, %ecx
-; WIN32-NEXT:    addl %ecx, %edi
-; WIN32-NEXT:    addl %eax, %edi
-; WIN32-NEXT:    movl %edi, %ecx
-; WIN32-NEXT:    addl $8, %esp
+; WIN32-NEXT:    addl %esi, %ecx
+; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %edi
+; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    imull %edi, %edx
+; WIN32-NEXT:    addl %edx, %ecx
+; WIN32-NEXT:    addl %ebx, %ecx
+; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    popl %ebx
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
@@ -372,42 +370,42 @@ define x86_regcallcc <32 x float> @testf32_stack(<32 x float> %a, <32 x float> %
 ; WIN32-NEXT:    movaps %xmm2, %xmm3
 ; WIN32-NEXT:    movaps %xmm1, %xmm2
 ; WIN32-NEXT:    movaps %xmm0, %xmm1
-; WIN32-NEXT:    movups 120(%ebp), %xmm7
-; WIN32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; WIN32-NEXT:    addps %xmm7, %xmm0
-; WIN32-NEXT:    movups 248(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm0
-; WIN32-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; WIN32-NEXT:    movups 8(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm1
+; WIN32-NEXT:    movups 136(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm1
+; WIN32-NEXT:    movups 24(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm2
+; WIN32-NEXT:    movups 152(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm2
+; WIN32-NEXT:    movups 40(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm3
+; WIN32-NEXT:    movups 168(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm3
+; WIN32-NEXT:    movups 56(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm4
+; WIN32-NEXT:    movups 184(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm4
+; WIN32-NEXT:    movups 72(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm5
+; WIN32-NEXT:    movups 200(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm5
+; WIN32-NEXT:    movups 88(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm6
+; WIN32-NEXT:    movups 216(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm6
 ; WIN32-NEXT:    movups 104(%ebp), %xmm7
 ; WIN32-NEXT:    movaps (%esp), %xmm0 # 16-byte Reload
 ; WIN32-NEXT:    addps %xmm7, %xmm0
 ; WIN32-NEXT:    movups 232(%ebp), %xmm7
 ; WIN32-NEXT:    addps %xmm7, %xmm0
 ; WIN32-NEXT:    movaps %xmm0, (%esp) # 16-byte Spill
-; WIN32-NEXT:    movups 88(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm6
-; WIN32-NEXT:    movups 216(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm6
-; WIN32-NEXT:    movups 72(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm5
-; WIN32-NEXT:    movups 200(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm5
-; WIN32-NEXT:    movups 56(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm4
-; WIN32-NEXT:    movups 184(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm4
-; WIN32-NEXT:    movups 40(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm3
-; WIN32-NEXT:    movups 168(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm3
-; WIN32-NEXT:    movups 24(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm2
-; WIN32-NEXT:    movups 152(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm2
-; WIN32-NEXT:    movups 8(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm1
-; WIN32-NEXT:    movups 136(%ebp), %xmm7
-; WIN32-NEXT:    addps %xmm7, %xmm1
+; WIN32-NEXT:    movups 120(%ebp), %xmm7
+; WIN32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; WIN32-NEXT:    addps %xmm7, %xmm0
+; WIN32-NEXT:    movups 248(%ebp), %xmm7
+; WIN32-NEXT:    addps %xmm7, %xmm0
+; WIN32-NEXT:    movaps %xmm0, %xmm7
 ; WIN32-NEXT:    movaps %xmm1, %xmm0
 ; WIN32-NEXT:    movaps %xmm2, %xmm1
 ; WIN32-NEXT:    movaps %xmm3, %xmm2
@@ -415,7 +413,6 @@ define x86_regcallcc <32 x float> @testf32_stack(<32 x float> %a, <32 x float> %
 ; WIN32-NEXT:    movaps %xmm5, %xmm4
 ; WIN32-NEXT:    movaps %xmm6, %xmm5
 ; WIN32-NEXT:    movaps (%esp), %xmm6 # 16-byte Reload
-; WIN32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
 ; WIN32-NEXT:    movl %ebp, %esp
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl

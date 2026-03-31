@@ -6,10 +6,10 @@ define <8 x float> @f(<8 x float> %a, i32 %b) nounwind  {
 ; X86-LABEL: f:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    subl $44, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $7, %eax
 ; X86-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movaps %xmm0, (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $7, %eax
 ; X86-NEXT:    movl $1084227584, (%esp,%eax,4) ## imm = 0x40A00000
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1

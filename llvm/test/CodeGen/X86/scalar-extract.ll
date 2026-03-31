@@ -8,9 +8,9 @@ define void @foo(ptr %A, ptr %B) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl (%ecx), %ecx
-; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    retl
 entry:
 	%tmp1 = load <2 x i16>, ptr %A		; <<2 x i16>> [#uses=1]

@@ -149,10 +149,10 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X86-NEXT:    pushl %ebp
 ; MSVC-X86-NEXT:    movl %esp, %ebp
 ; MSVC-X86-NEXT:    pushl %eax
+; MSVC-X86-NEXT:    movl ___security_cookie, %eax
+; MSVC-X86-NEXT:    xorl %ebp, %eax
+; MSVC-X86-NEXT:    movl %eax, -4(%ebp)
 ; MSVC-X86-NEXT:    movl 8(%ebp), %eax
-; MSVC-X86-NEXT:    movl ___security_cookie, %ecx
-; MSVC-X86-NEXT:    xorl %ebp, %ecx
-; MSVC-X86-NEXT:    movl %ecx, -4(%ebp)
 ; MSVC-X86-NEXT:    shll $2, %eax
 ; MSVC-X86-NEXT:    calll __chkstk
 ; MSVC-X86-NEXT:    movl %esp, %eax
@@ -288,10 +288,10 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X86-NEXT:    andl $-32, %esp
 ; MSVC-X86-NEXT:    subl $32, %esp
 ; MSVC-X86-NEXT:    movl %esp, %esi
+; MSVC-X86-NEXT:    movl ___security_cookie, %eax
+; MSVC-X86-NEXT:    xorl %ebp, %eax
+; MSVC-X86-NEXT:    movl %eax, 12(%esi)
 ; MSVC-X86-NEXT:    movl 8(%ebp), %eax
-; MSVC-X86-NEXT:    movl ___security_cookie, %ecx
-; MSVC-X86-NEXT:    xorl %ebp, %ecx
-; MSVC-X86-NEXT:    movl %ecx, 12(%esi)
 ; MSVC-X86-NEXT:    shll $2, %eax
 ; MSVC-X86-NEXT:    calll __chkstk
 ; MSVC-X86-NEXT:    movl %esp, %edi

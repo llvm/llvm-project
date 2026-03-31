@@ -353,9 +353,9 @@ define float @select_fcmp_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z, 
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovaps 8(%ebp), %xmm3
 ; X86-NEXT:    vcmpneq_oqss %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
+; X86-NEXT:    vmovaps 8(%ebp), %xmm1
+; X86-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; X86-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebp, %esp

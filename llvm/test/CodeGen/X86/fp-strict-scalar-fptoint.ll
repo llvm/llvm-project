@@ -446,10 +446,10 @@ define i16 @fptoui_f32toi16(float %x) #0 {
 define i32 @fptoui_f32toi32(float %x) #0 {
 ; SSE-X86-LABEL: fptoui_f32toi32:
 ; SSE-X86:       # %bb.0:
+; SSE-X86-NEXT:    xorps %xmm1, %xmm1
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm2 = [2.14748365E+9,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-X86-NEXT:    comiss %xmm0, %xmm2
-; SSE-X86-NEXT:    xorps %xmm1, %xmm1
 ; SSE-X86-NEXT:    ja .LBB8_2
 ; SSE-X86-NEXT:  # %bb.1:
 ; SSE-X86-NEXT:    movaps %xmm2, %xmm1
@@ -1086,10 +1086,10 @@ define i16 @fptoui_f64toi16(double %x) #0 {
 define i32 @fptoui_f64toi32(double %x) #0 {
 ; SSE-X86-LABEL: fptoui_f64toi32:
 ; SSE-X86:       # %bb.0:
+; SSE-X86-NEXT:    xorpd %xmm1, %xmm1
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm2 = [2.147483648E+9,0.0E+0]
 ; SSE-X86-NEXT:    comisd %xmm0, %xmm2
-; SSE-X86-NEXT:    xorpd %xmm1, %xmm1
 ; SSE-X86-NEXT:    ja .LBB17_2
 ; SSE-X86-NEXT:  # %bb.1:
 ; SSE-X86-NEXT:    movapd %xmm2, %xmm1

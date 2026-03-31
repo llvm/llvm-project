@@ -10,24 +10,22 @@
 define void @mul_2xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %index) nounwind {
 ; CHECK-LABEL: mul_2xi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl c, %esi
-; CHECK-NEXT:    movzbl 1(%edx,%ecx), %edi
-; CHECK-NEXT:    movzbl (%edx,%ecx), %edx
-; CHECK-NEXT:    movzbl 1(%eax,%ecx), %ebx
-; CHECK-NEXT:    imull %edi, %ebx
-; CHECK-NEXT:    movzbl (%eax,%ecx), %eax
-; CHECK-NEXT:    imull %edx, %eax
-; CHECK-NEXT:    movl %ebx, 4(%esi,%ecx,4)
-; CHECK-NEXT:    movl %eax, (%esi,%ecx,4)
+; CHECK-NEXT:    movzbl 1(%ecx,%eax), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movzbl 1(%esi,%eax), %edi
+; CHECK-NEXT:    imull %edx, %edi
+; CHECK-NEXT:    movzbl (%esi,%eax), %edx
+; CHECK-NEXT:    movzbl (%ecx,%eax), %ecx
+; CHECK-NEXT:    imull %edx, %ecx
+; CHECK-NEXT:    movl c, %edx
+; CHECK-NEXT:    movl %edi, 4(%edx,%eax,4)
+; CHECK-NEXT:    movl %ecx, (%edx,%eax,4)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
-; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    retl
 entry:
   %pre = load ptr, ptr @c

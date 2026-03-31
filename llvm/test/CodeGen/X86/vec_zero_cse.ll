@@ -13,10 +13,10 @@
 define void @test1() {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $0, M1+4
-; X86-NEXT:    movl $0, M1
 ; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    movsd %xmm0, M2
+; X86-NEXT:    movl $0, M1+4
+; X86-NEXT:    movl $0, M1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
@@ -32,10 +32,10 @@ define void @test1() {
 define void @test2() {
 ; X86-LABEL: test2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $-1, M1+4
-; X86-NEXT:    movl $-1, M1
 ; X86-NEXT:    pcmpeqd %xmm0, %xmm0
 ; X86-NEXT:    movq %xmm0, M2
+; X86-NEXT:    movl $-1, M1+4
+; X86-NEXT:    movl $-1, M1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2:
@@ -52,8 +52,8 @@ define void @test3() {
 ; X86-LABEL: test3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    movaps %xmm0, S1
 ; X86-NEXT:    movaps %xmm0, S2
+; X86-NEXT:    movaps %xmm0, S1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
@@ -71,8 +71,8 @@ define void @test4() {
 ; X86-LABEL: test4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pcmpeqd %xmm0, %xmm0
-; X86-NEXT:    movdqa %xmm0, S1
 ; X86-NEXT:    movdqa %xmm0, S2
+; X86-NEXT:    movdqa %xmm0, S1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test4:

@@ -86,14 +86,41 @@ define float @fneg_f32(float %x) nounwind {
 }
 
 define void @fneg_f64_mem(ptr %x, ptr %y) nounwind {
-; X86-LABEL: fneg_f64_mem:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    fldl (%ecx)
-; X86-NEXT:    fchs
-; X86-NEXT:    fstpl (%eax)
-; X86-NEXT:    retl
+; FASTISEL-X86-LABEL: fneg_f64_mem:
+; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; FASTISEL-X86-NEXT:    fldl (%ecx)
+; FASTISEL-X86-NEXT:    fchs
+; FASTISEL-X86-NEXT:    fstpl (%eax)
+; FASTISEL-X86-NEXT:    retl
+;
+; SDAG-X86-LABEL: fneg_f64_mem:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    fldl (%eax)
+; SDAG-X86-NEXT:    fchs
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    fstpl (%eax)
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-SSE-X86-LABEL: fneg_f64_mem:
+; FASTISEL-SSE-X86:       # %bb.0:
+; FASTISEL-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; FASTISEL-SSE-X86-NEXT:    fldl (%ecx)
+; FASTISEL-SSE-X86-NEXT:    fchs
+; FASTISEL-SSE-X86-NEXT:    fstpl (%eax)
+; FASTISEL-SSE-X86-NEXT:    retl
+;
+; SDAG-SSE-X86-LABEL: fneg_f64_mem:
+; SDAG-SSE-X86:       # %bb.0:
+; SDAG-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-SSE-X86-NEXT:    fldl (%eax)
+; SDAG-SSE-X86-NEXT:    fchs
+; SDAG-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-SSE-X86-NEXT:    fstpl (%eax)
+; SDAG-SSE-X86-NEXT:    retl
 ;
 ; FASTISEL-SSE-X64-LABEL: fneg_f64_mem:
 ; FASTISEL-SSE-X64:       # %bb.0:
@@ -137,10 +164,10 @@ define void @fneg_f32_mem(ptr %x, ptr %y) nounwind {
 ; SDAG-X86-LABEL: fneg_f32_mem:
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SDAG-X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
-; SDAG-X86-NEXT:    xorl (%ecx), %edx
-; SDAG-X86-NEXT:    movl %edx, (%eax)
+; SDAG-X86-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; SDAG-X86-NEXT:    xorl (%eax), %ecx
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl %ecx, (%eax)
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-SSE-X86-LABEL: fneg_f32_mem:
@@ -155,10 +182,10 @@ define void @fneg_f32_mem(ptr %x, ptr %y) nounwind {
 ; SDAG-SSE-X86-LABEL: fneg_f32_mem:
 ; SDAG-SSE-X86:       # %bb.0:
 ; SDAG-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SDAG-SSE-X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
-; SDAG-SSE-X86-NEXT:    xorl (%ecx), %edx
-; SDAG-SSE-X86-NEXT:    movl %edx, (%eax)
+; SDAG-SSE-X86-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; SDAG-SSE-X86-NEXT:    xorl (%eax), %ecx
+; SDAG-SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-SSE-X86-NEXT:    movl %ecx, (%eax)
 ; SDAG-SSE-X86-NEXT:    retl
 ;
 ; FASTISEL-SSE-X64-LABEL: fneg_f32_mem:

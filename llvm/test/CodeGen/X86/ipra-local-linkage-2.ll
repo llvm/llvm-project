@@ -35,11 +35,27 @@ define internal void @callee_clobber_rbx(ptr %addr) nounwind norecurse {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
+;
+; X86-LABEL: callee_clobber_rbx:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    #APP
+; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    #NO_APP
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
   call void asm sideeffect "xor %ebx, %ebx", "~{ebx}"()
   ret void
 }
 
 define internal void @callee_clobber_esi(ptr %addr) nounwind norecurse {
+; X64-LABEL: callee_clobber_esi:
+; X64:       # %bb.0:
+; X64-NEXT:    #APP
+; X64-NEXT:    xorl %esi, %esi
+; X64-NEXT:    #NO_APP
+; X64-NEXT:    retq
+;
 ; X86-LABEL: callee_clobber_esi:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -109,6 +125,36 @@ define void @caller_use_rbx(i32 %X) nounwind ssp {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB4_2:
 ; X64-NEXT:    callq __stack_chk_fail@PLT
+;
+; X86-LABEL: caller_use_rbx:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-32, %esp
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    movl %esp, %esi
+; X86-NEXT:    movl __stack_chk_guard, %eax
+; X86-NEXT:    movl %eax, 16(%esi)
+; X86-NEXT:    movl %esp, %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, %esp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll callee_clobber_rbx
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    movl __stack_chk_guard, %eax
+; X86-NEXT:    cmpl 16(%esi), %eax
+; X86-NEXT:    jne .LBB4_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    leal -4(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB4_2:
+; X86-NEXT:    calll __stack_chk_fail
   %realign = alloca i32, align 32
   %addr = alloca i32, i32 %X
   call void @callee_clobber_rbx(ptr %realign)
@@ -116,6 +162,35 @@ define void @caller_use_rbx(i32 %X) nounwind ssp {
 }
 
 define void @caller_use_esi(i32 %X) nounwind ssp {
+; X64-LABEL: caller_use_esi:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    movq %rsp, %rbp
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    andq $-32, %rsp
+; X64-NEXT:    subq $64, %rsp
+; X64-NEXT:    movq %rsp, %rbx
+; X64-NEXT:    movq __stack_chk_guard(%rip), %rax
+; X64-NEXT:    movq %rax, 32(%rbx)
+; X64-NEXT:    movq %rsp, %rax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    leaq 15(,%rcx,4), %rcx
+; X64-NEXT:    andq $-16, %rcx
+; X64-NEXT:    subq %rcx, %rax
+; X64-NEXT:    movq %rax, %rsp
+; X64-NEXT:    movq %rbx, %rdi
+; X64-NEXT:    callq callee_clobber_esi
+; X64-NEXT:    movq __stack_chk_guard(%rip), %rax
+; X64-NEXT:    cmpq 32(%rbx), %rax
+; X64-NEXT:    jne .LBB5_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    leaq -8(%rbp), %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB5_2:
+; X64-NEXT:    callq __stack_chk_fail@PLT
+;
 ; X86-LABEL: caller_use_esi:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -124,13 +199,13 @@ define void @caller_use_esi(i32 %X) nounwind ssp {
 ; X86-NEXT:    andl $-32, %esp
 ; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    movl %esp, %esi
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl __stack_chk_guard, %ecx
-; X86-NEXT:    movl %ecx, 16(%esi)
-; X86-NEXT:    movl %esp, %ecx
-; X86-NEXT:    shll $2, %eax
-; X86-NEXT:    subl %eax, %ecx
-; X86-NEXT:    movl %ecx, %esp
+; X86-NEXT:    movl __stack_chk_guard, %eax
+; X86-NEXT:    movl %eax, 16(%esi)
+; X86-NEXT:    movl %esp, %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, %esp
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll callee_clobber_esi

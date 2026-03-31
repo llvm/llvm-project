@@ -9,10 +9,10 @@ declare <2 x i32> @llvm.masked.gather.v2i32(<2 x ptr> %ptrs, i32 %align, <2 x i1
 define <2 x i32> @masked_gather_v2i32(ptr %ptr, <2 x i1> %masks, <2 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v2i32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    vpgatherdd %xmm0, (,%xmm2), %xmm1
 ; X86-NEXT:    vmovdqa %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -58,10 +58,10 @@ entry:
 define <4 x i32> @masked_gather_v2i32_concat(ptr %ptr, <2 x i1> %masks, <2 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v2i32_concat:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    vpgatherdd %xmm0, (,%xmm2), %xmm1
 ; X86-NEXT:    vmovdqa %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -110,10 +110,10 @@ declare <2 x float> @llvm.masked.gather.v2float(<2 x ptr> %ptrs, i32 %align, <2 
 define <2 x float> @masked_gather_v2float(ptr %ptr, <2 x i1> %masks, <2 x float> %passthro) {
 ; X86-LABEL: masked_gather_v2float:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    vgatherdps %xmm0, (,%xmm2), %xmm1
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -160,10 +160,10 @@ entry:
 define <4 x float> @masked_gather_v2float_concat(ptr %ptr, <2 x i1> %masks, <2 x float> %passthro) {
 ; X86-LABEL: masked_gather_v2float_concat:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    vgatherdps %xmm0, (,%xmm2), %xmm1
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -335,10 +335,10 @@ declare <8 x i32> @llvm.masked.gather.v8i32(<8 x ptr> %ptrs, i32 %align, <8 x i1
 define <8 x i32> @masked_gather_v8i32(ptr %ptr, <8 x i1> %masks, <8 x i32> %passthro) {
 ; X86-LABEL: masked_gather_v8i32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; X86-NEXT:    vpslld $31, %ymm0, %ymm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa (%eax), %ymm2
+; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X86-NEXT:    vpslld $31, %ymm0, %ymm0
 ; X86-NEXT:    vpgatherdd %ymm0, (,%ymm2), %ymm1
 ; X86-NEXT:    vmovdqa %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -438,10 +438,10 @@ declare <8 x float> @llvm.masked.gather.v8float(<8 x ptr> %ptrs, i32 %align, <8 
 define <8 x float> @masked_gather_v8float(ptr %ptr, <8 x i1> %masks, <8 x float> %passthro) {
 ; X86-LABEL: masked_gather_v8float:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; X86-NEXT:    vpslld $31, %ymm0, %ymm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps (%eax), %ymm2
+; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X86-NEXT:    vpslld $31, %ymm0, %ymm0
 ; X86-NEXT:    vgatherdps %ymm0, (,%ymm2), %ymm1
 ; X86-NEXT:    vmovaps %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -541,10 +541,10 @@ declare <4 x i64> @llvm.masked.gather.v4i64(<4 x ptr> %ptrs, i32 %align, <4 x i1
 define <4 x i64> @masked_gather_v4i64(ptr %ptr, <4 x i1> %masks, <4 x i64> %passthro) {
 ; X86-LABEL: masked_gather_v4i64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpslld $31, %xmm0, %xmm0
-; X86-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa (%eax), %xmm2
+; X86-NEXT:    vpslld $31, %xmm0, %xmm0
+; X86-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; X86-NEXT:    vpgatherdq %ymm0, (,%xmm2), %ymm1
 ; X86-NEXT:    vmovdqa %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -609,10 +609,10 @@ declare <4 x double> @llvm.masked.gather.v4double(<4 x ptr> %ptrs, i32 %align, <
 define <4 x double> @masked_gather_v4double(ptr %ptr, <4 x i1> %masks, <4 x double> %passthro) {
 ; X86-LABEL: masked_gather_v4double:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpslld $31, %xmm0, %xmm0
-; X86-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovapd (%eax), %xmm2
+; X86-NEXT:    vpslld $31, %xmm0, %xmm0
+; X86-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; X86-NEXT:    vgatherdpd %ymm0, (,%xmm2), %ymm1
 ; X86-NEXT:    vmovapd %ymm1, %ymm0
 ; X86-NEXT:    retl

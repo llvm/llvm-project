@@ -28,11 +28,11 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:  ## %bb.4: ## %bb37
 ; CHECK-NEXT:    movw $0, 40(%edi)
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    leal (,%ecx,4), %ecx
-; CHECK-NEXT:    leal (,%ebx,4), %edx
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movzwl %bp, %eax
+; CHECK-NEXT:    leal (,%ecx,4), %ecx
 ; CHECK-NEXT:    movswl %cx, %ecx
+; CHECK-NEXT:    leal (,%ebx,4), %edx
 ; CHECK-NEXT:    movswl %dx, %edx
 ; CHECK-NEXT:    pushl $87
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
@@ -64,18 +64,18 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    jmp LBB0_2
 ; CHECK-NEXT:  LBB0_7: ## %bb150
-; CHECK-NEXT:    movswl %si, %eax
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movswl %cx, %ecx
 ; CHECK-NEXT:    movswl %bx, %edx
-; CHECK-NEXT:    movzwl %bp, %esi
+; CHECK-NEXT:    movzwl %bp, %ebx
+; CHECK-NEXT:    movswl %si, %eax
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl $1

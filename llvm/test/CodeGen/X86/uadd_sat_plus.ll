@@ -11,11 +11,11 @@ declare i64 @llvm.uadd.sat.i64(i64, i64)
 define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: func32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    imull {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $-1, %eax
-; X86-NEXT:    cmovael %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    imull {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $-1, %ecx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmovbl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func32:
@@ -33,11 +33,11 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-LABEL: func64:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl $-1, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl $-1, %ecx
 ; X86-NEXT:    cmovbl %ecx, %edx
 ; X86-NEXT:    cmovbl %ecx, %eax
 ; X86-NEXT:    retl
@@ -113,10 +113,10 @@ define zeroext i4 @func4(i4 zeroext %x, i4 zeroext %y, i4 zeroext %z) nounwind {
 ; X86-NEXT:    andb $15, %al
 ; X86-NEXT:    addb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    movl $15, %edx
 ; X86-NEXT:    cmpb $15, %al
-; X86-NEXT:    movl $15, %eax
-; X86-NEXT:    cmovbl %ecx, %eax
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    cmovbl %ecx, %edx
+; X86-NEXT:    movzbl %dl, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func4:

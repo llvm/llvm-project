@@ -54,9 +54,9 @@ define dso_local void @test_sign_ext(ptr %f, ptr %i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, 8(%eax)
-; CHECK-NEXT:    sarl $31, %ecx
-; CHECK-NEXT:    movl %ecx, 12(%eax)
+; CHECK-NEXT:    movl %eax, 8(%ecx)
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    movl %eax, 12(%ecx)
 ; CHECK-NEXT:    jmp _use_foo # TAILCALL
 ;
 ; CHECK-O0-LABEL: test_sign_ext:
@@ -171,9 +171,10 @@ entry:
 define dso_local void @test_null_arg(ptr %f) {
 ; CHECK-LABEL: test_null_arg:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl $0
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll _test_noop2
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
@@ -199,9 +200,9 @@ define dso_local void @test_unrecognized(ptr %f, ptr addrspace(14) %i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, 8(%eax)
-; CHECK-NEXT:    sarl $31, %ecx
-; CHECK-NEXT:    movl %ecx, 12(%eax)
+; CHECK-NEXT:    movl %eax, 8(%ecx)
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    movl %eax, 12(%ecx)
 ; CHECK-NEXT:    jmp _use_foo # TAILCALL
 ;
 ; CHECK-O0-LABEL: test_unrecognized:
@@ -359,9 +360,9 @@ define void @test_store_sptr32_trunc_i1(ptr addrspace(270) %s, i32 %i) {
 ; CHECK-LABEL: test_store_sptr32_trunc_i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    movb %cl, (%eax)
+; CHECK-NEXT:    movb %al, (%ecx)
 ; CHECK-NEXT:    retl
 ;
 ; CHECK-O0-LABEL: test_store_sptr32_trunc_i1:

@@ -26,10 +26,10 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %forbody
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl 12(%ebp), %edx
-; CHECK-NEXT:    movl 8(%ebp), %ecx
+; CHECK-NEXT:    movl 12(%ebp), %ecx
 ; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    pinsrw $2, 4(%edx,%eax,8), %xmm1
+; CHECK-NEXT:    pinsrw $2, 4(%ecx,%eax,8), %xmm1
+; CHECK-NEXT:    movl 8(%ebp), %ecx
 ; CHECK-NEXT:    psubw %xmm0, %xmm1
 ; CHECK-NEXT:    pextrw $2, %xmm1, 4(%ecx,%eax,8)
 ; CHECK-NEXT:    movd %xmm1, (%ecx,%eax,8)

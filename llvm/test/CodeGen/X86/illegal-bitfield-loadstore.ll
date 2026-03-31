@@ -52,21 +52,16 @@ define void @i24_and_or(ptr %a) {
 define void @i24_insert_bit(ptr %a, i1 zeroext %bit) {
 ; X86-LABEL: i24_insert_bit:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %ecx
+; X86-NEXT:    movzbl 2(%eax), %edx
+; X86-NEXT:    shll $16, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    andl $16769023, %edx # imm = 0xFFDFFF
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%eax), %edx
-; X86-NEXT:    movzbl 2(%eax), %esi
-; X86-NEXT:    shll $16, %esi
-; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    shll $13, %ecx
-; X86-NEXT:    andl $16769023, %esi # imm = 0xFFDFFF
-; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    movw %si, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    movw %cx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: i24_insert_bit:
@@ -143,10 +138,10 @@ define void @i56_insert_bit(ptr %a, i1 zeroext %bit) {
 ; X86-LABEL: i56_insert_bit:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $13, %ecx
-; X86-NEXT:    movl $-8193, %edx # imm = 0xDFFF
-; X86-NEXT:    andl (%eax), %edx
+; X86-NEXT:    movl $-8193, %ecx # imm = 0xDFFF
+; X86-NEXT:    andl (%eax), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shll $13, %edx
 ; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    retl

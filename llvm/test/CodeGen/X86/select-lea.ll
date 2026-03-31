@@ -55,18 +55,18 @@ define i32 @sadd_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ; CMOV-NEXT:    pushl %esi
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CMOV-NEXT:    leal (%eax,%edx), %esi
-; CMOV-NEXT:    addl (%ecx), %esi
-; CMOV-NEXT:    addl %edx, %eax
-; CMOV-NEXT:    cmovol %esi, %eax
+; CMOV-NEXT:    leal (%eax,%ecx), %edx
+; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CMOV-NEXT:    addl (%esi), %edx
+; CMOV-NEXT:    addl %ecx, %eax
+; CMOV-NEXT:    cmovol %edx, %eax
 ; CMOV-NEXT:    popl %esi
 ; CMOV-NEXT:    retl
 ;
 ; NOCMOV-LABEL: sadd_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    leal (%eax,%edx), %ecx
 ; NOCMOV-NEXT:    addl %edx, %eax
 ; NOCMOV-NEXT:    jno .LBB1_2
@@ -135,18 +135,18 @@ define i32 @uadd_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ; CMOV-NEXT:    pushl %esi
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CMOV-NEXT:    leal (%eax,%edx), %esi
-; CMOV-NEXT:    addl (%ecx), %esi
-; CMOV-NEXT:    addl %edx, %eax
-; CMOV-NEXT:    cmovbl %esi, %eax
+; CMOV-NEXT:    leal (%eax,%ecx), %edx
+; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CMOV-NEXT:    addl (%esi), %edx
+; CMOV-NEXT:    addl %ecx, %eax
+; CMOV-NEXT:    cmovbl %edx, %eax
 ; CMOV-NEXT:    popl %esi
 ; CMOV-NEXT:    retl
 ;
 ; NOCMOV-LABEL: uadd_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    leal (%eax,%edx), %ecx
 ; NOCMOV-NEXT:    addl %edx, %eax
 ; NOCMOV-NEXT:    jae .LBB3_2
@@ -214,19 +214,19 @@ define i32 @ssub_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ; CMOV-NEXT:    pushl %esi
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CMOV-NEXT:    movl %eax, %esi
-; CMOV-NEXT:    subl %edx, %esi
-; CMOV-NEXT:    addl (%ecx), %esi
-; CMOV-NEXT:    subl %edx, %eax
-; CMOV-NEXT:    cmovol %esi, %eax
+; CMOV-NEXT:    movl %eax, %edx
+; CMOV-NEXT:    subl %ecx, %edx
+; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CMOV-NEXT:    addl (%esi), %edx
+; CMOV-NEXT:    subl %ecx, %eax
+; CMOV-NEXT:    cmovol %edx, %eax
 ; CMOV-NEXT:    popl %esi
 ; CMOV-NEXT:    retl
 ;
 ; NOCMOV-LABEL: ssub_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movl %eax, %ecx
 ; NOCMOV-NEXT:    subl %edx, %ecx
 ; NOCMOV-NEXT:    subl %edx, %eax
@@ -295,19 +295,19 @@ define i32 @usub_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ; CMOV-NEXT:    pushl %esi
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CMOV-NEXT:    movl %eax, %esi
-; CMOV-NEXT:    subl %edx, %esi
-; CMOV-NEXT:    addl (%ecx), %esi
-; CMOV-NEXT:    subl %edx, %eax
-; CMOV-NEXT:    cmovbl %esi, %eax
+; CMOV-NEXT:    movl %eax, %edx
+; CMOV-NEXT:    subl %ecx, %edx
+; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CMOV-NEXT:    addl (%esi), %edx
+; CMOV-NEXT:    subl %ecx, %eax
+; CMOV-NEXT:    cmovbl %edx, %eax
 ; CMOV-NEXT:    popl %esi
 ; CMOV-NEXT:    retl
 ;
 ; NOCMOV-LABEL: usub_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movl %eax, %ecx
 ; NOCMOV-NEXT:    subl %edx, %ecx
 ; NOCMOV-NEXT:    subl %edx, %eax
@@ -376,19 +376,19 @@ define i32 @smul_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ; CMOV-NEXT:    pushl %esi
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CMOV-NEXT:    movl %eax, %esi
-; CMOV-NEXT:    imull %edx, %esi
-; CMOV-NEXT:    addl (%ecx), %esi
-; CMOV-NEXT:    imull %edx, %eax
-; CMOV-NEXT:    cmovol %esi, %eax
+; CMOV-NEXT:    movl %eax, %edx
+; CMOV-NEXT:    imull %ecx, %edx
+; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CMOV-NEXT:    addl (%esi), %edx
+; CMOV-NEXT:    imull %ecx, %eax
+; CMOV-NEXT:    cmovol %edx, %eax
 ; CMOV-NEXT:    popl %esi
 ; CMOV-NEXT:    retl
 ;
 ; NOCMOV-LABEL: smul_add_load:
 ; NOCMOV:       # %bb.0:
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movl %eax, %ecx
 ; NOCMOV-NEXT:    imull %edx, %ecx
 ; NOCMOV-NEXT:    imull %edx, %eax
@@ -459,14 +459,14 @@ define i32 @umul_add_load(i32 %x, i32 %y, ptr %pz) nounwind {
 ;
 ; CMOV-LABEL: umul_add_load:
 ; CMOV:       # %bb.0:
-; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CMOV-NEXT:    mull {{[0-9]+}}(%esp)
-; CMOV-NEXT:    seto %dl
-; CMOV-NEXT:    movl (%ecx), %ecx
-; CMOV-NEXT:    addl %eax, %ecx
-; CMOV-NEXT:    testb %dl, %dl
-; CMOV-NEXT:    cmovnel %ecx, %eax
+; CMOV-NEXT:    seto %cl
+; CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CMOV-NEXT:    movl (%edx), %edx
+; CMOV-NEXT:    addl %eax, %edx
+; CMOV-NEXT:    testb %cl, %cl
+; CMOV-NEXT:    cmovnel %edx, %eax
 ; CMOV-NEXT:    retl
 ;
 ; NOCMOV-LABEL: umul_add_load:

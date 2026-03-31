@@ -89,10 +89,9 @@ define void @foo() {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movzbl var_27, %ecx
 ; X86-NEXT:    movzwl var_22, %eax
 ; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movzbl var_27, %ecx
 ; X86-NEXT:    addb $30, %cl
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    shrdl %cl, %edx, %eax
@@ -101,6 +100,7 @@ define void @foo() {
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:  .LBB0_2: # %bb
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movb %dl, (%eax)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp

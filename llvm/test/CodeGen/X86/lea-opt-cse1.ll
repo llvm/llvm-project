@@ -25,8 +25,8 @@ define void @test_func(ptr nocapture %ctx, i32 %n) local_unnamed_addr {
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl 16(%eax), %edx
 ; X86-NEXT:    leal 1(%ecx,%edx), %esi
-; X86-NEXT:    addl %edx, %ecx
 ; X86-NEXT:    movl %esi, 12(%eax)
+; X86-NEXT:    addl %edx, %ecx
 ; X86-NEXT:    leal 1(%edx,%ecx), %ecx
 ; X86-NEXT:    movl %ecx, 16(%eax)
 ; X86-NEXT:    popl %esi

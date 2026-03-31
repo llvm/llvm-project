@@ -72,7 +72,8 @@ define i64 @test_lrint_i64_f32(float %x) nounwind {
 ;
 ; X86-NOX87-LABEL: test_lrint_i64_f32:
 ; X86-NOX87:       # %bb.0:
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOX87-NEXT:    pushl %eax
 ; X86-NOX87-NEXT:    calll lrintf
 ; X86-NOX87-NEXT:    addl $4, %esp
 ; X86-NOX87-NEXT:    retl
@@ -123,8 +124,10 @@ define i64 @test_lrint_i64_f64(double %x) nounwind {
 ;
 ; X86-NOX87-LABEL: test_lrint_i64_f64:
 ; X86-NOX87:       # %bb.0:
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOX87-NEXT:    pushl %ecx
+; X86-NOX87-NEXT:    pushl %eax
 ; X86-NOX87-NEXT:    calll lrint
 ; X86-NOX87-NEXT:    addl $8, %esp
 ; X86-NOX87-NEXT:    retl
@@ -176,9 +179,11 @@ define i64 @test_lrint_i64_f80(x86_fp80 %x) nounwind {
 ; X86-NOX87-LABEL: test_lrint_i64_f80:
 ; X86-NOX87:       # %bb.0:
 ; X86-NOX87-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOX87-NEXT:    pushl %eax
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    pushl %edx
+; X86-NOX87-NEXT:    pushl %ecx
 ; X86-NOX87-NEXT:    calll lrintl
 ; X86-NOX87-NEXT:    addl $12, %esp
 ; X86-NOX87-NEXT:    retl
@@ -199,15 +204,21 @@ define i64 @test_lrint_i64_f128(fp128 %x) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    pushl 20(%ebp)
-; X86-NEXT:    pushl 16(%ebp)
-; X86-NEXT:    pushl 12(%ebp)
-; X86-NEXT:    pushl 8(%ebp)
+; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl 20(%ebp), %ecx
+; X86-NEXT:    movl 8(%ebp), %edx
+; X86-NEXT:    movl 12(%ebp), %esi
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll lrintl
 ; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    leal -4(%ebp), %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
@@ -215,15 +226,21 @@ define i64 @test_lrint_i64_f128(fp128 %x) nounwind {
 ; X86-NOX87:       # %bb.0:
 ; X86-NOX87-NEXT:    pushl %ebp
 ; X86-NOX87-NEXT:    movl %esp, %ebp
+; X86-NOX87-NEXT:    pushl %esi
 ; X86-NOX87-NEXT:    andl $-16, %esp
 ; X86-NOX87-NEXT:    subl $16, %esp
-; X86-NOX87-NEXT:    pushl 20(%ebp)
-; X86-NOX87-NEXT:    pushl 16(%ebp)
-; X86-NOX87-NEXT:    pushl 12(%ebp)
-; X86-NOX87-NEXT:    pushl 8(%ebp)
+; X86-NOX87-NEXT:    movl 16(%ebp), %eax
+; X86-NOX87-NEXT:    movl 20(%ebp), %ecx
+; X86-NOX87-NEXT:    movl 8(%ebp), %edx
+; X86-NOX87-NEXT:    movl 12(%ebp), %esi
+; X86-NOX87-NEXT:    pushl %ecx
+; X86-NOX87-NEXT:    pushl %eax
+; X86-NOX87-NEXT:    pushl %esi
+; X86-NOX87-NEXT:    pushl %edx
 ; X86-NOX87-NEXT:    calll lrintl
 ; X86-NOX87-NEXT:    addl $16, %esp
-; X86-NOX87-NEXT:    movl %ebp, %esp
+; X86-NOX87-NEXT:    leal -4(%ebp), %esp
+; X86-NOX87-NEXT:    popl %esi
 ; X86-NOX87-NEXT:    popl %ebp
 ; X86-NOX87-NEXT:    retl
 ;
@@ -293,7 +310,8 @@ define i64 @test_lrint_i64_f32_strict(float %x) nounwind {
 ;
 ; X86-NOX87-LABEL: test_lrint_i64_f32_strict:
 ; X86-NOX87:       # %bb.0:
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOX87-NEXT:    pushl %eax
 ; X86-NOX87-NEXT:    calll lrintf
 ; X86-NOX87-NEXT:    addl $4, %esp
 ; X86-NOX87-NEXT:    retl
@@ -329,8 +347,10 @@ define i64 @test_lrint_i64_f64_strict(double %x) nounwind {
 ;
 ; X86-NOX87-LABEL: test_lrint_i64_f64_strict:
 ; X86-NOX87:       # %bb.0:
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOX87-NEXT:    pushl %ecx
+; X86-NOX87-NEXT:    pushl %eax
 ; X86-NOX87-NEXT:    calll lrint
 ; X86-NOX87-NEXT:    addl $8, %esp
 ; X86-NOX87-NEXT:    retl
@@ -367,9 +387,11 @@ define i64 @test_lrint_i64_f80_strict(x86_fp80 %x) nounwind {
 ; X86-NOX87-LABEL: test_lrint_i64_f80_strict:
 ; X86-NOX87:       # %bb.0:
 ; X86-NOX87-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOX87-NEXT:    pushl %eax
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    pushl %edx
+; X86-NOX87-NEXT:    pushl %ecx
 ; X86-NOX87-NEXT:    calll lrintl
 ; X86-NOX87-NEXT:    addl $12, %esp
 ; X86-NOX87-NEXT:    retl
@@ -392,15 +414,21 @@ define i64 @test_lrint_i64_f128_strict(fp128 %x) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    pushl 20(%ebp)
-; X86-NEXT:    pushl 16(%ebp)
-; X86-NEXT:    pushl 12(%ebp)
-; X86-NEXT:    pushl 8(%ebp)
+; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl 20(%ebp), %ecx
+; X86-NEXT:    movl 8(%ebp), %edx
+; X86-NEXT:    movl 12(%ebp), %esi
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll lrintl
 ; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    leal -4(%ebp), %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
@@ -408,15 +436,21 @@ define i64 @test_lrint_i64_f128_strict(fp128 %x) nounwind {
 ; X86-NOX87:       # %bb.0:
 ; X86-NOX87-NEXT:    pushl %ebp
 ; X86-NOX87-NEXT:    movl %esp, %ebp
+; X86-NOX87-NEXT:    pushl %esi
 ; X86-NOX87-NEXT:    andl $-16, %esp
 ; X86-NOX87-NEXT:    subl $16, %esp
-; X86-NOX87-NEXT:    pushl 20(%ebp)
-; X86-NOX87-NEXT:    pushl 16(%ebp)
-; X86-NOX87-NEXT:    pushl 12(%ebp)
-; X86-NOX87-NEXT:    pushl 8(%ebp)
+; X86-NOX87-NEXT:    movl 16(%ebp), %eax
+; X86-NOX87-NEXT:    movl 20(%ebp), %ecx
+; X86-NOX87-NEXT:    movl 8(%ebp), %edx
+; X86-NOX87-NEXT:    movl 12(%ebp), %esi
+; X86-NOX87-NEXT:    pushl %ecx
+; X86-NOX87-NEXT:    pushl %eax
+; X86-NOX87-NEXT:    pushl %esi
+; X86-NOX87-NEXT:    pushl %edx
 ; X86-NOX87-NEXT:    calll lrintl
 ; X86-NOX87-NEXT:    addl $16, %esp
-; X86-NOX87-NEXT:    movl %ebp, %esp
+; X86-NOX87-NEXT:    leal -4(%ebp), %esp
+; X86-NOX87-NEXT:    popl %esi
 ; X86-NOX87-NEXT:    popl %ebp
 ; X86-NOX87-NEXT:    retl
 ;
@@ -446,7 +480,8 @@ define i32 @PR125324(float %x) nounwind {
 ;
 ; X86-NOX87-LABEL: PR125324:
 ; X86-NOX87:       # %bb.0:
-; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOX87-NEXT:    pushl %eax
 ; X86-NOX87-NEXT:    calll lrintf
 ; X86-NOX87-NEXT:    addl $4, %esp
 ; X86-NOX87-NEXT:    retl

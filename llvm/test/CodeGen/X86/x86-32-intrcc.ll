@@ -61,8 +61,8 @@ define x86_intrcc void @test_isr_ecode(ptr byval(%struct.interrupt_frame) %frame
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
-; CHECK-NEXT:    movl 4(%ebp), %eax
-; CHECK-NEXT:    movl 16(%ebp), %ecx
+; CHECK-NEXT:    movl 16(%ebp), %eax
+; CHECK-NEXT:    movl 4(%ebp), %ecx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    leal -8(%ebp), %esp
@@ -153,8 +153,8 @@ define x86_intrcc void @test_isr_x87(ptr byval(%struct.interrupt_frame) %frame) 
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-16, %esp
-; CHECK-NEXT:    fldt f80
 ; CHECK-NEXT:    fld1
+; CHECK-NEXT:    fldt f80
 ; CHECK-NEXT:    faddp %st, %st(1)
 ; CHECK-NEXT:    fstpt f80
 ; CHECK-NEXT:    movl %ebp, %esp
@@ -187,16 +187,14 @@ define dso_local x86_intrcc void @test_fp_1(ptr byval(%struct.interrupt_frame) %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    andl $-16, %esp
-; CHECK-NEXT:    leal 20(%ebp), %eax
-; CHECK-NEXT:    leal 4(%ebp), %ecx
-; CHECK-NEXT:    movl %ecx, sink_address
+; CHECK-NEXT:    leal 4(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, sink_address
-; CHECK-NEXT:    leal -8(%ebp), %esp
+; CHECK-NEXT:    leal 20(%ebp), %eax
+; CHECK-NEXT:    movl %eax, sink_address
+; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
-; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    iretl
 ;
@@ -230,20 +228,16 @@ define dso_local x86_intrcc void @test_fp_2(ptr byval(%struct.interrupt_frame) %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    pushl %edx
-; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    andl $-16, %esp
+; CHECK-NEXT:    leal 8(%ebp), %eax
+; CHECK-NEXT:    movl %eax, sink_address
+; CHECK-NEXT:    leal 24(%ebp), %eax
+; CHECK-NEXT:    movl %eax, sink_address
 ; CHECK-NEXT:    movl 4(%ebp), %eax
-; CHECK-NEXT:    leal 24(%ebp), %ecx
-; CHECK-NEXT:    leal 8(%ebp), %edx
-; CHECK-NEXT:    movl %edx, sink_address
-; CHECK-NEXT:    movl %ecx, sink_address
 ; CHECK-NEXT:    movl %eax, sink_i32
-; CHECK-NEXT:    leal -12(%ebp), %esp
+; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
-; CHECK-NEXT:    popl %ecx
-; CHECK-NEXT:    popl %edx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    iretl

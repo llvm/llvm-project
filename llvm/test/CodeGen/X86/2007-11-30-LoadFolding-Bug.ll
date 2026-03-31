@@ -20,8 +20,8 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:  .LBB0_1: # %bb.i5
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    addl %ebx, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    addl %ebx, %ebx
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %mp_unexp_mp2d.exit.i
@@ -42,12 +42,12 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    cvttsd2si %xmm1, %edi
 ; CHECK-NEXT:    cmpl %edx, %edi
 ; CHECK-NEXT:    cmovgel %eax, %edi
-; CHECK-NEXT:    addl $2, %ecx
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    cvtsi2sd %edi, %xmm2
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    subsd %xmm2, %xmm1
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
+; CHECK-NEXT:    addl $2, %ecx
 ; CHECK-NEXT:    addl $-2, %ebp
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.8: # %mp_unexp_d2mp.exit29.i

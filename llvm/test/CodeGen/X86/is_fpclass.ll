@@ -1222,13 +1222,13 @@ entry:
 define i1 @issubnormal_d(double %x) {
 ; X86-LABEL: issubnormal_d:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl $-1, %eax
-; X86-NEXT:    adcl $-1, %ecx
-; X86-NEXT:    cmpl $-1, %eax
-; X86-NEXT:    sbbl $1048575, %ecx # imm = 0xFFFFF
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl $-1, %ecx
+; X86-NEXT:    adcl $-1, %eax
+; X86-NEXT:    cmpl $-1, %ecx
+; X86-NEXT:    sbbl $1048575, %eax # imm = 0xFFFFF
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
@@ -1284,9 +1284,9 @@ define i1 @issignaling_d(double %x) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $2146435072, %ecx # imm = 0x7FF00000
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    sbbl %eax, %ecx
 ; X86-NEXT:    setl %cl
 ; X86-NEXT:    cmpl $2146959360, %eax # imm = 0x7FF80000
@@ -1364,9 +1364,9 @@ define i1 @isnan_d_strictfp(double %x) strictfp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $2146435072, %ecx # imm = 0x7FF00000
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    sbbl %eax, %ecx
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    retl
@@ -1464,12 +1464,12 @@ define <2 x i1> @isnan_v2f(<2 x float> %x) {
 ; X86-LABEL: isnan_v2f:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setp %cl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
@@ -1493,12 +1493,12 @@ define <2 x i1> @isnot_nan_v2f(<2 x float> %x) {
 ; X86-LABEL: isnot_nan_v2f:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setnp %cl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
@@ -1544,39 +1544,38 @@ entry:
 define <4 x i1> @isnan_v4f(<4 x float> %x) {
 ; X86-LABEL: isnan_v4f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fucomp %st(0)
-; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    # kill: def $ah killed $ah killed $ax
-; X86-NEXT:    sahf
-; X86-NEXT:    setp %dh
-; X86-NEXT:    shlb $2, %dh
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setp %dl
-; X86-NEXT:    shlb $3, %dl
-; X86-NEXT:    orb %dh, %dl
+; X86-NEXT:    shlb $2, %dl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    setp %dh
+; X86-NEXT:    setp %cl
+; X86-NEXT:    shlb $3, %cl
+; X86-NEXT:    orb %dl, %cl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucomp %st(0)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    setp %al
-; X86-NEXT:    addb %al, %al
-; X86-NEXT:    orb %dh, %al
-; X86-NEXT:    orb %dl, %al
-; X86-NEXT:    movb %al, (%ecx)
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    setp %dl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setp %ch
+; X86-NEXT:    addb %ch, %ch
+; X86-NEXT:    orb %dl, %ch
+; X86-NEXT:    orb %cl, %ch
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb %ch, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: isnan_v4f:
@@ -1591,35 +1590,30 @@ entry:
 define <4 x i1> @isnan_v4f_strictfp(<4 x float> %x) strictfp {
 ; X86-LABEL: isnan_v4f_strictfp:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    cmpl $2139095041, %edx # imm = 0x7F800001
-; X86-NEXT:    setge %dh
-; X86-NEXT:    shlb $2, %dh
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    andl %ecx, %esi
-; X86-NEXT:    cmpl $2139095041, %esi # imm = 0x7F800001
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl %eax, %ecx
+; X86-NEXT:    cmpl $2139095041, %ecx # imm = 0x7F800001
 ; X86-NEXT:    setge %dl
-; X86-NEXT:    shlb $3, %dl
-; X86-NEXT:    orb %dh, %dl
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    andl %ecx, %esi
-; X86-NEXT:    cmpl $2139095041, %esi # imm = 0x7F800001
-; X86-NEXT:    setge %dh
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shlb $2, %dl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl %eax, %ecx
 ; X86-NEXT:    cmpl $2139095041, %ecx # imm = 0x7F800001
 ; X86-NEXT:    setge %cl
-; X86-NEXT:    addb %cl, %cl
-; X86-NEXT:    orb %dh, %cl
+; X86-NEXT:    shlb $3, %cl
 ; X86-NEXT:    orb %dl, %cl
-; X86-NEXT:    movb %cl, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    andl %eax, %edx
+; X86-NEXT:    cmpl $2139095041, %edx # imm = 0x7F800001
+; X86-NEXT:    setge %dl
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X86-NEXT:    setge %ch
+; X86-NEXT:    addb %ch, %ch
+; X86-NEXT:    orb %dl, %ch
+; X86-NEXT:    orb %cl, %ch
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb %ch, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: isnan_v4f_strictfp:

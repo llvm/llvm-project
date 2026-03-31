@@ -12,8 +12,8 @@ define i32 @"$foo"() nounwind {
 ; STATIC-LABEL: $foo:
 ; STATIC:       # %bb.0:
 ; STATIC-NEXT:    movl ($arr), %eax
-; STATIC-NEXT:    movl %gs:0, %ecx
 ; STATIC-NEXT:    addl ($arr+4), %eax
+; STATIC-NEXT:    movl %gs:0, %ecx
 ; STATIC-NEXT:    addl ($tls@NTPOFF)(%ecx), %eax
 ; STATIC-NEXT:    pushl ($arr_h)
 ; STATIC-NEXT:    pushl %eax

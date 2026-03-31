@@ -1447,9 +1447,9 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %
 ;
 ; X86-SSE2-LABEL: splatvar_funnnel_v16i8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; X86-SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm0[8],xmm3[9],xmm0[9],xmm3[10],xmm0[10],xmm3[11],xmm0[11],xmm3[12],xmm0[12],xmm3[13],xmm0[13],xmm3[14],xmm0[14],xmm3[15],xmm0[15]
+; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-SSE2-NEXT:    psllw %xmm2, %xmm3
 ; X86-SSE2-NEXT:    psrlw $8, %xmm3
@@ -1661,24 +1661,24 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE2-NEXT:    .cfi_offset %esi, -8
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    xorl %ecx, %ecx
+; X86-SSE2-NEXT:    xorl %eax, %eax
 ; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    xorl %edx, %edx
 ; X86-SSE2-NEXT:    .p2align 4
 ; X86-SSE2-NEXT:  .LBB8_1: # %loop
 ; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SSE2-NEXT:    movdqu (%eax,%ecx,4), %xmm1
+; X86-SSE2-NEXT:    movdqu (%ecx,%eax,4), %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,2,3,3]
 ; X86-SSE2-NEXT:    psllq %xmm0, %xmm2
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
 ; X86-SSE2-NEXT:    psllq %xmm0, %xmm1
 ; X86-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,3]
-; X86-SSE2-NEXT:    movups %xmm1, (%eax,%ecx,4)
-; X86-SSE2-NEXT:    addl $4, %ecx
+; X86-SSE2-NEXT:    movups %xmm1, (%ecx,%eax,4)
+; X86-SSE2-NEXT:    addl $4, %eax
 ; X86-SSE2-NEXT:    adcl $0, %edx
-; X86-SSE2-NEXT:    movl %ecx, %esi
+; X86-SSE2-NEXT:    movl %eax, %esi
 ; X86-SSE2-NEXT:    xorl $256, %esi # imm = 0x100
 ; X86-SSE2-NEXT:    orl %edx, %esi
 ; X86-SSE2-NEXT:    jne .LBB8_1

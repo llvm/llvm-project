@@ -838,15 +838,6 @@ define <2 x i64> @test_mm_mul_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: test_mm_mul_epi32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX512-NEXT:    vpsraq $32, %xmm0, %xmm0
-; AVX512-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX512-NEXT:    vpsraq $32, %xmm1, %xmm1
-; AVX512-NEXT:    vpmullq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    ret{{[l|q]}}
   %A = shl <2 x i64> %a0, <i64 32, i64 32>
   %A1 = ashr exact <2 x i64> %A, <i64 32, i64 32>
   %B = shl <2 x i64> %a1, <i64 32, i64 32>

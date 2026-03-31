@@ -7,8 +7,8 @@ define i32 @sextinreg_i32(ptr %p0, ptr %p1) {
 ; X86-LABEL: sextinreg_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl (%ecx), %ecx
+; X86-NEXT:    movzbl (%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    shll $27, %eax
@@ -40,13 +40,13 @@ define i32 @sextinreg_i32_mismatch(ptr %p0, ptr %p1) {
 ; X86-LABEL: sextinreg_i32_mismatch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl (%ecx), %ecx
+; X86-NEXT:    movzbl (%eax), %ecx
+; X86-NEXT:    shll $27, %ecx
+; X86-NEXT:    sarl $27, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl (%eax), %eax
-; X86-NEXT:    shll $30, %ecx
-; X86-NEXT:    sarl $30, %ecx
-; X86-NEXT:    shll $27, %eax
-; X86-NEXT:    sarl $27, %eax
+; X86-NEXT:    shll $30, %eax
+; X86-NEXT:    sarl $30, %eax
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    retl
 ;

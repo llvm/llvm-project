@@ -8,33 +8,33 @@ define i64 @rotl64(i64 %A, i8 %Amt) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    shldl %cl, %esi, %edx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X86-NEXT:    movb $64, %cl
+; X86-NEXT:    subb %ch, %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shrl %cl, %esi
+; X86-NEXT:    movl %ebx, %edi
+; X86-NEXT:    shrdl %cl, %edx, %edi
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB0_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:  .LBB0_2:
-; X86-NEXT:    movb $64, %ch
-; X86-NEXT:    subb %cl, %ch
-; X86-NEXT:    movl %edi, %ebx
+; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    movb %ch, %cl
-; X86-NEXT:    shrl %cl, %ebx
-; X86-NEXT:    shrdl %cl, %edi, %esi
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    shldl %cl, %ebx, %edx
 ; X86-NEXT:    testb $32, %ch
 ; X86-NEXT:    je .LBB0_4
 ; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %ebx, %esi
-; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:  .LBB0_4:
-; X86-NEXT:    orl %ebx, %edx
-; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    orl %edi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -569,11 +569,11 @@ define void @rotr1_64_mem(ptr %Aptr) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl 4(%eax), %edx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    shldl $31, %edx, %esi
-; X86-NEXT:    shldl $31, %ecx, %edx
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shldl $31, %ecx, %esi
+; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    shldl $31, %edx, %ecx
+; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -653,29 +653,29 @@ define i64 @truncated_rot(i64 %x, i32 %amt) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movb $64, %cl
+; X86-NEXT:    subb %dl, %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    shrl %cl, %eax
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    shrdl %cl, %ebx, %edi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    movl $0, %edi
 ; X86-NEXT:    jne .LBB28_2
 ; X86-NEXT:  # %bb.1: # %entry
-; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:  .LBB28_2: # %entry
-; X86-NEXT:    movb $64, %dl
-; X86-NEXT:    subb %cl, %dl
-; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    shrdl %cl, %ebx, %esi
+; X86-NEXT:    shll %cl, %esi
 ; X86-NEXT:    testb $32, %dl
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    jne .LBB28_4
 ; X86-NEXT:  # %bb.3: # %entry
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:  .LBB28_4: # %entry
-; X86-NEXT:    orl %edi, %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

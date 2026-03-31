@@ -64,8 +64,10 @@ define float @f4(float %a, float %b) nounwind {
 ;
 ; NOSSE-NOX87-LABEL: f4:
 ; NOSSE-NOX87:       # %bb.0: # %entry
-; NOSSE-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOSSE-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOSSE-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOSSE-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NOX87-NEXT:    pushl %eax
+; NOSSE-NOX87-NEXT:    pushl %ecx
 ; NOSSE-NOX87-NEXT:    calll __addsf3
 ; NOSSE-NOX87-NEXT:    addl $8, %esp
 ; NOSSE-NOX87-NEXT:    retl
@@ -90,12 +92,18 @@ define double @f5(double %a, double %b) nounwind {
 ;
 ; NOSSE-NOX87-LABEL: f5:
 ; NOSSE-NOX87:       # %bb.0: # %entry
-; NOSSE-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOSSE-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOSSE-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOSSE-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOSSE-NOX87-NEXT:    pushl %esi
+; NOSSE-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOSSE-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOSSE-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NOSSE-NOX87-NEXT:    pushl %ecx
+; NOSSE-NOX87-NEXT:    pushl %eax
+; NOSSE-NOX87-NEXT:    pushl %esi
+; NOSSE-NOX87-NEXT:    pushl %edx
 ; NOSSE-NOX87-NEXT:    calll __adddf3
 ; NOSSE-NOX87-NEXT:    addl $16, %esp
+; NOSSE-NOX87-NEXT:    popl %esi
 ; NOSSE-NOX87-NEXT:    retl
 ;
 ; SSE-NOX87-LABEL: f5:
@@ -127,17 +135,27 @@ define x86_fp80 @f6(x86_fp80 %a, x86_fp80 %b) nounwind {
 ;
 ; NOX87-LABEL: f6:
 ; NOX87:       # %bb.0: # %entry
+; NOX87-NEXT:    pushl %ebx
+; NOX87-NEXT:    pushl %edi
+; NOX87-NEXT:    pushl %esi
 ; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; NOX87-NEXT:    pushl %ecx
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %esi
+; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; NOX87-NEXT:    pushl %eax
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl %edx
+; NOX87-NEXT:    pushl %ecx
+; NOX87-NEXT:    pushl %esi
+; NOX87-NEXT:    pushl %ebx
+; NOX87-NEXT:    pushl %edi
 ; NOX87-NEXT:    calll __addxf3
 ; NOX87-NEXT:    addl $24, %esp
 ; NOX87-NEXT:    movzwl %cx, %ecx
+; NOX87-NEXT:    popl %esi
+; NOX87-NEXT:    popl %edi
+; NOX87-NEXT:    popl %ebx
 ; NOX87-NEXT:    retl
 entry:
   %0 = fadd x86_fp80 %a, %b
@@ -149,8 +167,8 @@ define {float, float, float} @f7(float %a, float %b) nounwind {
 ; X87:       # %bb.0: # %entry
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps 8(%eax)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fsts 4(%eax)
 ; X87-NEXT:    fstps (%eax)
 ; X87-NEXT:    retl $4
@@ -185,8 +203,10 @@ define x86_fp80 @f8(i64 %a) nounwind {
 ;
 ; NOX87-LABEL: f8:
 ; NOX87:       # %bb.0: # %entry
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; NOX87-NEXT:    pushl %ecx
+; NOX87-NEXT:    pushl %eax
 ; NOX87-NEXT:    calll __floatdixf
 ; NOX87-NEXT:    addl $8, %esp
 ; NOX87-NEXT:    movzwl %cx, %ecx
@@ -215,9 +235,11 @@ define i32 @f9(x86_fp80 %a) nounwind {
 ; NOX87-LABEL: f9:
 ; NOX87:       # %bb.0: # %entry
 ; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; NOX87-NEXT:    pushl %eax
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
-; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl %edx
+; NOX87-NEXT:    pushl %ecx
 ; NOX87-NEXT:    calll __fixxfsi
 ; NOX87-NEXT:    addl $12, %esp
 ; NOX87-NEXT:    retl

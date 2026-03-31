@@ -19,7 +19,7 @@ define i1 @test2(i32 %val, i32 %mask) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    btl %ecx, %eax
+; CHECK-NEXT:    btl %eax, %ecx
 ; CHECK-NEXT:    jae .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %ret_true
 ; CHECK-NEXT:    movb $1, %al

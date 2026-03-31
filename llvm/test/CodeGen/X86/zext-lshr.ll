@@ -91,9 +91,9 @@ define i64 @i64_zext_shift_i32_zext_i16(i16 %a0) nounwind {
 define i128 @i128_zext_shift_i64_zext_i8(i8 %a0) nounwind {
 ; X86-LABEL: i128_zext_shift_i64_zext_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    movl $0, 12(%eax)
 ; X86-NEXT:    movl $0, 8(%eax)
@@ -115,9 +115,9 @@ define i128 @i128_zext_shift_i64_zext_i8(i8 %a0) nounwind {
 define i128 @i128_zext_shift_i64_zext_i16(i16 %a0) nounwind {
 ; X86-LABEL: i128_zext_shift_i64_zext_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shrl $7, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    movl $0, 12(%eax)
 ; X86-NEXT:    movl $0, 8(%eax)

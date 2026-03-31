@@ -79,9 +79,9 @@ define <4 x float> @insertps_from_vector_load_offset_2(<4 x float> %a, ptr nocap
 ; X86-LABEL: insertps_from_vector_load_offset_2:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $4, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $4, %ecx
-; X86-NEXT:    vinsertps $0, 12(%eax,%ecx), %xmm0, %xmm0 ## xmm0 = mem[0],xmm0[1,2,3]
+; X86-NEXT:    vinsertps $0, 12(%ecx,%eax), %xmm0, %xmm0 ## xmm0 = mem[0],xmm0[1,2,3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: insertps_from_vector_load_offset_2:
@@ -144,13 +144,13 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastss (%ecx,%eax,4), %xmm4
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{.*#+}} xmm3 = xmm3[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[3]
+; X86-NEXT:    vaddps %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
 ; X86-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[3]
-; X86-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[3]
-; X86-NEXT:    vaddps %xmm2, %xmm1, %xmm1
-; X86-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vaddps %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: insertps_from_broadcast_multiple_use:

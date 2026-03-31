@@ -142,8 +142,8 @@ define void @store_v2f64_i2(i2 %trigger, ptr %addr, <2 x double> %val) nounwind 
 ;
 ; X86-AVX512-LABEL: store_v2f64_i2:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovupd %xmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = bitcast i2 %trigger to <2 x i1>
@@ -202,8 +202,8 @@ define void @store_v2f64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x double> %val)
 ;
 ; X86-AVX512-LABEL: store_v2f64_v2i64:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovq2m %xmm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovupd %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = icmp slt <2 x i64> %trigger, zeroinitializer
@@ -295,8 +295,8 @@ define void @store_v4f64_i4(i4 %trigger, ptr %addr, <4 x double> %val) nounwind 
 ;
 ; X86-AVX512-LABEL: store_v4f64_i4:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovupd %ymm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -411,8 +411,8 @@ define void @store_v4f64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x double> %val)
 ;
 ; X86-AVX512-LABEL: store_v4f64_v4i64:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovq2m %ymm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovupd %ymm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -502,10 +502,10 @@ define void @store_v2f32_i2(i2 %trigger, ptr %addr, <2 x float> %val) nounwind {
 ;
 ; X86-AVX512-LABEL: store_v2f32_i2:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k0
 ; X86-AVX512-NEXT:    kshiftlb $6, %k0, %k0
 ; X86-AVX512-NEXT:    kshiftrb $6, %k0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %xmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = bitcast i2 %trigger to <2 x i1>
@@ -594,10 +594,10 @@ define void @store_v2f32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x float> %val) 
 ;
 ; X86-AVX512-LABEL: store_v2f32_v2i32:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestnmd %xmm0, %xmm0, %k0
 ; X86-AVX512-NEXT:    kshiftlb $6, %k0, %k0
 ; X86-AVX512-NEXT:    kshiftrb $6, %k0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
@@ -717,8 +717,8 @@ define void @store_v4f32_i4(<4 x float> %x, ptr %ptr, <4 x float> %y, i4 %trigge
 ;
 ; X86-AVX512-LABEL: store_v4f32_i4:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %xmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = bitcast i4 %trigger to <4 x i1>
@@ -828,8 +828,8 @@ define void @store_v4f32_v4i32(<4 x float> %x, ptr %ptr, <4 x float> %y, <4 x i3
 ;
 ; X86-AVX512-LABEL: store_v4f32_v4i32:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovd2m %xmm2, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %xmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %bool_mask = icmp slt <4 x i32> %mask, zeroinitializer
@@ -1015,8 +1015,8 @@ define void @store_v8f32_i8(<8 x float> %x, ptr %ptr, <8 x float> %y, i8 %trigge
 ;
 ; X86-AVX512-LABEL: store_v8f32_i8:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %ymm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -1195,8 +1195,8 @@ define void @store_v8f32_v8i32(<8 x float> %x, ptr %ptr, <8 x float> %y, <8 x i3
 ;
 ; X86-AVX512-LABEL: store_v8f32_v8i32:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovd2m %ymm2, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %ymm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -1658,8 +1658,8 @@ define void @store_v16f32_i16(<16 x float> %x, ptr %ptr, <16 x float> %y, i16 %t
 ;
 ; X86-AVX512-LABEL: store_v16f32_i16:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %zmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -1963,8 +1963,8 @@ define void @store_v16f32_v16i32(<16 x float> %x, ptr %ptr, <16 x float> %y, <16
 ;
 ; X86-AVX512-LABEL: store_v16f32_v16i32:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovd2m %zmm2, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %zmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -2052,8 +2052,8 @@ define void @store_v2i64_v2i64(<2 x i64> %trigger, ptr %addr, <2 x i64> %val) no
 ;
 ; X86-AVX512-LABEL: store_v2i64_v2i64:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovq2m %xmm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu64 %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = icmp slt <2 x i64> %trigger, zeroinitializer
@@ -2175,8 +2175,8 @@ define void @store_v4i64_v4i64(<4 x i64> %trigger, ptr %addr, <4 x i64> %val) no
 ;
 ; X86-AVX512-LABEL: store_v4i64_v4i64:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovq2m %ymm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu64 %ymm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -2312,10 +2312,10 @@ define void @store_v2i32_v2i32(<2 x i32> %trigger, ptr %addr, <2 x i32> %val) no
 ;
 ; X86-AVX512-LABEL: store_v2i32_v2i32:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestnmd %xmm0, %xmm0, %k0
 ; X86-AVX512-NEXT:    kshiftlb $6, %k0, %k0
 ; X86-AVX512-NEXT:    kshiftrb $6, %k0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu32 %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
@@ -2428,8 +2428,8 @@ define void @store_v4i32_v4i32(<4 x i32> %trigger, ptr %addr, <4 x i32> %val) no
 ;
 ; X86-AVX512-LABEL: store_v4i32_v4i32:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestnmd %xmm0, %xmm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu32 %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
@@ -2613,8 +2613,8 @@ define void @store_v8i32_v8i32(<8 x i32> %trigger, ptr %addr, <8 x i32> %val) no
 ;
 ; X86-AVX512-LABEL: store_v8i32_v8i32:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestnmd %ymm0, %ymm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu32 %ymm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -2964,8 +2964,8 @@ define void @store_v8i16_v8i16(<8 x i16> %trigger, ptr %addr, <8 x i16> %val) no
 ;
 ; X86-AVX512-LABEL: store_v8i16_v8i16:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestnmw %xmm0, %xmm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu16 %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = icmp eq <8 x i16> %trigger, zeroinitializer
@@ -3728,8 +3728,8 @@ define void @store_v16i16_v16i16(<16 x i16> %trigger, ptr %addr, <16 x i16> %val
 ;
 ; X86-AVX512-LABEL: store_v16i16_v16i16:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestnmw %ymm0, %ymm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu16 %ymm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -4330,8 +4330,8 @@ define void @store_v16i8_v16i8(<16 x i8> %trigger, ptr %addr, <16 x i8> %val) no
 ;
 ; X86-AVX512-LABEL: store_v16i8_v16i8:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestnmb %xmm0, %xmm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu8 %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask = icmp eq <16 x i8> %trigger, zeroinitializer
@@ -5724,8 +5724,8 @@ define void @store_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %val) no
 ;
 ; X86-AVX512-LABEL: store_v32i8_v32i8:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestnmb %ymm0, %ymm0, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu8 %ymm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -5862,9 +5862,9 @@ define void @mstore_constmask_allones_split(<16 x i64> %trigger, ptr %addr, <16 
 ;
 ; X86-AVX512-LABEL: mstore_constmask_allones_split:
 ; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movb $-37, %al
+; X86-AVX512-NEXT:    kmovd %eax, %k1
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movb $-37, %cl
-; X86-AVX512-NEXT:    kmovd %ecx, %k1
 ; X86-AVX512-NEXT:    vmovdqu64 %zmm2, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vmovups %zmm3, 64(%eax)
 ; X86-AVX512-NEXT:    vzeroupper
@@ -5941,8 +5941,8 @@ define void @one_mask_bit_set3(ptr %addr, <4 x i64> %val) nounwind {
 ;
 ; X86-AVX512-LABEL: one_mask_bit_set3:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovlps %xmm0, 16(%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -5967,8 +5967,8 @@ define void @one_mask_bit_set4(ptr %addr, <4 x double> %val) nounwind {
 ;
 ; X86-AVX512-LABEL: one_mask_bit_set4:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovhps %xmm0, 24(%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -6000,8 +6000,8 @@ define void @one_mask_bit_set5(ptr %addr, <8 x double> %val) nounwind {
 ;
 ; X86-AVX512-LABEL: one_mask_bit_set5:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovlps %xmm0, 48(%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -6053,8 +6053,8 @@ define void @one_mask_bit_set6(ptr %addr, <16 x i64> %val) nounwind {
 ;
 ; X86-AVX512-LABEL: one_mask_bit_set6:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovlps %xmm0, 48(%eax)
 ; X86-AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; X86-AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
@@ -6113,9 +6113,9 @@ define void @top_bits_unset_stack() nounwind {
 ; X86-AVX512-LABEL: top_bits_unset_stack:
 ; X86-AVX512:       ## %bb.0: ## %entry
 ; X86-AVX512-NEXT:    subl $76, %esp
-; X86-AVX512-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    movb $63, %al
 ; X86-AVX512-NEXT:    kmovd %eax, %k1
+; X86-AVX512-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    vmovupd %zmm0, (%esp) {%k1}
 ; X86-AVX512-NEXT:    addl $76, %esp
 ; X86-AVX512-NEXT:    vzeroupper
@@ -6211,9 +6211,9 @@ define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, ptr %p, <
 ;
 ; X86-AVX512-LABEL: masked_store_bool_mask_demand_trunc_sext:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpslld $31, %xmm1, %xmm1
 ; X86-AVX512-NEXT:    vpmovd2m %xmm1, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovupd %ymm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -6319,8 +6319,8 @@ define void @one_mask_bit_set1_variable(ptr %addr, <4 x float> %val, <4 x i32> %
 ;
 ; X86-AVX512-LABEL: one_mask_bit_set1_variable:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm1, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %xmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %mask_signbit = and <4 x i32> %mask, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
@@ -6692,8 +6692,8 @@ define void @PR11210(<4 x float> %x, ptr %ptr, <4 x float> %y, <2 x i64> %mask) 
 ;
 ; X86-AVX512-LABEL: PR11210:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpmovd2m %xmm2, %k1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovups %xmm1, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl
   %bc = bitcast <2 x i64> %mask to <4 x i32>
@@ -7065,18 +7065,18 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
 ;
 ; X86-AVX512-LABEL: store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts:
 ; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movw $21845, %ax ## imm = 0x5555
+; X86-AVX512-NEXT:    kmovd %eax, %k1
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX512-NEXT:    vmovdqa64 (%edx), %zmm0
-; X86-AVX512-NEXT:    vmovdqa64 64(%edx), %zmm1
-; X86-AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X86-AVX512-NEXT:    movw $21845, %dx ## imm = 0x5555
-; X86-AVX512-NEXT:    kmovd %edx, %k1
-; X86-AVX512-NEXT:    vpcmpgtd (%ecx), %zmm2, %k1 {%k1}
-; X86-AVX512-NEXT:    movw $85, %dx
-; X86-AVX512-NEXT:    kmovd %edx, %k2
-; X86-AVX512-NEXT:    vpcmpgtd 64(%ecx), %zmm2, %k2 {%k2}
+; X86-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X86-AVX512-NEXT:    vpcmpgtd (%eax), %zmm0, %k1 {%k1}
+; X86-AVX512-NEXT:    movw $85, %cx
+; X86-AVX512-NEXT:    kmovd %ecx, %k2
+; X86-AVX512-NEXT:    vpcmpgtd 64(%eax), %zmm0, %k2 {%k2}
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    vmovdqa64 (%eax), %zmm0
+; X86-AVX512-NEXT:    vmovdqa64 64(%eax), %zmm1
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu32 %zmm1, 64(%eax) {%k2}
 ; X86-AVX512-NEXT:    vmovdqu32 %zmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
@@ -7281,13 +7281,13 @@ define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) nounwind {
 ;
 ; X86-AVX512-LABEL: undefshuffle:
 ; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movl $15, %eax
+; X86-AVX512-NEXT:    kmovd %eax, %k0
 ; X86-AVX512-NEXT:    vpsllw $15, %xmm0, %xmm0
-; X86-AVX512-NEXT:    vpmovw2m %xmm0, %k0
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movl $15, %ecx
-; X86-AVX512-NEXT:    kmovd %ecx, %k1
-; X86-AVX512-NEXT:    kandd %k1, %k0, %k1
+; X86-AVX512-NEXT:    vpmovw2m %xmm0, %k1
+; X86-AVX512-NEXT:    kandd %k0, %k1, %k1
 ; X86-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqu32 %ymm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl

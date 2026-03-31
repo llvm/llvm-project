@@ -84,17 +84,6 @@ define i64 @test_sdiv_i64(i64 %arg1, i64 %arg2) nounwind {
 ; X64-NEXT:    idivq %rsi
 ; X64-NEXT:    retq
 ;
-; DAG-X86-LABEL: test_sdiv_i64:
-; DAG-X86:       # %bb.0:
-; DAG-X86-NEXT:    subl $12, %esp
-; DAG-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; DAG-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; DAG-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; DAG-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; DAG-X86-NEXT:    calll __divdi3
-; DAG-X86-NEXT:    addl $28, %esp
-; DAG-X86-NEXT:    retl
-;
 ; GISEL-X86-LABEL: test_sdiv_i64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    pushl %esi

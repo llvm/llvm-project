@@ -59,7 +59,6 @@ define void @clobber_base() #0 {
 ; CHECK-NEXT:    movl %ecx, %edx
 ; CHECK-NEXT:    subl %eax, %edx
 ; CHECK-NEXT:    movl %edx, %esp
-; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    movl $405, %esi # imm = 0x195
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
@@ -68,6 +67,7 @@ define void @clobber_base() #0 {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    movl %edx, -120(%ebp)
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    movl $0, (%ecx,%eax)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; CHECK-NEXT:    leal -4(%ebp), %esp
@@ -100,7 +100,6 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    subl $128, %esp
 ; CHECK-NEXT:    movl %esp, %esi
 ; CHECK-NEXT:    .cfi_offset %ebx, -12
-; CHECK-NEXT:    movl 8(%ebp), %edi
 ; CHECK-NEXT:    calll helper@PLT
 ; CHECK-NEXT:    movl %esp, %ecx
 ; CHECK-NEXT:    leal 31(,%eax,4), %eax
@@ -108,7 +107,6 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    movl %ecx, %edx
 ; CHECK-NEXT:    subl %eax, %edx
 ; CHECK-NEXT:    movl %edx, %esp
-; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    subl $28, %esp
 ; CHECK-NEXT:    movl $405, %esi # imm = 0x195
@@ -125,7 +123,9 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    movl %edx, (%esi)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movl %edi, (%ecx,%eax)
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    movl 8(%ebp), %edx
+; CHECK-NEXT:    movl %edx, (%ecx,%eax)
 ; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp

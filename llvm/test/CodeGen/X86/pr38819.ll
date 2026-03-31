@@ -7,10 +7,12 @@ define void @foo(i64 %x, ptr %b) {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    calll __floatdisf
 ; CHECK-NEXT:    addl $8, %esp

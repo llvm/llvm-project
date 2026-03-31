@@ -814,8 +814,8 @@ define i16 @test_mul_spec(i16 %x) nounwind {
 ; X86-LABEL: test_mul_spec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal 42(%eax,%eax,8), %ecx
-; X86-NEXT:    leal 2(%eax,%eax,4), %eax
+; X86-NEXT:    leal 2(%eax,%eax,4), %ecx
+; X86-NEXT:    leal 42(%eax,%eax,8), %eax
 ; X86-NEXT:    imull %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl

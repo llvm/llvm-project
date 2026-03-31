@@ -49,8 +49,8 @@ define void @bar(ptr %P) {
 define void @untyped_zero(ptr %p) {
 ; X86-LABEL: untyped_zero:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorps %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

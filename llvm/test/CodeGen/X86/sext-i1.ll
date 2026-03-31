@@ -46,12 +46,12 @@ define i32 @t2(i32 %x) nounwind readnone ssp {
 define i32 @t3(i32 %x, i64 %y) nounwind readonly {
 ; X86-LABEL: t3:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    sbbl %ecx, %ecx
-; X86-NEXT:    cmpl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    sbbl %ecx, %eax
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    sbbl %eax, %ecx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;

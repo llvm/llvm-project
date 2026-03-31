@@ -14,7 +14,6 @@ define ptr @f1() nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll .L0$pb
 ; X86-NEXT:  .L0$pb:
 ; X86-NEXT:    popl %ebx
@@ -22,14 +21,11 @@ define ptr @f1() nounwind {
 ; X86-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %ebx
 ; X86-NEXT:    #APP
 ; X86-NEXT:    #NO_APP
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X86-NEXT:    #APP
+; X86-NEXT:    #NO_APP
 ; X86-NEXT:    leal x@tlsdesc(%ebx), %eax
 ; X86-NEXT:    calll *x@tlscall(%eax)
 ; X86-NEXT:    addl %gs:0, %eax
-; X86-NEXT:    movl (%esp), %ebx # 4-byte Reload
-; X86-NEXT:    #APP
-; X86-NEXT:    #NO_APP
-; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

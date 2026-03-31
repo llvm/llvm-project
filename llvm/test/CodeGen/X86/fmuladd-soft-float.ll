@@ -9,74 +9,65 @@
 define float @fmuladd_intrinsic_f32(float %a, float %b, float %c) #0 {
 ; SOFT-FLOAT-32-LABEL: fmuladd_intrinsic_f32:
 ; SOFT-FLOAT-32:       # %bb.0:
-; SOFT-FLOAT-32-NEXT:    pushl %esi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-NEXT:    .cfi_offset %esi, -8
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    pushl %esi
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    popl %esi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    retl
 ;
 ; SOFT-FLOAT-32-FMA-LABEL: fmuladd_intrinsic_f32:
 ; SOFT-FLOAT-32-FMA:       # %bb.0:
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %esi, -8
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    popl %esi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    retl
 ;
 ; SOFT-FLOAT-32-FMA4-LABEL: fmuladd_intrinsic_f32:
 ; SOFT-FLOAT-32-FMA4:       # %bb.0:
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %esi, -8
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    popl %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    retl
 ;
 ; SOFT-FLOAT-64-LABEL: fmuladd_intrinsic_f32:
@@ -127,28 +118,29 @@ define float @fmuladd_intrinsic_f32(float %a, float %b, float %c) #0 {
 define double @fmuladd_intrinsic_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-LABEL: fmuladd_intrinsic_f64:
 ; SOFT-FLOAT-32:       # %bb.0:
-; SOFT-FLOAT-32-NEXT:    pushl %edi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 8
 ; SOFT-FLOAT-32-NEXT:    pushl %esi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 12
-; SOFT-FLOAT-32-NEXT:    .cfi_offset %esi, -12
-; SOFT-FLOAT-32-NEXT:    .cfi_offset %edi, -8
+; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 8
+; SOFT-FLOAT-32-NEXT:    .cfi_offset %esi, -8
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-NEXT:    pushl %edi
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-NEXT:    pushl %esi
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
@@ -158,35 +150,34 @@ define double @fmuladd_intrinsic_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-NEXT:    popl %esi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-NEXT:    popl %edi
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    retl
 ;
 ; SOFT-FLOAT-32-FMA-LABEL: fmuladd_intrinsic_f64:
 ; SOFT-FLOAT-32-FMA:       # %bb.0:
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 12
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %esi, -12
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %edi, -8
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 8
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %esi, -8
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
@@ -196,35 +187,34 @@ define double @fmuladd_intrinsic_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-FMA-NEXT:    popl %esi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-FMA-NEXT:    popl %edi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    retl
 ;
 ; SOFT-FLOAT-32-FMA4-LABEL: fmuladd_intrinsic_f64:
 ; SOFT-FLOAT-32-FMA4:       # %bb.0:
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 8
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 12
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %esi, -12
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %edi, -8
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 8
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %esi, -8
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
@@ -234,8 +224,6 @@ define double @fmuladd_intrinsic_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-FMA4-NEXT:    popl %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-FMA4-NEXT:    popl %edi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    retl
 ;
@@ -287,74 +275,65 @@ define double @fmuladd_intrinsic_f64(double %a, double %b, double %c) #0 {
 define float @fmuladd_contract_f32(float %a, float %b, float %c) #0 {
 ; SOFT-FLOAT-32-LABEL: fmuladd_contract_f32:
 ; SOFT-FLOAT-32:       # %bb.0:
-; SOFT-FLOAT-32-NEXT:    pushl %esi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-NEXT:    .cfi_offset %esi, -8
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    pushl %esi
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    popl %esi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    retl
 ;
 ; SOFT-FLOAT-32-FMA-LABEL: fmuladd_contract_f32:
 ; SOFT-FLOAT-32-FMA:       # %bb.0:
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %esi, -8
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    popl %esi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    retl
 ;
 ; SOFT-FLOAT-32-FMA4-LABEL: fmuladd_contract_f32:
 ; SOFT-FLOAT-32-FMA4:       # %bb.0:
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %esi, -8
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    popl %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    retl
 ;
 ; SOFT-FLOAT-64-LABEL: fmuladd_contract_f32:
@@ -406,28 +385,29 @@ define float @fmuladd_contract_f32(float %a, float %b, float %c) #0 {
 define double @fmuladd_contract_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-LABEL: fmuladd_contract_f64:
 ; SOFT-FLOAT-32:       # %bb.0:
-; SOFT-FLOAT-32-NEXT:    pushl %edi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 8
 ; SOFT-FLOAT-32-NEXT:    pushl %esi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 12
-; SOFT-FLOAT-32-NEXT:    .cfi_offset %esi, -12
-; SOFT-FLOAT-32-NEXT:    .cfi_offset %edi, -8
+; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 8
+; SOFT-FLOAT-32-NEXT:    .cfi_offset %esi, -8
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-NEXT:    pushl %edi
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-NEXT:    pushl %esi
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
@@ -437,35 +417,34 @@ define double @fmuladd_contract_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-NEXT:    popl %esi
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-NEXT:    popl %edi
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    retl
 ;
 ; SOFT-FLOAT-32-FMA-LABEL: fmuladd_contract_f64:
 ; SOFT-FLOAT-32-FMA:       # %bb.0:
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 8
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 12
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %esi, -12
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %edi, -8
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 8
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %esi, -8
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
@@ -475,35 +454,34 @@ define double @fmuladd_contract_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-FMA-NEXT:    popl %esi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-FMA-NEXT:    popl %edi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    retl
 ;
 ; SOFT-FLOAT-32-FMA4-LABEL: fmuladd_contract_f64:
 ; SOFT-FLOAT-32-FMA4:       # %bb.0:
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 8
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 12
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %esi, -12
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %edi, -8
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 8
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %esi, -8
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
@@ -513,8 +491,6 @@ define double @fmuladd_contract_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-FMA4-NEXT:    popl %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 8
-; SOFT-FLOAT-32-FMA4-NEXT:    popl %edi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    retl
 ;
@@ -575,85 +551,85 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 20
-; SOFT-FLOAT-32-NEXT:    pushl %eax
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 24
 ; SOFT-FLOAT-32-NEXT:    .cfi_offset %esi, -20
 ; SOFT-FLOAT-32-NEXT:    .cfi_offset %edi, -16
 ; SOFT-FLOAT-32-NEXT:    .cfi_offset %ebx, -12
 ; SOFT-FLOAT-32-NEXT:    .cfi_offset %ebp, -8
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; SOFT-FLOAT-32-NEXT:    pushl %edi
+; SOFT-FLOAT-32-NEXT:    movl %eax, %esi
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    calll __mulsf3
-; SOFT-FLOAT-32-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    movl %eax, %ebx
-; SOFT-FLOAT-32-NEXT:    pushl %ebp
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
 ; SOFT-FLOAT-32-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl %eax, %ebp
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %eax
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    calll __mulsf3
+; SOFT-FLOAT-32-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %eax
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    calll __addsf3
+; SOFT-FLOAT-32-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-NEXT:    movl %eax, %ebx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    pushl %eax
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %ebp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
 ; SOFT-FLOAT-32-NEXT:    movl %eax, %ebp
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %edi
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-NEXT:    movl %eax, %ebx
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl %esi, (%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-NEXT:    movl %eax, 12(%esi)
-; SOFT-FLOAT-32-NEXT:    movl %ebx, 8(%esi)
-; SOFT-FLOAT-32-NEXT:    movl %edi, 4(%esi)
-; SOFT-FLOAT-32-NEXT:    movl %ebp, (%esi)
+; SOFT-FLOAT-32-NEXT:    movl %ebp, 8(%esi)
+; SOFT-FLOAT-32-NEXT:    movl %ebx, 4(%esi)
+; SOFT-FLOAT-32-NEXT:    calll __addsf3
+; SOFT-FLOAT-32-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-NEXT:    movl %eax, (%esi)
 ; SOFT-FLOAT-32-NEXT:    movl %esi, %eax
-; SOFT-FLOAT-32-NEXT:    addl $4, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 20
 ; SOFT-FLOAT-32-NEXT:    popl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-NEXT:    popl %edi
@@ -674,85 +650,85 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 20
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 24
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %esi, -20
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %edi, -16
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %ebx, -12
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %ebp, -8
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %edi
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %esi
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    calll __mulsf3
-; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
 ; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %ebp
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    calll __mulsf3
+; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    calll __addsf3
+; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %ebx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
 ; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %ebp
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %edi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %esi, (%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, 12(%esi)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %ebx, 8(%esi)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %edi, 4(%esi)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %ebp, (%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ebp, 8(%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ebx, 4(%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    calll __addsf3
+; SOFT-FLOAT-32-FMA-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, (%esi)
 ; SOFT-FLOAT-32-FMA-NEXT:    movl %esi, %eax
-; SOFT-FLOAT-32-FMA-NEXT:    addl $4, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 20
 ; SOFT-FLOAT-32-FMA-NEXT:    popl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-FMA-NEXT:    popl %edi
@@ -773,85 +749,85 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 20
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 24
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %esi, -20
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %edi, -16
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %ebx, -12
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %ebp, -8
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edi
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    calll __mulsf3
-; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __mulsf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %ebp
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    calll __mulsf3
+; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    calll __addsf3
+; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %ebx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __addsf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %ebp
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    calll __addsf3
-; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %esi, (%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, 12(%esi)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %ebx, 8(%esi)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %edi, 4(%esi)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %ebp, (%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ebp, 8(%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ebx, 4(%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    calll __addsf3
+; SOFT-FLOAT-32-FMA4-NEXT:    addl $8, %esp
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -8
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, (%esi)
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl %esi, %eax
-; SOFT-FLOAT-32-FMA4-NEXT:    addl $4, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 20
 ; SOFT-FLOAT-32-FMA4-NEXT:    popl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-FMA4-NEXT:    popl %edi
@@ -1111,69 +1087,83 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 20
-; SOFT-FLOAT-32-NEXT:    subl $16, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 36
+; SOFT-FLOAT-32-NEXT:    subl $20, %esp
+; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 40
 ; SOFT-FLOAT-32-NEXT:    .cfi_offset %esi, -20
 ; SOFT-FLOAT-32-NEXT:    .cfi_offset %edi, -16
 ; SOFT-FLOAT-32-NEXT:    .cfi_offset %ebx, -12
 ; SOFT-FLOAT-32-NEXT:    .cfi_offset %ebp, -8
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; SOFT-FLOAT-32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; SOFT-FLOAT-32-NEXT:    pushl %ebp
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl %edi
+; SOFT-FLOAT-32-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-NEXT:    movl %eax, %esi
+; SOFT-FLOAT-32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; SOFT-FLOAT-32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %eax
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %esi
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %edx
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    calll __muldf3
+; SOFT-FLOAT-32-NEXT:    addl $16, %esp
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-NEXT:    movl %eax, %ebx
 ; SOFT-FLOAT-32-NEXT:    movl %edx, %ebp
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    calll __muldf3
-; SOFT-FLOAT-32-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-NEXT:    movl %edx, %ebx
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
@@ -1182,58 +1172,57 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-32-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; SOFT-FLOAT-32-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; SOFT-FLOAT-32-NEXT:    movl %edx, %edi
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl %edi
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    calll __adddf3
-; SOFT-FLOAT-32-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-NEXT:    movl %edx, %ebx
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    pushl %ebp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl %esi
+; SOFT-FLOAT-32-NEXT:    pushl %ebx
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-NEXT:    movl %eax, %ebp
-; SOFT-FLOAT-32-NEXT:    movl %edx, %esi
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-NEXT:    calll __adddf3
-; SOFT-FLOAT-32-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-NEXT:    movl %eax, %ebx
+; SOFT-FLOAT-32-NEXT:    movl %edx, %ebp
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SOFT-FLOAT-32-NEXT:    movl %edx, 28(%ecx)
-; SOFT-FLOAT-32-NEXT:    movl %eax, 24(%ecx)
-; SOFT-FLOAT-32-NEXT:    movl %esi, 20(%ecx)
-; SOFT-FLOAT-32-NEXT:    movl %ebp, 16(%ecx)
-; SOFT-FLOAT-32-NEXT:    movl %ebx, 12(%ecx)
-; SOFT-FLOAT-32-NEXT:    movl %edi, 8(%ecx)
-; SOFT-FLOAT-32-NEXT:    movl (%esp), %eax # 4-byte Reload
-; SOFT-FLOAT-32-NEXT:    movl %eax, 4(%ecx)
+; SOFT-FLOAT-32-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl %eax
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-NEXT:    calll __adddf3
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; SOFT-FLOAT-32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; SOFT-FLOAT-32-NEXT:    movl %ecx, (%esp)
+; SOFT-FLOAT-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-NEXT:    movl %edx, 28(%esi)
+; SOFT-FLOAT-32-NEXT:    movl %eax, 24(%esi)
+; SOFT-FLOAT-32-NEXT:    movl %ebp, 20(%esi)
+; SOFT-FLOAT-32-NEXT:    movl %ebx, 16(%esi)
+; SOFT-FLOAT-32-NEXT:    movl %edi, 12(%esi)
 ; SOFT-FLOAT-32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; SOFT-FLOAT-32-NEXT:    movl %eax, (%ecx)
-; SOFT-FLOAT-32-NEXT:    movl %ecx, %eax
+; SOFT-FLOAT-32-NEXT:    movl %eax, 8(%esi)
+; SOFT-FLOAT-32-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-NEXT:    addl $16, %esp
+; SOFT-FLOAT-32-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-NEXT:    movl %edx, 4(%esi)
+; SOFT-FLOAT-32-NEXT:    movl %eax, (%esi)
+; SOFT-FLOAT-32-NEXT:    movl %esi, %eax
+; SOFT-FLOAT-32-NEXT:    addl $20, %esp
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 20
 ; SOFT-FLOAT-32-NEXT:    popl %esi
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_offset 16
@@ -1255,69 +1244,83 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 20
-; SOFT-FLOAT-32-FMA-NEXT:    subl $16, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 36
+; SOFT-FLOAT-32-FMA-NEXT:    subl $20, %esp
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 40
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %esi, -20
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %edi, -16
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %ebx, -12
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_offset %ebp, -8
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebp
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %edi
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %esi
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    calll __muldf3
+; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %ebx
 ; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, %ebp
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    calll __muldf3
-; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
@@ -1326,58 +1329,57 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, %edi
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    calll __adddf3
-; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, %ebx
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ebx
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %ebp
-; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, %esi
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA-NEXT:    calll __adddf3
-; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, %ebx
+; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, %ebp
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, 28(%ecx)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, 24(%ecx)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %esi, 20(%ecx)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %ebp, 16(%ecx)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %ebx, 12(%ecx)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %edi, 8(%ecx)
-; SOFT-FLOAT-32-FMA-NEXT:    movl (%esp), %eax # 4-byte Reload
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, 4(%ecx)
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA-NEXT:    calll __adddf3
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ecx, (%esp)
+; SOFT-FLOAT-32-FMA-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, 28(%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, 24(%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ebp, 20(%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %ebx, 16(%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %edi, 12(%esi)
 ; SOFT-FLOAT-32-FMA-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, (%ecx)
-; SOFT-FLOAT-32-FMA-NEXT:    movl %ecx, %eax
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, 8(%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-FMA-NEXT:    addl $16, %esp
+; SOFT-FLOAT-32-FMA-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-FMA-NEXT:    movl %edx, 4(%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %eax, (%esi)
+; SOFT-FLOAT-32-FMA-NEXT:    movl %esi, %eax
+; SOFT-FLOAT-32-FMA-NEXT:    addl $20, %esp
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 20
 ; SOFT-FLOAT-32-FMA-NEXT:    popl %esi
 ; SOFT-FLOAT-32-FMA-NEXT:    .cfi_def_cfa_offset 16
@@ -1399,69 +1401,83 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 16
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 20
-; SOFT-FLOAT-32-FMA4-NEXT:    subl $16, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 36
+; SOFT-FLOAT-32-FMA4-NEXT:    subl $20, %esp
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 40
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %esi, -20
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %edi, -16
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %ebx, -12
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_offset %ebp, -8
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebp
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edi
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    calll __muldf3
+; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %ebx
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, %ebp
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    calll __muldf3
-; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __muldf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
@@ -1470,58 +1486,57 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, %edi
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    calll __adddf3
-; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %edi
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, %ebx
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ebx
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
 ; SOFT-FLOAT-32-FMA4-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %ebp
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, %esi
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[0-9]+}}(%esp)
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
-; SOFT-FLOAT-32-FMA4-NEXT:    calll __adddf3
-; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
-; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, %ebx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, %ebp
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, 28(%ecx)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, 24(%ecx)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %esi, 20(%ecx)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %ebp, 16(%ecx)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %ebx, 12(%ecx)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %edi, 8(%ecx)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl (%esp), %eax # 4-byte Reload
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, 4(%ecx)
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset 4
+; SOFT-FLOAT-32-FMA4-NEXT:    calll __adddf3
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ecx, (%esp)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, 28(%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, 24(%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ebp, 20(%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %ebx, 16(%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %edi, 12(%esi)
 ; SOFT-FLOAT-32-FMA4-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, (%ecx)
-; SOFT-FLOAT-32-FMA4-NEXT:    movl %ecx, %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, 8(%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    calll __adddf3
 ; SOFT-FLOAT-32-FMA4-NEXT:    addl $16, %esp
+; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_adjust_cfa_offset -16
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %edx, 4(%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %eax, (%esi)
+; SOFT-FLOAT-32-FMA4-NEXT:    movl %esi, %eax
+; SOFT-FLOAT-32-FMA4-NEXT:    addl $20, %esp
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 20
 ; SOFT-FLOAT-32-FMA4-NEXT:    popl %esi
 ; SOFT-FLOAT-32-FMA4-NEXT:    .cfi_def_cfa_offset 16

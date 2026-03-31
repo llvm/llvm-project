@@ -6,24 +6,19 @@
 define void @foo(ptr nocapture %P) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    subl $24, %esp
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    subl $28, %esp
+; CHECK-NEXT:    calll _test
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    calll _test
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd %xmm0, (%esp) ## 8-byte Spill
-; CHECK-NEXT:    calll _test
-; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd (%esp), %xmm1 ## 8-byte Reload
-; CHECK-NEXT:    ## xmm1 = mem[0],zero
-; CHECK-NEXT:    mulsd %xmm1, %xmm1
 ; CHECK-NEXT:    mulsd %xmm0, %xmm0
-; CHECK-NEXT:    addsd %xmm1, %xmm0
-; CHECK-NEXT:    movsd %xmm0, (%esi)
-; CHECK-NEXT:    addl $24, %esp
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    mulsd %xmm1, %xmm1
+; CHECK-NEXT:    addsd %xmm0, %xmm1
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movsd %xmm1, (%eax)
+; CHECK-NEXT:    addl $28, %esp
 ; CHECK-NEXT:    retl
 entry:
 	%0 = tail call double (...) @test() nounwind		; <double> [#uses=2]

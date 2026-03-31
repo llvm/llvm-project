@@ -317,9 +317,9 @@ define i32 @cttz_i32_zero_test(i32 %n) {
 ;
 ; X86-CMOV-LABEL: cttz_i32_zero_test:
 ; X86-CMOV:       # %bb.0:
-; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
-; X86-CMOV-NEXT:    movl $32, %eax
-; X86-CMOV-NEXT:    cmovnel %ecx, %eax
+; X86-CMOV-NEXT:    movl $32, %ecx
+; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    cmovel %ecx, %eax
 ; X86-CMOV-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i32_zero_test:
@@ -379,13 +379,13 @@ define i64 @cttz_i64_zero_test(i64 %n) nounwind {
 ;
 ; X86-CMOV-LABEL: cttz_i64_zero_test:
 ; X86-CMOV:       # %bb.0:
-; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    movl $32, %eax
 ; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
-; X86-CMOV-NEXT:    movl $32, %edx
-; X86-CMOV-NEXT:    cmovnel %ecx, %edx
-; X86-CMOV-NEXT:    addl $32, %edx
+; X86-CMOV-NEXT:    cmovel %eax, %ecx
+; X86-CMOV-NEXT:    addl $32, %ecx
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CMOV-NEXT:    bsfl %eax, %eax
-; X86-CMOV-NEXT:    cmovel %edx, %eax
+; X86-CMOV-NEXT:    cmovel %ecx, %eax
 ; X86-CMOV-NEXT:    xorl %edx, %edx
 ; X86-CMOV-NEXT:    retl
 ;
@@ -518,9 +518,9 @@ define i64 @cttz_i64_zero_test_knownneverzero(i64 %n) {
 ; X86-CMOV-LABEL: cttz_i64_zero_test_knownneverzero:
 ; X86-CMOV:       # %bb.0:
 ; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-CMOV-NEXT:    rep bsfl %ecx, %edx
 ; X86-CMOV-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X86-CMOV-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; X86-CMOV-NEXT:    rep bsfl %ecx, %edx
 ; X86-CMOV-NEXT:    rep bsfl %eax, %eax
 ; X86-CMOV-NEXT:    orl $32, %eax
 ; X86-CMOV-NEXT:    testl %ecx, %ecx
@@ -672,9 +672,9 @@ define i64 @cttz_i32_sext(i32 %x) {
 ;
 ; X86-CMOV-LABEL: cttz_i32_sext:
 ; X86-CMOV:       # %bb.0:
-; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
-; X86-CMOV-NEXT:    movl $32, %eax
-; X86-CMOV-NEXT:    cmovnel %ecx, %eax
+; X86-CMOV-NEXT:    movl $32, %ecx
+; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    cmovel %ecx, %eax
 ; X86-CMOV-NEXT:    xorl %edx, %edx
 ; X86-CMOV-NEXT:    retl
 ;
@@ -727,9 +727,9 @@ define i64 @cttz_i32_zext(i32 %x) {
 ;
 ; X86-CMOV-LABEL: cttz_i32_zext:
 ; X86-CMOV:       # %bb.0:
-; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
-; X86-CMOV-NEXT:    movl $32, %eax
-; X86-CMOV-NEXT:    cmovnel %ecx, %eax
+; X86-CMOV-NEXT:    movl $32, %ecx
+; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    cmovel %ecx, %eax
 ; X86-CMOV-NEXT:    xorl %edx, %edx
 ; X86-CMOV-NEXT:    retl
 ;

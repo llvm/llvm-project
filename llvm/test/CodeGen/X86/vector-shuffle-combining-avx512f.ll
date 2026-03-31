@@ -36,9 +36,9 @@ define <8 x double> @combine_permvar_8f64_identity(<8 x double> %x0, <8 x double
 define <8 x double> @combine_permvar_8f64_identity_mask(<8 x double> %x0, <8 x double> %x1, i8 %m) {
 ; X86-AVX512F-LABEL: combine_permvar_8f64_identity_mask:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    kmovw %eax, %k1
+; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512F-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1}
 ; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
 ; X86-AVX512F-NEXT:    vpermpd %zmm1, %zmm0, %zmm1 {%k1}
@@ -47,9 +47,9 @@ define <8 x double> @combine_permvar_8f64_identity_mask(<8 x double> %x0, <8 x d
 ;
 ; X86-AVX512BW-LABEL: combine_permvar_8f64_identity_mask:
 ; X86-AVX512BW:       # %bb.0:
-; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    kmovd %eax, %k1
+; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512BW-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1}
 ; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
 ; X86-AVX512BW-NEXT:    vpermpd %zmm1, %zmm0, %zmm1 {%k1}
@@ -95,9 +95,9 @@ define <8 x i64> @combine_permvar_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {
 define <8 x i64> @combine_permvar_8i64_identity_mask(<8 x i64> %x0, <8 x i64> %x1, i8 %m) {
 ; X86-AVX512F-LABEL: combine_permvar_8i64_identity_mask:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    kmovw %eax, %k1
+; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512F-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1}
 ; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
 ; X86-AVX512F-NEXT:    vpermq %zmm1, %zmm0, %zmm1 {%k1}
@@ -106,9 +106,9 @@ define <8 x i64> @combine_permvar_8i64_identity_mask(<8 x i64> %x0, <8 x i64> %x
 ;
 ; X86-AVX512BW-LABEL: combine_permvar_8i64_identity_mask:
 ; X86-AVX512BW:       # %bb.0:
-; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    kmovd %eax, %k1
+; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512BW-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1}
 ; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
 ; X86-AVX512BW-NEXT:    vpermq %zmm1, %zmm0, %zmm1 {%k1}
@@ -154,18 +154,18 @@ define <8 x double> @combine_vpermt2var_8f64_identity(<8 x double> %x0, <8 x dou
 define <8 x double> @combine_vpermt2var_8f64_identity_mask(<8 x double> %x0, <8 x double> %x1, i8 %m) {
 ; X86-AVX512F-LABEL: combine_vpermt2var_8f64_identity_mask:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    kmovw %eax, %k1
+; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512F-NEXT:    vpermt2pd %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-AVX512F-NEXT:    vpermpd %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X86-AVX512BW-LABEL: combine_vpermt2var_8f64_identity_mask:
 ; X86-AVX512BW:       # %bb.0:
-; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    kmovd %eax, %k1
+; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512BW-NEXT:    vpermt2pd %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-AVX512BW-NEXT:    vpermpd %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-AVX512BW-NEXT:    retl
@@ -254,18 +254,18 @@ define <8 x i64> @combine_vpermt2var_8i64_identity(<8 x i64> %x0, <8 x i64> %x1)
 define <8 x i64> @combine_vpermt2var_8i64_identity_mask(<8 x i64> %x0, <8 x i64> %x1, i8 %m) {
 ; X86-AVX512F-LABEL: combine_vpermt2var_8i64_identity_mask:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    kmovw %eax, %k1
+; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512F-NEXT:    vpermt2q %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-AVX512F-NEXT:    vpermq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X86-AVX512BW-LABEL: combine_vpermt2var_8i64_identity_mask:
 ; X86-AVX512BW:       # %bb.0:
-; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    kmovd %eax, %k1
+; X86-AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X86-AVX512BW-NEXT:    vpermt2q %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-AVX512BW-NEXT:    vpermq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-AVX512BW-NEXT:    retl
@@ -1097,17 +1097,17 @@ define <16 x i32> @combine_vcompressd_splat(i16 %m) {
 define <8 x i64> @PR179008(ptr %p0) {
 ; X86-AVX512F-LABEL: PR179008:
 ; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    movb $31, %al
+; X86-AVX512F-NEXT:    kmovw %eax, %k1
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    movb $31, %cl
-; X86-AVX512F-NEXT:    kmovw %ecx, %k1
 ; X86-AVX512F-NEXT:    vmovdqu64 (%eax), %zmm0 {%k1} {z}
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X86-AVX512BW-LABEL: PR179008:
 ; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    movb $31, %al
+; X86-AVX512BW-NEXT:    kmovd %eax, %k1
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512BW-NEXT:    movb $31, %cl
-; X86-AVX512BW-NEXT:    kmovd %ecx, %k1
 ; X86-AVX512BW-NEXT:    vmovdqu64 (%eax), %zmm0 {%k1} {z}
 ; X86-AVX512BW-NEXT:    retl
 ;

@@ -8,16 +8,16 @@ define void @fptrunc_frommem2(ptr %in, ptr %out) {
 ; X86-SSE-LABEL: fptrunc_frommem2:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    cvtpd2ps (%ecx), %xmm0
+; X86-SSE-NEXT:    cvtpd2ps (%eax), %xmm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movlpd %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: fptrunc_frommem2:
 ; X86-AVX:       # %bb.0: # %entry
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    vcvtpd2psx (%ecx), %xmm0
+; X86-AVX-NEXT:    vcvtpd2psx (%eax), %xmm0
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovlpd %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
@@ -43,18 +43,18 @@ define void @fptrunc_frommem4(ptr %in, ptr %out) {
 ; X86-SSE-LABEL: fptrunc_frommem4:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    cvtpd2ps 16(%ecx), %xmm0
-; X86-SSE-NEXT:    cvtpd2ps (%ecx), %xmm1
+; X86-SSE-NEXT:    cvtpd2ps 16(%eax), %xmm0
+; X86-SSE-NEXT:    cvtpd2ps (%eax), %xmm1
 ; X86-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movupd %xmm1, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: fptrunc_frommem4:
 ; X86-AVX:       # %bb.0: # %entry
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    vcvtpd2psy (%ecx), %xmm0
+; X86-AVX-NEXT:    vcvtpd2psy (%eax), %xmm0
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovupd %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
@@ -82,23 +82,23 @@ define void @fptrunc_frommem8(ptr %in, ptr %out) {
 ; X86-SSE-LABEL: fptrunc_frommem8:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    cvtpd2ps 16(%ecx), %xmm0
-; X86-SSE-NEXT:    cvtpd2ps (%ecx), %xmm1
+; X86-SSE-NEXT:    cvtpd2ps 48(%eax), %xmm0
+; X86-SSE-NEXT:    cvtpd2ps 32(%eax), %xmm1
 ; X86-SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; X86-SSE-NEXT:    cvtpd2ps 48(%ecx), %xmm0
-; X86-SSE-NEXT:    cvtpd2ps 32(%ecx), %xmm2
+; X86-SSE-NEXT:    cvtpd2ps 16(%eax), %xmm0
+; X86-SSE-NEXT:    cvtpd2ps (%eax), %xmm2
 ; X86-SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; X86-SSE-NEXT:    movupd %xmm2, 16(%eax)
-; X86-SSE-NEXT:    movupd %xmm1, (%eax)
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movupd %xmm1, 16(%eax)
+; X86-SSE-NEXT:    movupd %xmm2, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: fptrunc_frommem8:
 ; X86-AVX:       # %bb.0: # %entry
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    vcvtpd2psy (%ecx), %xmm0
-; X86-AVX-NEXT:    vcvtpd2psy 32(%ecx), %xmm1
+; X86-AVX-NEXT:    vcvtpd2psy (%eax), %xmm0
+; X86-AVX-NEXT:    vcvtpd2psy 32(%eax), %xmm1
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovupd %xmm1, 16(%eax)
 ; X86-AVX-NEXT:    vmovupd %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl

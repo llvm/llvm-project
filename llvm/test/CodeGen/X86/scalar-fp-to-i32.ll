@@ -803,27 +803,39 @@ define i32 @t_to_u32(fp128 %a) nounwind {
 ; X86-SSE-WIN:       # %bb.0:
 ; X86-SSE-WIN-NEXT:    pushl %ebp
 ; X86-SSE-WIN-NEXT:    movl %esp, %ebp
+; X86-SSE-WIN-NEXT:    pushl %esi
 ; X86-SSE-WIN-NEXT:    andl $-16, %esp
 ; X86-SSE-WIN-NEXT:    subl $16, %esp
-; X86-SSE-WIN-NEXT:    pushl 20(%ebp)
-; X86-SSE-WIN-NEXT:    pushl 16(%ebp)
-; X86-SSE-WIN-NEXT:    pushl 12(%ebp)
-; X86-SSE-WIN-NEXT:    pushl 8(%ebp)
+; X86-SSE-WIN-NEXT:    movl 16(%ebp), %eax
+; X86-SSE-WIN-NEXT:    movl 20(%ebp), %ecx
+; X86-SSE-WIN-NEXT:    movl 8(%ebp), %edx
+; X86-SSE-WIN-NEXT:    movl 12(%ebp), %esi
+; X86-SSE-WIN-NEXT:    pushl %ecx
+; X86-SSE-WIN-NEXT:    pushl %eax
+; X86-SSE-WIN-NEXT:    pushl %esi
+; X86-SSE-WIN-NEXT:    pushl %edx
 ; X86-SSE-WIN-NEXT:    calll ___fixunstfsi
 ; X86-SSE-WIN-NEXT:    addl $16, %esp
-; X86-SSE-WIN-NEXT:    movl %ebp, %esp
+; X86-SSE-WIN-NEXT:    leal -4(%ebp), %esp
+; X86-SSE-WIN-NEXT:    popl %esi
 ; X86-SSE-WIN-NEXT:    popl %ebp
 ; X86-SSE-WIN-NEXT:    retl
 ;
 ; X86-SSE-LIN-LABEL: t_to_u32:
 ; X86-SSE-LIN:       # %bb.0:
-; X86-SSE-LIN-NEXT:    subl $12, %esp
-; X86-SSE-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE-LIN-NEXT:    pushl %esi
+; X86-SSE-LIN-NEXT:    subl $8, %esp
+; X86-SSE-LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-LIN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-LIN-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE-LIN-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-LIN-NEXT:    pushl %eax
+; X86-SSE-LIN-NEXT:    pushl %ecx
+; X86-SSE-LIN-NEXT:    pushl %esi
+; X86-SSE-LIN-NEXT:    pushl %edx
 ; X86-SSE-LIN-NEXT:    calll __fixunstfsi
-; X86-SSE-LIN-NEXT:    addl $28, %esp
+; X86-SSE-LIN-NEXT:    addl $24, %esp
+; X86-SSE-LIN-NEXT:    popl %esi
 ; X86-SSE-LIN-NEXT:    retl
 ;
 ; X64-SSE-WIN-LABEL: t_to_u32:
@@ -847,27 +859,39 @@ define i32 @t_to_u32(fp128 %a) nounwind {
 ; X87-WIN:       # %bb.0:
 ; X87-WIN-NEXT:    pushl %ebp
 ; X87-WIN-NEXT:    movl %esp, %ebp
+; X87-WIN-NEXT:    pushl %esi
 ; X87-WIN-NEXT:    andl $-16, %esp
 ; X87-WIN-NEXT:    subl $16, %esp
-; X87-WIN-NEXT:    pushl 20(%ebp)
-; X87-WIN-NEXT:    pushl 16(%ebp)
-; X87-WIN-NEXT:    pushl 12(%ebp)
-; X87-WIN-NEXT:    pushl 8(%ebp)
+; X87-WIN-NEXT:    movl 16(%ebp), %eax
+; X87-WIN-NEXT:    movl 20(%ebp), %ecx
+; X87-WIN-NEXT:    movl 8(%ebp), %edx
+; X87-WIN-NEXT:    movl 12(%ebp), %esi
+; X87-WIN-NEXT:    pushl %ecx
+; X87-WIN-NEXT:    pushl %eax
+; X87-WIN-NEXT:    pushl %esi
+; X87-WIN-NEXT:    pushl %edx
 ; X87-WIN-NEXT:    calll ___fixunstfsi
 ; X87-WIN-NEXT:    addl $16, %esp
-; X87-WIN-NEXT:    movl %ebp, %esp
+; X87-WIN-NEXT:    leal -4(%ebp), %esp
+; X87-WIN-NEXT:    popl %esi
 ; X87-WIN-NEXT:    popl %ebp
 ; X87-WIN-NEXT:    retl
 ;
 ; X87-LIN-LABEL: t_to_u32:
 ; X87-LIN:       # %bb.0:
-; X87-LIN-NEXT:    subl $12, %esp
-; X87-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
+; X87-LIN-NEXT:    pushl %esi
+; X87-LIN-NEXT:    subl $8, %esp
+; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X87-LIN-NEXT:    pushl %eax
+; X87-LIN-NEXT:    pushl %ecx
+; X87-LIN-NEXT:    pushl %esi
+; X87-LIN-NEXT:    pushl %edx
 ; X87-LIN-NEXT:    calll __fixunstfsi
-; X87-LIN-NEXT:    addl $28, %esp
+; X87-LIN-NEXT:    addl $24, %esp
+; X87-LIN-NEXT:    popl %esi
 ; X87-LIN-NEXT:    retl
   %r = fptoui fp128 %a to i32
   ret i32 %r
@@ -917,27 +941,39 @@ define i32 @t_to_s32(fp128 %a) nounwind {
 ; X86-SSE-WIN:       # %bb.0:
 ; X86-SSE-WIN-NEXT:    pushl %ebp
 ; X86-SSE-WIN-NEXT:    movl %esp, %ebp
+; X86-SSE-WIN-NEXT:    pushl %esi
 ; X86-SSE-WIN-NEXT:    andl $-16, %esp
 ; X86-SSE-WIN-NEXT:    subl $16, %esp
-; X86-SSE-WIN-NEXT:    pushl 20(%ebp)
-; X86-SSE-WIN-NEXT:    pushl 16(%ebp)
-; X86-SSE-WIN-NEXT:    pushl 12(%ebp)
-; X86-SSE-WIN-NEXT:    pushl 8(%ebp)
+; X86-SSE-WIN-NEXT:    movl 16(%ebp), %eax
+; X86-SSE-WIN-NEXT:    movl 20(%ebp), %ecx
+; X86-SSE-WIN-NEXT:    movl 8(%ebp), %edx
+; X86-SSE-WIN-NEXT:    movl 12(%ebp), %esi
+; X86-SSE-WIN-NEXT:    pushl %ecx
+; X86-SSE-WIN-NEXT:    pushl %eax
+; X86-SSE-WIN-NEXT:    pushl %esi
+; X86-SSE-WIN-NEXT:    pushl %edx
 ; X86-SSE-WIN-NEXT:    calll ___fixtfsi
 ; X86-SSE-WIN-NEXT:    addl $16, %esp
-; X86-SSE-WIN-NEXT:    movl %ebp, %esp
+; X86-SSE-WIN-NEXT:    leal -4(%ebp), %esp
+; X86-SSE-WIN-NEXT:    popl %esi
 ; X86-SSE-WIN-NEXT:    popl %ebp
 ; X86-SSE-WIN-NEXT:    retl
 ;
 ; X86-SSE-LIN-LABEL: t_to_s32:
 ; X86-SSE-LIN:       # %bb.0:
-; X86-SSE-LIN-NEXT:    subl $12, %esp
-; X86-SSE-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE-LIN-NEXT:    pushl %esi
+; X86-SSE-LIN-NEXT:    subl $8, %esp
+; X86-SSE-LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-LIN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-LIN-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE-LIN-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-LIN-NEXT:    pushl %eax
+; X86-SSE-LIN-NEXT:    pushl %ecx
+; X86-SSE-LIN-NEXT:    pushl %esi
+; X86-SSE-LIN-NEXT:    pushl %edx
 ; X86-SSE-LIN-NEXT:    calll __fixtfsi
-; X86-SSE-LIN-NEXT:    addl $28, %esp
+; X86-SSE-LIN-NEXT:    addl $24, %esp
+; X86-SSE-LIN-NEXT:    popl %esi
 ; X86-SSE-LIN-NEXT:    retl
 ;
 ; X64-SSE-WIN-LABEL: t_to_s32:
@@ -961,27 +997,39 @@ define i32 @t_to_s32(fp128 %a) nounwind {
 ; X87-WIN:       # %bb.0:
 ; X87-WIN-NEXT:    pushl %ebp
 ; X87-WIN-NEXT:    movl %esp, %ebp
+; X87-WIN-NEXT:    pushl %esi
 ; X87-WIN-NEXT:    andl $-16, %esp
 ; X87-WIN-NEXT:    subl $16, %esp
-; X87-WIN-NEXT:    pushl 20(%ebp)
-; X87-WIN-NEXT:    pushl 16(%ebp)
-; X87-WIN-NEXT:    pushl 12(%ebp)
-; X87-WIN-NEXT:    pushl 8(%ebp)
+; X87-WIN-NEXT:    movl 16(%ebp), %eax
+; X87-WIN-NEXT:    movl 20(%ebp), %ecx
+; X87-WIN-NEXT:    movl 8(%ebp), %edx
+; X87-WIN-NEXT:    movl 12(%ebp), %esi
+; X87-WIN-NEXT:    pushl %ecx
+; X87-WIN-NEXT:    pushl %eax
+; X87-WIN-NEXT:    pushl %esi
+; X87-WIN-NEXT:    pushl %edx
 ; X87-WIN-NEXT:    calll ___fixtfsi
 ; X87-WIN-NEXT:    addl $16, %esp
-; X87-WIN-NEXT:    movl %ebp, %esp
+; X87-WIN-NEXT:    leal -4(%ebp), %esp
+; X87-WIN-NEXT:    popl %esi
 ; X87-WIN-NEXT:    popl %ebp
 ; X87-WIN-NEXT:    retl
 ;
 ; X87-LIN-LABEL: t_to_s32:
 ; X87-LIN:       # %bb.0:
-; X87-LIN-NEXT:    subl $12, %esp
-; X87-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    pushl {{[0-9]+}}(%esp)
+; X87-LIN-NEXT:    pushl %esi
+; X87-LIN-NEXT:    subl $8, %esp
+; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X87-LIN-NEXT:    pushl %eax
+; X87-LIN-NEXT:    pushl %ecx
+; X87-LIN-NEXT:    pushl %esi
+; X87-LIN-NEXT:    pushl %edx
 ; X87-LIN-NEXT:    calll __fixtfsi
-; X87-LIN-NEXT:    addl $28, %esp
+; X87-LIN-NEXT:    addl $24, %esp
+; X87-LIN-NEXT:    popl %esi
 ; X87-LIN-NEXT:    retl
   %r = fptosi fp128 %a to i32
   ret i32 %r

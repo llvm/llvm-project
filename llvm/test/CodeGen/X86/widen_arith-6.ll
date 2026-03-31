@@ -24,12 +24,12 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %forbody
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl 8(%ebp), %ecx
 ; CHECK-NEXT:    shll $4, %eax
-; CHECK-NEXT:    movl 12(%ebp), %edx
-; CHECK-NEXT:    movaps (%edx,%eax), %xmm1
+; CHECK-NEXT:    movl 12(%ebp), %ecx
+; CHECK-NEXT:    movaps (%ecx,%eax), %xmm1
 ; CHECK-NEXT:    mulps {{[0-9]+}}(%esp), %xmm1
 ; CHECK-NEXT:    addps %xmm0, %xmm1
+; CHECK-NEXT:    movl 8(%ebp), %ecx
 ; CHECK-NEXT:    extractps $2, %xmm1, 8(%ecx,%eax)
 ; CHECK-NEXT:    extractps $1, %xmm1, 4(%ecx,%eax)
 ; CHECK-NEXT:    movss %xmm1, (%ecx,%eax)

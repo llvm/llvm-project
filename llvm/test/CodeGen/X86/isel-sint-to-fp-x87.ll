@@ -30,10 +30,10 @@ define void @test_int8_to_float(i8 %x, ptr %p) nounwind {
 ; SDAG-X86:       # %bb.0: # %entry
 ; SDAG-X86-NEXT:    pushl %eax
 ; SDAG-X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    filds {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fstps (%ecx)
+; SDAG-X86-NEXT:    fstps (%eax)
 ; SDAG-X86-NEXT:    popl %eax
 ; SDAG-X86-NEXT:    retl
 ;
@@ -66,9 +66,9 @@ define void @test_int16_to_float(i16 %x, ptr %p) nounwind {
 ; SDAG-X86-LABEL: test_int16_to_float:
 ; SDAG-X86:       # %bb.0: # %entry
 ; SDAG-X86-NEXT:    pushl %eax
+; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; SDAG-X86-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    filds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstps (%eax)
 ; SDAG-X86-NEXT:    popl %eax
@@ -102,8 +102,8 @@ define void @test_int32_to_float(i32 %x, ptr %p) nounwind {
 ; SDAG-X86:       # %bb.0: # %entry
 ; SDAG-X86-NEXT:    pushl %eax
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SDAG-X86-NEXT:    movl %ecx, (%esp)
+; SDAG-X86-NEXT:    movl %eax, (%esp)
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    fildl (%esp)
 ; SDAG-X86-NEXT:    fstps (%eax)
 ; SDAG-X86-NEXT:    popl %eax
@@ -135,8 +135,8 @@ define void @test_int64_to_float(i64 %x, ptr %p) nounwind {
 ;
 ; X86-LABEL: test_int64_to_float:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    fstps (%eax)
 ; X86-NEXT:    retl
 entry:
@@ -260,10 +260,10 @@ define void @test_int8to_double(i8 %x, ptr %p) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    filds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl (%ecx)
+; X86-NEXT:    fstpl (%eax)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 entry:
@@ -283,9 +283,9 @@ define void @test_int16_to_double(i16 %x, ptr %p) nounwind {
 ; X86-LABEL: test_int16_to_double:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    filds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpl (%eax)
 ; X86-NEXT:    popl %eax
@@ -308,8 +308,8 @@ define void @test_int32_to_double(i32 %x, ptr %p) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, (%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    fildl (%esp)
 ; X86-NEXT:    fstpl (%eax)
 ; X86-NEXT:    popl %eax
@@ -330,8 +330,8 @@ define void @test_int64_to_double(i64 %x, ptr %p) nounwind {
 ;
 ; X86-LABEL: test_int64_to_double:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    fstpl (%eax)
 ; X86-NEXT:    retl
 entry:

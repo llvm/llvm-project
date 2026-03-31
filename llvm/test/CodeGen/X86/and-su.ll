@@ -30,10 +30,10 @@ define fastcc double @bar(i32 %hash, double %x, double %y) nounwind {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    fldl 16(%ebp)
-; CHECK-NEXT:    fldl 8(%ebp)
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    andl $15, %eax
+; CHECK-NEXT:    fldl 16(%ebp)
+; CHECK-NEXT:    fldl 8(%ebp)
 ; CHECK-NEXT:    cmpl $8, %eax
 ; CHECK-NEXT:    jb .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %bb10

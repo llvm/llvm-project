@@ -5,10 +5,10 @@
 define void @test_mm512_2intersect_epi32(<8 x i64> %a, <8 x i64> %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
 ; X86-NEXT:    vp2intersectd %zmm1, %zmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x48,0x68,0xc1]
-; X86-NEXT:    kmovw %k0, (%ecx) # encoding: [0xc5,0xf8,0x91,0x01]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %k0, (%eax) # encoding: [0xc5,0xf8,0x91,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X86-NEXT:    kmovw %k1, (%eax) # encoding: [0xc5,0xf8,0x91,0x08]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -34,13 +34,13 @@ entry:
 define void @test_mm512_2intersect_epi64(<8 x i64> %a, <8 x i64> %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vp2intersectq %zmm1, %zmm0, %k0 # encoding: [0x62,0xf2,0xff,0x48,0x68,0xc1]
-; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
-; X86-NEXT:    kmovw %k0, %edx # encoding: [0xc5,0xf8,0x93,0xd0]
-; X86-NEXT:    movb %dl, (%eax) # encoding: [0x88,0x10]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
-; X86-NEXT:    movb %cl, (%eax) # encoding: [0x88,0x08]
+; X86-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
+; X86-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
+; X86-NEXT:    movb %cl, (%edx) # encoding: [0x88,0x0a]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
+; X86-NEXT:    movb %al, (%ecx) # encoding: [0x88,0x01]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -65,19 +65,14 @@ entry:
 define void @test_mm512_2intersect_epi32_p(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi32_p:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi # encoding: [0x56]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x14]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi # encoding: [0x8b,0x74,0x24,0x08]
-; X86-NEXT:    vmovdqa64 (%esi), %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0x06]
-; X86-NEXT:    vp2intersectd (%edx), %zmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x48,0x68,0x02]
-; X86-NEXT:    kmovw %k0, (%ecx) # encoding: [0xc5,0xf8,0x91,0x01]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vmovdqa64 (%eax), %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
+; X86-NEXT:    vp2intersectd (%eax), %zmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x48,0x68,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
+; X86-NEXT:    kmovw %k0, (%eax) # encoding: [0xc5,0xf8,0x91,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x10]
 ; X86-NEXT:    kmovw %k1, (%eax) # encoding: [0xc5,0xf8,0x91,0x08]
-; X86-NEXT:    popl %esi # encoding: [0x5e]
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -103,16 +98,16 @@ entry:
 define void @test_mm512_2intersect_epi64_p(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi64_p:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vmovdqa64 (%edx), %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0x02]
-; X86-NEXT:    vp2intersectq (%ecx), %zmm0, %k0 # encoding: [0x62,0xf2,0xff,0x48,0x68,0x01]
-; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
-; X86-NEXT:    kmovw %k0, %edx # encoding: [0xc5,0xf8,0x93,0xd0]
-; X86-NEXT:    movb %dl, (%eax) # encoding: [0x88,0x10]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x10]
-; X86-NEXT:    movb %cl, (%eax) # encoding: [0x88,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vmovdqa64 (%eax), %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
+; X86-NEXT:    vp2intersectq (%eax), %zmm0, %k0 # encoding: [0x62,0xf2,0xff,0x48,0x68,0x00]
+; X86-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
+; X86-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
+; X86-NEXT:    movb %cl, (%edx) # encoding: [0x88,0x0a]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
+; X86-NEXT:    movb %al, (%ecx) # encoding: [0x88,0x01]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -141,19 +136,14 @@ entry:
 define void @test_mm512_2intersect_epi32_b(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi32_b:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi # encoding: [0x56]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x14]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi # encoding: [0x8b,0x74,0x24,0x08]
-; X86-NEXT:    vpbroadcastd (%esi), %zmm0 # encoding: [0x62,0xf2,0x7d,0x48,0x58,0x06]
-; X86-NEXT:    vp2intersectd (%edx){1to16}, %zmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x58,0x68,0x02]
-; X86-NEXT:    kmovw %k0, (%ecx) # encoding: [0xc5,0xf8,0x91,0x01]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpbroadcastd (%eax), %zmm0 # encoding: [0x62,0xf2,0x7d,0x48,0x58,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
+; X86-NEXT:    vp2intersectd (%eax){1to16}, %zmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x58,0x68,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
+; X86-NEXT:    kmovw %k0, (%eax) # encoding: [0xc5,0xf8,0x91,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x10]
 ; X86-NEXT:    kmovw %k1, (%eax) # encoding: [0xc5,0xf8,0x91,0x08]
-; X86-NEXT:    popl %esi # encoding: [0x5e]
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -183,16 +173,16 @@ entry:
 define void @test_mm512_2intersect_epi64_b(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %m0, ptr nocapture %m1) {
 ; X86-LABEL: test_mm512_2intersect_epi64_b:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vpbroadcastq (%edx), %zmm0 # encoding: [0x62,0xf2,0xfd,0x48,0x59,0x02]
-; X86-NEXT:    vp2intersectq (%ecx){1to8}, %zmm0, %k0 # encoding: [0x62,0xf2,0xff,0x58,0x68,0x01]
-; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
-; X86-NEXT:    kmovw %k0, %edx # encoding: [0xc5,0xf8,0x93,0xd0]
-; X86-NEXT:    movb %dl, (%eax) # encoding: [0x88,0x10]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x10]
-; X86-NEXT:    movb %cl, (%eax) # encoding: [0x88,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpbroadcastq (%eax), %zmm0 # encoding: [0x62,0xf2,0xfd,0x48,0x59,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
+; X86-NEXT:    vp2intersectq (%eax){1to8}, %zmm0, %k0 # encoding: [0x62,0xf2,0xff,0x58,0x68,0x00]
+; X86-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
+; X86-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
+; X86-NEXT:    movb %cl, (%edx) # encoding: [0x88,0x0a]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
+; X86-NEXT:    movb %al, (%ecx) # encoding: [0x88,0x01]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;

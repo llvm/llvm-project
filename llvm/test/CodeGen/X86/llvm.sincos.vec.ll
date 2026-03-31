@@ -7,55 +7,47 @@
 define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias %out_cos) nounwind {
 ; X86-LABEL: test_sincos_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $52, %esp
-; X86-NEXT:    movl 84(%esp), %esi
-; X86-NEXT:    flds 76(%esp)
-; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    flds 64(%esp)
-; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    flds 72(%esp)
-; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    flds 68(%esp)
-; X86-NEXT:    movl 80(%esp), %edi
-; X86-NEXT:    leal 40(%esp), %eax
+; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    leal 32(%esp), %eax
 ; X86-NEXT:    movl %eax, 8(%esp)
-; X86-NEXT:    leal 4(%edi), %eax
+; X86-NEXT:    movl 64(%esp), %esi
+; X86-NEXT:    leal 8(%esi), %eax
 ; X86-NEXT:    movl %eax, 4(%esp)
+; X86-NEXT:    flds 56(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll sincosf
-; X86-NEXT:    leal 44(%esp), %eax
+; X86-NEXT:    leal 28(%esp), %eax
 ; X86-NEXT:    movl %eax, 8(%esp)
-; X86-NEXT:    leal 8(%edi), %eax
+; X86-NEXT:    leal 4(%esi), %eax
 ; X86-NEXT:    movl %eax, 4(%esp)
-; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    flds 52(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll sincosf
 ; X86-NEXT:    leal 36(%esp), %eax
 ; X86-NEXT:    movl %eax, 8(%esp)
-; X86-NEXT:    movl %edi, 4(%esp)
-; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    leal 12(%esi), %eax
+; X86-NEXT:    movl %eax, 4(%esp)
+; X86-NEXT:    flds 60(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll sincosf
-; X86-NEXT:    leal 48(%esp), %eax
+; X86-NEXT:    leal 24(%esp), %eax
 ; X86-NEXT:    movl %eax, 8(%esp)
-; X86-NEXT:    addl $12, %edi
-; X86-NEXT:    movl %edi, 4(%esp)
-; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    movl %esi, 4(%esp)
+; X86-NEXT:    flds 48(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll sincosf
+; X86-NEXT:    movl 68(%esp), %eax
 ; X86-NEXT:    flds 36(%esp)
-; X86-NEXT:    flds 40(%esp)
-; X86-NEXT:    flds 44(%esp)
-; X86-NEXT:    flds 48(%esp)
-; X86-NEXT:    fstps 12(%esi)
-; X86-NEXT:    fstps 8(%esi)
-; X86-NEXT:    fstps 4(%esi)
-; X86-NEXT:    fstps (%esi)
-; X86-NEXT:    addl $52, %esp
+; X86-NEXT:    fstps 12(%eax)
+; X86-NEXT:    flds 32(%esp)
+; X86-NEXT:    fstps 8(%eax)
+; X86-NEXT:    flds 28(%esp)
+; X86-NEXT:    fstps 4(%eax)
+; X86-NEXT:    flds 24(%esp)
+; X86-NEXT:    fstps (%eax)
+; X86-NEXT:    addl $40, %esp
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_sincos_v4f32:
@@ -219,33 +211,29 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalias %out_cos) nounwind {
 ; X86-LABEL: test_sincos_v2f64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $52, %esp
-; X86-NEXT:    movl 84(%esp), %esi
-; X86-NEXT:    fldl 72(%esp)
-; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
-; X86-NEXT:    fldl 64(%esp)
-; X86-NEXT:    movl 80(%esp), %edi
-; X86-NEXT:    leal 24(%esp), %eax
-; X86-NEXT:    movl %eax, 12(%esp)
-; X86-NEXT:    movl %edi, 8(%esp)
-; X86-NEXT:    fstpl (%esp)
-; X86-NEXT:    calll sincos
+; X86-NEXT:    subl $40, %esp
 ; X86-NEXT:    leal 32(%esp), %eax
 ; X86-NEXT:    movl %eax, 12(%esp)
-; X86-NEXT:    addl $8, %edi
-; X86-NEXT:    movl %edi, 8(%esp)
-; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-NEXT:    movl 64(%esp), %esi
+; X86-NEXT:    leal 8(%esi), %eax
+; X86-NEXT:    movl %eax, 8(%esp)
+; X86-NEXT:    fldl 56(%esp)
 ; X86-NEXT:    fstpl (%esp)
 ; X86-NEXT:    calll sincos
-; X86-NEXT:    fldl 24(%esp)
+; X86-NEXT:    leal 24(%esp), %eax
+; X86-NEXT:    movl %eax, 12(%esp)
+; X86-NEXT:    movl %esi, 8(%esp)
+; X86-NEXT:    fldl 48(%esp)
+; X86-NEXT:    fstpl (%esp)
+; X86-NEXT:    calll sincos
+; X86-NEXT:    movl 68(%esp), %eax
 ; X86-NEXT:    fldl 32(%esp)
-; X86-NEXT:    fstpl 8(%esi)
-; X86-NEXT:    fstpl (%esi)
-; X86-NEXT:    addl $52, %esp
+; X86-NEXT:    fstpl 8(%eax)
+; X86-NEXT:    fldl 24(%esp)
+; X86-NEXT:    fstpl (%eax)
+; X86-NEXT:    addl $40, %esp
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_sincos_v2f64:

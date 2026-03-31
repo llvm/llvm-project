@@ -8,11 +8,11 @@ define <4 x i16> @func_16_32(ptr %a, ptr %b, ptr %c) nounwind {
 ; X86-LABEL: func_16_32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    vmovdqa (%edx), %xmm0
-; X86-NEXT:    vpaddw (%ecx), %xmm0, %xmm0
+; X86-NEXT:    vmovdqa (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpaddw (%eax), %xmm0, %xmm0
 ; X86-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovq %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -36,16 +36,16 @@ define <4 x i16> @func_16_64(ptr %a, ptr %b, ptr %c) nounwind {
 ; X86-LABEL: func_16_64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    vmovaps (%edx), %ymm0
-; X86-NEXT:    vxorps (%ecx), %ymm0, %ymm0
+; X86-NEXT:    vmovaps (%eax), %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vxorps (%eax), %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X86-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3],xmm0[4],xmm2[5,6,7]
 ; X86-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovq %xmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -75,8 +75,8 @@ define <4 x i32> @func_32_64(ptr %a, ptr %b) nounwind {
 ; X86-LABEL: func_32_64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovaps (%ecx), %ymm0
+; X86-NEXT:    vmovaps (%eax), %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vorps (%eax), %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -103,8 +103,8 @@ define <4 x i8> @func_8_16(ptr %a, ptr %b) nounwind {
 ; X86-LABEL: func_8_16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
@@ -129,8 +129,8 @@ define <4 x i8> @func_8_32(ptr %a, ptr %b) nounwind {
 ; X86-LABEL: func_8_32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovdqa (%ecx), %xmm0
+; X86-NEXT:    vmovdqa (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpsubb (%eax), %xmm0, %xmm0
 ; X86-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-NEXT:    retl
@@ -153,13 +153,13 @@ define <4 x i8> @func_8_64(ptr %a, ptr %b) nounwind {
 ; X86-LABEL: func_8_64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovdqa (%ecx), %xmm0
-; X86-NEXT:    vmovdqa 16(%ecx), %xmm1
+; X86-NEXT:    vmovdqa (%eax), %xmm0
+; X86-NEXT:    vmovdqa 16(%eax), %xmm1
 ; X86-NEXT:    vmovd {{.*#+}} xmm2 = [0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; X86-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa (%eax), %xmm1
 ; X86-NEXT:    vmovdqa 16(%eax), %xmm3
 ; X86-NEXT:    vpshufb %xmm2, %xmm3, %xmm3

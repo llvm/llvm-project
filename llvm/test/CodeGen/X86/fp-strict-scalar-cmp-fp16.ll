@@ -47,10 +47,10 @@ define i32 @test_f16_oeq_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_oeq_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovnel %eax, %ecx
 ; X86-FP16-NEXT:    cmovpl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
@@ -110,10 +110,10 @@ define i32 @test_f16_ogt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ogt_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmoval %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -171,10 +171,10 @@ define i32 @test_f16_oge_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_oge_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovael %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -234,10 +234,10 @@ define i32 @test_f16_olt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_olt_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmoval %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -297,10 +297,10 @@ define i32 @test_f16_ole_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ole_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovael %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -358,10 +358,10 @@ define i32 @test_f16_one_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_one_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovnel %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -419,10 +419,10 @@ define i32 @test_f16_ord_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ord_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovnpl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -480,10 +480,10 @@ define i32 @test_f16_ueq_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ueq_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovel %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -543,10 +543,10 @@ define i32 @test_f16_ugt_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ugt_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovbl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -606,10 +606,10 @@ define i32 @test_f16_uge_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_uge_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovbel %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -667,10 +667,10 @@ define i32 @test_f16_ult_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ult_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovbl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -728,10 +728,10 @@ define i32 @test_f16_ule_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ule_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovbel %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -791,10 +791,10 @@ define i32 @test_f16_une_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_une_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovnel %eax, %ecx
 ; X86-FP16-NEXT:    cmovpl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
@@ -854,10 +854,10 @@ define i32 @test_f16_uno_q(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_uno_q:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vucomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovpl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -917,10 +917,10 @@ define i32 @test_f16_oeq_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_oeq_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovnel %eax, %ecx
 ; X86-FP16-NEXT:    cmovpl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
@@ -980,10 +980,10 @@ define i32 @test_f16_ogt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ogt_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmoval %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1041,10 +1041,10 @@ define i32 @test_f16_oge_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_oge_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovael %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1104,10 +1104,10 @@ define i32 @test_f16_olt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_olt_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmoval %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1167,10 +1167,10 @@ define i32 @test_f16_ole_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ole_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovael %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1228,10 +1228,10 @@ define i32 @test_f16_one_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_one_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovnel %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1289,10 +1289,10 @@ define i32 @test_f16_ord_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ord_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovnpl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1350,10 +1350,10 @@ define i32 @test_f16_ueq_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ueq_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovel %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1413,10 +1413,10 @@ define i32 @test_f16_ugt_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ugt_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovbl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1476,10 +1476,10 @@ define i32 @test_f16_uge_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_uge_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovbel %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1537,10 +1537,10 @@ define i32 @test_f16_ult_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ult_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovbl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1598,10 +1598,10 @@ define i32 @test_f16_ule_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_ule_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovbel %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl
@@ -1661,10 +1661,10 @@ define i32 @test_f16_une_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_une_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovnel %eax, %ecx
 ; X86-FP16-NEXT:    cmovpl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
@@ -1724,10 +1724,10 @@ define i32 @test_f16_uno_s(i32 %a, i32 %b, half %f1, half %f2) #0 {
 ;
 ; X86-FP16-LABEL: test_f16_uno_s:
 ; X86-FP16:       # %bb.0:
-; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-FP16-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-FP16-NEXT:    vcomish {{[0-9]+}}(%esp), %xmm0
 ; X86-FP16-NEXT:    cmovpl %eax, %ecx
 ; X86-FP16-NEXT:    movl (%ecx), %eax
 ; X86-FP16-NEXT:    retl

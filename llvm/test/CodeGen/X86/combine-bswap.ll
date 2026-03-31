@@ -175,9 +175,9 @@ define void @demand_one_loaded_byte(ptr %xp, ptr %yp) {
 ; X86-LABEL: demand_one_loaded_byte:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl 4(%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl 4(%ecx), %ecx
-; X86-NEXT:    movb %cl, (%eax)
+; X86-NEXT:    movb %al, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: demand_one_loaded_byte:
@@ -324,13 +324,13 @@ define i64 @bs_xor_rhs_bs64(i64 %a, i64 %b) #0 {
 define i32 @bs_and_all_operand_multiuse(i32 %a, i32 %b) #0 {
 ; X86-LABEL: bs_and_all_operand_multiuse:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    bswapl %edx
-; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    andl %eax, %edx
 ; X86-NEXT:    bswapl %ecx
-; X86-NEXT:    imull %edx, %eax
+; X86-NEXT:    imull %edx, %ecx
+; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    imull %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -414,8 +414,8 @@ define i64 @test_bswap64_shift17(i64 %a0) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shldl $17, %edx, %eax
-; X86-NEXT:    shll $17, %edx
 ; X86-NEXT:    bswapl %eax
+; X86-NEXT:    shll $17, %edx
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    retl
 ;
@@ -434,9 +434,9 @@ define i64 @test_bswap64_shift17(i64 %a0) {
 define i64 @test_bswap64_shift48_multiuse(i64 %a0, ptr %a1) {
 ; X86-LABEL: test_bswap64_shift48_multiuse:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, 4(%ecx)
 ; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    movl %eax, (%ecx)

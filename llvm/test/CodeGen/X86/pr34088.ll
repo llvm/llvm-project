@@ -22,9 +22,9 @@ define i32 @pr34088() local_unnamed_addr {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movaps %xmm0, (%esp)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movl $-842150451, {{[0-9]+}}(%esp) # imm = 0xCDCDCDCD
 ; CHECK-NEXT:    movaps %xmm1, (%esp)
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl $-842150451, {{[0-9]+}}(%esp) # imm = 0xCDCDCDCD
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    .cfi_def_cfa %esp, 4

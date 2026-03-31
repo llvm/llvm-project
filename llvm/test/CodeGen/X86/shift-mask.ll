@@ -543,9 +543,9 @@ define i32 @test_i32_lshr_lshr_2(i32 %a0) {
 define i64 @test_i64_lshr_lshr_0(i64 %a0) {
 ; X86-LABEL: test_i64_lshr_lshr_0:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $536870911, %edx # imm = 0x1FFFFFFF
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-MASK-LABEL: test_i64_lshr_lshr_0:

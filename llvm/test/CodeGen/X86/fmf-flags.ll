@@ -62,10 +62,8 @@ define dso_local double @not_so_fast_mul_add(double %x) {
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NEXT:    fxch %st(1)
-; X86-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstpl mul1
+; X86-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    retl
   %m = fmul double %x, 4.2
   %a = fadd fast double %m, %x
@@ -94,10 +92,9 @@ define dso_local float @not_so_fast_recip_sqrt(float %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
+; X86-NEXT:    fsts sqrt1
 ; X86-NEXT:    fld1
-; X86-NEXT:    fdiv %st(1), %st
-; X86-NEXT:    fxch %st(1)
-; X86-NEXT:    fstps sqrt1
+; X86-NEXT:    fdivp %st, %st(1)
 ; X86-NEXT:    retl
   %y = call float @llvm.sqrt.f32(float %x)
   %z = fdiv fast float 1.0, %y

@@ -298,8 +298,8 @@ declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define void @buildvector_v4f32_0404(float %a, float %b, ptr %ptr) {
 ; X86-LABEL: buildvector_v4f32_0404:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -326,9 +326,9 @@ define void @buildvector_v4f32_0404(float %a, float %b, ptr %ptr) {
 define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, ptr %ptr) {
 ; X86-LABEL: buildvector_v4f32_07z6:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm1[0],xmm0[3],zero,xmm0[2]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

@@ -224,18 +224,17 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; X86-LABEL: oneusecmp:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    sarl $31, %eax
-; X86-NEXT:    xorl $127, %eax
-; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    js .LBB10_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl (%ecx), %eax
-; X86-NEXT:    retl
+; X86-NEXT:    jmp .LBB10_3
 ; X86-NEXT:  .LBB10_1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:  .LBB10_3:
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    xorl $127, %eax
 ; X86-NEXT:    addl (%ecx), %eax
 ; X86-NEXT:    retl
 ;

@@ -20,14 +20,14 @@ define dso_local i32 @test() local_unnamed_addr {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl $16396, %eax # imm = 0x400C
 ; CHECK-NEXT:    calll __chkstk
-; CHECK-NEXT:    movl _g_d, %eax
-; CHECK-NEXT:    movl _g_c, %ecx
-; CHECK-NEXT:    movl _g_b, %edx
-; CHECK-NEXT:    movl _g_a, %esi
-; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl _g_a, %eax
+; CHECK-NEXT:    movl _g_b, %ecx
+; CHECK-NEXT:    movl _g_c, %edx
+; CHECK-NEXT:    movl _g_d, %esi
+; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %esi, (%esp)
+; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    calll _bar
 ; CHECK-NEXT:    movl $4099, %ecx # imm = 0x1003
 ; CHECK-NEXT:    movl %esp, %edi

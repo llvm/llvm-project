@@ -468,9 +468,9 @@ define <32 x half> @test_x86_fma_vfnmsub_ph_512(<32 x half> %a0, <32 x half> %a1
 define <8 x half>@test_int_x86_avx512_mask3_vfmadd_sh(<8 x half> %x0, <8 x half> %x1, ptr%ptr_b, i8 %x3, i32 %x4) {
 ; X86-LABEL: test_int_x86_avx512_mask3_vfmadd_sh:
 ; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
+; X86-NEXT:    kmovd %eax, %k1 # encoding: [0xc5,0xfb,0x92,0xc8]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx # encoding: [0x0f,0xb6,0x4c,0x24,0x08]
-; X86-NEXT:    kmovd %ecx, %k1 # encoding: [0xc5,0xfb,0x92,0xc9]
 ; X86-NEXT:    vfmadd231sh (%eax), %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf6,0x7d,0x09,0xb9,0x08]
 ; X86-NEXT:    vmovaps %xmm1, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -531,16 +531,16 @@ define void @fmadd_sh_mask_memfold(ptr %a, ptr %b, i8 %c) {
 ; X86-LABEL: fmadd_sh_mask_memfold:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x0c]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
+; X86-NEXT:    kmovd %eax, %k1 # encoding: [0xc5,0xfb,0x92,0xc8]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    # encoding: [0x62,0xf5,0x7e,0x08,0x10,0x02]
+; X86-NEXT:    # encoding: [0x62,0xf5,0x7e,0x08,0x10,0x00]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
 ; X86-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    # encoding: [0x62,0xf5,0x7e,0x08,0x10,0x09]
 ; X86-NEXT:    vfmadd213sh %xmm0, %xmm0, %xmm1 # encoding: [0x62,0xf6,0x7d,0x08,0xa9,0xc8]
-; X86-NEXT:    kmovd %eax, %k1 # encoding: [0xc5,0xfb,0x92,0xc8]
 ; X86-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xc1]
-; X86-NEXT:    vmovsh %xmm0, (%edx) # encoding: [0x62,0xf5,0x7e,0x08,0x11,0x02]
+; X86-NEXT:    vmovsh %xmm0, (%eax) # encoding: [0x62,0xf5,0x7e,0x08,0x11,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: fmadd_sh_mask_memfold:

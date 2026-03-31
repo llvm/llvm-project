@@ -166,9 +166,9 @@ define i64 @test_mul_by_6(i64 %x) {
 define i64 @test_mul_by_7(i64 %x) {
 ; X86-LABEL: test_mul_by_7:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $7, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal (%edx,%ecx,8), %edx
 ; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    retl
@@ -437,9 +437,9 @@ define i64 @test_mul_by_14(i64 %x) {
 define i64 @test_mul_by_15(i64 %x) {
 ; X86-LABEL: test_mul_by_15:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $15, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,4), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    addl %ecx, %edx
@@ -815,9 +815,9 @@ define i64 @test_mul_by_24(i64 %x) {
 define i64 @test_mul_by_25(i64 %x) {
 ; X86-LABEL: test_mul_by_25:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $25, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,4), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,4), %ecx
 ; X86-NEXT:    addl %ecx, %edx
@@ -900,9 +900,9 @@ define i64 @test_mul_by_26(i64 %x) {
 define i64 @test_mul_by_27(i64 %x) {
 ; X86-LABEL: test_mul_by_27:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $27, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,8), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    addl %ecx, %edx
@@ -1621,11 +1621,11 @@ define i64 @PR111325(i64 %a0, i1 %a1) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $1, %cl
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmpb $1, %cl
-; X86-NEXT:    sbbl %eax, %eax
-; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    movl $0, %ecx
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
@@ -1634,11 +1634,11 @@ define i64 @PR111325(i64 %a0, i1 %a1) {
 ; X86-NOOPT-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOOPT-NEXT:    andb $1, %cl
 ; X86-NOOPT-NEXT:    xorl %eax, %eax
-; X86-NOOPT-NEXT:    xorl %edx, %edx
-; X86-NOOPT-NEXT:    subl {{[0-9]+}}(%esp), %edx
 ; X86-NOOPT-NEXT:    cmpb $1, %cl
-; X86-NOOPT-NEXT:    sbbl %eax, %eax
-; X86-NOOPT-NEXT:    orl %edx, %eax
+; X86-NOOPT-NEXT:    movl $0, %ecx
+; X86-NOOPT-NEXT:    sbbl %ecx, %ecx
+; X86-NOOPT-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NOOPT-NEXT:    orl %ecx, %eax
 ; X86-NOOPT-NEXT:    xorl %edx, %edx
 ; X86-NOOPT-NEXT:    retl
 ;

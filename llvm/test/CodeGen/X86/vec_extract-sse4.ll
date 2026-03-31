@@ -6,8 +6,8 @@ define void @t1(ptr %R, ptr %P1) nounwind {
 ; X86-LABEL: t1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -42,9 +42,9 @@ define void @t3(ptr %R, ptr %P1) nounwind {
 ; X86-LABEL: t3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl 12(%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl 12(%ecx), %ecx
-; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t3:

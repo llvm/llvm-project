@@ -7,11 +7,11 @@ define i32 @f(i32 %a, i32 %b) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    imull %ecx, %edx
-; CHECK-NEXT:    imull %eax, %ecx
+; CHECK-NEXT:    imull %eax, %edx
+; CHECK-NEXT:    imull %ecx, %ecx
 ; CHECK-NEXT:    imull %eax, %eax
-; CHECK-NEXT:    addl %edx, %eax
-; CHECK-NEXT:    leal (%eax,%ecx,2), %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    leal (%eax,%edx,2), %eax
 ; CHECK-NEXT:    retl
   %tmp.2 = mul i32 %a, %a
   %tmp.5 = shl i32 %a, 1

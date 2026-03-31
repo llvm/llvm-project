@@ -12,9 +12,9 @@ define i32 @or_shift1_and1(i32 %x, i32 %y) {
 ; X86-LABEL: or_shift1_and1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    leal (%ecx,%eax,2), %eax
+; X86-NEXT:    leal (%eax,%ecx,2), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_shift1_and1:
@@ -34,9 +34,9 @@ define i32 @or_shift1_and1_swapped(i32 %x, i32 %y) {
 ; X86-LABEL: or_shift1_and1_swapped:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    leal (%ecx,%eax,2), %eax
+; X86-NEXT:    leal (%eax,%ecx,2), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_shift1_and1_swapped:
@@ -56,9 +56,9 @@ define i32 @or_shift2_and1(i32 %x, i32 %y) {
 ; X86-LABEL: or_shift2_and1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    leal (%ecx,%eax,4), %eax
+; X86-NEXT:    leal (%eax,%ecx,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_shift2_and1:
@@ -78,9 +78,9 @@ define i32 @or_shift3_and1(i32 %x, i32 %y) {
 ; X86-LABEL: or_shift3_and1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    leal (%ecx,%eax,8), %eax
+; X86-NEXT:    leal (%eax,%ecx,8), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_shift3_and1:
@@ -100,9 +100,9 @@ define i32 @or_shift3_and7(i32 %x, i32 %y) {
 ; X86-LABEL: or_shift3_and7:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $7, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $7, %ecx
-; X86-NEXT:    leal (%ecx,%eax,8), %eax
+; X86-NEXT:    leal (%eax,%ecx,8), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_shift3_and7:
@@ -123,10 +123,10 @@ define i32 @or_shift3_and7(i32 %x, i32 %y) {
 define i32 @or_shift4_and1(i32 %x, i32 %y) {
 ; X86-LABEL: or_shift4_and1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $4, %ecx
-; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $4, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -149,10 +149,10 @@ define i32 @or_shift4_and1(i32 %x, i32 %y) {
 define i32 @or_shift3_and8(i32 %x, i32 %y) {
 ; X86-LABEL: or_shift3_and8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $3, %ecx
-; X86-NEXT:    andl $8, %eax
+; X86-NEXT:    andl $8, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -175,11 +175,11 @@ define i64 @or_shift1_and1_64(i64 %x, i64 %y) {
 ; X86-LABEL: or_shift1_and1_64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $1, %ecx, %edx
-; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    leal (%eax,%ecx,2), %eax
+; X86-NEXT:    shldl $1, %ecx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_shift1_and1_64:

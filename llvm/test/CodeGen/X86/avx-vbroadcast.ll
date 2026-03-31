@@ -25,17 +25,13 @@ entry:
 define <4 x i64> @A2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: A2:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %esi
-; X86-NEXT:    vbroadcastsd (%ecx), %ymm0
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    vbroadcastsd (%eax), %ymm0
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, (%edx)
+; X86-NEXT:    movl %eax, 4(%edx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: A2:
@@ -104,10 +100,10 @@ define <8 x i32> @B3(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: B3:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X86-NEXT:    retl
@@ -158,8 +154,8 @@ define <4 x double> @C2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: C2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcastsd (%ecx), %ymm0
+; X86-NEXT:    vbroadcastsd (%eax), %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovlps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -226,8 +222,8 @@ define <8 x float> @D3(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: D3:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcastss (%ecx), %ymm0
+; X86-NEXT:    vbroadcastss (%eax), %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -276,8 +272,8 @@ define <4 x float> @e2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: e2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcastss (%ecx), %xmm0
+; X86-NEXT:    vbroadcastss (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -340,10 +336,10 @@ define <4 x i32> @F2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: F2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-NEXT:    retl
 ;
@@ -593,17 +589,13 @@ entry:
 define <2 x i64> @G2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: G2:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %esi
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, (%edx)
+; X86-NEXT:    movl %eax, 4(%edx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: G2:
@@ -658,8 +650,8 @@ define <2 x double> @I2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-LABEL: I2:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovlps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -680,8 +672,8 @@ define <4 x float> @_RR(ptr %ptr, ptr %k) nounwind uwtable readnone ssp {
 ; X86-LABEL: _RR:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcastss (%ecx), %xmm0
+; X86-NEXT:    vbroadcastss (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl %eax, (%eax)
 ; X86-NEXT:    retl
@@ -848,8 +840,8 @@ define void @broadcast_v16i32(ptr %a, ptr %b) {
 ; X86-LABEL: broadcast_v16i32:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vbroadcastss (%ecx), %ymm0
+; X86-NEXT:    vbroadcastss (%eax), %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovups %ymm0, 32(%eax)
 ; X86-NEXT:    vmovups %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
@@ -878,12 +870,12 @@ define double @broadcast_scale_xyz(ptr nocapture readonly, ptr nocapture readonl
 ; X86:       ## %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmulpd (%eax), %xmm0, %xmm1
-; X86-NEXT:    vmulsd 16(%eax), %xmm0, %xmm0
 ; X86-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X86-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; X86-NEXT:    vmulsd 16(%eax), %xmm0, %xmm0
 ; X86-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)

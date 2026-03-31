@@ -5,18 +5,18 @@
 define i64 @PR69965(ptr %input_ptrs, ptr %output_ptrs) {
 ; X86-LABEL: PR69965:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    notl %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shll $8, %edx
-; X86-NEXT:    movl (%ecx), %ecx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shll $8, %ecx
 ; X86-NEXT:    addb %al, %al
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    orl $32768, %eax # imm = 0x8000
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %ecx
 ; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    xorl %edx, %edx

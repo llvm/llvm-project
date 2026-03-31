@@ -16,33 +16,12 @@
 ;  and their calling convention which remain unresolved.)
 
 define void @store_half(ptr %fptr, half %v) {
-; X86-SSE1-LABEL: store_half:
-; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movw %ax, (%ecx)
-; X86-SSE1-NEXT:    retl
-;
-; X86-SSE2-LABEL: store_half:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movw %cx, (%eax)
-; X86-SSE2-NEXT:    retl
-;
-; X86-AVX-LABEL: store_half:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movw %cx, (%eax)
-; X86-AVX-NEXT:    retl
-;
-; X86-NOSSE-LABEL: store_half:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movw %ax, (%ecx)
-; X86-NOSSE-NEXT:    retl
+; X86-LABEL: store_half:
+; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    retl
 ;
 ; X64-SSE-LABEL: store_half:
 ; X64-SSE:       # %bb.0:
@@ -64,7 +43,7 @@ define void @store_float(ptr %fptr, float %v) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-SSE-LABEL: store_float:
@@ -83,23 +62,23 @@ define void @store_float(ptr %fptr, float %v) {
 define void @store_double(ptr %fptr, double %v) {
 ; X86-SSE1-LABEL: store_double:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: store_double:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: store_double:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
@@ -109,9 +88,9 @@ define void @store_double(ptr %fptr, double %v) {
 ; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ecx, (%esp)
+; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    fildll (%esp)
 ; X86-NOSSE-NEXT:    fistpll (%eax)
 ; X86-NOSSE-NEXT:    addl $12, %esp
@@ -240,8 +219,8 @@ define double @load_double(ptr %fptr) {
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    subl $12, %esp
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -436,10 +415,10 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-SSE1-NEXT:    .cfi_offset %esi, -12
 ; X86-SSE1-NEXT:    .cfi_offset %ebx, -8
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    movl (%esi), %eax
 ; X86-SSE1-NEXT:    movl 4(%esi), %edx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    .p2align 4
 ; X86-SSE1-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-SSE1-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -468,10 +447,10 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-SSE2-NEXT:    .cfi_offset %esi, -12
 ; X86-SSE2-NEXT:    .cfi_offset %ebx, -8
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl (%esi), %eax
 ; X86-SSE2-NEXT:    movl 4(%esi), %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    .p2align 4
 ; X86-SSE2-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -502,10 +481,10 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-AVX-NEXT:    .cfi_offset %esi, -12
 ; X86-AVX-NEXT:    .cfi_offset %ebx, -8
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    movl (%esi), %eax
 ; X86-AVX-NEXT:    movl 4(%esi), %edx
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    .p2align 4
 ; X86-AVX-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -535,10 +514,10 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-NOSSE-NEXT:    .cfi_offset %esi, -12
 ; X86-NOSSE-NEXT:    .cfi_offset %ebx, -8
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl (%esi), %eax
 ; X86-NOSSE-NEXT:    movl 4(%esi), %edx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    .p2align 4
 ; X86-NOSSE-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -603,25 +582,25 @@ define void @store_float_seq_cst(ptr %fptr, float %v) {
 define void @store_double_seq_cst(ptr %fptr, double %v) {
 ; X86-SSE1-LABEL: store_double_seq_cst:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE1-NEXT:    lock orl $0, (%esp)
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: store_double_seq_cst:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE2-NEXT:    lock orl $0, (%esp)
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: store_double_seq_cst:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovlps %xmm0, (%eax)
 ; X86-AVX-NEXT:    lock orl $0, (%esp)
 ; X86-AVX-NEXT:    retl
@@ -632,9 +611,9 @@ define void @store_double_seq_cst(ptr %fptr, double %v) {
 ; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ecx, (%esp)
+; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    fildll (%esp)
 ; X86-NOSSE-NEXT:    fistpll (%eax)
 ; X86-NOSSE-NEXT:    lock orl $0, (%esp)
@@ -724,8 +703,8 @@ define double @load_double_seq_cst(ptr %fptr) {
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    subl $12, %esp
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -809,16 +788,16 @@ define void @store_bfloat(ptr %fptr, bfloat %v) {
 ;
 ; X86-SSE2-LABEL: store_bfloat:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movw %cx, (%eax)
+; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movw %ax, (%ecx)
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: store_bfloat:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movw %cx, (%eax)
+; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    movw %ax, (%ecx)
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-NOSSE-LABEL: store_bfloat:

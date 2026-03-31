@@ -59,50 +59,42 @@ define i1 @or_uno(float %a, float %b) {
 define <4 x i1> @and_ord_vec(<4 x float> %a, <4 x float> %b) {
 ; X86-LABEL: and_ord_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp) # 4-byte Folded Spill
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucompp
 ; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    fucompp
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    fucompp
-; X86-NEXT:    setnp %dh
-; X86-NEXT:    shlb $2, %dh
-; X86-NEXT:    # kill: def $ah killed $ah killed $ax
-; X86-NEXT:    sahf
-; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    flds (%esp) # 4-byte Folded Reload
-; X86-NEXT:    fxch %st(1)
-; X86-NEXT:    fucompp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    setnp %dl
-; X86-NEXT:    shlb $3, %dl
-; X86-NEXT:    orb %dh, %dl
-; X86-NEXT:    # kill: def $ah killed $ah killed $ax
-; X86-NEXT:    sahf
-; X86-NEXT:    setnp %dh
+; X86-NEXT:    shlb $2, %dl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fucompp
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    setnp %al
-; X86-NEXT:    addb %al, %al
-; X86-NEXT:    orb %dh, %al
-; X86-NEXT:    orb %dl, %al
-; X86-NEXT:    movb %al, (%ecx)
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    popl %ecx
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    setnp %cl
+; X86-NEXT:    shlb $3, %cl
+; X86-NEXT:    orb %dl, %cl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %dl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setnp %ch
+; X86-NEXT:    addb %ch, %ch
+; X86-NEXT:    orb %dl, %ch
+; X86-NEXT:    orb %cl, %ch
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb %ch, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: and_ord_vec:
@@ -118,50 +110,42 @@ define <4 x i1> @and_ord_vec(<4 x float> %a, <4 x float> %b) {
 define <4 x i1> @or_uno_vec(<4 x float> %a, <4 x float> %b) {
 ; X86-LABEL: or_uno_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp) # 4-byte Folded Spill
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucompp
 ; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    fucompp
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    fucompp
-; X86-NEXT:    setp %dh
-; X86-NEXT:    shlb $2, %dh
-; X86-NEXT:    # kill: def $ah killed $ah killed $ax
-; X86-NEXT:    sahf
-; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    flds (%esp) # 4-byte Folded Reload
-; X86-NEXT:    fxch %st(1)
-; X86-NEXT:    fucompp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    setp %dl
-; X86-NEXT:    shlb $3, %dl
-; X86-NEXT:    orb %dh, %dl
-; X86-NEXT:    # kill: def $ah killed $ah killed $ax
-; X86-NEXT:    sahf
-; X86-NEXT:    setp %dh
+; X86-NEXT:    shlb $2, %dl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fucompp
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    setp %al
-; X86-NEXT:    addb %al, %al
-; X86-NEXT:    orb %dh, %al
-; X86-NEXT:    orb %dl, %al
-; X86-NEXT:    movb %al, (%ecx)
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    popl %ecx
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    setp %cl
+; X86-NEXT:    shlb $3, %cl
+; X86-NEXT:    orb %dl, %cl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setp %dl
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fucompp
+; X86-NEXT:    fnstsw %ax
+; X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-NEXT:    sahf
+; X86-NEXT:    setp %ch
+; X86-NEXT:    addb %ch, %ch
+; X86-NEXT:    orb %dl, %ch
+; X86-NEXT:    orb %cl, %ch
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb %ch, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: or_uno_vec:

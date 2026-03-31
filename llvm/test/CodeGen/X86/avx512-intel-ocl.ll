@@ -20,9 +20,9 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-64, %esp
 ; X32-NEXT:    subl $192, %esp
-; X32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, (%esp)
+; X32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X32-NEXT:    calll _func_float16_ptr
 ; X32-NEXT:    vaddps {{[0-9]+}}(%esp), %zmm0, %zmm0
 ; X32-NEXT:    movl %ebp, %esp
@@ -35,8 +35,8 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-64, %esp
 ; WIN32-NEXT:    subl $128, %esp
-; WIN32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; WIN32-NEXT:    movl %esp, %eax
+; WIN32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; WIN32-NEXT:    pushl %eax
 ; WIN32-NEXT:    calll _func_float16_ptr
 ; WIN32-NEXT:    addl $4, %esp
@@ -99,9 +99,9 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; X32-NEXT:    andl $-64, %esp
 ; X32-NEXT:    subl $256, %esp ## imm = 0x100
 ; X32-NEXT:    vmovaps %zmm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; X32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, (%esp)
+; X32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X32-NEXT:    calll _func_float16_ptr
 ; X32-NEXT:    vaddps {{[-0-9]+}}(%e{{[sb]}}p), %zmm0, %zmm0 ## 64-byte Folded Reload
 ; X32-NEXT:    vaddps {{[0-9]+}}(%esp), %zmm0, %zmm0
@@ -116,8 +116,8 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    andl $-64, %esp
 ; WIN32-NEXT:    subl $192, %esp
 ; WIN32-NEXT:    vmovaps %zmm1, (%esp) # 64-byte Spill
-; WIN32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; WIN32-NEXT:    pushl %eax
 ; WIN32-NEXT:    calll _func_float16_ptr
 ; WIN32-NEXT:    addl $4, %esp

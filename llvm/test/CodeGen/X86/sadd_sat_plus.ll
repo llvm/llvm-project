@@ -107,9 +107,9 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 ; X86-LABEL: func8:
 ; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mulb {{[0-9]+}}(%esp)
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    addb %cl, %dl
 ; X86-NEXT:    sarb $7, %dl
@@ -150,14 +150,14 @@ define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; X86-NEXT:    shlb $4, %al
 ; X86-NEXT:    sarb $4, %al
 ; X86-NEXT:    addb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    movzbl %al, %edx
+; X86-NEXT:    movl $7, %ecx
 ; X86-NEXT:    cmpb $7, %al
-; X86-NEXT:    movl $7, %eax
-; X86-NEXT:    cmovll %ecx, %eax
-; X86-NEXT:    cmpb $-7, %al
-; X86-NEXT:    movl $248, %ecx
-; X86-NEXT:    cmovgel %eax, %ecx
-; X86-NEXT:    movsbl %cl, %eax
+; X86-NEXT:    cmovll %edx, %ecx
+; X86-NEXT:    movl $248, %eax
+; X86-NEXT:    cmpb $-7, %cl
+; X86-NEXT:    cmovgel %ecx, %eax
+; X86-NEXT:    movsbl %al, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func4:

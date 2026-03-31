@@ -101,14 +101,14 @@ define <2 x i64> @var_rotate_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; X86-SSE2-LABEL: var_rotate_v2i64:
 ; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE2-NEXT:    psllq %xmm1, %xmm2
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm4
+; X86-SSE2-NEXT:    psllq %xmm3, %xmm4
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm4 = xmm2[0],xmm4[1]
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [64,0,64,0]
 ; X86-SSE2-NEXT:    psubq %xmm1, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm3
-; X86-SSE2-NEXT:    psllq %xmm1, %xmm3
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm4
-; X86-SSE2-NEXT:    psllq %xmm1, %xmm4
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm4 = xmm3[0],xmm4[1]
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlq %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
@@ -722,12 +722,12 @@ define <2 x i64> @splatvar_rotate_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; X86-SSE2-LABEL: splatvar_rotate_v2i64:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movd {{.*#+}} xmm2 = [64,0,0,0]
-; X86-SSE2-NEXT:    psubq %xmm1, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm3
-; X86-SSE2-NEXT:    psllq %xmm1, %xmm3
-; X86-SSE2-NEXT:    psrlq %xmm2, %xmm0
-; X86-SSE2-NEXT:    por %xmm3, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE2-NEXT:    psllq %xmm1, %xmm2
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm3 = [64,0,0,0]
+; X86-SSE2-NEXT:    psubq %xmm1, %xmm3
+; X86-SSE2-NEXT:    psrlq %xmm3, %xmm0
+; X86-SSE2-NEXT:    por %xmm2, %xmm0
 ; X86-SSE2-NEXT:    retl
   %splat = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
   %splat64 = sub <2 x i64> <i64 64, i64 64>, %splat
@@ -999,9 +999,9 @@ define <16 x i8> @splatvar_rotate_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ;
 ; X86-SSE2-LABEL: splatvar_rotate_v16i8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; X86-SSE2-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm0[8],xmm2[9],xmm0[9],xmm2[10],xmm0[10],xmm2[11],xmm0[11],xmm2[12],xmm0[12],xmm2[13],xmm0[13],xmm2[14],xmm0[14],xmm2[15],xmm0[15]
+; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    psllw %xmm1, %xmm2
 ; X86-SSE2-NEXT:    psrlw $8, %xmm2
@@ -1944,8 +1944,8 @@ define <4 x i32> @rot16_demandedbits(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-LABEL: rot16_demandedbits:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    psrld $11, %xmm1
-; X86-SSE2-NEXT:    pslld $11, %xmm0
+; X86-SSE2-NEXT:    pslld $11, %xmm1
+; X86-SSE2-NEXT:    psrld $11, %xmm0
 ; X86-SSE2-NEXT:    por %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
@@ -2012,8 +2012,8 @@ define <4 x i16> @rot16_trunc(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-LABEL: rot16_trunc:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    psrld $11, %xmm1
-; X86-SSE2-NEXT:    pslld $5, %xmm0
+; X86-SSE2-NEXT:    pslld $5, %xmm1
+; X86-SSE2-NEXT:    psrld $11, %xmm0
 ; X86-SSE2-NEXT:    por %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; X86-SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]

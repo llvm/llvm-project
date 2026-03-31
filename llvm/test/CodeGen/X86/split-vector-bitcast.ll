@@ -8,20 +8,20 @@ define void @a(ptr %a, ptr %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; CHECK-NEXT:    addps %xmm0, %xmm0
 ; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    addl %eax, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movss %xmm0, (%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl (%esp), %edx
-; CHECK-NEXT:    addl %edx, %edx
-; CHECK-NEXT:    addl %ecx, %ecx
-; CHECK-NEXT:    movl %ecx, (%eax)
-; CHECK-NEXT:    movl %edx, 4(%eax)
+; CHECK-NEXT:    movl (%esp), %eax
+; CHECK-NEXT:    addl %eax, %eax
+; CHECK-NEXT:    movl %eax, 4(%ecx)
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl

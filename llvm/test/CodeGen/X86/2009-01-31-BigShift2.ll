@@ -6,11 +6,11 @@ define void @test(ptr %P, ptr %Q) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 56(%ecx), %edx
-; CHECK-NEXT:    movl 60(%ecx), %ecx
-; CHECK-NEXT:    movl %ecx, 4(%eax)
-; CHECK-NEXT:    movl %edx, (%eax)
+; CHECK-NEXT:    movl 56(%eax), %ecx
+; CHECK-NEXT:    movl 60(%eax), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl %eax, 4(%edx)
+; CHECK-NEXT:    movl %ecx, (%edx)
 ; CHECK-NEXT:    retl
 	%A = load <8 x double>, ptr %P		; <<8 x double>> [#uses=1]
 	%B = bitcast <8 x double> %A to i512		; <i512> [#uses=1]

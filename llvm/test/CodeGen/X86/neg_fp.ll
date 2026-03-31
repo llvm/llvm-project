@@ -32,13 +32,12 @@ define double @negation_propagation(ptr %arg, double %arg1, double %arg2) nounwi
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    divsd 12(%ebp), %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movapd %xmm0, %xmm1
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm0, %xmm2
-; CHECK-NEXT:    mulsd %xmm0, %xmm2
-; CHECK-NEXT:    mulsd %xmm0, %xmm2
-; CHECK-NEXT:    subsd %xmm2, %xmm1
-; CHECK-NEXT:    movsd %xmm1, (%esp)
+; CHECK-NEXT:    mulsd %xmm0, %xmm1
+; CHECK-NEXT:    mulsd 20(%ebp), %xmm0
+; CHECK-NEXT:    subsd %xmm1, %xmm0
+; CHECK-NEXT:    movsd %xmm0, (%esp)
 ; CHECK-NEXT:    fldl (%esp)
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
@@ -63,13 +62,13 @@ define float @fdiv_extra_use_changes_cost(float %a0, float %a1, float %a2) nounw
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    subss {{[0-9]+}}(%esp), %xmm0
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    subss {{[0-9]+}}(%esp), %xmm1
-; CHECK-NEXT:    movaps %xmm1, %xmm2
-; CHECK-NEXT:    mulss %xmm0, %xmm2
-; CHECK-NEXT:    subss %xmm1, %xmm0
-; CHECK-NEXT:    divss %xmm2, %xmm0
-; CHECK-NEXT:    movss %xmm0, (%esp)
+; CHECK-NEXT:    movaps %xmm0, %xmm2
+; CHECK-NEXT:    mulss %xmm1, %xmm2
+; CHECK-NEXT:    subss %xmm0, %xmm1
+; CHECK-NEXT:    divss %xmm2, %xmm1
+; CHECK-NEXT:    movss %xmm1, (%esp)
 ; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl

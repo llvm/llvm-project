@@ -6,10 +6,10 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; X86-LABEL: vec3_setcc_crash:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovdqa (%ecx), %xmm0
+; X86-NEXT:    vmovdqa (%eax), %xmm0
 ; X86-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; X86-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrd $2, %xmm0, 8(%eax)
 ; X86-NEXT:    vpextrd $1, %xmm0, 4(%eax)
 ; X86-NEXT:    vmovd %xmm0, (%eax)

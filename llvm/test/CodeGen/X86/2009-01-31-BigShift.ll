@@ -5,17 +5,32 @@
 define void @x(i288 %i) nounwind {
 ; CHECK-LABEL: x:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    calll add@PLT
 ; CHECK-NEXT:    addl $36, %esp
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
 	call void @add(i288 %i)
 	ret void

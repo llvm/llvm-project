@@ -18,8 +18,8 @@ define void @foo(ptr %buf, i32 %size, i32 %col, ptr %p) nounwind {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_2: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl (%esi), %edi
 ; CHECK-NEXT:    movzbl -8(%ecx), %ebx
+; CHECK-NEXT:    movl (%esi), %edi
 ; CHECK-NEXT:    movb %bl, (%edi,%edx)
 ; CHECK-NEXT:    movzbl -7(%ecx), %ebx
 ; CHECK-NEXT:    movb %bl, 7(%edi,%edx)
@@ -37,8 +37,8 @@ define void @foo(ptr %buf, i32 %size, i32 %col, ptr %p) nounwind {
 ; CHECK-NEXT:    movb %bl, 4(%edi,%edx)
 ; CHECK-NEXT:    movzbl (%ecx), %ebx
 ; CHECK-NEXT:    movb %bl, 6(%edi,%edx)
-; CHECK-NEXT:    addl $4, %esi
 ; CHECK-NEXT:    addl $9, %ecx
+; CHECK-NEXT:    addl $4, %esi
 ; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    jne LBB0_2
 ; CHECK-NEXT:  LBB0_3: ## %return

@@ -5,23 +5,21 @@
 define void @test(<2 x i64> %val, ptr %dst, i64 %x) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    addl %ecx, %ecx
-; CHECK-NEXT:    adcl %edx, %edx
 ; CHECK-NEXT:    movl %ecx, 8(%eax)
-; CHECK-NEXT:    movl %esi, (%eax)
+; CHECK-NEXT:    adcl %edx, %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %ecx, (%eax)
 ; CHECK-NEXT:    movl %edx, 12(%eax)
-; CHECK-NEXT:    movl %edi, 4(%eax)
+; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl %esi, 4(%eax)
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 entry:
 	%tmp4 = insertelement <2 x i64> %val, i64 %x, i32 0		; <<2 x i64>> [#uses=1]

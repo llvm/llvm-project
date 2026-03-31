@@ -3062,15 +3062,35 @@ define <2 x i64> @test_mm_mul_epu32(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xf4,0xc1]
 ; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
-; AVX512-LABEL: test_mm_mul_epu32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
-; AVX512-NEXT:    vpblendd $10, %xmm2, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x02,0xc2,0x0a]
-; AVX512-NEXT:    # xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512-NEXT:    vpblendd $10, %xmm2, %xmm1, %xmm1 # encoding: [0xc4,0xe3,0x71,0x02,0xca,0x0a]
-; AVX512-NEXT:    # xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512-NEXT:    vpmullq %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf2,0xfd,0x08,0x40,0xc1]
-; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; X86-AVX512-LABEL: test_mm_mul_epu32:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
+; X86-AVX512-NEXT:    vpblendd $10, %xmm2, %xmm1, %xmm1 # encoding: [0xc4,0xe3,0x71,0x02,0xca,0x0a]
+; X86-AVX512-NEXT:    # xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
+; X86-AVX512-NEXT:    vpblendd $10, %xmm2, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x02,0xc2,0x0a]
+; X86-AVX512-NEXT:    # xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
+; X86-AVX512-NEXT:    vpmullq %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf2,0xfd,0x08,0x40,0xc1]
+; X86-AVX512-NEXT:    retl # encoding: [0xc3]
+;
+; X64-AVX512-LABEL: test_mm_mul_epu32:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
+; X64-AVX512-NEXT:    vpblendd $10, %xmm2, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x02,0xc2,0x0a]
+; X64-AVX512-NEXT:    # xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
+; X64-AVX512-NEXT:    vpblendd $10, %xmm2, %xmm1, %xmm1 # encoding: [0xc4,0xe3,0x71,0x02,0xca,0x0a]
+; X64-AVX512-NEXT:    # xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
+; X64-AVX512-NEXT:    vpmullq %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf2,0xfd,0x08,0x40,0xc1]
+; X64-AVX512-NEXT:    retq # encoding: [0xc3]
+;
+; X32-AVX512-LABEL: test_mm_mul_epu32:
+; X32-AVX512:       # %bb.0:
+; X32-AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
+; X32-AVX512-NEXT:    vpblendd $10, %xmm2, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x02,0xc2,0x0a]
+; X32-AVX512-NEXT:    # xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
+; X32-AVX512-NEXT:    vpblendd $10, %xmm2, %xmm1, %xmm1 # encoding: [0xc4,0xe3,0x71,0x02,0xca,0x0a]
+; X32-AVX512-NEXT:    # xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
+; X32-AVX512-NEXT:    vpmullq %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf2,0xfd,0x08,0x40,0xc1]
+; X32-AVX512-NEXT:    retq # encoding: [0xc3]
   %A = and <2 x i64> %a0, <i64 4294967295, i64 4294967295>
   %B = and <2 x i64> %a1, <i64 4294967295, i64 4294967295>
   %res = mul nuw <2 x i64> %A, %B

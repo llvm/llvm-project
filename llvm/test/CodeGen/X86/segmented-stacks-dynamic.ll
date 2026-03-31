@@ -23,8 +23,8 @@ define i32 @test_basic(i32 %l) #0 {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    movl %esp, %eax
+; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    leal 15(,%esi,4), %ecx
 ; X86-NEXT:    andl $-16, %ecx
 ; X86-NEXT:    subl %ecx, %eax
@@ -47,8 +47,8 @@ define i32 @test_basic(i32 %l) #0 {
 ; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    je .LBB0_6
 ; X86-NEXT:  # %bb.8: # %false
-; X86-NEXT:    decl %esi
 ; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    decl %esi
 ; X86-NEXT:    movl %esi, (%esp)
 ; X86-NEXT:    calll test_basic@PLT
 ; X86-NEXT:    jmp .LBB0_7

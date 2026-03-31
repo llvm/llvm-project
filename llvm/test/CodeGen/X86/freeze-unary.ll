@@ -209,9 +209,9 @@ declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
 define i32 @freeze_ctlz(i32 %a0) nounwind {
 ; X86-LABEL: freeze_ctlz:
 ; X86:       # %bb.0:
-; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $63, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    movl $63, %ecx
+; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmovel %ecx, %eax
 ; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    retl
 ;
@@ -231,12 +231,12 @@ define i32 @freeze_ctlz(i32 %a0) nounwind {
 define i32 @freeze_ctlz_undef(i32 %a0) nounwind {
 ; X86-LABEL: freeze_ctlz_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    bsrl %eax, %ecx
-; X86-NEXT:    xorl $31, %ecx
-; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    bsrl %ecx, %edx
+; X86-NEXT:    xorl $31, %edx
 ; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    cmovnel %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ctlz_undef:
@@ -280,9 +280,9 @@ define i32 @freeze_ctlz_undef_nonzero(i32 %a0) nounwind {
 define i32 @freeze_cttz(i32 %a0) nounwind {
 ; X86-LABEL: freeze_cttz:
 ; X86:       # %bb.0:
-; X86-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    movl $32, %ecx
+; X86-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmovel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_cttz:

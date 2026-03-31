@@ -29,28 +29,26 @@ define double @test1(i32 %a, i32 %b, double %x) nounwind {
 ;
 ; NOSSE-LABEL: test1:
 ; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovnbe %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test1:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    ja .LBB0_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB0_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB0_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ugt i32 %a, %b
   %sel = select i1 %cmp, double 99.0, double %x
@@ -81,28 +79,26 @@ define double @test2(i32 %a, i32 %b, double %x) nounwind {
 ;
 ; NOSSE-LABEL: test2:
 ; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovnb %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test2:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jae .LBB1_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB1_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB1_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp uge i32 %a, %b
   %sel = select i1 %cmp, double 99.0, double %x
@@ -133,28 +129,26 @@ define double @test3(i32 %a, i32 %b, double %x) nounwind {
 ;
 ; NOSSE-LABEL: test3:
 ; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovb %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test3:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jb .LBB2_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB2_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB2_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ult i32 %a, %b
   %sel = select i1 %cmp, double 99.0, double %x
@@ -185,28 +179,26 @@ define double @test4(i32 %a, i32 %b, double %x) nounwind {
 ;
 ; NOSSE-LABEL: test4:
 ; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovbe %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test4:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jbe .LBB3_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB3_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB3_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ule i32 %a, %b
   %sel = select i1 %cmp, double 99.0, double %x
@@ -237,30 +229,28 @@ define double @test5(i32 %a, i32 %b, double %x) nounwind {
 ;
 ; NOSSE-LABEL: test5:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    setg %al
-; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    fcmovne %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test5:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jg .LBB4_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB4_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB4_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp sgt i32 %a, %b
   %sel = select i1 %cmp, double 99.0, double %x
@@ -291,30 +281,28 @@ define double @test6(i32 %a, i32 %b, double %x) nounwind {
 ;
 ; NOSSE-LABEL: test6:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    setge %al
-; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    fcmovne %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test6:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jge .LBB5_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB5_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB5_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp sge i32 %a, %b
   %sel = select i1 %cmp, double 99.0, double %x
@@ -345,30 +333,28 @@ define double @test7(i32 %a, i32 %b, double %x) nounwind {
 ;
 ; NOSSE-LABEL: test7:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    setl %al
-; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    fcmovne %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test7:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jl .LBB6_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB6_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB6_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp slt i32 %a, %b
   %sel = select i1 %cmp, double 99.0, double %x
@@ -399,30 +385,28 @@ define double @test8(i32 %a, i32 %b, double %x) nounwind {
 ;
 ; NOSSE-LABEL: test8:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    setle %al
-; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fldl {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    fcmovne %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test8:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jle .LBB7_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB7_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB7_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp sle i32 %a, %b
   %sel = select i1 %cmp, double 99.0, double %x
@@ -466,28 +450,26 @@ define float @test9(i32 %a, i32 %b, float %x) nounwind {
 ;
 ; NOSSE1-LABEL: test9:
 ; NOSSE1:       # %bb.0:
+; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE1-NEXT:    fxch %st(1)
 ; NOSSE1-NEXT:    fcmovnbe %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test9:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    ja .LBB8_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB8_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB8_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ugt i32 %a, %b
   %sel = select i1 %cmp, float 99.0, float %x
@@ -531,28 +513,26 @@ define float @test10(i32 %a, i32 %b, float %x) nounwind {
 ;
 ; NOSSE1-LABEL: test10:
 ; NOSSE1:       # %bb.0:
+; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE1-NEXT:    fxch %st(1)
 ; NOSSE1-NEXT:    fcmovnb %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test10:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jae .LBB9_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB9_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB9_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp uge i32 %a, %b
   %sel = select i1 %cmp, float 99.0, float %x
@@ -596,28 +576,26 @@ define float @test11(i32 %a, i32 %b, float %x) nounwind {
 ;
 ; NOSSE1-LABEL: test11:
 ; NOSSE1:       # %bb.0:
+; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE1-NEXT:    fxch %st(1)
 ; NOSSE1-NEXT:    fcmovb %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test11:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jb .LBB10_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB10_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB10_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ult i32 %a, %b
   %sel = select i1 %cmp, float 99.0, float %x
@@ -661,28 +639,26 @@ define float @test12(i32 %a, i32 %b, float %x) nounwind {
 ;
 ; NOSSE1-LABEL: test12:
 ; NOSSE1:       # %bb.0:
+; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE1-NEXT:    fxch %st(1)
 ; NOSSE1-NEXT:    fcmovbe %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test12:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jbe .LBB11_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB11_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB11_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ule i32 %a, %b
   %sel = select i1 %cmp, float 99.0, float %x
@@ -726,30 +702,28 @@ define float @test13(i32 %a, i32 %b, float %x) nounwind {
 ;
 ; NOSSE1-LABEL: test13:
 ; NOSSE1:       # %bb.0:
-; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    setg %al
-; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE1-NEXT:    fxch %st(1)
+; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test13:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jg .LBB12_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB12_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB12_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp sgt i32 %a, %b
   %sel = select i1 %cmp, float 99.0, float %x
@@ -793,30 +767,28 @@ define float @test14(i32 %a, i32 %b, float %x) nounwind {
 ;
 ; NOSSE1-LABEL: test14:
 ; NOSSE1:       # %bb.0:
-; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    setge %al
-; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE1-NEXT:    fxch %st(1)
+; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test14:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jge .LBB13_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB13_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB13_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp sge i32 %a, %b
   %sel = select i1 %cmp, float 99.0, float %x
@@ -860,30 +832,28 @@ define float @test15(i32 %a, i32 %b, float %x) nounwind {
 ;
 ; NOSSE1-LABEL: test15:
 ; NOSSE1:       # %bb.0:
-; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    setl %al
-; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE1-NEXT:    fxch %st(1)
+; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test15:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jl .LBB14_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB14_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB14_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp slt i32 %a, %b
   %sel = select i1 %cmp, float 99.0, float %x
@@ -927,30 +897,28 @@ define float @test16(i32 %a, i32 %b, float %x) nounwind {
 ;
 ; NOSSE1-LABEL: test16:
 ; NOSSE1:       # %bb.0:
-; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE1-NEXT:    setle %al
-; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE1-NEXT:    fxch %st(1)
+; NOSSE1-NEXT:    flds {{[0-9]+}}(%esp)
+; NOSSE1-NEXT:    testb %al, %al
 ; NOSSE1-NEXT:    fcmovne %st(1), %st
 ; NOSSE1-NEXT:    fstp %st(1)
 ; NOSSE1-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test16:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jle .LBB15_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB15_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB15_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp sle i32 %a, %b
   %sel = select i1 %cmp, float 99.0, float %x
@@ -961,9 +929,8 @@ define x86_fp80 @test17(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test17:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fcmovnbe %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
@@ -971,28 +938,26 @@ define x86_fp80 @test17(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ;
 ; NOSSE-LABEL: test17:
 ; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovnbe %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test17:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    ja .LBB16_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB16_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB16_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ugt i32 %a, %b
   %sel = select i1 %cmp, x86_fp80 0xK4005C600000000000000, x86_fp80 %x
@@ -1003,9 +968,8 @@ define x86_fp80 @test18(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test18:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fcmovnb %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
@@ -1013,28 +977,26 @@ define x86_fp80 @test18(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ;
 ; NOSSE-LABEL: test18:
 ; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovnb %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test18:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jae .LBB17_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB17_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB17_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp uge i32 %a, %b
   %sel = select i1 %cmp, x86_fp80 0xK4005C600000000000000, x86_fp80 %x
@@ -1045,9 +1007,8 @@ define x86_fp80 @test19(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test19:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fcmovb %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
@@ -1055,28 +1016,26 @@ define x86_fp80 @test19(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ;
 ; NOSSE-LABEL: test19:
 ; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovb %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test19:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jb .LBB18_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB18_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB18_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ult i32 %a, %b
   %sel = select i1 %cmp, x86_fp80 0xK4005C600000000000000, x86_fp80 %x
@@ -1087,9 +1046,8 @@ define x86_fp80 @test20(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test20:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fcmovbe %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
@@ -1097,28 +1055,26 @@ define x86_fp80 @test20(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ;
 ; NOSSE-LABEL: test20:
 ; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fcmovbe %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test20:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jbe .LBB19_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB19_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB19_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp ule i32 %a, %b
   %sel = select i1 %cmp, x86_fp80 0xK4005C600000000000000, x86_fp80 %x
@@ -1129,9 +1085,8 @@ define x86_fp80 @test21(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test21:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    setg %al
 ; SSE-NEXT:    testb %al, %al
@@ -1141,30 +1096,28 @@ define x86_fp80 @test21(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ;
 ; NOSSE-LABEL: test21:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    setg %al
-; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    fcmovne %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test21:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jg .LBB20_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB20_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB20_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
 ; We don't emit a branch for fp80, why?
   %cmp = icmp sgt i32 %a, %b
@@ -1176,9 +1129,8 @@ define x86_fp80 @test22(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test22:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    setge %al
 ; SSE-NEXT:    testb %al, %al
@@ -1188,30 +1140,28 @@ define x86_fp80 @test22(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ;
 ; NOSSE-LABEL: test22:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    setge %al
-; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    fcmovne %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test22:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jge .LBB21_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB21_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB21_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp sge i32 %a, %b
   %sel = select i1 %cmp, x86_fp80 0xK4005C600000000000000, x86_fp80 %x
@@ -1222,9 +1172,8 @@ define x86_fp80 @test23(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test23:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    setl %al
 ; SSE-NEXT:    testb %al, %al
@@ -1234,30 +1183,28 @@ define x86_fp80 @test23(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ;
 ; NOSSE-LABEL: test23:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    setl %al
-; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    fcmovne %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test23:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jl .LBB22_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB22_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB22_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp slt i32 %a, %b
   %sel = select i1 %cmp, x86_fp80 0xK4005C600000000000000, x86_fp80 %x
@@ -1268,9 +1215,8 @@ define x86_fp80 @test24(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test24:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    setle %al
 ; SSE-NEXT:    testb %al, %al
@@ -1280,30 +1226,28 @@ define x86_fp80 @test24(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ;
 ; NOSSE-LABEL: test24:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    setle %al
-; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    testb %al, %al
 ; NOSSE-NEXT:    fcmovne %st(1), %st
 ; NOSSE-NEXT:    fstp %st(1)
 ; NOSSE-NEXT:    retl
 ;
 ; NOCMOV-LABEL: test24:
 ; NOCMOV:       # %bb.0:
+; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; NOCMOV-NEXT:    jle .LBB23_2
 ; NOCMOV-NEXT:  # %bb.1:
-; NOCMOV-NEXT:    fstp %st(0)
-; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    fxch %st(1)
-; NOCMOV-NEXT:  .LBB23_2:
 ; NOCMOV-NEXT:    fstp %st(1)
+; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:  .LBB23_2:
+; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:    retl
   %cmp = icmp sle i32 %a, %b
   %sel = select i1 %cmp, x86_fp80 0xK4005C600000000000000, x86_fp80 %x

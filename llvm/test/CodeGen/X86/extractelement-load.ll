@@ -97,8 +97,8 @@ define void @t5(ptr%a0, ptr%a1) {
 ; X86-SSE2-LABEL: t5:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movaps (%ecx), %xmm0
+; X86-SSE2-NEXT:    movaps (%eax), %xmm0
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movhps %xmm0, (%eax)
 ; X86-SSE2-NEXT:    retl
 ;
@@ -178,11 +178,11 @@ define void @PR43971(ptr%a0, ptr%a1) {
 ; X86-SSE2-LABEL: PR43971:
 ; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movaps 16(%ecx), %xmm0
+; X86-SSE2-NEXT:    movaps 16(%eax), %xmm0
 ; X86-SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X86-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE2-NEXT:    cmpltss %xmm0, %xmm1
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    andps %xmm1, %xmm2
 ; X86-SSE2-NEXT:    andnps %xmm0, %xmm1
@@ -310,10 +310,10 @@ define void @subextract_broadcast_load_constant(ptr nocapture %0, ptr nocapture 
 ; X86-SSE2-LABEL: subextract_broadcast_load_constant:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    movl $-1583308898, (%edx) # imm = 0xA1A09F9E
-; X86-SSE2-NEXT:    movw $-24674, (%ecx) # imm = 0x9F9E
+; X86-SSE2-NEXT:    movl $-1583308898, (%eax) # imm = 0xA1A09F9E
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movw $-24674, (%eax) # imm = 0x9F9E
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movw $-24160, (%eax) # imm = 0xA1A0
 ; X86-SSE2-NEXT:    retl
 ;
@@ -344,10 +344,10 @@ define i32 @multi_use_load_scalarization(ptr %p) nounwind {
 ; X86-SSE2-LABEL: multi_use_load_scalarization:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl (%ecx), %eax
 ; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
 ; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-SSE2-NEXT:    psubd %xmm1, %xmm0
+; X86-SSE2-NEXT:    movl (%ecx), %eax
 ; X86-SSE2-NEXT:    movdqa %xmm0, (%ecx)
 ; X86-SSE2-NEXT:    retl
 ;
@@ -428,15 +428,15 @@ define i32 @main() nounwind {
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-32, %esp
 ; X86-SSE2-NEXT:    subl $64, %esp
-; X86-SSE2-NEXT:    movaps n1+16, %xmm0
-; X86-SSE2-NEXT:    movaps n1, %xmm1
-; X86-SSE2-NEXT:    movl zero+4, %ecx
-; X86-SSE2-NEXT:    movl zero+8, %eax
-; X86-SSE2-NEXT:    movaps %xmm1, zero
-; X86-SSE2-NEXT:    movaps %xmm0, zero+16
 ; X86-SSE2-NEXT:    movaps {{.*#+}} xmm0 = [2,2,2,2]
 ; X86-SSE2-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movaps %xmm0, (%esp)
+; X86-SSE2-NEXT:    movl zero+4, %ecx
+; X86-SSE2-NEXT:    movl zero+8, %eax
+; X86-SSE2-NEXT:    movaps n1, %xmm0
+; X86-SSE2-NEXT:    movaps %xmm0, zero
+; X86-SSE2-NEXT:    movaps n1+16, %xmm0
+; X86-SSE2-NEXT:    movaps %xmm0, zero+16
 ; X86-SSE2-NEXT:    movdqa (%esp), %xmm0
 ; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -538,10 +538,10 @@ define dso_local <2 x float> @multiuse_of_single_value_from_vbroadcast_load(ptr 
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE2-NEXT:    movups 24(%esi), %xmm0
 ; X86-SSE2-NEXT:    movups %xmm0, (%esp) # 16-byte Spill
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movhps %xmm0, (%eax)
 ; X86-SSE2-NEXT:    movaps 32(%esi), %xmm0
 ; X86-SSE2-NEXT:    calll ccosf@PLT

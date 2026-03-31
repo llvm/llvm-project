@@ -10,11 +10,11 @@ define i64 @t0(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    movd (%eax), %mm1
-; X86-NEXT:    psllq %mm1, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movd (%eax), %mm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm1
+; X86-NEXT:    psllq %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -45,11 +45,11 @@ define i64 @t1(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    movd (%eax), %mm1
-; X86-NEXT:    psrlq %mm1, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movd (%eax), %mm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm1
+; X86-NEXT:    psrlq %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -80,11 +80,11 @@ define i64 @t2(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    movd (%eax), %mm1
-; X86-NEXT:    psllw %mm1, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movd (%eax), %mm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm1
+; X86-NEXT:    psllw %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -115,11 +115,11 @@ define i64 @t3(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    movd (%eax), %mm1
-; X86-NEXT:    psrlw %mm1, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movd (%eax), %mm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm1
+; X86-NEXT:    psrlw %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -150,11 +150,11 @@ define i64 @t4(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    movd (%eax), %mm1
-; X86-NEXT:    pslld %mm1, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movd (%eax), %mm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm1
+; X86-NEXT:    pslld %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -185,11 +185,11 @@ define i64 @t5(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    movd (%eax), %mm1
-; X86-NEXT:    psrld %mm1, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movd (%eax), %mm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm1
+; X86-NEXT:    psrld %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -220,11 +220,11 @@ define i64 @t6(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    movd (%eax), %mm1
-; X86-NEXT:    psraw %mm1, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movd (%eax), %mm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm1
+; X86-NEXT:    psraw %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -255,11 +255,11 @@ define i64 @t7(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    movd (%eax), %mm1
-; X86-NEXT:    psrad %mm1, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movd (%eax), %mm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%eax), %mm1
+; X86-NEXT:    psrad %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ebp, %esp
@@ -297,9 +297,9 @@ define i64 @tt0(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddb (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -336,9 +336,9 @@ define i64 @tt1(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddw (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -374,9 +374,9 @@ define i64 @tt2(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddd (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -412,9 +412,9 @@ define i64 @tt3(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddq (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -450,9 +450,9 @@ define i64 @tt4(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddusb (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -488,9 +488,9 @@ define i64 @tt5(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    paddusw (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -526,9 +526,9 @@ define i64 @tt6(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    psrlw (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -564,9 +564,9 @@ define i64 @tt7(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    psrld (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -602,9 +602,9 @@ define i64 @tt8(<1 x i64> %t, ptr %q) nounwind {
 ; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    psrlq (%eax), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    emms
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    emms
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -629,12 +629,12 @@ define void @test_psrlq_by_volatile_shift_amount(ptr %t) nounwind {
 ; X86-LABEL: test_psrlq_by_volatile_shift_amount:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $1, (%esp)
-; X86-NEXT:    movl $255, %ecx
-; X86-NEXT:    movd %ecx, %mm0
+; X86-NEXT:    movl $255, %eax
+; X86-NEXT:    movd %eax, %mm0
 ; X86-NEXT:    movd (%esp), %mm1
 ; X86-NEXT:    psrlq %mm1, %mm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl

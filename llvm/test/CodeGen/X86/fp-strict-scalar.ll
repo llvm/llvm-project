@@ -418,9 +418,9 @@ define void @fpext_f32_to_f64(ptr %val, ptr %ret) nounwind strictfp {
 ; SSE-X86-LABEL: fpext_f32_to_f64:
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-X86-NEXT:    cvtss2sd %xmm0, %xmm0
+; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    movsd %xmm0, (%eax)
 ; SSE-X86-NEXT:    retl
 ;
@@ -434,9 +434,9 @@ define void @fpext_f32_to_f64(ptr %val, ptr %ret) nounwind strictfp {
 ; AVX-X86-LABEL: fpext_f32_to_f64:
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-X86-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%eax)
 ; AVX-X86-NEXT:    retl
 ;
@@ -450,8 +450,9 @@ define void @fpext_f32_to_f64(ptr %val, ptr %ret) nounwind strictfp {
 ; X87-LABEL: fpext_f32_to_f64:
 ; X87:       # %bb.0:
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X87-NEXT:    flds (%ecx)
+; X87-NEXT:    flds (%eax)
+; X87-NEXT:    wait
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fstpl (%eax)
 ; X87-NEXT:    wait
 ; X87-NEXT:    retl
@@ -466,9 +467,9 @@ define void @fptrunc_double_to_f32(ptr %val, ptr%ret) nounwind strictfp {
 ; SSE-X86-LABEL: fptrunc_double_to_f32:
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-X86-NEXT:    cvtsd2ss %xmm0, %xmm0
+; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    movss %xmm0, (%eax)
 ; SSE-X86-NEXT:    retl
 ;
@@ -482,9 +483,9 @@ define void @fptrunc_double_to_f32(ptr %val, ptr%ret) nounwind strictfp {
 ; AVX-X86-LABEL: fptrunc_double_to_f32:
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
+; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-X86-NEXT:    vmovss %xmm0, (%eax)
 ; AVX-X86-NEXT:    retl
 ;
@@ -499,9 +500,10 @@ define void @fptrunc_double_to_f32(ptr %val, ptr%ret) nounwind strictfp {
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X87-NEXT:    fldl (%ecx)
+; X87-NEXT:    fldl (%eax)
 ; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    fstps (%eax)
 ; X87-NEXT:    wait
@@ -614,10 +616,10 @@ define double @fma_f64(double %a, double %b, double %c) nounwind strictfp {
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    subl $24, %esp
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-X86-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-X86-NEXT:    movsd %xmm2, {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    movsd %xmm1, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-X86-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE-X86-NEXT:    calll fma
 ; SSE-X86-NEXT:    addl $24, %esp
@@ -655,10 +657,10 @@ define double @fma_f64(double %a, double %b, double %c) nounwind strictfp {
 ; X87:       # %bb.0:
 ; X87-NEXT:    subl $24, %esp
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstpl (%esp)
 ; X87-NEXT:    wait
 ; X87-NEXT:    calll fma
@@ -675,10 +677,10 @@ define float @fma_f32(float %a, float %b, float %c) nounwind strictfp {
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    subl $12, %esp
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE-X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE-X86-NEXT:    movss %xmm2, {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE-X86-NEXT:    calll fmaf
 ; SSE-X86-NEXT:    addl $12, %esp
@@ -712,10 +714,10 @@ define float @fma_f32(float %a, float %b, float %c) nounwind strictfp {
 ; X87:       # %bb.0:
 ; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps {{[0-9]+}}(%esp)
-; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    wait
 ; X87-NEXT:    calll fmaf

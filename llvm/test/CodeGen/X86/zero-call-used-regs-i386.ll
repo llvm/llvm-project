@@ -37,9 +37,9 @@ define dso_local zeroext i1 @test1(ptr nocapture noundef readonly %0) local_unna
 ; I386-NEXT:    movb mt_pivots_0, %ah
 ; I386-NEXT:    movb %ah, %al
 ; I386-NEXT:    decb %al
-; I386-NEXT:    movl mas_data_end___trans_tmp_2, %ecx
-; I386-NEXT:    movsbl %al, %edx
-; I386-NEXT:    cmpl $0, (%ecx,%edx,4)
+; I386-NEXT:    movsbl %al, %ecx
+; I386-NEXT:    movl mas_data_end___trans_tmp_2, %edx
+; I386-NEXT:    cmpl $0, (%edx,%ecx,4)
 ; I386-NEXT:    je .LBB0_5
 ; I386-NEXT:  # %bb.4:
 ; I386-NEXT:    movb %al, %ah

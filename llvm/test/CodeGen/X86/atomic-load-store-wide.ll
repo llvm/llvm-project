@@ -8,8 +8,8 @@
 define void @test1(ptr %ptr, i64 %val1) {
 ; SSE42-LABEL: test1:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE42-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE42-NEXT:    movlps %xmm0, (%eax)
 ; SSE42-NEXT:    lock orl $0, (%esp)
 ; SSE42-NEXT:    retl
@@ -23,11 +23,11 @@ define void @test1(ptr %ptr, i64 %val1) {
 ; NOSSE-NEXT:    .cfi_def_cfa_register %ebp
 ; NOSSE-NEXT:    andl $-8, %esp
 ; NOSSE-NEXT:    subl $8, %esp
+; NOSSE-NEXT:    movl 12(%ebp), %eax
+; NOSSE-NEXT:    movl 16(%ebp), %ecx
+; NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; NOSSE-NEXT:    movl %eax, (%esp)
 ; NOSSE-NEXT:    movl 8(%ebp), %eax
-; NOSSE-NEXT:    movl 12(%ebp), %ecx
-; NOSSE-NEXT:    movl 16(%ebp), %edx
-; NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; NOSSE-NEXT:    movl %ecx, (%esp)
 ; NOSSE-NEXT:    fildll (%esp)
 ; NOSSE-NEXT:    fistpll (%eax)
 ; NOSSE-NEXT:    lock orl $0, (%esp)

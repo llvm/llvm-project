@@ -8,8 +8,8 @@
 define void @vp_add_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_add_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -33,8 +33,8 @@ declare <4 x i32> @llvm.vp.add.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_sub_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_sub_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -58,8 +58,8 @@ declare <4 x i32> @llvm.vp.sub.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_mul_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_mul_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -89,23 +89,21 @@ declare <4 x i32> @llvm.vp.mul.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_sdiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_sdiv_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
-; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
-; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
+; X86-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,1,2,3]
+; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm3
+; X86-NEXT:    vpmaxud %xmm2, %xmm3, %xmm3
+; X86-NEXT:    vpcmpeqd %xmm2, %xmm3, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-NEXT:    vextractps $1, %xmm1, %ecx
 ; X86-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-NEXT:    cltd
 ; X86-NEXT:    idivl %ecx
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    vmovd %xmm1, %edi
+; X86-NEXT:    vmovd %xmm1, %esi
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    cltd
-; X86-NEXT:    idivl %edi
+; X86-NEXT:    idivl %esi
 ; X86-NEXT:    vmovd %eax, %xmm2
 ; X86-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
 ; X86-NEXT:    vpextrd $2, %xmm1, %ecx
@@ -118,9 +116,9 @@ define void @vp_sdiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-NEXT:    cltd
 ; X86-NEXT:    idivl %ecx
 ; X86-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; SSE-LABEL: vp_sdiv_v4i32:
@@ -268,23 +266,21 @@ declare <4 x i32> @llvm.vp.sdiv.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_udiv_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
-; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
-; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
+; X86-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,1,2,3]
+; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm3
+; X86-NEXT:    vpmaxud %xmm2, %xmm3, %xmm3
+; X86-NEXT:    vpcmpeqd %xmm2, %xmm3, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-NEXT:    vextractps $1, %xmm1, %ecx
 ; X86-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %ecx
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    vmovd %xmm1, %edi
+; X86-NEXT:    vmovd %xmm1, %esi
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %edi
+; X86-NEXT:    divl %esi
 ; X86-NEXT:    vmovd %eax, %xmm2
 ; X86-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
 ; X86-NEXT:    vpextrd $2, %xmm1, %ecx
@@ -297,9 +293,9 @@ define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %ecx
 ; X86-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; SSE-LABEL: vp_udiv_v4i32:
@@ -447,23 +443,21 @@ declare <4 x i32> @llvm.vp.udiv.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_srem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_srem_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
-; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
-; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
+; X86-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,1,2,3]
+; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm3
+; X86-NEXT:    vpmaxud %xmm2, %xmm3, %xmm3
+; X86-NEXT:    vpcmpeqd %xmm2, %xmm3, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-NEXT:    vextractps $1, %xmm1, %ecx
 ; X86-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-NEXT:    cltd
 ; X86-NEXT:    idivl %ecx
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    vmovd %xmm1, %edi
+; X86-NEXT:    vmovd %xmm1, %esi
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    cltd
-; X86-NEXT:    idivl %edi
+; X86-NEXT:    idivl %esi
 ; X86-NEXT:    vmovd %edx, %xmm2
 ; X86-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
 ; X86-NEXT:    vpextrd $2, %xmm1, %ecx
@@ -476,9 +470,9 @@ define void @vp_srem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-NEXT:    cltd
 ; X86-NEXT:    idivl %ecx
 ; X86-NEXT:    vpinsrd $3, %edx, %xmm2, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; SSE-LABEL: vp_srem_v4i32:
@@ -626,23 +620,21 @@ declare <4 x i32> @llvm.vp.srem.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_urem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_urem_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [0,1,2,3]
-; X86-NEXT:    vpmaxud %xmm3, %xmm2, %xmm2
-; X86-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
+; X86-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,1,2,3]
+; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm3
+; X86-NEXT:    vpmaxud %xmm2, %xmm3, %xmm3
+; X86-NEXT:    vpcmpeqd %xmm2, %xmm3, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-NEXT:    vextractps $1, %xmm1, %ecx
 ; X86-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %ecx
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    vmovd %xmm1, %edi
+; X86-NEXT:    vmovd %xmm1, %esi
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divl %edi
+; X86-NEXT:    divl %esi
 ; X86-NEXT:    vmovd %edx, %xmm2
 ; X86-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
 ; X86-NEXT:    vpextrd $2, %xmm1, %ecx
@@ -655,9 +647,9 @@ define void @vp_urem_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %ecx
 ; X86-NEXT:    vpinsrd $3, %edx, %xmm2, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; SSE-LABEL: vp_urem_v4i32:
@@ -805,7 +797,6 @@ declare <4 x i32> @llvm.vp.urem.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_ashr_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_ashr_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vpsrad %xmm2, %xmm0, %xmm2
 ; X86-NEXT:    vpsrlq $32, %xmm1, %xmm3
@@ -818,6 +809,7 @@ define void @vp_ashr_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-NEXT:    vpsrad %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm3[4,5,6,7]
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -878,7 +870,6 @@ declare <4 x i32> @llvm.vp.ashr.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_lshr_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_lshr_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vpsrld %xmm2, %xmm0, %xmm2
 ; X86-NEXT:    vpsrlq $32, %xmm1, %xmm3
@@ -891,6 +882,7 @@ define void @vp_lshr_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; X86-NEXT:    vpsrld %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm3[4,5,6,7]
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -951,11 +943,11 @@ declare <4 x i32> @llvm.vp.lshr.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_shl_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_shl_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpslld $23, %xmm1, %xmm1
 ; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-NEXT:    vcvttps2dq %xmm1, %xmm1
 ; X86-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1003,8 +995,8 @@ declare <4 x i32> @llvm.vp.shl.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_or_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_or_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1028,8 +1020,8 @@ declare <4 x i32> @llvm.vp.or.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_and_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_and_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1053,8 +1045,8 @@ declare <4 x i32> @llvm.vp.and.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_xor_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_xor_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1078,8 +1070,8 @@ declare <4 x i32> @llvm.vp.xor.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_abs_v4i32(<4 x i32> %a0, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_abs_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpabsd %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1106,8 +1098,8 @@ declare <4 x i32> @llvm.vp.abs.v4i32(<4 x i32>, i1 immarg, <4 x i1>, i32)
 define void @vp_smax_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_smax_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1135,8 +1127,8 @@ declare <4 x i32> @llvm.vp.smax.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_smin_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_smin_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1164,8 +1156,8 @@ declare <4 x i32> @llvm.vp.smin.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_umax_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_umax_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1196,8 +1188,8 @@ declare <4 x i32> @llvm.vp.umax.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define void @vp_umin_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_umin_v4i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpminud %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

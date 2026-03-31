@@ -7,10 +7,10 @@
 define i32 @foo(ptr %x, i32 %y) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    imull %eax, %eax
 ; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movb $77, (%ecx,%eax,8)
 ; CHECK-NEXT:    shll $3, %eax
 ; CHECK-NEXT:    retl

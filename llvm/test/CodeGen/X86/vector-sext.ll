@@ -1958,12 +1958,12 @@ define <4 x i64> @load_sext_4i1_to_4i64(ptr%ptr) {
 ; X86-SSE41-NEXT:    andb $1, %cl
 ; X86-SSE41-NEXT:    movzbl %cl, %ecx
 ; X86-SSE41-NEXT:    pinsrb $8, %ecx, %xmm1
-; X86-SSE41-NEXT:    shrb $3, %al
-; X86-SSE41-NEXT:    movzbl %al, %eax
 ; X86-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,1,1]
-; X86-SSE41-NEXT:    pinsrb $12, %eax, %xmm1
 ; X86-SSE41-NEXT:    pslld $31, %xmm0
 ; X86-SSE41-NEXT:    psrad $31, %xmm0
+; X86-SSE41-NEXT:    shrb $3, %al
+; X86-SSE41-NEXT:    movzbl %al, %eax
+; X86-SSE41-NEXT:    pinsrb $12, %eax, %xmm1
 ; X86-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,2,3,3]
 ; X86-SSE41-NEXT:    pslld $31, %xmm1
 ; X86-SSE41-NEXT:    psrad $31, %xmm1
@@ -3517,13 +3517,13 @@ define <32 x i8> @sext_32xi1_to_32xi8(<32 x i16> %c1, <32 x i16> %c2)nounwind {
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pcmpeqw 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    pcmpeqw 24(%ebp), %xmm0
 ; X86-SSE-NEXT:    packsswb %xmm1, %xmm0
-; X86-SSE-NEXT:    pcmpeqw 72(%ebp), %xmm3
+; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm1
+; X86-SSE-NEXT:    pcmpeqw 72(%ebp), %xmm1
 ; X86-SSE-NEXT:    pcmpeqw 56(%ebp), %xmm2
-; X86-SSE-NEXT:    packsswb %xmm3, %xmm2
+; X86-SSE-NEXT:    packsswb %xmm1, %xmm2
 ; X86-SSE-NEXT:    movdqa %xmm2, %xmm1
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp

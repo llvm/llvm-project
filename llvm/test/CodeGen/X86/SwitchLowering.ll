@@ -5,37 +5,32 @@
 define ptr @FindChar(ptr %CurPtr) {
 ; CHECK-LABEL: FindChar:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset %esi, -12
-; CHECK-NEXT:    .cfi_offset %edi, -8
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movzbl (%esi,%edi), %eax
-; CHECK-NEXT:    incl %edi
-; CHECK-NEXT:    cmpl $120, %eax
+; CHECK-NEXT:    movzbl (%esi,%eax), %ecx
+; CHECK-NEXT:    incl %eax
+; CHECK-NEXT:    cmpl $120, %ecx
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testl %ecx, %ecx
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %bb7
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    addl %eax, %esi
+; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:    calll foo@PLT
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
-; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:

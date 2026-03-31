@@ -13,8 +13,8 @@ define x86_fp80 @cmove_cmp(x86_fp80 %a, x86_fp80 %b, i32 %c) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fadd %st(1), %st
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fcmove %st(1), %st
 ; X86-NEXT:    fstp %st(1)
@@ -119,18 +119,6 @@ define x86_fp80 @cmove_arg(x86_fp80 %a, x86_fp80 %b, i1 %test) {
 }
 
 define x86_fp80 @cmove_load(x86_fp80 %a, x86_fp80 %b, ptr %p) {
-; X86-LABEL: cmove_load:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fadd %st(1), %st
-; X86-NEXT:    cmpb $0, (%eax)
-; X86-NEXT:    fxch %st(1)
-; X86-NEXT:    fcmovne %st(1), %st
-; X86-NEXT:    fstp %st(1)
-; X86-NEXT:    retl
-;
 ; X86-GISEL-LABEL: cmove_load:
 ; X86-GISEL:       # %bb.0:
 ; X86-GISEL-NEXT:    fldt {{[0-9]+}}(%esp)

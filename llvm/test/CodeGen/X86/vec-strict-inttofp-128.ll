@@ -272,9 +272,9 @@ define <2 x float> @uitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; SSE-32-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE-32-NEXT:    andl $-8, %esp
 ; SSE-32-NEXT:    subl $24, %esp
+; SSE-32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
 ; SSE-32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE-32-NEXT:    movq %xmm1, {{[0-9]+}}(%esp)
-; SSE-32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
 ; SSE-32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; SSE-32-NEXT:    movd %xmm1, %eax
 ; SSE-32-NEXT:    shrl $31, %eax
@@ -341,9 +341,9 @@ define <2 x float> @uitofp_v2i64_v2f32(<2 x i64> %x) #0 {
 ; SSE41-32-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE41-32-NEXT:    andl $-8, %esp
 ; SSE41-32-NEXT:    subl $24, %esp
+; SSE41-32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
 ; SSE41-32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE41-32-NEXT:    movq %xmm1, {{[0-9]+}}(%esp)
-; SSE41-32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
 ; SSE41-32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; SSE41-32-NEXT:    movd %xmm1, %eax
 ; SSE41-32-NEXT:    shrl $31, %eax

@@ -102,12 +102,18 @@ define i32 @test_lib_args(float %a, float %b) #0 {
 define i32 @test_fp128(ptr %ptr) #0 {
 ; CHECK-LABEL: test_fp128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl 12(%eax)
-; CHECK-NEXT:    pushl 8(%eax)
-; CHECK-NEXT:    pushl 4(%eax)
-; CHECK-NEXT:    pushl (%eax)
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    movl 12(%eax), %ecx
+; CHECK-NEXT:    movl 8(%eax), %edx
+; CHECK-NEXT:    movl (%eax), %esi
+; CHECK-NEXT:    movl 4(%eax), %eax
+; CHECK-NEXT:    pushl %ecx
+; CHECK-NEXT:    pushl %edx
+; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    calll __fixtfsi
 ; CHECK-NEXT:    addl $16, %esp
+; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %v = load fp128, ptr %ptr
   %ret = fptosi fp128 %v to i32

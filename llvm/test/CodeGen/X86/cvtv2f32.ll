@@ -8,16 +8,16 @@
 define <2 x float> @uitofp_2i32_cvt_buildvector(i32 %x, i32 %y, <2 x float> %v) {
 ; X86-LABEL: uitofp_2i32_cvt_buildvector:
 ; X86:       # %bb.0:
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    movsd {{.*#+}} xmm2 = [4.503599627370496E+15,0.0E+0]
-; X86-NEXT:    orpd %xmm2, %xmm1
-; X86-NEXT:    subsd %xmm2, %xmm1
-; X86-NEXT:    cvtsd2ss %xmm1, %xmm1
+; X86-NEXT:    movsd {{.*#+}} xmm1 = [4.503599627370496E+15,0.0E+0]
+; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    orpd %xmm1, %xmm2
+; X86-NEXT:    subsd %xmm1, %xmm2
+; X86-NEXT:    cvtsd2ss %xmm2, %xmm2
 ; X86-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; X86-NEXT:    orpd %xmm2, %xmm3
-; X86-NEXT:    subsd %xmm2, %xmm3
-; X86-NEXT:    xorps %xmm2, %xmm2
-; X86-NEXT:    cvtsd2ss %xmm3, %xmm2
+; X86-NEXT:    orpd %xmm1, %xmm3
+; X86-NEXT:    subsd %xmm1, %xmm3
+; X86-NEXT:    xorps %xmm1, %xmm1
+; X86-NEXT:    cvtsd2ss %xmm3, %xmm1
 ; X86-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
 ; X86-NEXT:    mulps %xmm1, %xmm0
 ; X86-NEXT:    retl

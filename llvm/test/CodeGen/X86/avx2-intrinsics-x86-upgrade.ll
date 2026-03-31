@@ -389,9 +389,9 @@ define void @test_x86_avx_storeu_dq_256(ptr %a0, <32 x i8> %a1) {
   ; add operation forces the execution domain.
 ; X86-LABEL: test_x86_avx_storeu_dq_256:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqu %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl

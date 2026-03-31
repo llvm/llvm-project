@@ -59,9 +59,9 @@ define void @f_non_leaf(i32 %x, i32 %y) !prof !14 {
 ; CHECK32-NEXT:    pushl %ebx # encoding: [0x53]
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK32-NEXT:    .cfi_offset %ebx, -8
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; CHECK32-NEXT:    #APP
 ; CHECK32-NEXT:    #NO_APP
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; CHECK32-NEXT:    cmpl {{[0-9]+}}(%esp), %eax # encoding: [0x3b,0x44,0x24,0x0c]
 ; CHECK32-NEXT:    jne .LBB1_2 # encoding: [0x75,A]
 ; CHECK32-NEXT:    # fixup A - offset: 1, value: .LBB1_2, kind: FK_PCRel_1

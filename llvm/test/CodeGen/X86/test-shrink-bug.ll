@@ -11,10 +11,10 @@ define dso_local i32 @func_35(i64 %p_38) nounwind ssp {
 ; CHECK-X86:       ## %bb.0: ## %entry
 ; CHECK-X86-NEXT:    subl $12, %esp
 ; CHECK-X86-NEXT:    movsbl _g_14, %eax
+; CHECK-X86-NEXT:    subl $8, %esp
 ; CHECK-X86-NEXT:    xorl %ecx, %ecx
 ; CHECK-X86-NEXT:    testl $255, %eax
 ; CHECK-X86-NEXT:    setg %cl
-; CHECK-X86-NEXT:    subl $8, %esp
 ; CHECK-X86-NEXT:    pushl %ecx
 ; CHECK-X86-NEXT:    pushl %eax
 ; CHECK-X86-NEXT:    calll _func_16
@@ -48,9 +48,9 @@ define dso_local void @fail(i16 %a, <2 x i8> %b) {
 ; CHECK-X86:       ## %bb.0:
 ; CHECK-X86-NEXT:    subl $12, %esp
 ; CHECK-X86-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    cmpb $123, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    sete %al
+; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    testl $263, %ecx ## imm = 0x107
 ; CHECK-X86-NEXT:    je LBB1_3
 ; CHECK-X86-NEXT:  ## %bb.1:

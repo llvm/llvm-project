@@ -8,18 +8,18 @@
 define void @runcont(ptr %source) nounwind  {
 ; CHECK-LABEL: runcont:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl L_NNTOT$non_lazy_ptr, %ecx
-; CHECK-NEXT:    movl (%ecx), %ecx
+; CHECK-NEXT:    movl L_NNTOT$non_lazy_ptr, %eax
+; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vcvtsi2ssl (%eax,%edx,4), %xmm7, %xmm1
+; CHECK-NEXT:    vcvtsi2ssl (%edx,%ecx,4), %xmm7, %xmm1
 ; CHECK-NEXT:    vaddss %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    incl %edx
-; CHECK-NEXT:    cmpl %edx, %ecx
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    jne LBB0_1
 ; CHECK-NEXT:  ## %bb.2: ## %bb13
 ; CHECK-NEXT:    movl L_G$non_lazy_ptr, %eax

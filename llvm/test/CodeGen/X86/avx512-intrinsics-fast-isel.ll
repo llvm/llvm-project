@@ -3238,13 +3238,21 @@ entry:
 }
 
 define <8 x double> @test_mm512_fnmsub_round_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; CHECK-LABEL: test_mm512_fnmsub_round_pd:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vfmadd231pd {rn-sae}, %zmm4, %zmm1, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: test_mm512_fnmsub_round_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vpxorq %zmm3, %zmm2, %zmm2
+; X86-NEXT:    vpxorq %zmm3, %zmm0, %zmm0
+; X86-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_fnmsub_round_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
+; X64-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
+; X64-NEXT:    vfmadd231pd {rn-sae}, %zmm4, %zmm1, %zmm0
+; X64-NEXT:    retq
 entry:
   %sub = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__A
   %sub1 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__C
@@ -3469,13 +3477,21 @@ entry:
 }
 
 define <8 x double> @test_mm512_fnmsub_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
-; CHECK-LABEL: test_mm512_fnmsub_pd:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: test_mm512_fnmsub_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vpxorq %zmm3, %zmm2, %zmm2
+; X86-NEXT:    vpxorq %zmm3, %zmm0, %zmm0
+; X86-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_fnmsub_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
+; X64-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
+; X64-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
+; X64-NEXT:    retq
 entry:
   %sub.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__A
   %sub1.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %__C
@@ -3702,13 +3718,21 @@ entry:
 }
 
 define <16 x float> @test_mm512_fnmsub_round_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; CHECK-LABEL: test_mm512_fnmsub_round_ps:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vpxord %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxord %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vfmadd231ps {rn-sae}, %zmm4, %zmm1, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: test_mm512_fnmsub_round_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vpxord %zmm3, %zmm2, %zmm2
+; X86-NEXT:    vpxord %zmm3, %zmm0, %zmm0
+; X86-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_fnmsub_round_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vpxord %zmm3, %zmm0, %zmm4
+; X64-NEXT:    vpxord %zmm3, %zmm2, %zmm0
+; X64-NEXT:    vfmadd231ps {rn-sae}, %zmm4, %zmm1, %zmm0
+; X64-NEXT:    retq
 entry:
   %sub = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__A
   %sub1 = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__C
@@ -3933,13 +3957,21 @@ entry:
 }
 
 define <16 x float> @test_mm512_fnmsub_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
-; CHECK-LABEL: test_mm512_fnmsub_ps:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vpxord %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxord %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: test_mm512_fnmsub_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vpxord %zmm3, %zmm2, %zmm2
+; X86-NEXT:    vpxord %zmm3, %zmm0, %zmm0
+; X86-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_fnmsub_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vpxord %zmm3, %zmm0, %zmm4
+; X64-NEXT:    vpxord %zmm3, %zmm2, %zmm0
+; X64-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
+; X64-NEXT:    retq
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__A
   %sub1.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %__C
@@ -6590,15 +6622,15 @@ define i64 @test_mm512_reduce_mul_epi64(<8 x i64> %__W) {
 ; X86-NEXT:    vpsllq $32, %xmm2, %xmm2
 ; X86-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X86-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vpmuludq %xmm0, %xmm2, %xmm2
-; X86-NEXT:    vpsrlq $32, %xmm0, %xmm3
-; X86-NEXT:    vpmuludq %xmm3, %xmm1, %xmm3
-; X86-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vpsllq $32, %xmm2, %xmm2
-; X86-NEXT:    vpmuludq %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpmuludq %xmm0, %xmm1, %xmm1
+; X86-NEXT:    vpsrlq $32, %xmm0, %xmm2
+; X86-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; X86-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
+; X86-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
+; X86-NEXT:    vpsllq $32, %xmm1, %xmm1
+; X86-NEXT:    vpmuludq %xmm0, %xmm3, %xmm0
+; X86-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    vpextrd $1, %xmm0, %edx
 ; X86-NEXT:    vzeroupper
@@ -6795,15 +6827,15 @@ define i64 @test_mm512_mask_reduce_mul_epi64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X86-NEXT:    vpsllq $32, %xmm2, %xmm2
 ; X86-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X86-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vpmuludq %xmm0, %xmm2, %xmm2
-; X86-NEXT:    vpsrlq $32, %xmm0, %xmm3
-; X86-NEXT:    vpmuludq %xmm3, %xmm1, %xmm3
-; X86-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vpsllq $32, %xmm2, %xmm2
-; X86-NEXT:    vpmuludq %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpmuludq %xmm0, %xmm1, %xmm1
+; X86-NEXT:    vpsrlq $32, %xmm0, %xmm2
+; X86-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; X86-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
+; X86-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
+; X86-NEXT:    vpsllq $32, %xmm1, %xmm1
+; X86-NEXT:    vpmuludq %xmm0, %xmm3, %xmm0
+; X86-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    vpextrd $1, %xmm0, %edx
 ; X86-NEXT:    vzeroupper

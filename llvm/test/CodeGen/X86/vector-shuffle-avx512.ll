@@ -493,10 +493,10 @@ define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; X86-AVX512F-LABEL: test_masked_permps_v8f32:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; X86-AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [23,22,19,3,23,22,6,7]
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    vmovaps (%eax), %ymm1
-; X86-AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [23,22,19,3,23,22,6,7]
-; X86-AVX512F-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
+; X86-AVX512F-NEXT:    vmovaps (%eax), %ymm2
+; X86-AVX512F-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
 ; X86-AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; X86-AVX512F-NEXT:    retl
 ;
@@ -550,13 +550,13 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512-SLOW-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; X86-AVX512-SLOW:       # %bb.0:
 ; X86-AVX512-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512-SLOW-NEXT:    vpbroadcastd 44(%ecx), %xmm0
+; X86-AVX512-SLOW-NEXT:    vpbroadcastd 44(%eax), %xmm0
 ; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 672(%eax)
+; X86-AVX512-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 672(%ecx)
 ; X86-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
 ; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 832(%eax)
+; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 832(%ecx)
 ; X86-AVX512-SLOW-NEXT:    vzeroupper
 ; X86-AVX512-SLOW-NEXT:    retl
 ;
@@ -574,13 +574,13 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512-FAST-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; X86-AVX512-FAST:       # %bb.0:
 ; X86-AVX512-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512-FAST-NEXT:    vpbroadcastd 44(%ecx), %xmm0
+; X86-AVX512-FAST-NEXT:    vpbroadcastd 44(%eax), %xmm0
 ; X86-AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 672(%eax)
-; X86-AVX512-FAST-NEXT:    vmovdqa 208(%ecx), %xmm0
+; X86-AVX512-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 672(%ecx)
+; X86-AVX512-FAST-NEXT:    vmovdqa 208(%eax), %xmm0
 ; X86-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
-; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 832(%eax)
+; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 832(%ecx)
 ; X86-AVX512-FAST-NEXT:    vzeroupper
 ; X86-AVX512-FAST-NEXT:    retl
 ;
@@ -598,13 +598,13 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512F-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512F-NEXT:    vpbroadcastd 44(%ecx), %xmm0
+; X86-AVX512F-NEXT:    vpbroadcastd 44(%eax), %xmm0
 ; X86-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X86-AVX512F-NEXT:    vmovdqa %ymm0, 672(%eax)
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512F-NEXT:    vmovdqa %ymm0, 672(%ecx)
 ; X86-AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
 ; X86-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X86-AVX512F-NEXT:    vmovdqa %ymm0, 832(%eax)
+; X86-AVX512F-NEXT:    vmovdqa %ymm0, 832(%ecx)
 ; X86-AVX512F-NEXT:    vzeroupper
 ; X86-AVX512F-NEXT:    retl
 ;
@@ -655,8 +655,8 @@ define <32 x float> @PR47534(<8 x float> %tmp) {
 define void @PR43170(ptr %a0) {
 ; X86-AVX512-LABEL: PR43170:
 ; X86-AVX512:       # %bb.0: # %entry
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovaps src1, %ymm0
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovaps %zmm0, (%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -670,8 +670,8 @@ define void @PR43170(ptr %a0) {
 ;
 ; X86-AVX512F-LABEL: PR43170:
 ; X86-AVX512F:       # %bb.0: # %entry
-; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovaps src1, %ymm0
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovaps %zmm0, (%eax)
 ; X86-AVX512F-NEXT:    vzeroupper
 ; X86-AVX512F-NEXT:    retl

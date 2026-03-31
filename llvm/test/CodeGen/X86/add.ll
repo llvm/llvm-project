@@ -220,9 +220,9 @@ carry:
 define i64 @test6(i64 %A, i32 %B) nounwind {
 ; X86-LABEL: test6:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test6:
@@ -310,10 +310,10 @@ entry:
 define i32 @test9(i32 %x, i32 %y) nounwind readnone {
 ; X86-LABEL: test9:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    cmpl $10, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -460,23 +460,19 @@ define i32 @inc_not(i32 %a) {
 define <4 x i32> @inc_not_vec(<4 x i32> %a) nounwind {
 ; X86-LABEL: inc_not_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edi, %edi
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, 4(%eax)
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LINUX-LABEL: inc_not_vec:
@@ -500,10 +496,10 @@ define void @uaddo1_not(i32 %a, ptr %p0, ptr %p1) {
 ; X86-LABEL: uaddo1_not:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setae (%eax)
 ; X86-NEXT:    retl
 ;

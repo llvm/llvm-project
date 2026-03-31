@@ -9,10 +9,10 @@ define double @zext_shl_mul(ptr %a0, ptr %a1) {
 ; X86-LABEL: zext_shl_mul:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    leal (%eax,%eax,8), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,8), %ecx
-; X86-NEXT:    fldl 16(%eax,%ecx,4)
+; X86-NEXT:    fldl 16(%ecx,%eax,4)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: zext_shl_mul:

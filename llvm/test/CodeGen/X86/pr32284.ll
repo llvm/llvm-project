@@ -307,32 +307,33 @@ define void @f1() {
 ; X86-NEXT:    .cfi_def_cfa_offset 13
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    movl var_5, %eax
-; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    movl var_5, %ecx
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    xorl $208307499, %edx # imm = 0xC6A852B
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    xorl $-2, %esi
 ; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    setne (%esp)
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    andl %ecx, %esi
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    cmpl $-1, %esi
-; X86-NEXT:    sete %dl
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    andl %eax, %edx
 ; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    cmpl $-1, %eax
+; X86-NEXT:    cmpl $-1, %edx
 ; X86-NEXT:    sete %bl
-; X86-NEXT:    addl $7093, %eax # imm = 0x1BB5
-; X86-NEXT:    adcl $0, %ecx
-; X86-NEXT:    cmpl %ebx, %eax
-; X86-NEXT:    sbbl $0, %ecx
+; X86-NEXT:    movl %ebx, _ZN8struct_210member_2_0E
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    addl $7093, %edx # imm = 0x1BB5
+; X86-NEXT:    adcl $0, %eax
+; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    cmpl $-1, %ecx
+; X86-NEXT:    sete %bl
+; X86-NEXT:    cmpl %ebx, %edx
+; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movl %eax, var_57
 ; X86-NEXT:    movl $0, var_57+4
-; X86-NEXT:    movl %edx, _ZN8struct_210member_2_0E
 ; X86-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
 ; X86-NEXT:    addl $1, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 12
@@ -768,21 +769,25 @@ define void @f3() #0 {
 ; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl var_13, %eax
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    movl var_13, %edx
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    notl %eax
-; X86-NEXT:    sete %cl
-; X86-NEXT:    movl var_16, %edx
-; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    movl %edx, (%esp)
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, var_46
-; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    movl var_16, %esi
+; X86-NEXT:    xorl %eax, %esi
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    sete %cl
+; X86-NEXT:    andl %esi, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    movl %ecx, (%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    leal -4(%ebp), %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl

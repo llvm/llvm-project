@@ -1747,15 +1747,15 @@ define <4 x i32> @vector_variable_shift_right(<4 x i1> %cond, <4 x i32> %x, <4 x
 ; X86-SSE-NEXT:    xorps %xmm3, %xmm3
 ; X86-SSE-NEXT:    xorps %xmm4, %xmm4
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm4 = xmm2[0],xmm4[1,2,3]
-; X86-SSE-NEXT:    movss {{.*#+}} xmm3 = xmm1[0],xmm3[1,2,3]
+; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm2
+; X86-SSE-NEXT:    movdqa %xmm2, %xmm5
+; X86-SSE-NEXT:    psrld %xmm4, %xmm5
 ; X86-SSE-NEXT:    pslld $31, %xmm0
 ; X86-SSE-NEXT:    psrad $31, %xmm0
-; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm1
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm2
+; X86-SSE-NEXT:    movss {{.*#+}} xmm3 = xmm1[0],xmm3[1,2,3]
 ; X86-SSE-NEXT:    psrld %xmm3, %xmm2
-; X86-SSE-NEXT:    psrld %xmm4, %xmm1
 ; X86-SSE-NEXT:    pand %xmm0, %xmm2
-; X86-SSE-NEXT:    pandn %xmm1, %xmm0
+; X86-SSE-NEXT:    pandn %xmm5, %xmm0
 ; X86-SSE-NEXT:    por %xmm2, %xmm0
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp

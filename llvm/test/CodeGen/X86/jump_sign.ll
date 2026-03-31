@@ -47,8 +47,8 @@ define i32 @func_g(i32 %a, i32 %b) nounwind {
 define i32 @func_h(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmovlel %ecx, %eax
 ; CHECK-NEXT:    retl
@@ -61,8 +61,8 @@ define i32 @func_h(i32 %a, i32 %b) nounwind {
 define i32 @func_i(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_i:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmovlel %ecx, %eax
 ; CHECK-NEXT:    retl
@@ -75,8 +75,8 @@ define i32 @func_i(i32 %a, i32 %b) nounwind {
 define i32 @func_j(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_j:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmovbel %ecx, %eax
 ; CHECK-NEXT:    retl
@@ -89,8 +89,8 @@ define i32 @func_j(i32 %a, i32 %b) nounwind {
 define i32 @func_k(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_k:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmovbel %ecx, %eax
 ; CHECK-NEXT:    retl
@@ -185,8 +185,8 @@ if.else:
 define i32 @func_l4(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_l4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmovll %ecx, %eax
 ; CHECK-NEXT:    retl
@@ -302,8 +302,8 @@ define i32 @func_p(i32 %a, i32 %b) nounwind {
 define i32 @func_q(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: func_q:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    sbbl %ecx, %ecx
 ; CHECK-NEXT:    negl %eax

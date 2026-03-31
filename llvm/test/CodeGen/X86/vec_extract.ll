@@ -6,9 +6,9 @@ define void @test1(ptr %F, ptr %f) nounwind {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -56,9 +56,9 @@ define void @test3(ptr %R, ptr %P1) nounwind {
 ; X86-LABEL: test3:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movaps (%ecx), %xmm0
+; X86-NEXT:    movaps (%eax), %xmm0
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -107,36 +107,30 @@ declare <2 x double> @foo()
 define i64 @pr150117(<31 x i8> %a0) nounwind {
 ; X86-LABEL: pr150117:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shll $8, %edx
-; X86-NEXT:    orl %ebx, %edx
-; X86-NEXT:    shll $8, %edi
-; X86-NEXT:    orl %esi, %edi
-; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    orl %edi, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shll $24, %esi
-; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    movd %esi, %xmm0
-; X86-NEXT:    pinsrw $2, %edx, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shll $8, %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shll $8, %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shll $16, %ecx
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shll $24, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movd %edx, %xmm0
+; X86-NEXT:    pinsrw $2, %eax, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    pinsrw $3, %ecx, %xmm0
 ; X86-NEXT:    movd %xmm0, %eax
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-NEXT:    movd %xmm0, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr150117:

@@ -20,13 +20,13 @@ define void @foo(ptr byval(%struct.anon) %p) nounwind {
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    xorps %xmm0, %xmm1
-; CHECK-NEXT:    cvtss2sd %xmm1, %xmm1
 ; CHECK-NEXT:    xorps %xmm0, %xmm2
+; CHECK-NEXT:    cvtss2sd %xmm2, %xmm2
+; CHECK-NEXT:    movsd %xmm2, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    cvtss2sd %xmm2, %xmm0
+; CHECK-NEXT:    cvtss2sd %xmm1, %xmm0
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movsd %xmm1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $_.str, (%esp)
 ; CHECK-NEXT:    calll _printf
 ; CHECK-NEXT:    addl $28, %esp
