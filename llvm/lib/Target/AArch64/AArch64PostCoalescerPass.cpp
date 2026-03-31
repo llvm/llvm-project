@@ -121,6 +121,7 @@ AArch64PostCoalescerPass::run(MachineFunction &MF,
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<SlotIndexesAnalysis>();
   return PA;
 }
 
