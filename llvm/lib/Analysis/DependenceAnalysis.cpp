@@ -2110,12 +2110,9 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  bool disproven = false;
-  if (SrcAddRec && DstAddRec)
-    disproven = exactRDIVtest(SrcAddRec, DstAddRec, Result);
-  else
-    llvm_unreachable("RDIV expected at least one AddRec");
-  return disproven || gcdMIVtest(Src, Dst, Result);
+  assert(SrcAddRec && DstAddRec && "Unexpected non-addrec input");
+  return exactRDIVtest(SrcAddRec, DstAddRec, Result) ||
+         gcdMIVtest(Src, Dst, Result);
 }
 
 // Tests the single-subscript MIV pair (Src and Dst) for dependence.
