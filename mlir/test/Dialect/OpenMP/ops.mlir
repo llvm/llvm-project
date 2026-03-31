@@ -871,7 +871,7 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
     "omp.target"(%device, %if_cond, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,1,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
+    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,1,0,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
 
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
@@ -4016,3 +4016,102 @@ llvm.mlir.global internal @gp() : i32
 llvm.mlir.global internal @any() : i32
 llvm.mlir.global internal @host() : i32
 llvm.mlir.global internal @nohost() : i32
+
+// -----
+
+// CHECK-LABEL: func.func @omp_target_update_map_iterated
+func.func @omp_target_update_map_iterated(%lb : index, %ub : index, %step : index,
+                                           %addr : !llvm.ptr) -> () {
+  // CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   %[[M:.*]] = omp.map.info var_ptr(%{{.*}} : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  // CHECK:   omp.yield(%[[M]] : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  // CHECK: omp.target_update map_entries(%[[MAP]], %[[IT]] : !llvm.ptr, !omp.iterated<!llvm.ptr>)
+  omp.target_update map_entries(%map, %it : !llvm.ptr, !omp.iterated<!llvm.ptr>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_target_enter_data_map_iterated
+func.func @omp_target_enter_data_map_iterated(%lb : index, %ub : index, %step : index,
+                                               %addr : !llvm.ptr) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  // CHECK: omp.target_enter_data map_entries(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.target_enter_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_target_exit_data_map_iterated
+func.func @omp_target_exit_data_map_iterated(%lb : index, %ub : index, %step : index,
+                                              %addr : !llvm.ptr) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  // CHECK: omp.target_exit_data map_entries(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.target_exit_data map_entries(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_target_data_map_iterated
+func.func @omp_target_data_map_iterated(%lb : index, %ub : index, %step : index,
+                                         %addr : !llvm.ptr) -> () {
+  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+
+  // CHECK: %[[IT:.*]] = omp.iterator
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  // CHECK: omp.target_data map_entries(%{{.*}}, %[[IT]] : !llvm.ptr, !omp.iterated<!llvm.ptr>)
+  omp.target_data map_entries(%map, %it : !llvm.ptr, !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_target_map_iterated
+func.func @omp_target_map_iterated(%lb : index, %ub : index, %step : index,
+                                    %addr : !llvm.ptr) -> () {
+  // CHECK: %[[MAP:.*]] = omp.map.info
+  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+
+  // CHECK: %[[IT:.*]] = omp.iterator
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  // CHECK: omp.target map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) {
+  // CHECK:   omp.terminator
+  // CHECK: } map_iterated_entries(%[[IT]] : !omp.iterated<!llvm.ptr>)
+  omp.target map_entries(%map -> %arg0 : !llvm.ptr) {
+    omp.terminator
+  } map_iterated_entries(%it : !omp.iterated<!llvm.ptr>)
+  return
+}

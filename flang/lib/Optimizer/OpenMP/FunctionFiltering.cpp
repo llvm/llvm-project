@@ -311,6 +311,7 @@ private:
       targetOp.setDependKindsAttr(nullptr);
       targetOp.getDependIteratedMutable().clear();
       targetOp.setDependIteratedKindsAttr(nullptr);
+      targetOp.getMapIteratedMutable().clear();
       targetOp.getDeviceMutable().clear();
       targetOp.getIfExprMutable().clear();
       targetOp.getDynGroupprivateSizeMutable().clear();

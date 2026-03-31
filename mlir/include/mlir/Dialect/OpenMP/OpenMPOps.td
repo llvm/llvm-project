@@ -1657,12 +1657,13 @@ def TargetOp : OpenMP_Op<"target", traits = [
                        bool *hostEvalTripCount = nullptr);
   }] # clausesExtraClassDeclaration;
 
-  let assemblyFormat = clausesAssemblyFormat # [{
+  let assemblyFormat = clausesAssemblyFormat#[{
     custom<TargetOpRegion>(
         $region, $has_device_addr_vars, type($has_device_addr_vars),
         $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
         type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
-        $map_vars, type($map_vars), $private_vars, type($private_vars),
+        $map_vars, type($map_vars), $map_iterated, type($map_iterated),
+        $private_vars, type($private_vars),
         $private_syms, $private_needs_barrier, $private_maps) attr-dict
   }];
 
@@ -2124,12 +2125,10 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
   let hasRegionVerifier = 1;
 }
 
-def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
-    HasParent<"DeclareMapperOp">,
-    Terminator
-  ], clauses = [
-    OpenMP_MapClause
-  ]> {
+def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info",
+                                    [AttrSizedOperandSegments,
+                                     HasParent<"DeclareMapperOp">, Terminator],
+                                    clauses = [OpenMP_MapClause]> {
   let summary = "declare mapper info";
   let description = [{
     This Op is used to capture the map information related to it's

@@ -1310,6 +1310,8 @@ static ParseResult parseTargetOpRegion(
     DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapVars,
     SmallVectorImpl<Type> &mapTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapIterated,
+    SmallVectorImpl<Type> &mapIteratedTypes,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
     UnitAttr &privateNeedsBarrier, DenseI64ArrayAttr &privateMaps) {
@@ -1321,7 +1323,26 @@ static ParseResult parseTargetOpRegion(
   args.mapArgs.emplace(mapVars, mapTypes);
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier, &privateMaps);
-  return parseBlockArgRegion(parser, region, args);
+
+  if (parseBlockArgRegion(parser, region, args))
+    return failure();
+
+  // Parse optional map_iterated_entries (not block args).
+  if (succeeded(parser.parseOptionalKeyword("map_iterated_entries"))) {
+    if (parser.parseLParen() || parser.parseCommaSeparatedList([&]() {
+          OpAsmParser::UnresolvedOperand operand;
+          Type ty;
+          if (parser.parseOperand(operand) || parser.parseColonType(ty))
+            return failure();
+          mapIterated.push_back(operand);
+          mapIteratedTypes.push_back(ty);
+          return success();
+        }) ||
+        parser.parseRParen())
+      return failure();
+  }
+
+  return success();
 }
 
 static ParseResult parseInReductionPrivateRegion(
@@ -1574,8 +1595,9 @@ static void printTargetOpRegion(
     ValueRange hostEvalVars, TypeRange hostEvalTypes,
     ValueRange inReductionVars, TypeRange inReductionTypes,
     DenseBoolArrayAttr inReductionByref, ArrayAttr inReductionSyms,
-    ValueRange mapVars, TypeRange mapTypes, ValueRange privateVars,
-    TypeRange privateTypes, ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
+    ValueRange mapVars, TypeRange mapTypes, ValueRange mapIterated,
+    TypeRange mapIteratedTypes, ValueRange privateVars, TypeRange privateTypes,
+    ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
     DenseI64ArrayAttr privateMaps) {
   AllRegionPrintArgs args;
   args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
@@ -1586,6 +1608,17 @@ static void printTargetOpRegion(
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier, privateMaps);
   printBlockArgRegion(p, op, region, args);
+
+  // Print map_iterated_entries if present (not block args).
+  if (!mapIterated.empty()) {
+    p << " map_iterated_entries(";
+    llvm::interleaveComma(llvm::zip(mapIterated, mapIteratedTypes), p,
+                          [&](auto t) {
+                            auto [val, ty] = t;
+                            p << val << " : " << ty;
+                          });
+    p << ")";
+  }
 }
 
 static void printInReductionPrivateRegion(
@@ -2223,6 +2256,56 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
   }
 }
 
+/// map-entry-list ::= map-entry
+///                  | map-entry-list `,` map-entry
+/// map-entry ::= ssa-id `:` type
+///             | ssa-id `:` iterated-type
+static ParseResult
+parseMapEntryList(OpAsmParser &parser,
+                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapVars,
+                  SmallVectorImpl<Type> &mapVarTypes,
+                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapIterated,
+                  SmallVectorImpl<Type> &mapIteratedTypes) {
+  // Parse all operands first, then all types in grouped format:
+  //   %v1, %v2 : type1, type2
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  SmallVector<Type> types;
+  if (parser.parseOperandList(operands) || parser.parseColonTypeList(types))
+    return failure();
+  if (operands.size() != types.size())
+    return parser.emitError(parser.getNameLoc(),
+                            "expected same number of operands and types");
+  // Split iterator handles from regular map locators.
+  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
+    if (llvm::isa<mlir::omp::IteratedType>(types[i])) {
+      mapIterated.push_back(operands[i]);
+      mapIteratedTypes.push_back(types[i]);
+    } else {
+      mapVars.push_back(operands[i]);
+      mapVarTypes.push_back(types[i]);
+    }
+  }
+  return success();
+}
+
+/// Print map_entries list with both plain and iterated entries.
+static void printMapEntryList(OpAsmPrinter &p, Operation *op,
+                              OperandRange mapVars, TypeRange mapVarTypes,
+                              OperandRange mapIterated,
+                              TypeRange mapIteratedTypes) {
+  // Print all operands, then all types in grouped format:
+  //   %v1, %v2 : type1, type2
+  llvm::interleaveComma(mapVars, p, [&](Value v) { p << v; });
+  if (!mapVars.empty() && !mapIterated.empty())
+    p << ", ";
+  llvm::interleaveComma(mapIterated, p, [&](Value v) { p << v; });
+  p << " : ";
+  llvm::interleaveComma(mapVarTypes, p, [&](Type t) { p << t; });
+  if (!mapVarTypes.empty() && !mapIteratedTypes.empty())
+    p << ", ";
+  llvm::interleaveComma(mapIteratedTypes, p, [&](Type t) { p << t; });
+}
+
 static ParseResult parseMembersIndex(OpAsmParser &parser,
                                      ArrayAttr &membersIdx) {
   SmallVector<Attribute> values, memberIdxs;
@@ -2308,7 +2391,8 @@ static ParseResult parseCaptureType(OpAsmParser &parser,
   return success();
 }
 
-static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
+static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
+                                     OperandRange mapIterated) {
   llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateToVars;
   llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateFromVars;
 
@@ -2389,6 +2473,26 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
     }
   }
 
+  // Verify iterated map entries.
+  for (auto iterVal : mapIterated) {
+    auto iterOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
+    if (!iterOp)
+      return op->emitOpError() << "'map_iterated' arguments must be defined by "
+                                  "'omp.iterator' ops";
+
+    // Check that the iterator body yields a value defined by omp.map.info.
+    auto &region = iterOp.getRegion();
+    if (!region.empty()) {
+      auto yieldOp = cast<mlir::omp::YieldOp>(region.front().getTerminator());
+      if (yieldOp.getNumOperands() > 0) {
+        auto yieldedVal = yieldOp.getOperand(0);
+        if (!yieldedVal.getDefiningOp<mlir::omp::MapInfoOp>())
+          return op->emitOpError() << "'map_iterated' iterator body must yield "
+                                      "a value defined by 'omp.map.info'";
+      }
+    }
+  }
+
   return success();
 }
 
@@ -2448,13 +2552,13 @@ LogicalResult MapInfoOp::verify() {
 void TargetDataOp::build(OpBuilder &builder, OperationState &state,
                          const TargetDataOperands &clauses) {
   TargetDataOp::build(builder, state, clauses.device, clauses.ifExpr,
-                      clauses.mapVars, clauses.useDeviceAddrVars,
-                      clauses.useDevicePtrVars);
+                      clauses.mapVars, clauses.mapIterated,
+                      clauses.useDeviceAddrVars, clauses.useDevicePtrVars);
 }
 
 LogicalResult TargetDataOp::verify() {
-  if (getMapVars().empty() && getUseDevicePtrVars().empty() &&
-      getUseDeviceAddrVars().empty()) {
+  if (getMapVars().empty() && getMapIterated().empty() &&
+      getUseDevicePtrVars().empty() && getUseDeviceAddrVars().empty()) {
     return ::emitError(this->getLoc(),
                        "At least one of map, use_device_ptr_vars, or "
                        "use_device_addr_vars operand must be present");
@@ -2468,7 +2572,7 @@ LogicalResult TargetDataOp::verify() {
                                       getUseDeviceAddrVars())))
     return failure();
 
-  return verifyMapClause(*this, getMapVars());
+  return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2483,15 +2587,16 @@ void TargetEnterDataOp::build(
       builder, state, makeArrayAttr(ctx, clauses.dependKinds),
       clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
       clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
-      clauses.nowait);
+      clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetEnterDataOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2505,15 +2610,16 @@ void TargetExitDataOp::build(OpBuilder &builder, OperationState &state,
       builder, state, makeArrayAttr(ctx, clauses.dependKinds),
       clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
       clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
-      clauses.nowait);
+      clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetExitDataOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2527,15 +2633,16 @@ void TargetUpdateOp::build(OpBuilder &builder, OperationState &state,
                         clauses.dependVars,
                         makeArrayAttr(ctx, clauses.dependIteratedKinds),
                         clauses.dependIterated, clauses.device, clauses.ifExpr,
-                        clauses.mapVars, clauses.nowait);
+                        clauses.mapVars, clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetUpdateOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2556,7 +2663,7 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
       clauses.hasDeviceAddrVars, clauses.hostEvalVars, clauses.ifExpr,
       /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
       /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
-      clauses.nowait, clauses.privateVars,
+      clauses.mapIterated, clauses.nowait, clauses.privateVars,
       makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
       clauses.threadLimitVars,
       /*private_maps=*/nullptr);
@@ -2572,7 +2679,7 @@ LogicalResult TargetOp::verify() {
                                       getHasDeviceAddrVars())))
     return failure();
 
-  if (failed(verifyMapClause(*this, getMapVars())))
+  if (failed(verifyMapClause(*this, getMapVars(), getMapIterated())))
     return failure();
 
   if (failed(verifyDynGroupprivateClause(
@@ -3433,7 +3540,7 @@ LogicalResult DistributeOp::verifyRegions() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DeclareMapperInfoOp::verify() {
-  return verifyMapClause(*this, getMapVars());
+  return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 LogicalResult DeclareMapperOp::verifyRegions() {
