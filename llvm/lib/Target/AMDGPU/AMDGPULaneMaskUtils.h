@@ -27,10 +27,13 @@ public:
   const unsigned AndN2Opc;
   const unsigned AndN2SaveExecOpc;
   const unsigned AndN2TermOpc;
+  const unsigned AndN2WRExecOpc;
   const unsigned AndSaveExecOpc;
   const unsigned AndSaveExecTermOpc;
   const unsigned BfmOpc;
   const unsigned CMovOpc;
+  const unsigned CmpXEqU32Opc;
+  const unsigned CmpXEqU64Opc;
   const unsigned CSelectOpc;
   const unsigned MovOpc;
   const unsigned MovTermOpc;
@@ -52,12 +55,18 @@ public:
                                   : AMDGPU::S_ANDN2_SAVEEXEC_B64),
         AndN2TermOpc(IsWave32 ? AMDGPU::S_ANDN2_B32_term
                               : AMDGPU::S_ANDN2_B64_term),
+        AndN2WRExecOpc(IsWave32 ? AMDGPU::S_ANDN2_WREXEC_B32
+                                : AMDGPU::S_ANDN2_WREXEC_B64),
         AndSaveExecOpc(IsWave32 ? AMDGPU::S_AND_SAVEEXEC_B32
                                 : AMDGPU::S_AND_SAVEEXEC_B64),
         AndSaveExecTermOpc(IsWave32 ? AMDGPU::S_AND_SAVEEXEC_B32_term
                                     : AMDGPU::S_AND_SAVEEXEC_B64_term),
         BfmOpc(IsWave32 ? AMDGPU::S_BFM_B32 : AMDGPU::S_BFM_B64),
         CMovOpc(IsWave32 ? AMDGPU::S_CMOV_B32 : AMDGPU::S_CMOV_B64),
+        CmpXEqU32Opc(IsWave32 ? AMDGPU::V_CMPX_EQ_U32_nosdst_e32
+                              : AMDGPU::V_CMPX_EQ_U32_nosdst_e64),
+        CmpXEqU64Opc(IsWave32 ? AMDGPU::V_CMPX_EQ_U64_nosdst_e32
+                              : AMDGPU::V_CMPX_EQ_U64_nosdst_e64),
         CSelectOpc(IsWave32 ? AMDGPU::S_CSELECT_B32 : AMDGPU::S_CSELECT_B64),
         MovOpc(IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
         MovTermOpc(IsWave32 ? AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term),

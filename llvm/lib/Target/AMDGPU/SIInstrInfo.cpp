@@ -7090,8 +7090,8 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 // unique value of \p ScalarOps across all lanes. In the best case we execute 1
 // iteration, in the worst case we execute 64 (once per lane).
 static void emitLoadScalarOpsFromVGPRLoop(
-    const SIInstrInfo &TII, MachineRegisterInfo &MRI, MachineBasicBlock &LoopBB,
-    MachineBasicBlock &BodyBB, const DebugLoc &DL,
+    const SIInstrInfo &TII, MachineRegisterInfo &MRI, MachineBasicBlock &PredBB,
+    MachineBasicBlock &LoopBB, MachineBasicBlock &BodyBB, const DebugLoc &DL,
     ArrayRef<MachineOperand *> ScalarOps, ArrayRef<Register> PhySGPRs = {}) {
   MachineFunction &MF = *LoopBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -7099,8 +7099,33 @@ static void emitLoadScalarOpsFromVGPRLoop(
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
   const auto *BoolXExecRC = TRI->getWaveMaskRegClass();
 
+  // Emit [v_cmpx_eq] and [s_andn2_wrexec] when these instructions are
+  // available.
+  // Otherwise, use the previous pattern of [v_cmp_eq], [s_and_saveexec],
+  // and [s_xor].
+  // TODO: Accurately detect the availability of [s_andn2_wrexec] instruction
+  // in the target. For now, use the same condition as for the detection
+  // [v_cmpx_eq].
+  bool UseNewExecInstructions = ST.hasNoSdstCMPX();
+
   MachineBasicBlock::iterator I = LoopBB.begin();
   Register CondReg;
+
+  Register PhiExec = MRI.createVirtualRegister(BoolXExecRC);
+  Register NewExec = MRI.createVirtualRegister(BoolXExecRC);
+
+  if (UseNewExecInstructions) {
+    Register InitExec = MRI.createVirtualRegister(BoolXExecRC);
+    BuildMI(PredBB, PredBB.end(), DL, TII.get(LMC.MovOpc), InitExec)
+        .addReg(LMC.ExecReg);
+
+    BuildMI(LoopBB, I, DL, TII.get(TargetOpcode::PHI), PhiExec)
+        .addReg(InitExec)
+        .addMBB(&PredBB)
+        .addReg(NewExec)
+        .addMBB(&BodyBB);
+  }
+
   for (auto [Idx, ScalarOp] : enumerate(ScalarOps)) {
     unsigned RegSize = TRI->getRegSizeInBits(ScalarOp->getReg(), MRI);
     unsigned NumSubRegs = RegSize / 32;
@@ -7123,21 +7148,27 @@ static void emitLoadScalarOpsFromVGPRLoop(
       BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), CurReg)
           .addReg(VScalarOp);
 
-      Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
+      if (UseNewExecInstructions) {
+        BuildMI(LoopBB, I, DL, TII.get(LMC.CmpXEqU32Opc))
+            .addReg(CurReg)
+            .addReg(VScalarOp);
+      } else {
+        Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
 
-      BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U32_e64), NewCondReg)
-          .addReg(CurReg)
-          .addReg(VScalarOp);
+        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U32_e64), NewCondReg)
+            .addReg(CurReg)
+            .addReg(VScalarOp);
 
-      // Combine the comparison results with AND.
-      if (!CondReg) // First.
-        CondReg = NewCondReg;
-      else { // If not the first, we create an AND.
-        Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
-        BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
-            .addReg(CondReg)
-            .addReg(NewCondReg);
-        CondReg = AndReg;
+        // Combine the comparison results with AND.
+        if (!CondReg) // First.
+          CondReg = NewCondReg;
+        else { // If not the first, we create an AND.
+          Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
+          BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
+              .addReg(CondReg)
+              .addReg(NewCondReg);
+          CondReg = AndReg;
+        }
       }
 
       // Update ScalarOp operand to use the SGPR ScalarOp.
@@ -7183,25 +7214,36 @@ static void emitLoadScalarOpsFromVGPRLoop(
             .addReg(CurRegHi)
             .addImm(AMDGPU::sub1);
 
-        Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
-        auto Cmp = BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64),
-                           NewCondReg)
-                       .addReg(CurReg);
-        if (NumSubRegs <= 2)
-          Cmp.addReg(VScalarOp);
-        else
-          Cmp.addReg(VScalarOp, VScalarOpUndef,
-                     TRI->getSubRegFromChannel(Idx, 2));
+        if (UseNewExecInstructions) {
+          auto CmpX =
+              BuildMI(LoopBB, I, DL, TII.get(LMC.CmpXEqU64Opc)).addReg(CurReg);
 
-        // Combine the comparison results with AND.
-        if (!CondReg) // First.
-          CondReg = NewCondReg;
-        else { // If not the first, we create an AND.
-          Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
-          BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
-              .addReg(CondReg)
-              .addReg(NewCondReg);
-          CondReg = AndReg;
+          if (NumSubRegs <= 2)
+            CmpX.addReg(VScalarOp);
+          else
+            CmpX.addReg(VScalarOp, VScalarOpUndef,
+                        TRI->getSubRegFromChannel(Idx, 2));
+        } else {
+          Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
+          auto Cmp = BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64),
+                             NewCondReg)
+                         .addReg(CurReg);
+          if (NumSubRegs <= 2)
+            Cmp.addReg(VScalarOp);
+          else
+            Cmp.addReg(VScalarOp, VScalarOpUndef,
+                       TRI->getSubRegFromChannel(Idx, 2));
+
+          // Combine the comparison results with AND.
+          if (!CondReg) // First.
+            CondReg = NewCondReg;
+          else { // If not the first, we create an AND.
+            Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
+            BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
+                .addReg(CondReg)
+                .addReg(NewCondReg);
+            CondReg = AndReg;
+          }
         }
       } // End for loop.
 
@@ -7230,20 +7272,29 @@ static void emitLoadScalarOpsFromVGPRLoop(
     }
   }
 
-  Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
-  MRI.setSimpleHint(SaveExec, CondReg);
+  Register SaveExec;
+  if (!UseNewExecInstructions) {
+    SaveExec = MRI.createVirtualRegister(BoolXExecRC);
+    MRI.setSimpleHint(SaveExec, CondReg);
 
-  // Update EXEC to matching lanes, saving original to SaveExec.
-  BuildMI(LoopBB, I, DL, TII.get(LMC.AndSaveExecOpc), SaveExec)
-      .addReg(CondReg, RegState::Kill);
+    // Update EXEC to matching lanes, saving original to SaveExec.
+    BuildMI(LoopBB, I, DL, TII.get(LMC.AndSaveExecOpc), SaveExec)
+        .addReg(CondReg, RegState::Kill);
+  }
 
   // The original instruction is here; we insert the terminators after it.
   I = BodyBB.end();
 
-  // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  BuildMI(BodyBB, I, DL, TII.get(LMC.XorTermOpc), LMC.ExecReg)
-      .addReg(LMC.ExecReg)
-      .addReg(SaveExec);
+  if (UseNewExecInstructions) {
+    MRI.setSimpleHint(NewExec, PhiExec);
+    BuildMI(BodyBB, I, DL, TII.get(LMC.AndN2WRExecOpc), NewExec)
+        .addReg(PhiExec);
+  } else {
+    // Update EXEC, switch all done bits to 0 and all todo bits to 1.
+    BuildMI(BodyBB, I, DL, TII.get(LMC.XorTermOpc), LMC.ExecReg)
+        .addReg(LMC.ExecReg)
+        .addReg(SaveExec);
+  }
 
   BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
 }
@@ -7344,7 +7395,7 @@ generateWaterFallLoop(const SIInstrInfo &TII, MachineInstr &MI,
     }
   }
 
-  emitLoadScalarOpsFromVGPRLoop(TII, MRI, *LoopBB, *BodyBB, DL, ScalarOps,
+  emitLoadScalarOpsFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, ScalarOps,
                                 PhySGPRs);
 
   MachineBasicBlock::iterator First = RemainderBB->begin();
