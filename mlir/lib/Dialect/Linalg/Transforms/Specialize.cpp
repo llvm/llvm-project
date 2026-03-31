@@ -318,28 +318,22 @@ static FailureOr<LinalgOp> specializeLinalgMmt4D(RewriterBase &rewriter,
       }))
     return failure();
 
-  auto aOuter =
-      matchOperandMap(indexingMaps[0], 0, dims.m[0], dims.k[0]);
-  auto aInner =
-      matchOperandMap(indexingMaps[0], 2, dims.m[1], dims.k[1]);
+  auto aOuter = matchOperandMap(indexingMaps[0], 0, dims.m[0], dims.k[0]);
+  auto aInner = matchOperandMap(indexingMaps[0], 2, dims.m[1], dims.k[1]);
 
-  auto bOuter =
-      matchOperandMap(indexingMaps[1], 0, dims.k[0], dims.n[0]);
-  auto bInner =
-      matchOperandMap(indexingMaps[1], 2, dims.k[1], dims.n[1]);
+  auto bOuter = matchOperandMap(indexingMaps[1], 0, dims.k[0], dims.n[0]);
+  auto bInner = matchOperandMap(indexingMaps[1], 2, dims.k[1], dims.n[1]);
 
-  auto cOuter =
-      matchOperandMap(indexingMaps[2], 0, dims.m[0], dims.n[0]);
-  auto cInner =
-      matchOperandMap(indexingMaps[2], 2, dims.m[1], dims.n[1]);
+  auto cOuter = matchOperandMap(indexingMaps[2], 0, dims.m[0], dims.n[0]);
+  auto cInner = matchOperandMap(indexingMaps[2], 2, dims.m[1], dims.n[1]);
 
   if (llvm::is_contained({aOuter, bOuter, cOuter}, IndexMatchResult::Mismatch))
     return failure();
   if (llvm::is_contained({aInner, bInner, cInner}, IndexMatchResult::Mismatch))
     return failure();
 
-  SmallVector<AffineMap> namedOpMaps =
-      {indexingMaps[0], indexingMaps[1], indexingMaps[2]};
+  SmallVector<AffineMap> namedOpMaps = {indexingMaps[0], indexingMaps[1],
+                                        indexingMaps[2]};
 
   return replaceWithMatmulVariant<Mmt4DOp>(rewriter, genericOp, castTy,
                                            namedOpMaps);
