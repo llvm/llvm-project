@@ -403,6 +403,10 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     return nullptr;
   }
 
+  if (symtab.ctx.config.stripEmbeddedBitcode &&
+      (name == ".llvmbc" || name == ".llvmcmd"))
+    return nullptr;
+
   // Object files may have DWARF debug info or MS CodeView debug info
   // (or both).
   //

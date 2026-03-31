@@ -110,6 +110,8 @@ def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,
 def section : P<"section", "Specify section attributes">;
 def sectionlayout : P<"sectionlayout", "Specifies the layout strategy for output sections">;
 def stack   : P<"stack", "Size of the stack">;
+def strip_embedded_bitcode : F<"strip-embedded-bitcode">,
+    HelpText<"Strip .llvmbc and .llvmcmd sections from the output">;
 def stub    : P<"stub", "Specify DOS stub file">;
 def subsystem : P<"subsystem", "Specify subsystem">;
 def timestamp : P<"timestamp", "Specify the PE header timestamp">;

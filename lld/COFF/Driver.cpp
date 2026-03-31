@@ -2129,6 +2129,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_sectionlayout))
     parseSectionLayout(arg->getValue());
 
+  // Handle /strip-embedded-bitcode
+  config->stripEmbeddedBitcode = args.hasArg(OPT_strip_embedded_bitcode);
+
   // Handle /align
   if (auto *arg = args.getLastArg(OPT_align)) {
     parseNumbers(arg->getValue(), &config->align);

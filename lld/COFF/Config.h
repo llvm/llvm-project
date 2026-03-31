@@ -134,6 +134,7 @@ struct Configuration {
   bool forceUnresolved = false;
   bool debug = false;
   bool includeDwarfChunks = false;
+  bool stripEmbeddedBitcode = false;
   bool debugGHashes = false;
   bool writeSymtab = false;
   bool driver = false;
