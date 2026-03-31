@@ -17,7 +17,7 @@ class TestSwiftLazyFramework(lldbtest.TestBase):
     # This causes DoLoadImage() to allocate memory while the process is still
     # running, which fails and leaves the process in a bad state, ultimately
     # timing out with "didn't get any event after resume".
-    @expectedFailureAll(setting=("symbols.use-swift-clangimporter", "false"))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     def test(self):
         """Test that a framework that is registered as autolinked in a Swift
            module used in the target, but not linked against the target is
