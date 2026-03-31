@@ -16,13 +16,13 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-NOMAX: LV: Selecting VF: vscale x 4.
 ;
 ; CHECK-REGS-VP: Cost for VF vscale x 4: 6 (Estimated cost per lane: 1.
-; CHECK-REGS-VP: Cost for VF vscale x 8: 6 (Estimated cost per lane: 0.
+; CHECK-REGS-VP: Cost for VF vscale x 8: 5 (Estimated cost per lane: 0.
 ; CHECK-REGS-VP: Cost for VF vscale x 16: 5 (Estimated cost per lane: 0.
 ; CHECK-REGS-VP: LV: Selecting VF: vscale x 16.
 ;
 ; CHECK-NOREGS-VP: Cost for VF vscale x 4: 6 (Estimated cost per lane: 1.
 ; CHECK-NOREGS-VP: LV(REG): Cost of 4 from 2 spills of Generic::VectorRC
-; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 8: 14 (Estimated cost per lane: 1.
+; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 8: 13 (Estimated cost per lane: 1.
 ; CHECK-NOREGS-VP: LV(REG): Cost of 4 from 2 spills of Generic::VectorRC
 ; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 16: 13 (Estimated cost per lane: 0.
 ; CHECK-NOREGS-VP: LV: Selecting VF: vscale x 16.

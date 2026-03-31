@@ -1,4 +1,4 @@
-//===-- endian.h - make double-prec software FP work in both endiannesses -===//
+//===-- crt_endian.h - make double-prec software FP work both BE and LE ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
