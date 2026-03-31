@@ -43,6 +43,8 @@ llvm_add_library(MLIRTableGen STATIC
 )
 set_target_properties(MLIRTableGen PROPERTIES FOLDER "MLIR/Tablegenning")
 
+add_subdirectory(Generators)
+
 mlir_check_all_link_libraries(MLIRTableGen)
 
 add_mlir_library_install(MLIRTableGen)

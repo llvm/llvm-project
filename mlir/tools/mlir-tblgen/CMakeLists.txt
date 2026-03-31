@@ -8,37 +8,19 @@ set(LLVM_LINK_COMPONENTS
 add_tablegen(mlir-tblgen MLIR
   DESTINATION "${MLIR_TOOLS_INSTALL_DIR}"
   EXPORT MLIR
-  AttrOrTypeDefGen.cpp
-  AttrOrTypeFormatGen.cpp
-  BytecodeDialectGen.cpp
-  DialectGen.cpp
-  DialectInterfacesGen.cpp
   DirectiveCommonGen.cpp
-  EnumsGen.cpp
-  EnumPythonBindingGen.cpp
-  FormatGen.cpp
+  Generators.cpp
   LLVMIRConversionGen.cpp
   LLVMIRIntrinsicGen.cpp
   mlir-tblgen.cpp
   OmpOpGen.cpp
-  OpClass.cpp
-  OpDefinitionsGen.cpp
-  OpDocGen.cpp
-  OpFormatGen.cpp
-  OpGenHelpers.cpp
-  OpInterfacesGen.cpp
-  OpPythonBindingGen.cpp
-  PassCAPIGen.cpp
-  PassDocGen.cpp
-  PassGen.cpp
-  RewriterGen.cpp
   SPIRVUtilsGen.cpp
   TosaUtilsGen.cpp
-  CppGenUtilities.cpp
   )
 
 target_link_libraries(mlir-tblgen
   PRIVATE
+  MLIRTableGenGenerators
   MLIRTblgenLib)
 
 mlir_check_all_link_libraries(mlir-tblgen)
