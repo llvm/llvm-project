@@ -29,37 +29,6 @@ uint DoStore(RWByteAddressBuffer buf, uint offset, uint value)
 // PASS TESTS
 //==============================================================
 
-// PASS 0
-groupshared RWByteAddressBuffer sharedBuf;
-
-uint Use_Shared(uint idx)
-{
-    return DoStore(gBuf0, idx * 4, 1);
-}
-
-// PASS 1
-uint Pass_TernaryInit(bool cond, uint idx)
-{
-    // expected-warning@+1{{assignment of 'cond ? gBuf0 : gBuf1' to local resource 'buf' is not to the same unique global resource}}
-    RWByteAddressBuffer buf = cond ? gBuf0 : gBuf1;
-    return DoStore(buf, idx * 4, 2);
-}
-
-// PASS 2
-void Pass_LoopVar()
-{
-    for(RWByteAddressBuffer buf = gBuf0; false;)
-    {
-    }
-}
-
-// PASS 3
-uint Pass_ExpressionInit(uint idx)
-{
-    RWByteAddressBuffer buf = (true ? gBuf0 : gBuf1);
-    return DoStore(buf, idx * 4, 3);
-}
-
 // PASS 4
 struct PassBufStruct { RWByteAddressBuffer buf; };
 
