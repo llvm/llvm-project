@@ -155,26 +155,22 @@ and the related `CMakeLists.txt` under `mlir/include/mlir/Transforms`.
 
 There are three types of methods that can be used with a dialect interface,
 `InterfaceMethod`, `InterfaceMethodDeclaration` and `PureVirtualInterfaceMethod`.
-They are all comprised of the same core components, with the distinction that 
+They are all comprised of the same core components, with the distinction that
 `InterfaceMethod` also supports a default method body.
 
 Interface methods are comprised of the following components:
 
-*   Description
-    -   A string description of this method, its invariants, example usages,
-        etc.
-*   ReturnType
-    -   A string corresponding to the C++ return type of the method.
-*   MethodName
-    -   A string corresponding to the C++ name of the method.
-*   Arguments (Optional)
-    -   A dag of strings that correspond to a C++ type and variable name
-        respectively.
-*   MethodBody (Optional, only in `InterfaceMethod`)
-    -   An optional explicit implementation of the interface method.
+*   Description: a string description of this method, its invariants, example usages,
+etc.
+*   ReturnType: a string corresponding to the C++ return type of the method.
+*   MethodName: a string corresponding to the C++ name of the method.
+*   Arguments (Optional): a dag of strings that correspond to a C++ type and variable name
+respectively.
+*   MethodBody (Optional, only in `InterfaceMethod`): an optional explicit implementation
+of the interface method.
 
 `InterfaceMethodDeclaration` will only declare the class method. On the other hand,
-`PureVirtualInterfaceMethod` marks the method as pure virtual, but also makes the 
+`PureVirtualInterfaceMethod` marks the method as pure virtual, but also makes the
 constructor of the dialect calss protected.
 
 #### DialectInterfaceCollection
