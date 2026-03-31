@@ -34,6 +34,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -388,9 +389,12 @@ private:
                                           MachineInstr &I) const;
   bool selectGetDimensionsMSIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                       MachineInstr &I) const;
-  bool selectImageQuerySize(Register &ResVReg, SPIRVTypeInst ResType,
-                            MachineInstr &I, Register ImageReg, unsigned Opcode,
-                            std::optional<Register> LodReg) const;
+  bool
+  selectImageQuerySize(unsigned Opcode, Register ImageReg, Register &ResVReg,
+                       SPIRVTypeInst ResType, MachineInstr &I,
+                       std::optional<Register> LodReg = std::nullopt) const;
+  SPIRVTypeInst removeElementFromVectorType(SPIRVTypeInst ResType,
+                                            MachineInstr &I) const;
   bool selectSampleBasicIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                   MachineInstr &I) const;
   bool selectCalculateLodIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
@@ -4975,11 +4979,10 @@ bool SPIRVInstructionSelector::generateSampleImage(
   return true;
 }
 
-// TODO: The operands should be in the order they appear in the instructions.
-// Opcode, ImageReg, LodReg.
 bool SPIRVInstructionSelector::selectImageQuerySize(
-    Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
-    Register ImageReg, unsigned Opcode, std::optional<Register> LodReg) const {
+    unsigned Opcode, Register ImageReg, Register &ResVReg,
+    SPIRVTypeInst ResType, MachineInstr &I,
+    std::optional<Register> LodReg) const {
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
                  .addUse(GR.getSPIRVTypeID(ResType))
@@ -4988,6 +4991,17 @@ bool SPIRVInstructionSelector::selectImageQuerySize(
     MIB.addUse(*LodReg);
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
+}
+
+SPIRVTypeInst
+SPIRVInstructionSelector::removeElementFromVectorType(SPIRVTypeInst ResType,
+                                                      MachineInstr &I) const {
+  unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
+  assert(NumResComponents >= 2);
+  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  return NumResComponents == 2 ? I32Ty
+                               : GR.getOrCreateSPIRVVectorType(
+                                     I32Ty, NumResComponents - 1, I, TII);
 }
 
 bool SPIRVInstructionSelector::selectGetDimensionsIntrinsic(
@@ -4999,9 +5013,8 @@ bool SPIRVInstructionSelector::selectGetDimensionsIntrinsic(
                                 *ImageDef, I)) {
     return false;
   }
-
-  return selectImageQuerySize(ResVReg, ResType, I, NewImageReg,
-                              SPIRV::OpImageQuerySize, std::nullopt);
+  return selectImageQuerySize(SPIRV::OpImageQuerySize, NewImageReg, ResVReg,
+                              ResType, I);
 }
 
 bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
@@ -5014,21 +5027,15 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
     return false;
   }
 
-  // TODO: This is repeat code. Move to a new function.
-  unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
-  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  SPIRVTypeInst SizeResTy =
-      NumResComponents == 2
-          ? I32Ty
-          : GR.getOrCreateSPIRVVectorType(I32Ty, NumResComponents - 1, I, TII);
+  SPIRVTypeInst SizeResTy = removeElementFromVectorType(ResType, I);
   Register SizeReg = createVirtualRegister(SizeResTy, &GR, MRI, *I.getMF());
-
   Register LodReg = I.getOperand(3).getReg();
-  if (!selectImageQuerySize(SizeReg, SizeResTy, I, NewImageReg,
-                            SPIRV::OpImageQuerySizeLod, LodReg)) {
+  if (!selectImageQuerySize(SPIRV::OpImageQuerySizeLod, NewImageReg, SizeReg,
+                            SizeResTy, I, LodReg)) {
     return false;
   }
 
+  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   Register LevelsReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(SPIRV::OpImageQueryLevels))
@@ -5057,22 +5064,14 @@ bool SPIRVInstructionSelector::selectGetDimensionsMSIntrinsic(
     return false;
   }
 
-  // TODO: This is repeat code. Move to a new function, and call from both
-  // places.
-  unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
-  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  SPIRVTypeInst SizeResTy =
-      NumResComponents == 2
-          ? I32Ty
-          : GR.getOrCreateSPIRVVectorType(I32Ty, NumResComponents - 1, I, TII);
-
+  SPIRVTypeInst SizeResTy = removeElementFromVectorType(ResType, I);
   Register SizeReg = createVirtualRegister(SizeResTy, &GR, MRI, *I.getMF());
-
-  if (!selectImageQuerySize(SizeReg, SizeResTy, I, NewImageReg,
-                            SPIRV::OpImageQuerySize, std::nullopt)) {
+  if (!selectImageQuerySize(SPIRV::OpImageQuerySize, NewImageReg, SizeReg,
+                            SizeResTy, I, std::nullopt)) {
     return false;
   }
 
+  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   Register SamplesReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
 
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
