@@ -90,10 +90,10 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
   unsigned getFlags() const { return getInt(); }
 
   bool operator==(const SCEVUse &RHS) const {
-    return getCanonical() == RHS.getCanonical();
+    return getRawPointer() == RHS.getRawPointer();
   }
 
-  inline bool operator==(const SCEV *RHS) const;
+  bool operator==(const SCEV *RHS) const { return getRawPointer() == RHS; }
 
   /// Print out the internal representation of this scalar to the specified
   /// stream.  This should really only be used for debugging purposes.
@@ -129,17 +129,11 @@ template <> struct DenseMapInfo<SCEVUse> {
   }
 
   static unsigned getHashValue(SCEVUse U) {
-    return hash_value(U.getCanonical());
+    return hash_value(U.getRawPointer());
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
-    void *L = LHS.getRawPointer();
-    void *R = RHS.getRawPointer();
-    void *Empty = getEmptyKey().getRawPointer();
-    void *Tombstone = getTombstoneKey().getRawPointer();
-    if (L == Empty || L == Tombstone || R == Empty || R == Tombstone)
-      return L == R;
-    return LHS.getCanonical() == RHS.getCanonical();
+    return LHS.getRawPointer() == RHS.getRawPointer();
   }
 };
 
@@ -2667,10 +2661,6 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
 
 inline const SCEV *SCEVUse::getCanonical() const {
   return getPointer()->getCanonical();
-}
-
-inline bool SCEVUse::operator==(const SCEV *RHS) const {
-  return getCanonical() == RHS->getCanonical();
 }
 
 } // end namespace llvm
