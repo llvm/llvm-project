@@ -809,7 +809,7 @@ private:
 public:
   LLVM_ABI AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID,
+                         SyncScope::ID SSID, bool Elementwise = false,
                          InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
@@ -867,6 +867,12 @@ public:
   ///
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
 
+  /// Return true if this RMW has elementwise vector semantics.
+  bool isElementwise() const { return Elementwise; }
+
+  /// Specify whether this RMW has elementwise vector semantics.
+  void setElementwise(bool V) { Elementwise = V; }
+
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
@@ -920,7 +926,7 @@ public:
 
 private:
   void Init(BinOp Operation, Value *Ptr, Value *Val, Align Align,
-            AtomicOrdering Ordering, SyncScope::ID SSID);
+            AtomicOrdering Ordering, SyncScope::ID SSID, bool Elementwise);
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
@@ -933,6 +939,9 @@ private:
   /// room in SubClassData for everything, so synchronization scope ID gets its
   /// own field.
   SyncScope::ID SSID;
+
+  /// Whether this instruction uses per-lane vector atomic semantics.
+  bool Elementwise = false;
 };
 
 template <>

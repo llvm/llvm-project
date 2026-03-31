@@ -1093,6 +1093,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP}, MVT::i128,
                      Custom);
 
+  if (STI.hasVectorAtom()) {
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, {MVT::v2f32, MVT::v4f32}, Custom);
+    for (MVT VT : {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v2bf16, MVT::v4bf16,
+                   MVT::v8bf16})
+      setOperationAction(
+          {ISD::ATOMIC_LOAD_FADD, ISD::ATOMIC_LOAD_FMIN, ISD::ATOMIC_LOAD_FMAX},
+          VT, Custom);
+  }
+
   // Now deduce the information based on the above mentioned
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
@@ -3408,6 +3417,76 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   return NewSt;
 }
 
+enum AtomVecOp : unsigned {
+  ATOM_VEC_FADD = 0,
+  ATOM_VEC_FMIN = 1,
+  ATOM_VEC_FMAX = 2,
+};
+
+// Replace a vector ATOMIC_LOAD_F{ADD,MIN,MAX} with an NVPTXISD::ATOM_VEC_V{N}
+// node that scalarizes the vector argument and result. We do this because
+// vector types are illegal in NVPTX.
+static void replaceVectorAtomicRMW(SDNode *N, SelectionDAG &DAG,
+                                   SmallVectorImpl<SDValue> &Results) {
+  auto *AN = cast<AtomicSDNode>(N);
+  EVT VecVT = AN->getValueType(0);
+  EVT EltVT = VecVT.getVectorElementType();
+  unsigned NumElts = VecVT.getVectorNumElements();
+  SDLoc DL(N);
+
+  unsigned NVPTXOpc;
+  switch (NumElts) {
+  case 2:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V2;
+    break;
+  case 4:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V4;
+    break;
+  case 8:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V8;
+    break;
+  default:
+    llvm_unreachable("Unsupported vector width for atom");
+  }
+
+  unsigned OpCode;
+  switch (N->getOpcode()) {
+  case ISD::ATOMIC_LOAD_FADD:
+    OpCode = ATOM_VEC_FADD;
+    break;
+  case ISD::ATOMIC_LOAD_FMIN:
+    OpCode = ATOM_VEC_FMIN;
+    break;
+  case ISD::ATOMIC_LOAD_FMAX:
+    OpCode = ATOM_VEC_FMAX;
+    break;
+  default:
+    llvm_unreachable("Unsupported atomic op for vector atom");
+  }
+
+  SmallVector<SDValue, 10> Ops;
+  Ops.push_back(AN->getChain());
+  Ops.push_back(AN->getBasePtr());
+  SDValue Val = AN->getVal();
+  for (unsigned I = 0; I < NumElts; ++I)
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
+                              DAG.getIntPtrConstant(I, DL)));
+  Ops.push_back(DAG.getTargetConstant(OpCode, DL, MVT::i32));
+
+  SmallVector<EVT, 9> ResVTs(NumElts, EltVT);
+  ResVTs.push_back(MVT::Other);
+
+  SDValue Result = DAG.getMemIntrinsicNode(NVPTXOpc, DL, DAG.getVTList(ResVTs),
+                                           Ops, VecVT, AN->getMemOperand());
+
+  SmallVector<SDValue, 8> Elts;
+  for (unsigned I = 0; I < NumElts; ++I)
+    Elts.push_back(Result.getValue(I));
+
+  Results.push_back(DAG.getBuildVector(VecVT, DL, Elts));
+  Results.push_back(Result.getValue(NumElts));
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -3452,6 +3531,14 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
   case ISD::LOAD:
     return LowerLOAD(Op, DAG);
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMAX: {
+    SmallVector<SDValue, 2> Results;
+    replaceVectorAtomicRMW(Op.getNode(), DAG, Results);
+    assert(Results.size() == 2);
+    return DAG.getMergeValues(Results, SDLoc(Op));
+  }
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::SHL_PARTS:
@@ -7412,6 +7499,11 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   case ISD::ATOMIC_SWAP:
     replaceAtomicSwap128(N, DAG, STI, Results);
     return;
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMAX:
+    replaceVectorAtomicRMW(N, DAG, Results);
+    return;
   }
 }
 
@@ -7502,6 +7594,46 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 
+bool NVPTXTargetLowering::shouldExpandAtomicRMWElementwiseInIR(
+    const AtomicRMWInst *AI) const {
+  if (!STI.hasVectorAtom())
+    return true;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(AI->getValOperand()->getType());
+  if (!VecTy)
+    return true;
+  auto *EltTy = VecTy->getElementType();
+  auto NumElts = VecTy->getNumElements();
+
+  // Vector atomics are only supported on fadd/fmin/fmax.
+  // fadd float supports v2/v4. fadd/fmin/fmax on half/bfloat supports
+  // v2/v4/v8.
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::BinOp::FAdd:
+    if (EltTy->isFloatTy()) {
+      if (NumElts != 2 && NumElts != 4)
+        return true;
+      break;
+    }
+    [[fallthrough]];
+  case AtomicRMWInst::BinOp::FMin:
+  case AtomicRMWInst::BinOp::FMax:
+    if (!(EltTy->isHalfTy() || EltTy->isBFloatTy()) ||
+        (NumElts != 2 && NumElts != 4 && NumElts != 8))
+      return true;
+    break;
+  default:
+    return true;
+  }
+
+  // Vector atomics only support generic and global address spaces.
+  unsigned AS = AI->getPointerAddressSpace();
+  if (AS != ADDRESS_SPACE_GENERIC && AS != ADDRESS_SPACE_GLOBAL)
+    return true;
+
+  return false;
+}
+
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   // This function returns true iff the operation is emulated using a CAS-loop,
@@ -7524,7 +7656,8 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
   if (auto *RI = dyn_cast<AtomicRMWInst>(I))
-    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+    return (!RI->isElementwise() &&
+            shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg) ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
   return false;
 }
@@ -7556,7 +7689,8 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     return AtomicOrdering::Acquire;
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
            RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
-           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
+           (RI->isElementwise() ||
+            shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None))
     return AtomicOrdering::Acquire;
 
   return AtomicOrdering::Monotonic;
@@ -7604,7 +7738,8 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   bool IsEmulated =
       CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
                    ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+         : !RI->isElementwise() &&
+               shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
 
   if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());

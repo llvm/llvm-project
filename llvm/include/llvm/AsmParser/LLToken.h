@@ -91,6 +91,7 @@ enum Kind {
   kw_unwind,
   kw_datalayout,
   kw_volatile,
+  kw_elementwise,
   kw_atomic,
   kw_unordered,
   kw_monotonic,

@@ -1454,14 +1454,16 @@ public:
   /// and chain and takes 2 operands.
   LLVM_ABI SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                              SDValue Chain, SDValue Ptr, SDValue Val,
-                             MachineMemOperand *MMO);
+                             MachineMemOperand *MMO,
+                             bool IsElementwise = false);
 
   /// Gets a node for an atomic op, produces result and chain and takes N
   /// operands.
   LLVM_ABI SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                              SDVTList VTList, ArrayRef<SDValue> Ops,
                              MachineMemOperand *MMO,
-                             ISD::LoadExtType ExtType = ISD::NON_EXTLOAD);
+                             ISD::LoadExtType ExtType = ISD::NON_EXTLOAD,
+                             bool IsElementwise = false);
 
   LLVM_ABI SDValue getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl,
                                  EVT MemVT, EVT VT, SDValue Chain, SDValue Ptr,

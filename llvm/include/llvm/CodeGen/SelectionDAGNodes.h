@@ -1648,10 +1648,14 @@ public:
 
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
+  bool IsElementwise;
+
 public:
   AtomicSDNode(unsigned Order, const DebugLoc &dl, unsigned Opc, SDVTList VTL,
-               EVT MemVT, MachineMemOperand *MMO, ISD::LoadExtType ETy)
-      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
+               EVT MemVT, MachineMemOperand *MMO, ISD::LoadExtType ETy,
+               bool IsElementwise = false)
+      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO),
+        IsElementwise(IsElementwise) {
     assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
     assert((Opc == ISD::ATOMIC_LOAD || ETy == ISD::NON_EXTLOAD) &&
@@ -1663,6 +1667,8 @@ public:
     assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
     return static_cast<ISD::LoadExtType>(LoadSDNodeBits.ExtTy);
   }
+
+  bool isElementwiseAtomic() const { return IsElementwise; }
 
   const SDValue &getBasePtr() const {
     return getOpcode() == ISD::ATOMIC_STORE ? getOperand(2) : getOperand(1);
