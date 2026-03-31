@@ -732,6 +732,9 @@ public:
     /// Fall back to the generic logic to determine whether multi-exit unrolling
     /// is profitable if set to false.
     bool RuntimeUnrollMultiExit;
+    /// Optional reason why unrolling was not enabled by the target.
+    /// Used to provide detailed diagnostics in optimization remarks.
+    std::string UnrollSkipReason;
     /// Allow unrolling to add parallel reduction phis.
     bool AddAdditionalAccumulators;
   };
