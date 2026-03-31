@@ -255,3 +255,17 @@ subroutine test_array_section(flag)
   ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
   ! CHECK: }
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_noncontiguous_section(
+subroutine test_noncontiguous_section(flag)
+  logical :: flag
+  integer :: arr1(20), arr2(20), result(5)
+  ! Non-contiguous stride-2 sections: result must be contiguous.
+  result = (flag ? arr1(1:10:2) : arr2(2:10:2))
+  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<{{.*}}xi32>>> {bindc_name = ".cond.array"
+  ! CHECK: fir.if
+  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK: } else {
+  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK: }
+end subroutine
