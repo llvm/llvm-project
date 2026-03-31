@@ -59,35 +59,25 @@ entry:
 ; CHECK: %[[img2dlod_val:[0-9]+]] = OpLoad %[[image2d_s1]]
 ; CHECK: %[[size4:[0-9]+]] = OpImageQuerySizeLod %[[v2int]] %[[img2dlod_val]] %[[int_0]]
 ; CHECK: %[[levels4:[0-9]+]] = OpImageQueryLevels %[[int]] %[[img2dlod_val]]
-; CHECK-DAG: %[[e4_0:[0-9]+]] = OpCompositeExtract %[[int]] %[[size4]] 0
-; CHECK-DAG: %[[e4_1:[0-9]+]] = OpCompositeExtract %[[int]] %[[size4]] 1
-; CHECK: OpCompositeConstruct %[[v3int]] %[[e4_0]] %[[e4_1]] %[[levels4]]
+; CHECK: OpCompositeConstruct %[[v3int]] %[[size4]] %[[levels4]]
   %res4 = call <3 x i32> @llvm.spv.resource.getdimensions.levels.xy.v3i32.tspirv.Image_f32_1_2_0_0_1_0t(target("spirv.Image", float, 1, 2, 0, 0, 1, 0) %img2dlod, i32 0)
 
 ; CHECK: %[[img3dlod_val:[0-9]+]] = OpLoad %[[image3d_s1]]
 ; CHECK: %[[size5:[0-9]+]] = OpImageQuerySizeLod %[[v3int]] %[[img3dlod_val]] %[[int_0]]
 ; CHECK: %[[levels5:[0-9]+]] = OpImageQueryLevels %[[int]] %[[img3dlod_val]]
-; CHECK-DAG: %[[e5_0:[0-9]+]] = OpCompositeExtract %[[int]] %[[size5]] 0
-; CHECK-DAG: %[[e5_1:[0-9]+]] = OpCompositeExtract %[[int]] %[[size5]] 1
-; CHECK-DAG: %[[e5_2:[0-9]+]] = OpCompositeExtract %[[int]] %[[size5]] 2
-; CHECK: OpCompositeConstruct %[[v4int]] %[[e5_0]] %[[e5_1]] %[[e5_2]] %[[levels5]]
+; CHECK: OpCompositeConstruct %[[v4int]] %[[size5]] %[[levels5]]
   %res5 = call <4 x i32> @llvm.spv.resource.getdimensions.levels.xyz.v4i32.tspirv.Image_f32_2_2_0_0_1_0t(target("spirv.Image", float, 2, 2, 0, 0, 1, 0) %img3dlod, i32 0)
 
 ; CHECK: %[[imgms_val:[0-9]+]] = OpLoad %[[imagems]]
 ; CHECK: %[[size6:[0-9]+]] = OpImageQuerySize %[[v2int]] %[[imgms_val]]
 ; CHECK: %[[samp6:[0-9]+]] = OpImageQuerySamples %[[int]] %[[imgms_val]]
-; CHECK-DAG: %[[e6_0:[0-9]+]] = OpCompositeExtract %[[int]] %[[size6]] 0
-; CHECK-DAG: %[[e6_1:[0-9]+]] = OpCompositeExtract %[[int]] %[[size6]] 1
-; CHECK: OpCompositeConstruct %[[v3int]] %[[e6_0]] %[[e6_1]] %[[samp6]]
+; CHECK: OpCompositeConstruct %[[v3int]] %[[size6]] %[[samp6]]
   %res6 = call <3 x i32> @llvm.spv.resource.getdimensions.ms.xy.v3i32.tspirv.Image_f32_1_2_0_1_1_0t(target("spirv.Image", float, 1, 2, 0, 1, 1, 0) %imgms)
 
 ; CHECK: %[[imgmsarray_val:[0-9]+]] = OpLoad %[[imagemsarray]]
 ; CHECK: %[[size7:[0-9]+]] = OpImageQuerySize %[[v3int]] %[[imgmsarray_val]]
 ; CHECK: %[[samp7:[0-9]+]] = OpImageQuerySamples %[[int]] %[[imgmsarray_val]]
-; CHECK-DAG: %[[e7_0:[0-9]+]] = OpCompositeExtract %[[int]] %[[size7]] 0
-; CHECK-DAG: %[[e7_1:[0-9]+]] = OpCompositeExtract %[[int]] %[[size7]] 1
-; CHECK-DAG: %[[e7_2:[0-9]+]] = OpCompositeExtract %[[int]] %[[size7]] 2
-; CHECK: OpCompositeConstruct %[[v4int]] %[[e7_0]] %[[e7_1]] %[[e7_2]] %[[samp7]]
+; CHECK: OpCompositeConstruct %[[v4int]] %[[size7]] %[[samp7]]
   %res7 = call <4 x i32> @llvm.spv.resource.getdimensions.ms.xyz.v4i32.tspirv.Image_f32_1_2_1_1_1_0t(target("spirv.Image", float, 1, 2, 1, 1, 1, 0) %imgmsarray)
 
   ret void
