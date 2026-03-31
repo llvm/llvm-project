@@ -418,6 +418,7 @@ struct __local_execution_state {
     return __current_pos;
   }
 
+  [[clang::preserve_none]]
   pair<bool, size_t> __execute(const _CharT* __first, const _CharT* __last, __global_state& __gstate) {
     const __interpreter_info<_CharT>* const __code = __gstate.__machine().data();
     auto __current_pos                             = __current_pos_;
@@ -805,6 +806,7 @@ public:
 
   size_t size() const { return __machine_.size(); }
 
+  [[clang::preserve_none]]
   pair<bool, const _CharT*>
   __execute(__global_execution_state<_CharT, _Traits>& __gexec_state,
             const _CharT* __first,
