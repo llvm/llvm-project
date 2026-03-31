@@ -20689,21 +20689,25 @@ SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
   SDValue Op0 = N->getOperand(0);
   if (Op0.getOpcode() != ISD::TRUNCATE)
     return SDValue();
-
   SDValue Src = Op0.getOperand(0);
   EVT ResVT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
+  SDLoc dl(N);
+  return GenerateVBPERM(DCI.DAG, dl, Src, SrcVT, ResVT,
+                        Subtarget.isLittleEndian());
+}
+
+SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
+                                          SDValue Src, EVT SrcVT, EVT ResVT,
+                                          bool IsLE) const {
   bool IsV16i8 = (ResVT == MVT::i16 && SrcVT == MVT::v16i8);
   bool IsV8i16 = (ResVT == MVT::i8 && SrcVT == MVT::v8i16);
   bool IsV8i8 = (ResVT == MVT::i8 && SrcVT == MVT::v8i8);
-  unsigned EltIdx = 2;
-  bool IsLE = Subtarget.isLittleEndian();
 
   if (!IsV16i8 && !IsV8i16 && !IsV8i8)
     return SDValue();
 
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc dl(N);
+  unsigned EltIdx = 2;
   if (IsV8i8) {
     Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i8,
                       DAG.getUNDEF(MVT::v16i8), Src,
@@ -20721,7 +20725,6 @@ SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
     std::reverse(BitIndices.begin(), BitIndices.end());
     EltIdx = 1;
   }
-
   SmallVector<SDValue, 16> BVOps;
   for (auto Idx : BitIndices)
     BVOps.push_back(DAG.getConstant(Idx, dl, MVT::i8));
