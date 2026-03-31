@@ -931,13 +931,11 @@ struct [[gsl::Pointer]] Pointer {
   Pointer(const Bar & bar [[clang::lifetimebound]]);
 };
 Pointer test3(Bar bar) {
-  // FIXME: Detect this using the CFG-based lifetime analysis (constructor of a pointer).
-  //        https://github.com/llvm/llvm-project/issues/175898
-  Pointer p = Pointer(Bar()); // expected-warning {{temporary}}
-  use(p);
-  p = Pointer(Bar()); // expected-warning {{object backing}}
-  use(p);
-  return bar; // expected-warning {{address of stack}}
+  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(p);                     // cfg-note {{later used here}}
+  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(p);                     // cfg-note {{later used here}}
+  return bar;                 // expected-warning {{address of stack}} cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
 }
 
 template<typename T>

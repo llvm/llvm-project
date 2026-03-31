@@ -712,6 +712,11 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));
         KillSrc = false;
+      } else if (IsArgLifetimeBound(I)) {
+        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
+            KillSrc));
+        KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {
       assert(ArgList->getLength() >= 2 &&
