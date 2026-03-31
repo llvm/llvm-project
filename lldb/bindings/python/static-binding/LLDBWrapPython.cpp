@@ -107187,6 +107187,7 @@ SWIGINTERN int SWIG_mod_exec(PyObject *m) {
   SWIG_Python_SetConstant(d, "eTypeOptionNonCacheable",SWIG_From_int(static_cast< int >(lldb::eTypeOptionNonCacheable)));
   SWIG_Python_SetConstant(d, "eTypeOptionHideEmptyAggregates",SWIG_From_int(static_cast< int >(lldb::eTypeOptionHideEmptyAggregates)));
   SWIG_Python_SetConstant(d, "eTypeOptionFrontEndWantsDereference",SWIG_From_int(static_cast< int >(lldb::eTypeOptionFrontEndWantsDereference)));
+  SWIG_Python_SetConstant(d, "eTypeOptionCustomSubscripting",SWIG_From_int(static_cast< int >(lldb::eTypeOptionCustomSubscripting)));
   SWIG_Python_SetConstant(d, "eFrameCompareInvalid",SWIG_From_int(static_cast< int >(lldb::eFrameCompareInvalid)));
   SWIG_Python_SetConstant(d, "eFrameCompareUnknown",SWIG_From_int(static_cast< int >(lldb::eFrameCompareUnknown)));
   SWIG_Python_SetConstant(d, "eFrameCompareEqual",SWIG_From_int(static_cast< int >(lldb::eFrameCompareEqual)));
