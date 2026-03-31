@@ -551,6 +551,9 @@ namespace cwg3088 { // cwg3088: partial
 #define likely()
 #define no_unique_address
 // FIXME-since-cxx20-error@-1 {{attribute is hidden by macro definition}}
+#undef no_unique_address
+#define no_unique_address()
+// FIXME-since-cxx20-error@-1 {{attribute is hidden by macro definition}}
 #define unlikely
 #undef unlikely
 // FIXME-since-cxx20-error@-1 {{attribute is hidden by macro definition}}
