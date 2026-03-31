@@ -1,0 +1,38 @@
++ set +x
+--- Diagnose tools in use
++ cmake --version
+cmake version 4.2.0
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
++ ninja --version
+1.12.1
++ /xl_le/compgpfs/builds/continuous/openxlC/aix/v1714p/latest/bin/ibm-clang --version
+IBM Open XL C/C++ for AIX 17.1.4 (5725-C72, 5765-J18), version 17.1.4.3, clang version 21.1.8 (build fab5847 fab584759d67508c07d1bf7523fded49ae9a4f0a) 
+Target: powerpc64-ibm-aix7.2.0.0
+Thread model: posix
+InstalledDir: /compgpfs/build/xlcit/continuous/openxlC/aix/v1714p/219/opt/IBM/openxlC/17.1.4/bin
+Build config: +assertions
++ /xl_le/compgpfs/builds/continuous/openxlC/aix/v1714p/latest/bin/ibm-clang++_r --version
+IBM Open XL C/C++ for AIX 17.1.4 (5725-C72, 5765-J18), version 17.1.4.3, clang version 21.1.8 (build fab5847 fab584759d67508c07d1bf7523fded49ae9a4f0a) 
+Target: powerpc64-ibm-aix7.2.0.0
+Thread model: posix
+InstalledDir: /compgpfs/build/xlcit/continuous/openxlC/aix/v1714p/219/opt/IBM/openxlC/17.1.4/bin
+Build config: +assertions
++ case "${BUILDER}" in
++ clean
++ rm -rf /home/himadhit/llvm/community/llvm-project/build/aix
++ generate-cmake -C /home/himadhit/llvm/community/llvm-project/libcxx/cmake/caches/AIX.cmake -DLIBCXX_TEST_CONFIG=ibm-libc++-shared.cfg.in -DLIBCXXABI_TEST_CONFIG=ibm-libc++abi-shared.cfg.in -DLIBUNWIND_TEST_CONFIG=ibm-libunwind-shared.cfg.in
++ generate-cmake-base '-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi;libunwind' -DLIBCXX_CXX_ABI=libcxxabi -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -C /home/himadhit/llvm/community/llvm-project/libcxx/cmake/caches/AIX.cmake -DLIBCXX_TEST_CONFIG=ibm-libc++-shared.cfg.in -DLIBCXXABI_TEST_CONFIG=ibm-libc++abi-shared.cfg.in -DLIBUNWIND_TEST_CONFIG=ibm-libunwind-shared.cfg.in
++ step 'Generating CMake'
++ endstep
++ set +x
++ set +x
+--- Generating CMake
++ cmake -S /home/himadhit/llvm/community/llvm-project/runtimes -B /home/himadhit/llvm/community/llvm-project/build/aix -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=/home/himadhit/llvm/community/llvm-project/build/aix/install -DLIBCXX_ENABLE_WERROR=YES -DLIBCXXABI_ENABLE_WERROR=YES -DLIBUNWIND_ENABLE_WERROR=YES -DCMAKE_INSTALL_MESSAGE=NEVER '-DLLVM_LIT_ARGS=-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests' '-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi;libunwind' -DLIBCXX_CXX_ABI=libcxxabi -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -C /home/himadhit/llvm/community/llvm-project/libcxx/cmake/caches/AIX.cmake -DLIBCXX_TEST_CONFIG=ibm-libc++-shared.cfg.in -DLIBCXXABI_TEST_CONFIG=ibm-libc++abi-shared.cfg.in -DLIBUNWIND_TEST_CONFIG=ibm-libunwind-shared.cfg.in
+loading initial cache file /home/himadhit/llvm/community/llvm-project/libcxx/cmake/caches/AIX.cmake
+-- Performing standalone runtimes build.
+-- The C compiler identification is IBMClang 17.1.4.3
+-- The CXX compiler identification is IBMClang 17.1.4.3
+-- The ASM compiler identification is Clang with GNU-like command-line
+-- Found assembler: /xl_le/compgpfs/builds/continuous/openxlC/aix/v1714p/latest/bin/ibm-clang
+-- Detecting C compiler ABI info
