@@ -603,6 +603,9 @@ class CIRGenItaniumRTTIBuilder {
 
   /// Build an abi::__pointer_to_member_type_info, used for pointer to member
   /// types, according to the Itanium C++ ABI, 2.9.4p9.
+
+  /// Build an abi::__pointer_to_member_type_info
+  /// struct, used for member pointer types.
   void buildPointerToMemberTypeInfo(mlir::Location loc,
                                     const MemberPointerType *ty);
 
