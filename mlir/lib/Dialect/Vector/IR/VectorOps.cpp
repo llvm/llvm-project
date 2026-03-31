@@ -3764,6 +3764,11 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
       !insertOp->hasOneUse())
     return {};
 
+  // Bail out on poison indices (kPoisonIndex = -1) to avoid computing an
+  // invalid (negative) linearized position which would cause UB below.
+  if (is_contained(insertOp.getStaticPosition(), InsertOp::kPoisonIndex))
+    return {};
+
   // Calculate the linearized position for inserting elements.
   int64_t insertBeginPosition =
       calculateInsertPosition(destTy, insertOp.getStaticPosition());
