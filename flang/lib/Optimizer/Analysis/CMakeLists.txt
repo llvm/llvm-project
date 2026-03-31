@@ -20,6 +20,7 @@ add_flang_library(FIRAnalysis
   MLIR_DEPS
   MLIRIR
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIROpenMPDialect
 
   MLIR_LIBS
@@ -27,5 +28,6 @@ add_flang_library(FIRAnalysis
   MLIRLLVMDialect
   MLIRMathTransforms
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIROpenMPDialect
 )

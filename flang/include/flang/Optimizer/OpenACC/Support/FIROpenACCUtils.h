@@ -18,7 +18,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include <string>
 
 namespace fir {

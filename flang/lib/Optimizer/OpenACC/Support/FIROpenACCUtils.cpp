@@ -30,7 +30,6 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
-#include <mlir/Support/LLVM.h>
 
 using namespace mlir;
 
