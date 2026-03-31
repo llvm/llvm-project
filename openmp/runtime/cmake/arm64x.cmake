@@ -75,7 +75,8 @@ function(handle_arm64ec_target target)
 endfunction()
 
 # Handle the targets we have requested arm64x builds for.
-function(handle_arm64x targets)
+function(handle_arm64x)
+  set(targets "${ARGV}")
   # During the arm64ec build, create rsp files that containes the absolute path to the inputs passed to the linker (objs, libs).
   if(LIBOMP_ARCH STREQUAL "arm64ec")
     file(MAKE_DIRECTORY ${arm64ReproDir})
