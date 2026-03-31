@@ -3343,6 +3343,127 @@ public:
   static bool classofKind(Kind K) { return K == TemplateParamObject; }
 };
 
+/// Represents a C++26 expansion statement declaration.
+///
+/// This is a bit of a hack, since expansion statements shouldn't really be
+/// 'declarations' per se (they don't declare anything). Nevertheless, we *do*
+/// need them to be declaration *contexts*, because the DeclContext is used to
+/// compute the 'template depth' of entities enclosed therein. In particular,
+/// the 'template depth' is used to find instantiations of parameter variables,
+/// and a lambda enclosed within an expansion statement cannot compute its
+/// template depth without a pointer to the enclosing expansion statement.
+///
+/// For the remainder of this comment, let 'expanding' an expansion statement
+/// refer to the process of performing template substitution on its body N
+/// times, where N is the expansion size (how this size is determined depends on
+/// the kind of expansion statement); by contrast we may sometimes 'instantiate'
+/// an expansion statement (because it happens to be in a template). This is
+/// just regular template instantiation.
+///
+/// Apart from a template parameter list that contains a template parameter used
+/// as the expansion index, this node contains a 'CXXExpansionStmtPattern' as
+/// well as a 'CXXExpansionStmtInstantiation'. These two members correspond to
+/// distinct representations of the expansion statement: the former is used
+/// prior to expansion and contains all the parts needed to perform expansion;
+/// the latter holds the expanded/desugared AST nodes that result from the
+/// expansion.
+///
+/// After expansion, the 'CXXExpansionStmtPattern' is no longer updated and left
+/// as-is; this also means that, if an already-expanded expansion statement is
+/// inside a template, and that template is then instantiated, the
+/// 'CXXExpansionStmtPattern' is *not* instantiated; only the
+/// 'CXXExpansionStmtInstantiation' is. The latter is also what's used for
+/// codegen and constant evaluation.
+///
+/// There are different kinds of expansion statements; see the comment on
+/// 'CXXExpansionStmtPattern' for more information.
+///
+/// As an example, if the user writes the following expansion statement:
+/// \verbatim
+///   std::tuple<int, int, int> a{1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// The 'CXXExpansionStmtPattern' of this particular 'CXXExpansionStmtDecl'
+/// stores, amongst other things, the declaration of the variable 'x' as well
+/// as the expansion-initializer 'a'.
+///
+/// After expansion, we end up with a 'CXXExpansionStmtInstantiation' that
+/// is *equivalent* to the AST shown below. Note that only the inner '{}' (i.e.
+/// those marked as 'Actual "CompoundStmt"' below) are actually present as
+/// 'CompoundStmt's in the AST; the outer braces that wrap everything do *not*
+/// correspond to an actual 'CompoundStmt' and are implicit in the sense that we
+/// simply push a scope when evaluating or emitting IR for a
+/// 'CXXExpansionStmtInstantiation'.
+///
+/// \verbatim
+/// { // Not actually present in the AST.
+///   auto [__u0, __u1, __u2] = a;
+///   { // Actual 'CompoundStmt'.
+///     auto x = __u0;
+///     // ...
+///   }
+///   { // Actual 'CompoundStmt'.
+///     auto x = __u1;
+///     // ...
+///   }
+///   { // Actual 'CompoundStmt'.
+///     auto x = __u2;
+///     // ...
+///   }
+/// }
+/// \endverbatim
+///
+/// See the documentation around 'CXXExpansionStmtInstantiation' for more notes
+/// as to why this node exist and how it is used.
+///
+/// \see CXXExpansionStmtPattern
+/// \see CXXExpansionStmtInstantiation
+class CXXExpansionStmtDecl : public Decl, public DeclContext {
+  CXXExpansionStmtPattern *Expansion = nullptr;
+  NonTypeTemplateParmDecl *IndexNTTP = nullptr;
+  CXXExpansionStmtInstantiation *Instantiations = nullptr;
+
+  CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+                       NonTypeTemplateParmDecl *NTTP);
+
+public:
+  friend class ASTDeclReader;
+
+  static CXXExpansionStmtDecl *Create(ASTContext &C, DeclContext *DC,
+                                      SourceLocation Loc,
+                                      NonTypeTemplateParmDecl *NTTP);
+  static CXXExpansionStmtDecl *CreateDeserialized(ASTContext &C,
+                                                  GlobalDeclID ID);
+
+  CXXExpansionStmtPattern *getExpansionPattern() { return Expansion; }
+  const CXXExpansionStmtPattern *getExpansionPattern() const {
+    return Expansion;
+  }
+  void setExpansionPattern(CXXExpansionStmtPattern *S) { Expansion = S; }
+
+  CXXExpansionStmtInstantiation *getInstantiations() { return Instantiations; }
+  const CXXExpansionStmtInstantiation *getInstantiations() const {
+    return Instantiations;
+  }
+
+  void setInstantiations(CXXExpansionStmtInstantiation *S) {
+    Instantiations = S;
+  }
+
+  NonTypeTemplateParmDecl *getIndexTemplateParm() { return IndexNTTP; }
+  const NonTypeTemplateParmDecl *getIndexTemplateParm() const {
+    return IndexNTTP;
+  }
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == CXXExpansionStmt; }
+};
+
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
   if (auto *PD = P.dyn_cast<TemplateTypeParmDecl *>())
     return PD;

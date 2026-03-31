@@ -114,6 +114,7 @@ namespace {
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
     void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
+    void VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *D);
 
     void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
     void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
@@ -1345,6 +1346,11 @@ void DeclPrinter::VisitClassTemplatePartialSpecializationDecl(
                                     ClassTemplatePartialSpecializationDecl *D) {
   printTemplateParameters(D->getTemplateParameters());
   VisitCXXRecordDecl(D);
+}
+
+void DeclPrinter::VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *D) {
+  D->getExpansionPattern()->printPretty(Out, nullptr, Policy, Indentation, "\n",
+                                        &Context);
 }
 
 //----------------------------------------------------------------------------
