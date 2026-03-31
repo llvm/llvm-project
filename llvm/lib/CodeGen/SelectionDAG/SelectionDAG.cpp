@@ -6113,8 +6113,19 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     break;
   }
   case ISD::BITCAST: {
-    // Try to infer NaN from known bits, but only for detecting signaling or
-    // nonsignaling NaNs
+    // FIXME: It should not be necessary to check for an elementwise bitcast.
+    // If a bitcast is not elementwise between vector / scalar types,
+    // computeKnownBits already splices the known bits of the source elements
+    // appropriately so as to line up with the bits of the result's demanded
+    // elements.
+    EVT SrcVT = Op.getOperand(0).getValueType();
+    if (VT.isScalableVector() || SrcVT.isScalableVector())
+      break;
+    unsigned VTNumElts = VT.isVector() ? VT.getVectorNumElements() : 1;
+    unsigned SrcVTNumElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
+    if (VTNumElts != SrcVTNumElts)
+      break;
+
     if (VT.isFloatingPoint()) {
       KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
       Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
