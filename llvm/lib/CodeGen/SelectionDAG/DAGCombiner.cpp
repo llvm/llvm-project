@@ -12682,6 +12682,10 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
     LHS = A;
   }
 
+  bool IsTypeLegalOrPromote =
+      TLI.isTypeLegal(VT) || TLI.getTypeAction(*DAG.getContext(), VT) ==
+                                 TargetLowering::TypePromoteInteger;
+
   switch (CC) {
   case ISD::SETGT:
   case ISD::SETGE:
@@ -12696,7 +12700,7 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
                                m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(m_Specific(LHS), m_Specific(RHS)),
                                 m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
-        hasOperation(ABDOpc, VT))
+        IsTypeLegalOrPromote)
       return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
   case ISD::SETLT:
@@ -12712,7 +12716,7 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
                                m_Add(m_Specific(LHS), m_SpecificNeg(RHS)))) &&
         sd_match(False, m_AnyOf(m_Sub(m_Specific(RHS), m_Specific(LHS)),
                                 m_Add(m_Specific(RHS), m_SpecificNeg(LHS)))) &&
-        hasOperation(ABDOpc, VT))
+        IsTypeLegalOrPromote)
       return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
     break;
   default:
