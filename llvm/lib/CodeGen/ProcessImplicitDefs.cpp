@@ -129,19 +129,21 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
         continue;
       // SearchMI uses or redefines Reg. Set <undef> flags on all uses.
       if (MO.isUse()) {
-        if (TRI->isSubRegisterEq(Reg, SearchReg))
+        if (TRI->isSubRegisterEq(Reg, SearchReg)) {
           MO.setIsUndef();
-        else
+        } else {
           // Use is larger than Reg.  It is not safe to add undef to this use.
           return;
+        }
       }
       if (MO.isDef()) {
-        if (TRI->isSubRegisterEq(SearchReg, Reg))
+        if (TRI->isSubRegisterEq(SearchReg, Reg)) {
           ImplicitDefIsDead = true;
-        else
+        } else {
           // Reg is larger than definition.  It is not safe to add undef to any
           // subsequent uses of Reg.
           return;
+        }
       }
     }
     if (ImplicitDefIsDead) {
