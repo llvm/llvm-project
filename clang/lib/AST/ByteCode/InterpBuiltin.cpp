@@ -283,6 +283,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
     return false;
   if (!A.isBlockPointer() || !B.isBlockPointer())
     return false;
+  if (!A.getFieldDesc()->isPrimitiveArray() ||
+      !B.getFieldDesc()->isPrimitiveArray())
+    return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
                 ID == Builtin::BI__builtin_wcscmp ||
