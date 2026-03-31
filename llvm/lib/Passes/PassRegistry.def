@@ -401,6 +401,7 @@ FUNCTION_ALIAS_ANALYSIS("tbaa", TypeBasedAA())
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 FUNCTION_PASS("debug-record-count-pass", DebugRecordCountPass())
+FUNCTION_PASS("delete-debug-record-pass", DeleteDebugRecordPass())
 FUNCTION_PASS("aa-eval", AAEvaluator())
 FUNCTION_PASS("adce", ADCEPass())
 FUNCTION_PASS("add-discriminators", AddDiscriminatorsPass())

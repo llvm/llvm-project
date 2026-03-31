@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/DebugRecordCountPass.h"
+#include "llvm/Transforms/Utils/DeleteDebugRecordPass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
