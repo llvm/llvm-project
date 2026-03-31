@@ -489,11 +489,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BSWAP, MVT::i64, Legal);
   } else {
     setOperationAction(ISD::BSWAP, MVT::i32, Expand);
-    setOperationAction(
-        ISD::BSWAP, MVT::i64,
-        ((Subtarget.hasP9Vector() || Subtarget.hasP8Vector()) && isPPC64)
-            ? Custom
-            : Expand);
+    setOperationAction(ISD::BSWAP, MVT::i64,
+                       ((Subtarget.hasP8Vector()) && isPPC64) ? Custom
+                                                              : Expand);
   }
 
   // CTPOP or CTTZ were introduced in P8/P9 respectively
@@ -11622,7 +11620,7 @@ SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
 
   // Apply the optimization to Power8 and 64-bits which allows parallelism for
   // rotate instructions which should make the bswap64 builtin faster.
-  if (Subtarget.hasP8Vector() && !Subtarget.hasP9Vector()) {
+  if (!Subtarget.hasP9Vector()) {
     SDValue Input = Op.getOperand(0);
 
     auto Swap32 = [&](SDValue Val32) -> SDValue {
