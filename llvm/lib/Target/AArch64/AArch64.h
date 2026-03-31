@@ -21,6 +21,8 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Target/TargetMachine.h"
+#include <map>
+#include <unordered_map>
 
 namespace llvm {
 
@@ -190,6 +192,9 @@ public:
 };
 
 class AArch64SIMDInstrOptPass : public PassInfoMixin<AArch64SIMDInstrOptPass> {
+  std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
+  std::unordered_map<std::string, bool> InterlEarlyExit;
+
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

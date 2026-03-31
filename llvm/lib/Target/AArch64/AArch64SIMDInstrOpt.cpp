@@ -72,6 +72,19 @@ public:
   MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
 
+  // The two maps below are used to cache decisions instead of recomputing:
+  //
+  // This is used to cache instruction replacement decisions within function
+  // units and across function units.
+  using SIMDInstrTableMap = std::map<std::pair<unsigned, std::string>, bool>;
+
+  // This is used to cache the decision of whether to leave the interleaved
+  // store instructions replacement pass early or not for a particular target.
+  using InterlEarlyExitMap = std::unordered_map<std::string, bool>;
+
+  SIMDInstrTableMap &SIMDInstrTable;
+  InterlEarlyExitMap &InterlEarlyExit;
+
   typedef enum {
     VectorElem,
     Interleave
@@ -99,7 +112,9 @@ public:
   // The maximum of N is currently 10 and it is for ST4 case.
   static const unsigned MaxNumRepl = 10;
 
-  AArch64SIMDInstrOptImpl() {}
+  AArch64SIMDInstrOptImpl(SIMDInstrTableMap &SIMDInstrTable,
+                          InterlEarlyExitMap &InterlEarlyExit)
+      : SIMDInstrTable(SIMDInstrTable), InterlEarlyExit(InterlEarlyExit) {}
 
   /// Based only on latency of instructions, determine if it is cost efficient
   /// to replace the instruction InstDesc by the instructions stored in the
@@ -149,6 +164,9 @@ public:
 
 struct AArch64SIMDInstrOptLegacy : public MachineFunctionPass {
   static char ID;
+
+  AArch64SIMDInstrOptImpl::SIMDInstrTableMap SIMDInstrTable;
+  AArch64SIMDInstrOptImpl::InterlEarlyExitMap InterlEarlyExit;
 
   AArch64SIMDInstrOptLegacy() : MachineFunctionPass(ID) {}
 
@@ -207,15 +225,6 @@ const std::vector<AArch64SIMDInstrOptImpl::InstReplInfo>
                 AArch64::ZIP1v8i8, AArch64::ZIP2v8i8, AArch64::ZIP1v8i8,
                 AArch64::ZIP2v8i8, AArch64::ZIP1v8i8, AArch64::ZIP2v8i8,
                 AArch64::STPDi, AArch64::STPDi, AArch64::FPR64RegClass)};
-
-// The two maps below are used to cache decisions instead of recomputing:
-//
-// This is used to cache instruction replacement decisions within function
-// units and across function units.
-static std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
-// This is used to cache the decision of whether to leave the interleaved
-// store instructions replacement pass early or not for a particular target.
-static std::unordered_map<std::string, bool> InterlEarlyExit;
 
 } // end anonymous namespace
 
@@ -745,13 +754,14 @@ bool AArch64SIMDInstrOptLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  return AArch64SIMDInstrOptImpl().run(MF);
+  return AArch64SIMDInstrOptImpl(SIMDInstrTable, InterlEarlyExit).run(MF);
 }
 
 PreservedAnalyses
 AArch64SIMDInstrOptPass::run(MachineFunction &MF,
                              MachineFunctionAnalysisManager &MFAM) {
-  const bool Changed = AArch64SIMDInstrOptImpl().run(MF);
+  const bool Changed =
+      AArch64SIMDInstrOptImpl(SIMDInstrTable, InterlEarlyExit).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
 
