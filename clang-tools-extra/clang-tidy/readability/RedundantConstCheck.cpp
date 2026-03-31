@@ -17,7 +17,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 static const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
-    varTemplateDecl;
+    VarTemplateDecl;
 
 static std::optional<Token>
 findConstToRemove(const VarDecl *VD, const MatchFinder::MatchResult &Result) {
@@ -70,7 +70,7 @@ RedundantConstCheck::RedundantConstCheck(StringRef Name,
 
 void RedundantConstCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      varDecl(isConstexpr(), unless(anyOf(hasAncestor(varTemplateDecl()),
+      varDecl(isConstexpr(), unless(anyOf(hasAncestor(VarTemplateDecl()),
                                           hasType(referenceType()))))
           .bind("var_decl"),
       this);
