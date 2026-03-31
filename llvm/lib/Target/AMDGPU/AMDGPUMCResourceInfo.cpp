@@ -284,8 +284,7 @@ void MCResourceInfo::gatherResourceInfo(
                              FRI.Callees, OutContext);
     } else {
       const MCExpr *SymRef = MCSymbolRefExpr::create(MaxSym, OutContext);
-      MCSymbol *LocalNumSym =
-          getSymbol(FnSym->getName(), RIK, OutContext);
+      MCSymbol *LocalNumSym = getSymbol(FnSym->getName(), RIK, OutContext);
       const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       LocalNumSym->setVariableValue(MaxWithLocal);
@@ -304,8 +303,7 @@ void MCResourceInfo::gatherResourceInfo(
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
     SmallVector<const MCExpr *, 8> ArgExprs;
-    MCSymbol *Sym =
-        getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext);
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext);
     if (FRI.CalleeSegmentSize) {
       LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                         << FRI.CalleeSegmentSize
@@ -399,7 +397,7 @@ const MCExpr *MCResourceInfo::createTotalNumSGPRs(const MachineFunction &MF,
       getSymRefExpr(FnSym->getName(), RIK_NumSGPR, Ctx),
       AMDGPUMCExpr::createExtraSGPRs(
           getSymRefExpr(FnSym->getName(), RIK_UsesVCC, Ctx),
-          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx),
-          hasXnack, Ctx),
+          getSymRefExpr(FnSym->getName(), RIK_UsesFlatScratch, Ctx), hasXnack,
+          Ctx),
       Ctx);
 }

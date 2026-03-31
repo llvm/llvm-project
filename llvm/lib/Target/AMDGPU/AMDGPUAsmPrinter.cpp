@@ -403,8 +403,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
 
   const uint64_t MaxScratchPerWorkitem =
       STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
-  MCSymbol *ScratchSizeSymbol = RI.getSymbol(
-      FnSym->getName(), RIK::RIK_PrivateSegSize, OutContext);
+  MCSymbol *ScratchSizeSymbol =
+      RI.getSymbol(FnSym->getName(), RIK::RIK_PrivateSegSize, OutContext);
   uint64_t ScratchSize;
   if (ScratchSizeSymbol->isVariable() &&
       TryGetMCExprValue(ScratchSizeSymbol->getVariableValue(), ScratchSize) &&
@@ -435,8 +435,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
 
   MCSymbol *VCCUsedSymbol =
       RI.getSymbol(FnSym->getName(), RIK::RIK_UsesVCC, OutContext);
-  MCSymbol *FlatUsedSymbol = RI.getSymbol(
-      FnSym->getName(), RIK::RIK_UsesFlatScratch, OutContext);
+  MCSymbol *FlatUsedSymbol =
+      RI.getSymbol(FnSym->getName(), RIK::RIK_UsesFlatScratch, OutContext);
   uint64_t VCCUsed, FlatUsed, NumSgpr;
 
   if (NumSGPRSymbol->isVariable() && VCCUsedSymbol->isVariable() &&
@@ -768,11 +768,10 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       emitCommonFunctionComments(
           RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext)
               ->getVariableValue(),
-          STM.hasMAIInsts()
-              ? RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumAGPR,
-                             OutContext)
-                    ->getVariableValue()
-              : nullptr,
+          STM.hasMAIInsts() ? RI.getSymbol(CurrentFnSym->getName(),
+                                           RIK::RIK_NumAGPR, OutContext)
+                                  ->getVariableValue()
+                            : nullptr,
           RI.createTotalNumVGPRs(MF, Ctx),
           RI.createTotalNumSGPRs(
               MF,
@@ -1013,8 +1012,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   auto GetSymRefExpr =
       [&](MCResourceInfo::ResourceInfoKind RIK) -> const MCExpr * {
-    MCSymbol *Sym =
-        RI.getSymbol(CurrentFnSym->getName(), RIK, OutContext);
+    MCSymbol *Sym = RI.getSymbol(CurrentFnSym->getName(), RIK, OutContext);
     return MCSymbolRefExpr::create(Sym, Ctx);
   };
 
