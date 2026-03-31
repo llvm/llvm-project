@@ -71,7 +71,7 @@ static bool isLambda(const NamedDecl *ND) {
 static const unsigned UnknownArity = ~0U;
 
 class ItaniumMangleContextImpl : public ItaniumMangleContext {
-  typedef std::pair<const DeclContext*, IdentifierInfo*> DiscriminatorKeyTy;
+  using DiscriminatorKeyTy = std::pair<const DeclContext *, IdentifierInfo *>;
   llvm::DenseMap<DiscriminatorKeyTy, unsigned> Discriminator;
   llvm::DenseMap<const NamedDecl*, unsigned> Uniquifier;
   const DiscriminatorOverrideTy DiscriminatorOverride = nullptr;
@@ -143,10 +143,9 @@ public:
       return false;
 
     // Anonymous tags are already numbered.
-    if (const TagDecl *Tag = dyn_cast<TagDecl>(ND)) {
-      if (Tag->getName().empty() && !Tag->getTypedefNameForAnonDecl())
-        return false;
-    }
+    if (const auto *Tag = dyn_cast<TagDecl>(ND);
+        Tag && Tag->getName().empty() && !Tag->getTypedefNameForAnonDecl())
+      return false;
 
     // Use the canonical number for externally visible decls.
     if (ND->isExternallyVisible()) {
@@ -286,7 +285,7 @@ class CXXNameMangler {
   // The goal is to annotate against which version of a library an object was
   // built and to be able to provide backwards compatibility ("dual abi").
   // For more information see docs/ItaniumMangleAbiTags.rst.
-  typedef SmallVector<StringRef, 4> AbiTagList;
+  using AbiTagList = SmallVector<StringRef, 4>;
 
   // State to gather all implicit and explicit tags used in a mangled name.
   // Must always have an instance of this while emitting any name to keep
@@ -1136,8 +1135,8 @@ void CXXNameMangler::mangleModuleName(const NamedDecl *ND) {
 //                  ::= W P <source-name>
 void CXXNameMangler::mangleModuleNamePrefix(StringRef Name, bool IsPartition) {
   //  <substitution> ::= S <seq-id> _
-  auto It = ModuleSubstitutions.find(Name);
-  if (It != ModuleSubstitutions.end()) {
+  if (auto It = ModuleSubstitutions.find(Name);
+      It != ModuleSubstitutions.end()) {
     Out << 'S';
     mangleSeqID(It->second);
     return;
@@ -1145,18 +1144,18 @@ void CXXNameMangler::mangleModuleNamePrefix(StringRef Name, bool IsPartition) {
 
   // FIXME: Preserve hierarchy in module names rather than flattening
   // them to strings; use Module*s as substitution keys.
-  auto Parts = Name.rsplit('.');
-  if (Parts.second.empty())
-    Parts.second = Parts.first;
+  auto [Prefix, SubName] = Name.rsplit('.');
+  if (SubName.empty())
+    SubName = Prefix;
   else {
-    mangleModuleNamePrefix(Parts.first, IsPartition);
+    mangleModuleNamePrefix(Prefix, IsPartition);
     IsPartition = false;
   }
 
   Out << 'W';
   if (IsPartition)
     Out << 'P';
-  Out << Parts.second.size() << Parts.second;
+  Out << SubName.size() << SubName;
   ModuleSubstitutions.insert({Name, SeqID++});
 }
 
@@ -2005,15 +2004,14 @@ void CXXNameMangler::mangleBlockForPrefix(const BlockDecl *Block) {
 void CXXNameMangler::mangleUnqualifiedBlock(const BlockDecl *Block) {
   // When trying to be ABI-compatibility with clang 12 and before, mangle a
   // <data-member-prefix> now, with no substitutions and no <template-args>.
-  if (Decl *Context = Block->getBlockManglingContextDecl()) {
-    if (isCompatibleWith(LangOptions::ClangABI::Ver12) &&
-        (isa<VarDecl>(Context) || isa<FieldDecl>(Context)) &&
-        Context->getDeclContext()->isRecord()) {
-      const auto *ND = cast<NamedDecl>(Context);
-      if (ND->getIdentifier()) {
-        mangleSourceNameWithAbiTags(ND);
-        Out << 'M';
-      }
+  if (Decl *Context = Block->getBlockManglingContextDecl();
+      Context && isCompatibleWith(LangOptions::ClangABI::Ver12) &&
+      (isa<VarDecl>(Context) || isa<FieldDecl>(Context)) &&
+      Context->getDeclContext()->isRecord()) {
+    const auto *ND = cast<NamedDecl>(Context);
+    if (ND->getIdentifier()) {
+      mangleSourceNameWithAbiTags(ND);
+      Out << 'M';
     }
   }
 
@@ -2123,18 +2121,17 @@ void CXXNameMangler::mangleRequiresClause(const Expr *RequiresClause) {
 void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // When trying to be ABI-compatibility with clang 12 and before, mangle a
   // <data-member-prefix> now, with no substitutions.
-  if (Decl *Context = Lambda->getLambdaContextDecl()) {
-    if (isCompatibleWith(LangOptions::ClangABI::Ver12) &&
-        (isa<VarDecl>(Context) || isa<FieldDecl>(Context)) &&
-        !isa<ParmVarDecl>(Context)) {
-      if (const IdentifierInfo *Name
-            = cast<NamedDecl>(Context)->getIdentifier()) {
-        mangleSourceName(Name);
-        const TemplateArgumentList *TemplateArgs = nullptr;
-        if (GlobalDecl TD = isTemplate(cast<NamedDecl>(Context), TemplateArgs))
-          mangleTemplateArgs(asTemplateName(TD), *TemplateArgs);
-        Out << 'M';
-      }
+  if (Decl *Context = Lambda->getLambdaContextDecl();
+      Context && isCompatibleWith(LangOptions::ClangABI::Ver12) &&
+      (isa<VarDecl>(Context) || isa<FieldDecl>(Context)) &&
+      !isa<ParmVarDecl>(Context)) {
+    if (const IdentifierInfo *Name =
+            cast<NamedDecl>(Context)->getIdentifier()) {
+      mangleSourceName(Name);
+      const TemplateArgumentList *TemplateArgs = nullptr;
+      if (GlobalDecl TD = isTemplate(cast<NamedDecl>(Context), TemplateArgs))
+        mangleTemplateArgs(asTemplateName(TD), *TemplateArgs);
+      Out << 'M';
     }
   }
 
@@ -3034,9 +3031,7 @@ void CXXNameMangler::mangleType(QualType T) {
       T = Desugared;
     } while (true);
   }
-  SplitQualType split = T.split();
-  Qualifiers quals = split.Quals;
-  const Type *ty = split.Ty;
+  auto [ty, quals] = T.split();
 
   bool isSubstitutable =
     isTypeSubstitutable(quals, ty, Context.getASTContext());
@@ -3056,9 +3051,9 @@ void CXXNameMangler::mangleType(QualType T) {
   if (quals || ty->isDependentAddressSpaceType()) {
     if (const DependentAddressSpaceType *DAST =
         dyn_cast<DependentAddressSpaceType>(ty)) {
-      SplitQualType splitDAST = DAST->getPointeeType().split();
-      mangleQualifiers(splitDAST.Quals, DAST);
-      mangleType(QualType(splitDAST.Ty, 0));
+      auto [Ty, Quals] = DAST->getPointeeType().split();
+      mangleQualifiers(Quals, DAST);
+      mangleType(QualType(Ty, 0));
     } else {
       mangleQualifiers(quals);
 
