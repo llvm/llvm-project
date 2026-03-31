@@ -35,32 +35,20 @@ jobs:
         targets:
           - { arch: X86, triple: x86_64-pc-linux-gnu }
           - { arch: AArch64, triple: aarch64-linux-gnu }
-        include:
-          - cc: clang-18
-            cxx: clang++-18
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
-      - name: Get LLD
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lld
-          sudo rm -rf /var/lib/apt/lists/*
-
       - name: Configure
         run: |
           cmake -G Ninja -S llvm -B build \
+            ${CMAKE_HOST_OPT-} \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
-            -DCMAKE_C_COMPILER=${{ matrix.cc }} \
-            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
-            -DLLVM_USE_LINKER=lld \
             -DLLVM_ENABLE_PROJECTS="clang" \
             -DLLVM_TARGETS_TO_BUILD=${{ matrix.targets.arch }} \
-            -DLLVM_DEFAULT_TARGET_TRIPLE=${{ matrix.targets.triple }} \
-            -DLLVM_PARALLEL_LINK_JOBS=1
+            -DLLVM_DEFAULT_TARGET_TRIPLE=${{ matrix.targets.triple }}
 
       - name: Clang Ripple Lit Tests
         run: cmake --build build --target check-clang-ripple
@@ -82,9 +70,6 @@ jobs:
       matrix:
         targets:
           - { arch: Hexagon, triple: hexagon-unknown-linux-musl }
-        include:
-          - cc: clang-18
-            cxx: clang++-18
 
     steps:
       - name: Checkout Code
@@ -96,24 +81,15 @@ jobs:
           wget -qO - $HEXAGON_TOOLCHAIN_URL | \
             tar --zstd -xvf - --strip-component=2 -C hexagon_toolchain
 
-      - name: Get LLD
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lld
-          sudo rm -rf /var/lib/apt/lists/*
-
       - name: Configure
         run: |
           cmake -G Ninja -S llvm -B build \
+            ${CMAKE_HOST_OPT-} \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
-            -DCMAKE_C_COMPILER=${{ matrix.cc }} \
-            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
-            -DLLVM_USE_LINKER=lld \
             -DLLVM_ENABLE_PROJECTS="clang" \
             -DLLVM_TARGETS_TO_BUILD=${{ matrix.targets.arch }} \
-            -DLLVM_DEFAULT_TARGET_TRIPLE=${{ matrix.targets.triple }} \
-            -DLLVM_PARALLEL_LINK_JOBS=1
+            -DLLVM_DEFAULT_TARGET_TRIPLE=${{ matrix.targets.triple }}
 
       - name: Build Ripple Compiler
         run: cmake --build build
@@ -140,8 +116,7 @@ jobs:
             -DCMAKE_C_COMPILER_TARGET=${{ matrix.targets.triple }} \
             -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.targets.triple }} \
             -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
-            -DCMAKE_SYSROOT="${{ github.workspace }}/hexagon_toolchain/target/${{ matrix.targets.triple }}" \
-            -DLLVM_PARALLEL_LINK_JOBS=1
+            -DCMAKE_SYSROOT="${{ github.workspace }}/hexagon_toolchain/target/${{ matrix.targets.triple }}"
 
       - name: Build Ripple compiler-rt
         run: cmake --build build-compiler-rt
