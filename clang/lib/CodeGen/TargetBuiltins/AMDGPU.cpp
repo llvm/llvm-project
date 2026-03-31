@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -459,7 +458,6 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
-<<<<<<< HEAD
 static Value *GetOrInsertAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   auto PTy = IntegerType::getInt1Ty(CGF.getLLVMContext());
 
@@ -470,19 +468,6 @@ static Value *GetOrInsertAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
 
   return CGF.Builder.CreateLoad(
       RawAddress(P, PTy, CharUnits::One(), KnownNonNull));
-=======
-static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
-  Constant *SpecId = ConstantInt::getAllOnesValue(CGF.Int32Ty);
-
-  LLVMContext &Ctx = CGF.getLLVMContext();
-  MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
-  std::vector<Value *> Args = {SpecId, ConstantInt::getFalse(Ctx),
-                               MetadataAsValue::get(Ctx, Predicate)};
-  CallInst *Call = CGF.Builder.CreateIntrinsic(
-      Intrinsic::spv_named_boolean_spec_constant, Args);
-
-  return Call;
->>>>>>> 18e695890306
 }
 
 static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
@@ -1066,11 +1051,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
            "__builtin_amdgcn_processor_is should never reach CodeGen for "
            "concrete targets!");
     StringRef Proc = cast<clang::StringLiteral>(E->getArg(0))->getString();
-<<<<<<< HEAD
     return GetOrInsertAMDGPUPredicate(*this, "llvm.amdgcn.is." + Proc);
-=======
-    return GetAMDGPUPredicate(*this, "is." + Proc);
->>>>>>> 18e695890306
   }
   case AMDGPU::BI__builtin_amdgcn_is_invocable: {
     assert(CGM.getTriple().isSPIRV() &&
@@ -1080,11 +1061,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         cast<DeclRefExpr>(E->getArg(0))->getReferencedDeclOfCallee());
     StringRef RF =
         getContext().BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
-<<<<<<< HEAD
     return GetOrInsertAMDGPUPredicate(*this, "llvm.amdgcn.has." + RF);
-=======
-    return GetAMDGPUPredicate(*this, "has." + RF);
->>>>>>> 18e695890306
   }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
     return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);

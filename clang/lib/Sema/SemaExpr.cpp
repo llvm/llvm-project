@@ -6914,15 +6914,6 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
     FunctionDecl *FDecl = dyn_cast<FunctionDecl>(NDecl);
     if (FDecl && FDecl->getBuiltinID()) {
-      const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
-      if (Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::AMD) {
-        if (Context.BuiltinInfo.isTSBuiltin(FDecl->getBuiltinID()) &&
-            !Context.BuiltinInfo.isAuxBuiltinID(FDecl->getBuiltinID())) {
-          AMDGPU().AddPotentiallyUnguardedBuiltinUser(cast<FunctionDecl>(
-              getFunctionLevelDeclContext(/*AllowLambda=*/true)));
-        }
-      }
-
       // Rewrite the function decl for this builtin by replacing parameters
       // with no explicit address space with the address space of the arguments
       // in ArgExprs.
@@ -13945,11 +13936,6 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
     if (RHS.isInvalid())
       return QualType();
 
-    if (LHS.get()->getType() == Context.AMDGPUFeaturePredicateTy)
-      LHS = AMDGPU().ExpandAMDGPUPredicateBuiltIn(LHS.get());
-    if (RHS.get()->getType() == Context.AMDGPUFeaturePredicateTy)
-      RHS = AMDGPU().ExpandAMDGPUPredicateBuiltIn(RHS.get());
-
     if (!LHS.get()->getType()->isScalarType() ||
         !RHS.get()->getType()->isScalarType())
       return InvalidOperands(Loc, LHS, RHS);
@@ -16365,11 +16351,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
         break;
       } else if (resultType == Context.AMDGPUFeaturePredicateTy) {
         resultType = Context.getLogicalOperationType();
-<<<<<<< HEAD
         Input = AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast<CallExpr>(InputExpr));
-=======
-        Input = AMDGPU().ExpandAMDGPUPredicateBuiltIn(InputExpr);
->>>>>>> 18e695890306
         break;
       } else {
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
@@ -21233,11 +21215,7 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
 
   if (!E->isTypeDependent()) {
     if (E->getType() == Context.AMDGPUFeaturePredicateTy)
-<<<<<<< HEAD
       return AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast_or_null<CallExpr>(E));
-=======
-      return AMDGPU().ExpandAMDGPUPredicateBuiltIn(E);
->>>>>>> 18e695890306
 
     if (getLangOpts().CPlusPlus)
       return CheckCXXBooleanCondition(E, IsConstexpr); // C++ 6.4p4

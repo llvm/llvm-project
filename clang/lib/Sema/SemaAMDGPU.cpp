@@ -11,28 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaAMDGPU.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
-#include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
-<<<<<<< HEAD
 #include "clang/Frontend/FrontendDiagnostic.h"
-=======
->>>>>>> 18e695890306
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <cstdint>
-#include <utility>
 
 namespace clang {
 
@@ -772,12 +760,7 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
 }
 
-<<<<<<< HEAD
 Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
-=======
-Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
-  CallExpr *CE = cast<CallExpr>(E->IgnoreParens());
->>>>>>> 18e695890306
   ASTContext &Ctx = getASTContext();
   QualType BoolTy = Ctx.getLogicalOperationType();
   llvm::APInt False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));
@@ -809,11 +792,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
       SmallVector<StringRef, 32> ValidList;
       if (TI.getTriple().getVendor() == llvm::Triple::VendorType::AMD)
         TI.fillValidCPUList(ValidList);
-<<<<<<< HEAD
       else if (AuxTI) // Since the BI is present it must be and AMDGPU triple.
-=======
-      else if (AuxTI) // Since the BI is present it must be an AMDGPU triple.
->>>>>>> 18e695890306
         AuxTI->fillValidCPUList(ValidList);
       if (!ValidList.empty())
         Diag(Loc, diag::note_amdgcn_processor_is_valid_options)
@@ -857,224 +836,4 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
 bool SemaAMDGPU::IsPredicate(Expr *E) const {
   return ExpandedPredicates.contains(E);
 }
-<<<<<<< HEAD
-=======
-
-void SemaAMDGPU::AddPotentiallyUnguardedBuiltinUser(FunctionDecl *FD) {
-  PotentiallyUnguardedBuiltinUsers.insert(FD);
-}
-
-bool SemaAMDGPU::HasPotentiallyUnguardedBuiltinUsage(FunctionDecl *FD) const {
-  return PotentiallyUnguardedBuiltinUsers.contains(FD);
-}
-
-namespace {
-/// This class implements -Wamdgpu-unguarded-builtin-usage.
-///
-/// This is done with a traversal of the AST of a function that includes a
-/// call to a target specific builtin. Whenever we encounter an \c if of the
-/// form: \c if(__builtin_amdgcn_is_invocable), we consider the then statement
-/// guarded.
-class DiagnoseUnguardedBuiltins : public DynamicRecursiveASTVisitor {
-  // TODO: this could eventually be extended to consider what happens when there
-  //       are multiple target architectures specified via target("arch=gfxXXX")
-  //       target("arch=gfxyyy") etc., as well as feature disabling via "-XXX".
-  Sema &SemaRef;
-
-  SmallVector<StringRef> TargetFeatures;
-  SmallVector<std::pair<SourceLocation, StringRef>> CurrentGFXIP;
-  SmallVector<unsigned> GuardedBuiltins;
-
-  static Expr *FindPredicate(Expr *Cond) {
-    if (auto *CE = dyn_cast<CallExpr>(Cond)) {
-      if (CE->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_is_invocable ||
-          CE->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_processor_is)
-        return Cond;
-    } else if (auto *UO = dyn_cast<UnaryOperator>(Cond)) {
-      return FindPredicate(UO->getSubExpr());
-    } else if (auto *BO = dyn_cast<BinaryOperator>(Cond)) {
-      if ((Cond = FindPredicate(BO->getLHS())))
-        return Cond;
-      return FindPredicate(BO->getRHS());
-    }
-    return nullptr;
-  }
-
-  bool EnterPredicateGuardedContext(CallExpr *P);
-  void ExitPredicateGuardedContext(bool WasProcessorCheck);
-  bool TraverseGuardedStmt(Stmt *S, CallExpr *P);
-
-public:
-  DiagnoseUnguardedBuiltins(Sema &SemaRef) : SemaRef(SemaRef) {
-    if (auto *TAT = SemaRef.getCurFunctionDecl(true)->getAttr<TargetAttr>()) {
-      // We use the somewhat misnamed x86 accessors because they provide exactly
-      // what we require.
-      TAT->getX86AddedFeatures(TargetFeatures);
-      if (auto GFXIP = TAT->getX86Architecture())
-        CurrentGFXIP.emplace_back(TAT->getLocation(), *GFXIP);
-    }
-  }
-
-  bool TraverseLambdaExpr(LambdaExpr *LE) override {
-    if (SemaRef.AMDGPU().HasPotentiallyUnguardedBuiltinUsage(
-            LE->getCallOperator()))
-      return true; // We have already handled this.
-    return DynamicRecursiveASTVisitor::TraverseLambdaExpr(LE);
-  }
-
-  bool TraverseStmt(Stmt *S) override {
-    if (!S)
-      return true;
-    return DynamicRecursiveASTVisitor::TraverseStmt(S);
-  }
-
-  void IssueDiagnostics(Stmt *S) { TraverseStmt(S); }
-
-  bool TraverseIfStmt(IfStmt *If) override {
-    if (auto *CE = dyn_cast_or_null<CallExpr>(FindPredicate(If->getCond())))
-      return TraverseGuardedStmt(If, CE);
-    return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
-  }
-
-  bool TraverseCaseStmt(CaseStmt *CS) override {
-    return TraverseStmt(CS->getSubStmt());
-  }
-
-  bool TraverseConditionalOperator(ConditionalOperator *CO) override {
-    if (auto *CE = dyn_cast_or_null<CallExpr>(FindPredicate(CO->getCond())))
-      return TraverseGuardedStmt(CO, CE);
-    return DynamicRecursiveASTVisitor::TraverseConditionalOperator(CO);
-  }
-
-  bool VisitAsmStmt(AsmStmt *ASM) override;
-  bool VisitCallExpr(CallExpr *CE) override;
-};
-
-bool DiagnoseUnguardedBuiltins::EnterPredicateGuardedContext(CallExpr *P) {
-  bool IsProcessorCheck =
-      P->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_processor_is;
-
-  if (IsProcessorCheck) {
-    StringRef G = cast<clang::StringLiteral>(P->getArg(0))->getString();
-    // TODO: handle generic ISAs.
-    if (!CurrentGFXIP.empty() && G != CurrentGFXIP.back().second) {
-      SemaRef.Diag(P->getExprLoc(),
-                   diag::err_amdgcn_conflicting_is_processor_options)
-          << P;
-      SemaRef.Diag(CurrentGFXIP.back().first,
-                   diag::note_amdgcn_previous_is_processor_guard);
-    }
-    CurrentGFXIP.emplace_back(P->getExprLoc(), G);
-  } else {
-    auto *FD = cast<FunctionDecl>(
-        cast<DeclRefExpr>(P->getArg(0))->getReferencedDeclOfCallee());
-    GuardedBuiltins.push_back(FD->getBuiltinID());
-  }
-
-  return IsProcessorCheck;
-}
-
-void DiagnoseUnguardedBuiltins::ExitPredicateGuardedContext(bool WasProcCheck) {
-  if (WasProcCheck)
-    CurrentGFXIP.pop_back();
-  else
-    GuardedBuiltins.pop_back();
-}
-
-inline std::pair<Stmt *, Stmt *> GetTraversalOrder(Stmt *S) {
-  std::pair<Stmt *, Stmt *> Ordered;
-  Expr *Condition = nullptr;
-
-  if (auto *CO = dyn_cast<ConditionalOperator>(S)) {
-    Condition = CO->getCond();
-    Ordered = {CO->getTrueExpr(), CO->getFalseExpr()};
-  } else if (auto *If = dyn_cast<IfStmt>(S)) {
-    Condition = If->getCond();
-    Ordered = {If->getThen(), If->getElse()};
-  }
-
-  if (auto *UO = dyn_cast<UnaryOperator>(Condition))
-    if (UO->getOpcode() == UnaryOperatorKind::UO_LNot)
-      std::swap(Ordered.first, Ordered.second);
-
-  return Ordered;
-}
-
-bool DiagnoseUnguardedBuiltins::TraverseGuardedStmt(Stmt *S, CallExpr *P) {
-  assert(S && "Unexpected missing Statement!");
-  assert(P && "Unexpected missing Predicate!");
-
-  auto [Guarded, Unguarded] = GetTraversalOrder(S);
-
-  bool WasProcessorCheck = EnterPredicateGuardedContext(P);
-
-  bool Continue = TraverseStmt(Guarded);
-
-  ExitPredicateGuardedContext(WasProcessorCheck);
-
-  return Continue && TraverseStmt(Unguarded);
-}
-
-bool DiagnoseUnguardedBuiltins::VisitAsmStmt(AsmStmt *ASM) {
-  // TODO: should we check if the ASM is valid for the target? Can we?
-  if (!CurrentGFXIP.empty())
-    return true;
-
-  std::string S = ASM->generateAsmString(SemaRef.getASTContext());
-  SemaRef.Diag(ASM->getAsmLoc(), diag::warn_amdgcn_unguarded_asm_stmt) << S;
-  SemaRef.Diag(ASM->getAsmLoc(), diag::note_amdgcn_unguarded_asm_silence) << S;
-
-  return true;
-}
-
-bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
-  unsigned ID = CE->getBuiltinCallee();
-  Builtin::Context &BInfo = SemaRef.getASTContext().BuiltinInfo;
-
-  if (!ID)
-    return true;
-  if (!BInfo.isTSBuiltin(ID))
-    return true;
-  if (ID == AMDGPU::BI__builtin_amdgcn_processor_is ||
-      ID == AMDGPU::BI__builtin_amdgcn_is_invocable)
-    return true;
-  if (llvm::find(GuardedBuiltins, ID) != GuardedBuiltins.end())
-    return true;
-
-  StringRef FL(BInfo.getRequiredFeatures(ID));
-  llvm::StringMap<bool> FeatureMap;
-  if (CurrentGFXIP.empty()) {
-    for (auto &&F : TargetFeatures)
-      FeatureMap[F] = true;
-    for (auto &&GID : GuardedBuiltins)
-      for (auto &&F : llvm::split(BInfo.getRequiredFeatures(GID), ','))
-        FeatureMap[F] = true;
-  } else {
-    static const llvm::Triple AMDGCN("amdgcn-amd-amdhsa");
-    llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second, AMDGCN,
-                                       FeatureMap);
-  }
-
-  FunctionDecl *BI = CE->getDirectCallee();
-  SourceLocation BICallLoc = CE->getExprLoc();
-  if (Builtin::evaluateRequiredTargetFeatures(FL, FeatureMap)) {
-    SemaRef.Diag(BICallLoc, diag::warn_amdgcn_unguarded_builtin) << BI;
-    SemaRef.Diag(BICallLoc, diag::note_amdgcn_unguarded_builtin_silence) << BI;
-  } else {
-    StringRef GFXIP = CurrentGFXIP.empty() ? "" : CurrentGFXIP.back().second;
-    SemaRef.Diag(BICallLoc, diag::err_amdgcn_incompatible_builtin)
-        << BI << FL << !CurrentGFXIP.empty() << GFXIP;
-    if (!CurrentGFXIP.empty())
-      SemaRef.Diag(CurrentGFXIP.back().first,
-                   diag::note_amdgcn_previous_is_processor_guard);
-  }
-
-  return true;
-}
-} // Unnamed namespace
-
-void SemaAMDGPU::DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD) {
-  DiagnoseUnguardedBuiltins(SemaRef).IssueDiagnostics(FD->getBody());
-}
->>>>>>> 18e695890306
 } // namespace clang

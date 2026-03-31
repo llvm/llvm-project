@@ -6367,11 +6367,7 @@ ExprResult Sema::PerformContextuallyConvertToBool(Expr *From) {
   if (checkPlaceholderForOverload(*this, From))
     return ExprError();
   if (From->getType() == Context.AMDGPUFeaturePredicateTy)
-<<<<<<< HEAD
     return AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast<CallExpr>(From));
-=======
-    return AMDGPU().ExpandAMDGPUPredicateBuiltIn(From);
->>>>>>> 18e695890306
 
   ImplicitConversionSequence ICS = TryContextuallyConvertToBool(*this, From);
   if (!ICS.isBad())
