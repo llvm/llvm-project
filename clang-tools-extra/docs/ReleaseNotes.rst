@@ -49,6 +49,12 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- Deprecated the :program:`clang-tidy` check :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>`. It has been renamed to
+  :doc:`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>`.
+  The original check will be removed in the 25th release.
+
 Improvements to clangd
 ----------------------
 
@@ -188,6 +194,12 @@ New check aliases
   to :doc:`portability-no-assembler
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
+
+- Renamed :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>` to
+  :doc:`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>`.
+  The `performance-faster-string-find` name is kept as an alias.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -357,14 +369,6 @@ Changes in existing checks
 
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
-- Improved :doc:`performance-faster-string-find
-  <clang-tidy/checks/performance/faster-string-find>` check:
-
-  - Now analyzes calls to the ``starts_with``, ``ends_with``, ``contains``,
-    and ``operator+=`` string member functions.
-
-  - Fixes false negatives when using ``std::set`` from ``libstdc++``.
-
 - Improved :doc:`performance-inefficient-string-concatenation
   <clang-tidy/checks/performance/inefficient-string-concatenation>` check by
   adding support for detecting inefficient string concatenation in ``do-while``
@@ -378,6 +382,14 @@ Changes in existing checks
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
+
+- Improved :doc:`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>` check:
+
+  - Now analyzes calls to the ``starts_with``, ``ends_with``, ``contains``,
+    and ``operator+=`` string member functions.
+
+  - Fixes false negatives when using ``std::set`` from ``libstdc++``.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check:
