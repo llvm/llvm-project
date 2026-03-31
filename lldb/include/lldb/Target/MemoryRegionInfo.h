@@ -28,12 +28,10 @@ public:
   MemoryRegionInfo(RangeType range, OptionalBool read, OptionalBool write,
                    OptionalBool execute, OptionalBool shared,
                    OptionalBool mapped, ConstString name, OptionalBool flash,
-                   lldb::offset_t blocksize, OptionalBool memory_tagged,
-                   OptionalBool stack_memory)
+                   lldb::offset_t blocksize, OptionalBool memory_tagged)
       : m_range(range), m_read(read), m_write(write), m_execute(execute),
         m_shared(shared), m_mapped(mapped), m_name(name), m_flash(flash),
-        m_blocksize(blocksize), m_memory_tagged(memory_tagged),
-        m_is_stack_memory(stack_memory) {}
+        m_blocksize(blocksize), m_memory_tagged(memory_tagged) {}
 
   RangeType &GetRange() { return m_range; }
 
