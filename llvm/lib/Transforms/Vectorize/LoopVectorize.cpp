@@ -7375,11 +7375,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
   // Check if the epilogue VPlan is executed (where the trip count was already
   // set when executing the main plan).
-  bool VectroizingEpilogue = IsEpilogueVectorization && ILV.getTripCount();
+  bool VectorizingEpilogue = IsEpilogueVectorization && ILV.getTripCount();
   if (!ILV.getTripCount()) {
     ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
   } else {
-    assert(VectroizingEpilogue && "should only re-use the existing trip "
+    assert(VectorizingEpilogue && "should only re-use the existing trip "
                                   "count during epilogue vectorization");
   }
 
@@ -7446,7 +7446,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   updateLoopMetadataAndProfileInfo(
       HeaderVPBB ? LI->getLoopFor(State.CFG.VPBB2IRBB.lookup(HeaderVPBB))
                  : nullptr,
-      HeaderVPBB, BestVPlan, VectroizingEpilogue, LID, OrigAverageTripCount,
+      HeaderVPBB, BestVPlan, VectorizingEpilogue, LID, OrigAverageTripCount,
       OrigLoopInvocationWeight,
       estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning()),
       DisableRuntimeUnroll);
@@ -8635,9 +8635,9 @@ static bool processLoopInVPlanNativePath(
                       << L->getHeader()->getParent()->getName() << "\"\n");
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, /*UF=*/1,
                                  VF.MinProfitableTripCount);
-    LVP.attachRuntimeChecks(
-        BestPlan, Checks,
-        hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
+    bool HasBranchWeights =
+        hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
+    LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
 
     LVP.executePlan(VF.Width, /*UF=*/1, BestPlan, LB, DT, false);
   }
