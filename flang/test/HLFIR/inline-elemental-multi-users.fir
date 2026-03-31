@@ -1,9 +1,92 @@
 // RUN: fir-opt --inline-elementals %s | FileCheck %s
 
-// Test inlining of hlfir.elemental into its hlfir.apply site when the 
+// Test inlining of hlfir.elemental into its hlfir.apply site when the
 // elemental has more than two users.
 
-// Check successful inlining where hlfir.elemental survives because the
+// Test successful inlining with relaxed inlining.
+func.func @test_safe_loop_inlining(%arg0: !fir.ref<!fir.array<10xf32>>, %i: index) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+
+  // Elemental Mask.
+  %elem = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+    ^bb0(%idx: index):
+      %addr = fir.coordinate_of %arg0, %idx : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      %val = fir.load %addr : !fir.ref<f32>
+      hlfir.yield_element %val : f32
+  }
+
+  // User 1 - hlfir.apply inside nested loops (The target for inlining).
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    fir.do_loop %arg2 = %c1 to %c10 step %c1 {
+      %res = hlfir.apply %elem, %arg2 : (!hlfir.expr<10xf32>, index) -> f32
+      %dummy = fir.alloca f32
+      fir.store %res to %dummy : !fir.ref<f32>
+    }
+  }
+
+  // User 2 - Associate (Simulating a shared mask use-case).
+  %temp:3 = hlfir.associate %elem(%shape) : (!hlfir.expr<10xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>, i1)
+
+  // User 3 - Destroy
+  hlfir.destroy %elem : !hlfir.expr<10xf32>
+
+  hlfir.end_associate %temp#0, %temp#2 : !fir.ref<!fir.array<10xf32>>, i1
+  return
+}
+// CHECK-LABEL: func.func @test_safe_loop_inlining
+// CHECK: %[[ELEM:.*]] = hlfir.elemental
+// CHECK: fir.do_loop
+// CHECK:   fir.do_loop %[[INNER_IDX:.*]] =
+// CHECK:     %[[ADDR:.*]] = fir.coordinate_of %arg0, %[[INNER_IDX]]
+// CHECK:     %[[VAL:.*]] = fir.load %[[ADDR]]
+// CHECK-NOT: hlfir.apply
+// CHECK: hlfir.associate %[[ELEM]]
+// CHECK-NOT: hlfir.destroy %[[ELEM]]
+
+// Test blocking of incorrect inlining because of alias conflict.
+func.func @test_unsafe_loop_alias_conflict(%arg0: !fir.ref<!fir.array<10xf32>>, %new_val: f32) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+
+  // Elemental depends on the values in %arg0 (Producer).
+  %elem = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+    ^bb0(%idx: index):
+      %addr = fir.coordinate_of %arg0, %idx : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      %val = fir.load %addr : !fir.ref<f32>
+      hlfir.yield_element %val : f32
+  }
+
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    // We modify the array that the elemental needs to read from.
+    // Inlining the elemental here would see the new value.
+    %write_addr = fir.coordinate_of %arg0, %arg1 : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+    fir.store %new_val to %write_addr : !fir.ref<f32>
+
+    // Target for inlining.
+    %res = hlfir.apply %elem, %arg1 : (!hlfir.expr<10xf32>, index) -> f32
+
+    %dummy = fir.alloca f32
+    fir.store %res to %dummy : !fir.ref<f32>
+  }
+
+  hlfir.destroy %elem : !hlfir.expr<10xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_unsafe_loop_alias_conflict
+// Elemental should not be inlined, check presence of elemental and apply.
+// CHECK: %[[ELEM:.*]] = hlfir.elemental
+// CHECK: fir.do_loop
+// CHECK:   fir.store
+// CHECK:   %[[APPLIED:.*]] = hlfir.apply %[[ELEM]]
+// CHECK:   fir.store %[[APPLIED]]
+// Inlined code (coordinate_of/load) should not appear inside the loop.
+// CHECK-NOT: fir.coordinate_of %arg0, %arg1
+
+
+// Check successful inlining where 2-d hlfir.elemental survives because the
 // 'associate' op is still using it.
 func.func @test_inlining_use_mask(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !fir.ref<i32>) {
   %c1 = arith.constant 1 : index
@@ -98,7 +181,7 @@ func.func @test_multi_apply_no_inlining(%arg0: !hlfir.expr<?xi32>, %target: i32,
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
 
-  // Producer (Elemental)
+  // Producer (Elemental).
   %mask = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
     ^bb0(%i: index):
       %val = hlfir.apply %arg0, %i : (!hlfir.expr<?xi32>, index) -> i32
@@ -127,16 +210,14 @@ func.func @test_multi_apply_no_inlining(%arg0: !hlfir.expr<?xi32>, %target: i32,
 // CHECK:       %[[A2:.*]] = hlfir.apply %[[MASK]], %{{.*}}
 // CHECK:       hlfir.destroy %[[MASK]]
 
-// Check inlining one elemental into another.
-// a = b * c + d
-// Declare a global symbol to store the intermediate mask.
+// Check global store blocks inlining.
 fir.global @mask_storage : !hlfir.expr<10x10x!fir.logical<4>>
 func.func @test_nested_elemental(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !fir.ref<i32>) {
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
 
-  // The Elemental Mask (b * c)
+  // The Elemental Mask (b * c).
   %mask = hlfir.elemental %shape unordered : (!fir.shape<2>) -> !hlfir.expr<10x10x!fir.logical<4>> {
   ^bb0(%i: index, %j: index):
     %val = hlfir.designate %arg0 (%i, %j) : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
@@ -165,50 +246,56 @@ func.func @test_nested_elemental(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !f
   return
 }
 // CHECK-LABEL: func.func @test_nested_elemental
-// CHECK:         hlfir.elemental
-// CHECK-NOT:       hlfir.apply
-// CHECK:           arith.cmpi eq
-// CHECK-NOT:         hlfir.destroy
+// CHECK: %[[MASK:.*]] = hlfir.elemental
+// CHECK: %[[PTR:.*]] = fir.address_of(@mask_storage)
+// CHECK: fir.store %[[MASK]] to %[[PTR]]
+// Apply site not inlined.
+// CHECK: fir.do_loop
+// CHECK:   fir.do_loop
+// CHECK:     %[[VAL:.*]] = hlfir.apply %[[MASK]]
+// CHECK:     fir.store %[[VAL]]
+// The designate/load should only be inside the elemental.
+// CHECK-NOT: hlfir.designate
 
-// Inlining into a single hlfir.apply.
+// Inlining into a single hlfir.apply (relaxed inlining).
 // a = (b * c)[1]
-func.func @test_scalar_apply_inline(%b: !fir.box<!fir.array<?xf32>>, %c: !fir.box<!fir.array<?xf32>>) {
-  %c1 = arith.constant 1 : index
+func.func @test_scalar_apply_inlining_safe(%b: !fir.ref<!fir.array<10xf32>>, %c1: index) {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
 
-  // Elemental (b * c)
+  // Producer(1D Elemental).
   %prod = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
   ^bb0(%i: index):
-    %b_ref = hlfir.designate %b (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-    %b_val = fir.load %b_ref : !fir.ref<f32>
-    %c_ref = hlfir.designate %c (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-    %c_val = fir.load %c_ref : !fir.ref<f32>
-    %mul = arith.mulf %b_val, %c_val : f32
-    hlfir.yield_element %mul : f32
+    %b_addr = fir.coordinate_of %b, %i : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+    %b_val = fir.load %b_addr : !fir.ref<f32>
+    %res = arith.addf %b_val, %b_val : f32
+    hlfir.yield_element %res : f32
   }
 
-  // Total users = 3 (store, apply, destroy).
-  %ptr = fir.address_of(@scalar_storage) : !fir.ref<!hlfir.expr<10xf32>>
-  fir.store %prod to %ptr : !fir.ref<!hlfir.expr<10xf32>>
-
-  // Scalar apply site - a = (b * c)(1)
-  // CHECK-NOT: hlfir.apply
+  // Scalar Apply (Target for inlining).
   %scalar_val = hlfir.apply %prod, %c1 : (!hlfir.expr<10xf32>, index) -> f32
-  
-  // Use the scalar result.
-  %dummy_ref = fir.alloca f32
-  fir.store %scalar_val to %dummy_ref : !fir.ref<f32>
+
+  %temp:3 = hlfir.associate %prod(%shape) : (!hlfir.expr<10xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>, i1)
 
   hlfir.destroy %prod : !hlfir.expr<10xf32>
+
+  // Use the result.
+  %dummy = fir.alloca f32
+  fir.store %scalar_val to %dummy : !fir.ref<f32>
+
+  hlfir.end_associate %temp#0, %temp#2 : !fir.ref<!fir.array<10xf32>>, i1
   return
 }
-// CHECK-LABEL: func.func @test_scalar_apply_inline
-// CHECK:         %[[MASK:.*]] = hlfir.elemental
-// CHECK:         fir.store %[[MASK]] to {{.*}}
-// CHECK-NOT:     hlfir.apply
-// CHECK:         arith.mulf
-// CHECK-NOT:     hlfir.destroy
+
+// CHECK-LABEL: func.func @test_scalar_apply_inlining_safe
+// CHECK: %[[ELEM:.*]] = hlfir.elemental
+// CHECK: hlfir.yield_element
+// CHECK: %[[ADDR:.*]] = fir.coordinate_of %arg0, %arg1
+// CHECK: %[[VAL:.*]] = fir.load %[[ADDR]]
+// CHECK: arith.addf %[[VAL]], %[[VAL]]
+// CHECK-NOT: hlfir.apply
+// CHECK: hlfir.associate %[[ELEM]]
+// CHECK-NOT: hlfir.destroy %[[ELEM]]
 
 // Check long chains of elementals.
 // subroutine reproducer(a)
@@ -222,7 +309,7 @@ func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
   %1:3 = fir.box_dims %0#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
   %2 = fir.shape %1#1 : (index) -> !fir.shape<1>
 
-  // tmp1 = a - 1
+  // tmp1 = a - 1.
   %tmp1 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
   ^bb0(%i: index):
     %a_ref = hlfir.designate %0#0 (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -233,7 +320,7 @@ func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
 
   %dummy = hlfir.no_reassoc %tmp1 : !hlfir.expr<?xf32>
 
-  // tmp2 = a * tmp1
+  // tmp2 = a * tmp1.
   %tmp2 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
   ^bb0(%j: index):
     %a_ref_2 = hlfir.designate %0#0 (%j) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -243,7 +330,7 @@ func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
     hlfir.yield_element %mul : f32
   }
 
-  // tmp3 = sqrt(tmp2)
+  // tmp3 = sqrt(tmp2).
   %tmp3 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
   ^bb0(%k: index):
     %t2_val = hlfir.apply %tmp2, %k : (!hlfir.expr<?xf32>, index) -> f32
@@ -340,3 +427,151 @@ func.func @test_noinline_due_to_finalization(%arg0: !fir.box<!fir.array<?x!fir.t
 // CHECK:         fir.call @persistent_user(%[[EL]])
 // CHECK:         %[[APPLY:.*]] = hlfir.apply %[[EL]], %{{.*}}
 // CHECK:         hlfir.destroy %[[EL]] finalize
+
+// Test conflicting writes hidden within nested regions (like fir.if) between
+// producer and the apply site.
+func.func @test_nested_region_conflict(%arg0: !fir.ref<f32>, %cond: i1) {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shape %c1 : (index)  -> !fir.shape<1>
+
+  // Producer.
+  %elem = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+    ^bb0(%i: index):
+      %val = fir.load %arg0 : !fir.ref<f32>
+      hlfir.yield_element %val : f32
+  }
+
+  // Nested region (fir.if) containing a store.
+  // This tests if your walk(func) correctly sees into the 'then' block.
+  fir.if %cond {
+    %new_val = arith.constant 3.0 : f32
+    fir.store %new_val to %arg0 : !fir.ref<f32>
+  } else {
+    // Distractor op
+    fir.no_reassoc %cond : i1
+  }
+
+  // Apply Site.
+  %res = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+    ^bb0(%j: index):
+      %val = hlfir.apply %elem, %j : (!hlfir.expr<1xf32>, index) -> f32
+      hlfir.yield_element %val : f32
+  }
+
+  hlfir.destroy %elem : !hlfir.expr<1xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_nested_region_conflict
+// CHECK: %[[ELEM:.*]] = hlfir.elemental
+// CHECK: fir.if %{{.*}} {
+// CHECK:   fir.store
+// CHECK: }
+// CHECK: hlfir.elemental
+// CHECK:   hlfir.apply %[[ELEM]]
+// CHECK: hlfir.destroy %[[ELEM]]
+
+// Checks tracking the elemntal result through block arguments to find the
+// hlfir.apply site across a branch, fir.store in the intervening block (^bb1)
+// blocks the inlining. It was getting inlined with relaxed inlining patch.
+func.func @test_cross_block_conflict(%arg0: !fir.ref<f32>, %shape: !fir.shape<1>) {
+  // Producer in Entry Block.
+  %elemental = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %val = fir.load %arg0 : !fir.ref<f32>
+    hlfir.yield_element %val : f32
+  }
+
+  // Pass value to block argument to maintain dataflow for the worklist.
+  cf.br ^bb1(%elemental : !hlfir.expr<1xf32>)
+
+^bb1(%block_arg: !hlfir.expr<1xf32>):
+  // Conflicting Write.
+  // This store between producer and apply site across blocks.
+  %new_val = arith.constant 2.0 : f32
+  fir.store %new_val to %arg0 : !fir.ref<f32>
+
+  // Apply Site.
+  %res = hlfir.elemental %shape : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%j: index):
+    %val = hlfir.apply %block_arg, %j : (!hlfir.expr<1xf32>, index) -> f32
+    hlfir.yield_element %val : f32
+  }
+
+  hlfir.destroy %elemental : !hlfir.expr<1xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_cross_block_conflict
+// CHECK: %[[ELM:.*]] = hlfir.elemental
+// CHECK: cf.br ^bb1(%[[ELM]] : !hlfir.expr<1xf32>)
+// CHECK: ^bb1(%[[BARG:.*]]: !hlfir.expr<1xf32>):
+// CHECK: fir.store {{.*}} to %arg0
+// CHECK: hlfir.elemental
+// CHECK: hlfir.apply %[[BARG]]
+// CHECK: hlfir.destroy %[[ELM]]
+
+// External impure procedure that might modify %arg0.
+func.func private @impure_side_effect()
+
+func.func @test_impure_call_conflict(%arg0: !fir.ref<f32>, %shape: !fir.shape<1>) {
+  // Reads from %arg0.
+  %elemental = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%i: index):
+    %val = fir.load %arg0 : !fir.ref<f32>
+    hlfir.yield_element %val : f32
+  }
+
+  // Acts as a memory barrier.
+  fir.call @impure_side_effect() : () -> ()
+
+  // Apply Site.
+  %res = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<1xf32> {
+  ^bb0(%j: index):
+    %val = hlfir.apply %elemental, %j : (!hlfir.expr<1xf32>, index) -> f32
+    hlfir.yield_element %val : f32
+  }
+
+  hlfir.destroy %elemental : !hlfir.expr<1xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_impure_call_conflict
+// CHECK: %[[ELEM:.*]] = hlfir.elemental
+// CHECK: fir.call @impure_side_effect()
+// CHECK: hlfir.apply %[[ELEM]]
+// CHECK: hlfir.destroy %[[ELEM]]
+
+// Check conflicting write to the same memory buffer read by the elemental
+// producer in loop body blocks inlining.
+func.func @test_memory_dependency_with_designate(%arg0: !fir.ref<!fir.array<10xf32>>, %shape: !fir.shape<1>) {
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %val = arith.constant 2.0 : f32
+
+  // Reads from the whole array %arg0.
+  %elem = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+    ^bb0(%i: index):
+      %addr = fir.coordinate_of %arg0, %i : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      %load = fir.load %addr : !fir.ref<f32>
+      hlfir.yield_element %load : f32
+  }
+
+  // Modifies one element of the same array, partial write to the same base
+  // buffer.
+  %specific_addr = hlfir.designate %arg0 (%c1) : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+  fir.store %val to %specific_addr : !fir.ref<f32>
+
+  // Apply Site.
+  %res = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
+    ^bb0(%j: index):
+      %applied = hlfir.apply %elem, %j : (!hlfir.expr<10xf32>, index) -> f32
+      hlfir.yield_element %applied : f32
+  }
+
+  hlfir.destroy %elem : !hlfir.expr<10xf32>
+  return
+}
+// CHECK-LABEL: func.func @test_memory_dependency_with_designate
+// CHECK: %[[ELEM:.*]] = hlfir.elemental {{.*}} unordered
+// CHECK: fir.store {{.*}} to %{{.*}}
+// CHECK: hlfir.elemental
+// CHECK:   hlfir.apply %[[ELEM]]
+// CHECK: hlfir.destroy %[[ELEM]]
