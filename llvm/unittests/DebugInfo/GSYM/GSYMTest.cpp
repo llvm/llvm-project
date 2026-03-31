@@ -183,7 +183,8 @@ static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
                                         const uint64_t BaseAddr,
                                         std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(DE);
   llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -270,7 +271,8 @@ static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
   ASSERT_EQ(ExpectedOffset.get(), 0ULL);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(DE);
   llvm::Expected<FunctionInfo> Decoded =
       FunctionInfo::decode(Data, FI.Range.start());
   // Make sure decoding succeeded.
@@ -346,7 +348,8 @@ static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(DE);
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
@@ -358,7 +361,8 @@ static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
                                       StringRef Bytes, const uint64_t BaseAddr,
                                       std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
-  DataExtractor Data(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
+  GsymDataExtractor Data(DE);
   llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
@@ -525,7 +529,7 @@ TEST(GSYMTest, TestInlineInfoDecodeErrors) {
       "0x00000004: missing InlineInfo uint8_t indicating children");
   FW.writeU8(0);
   TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000005: missing InlineInfo uint32_t for name");
+      "0x00000005: missing InlineInfo name");
   FW.writeU32(0);
   TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
       "0x00000009: missing ULEB128 for InlineInfo call file");

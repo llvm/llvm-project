@@ -38,7 +38,7 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
   return OS;
 }
 
-llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
+llvm::Expected<FunctionInfo> FunctionInfo::decode(GsymDataExtractor &Data,
                                                   uint64_t BaseAddr) {
   FunctionInfo FI;
   uint64_t Offset = 0;
@@ -49,7 +49,7 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   if (!Data.isValidOffsetForDataOfSize(Offset, 4))
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": missing FunctionInfo Name", Offset);
-  FI.Name = Data.getU32(&Offset);
+  FI.Name = Data.getStrp(&Offset);
   if (FI.Name == 0)
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": invalid FunctionInfo Name value 0x%8.8x",
@@ -68,9 +68,7 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
       return createStringError(std::errc::io_error,
           "0x%8.8" PRIx64 ": missing FunctionInfo data for InfoType %u",
           Offset, IT);
-    DataExtractor InfoData(Data.getData().substr(Offset, InfoLength),
-                           Data.isLittleEndian(),
-                           Data.getAddressSize());
+    GsymDataExtractor InfoData(Data.getData().substr(Offset, InfoLength), Data);
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
@@ -236,14 +234,14 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
 }
 
 llvm::Expected<LookupResult>
-FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
+FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
                      uint64_t FuncAddr, uint64_t Addr,
                      std::optional<DataExtractor> *MergedFuncsData) {
   LookupResult LR;
   LR.LookupAddr = Addr;
   uint64_t Offset = 0;
   LR.FuncRange = {FuncAddr, FuncAddr + Data.getU32(&Offset)};
-  uint32_t NameOffset = Data.getU32(&Offset);
+  uint32_t NameOffset = Data.getStrp(&Offset);
   // The "lookup" functions doesn't report errors as accurately as the "decode"
   // function as it is meant to be fast. For more accurage errors we could call
   // "decode".
@@ -301,8 +299,9 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
         InlineInfoData = InfoData;
         break;
 
-      case InfoType::CallSiteInfo:
-        if (auto CSIC = CallSiteInfoCollection::decode(InfoData)) {
+      case InfoType::CallSiteInfo: {
+        GsymDataExtractor GsymInfoData(InfoData, &GR);
+        if (auto CSIC = CallSiteInfoCollection::decode(GsymInfoData)) {
           // Find matching call site based on relative offset
           for (const auto &CS : CSIC->CallSites) {
             // Check if the call site matches the lookup address
@@ -318,6 +317,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
           return CSIC.takeError();
         }
         break;
+      }
 
       default:
         break;
@@ -353,7 +353,8 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
     return LR;
   // We have inline information. Try to augment the lookup result with this
   // data.
-  llvm::Error Err = InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr,
+  GsymDataExtractor InlineGDE(*InlineInfoData, &GR);
+  llvm::Error Err = InlineInfo::lookup(GR, InlineGDE, FuncAddr, Addr,
                                        LR.Locations);
   if (Err)
     return std::move(Err);

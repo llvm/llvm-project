@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
@@ -139,7 +140,7 @@ struct FunctionInfo {
   ///
   /// \returns An FunctionInfo or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
+  LLVM_ABI static llvm::Expected<FunctionInfo> decode(GsymDataExtractor &Data,
                                                       uint64_t BaseAddr);
 
   /// Encode this object into FileWriter stream.
@@ -197,7 +198,7 @@ struct FunctionInfo {
   /// encountered during decoding. An error should only be returned if the
   /// address is not contained in the FunctionInfo or if the data is corrupted.
   LLVM_ABI static llvm::Expected<LookupResult>
-  lookup(DataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
+  lookup(GsymDataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
          uint64_t Addr,
          std::optional<DataExtractor> *MergedFuncsData = nullptr);
 
