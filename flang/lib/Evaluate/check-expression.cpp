@@ -1211,9 +1211,9 @@ public:
   Result operator()(const NullPointer &) const { return true; }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &x) {
-    // Contiguity is not a meaningful characteristic of a conditional
-    // expression
-    return std::nullopt;
+    // Conditional expressions are never variables; expression results are
+    // always contiguous.
+    return true;
   }
 
 private:
