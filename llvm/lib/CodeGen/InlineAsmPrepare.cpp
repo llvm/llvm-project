@@ -258,8 +258,14 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
   for (int OrigIdx : NewArgToOrigArg)
     NewParamAttrs.push_back(OrigIdx >= 0 ? OldAL.getParamAttrs(OrigIdx)
                                          : AttributeSet());
+
+  // Return attributes must be dropped if the return type changed (e.g. from
+  // a value output to an out-parameter void return).
+  AttributeSet NewRetAttrs =
+      NewRetTy == CB->getType() ? OldAL.getRetAttrs() : AttributeSet();
+
   NewCall->setAttributes(AttributeList::get(
-      Context, OldAL.getFnAttrs(), OldAL.getRetAttrs(), NewParamAttrs));
+      Context, OldAL.getFnAttrs(), NewRetAttrs, NewParamAttrs));
 
   NewCall->copyMetadata(*CB);
 
