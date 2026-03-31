@@ -96,9 +96,6 @@ def NVVM_Dialect : Dialect {
     /// nvvm.cluster_dim attributes.
     static StringRef getBlocksAreClustersAttrName() { return "nvvm.blocksareclusters"; }
 
-    /// Get the name of the attribute used to annotate managed global variables.
-    static StringRef getManagedAttrName() { return "nvvm.managed"; }
-
     /// Verify an attribute from this dialect on the argument at 'argIndex' for
     /// the region at 'regionIndex' on the given operation. Returns failure if
     /// the verification failed, success otherwise. This hook may optionally be
