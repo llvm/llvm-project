@@ -620,11 +620,6 @@ public:
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
 
-  /// Add a new check block before the vector preheader to \p Plan to check
-  /// if the main vector loop should be executed (TC >= VF * UF).
-  void addIterationCountCheckBlock(VPlan &Plan, ElementCount VF,
-                                   unsigned UF) const;
-
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
                            bool HasBranchWeights) const;

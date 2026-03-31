@@ -7302,7 +7302,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
 
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
-    InnerLoopVectorizer &ILV, DominatorTree *DT, bool VectorizingEpilogue) {
+    InnerLoopVectorizer &ILV, DominatorTree *DT, bool IsEpilogueVectorization) {
   assert(BestVPlan.hasVF(BestVF) &&
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
@@ -7328,7 +7328,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan);
-  if (!VectorizingEpilogue)
+  if (!IsEpilogueVectorization)
     VPlanTransforms::removeBranchOnConst(BestVPlan);
   if (BestVPlan.getEntry()->getSingleSuccessor() ==
       BestVPlan.getScalarPreheader()) {
@@ -7375,11 +7375,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
   // Check if the epilogue VPlan is executed (where the trip count was already
   // set when executing the main plan).
-  bool IsEpilogueVectorization = VectorizingEpilogue && ILV.getTripCount();
+  bool VectroizingEpilogue = IsEpilogueVectorization && ILV.getTripCount();
   if (!ILV.getTripCount()) {
     ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
   } else {
-    assert(VectorizingEpilogue && "should only re-use the existing trip "
+    assert(VectroizingEpilogue && "should only re-use the existing trip "
                                   "count during epilogue vectorization");
   }
 
@@ -7446,7 +7446,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   updateLoopMetadataAndProfileInfo(
       HeaderVPBB ? LI->getLoopFor(State.CFG.VPBB2IRBB.lookup(HeaderVPBB))
                  : nullptr,
-      HeaderVPBB, BestVPlan, IsEpilogueVectorization, LID, OrigAverageTripCount,
+      HeaderVPBB, BestVPlan, VectroizingEpilogue, LID, OrigAverageTripCount,
       OrigLoopInvocationWeight,
       estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning()),
       DisableRuntimeUnroll);
@@ -8535,19 +8535,6 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
       Plan, VF, UF, MinProfitableTripCount,
       CM.requiresScalarEpilogue(VF.isVector()), CM.foldTailByMasking(),
       OrigLoop, BranchWeights,
-      OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
-}
-
-void LoopVectorizationPlanner::addIterationCountCheckBlock(VPlan &Plan,
-                                                           ElementCount VF,
-                                                           unsigned UF) const {
-  const uint32_t *BranchWeights =
-      hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
-          ? MinItersBypassWeights
-          : nullptr;
-  VPlanTransforms::addIterationCountCheckBlock(
-      Plan, VF, UF, CM.requiresScalarEpilogue(VF.isVector()), OrigLoop,
-      BranchWeights,
       OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 }
 
@@ -9652,6 +9639,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Consider vectorizing the epilogue too if it's profitable.
   VectorizationFactor EpilogueVF =
       LVP.selectEpilogueVectorizationFactor(VF.Width, IC);
+  bool HasBranchWeights =
+      hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   if (EpilogueVF.Width.isVector()) {
     std::unique_ptr<VPlan> BestMainPlan(BestPlan.duplicate());
 
@@ -9670,11 +9659,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // checks for the main plan.
     LVP.addMinimumIterationCheck(*BestMainPlan, EPI.EpilogueVF, EPI.EpilogueUF,
                                  ElementCount::getFixed(0));
-    bool HasBranchWeights =
-        hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
     LVP.attachRuntimeChecks(*BestMainPlan, Checks, HasBranchWeights);
-    LVP.addIterationCountCheckBlock(*BestMainPlan, EPI.MainLoopVF,
-                                    EPI.MainLoopUF);
+    VPlanTransforms::addIterationCountCheckBlock(
+        *BestMainPlan, EPI.MainLoopVF, EPI.MainLoopUF,
+        CM.requiresScalarEpilogue(EPI.MainLoopVF.isVector()), L,
+        HasBranchWeights ? MinItersBypassWeights : nullptr,
+        L->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 
     EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TTI, AC, EPI, &CM,
                                        Checks, *BestMainPlan);
@@ -9698,9 +9688,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       LastCheck = SCEVBB;
     BasicBlock *ScalarPH = L->getLoopPreheader();
     auto *BI = cast<CondBrInst>(LastCheck->getTerminator());
-    EPI.MainLoopIterationCountCheck = BI->getSuccessor(0) == ScalarPH
-                                          ? BI->getSuccessor(1)
-                                          : BI->getSuccessor(0);
+    EPI.MainLoopIterationCountCheck =
+        BI->getSuccessor(BI->getSuccessor(0) == ScalarPH);
 
     // Second pass vectorizes the epilogue and adjusts the control flow
     // edges from the first pass.
@@ -9724,9 +9713,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                    BestPlan, VF.Width, IC, PSE);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
-    LVP.attachRuntimeChecks(
-        BestPlan, Checks,
-        hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
+    LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
 
     LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
     ++LoopsVectorized;
