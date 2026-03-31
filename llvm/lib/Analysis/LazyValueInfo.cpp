@@ -1586,7 +1586,6 @@ static bool isOperationFoldable(User *Usr) {
 /// Judge whether a foldable operation is injective.
 static bool isInjectiveMapping(User *Usr) {
   assert(isOperationFoldable(Usr) && "Only accept foldable user");
-  const APInt *C;
   if (auto *BO = dyn_cast<BinaryOperator>(Usr)) {
     switch (BO->getOpcode()) {
     case Instruction::Add:
