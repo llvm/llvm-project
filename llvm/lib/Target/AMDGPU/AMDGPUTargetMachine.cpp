@@ -52,6 +52,7 @@
 #include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
 #include "SIFormMemoryClauses.h"
+#include "SIGlobalLoadSAddrToVAddr.h"
 #include "SILoadStoreOptimizer.h"
 #include "SILowerControlFlow.h"
 #include "SILowerSGPRSpills.h"
@@ -727,6 +728,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
+  initializeSIGlobalLoadSAddrToVAddrLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1814,6 +1816,8 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsLegacyID);
 
+  addPass(&SIGlobalLoadSAddrToVAddrLegacyID);
+
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addPass(&SIPreAllocateWWMRegsLegacyID);
 
@@ -1850,6 +1854,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsLegacyID);
+
+  addPass(&SIGlobalLoadSAddrToVAddrLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addPass(&SIPreAllocateWWMRegsLegacyID);
@@ -2455,6 +2461,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
   // Equivalent of PEI for SGPRs.
   addMachineFunctionPass(SILowerSGPRSpillsPass(), PMW);
 
+  addMachineFunctionPass(SIGlobalLoadSAddrToVAddrPass(), PMW);
+
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
 
@@ -2548,6 +2556,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
 
   // Equivalent of PEI for SGPRs.
   addMachineFunctionPass(SILowerSGPRSpillsPass(), PMW);
+
+  addMachineFunctionPass(SIGlobalLoadSAddrToVAddrPass(), PMW);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
