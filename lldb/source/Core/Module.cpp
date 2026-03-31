@@ -1434,6 +1434,8 @@ static bool LoadScriptingModule(const FileSpec &scripting_fspec,
 }
 
 bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
+  Log *log = GetLog(LLDBLog::Modules);
+
   if (!target) {
     error = Status::FromErrorString("invalid destination Target");
     return false;
@@ -1499,13 +1501,11 @@ To run all discovered debug scripts in this session:
       return false;
     }
 
-    LLDB_LOG(GetLog(LLDBLog::Modules), "Auto-loading {0}",
-             scripting_fspec.GetPath());
+    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
 
     if (!LoadScriptingModule(scripting_fspec, *script_interpreter, *target,
                              error)) {
-      LLDB_LOG(GetLog(LLDBLog::Modules),
-               "Failed to load '{0}'. Remaining scripts won't be loaded.",
+      LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
                scripting_fspec.GetPath());
       return false;
     }
