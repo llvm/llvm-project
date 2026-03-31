@@ -259,7 +259,7 @@ public:
   }
 
   /// Return which operand this is in the OpOperand list of the Operation.
-  unsigned getOperandNumber();
+  unsigned getOperandNumber() const;
 
   /// Set the current value being used by this operand.
   void assign(Value value) { set(value); }
