@@ -18231,7 +18231,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAGCombineAddc(N, DCI);
 
   case ISD::BITCAST:
-    return GenerateVBPERM(N, DCI);
+    return DAGCombineBitcast(N, DCI);
   }
 
   return SDValue();
@@ -20684,8 +20684,8 @@ bool PPCTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const {
 //   i16 = bitcast(v16i1 truncate(v16i8))
 //   i8  = bitcast(v8i1  truncate(v8i16))
 //   i8  = bitcast(v8i1  truncate(v8i8))
-SDValue PPCTargetLowering::GenerateVBPERM(SDNode *N,
-                                          DAGCombinerInfo &DCI) const {
+SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
   SDValue Op0 = N->getOperand(0);
   if (Op0.getOpcode() != ISD::TRUNCATE)
     return SDValue();
