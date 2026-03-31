@@ -1082,14 +1082,8 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     if (TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
         TargetLowering::Expand)
       break;
-    // Otherwise multiply the whole vector
-    SDLoc DL(Node);
-    SDNodeFlags Flags = Node->getFlags();
-    Flags.setNoFPExcept(true);
-    SDValue One = DAG.getConstantFP(1.0, DL, VT);
-    SDValue Mul =
-        DAG.getNode(ISD::STRICT_FMUL, DL, {VT, MVT::Other},
-                    {DAG.getEntryNode(), Node->getOperand(0), One}, Flags);
+    // Otherwise canonicalize the whole vector.
+    SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
     Results.push_back(Mul);
     return;
   }
