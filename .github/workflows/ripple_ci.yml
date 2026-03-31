@@ -60,8 +60,6 @@ jobs:
         run: cmake --build build --target check-llvm-transforms-ripple
 
   hexagon_build_and_test:
-    env:
-      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/20.1.4/clang+llvm-20.1.4-cross-hexagon-unknown-linux-musl.tar.zst
     if: github.repository_owner == 'Ripple-Programming'
     name: Build and Test ripple
     runs-on: [ubuntu-24.04]
@@ -70,19 +68,13 @@ jobs:
       matrix:
         targets:
           - arch: Hexagon
-            triple: hexagon-unknown-linux-musl
-            cxx_flags:
-            sysroot: ${{ github.workspace }}/hexagon_toolchain/target/hexagon-unknown-linux-musl
+            triple: hexagon-unknown-unknown-elf
+            cxx_flags: -stdlib=libc++ -D_USE_GENERIC_XLOCALE_SHIMS -D_LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE -D_C99 -D_C_AS_CPP -D_HAS_GENERIC_TEMPLATES=0
+            sysroot: $HEXAGON_SDK/tools/HEXAGON_Tools/19.0.04/Tools/target/hexagon
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-
-      - name: Get Hexagon Toolchain
-        run: |
-          mkdir hexagon_toolchain
-          wget -qO - $HEXAGON_TOOLCHAIN_URL | \
-            tar --zstd -xvf - --strip-component=2 -C hexagon_toolchain
 
       - name: Clone eld
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
