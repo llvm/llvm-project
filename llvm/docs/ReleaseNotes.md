@@ -101,6 +101,13 @@ Changes to LLVM infrastructure
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
 
+* Bitcode libraries can now implement compiler-managed library functions
+  (libcalls) without causing incorrect API manipulation or undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there are still issues with invalid compiler reasoning about some functions
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO. 
+
 Changes to building LLVM
 ------------------------
 
@@ -167,7 +174,7 @@ Changes to the RISC-V Backend
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 * `-mcpu=spacemit-x100` was added.
-* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Change P extension version to match the 0.21 draft specification.
 * Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
   `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
   available in the assembler and disassembler without requiring their respective
@@ -181,6 +188,7 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
+* Support for the experimental `XRivosVisni` vendor extension has been removed.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -237,6 +245,7 @@ Changes to LLDB
 
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
   have been deprecated. They always return 1, as before.
+* A new ``webinspector-wasm`` platform was added to list and attach to WebAssebly processes in Safari.
 
 ### FreeBSD
 

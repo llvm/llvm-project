@@ -108,6 +108,16 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_uproduct:
     // Quad Op Variants
   case Intrinsic::dx_quad_read_across_x:
+  case Intrinsic::dx_quad_read_across_y:
+    return true;
+  }
+}
+
+static bool checkDoubleExtensionOps(Intrinsic::ID IID) {
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::fma:
     return true;
   }
 }
@@ -249,9 +259,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     if (FunctionFlags.contains(CF))
       CSF.merge(FunctionFlags[CF]);
 
-    // TODO: Set DX11_1_DoubleExtensions if I is a call to DXIL intrinsic
-    // DXIL::Opcode::Fma https://github.com/llvm/llvm-project/issues/114554
-
+    CSF.DX11_1_DoubleExtensions |=
+        checkDoubleExtensionOps(CI->getIntrinsicID());
     CSF.WaveOps |= checkWaveOps(CI->getIntrinsicID());
   }
 }

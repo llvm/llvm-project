@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s -fexperimental-new-constant-interpreter
 
-// expected-no-diagnostics
-
 enum gcc_type_class {
   no_type_class = -1,
   void_type_class, integer_type_class, char_type_class,
@@ -71,3 +69,18 @@ void foo() {
   int a23[__builtin_classify_type(bitint) == bitint_type_class ? 1 : -1];
 }
 
+namespace GH175589 {
+  struct C {
+    template<class T>
+    void f() {}
+  };
+  // expected-error@+1 {{reference to overloaded function could not be resolved}}
+  int x1 = __builtin_classify_type(&C::f);
+
+  void g(int);
+  void g(double);
+  // expected-error@+3 {{reference to overloaded function could not be resolved}}
+  // expected-note@-3 {{possible target for call}}
+  // expected-note@-3 {{possible target for call}}
+  int x2 = __builtin_classify_type(g);
+}

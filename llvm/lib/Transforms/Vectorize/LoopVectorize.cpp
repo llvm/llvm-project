@@ -460,6 +460,24 @@ static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
   return ElementCount::getFixed(0);
 }
 
+/// Get the maximum trip count for \p L from the SCEV unsigned range, excluding
+/// zero from the range. Only valid when not folding the tail, as the minimum
+/// iteration count check guards against a zero trip count. Returns 0 if
+/// unknown.
+static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
+                                         Loop *L) {
+  const SCEV *BTC = PSE.getBackedgeTakenCount();
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return 0;
+  ScalarEvolution *SE = PSE.getSE();
+  const SCEV *TripCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
+  ConstantRange TCRange = SE->getUnsignedRange(TripCount);
+  APInt MaxTCFromRange = TCRange.getUnsignedMax();
+  if (!MaxTCFromRange.isZero() && MaxTCFromRange.getActiveBits() <= 32)
+    return MaxTCFromRange.getZExtValue();
+  return 0;
+}
+
 /// Returns "best known" trip count, which is either a valid positive trip count
 /// or std::nullopt when an estimate cannot be made (including when the trip
 /// count would overflow), for the specified loop \p L as defined by the
@@ -467,10 +485,13 @@ static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
-///   4) Returns std::nullopt if all of the above failed.
+///   4) Returns the maximum trip count from the SCEV range excluding zero,
+///      if \p CanUseConstantMax and \p CanExcludeZeroTrips.
+///   5) Returns std::nullopt if all of the above failed.
 static std::optional<ElementCount>
 getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
-                    bool CanUseConstantMax = true) {
+                    bool CanUseConstantMax = true,
+                    bool CanExcludeZeroTrips = false) {
   // Check if exact trip count is known.
   if (auto ExpectedTC = getSmallConstantTripCount(PSE.getSE(), L))
     return ExpectedTC;
@@ -486,6 +507,13 @@ getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
   // Check if upper bound estimate is known.
   if (unsigned ExpectedTC = PSE.getSmallConstantMaxTripCount())
     return ElementCount::getFixed(ExpectedTC);
+
+  // Get the maximum trip count from the SCEV range excluding zero. This is
+  // only safe when not folding the tail, as the minimum iteration count check
+  // prevents entering the vector loop with a zero trip count.
+  if (CanUseConstantMax && CanExcludeZeroTrips)
+    if (unsigned RefinedTC = getMaxTCFromNonZeroRange(PSE, L))
+      return ElementCount::getFixed(RefinedTC);
 
   return std::nullopt;
 }
@@ -1244,6 +1272,10 @@ public:
   /// don't have an alternate strategy such as masking available).
   /// \p VF is the vectorization factor that will be used to vectorize \p I.
   bool isScalarWithPredication(Instruction *I, ElementCount VF);
+
+  /// Wrapper function for LoopVectorizationLegality::isMaskRequired,
+  /// that passes the Instruction \p I and if we fold tail.
+  bool isMaskRequired(Instruction *I) const;
 
   /// Returns true if \p I is an instruction that needs to be predicated
   /// at runtime.  The result is independent of the predication mechanism.
@@ -2839,12 +2871,16 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   }
 }
 
+bool LoopVectorizationCostModel::isMaskRequired(Instruction *I) const {
+  return Legal->isMaskRequired(I, foldTailByMasking());
+}
+
 // TODO: Fold into LoopVectorizationLegality::isMaskRequired.
 bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   // TODO: We can use the loop-preheader as context point here and get
   // context sensitive reasoning for isSafeToSpeculativelyExecute.
   if (isSafeToSpeculativelyExecute(I) ||
-      (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
+      (isa<LoadInst, StoreInst, CallInst>(I) && !isMaskRequired(I)) ||
       isa<UncondBrInst, CondBrInst, SwitchInst, PHINode, AllocaInst>(I))
     return false;
 
@@ -2869,7 +2905,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   case Instruction::Call:
     // Side-effects of a Call are assumed to be non-invariant, needing a
     // (fold-tail) mask.
-    assert(Legal->isMaskRequired(I) &&
+    assert(isMaskRequired(I) &&
            "should have returned earlier for calls not needing a mask");
     return true;
   case Instruction::Load:
@@ -3016,8 +3052,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // (either a gap at the end of a load-access that may result in a speculative
   // load, or any gaps in a store-access).
   bool PredicatedAccessRequiresMasking =
-      blockNeedsPredicationForAnyReason(I->getParent()) &&
-      Legal->isMaskRequired(I);
+      blockNeedsPredicationForAnyReason(I->getParent()) && isMaskRequired(I);
   bool LoadAccessWithGapsRequiresEpilogMasking =
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
@@ -3557,6 +3592,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   ScalarEvolution *SE = PSE.getSE();
   ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
+  if (!MaxTC && ScalarEpilogueStatus == CM_ScalarEpilogueAllowed)
+    MaxTC = getMaxTCFromNonZeroRange(PSE, TheLoop);
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
@@ -4787,7 +4824,10 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   // Try to get the exact trip count, or an estimate based on profiling data or
   // ConstantMax from PSE, failing that.
-  auto BestKnownTC = getSmallBestKnownTC(PSE, OrigLoop);
+  auto BestKnownTC =
+      getSmallBestKnownTC(PSE, OrigLoop,
+                          /*CanUseConstantMax=*/true,
+                          /*CanExcludeZeroTrips=*/CM.isScalarEpilogueAllowed());
 
   // For fixed length VFs treat a scalable trip count as unknown.
   if (BestKnownTC && (BestKnownTC->isFixed() || VF.isScalable())) {
@@ -5341,7 +5381,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
-  if (Legal->isMaskRequired(I)) {
+  if (isMaskRequired(I)) {
     unsigned IID = I->getOpcode() == Instruction::Load
                        ? Intrinsic::masked_load
                        : Intrinsic::masked_store;
@@ -5410,8 +5450,8 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                      : Intrinsic::masked_scatter;
   return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
          TTI.getMemIntrinsicInstrCost(
-             MemIntrinsicCostAttributes(IID, VectorTy, Ptr,
-                                        Legal->isMaskRequired(I), Alignment, I),
+             MemIntrinsicCostAttributes(IID, VectorTy, Ptr, isMaskRequired(I),
+                                        Alignment, I),
              CostKind);
 }
 
@@ -5441,12 +5481,11 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (isa<StoreInst>(I) && !Group->isFull());
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
-      Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
-      UseMaskForGaps);
+      Group->getAlign(), AS, CostKind, isMaskRequired(I), UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
-    assert(!Legal->isMaskRequired(I) &&
+    assert(!isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
             TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
@@ -5994,7 +6033,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         continue;
       }
 
-      bool MaskRequired = Legal->isMaskRequired(CI);
+      bool MaskRequired = isMaskRequired(CI);
       // Compute corresponding vector type for return value and arguments.
       Type *RetTy = toVectorizedTy(ScalarRetTy, VF);
       for (Type *ScalarTy : ScalarTys)
@@ -7421,6 +7460,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
   // Convert loops with variable-length stepping after regions are dissolved.
   VPlanTransforms::convertToVariableLengthStep(BestVPlan);
+  // Remove dead back-edges for single-iteration loops with BranchOnCond(true).
+  // Only process loop latches to avoid removing edges from the middle block,
+  // which may be needed for epilogue vectorization.
+  VPlanTransforms::removeBranchOnConst(BestVPlan, /*OnlyLatches=*/true);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
@@ -7428,6 +7471,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
+  VPlanTransforms::simplifyKnownEVL(BestVPlan, BestVF, PSE);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
   // making any changes to the CFG.
@@ -7672,7 +7716,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
 
   // If a mask is not required, drop it - use unmasked version for safe loads.
   // TODO: Determine if mask is needed in VPlan.
-  VPValue *Mask = Legal->isMaskRequired(I) ? VPI->getMask() : nullptr;
+  VPValue *Mask = CM.isMaskRequired(I) ? VPI->getMask() : nullptr;
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -7759,10 +7803,9 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   VPIRValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
 
-  // It is always safe to copy over the NoWrap and FastMath flags. In
-  // particular, when folding tail by masking, the masked-off lanes are never
-  // used, so it is safe.
-  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
+  // Wrap flags from the original induction do not apply to the truncated type,
+  // so do not propagate them.
+  VPIRFlags Flags = VPIRFlags::WrapFlagsTy(false, false);
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
   return new VPWidenIntOrFpInductionRecipe(
@@ -7939,7 +7982,7 @@ VPHistogramRecipe *VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (Legal->isMaskRequired(HI->Store))
+  if (CM.isMaskRequired(HI->Store))
     HGramOps.push_back(VPI->getMask());
 
   return new VPHistogramRecipe(Opcode, HGramOps, VPI->getDebugLoc());
@@ -9062,13 +9105,11 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   Header->setName("vec.epilog.vector.body");
 
   VPCanonicalIVPHIRecipe *IV = VectorLoop->getCanonicalIV();
-  // When vectorizing the epilogue loop, the canonical induction needs to be
-  // adjusted by the value after the main vector loop. Find the resume value
+  // When vectorizing the epilogue loop, the canonical induction needs to start
+  // at the resume value from the main vector loop. Find the resume value
   // created during execution of the main VPlan. It must be the first phi in the
-  // loop preheader. Use the value to increment the canonical IV, and update all
-  // users in the loop region to use the adjusted value.
-  // FIXME: Improve modeling for canonical IV start values in the epilogue
-  // loop.
+  // loop preheader. Add this resume value as an offset to the canonical IV of
+  // the epilogue loop.
   using namespace llvm::PatternMatch;
   PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
   for (Value *Inc : EPResumeVal->incoming_values()) {
@@ -9103,8 +9144,17 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
          "ScalarIVSteps when resetting the start value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   VPInstruction *Add = Builder.createAdd(IV, VPV);
-  IV->replaceAllUsesWith(Add);
-  Add->setOperand(0, IV);
+  // Replace all users of the canonical IV and its increment with the offset
+  // version, except for the Add itself and the canonical IV increment.
+  auto *Increment = cast<VPInstruction>(IV->getBackedgeValue());
+  IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U, unsigned) {
+    return &U != Add && &U != Increment;
+  });
+  VPInstruction *OffsetIVInc =
+      VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
+  Increment->replaceUsesWithIf(OffsetIVInc,
+                               [IV](VPUser &U, unsigned) { return &U != IV; });
+  OffsetIVInc->setOperand(0, Increment);
 
   DenseMap<Value *, Value *> ToFrozen;
   SmallVector<Instruction *> InstsToMove;

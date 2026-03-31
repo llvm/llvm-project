@@ -1359,6 +1359,15 @@ struct GenericPluginTy {
     return *RPCServer;
   }
 
+  /// Initialize the RPC doorbell if used by the target.
+  virtual Error initRPCDoorbell(uint64_t *&Value, uint64_t *&Mailbox,
+                                uint32_t &EventID) {
+    return Plugin::success();
+  }
+
+  /// Tear down any target-specific doorbell resources.
+  virtual Error deinitRPCDoorbell() { return Plugin::success(); }
+
   /// Get a reference to the record and replay interface for the plugin.
   RecordReplayTy &getRecordReplay() {
     assert(RecordReplay && "RR interface not initialized");

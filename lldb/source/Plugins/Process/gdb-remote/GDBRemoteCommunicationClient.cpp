@@ -4359,7 +4359,7 @@ bool GDBRemoteCommunicationClient::UsesNativeSignals() {
 
 llvm::Expected<int> GDBRemoteCommunicationClient::KillProcess(lldb::pid_t pid) {
   StringExtractorGDBRemote response;
-  GDBRemoteCommunication::ScopedTimeout(*this, seconds(3));
+  GDBRemoteCommunication::ScopedTimeout timeout(*this, seconds(3));
 
   // LLDB server typically sends no response for "k", so we shouldn't try
   // to sync on timeout.

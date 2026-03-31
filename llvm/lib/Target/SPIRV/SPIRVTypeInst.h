@@ -68,4 +68,4 @@ template <> struct DenseMapInfo<SPIRVTypeInst> {
 };
 
 } // namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVTYPEINST_H

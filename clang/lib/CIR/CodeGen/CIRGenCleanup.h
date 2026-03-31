@@ -108,6 +108,10 @@ class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
   /// created if needed before the cleanup is popped.
   mlir::Block *normalBlock = nullptr;
 
+  /// An optional boolean variable indicating whether this cleanup has been
+  /// activated yet.
+  Address activeFlag = Address::invalid();
+
   /// Cleanup scope op that represent the current scope in CIR
   cir::CleanupScopeOp cleanupScopeOp;
 
@@ -153,6 +157,22 @@ public:
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
 
   bool isLifetimeMarker() const { return cleanupBits.isLifetimeMarker; }
+
+  bool hasActiveFlag() const { return activeFlag.isValid(); }
+  Address getActiveFlag() const { return activeFlag; }
+  void setActiveFlag(Address var) { activeFlag = var; }
+
+  void setTestFlagInNormalCleanup() {
+    cleanupBits.testFlagInNormalCleanup = true;
+  }
+  bool shouldTestFlagInNormalCleanup() const {
+    return cleanupBits.testFlagInNormalCleanup;
+  }
+
+  void setTestFlagInEHCleanup() { cleanupBits.testFlagInEHCleanup = true; }
+  bool shouldTestFlagInEHCleanup() const {
+    return cleanupBits.testFlagInEHCleanup;
+  }
 
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
     return enclosingNormal;
