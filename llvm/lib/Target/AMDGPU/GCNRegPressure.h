@@ -342,12 +342,14 @@ protected:
 
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
+  const SIRegisterInfo *SRI = nullptr;
 
   GCNRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
-      : LIS(LIS), MRI(&MRI) {
+      : LIS(LIS), MRI(&MRI),
+        SRI(static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo())) {
     setPhysRegTracking();
     if (TrackPhysRegs)
-      PhysLiveRegs.init(*MRI.getTargetRegisterInfo());
+      PhysLiveRegs.init(*SRI);
   }
 
   // Copy constructor - PhysLiveRegs must be initialized then copied.
@@ -358,10 +360,10 @@ protected:
         CurPhysPressure(Other.CurPhysPressure),
         MaxPhysPressure(Other.MaxPhysPressure),
         TrackPhysRegs(Other.TrackPhysRegs), LastTrackedMI(Other.LastTrackedMI),
-        MRI(Other.MRI) {
+        MRI(Other.MRI), SRI(Other.SRI) {
     if (TrackPhysRegs) {
-      assert(MRI && "MRI not initialized");
-      PhysLiveRegs.init(*MRI->getTargetRegisterInfo());
+      assert(SRI && "SRI not initialized");
+      PhysLiveRegs.init(*SRI);
       PhysLiveRegs.addUnits(Other.PhysLiveRegs.getBitVector());
     }
   }

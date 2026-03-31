@@ -500,28 +500,25 @@ bool GCNRPTracker::isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const {
 }
 
 bool GCNRPTracker::allRegUnitsLive(MCRegister Reg) const {
-  assert(MRI && "MRI not initialized");
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  assert(SRI && "SRI not initialized");
   const BitVector &Units = PhysLiveRegs.getBitVector();
-  return llvm::all_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+  return llvm::all_of(SRI->regunits(Reg), [&](MCRegUnit Unit) {
     return Units.test(static_cast<unsigned>(Unit));
   });
 }
 
 bool GCNRPTracker::checkRegKilled(MCRegister Reg, SlotIndex SI) const {
-  assert(MRI && "MRI not initialized");
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  assert(SRI && "SRI not initialized");
   const BitVector &Units = PhysLiveRegs.getBitVector();
-  return llvm::any_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+  return llvm::any_of(SRI->regunits(Reg), [&](MCRegUnit Unit) {
     return Units.test(static_cast<unsigned>(Unit)) && !isUnitLiveAt(Unit, SI);
   });
 }
 
 bool GCNRPTracker::eraseKilledUnits(MCRegister Reg, SlotIndex SI) {
-  assert(MRI && "MRI not initialized");
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  assert(SRI && "SRI not initialized");
   BitVector KilledUnits(PhysLiveRegs.getBitVector().size(), false);
-  for (MCRegUnit Unit : TRI->regunits(Reg)) {
+  for (MCRegUnit Unit : SRI->regunits(Reg)) {
     unsigned U = static_cast<unsigned>(Unit);
     if (PhysLiveRegs.getBitVector().test(U) && !isUnitLiveAt(Unit, SI))
       KilledUnits.set(U);
@@ -533,10 +530,9 @@ bool GCNRPTracker::eraseKilledUnits(MCRegister Reg, SlotIndex SI) {
 }
 
 bool GCNRPTracker::eraseAllLiveUnits(MCRegister Reg) {
-  assert(MRI && "MRI not initialized");
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  assert(SRI && "SRI not initialized");
   const BitVector &Units = PhysLiveRegs.getBitVector();
-  bool WasLive = llvm::any_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+  bool WasLive = llvm::any_of(SRI->regunits(Reg), [&](MCRegUnit Unit) {
     return Units.test(static_cast<unsigned>(Unit));
   });
   if (WasLive)
@@ -545,10 +541,9 @@ bool GCNRPTracker::eraseAllLiveUnits(MCRegister Reg) {
 }
 
 bool GCNRPTracker::insertIfNotLive(MCRegister Reg) {
-  assert(MRI && "MRI not initialized");
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  assert(SRI && "SRI not initialized");
   const BitVector &Units = PhysLiveRegs.getBitVector();
-  bool NewlyLive = llvm::any_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+  bool NewlyLive = llvm::any_of(SRI->regunits(Reg), [&](MCRegUnit Unit) {
     return !Units.test(static_cast<unsigned>(Unit));
   });
   if (NewlyLive)
@@ -596,6 +591,7 @@ void GCNRPTracker::reset(const MachineInstr &MI,
                          const LiveRegSet *VirtLiveRegsCopy, bool After) {
   const MachineFunction &MF = *MI.getMF();
   MRI = &MF.getRegInfo();
+  SRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   if (VirtLiveRegsCopy) {
     if (&VirtLiveRegs != VirtLiveRegsCopy)
       VirtLiveRegs = *VirtLiveRegsCopy;
@@ -610,7 +606,7 @@ void GCNRPTracker::reset(const MachineInstr &MI,
   // Clear physical register tracking (only if enabled)
   if (TrackPhysRegs) {
     PhysLiveRegs.clear();
-    PhysLiveRegs.init(*MRI->getTargetRegisterInfo());
+    PhysLiveRegs.init(*SRI);
     MaxPhysPressure.clear();
     CurPhysPressure.clear();
   }
@@ -619,6 +615,7 @@ void GCNRPTracker::reset(const MachineInstr &MI,
 void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
                          const LiveRegSet &VirtLiveRegsSet) {
   MRI = &MRInfo;
+  SRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   VirtLiveRegs = VirtLiveRegsSet;
   LastTrackedMI = nullptr;
   MaxPressure = CurPressure = getVirtRegPressure(MRInfo, VirtLiveRegsSet);
@@ -627,7 +624,7 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
   // Clear physical register tracking (only if enabled)
   if (TrackPhysRegs) {
     PhysLiveRegs.clear();
-    PhysLiveRegs.init(*MRI->getTargetRegisterInfo());
+    PhysLiveRegs.init(*SRI);
     MaxPhysPressure.clear();
     CurPhysPressure.clear();
   }
@@ -761,6 +758,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
                                  const LiveRegSet *VirtLiveRegsCopy) {
   MRI = &MI.getMF()->getRegInfo();
+  SRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   LastTrackedMI = nullptr;
   MBBEnd = MI.getParent()->end();
   NextMI = &MI;
@@ -1072,7 +1070,7 @@ bool GCNUpwardRPTracker::isValid() const {
     dbgs() << "\nGCNUpwardRPTracker error: Tracked and"
               " LIS reported livesets mismatch:\n"
            << print(LISLR, *MRI);
-    reportMismatch(LISLR, TrackedLR, MRI->getTargetRegisterInfo());
+    reportMismatch(LISLR, TrackedLR, SRI);
     return false;
   }
 
