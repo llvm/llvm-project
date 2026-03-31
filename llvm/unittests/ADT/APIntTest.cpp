@@ -2645,6 +2645,26 @@ TEST(APIntTest, clearBits) {
   EXPECT_EQ(32u, i64hi32.countl_zero());
   EXPECT_EQ(0u, i64hi32.countl_one());
   EXPECT_EQ(32u, i64hi32.popcount());
+
+  APInt i65top = APInt::getAllOnes(65);
+  i65top.clearBits(64, 65);
+  EXPECT_EQ(64u, i65top.countr_one());
+  EXPECT_EQ(0u, i65top.countr_zero());
+  EXPECT_EQ(64u, i65top.getActiveBits());
+  EXPECT_EQ(1u, i65top.countl_zero());
+  EXPECT_EQ(0u, i65top.countl_one());
+  EXPECT_EQ(64u, i65top.popcount());
+  EXPECT_FALSE(i65top[64]);
+  EXPECT_EQ(APInt(65, UINT64_MAX), i65top);
+
+  APInt i128hi64 = APInt::getAllOnes(128);
+  i128hi64.clearBits(64, 128);
+  EXPECT_EQ(64u, i128hi64.countr_one());
+  EXPECT_EQ(0u, i128hi64.countr_zero());
+  EXPECT_EQ(64u, i128hi64.getActiveBits());
+  EXPECT_EQ(64u, i128hi64.countl_zero());
+  EXPECT_EQ(0u, i128hi64.countl_one());
+  EXPECT_EQ(64u, i128hi64.popcount());
 }
 
 TEST(APIntTest, getLoBits) {
