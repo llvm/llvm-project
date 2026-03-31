@@ -238,11 +238,11 @@ func.func private @test_alloc_with_multiple_results() -> () {
 // -----
 
 // CHECK-LABEL: func.func private @test_two_alloc_results
-// CHECK: %[[a0:.*]], %[[a1:.*]] = test.alloc_with_two_memref_results
-// CHECK-NEXT: memref.load %[[a0]]
-// CHECK-NEXT: memref.dealloc %[[a0]]
+// CHECK: %[[alloc0:.*]], %[[alloc1:.*]] = test.alloc_with_two_memref_results
+// CHECK-NEXT: memref.load %[[alloc0]]
+// CHECK-NEXT: memref.dealloc %[[alloc0]]
 // CHECK: memref.store
-// CHECK-NEXT: memref.dealloc %[[a1]]
+// CHECK-NEXT: memref.dealloc %[[alloc1]]
 
 // Op produces two allocated results. Each dealloc should move to right
 // after the last use of its corresponding result.
