@@ -406,8 +406,8 @@ CrossTranslationUnitContext::getCrossTUDefinition(const VarDecl *VD,
                                   DisplayCTUProgress);
 }
 
-void CrossTranslationUnitContext::emitCrossTUDiagnostics(
-    const IndexError &IE, SourceLocation Loc) const {
+void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
+                                                         SourceLocation Loc) {
   switch (IE.getCode()) {
   case index_error_code::missing_index_file:
   case index_error_code::invocation_list_file_not_found:
@@ -460,9 +460,12 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(
 
   case index_error_code::load_threshold_reached:
     // This is expected. It is still useful to be aware of, but it is normal
-    // operation.
-    Context.getDiagnostics().Report(Loc,
-                                    diag::remark_ctu_import_threshold_reached);
+    // operation. Emit the remark only once to avoid noise.
+    if (!HasEmittedLoadThresholdRemark) {
+      HasEmittedLoadThresholdRemark = true;
+      Context.getDiagnostics().Report(Loc,
+                                      diag::remark_ctu_import_threshold_reached);
+    }
     return;
 
   case index_error_code::lang_mismatch:

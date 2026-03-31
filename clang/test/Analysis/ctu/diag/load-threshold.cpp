@@ -1,8 +1,9 @@
 // Test that exceeding ctu-import-cpp-threshold produces load_threshold_reached,
-// which is silently fails AST import.
+// which silently fails AST import.
 //
 // With threshold=1, the first external AST (foo) is loaded successfully.
-// The second lookup (bar) finds the threshold exhausted and reports the error.
+// The second lookup (bar) finds the threshold exhausted and emits a remark once.
+// All subsequent threshold-blocked lookups fail silently.
 //
 // RUN: rm -rf %t && mkdir %t
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
@@ -26,7 +27,8 @@
 // RUN:   -verify %s
 
 // foo is loaded successfully (first load, within threshold).
-// bar hits the threshold (no telemetry emitted for it).
+// bar is the first to hit the threshold; the remark is emitted once.
+// Subsequent threshold-blocked lookups (bar(2), third) fail silently.
 
 int foo(int);
 int bar(int);
@@ -35,6 +37,6 @@ int third(int);
 void test() {
   foo(1);
   bar(1); // expected-remark {{reached a the CTU-import threshold before trying to import definition}}
-  bar(2); // expected-remark {{reached a the CTU-import threshold before trying to import definition}}
-  third(1); // expected-remark {{reached a the CTU-import threshold before trying to import definition}}
+  bar(2); // no remark: threshold already reported
+  third(1); // no remark: threshold already reported
 }
