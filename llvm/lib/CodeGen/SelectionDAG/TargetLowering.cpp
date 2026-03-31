@@ -2789,20 +2789,12 @@ bool TargetLowering::SimplifyDemandedBits(
     if (!TLO.LegalOperations() && !VT.isVector() && !SrcVT.isVector() &&
         DemandedBits == APInt::getSignMask(Op.getValueSizeInBits()) &&
         SrcVT.isFloatingPoint()) {
-      bool OpVTLegal = isOperationLegalOrCustom(ISD::FGETSIGN, VT);
-      bool i32Legal = isOperationLegalOrCustom(ISD::FGETSIGN, MVT::i32);
-      if ((OpVTLegal || i32Legal) && VT.isSimple() && SrcVT != MVT::f16 &&
-          SrcVT != MVT::f128) {
-        // Cannot eliminate/lower SHL for f128 yet.
-        EVT Ty = OpVTLegal ? VT : MVT::i32;
+      if (isOperationLegalOrCustom(ISD::FGETSIGN, VT)) {
         // Make a FGETSIGN + SHL to move the sign bit into the appropriate
         // place.  We expect the SHL to be eliminated by other optimizations.
-        SDValue Sign = TLO.DAG.getNode(ISD::FGETSIGN, dl, Ty, Src);
-        unsigned OpVTSizeInBits = Op.getValueSizeInBits();
-        if (!OpVTLegal && OpVTSizeInBits > 32)
-          Sign = TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Sign);
+        SDValue Sign = TLO.DAG.getNode(ISD::FGETSIGN, dl, VT, Src);
         unsigned ShVal = Op.getValueSizeInBits() - 1;
-        SDValue ShAmt = TLO.DAG.getConstant(ShVal, dl, VT);
+        SDValue ShAmt = TLO.DAG.getShiftAmountConstant(ShVal, VT, dl);
         return TLO.CombineTo(Op,
                              TLO.DAG.getNode(ISD::SHL, dl, VT, Sign, ShAmt));
       }
@@ -4071,6 +4063,19 @@ bool TargetLowering::canCreateUndefOrPoisonForTargetNode(
          " is a target node!");
   // Be conservative and return true.
   return true;
+}
+
+void TargetLowering::computeKnownFPClassForTargetNode(const SDValue Op,
+                                                      KnownFPClass &Known,
+                                                      const APInt &DemandedElts,
+                                                      const SelectionDAG &DAG,
+                                                      unsigned Depth) const {
+  assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
+          Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_VOID) &&
+         "Should use computeKnownFPClass if you don't know whether Op"
+         " is a target node!");
 }
 
 bool TargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
@@ -9575,8 +9580,19 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
     ; // Detect finite numbers of f80 by checking individual classes because
       // they have different settings of the explicit integer bit.
   else if ((Test & fcFinite) == fcFinite) {
-    // finite(V) ==> abs(V) < exp_mask
-    PartialRes = DAG.getSetCC(DL, ResultVT, AbsV, ExpMaskV, ISD::SETLT);
+    // finite(V) ==> (a << 1) < (inf << 1)
+    //
+    // See https://github.com/llvm/llvm-project/issues/169270, this is slightly
+    // shorter than the `finite(V) ==> abs(V) < exp_mask` formula used before.
+
+    assert(APFloat::isIEEELikeFP(OperandVT.getFltSemantics()) &&
+           "finite check requires IEEE-like FP");
+
+    SDValue One = DAG.getShiftAmountConstant(1, IntVT, DL);
+    SDValue TwiceOp = DAG.getNode(ISD::SHL, DL, IntVT, OpAsInt, One);
+    SDValue TwiceInf = DAG.getNode(ISD::SHL, DL, IntVT, ExpMaskV, One);
+
+    PartialRes = DAG.getSetCC(DL, ResultVT, TwiceOp, TwiceInf, ISD::SETULT);
     Test &= ~fcFinite;
   } else if ((Test & fcFinite) == fcPosFinite) {
     // finite(V) && V > 0 ==> V < exp_mask
@@ -10104,22 +10120,24 @@ SDValue TargetLowering::expandVPCTTZElements(SDNode *N,
   return DAG.getNode(ISD::VP_REDUCE_UMIN, DL, ResVT, ExtEVL, Select, Mask, EVL);
 }
 
-SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
-                                                   SelectionDAG &DAG) const {
-  SDLoc DL(N);
-  SDValue Mask = N->getOperand(0);
+/// Returns a type-legalized version of \p Mask as the first item in the
+/// pair. The second item contains a type-legalized step vector that's
+/// guaranteed to fit the number of elements in \p Mask.
+static std::pair<SDValue, SDValue>
+getLegalMaskAndStepVector(SDValue Mask, bool ZeroIsPoison, SDLoc DL,
+                          SelectionDAG &DAG) {
   EVT MaskVT = Mask.getValueType();
   EVT BoolVT = MaskVT.getScalarType();
 
   // Find a suitable type for a stepvector.
+  // If zero is poison, we can assume the upper limit of the result is VF-1.
   ConstantRange VScaleRange(1, /*isFullSet=*/true); // Fixed length default.
   if (MaskVT.isScalableVector())
     VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   uint64_t EltWidth = TLI.getBitWidthForCttzElements(
-      EVT(getVectorIdxTy(DAG.getDataLayout())).getTypeForEVT(*DAG.getContext()),
-      MaskVT.getVectorElementCount(),
-      /*ZeroIsPoison=*/true, &VScaleRange);
+      EVT(TLI.getVectorIdxTy(DAG.getDataLayout())),
+      MaskVT.getVectorElementCount(), ZeroIsPoison, &VScaleRange);
   // If the step vector element type is smaller than the mask element type,
   // use the mask type directly to avoid widening issues.
   EltWidth = std::max(EltWidth, BoolVT.getFixedSizeInBits());
@@ -10135,7 +10153,6 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   SDValue StepVec;
   if (TypeAction == TargetLowering::TypePromoteInteger) {
     StepVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), StepVecVT);
-    StepVT = StepVecVT.getVectorElementType();
     StepVec = DAG.getStepVector(DL, StepVecVT);
   } else if (TypeAction == TargetLowering::TypeWidenVector) {
     // For widening, the element count changes. Create a step vector with only
@@ -10152,12 +10169,20 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
     EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), BoolVT, WideNumElts);
     SDValue ZeroMask = DAG.getConstant(0, DL, WideMaskVT);
     Mask = DAG.getInsertSubvector(DL, ZeroMask, Mask, 0);
-
-    StepVecVT = WideVecVT;
-    StepVT = WideVecVT.getVectorElementType();
   } else {
     StepVec = DAG.getStepVector(DL, StepVecVT);
   }
+
+  return {Mask, StepVec};
+}
+
+SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
+                                                   SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  auto [Mask, StepVec] = getLegalMaskAndStepVector(
+      N->getOperand(0), /*ZeroIsPoison=*/true, DL, DAG);
+  EVT StepVecVT = StepVec.getValueType();
+  EVT StepVT = StepVec.getValueType().getVectorElementType();
 
   // Zero out lanes with inactive elements, then find the highest remaining
   // value from the stepvector.
@@ -12578,6 +12603,34 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   }
 
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
+}
+
+SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+
+  bool ZeroIsPoison = Node->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON;
+  auto [Mask, StepVec] =
+      getLegalMaskAndStepVector(Node->getOperand(0), ZeroIsPoison, DL, DAG);
+  EVT StepVecVT = StepVec.getValueType();
+  EVT StepVT = StepVecVT.getVectorElementType();
+
+  // Promote the scalar result type early to avoid redundant zexts.
+  if (getTypeAction(StepVT.getSimpleVT()) == TypePromoteInteger)
+    StepVT = getTypeToTransformTo(*DAG.getContext(), StepVT);
+
+  SDValue VL =
+      DAG.getElementCount(DL, StepVT, StepVecVT.getVectorElementCount());
+  SDValue SplatVL = DAG.getSplat(StepVecVT, DL, VL);
+  StepVec = DAG.getNode(ISD::SUB, DL, StepVecVT, SplatVL, StepVec);
+  SDValue Zeroes = DAG.getConstant(0, DL, StepVecVT);
+  SDValue Select = DAG.getSelect(DL, StepVecVT, Mask, StepVec, Zeroes);
+  SDValue Max = DAG.getNode(ISD::VECREDUCE_UMAX, DL,
+                            StepVecVT.getVectorElementType(), Select);
+  SDValue Sub = DAG.getNode(ISD::SUB, DL, StepVT, VL,
+                            DAG.getZExtOrTrunc(Max, DL, StepVT));
+
+  return DAG.getZExtOrTrunc(Sub, DL, VT);
 }
 
 SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,

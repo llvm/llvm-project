@@ -77,11 +77,10 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
       return;
     auto *sec = dyn_cast_or_null<InputSection>(d->section);
     // Skip section symbols. Skip empty, discarded, ICF folded sections, .bss.
-    // Skipping ICF folded sections reduces duplicate detection work in
-    // BPSectionOrderer.
+    // ICF folded sections are already dead (!isLive()), so no separate check
+    // is needed.
     if (sym.isSection() || !sec || sec->size == 0 || !sec->isLive() ||
-        sec->repl != sec || !sec->content().data() ||
-        !orderer.secToSym.try_emplace(sec, d).second)
+        !sec->content().data() || !orderer.secToSym.try_emplace(sec, d).second)
       return;
     rootSymbolToSectionIdxs[CachedHashStringRef(
                                 lld::utils::getRootSymbol(sym.getName()))]

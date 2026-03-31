@@ -283,6 +283,9 @@ public:
   /// Get the kind of extension that a cast opcode represents.
   LLVM_ABI static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction::CastOps CastOpc);
+  /// Get the cast opcode for an extension kind.
+  LLVM_ABI static Instruction::CastOps
+  getOpcodeForPartialReductionExtendKind(PartialReductionExtendKind Kind);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
@@ -1389,9 +1392,12 @@ public:
   /// \param VF Initial estimation of the minimum vector factor.
   /// \param ScalarMemTy Scalar memory type of the store operation.
   /// \param ScalarValTy Scalar type of the stored value.
+  /// \param Alignment Alignment of the store
+  /// \param AddrSpace Address space of the store
   /// Currently only used by the SLP vectorizer.
   LLVM_ABI unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                      Type *ScalarValTy) const;
+                                      Type *ScalarValTy, Align Alignment,
+                                      unsigned AddrSpace) const;
 
   /// \return True if it should be considered for address type promotion.
   /// \p AllowPromotionWithoutCommonHeader Set true if promoting \p I is

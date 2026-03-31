@@ -906,9 +906,6 @@ static bool mayApplyGenericSelection(unsigned Opcode) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
     return false;
-  case TargetOpcode::G_SADDO:
-  case TargetOpcode::G_SSUBO:
-    return true;
   }
   return isTypeFoldingSupported(Opcode);
 }
@@ -4242,7 +4239,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                    .addUse(GR.getSPIRVTypeID(ResType));
     MIB.constrainAllUses(TII, TRI, RBI);
     unsigned SpecId = I.getOperand(2).getImm();
-    buildOpDecorate(I.getOperand(0).getReg(), *MIB.getInstr(), TII,
+    buildOpDecorate(I.getOperand(0).getReg(), *++MIB->getIterator(), TII,
                     SPIRV::Decoration::SpecId, {SpecId});
 
     return true;
