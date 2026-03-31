@@ -120,7 +120,6 @@ public:
   /// debugging information present.
   DbgMarker *DebugMarker = nullptr;
 
-public:
   /// Clone any debug-info attached to \p From onto this instruction. Used to
   /// copy debugging information from one block to another, when copying entire
   /// blocks. \see DebugProgramInstruction.h , because the ordering of

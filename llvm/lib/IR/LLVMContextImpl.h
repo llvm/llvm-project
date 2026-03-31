@@ -1752,7 +1752,10 @@ public:
 
   /// Collection of metadata attachments in this context.
   SmallVector<MDAttachment, 0> Metadatas;
+  /// Index of first free Metadatas entry, linked list via MDAttachment::Next.
   unsigned MetadataRecycleHead = 0;
+  /// Number of currently unused metadata entries. Only used/updated in debug
+  /// builds to ensure that all metadata attachments are properly freed.
   unsigned MetadataRecycleSize = 0;
 
   /// Map DIAssignID -> Instructions with that attachment.

@@ -1616,8 +1616,6 @@ void Value::setMetadata(unsigned KindID, MDNode *Node) {
   eraseMetadata(KindID);
   if (Node)
     addMetadata(KindID, *Node);
-  if (Node)
-    HasMetadata = true;
 }
 
 void Value::setMetadata(StringRef Kind, MDNode *Node) {
@@ -1635,13 +1633,17 @@ void Value::addMetadata(unsigned KindID, MDNode &MD) {
   if (NewIdx == 0) {
     NewIdx = Ctx.pImpl->Metadatas.size();
     if (NewIdx == 0) {
-      Ctx.pImpl->MetadataRecycleSize = 1;
+#ifndef NDEBUG
+      Ctx.pImpl->MetadataRecycleSize = 0;
+#endif
       NewIdx = 1;
     }
     Ctx.pImpl->Metadatas.resize(NewIdx + 1);
   } else {
     Ctx.pImpl->MetadataRecycleHead = Ctx.pImpl->Metadatas[NewIdx].Next;
+#ifndef NDEBUG
     Ctx.pImpl->MetadataRecycleSize -= 1;
+#endif
   }
   Ctx.pImpl->Metadatas[NewIdx] =
       MDAttachment{Idx, KindID, TrackingMDNodeRef(&MD)};
@@ -1672,7 +1674,9 @@ void Value::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
       *Idx = A.Next;
       A.Next = Ctx.pImpl->MetadataRecycleHead;
       Ctx.pImpl->MetadataRecycleHead = FreeIdx;
+#ifndef NDEBUG
       Ctx.pImpl->MetadataRecycleSize += 1;
+#endif
     } else {
       Idx = &A.Next;
     }

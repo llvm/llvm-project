@@ -57,7 +57,7 @@ LLVMContextImpl::~LLVMContextImpl() {
 
 #ifndef NDEBUG
   // Check for metadata references from leaked Values.
-  assert(MetadataRecycleSize == Metadatas.size() &&
+  assert((Metadatas.empty() || MetadataRecycleSize + 1 == Metadatas.size()) &&
          "Values with metadata have been leaked");
 #endif
 
