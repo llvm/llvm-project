@@ -5452,6 +5452,9 @@ static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.checkAtLeastNumArgs(S, 2))
+    return;
+
   if (!isa<EmptyDecl>(D)) {
     S.Diag(AL.getLoc(), diag::err_profiles_enforce_not_empty_decl);
     return;
@@ -5512,7 +5515,7 @@ static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleProfilesSuppressDeclAttr(Sema &S, Decl *D,
                                            const ParsedAttr &AL) {
-  if (AL.getNumArgs() < 1)
+  if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
   StringRef ProfileName;
