@@ -67,15 +67,6 @@ void computeProcResourceMasks(const MCSchedModel &SM,
     }
     ProcResourceID++;
   }
-
-  LLVM_DEBUG({
-    dbgs() << "\nProcessor resource masks:\n";
-    for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-      const MCProcResourceDesc &Desc = *SM.getProcResource(I);
-      dbgs() << '[' << format_decimal(I, 2) << "] " << " - "
-             << format_hex(Masks[I], 16) << " - " << Desc.Name << '\n';
-    }
-  });
 }
 
 double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,

@@ -11,8 +11,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MCA/Support.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <vector>
+
+#define DEBUG_TYPE "exegesis-sched-class-resolution"
 
 namespace llvm {
 namespace exegesis {
@@ -55,6 +58,15 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
   // Collect resource masks.
   SmallVector<uint64_t> ProcResourceMasks(NumProcRes);
   mca::computeProcResourceMasks(SM, ProcResourceMasks);
+  LLVM_DEBUG({
+    dbgs() << "\nProcessor resource masks:\n";
+    for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+      const MCProcResourceDesc &Desc = *SM.getProcResource(I);
+      dbgs() << '[' << format_decimal(I, 2) << "] " << " - "
+             << format_hex(ProcResourceMasks[I], 16) << " - " << Desc.Name
+             << '\n';
+    }
+  });
 
   // Sort entries by smaller resources for (basic) topological ordering.
   using ResourceMaskAndEntry = std::pair<uint64_t, const MCWriteProcResEntry *>;
