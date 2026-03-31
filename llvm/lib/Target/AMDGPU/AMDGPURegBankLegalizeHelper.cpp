@@ -66,8 +66,9 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
 
   WaterfallInfo WFI;
   unsigned OpIdx = 0;
+  OldNextMI = std::next(MI.getIterator());
   if (!Mapping->DstOpMapping.empty()) {
-    B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
+    B.setInsertPt(*MI.getParent(), OldNextMI);
     if (!applyMappingDst(MI, OpIdx, Mapping->DstOpMapping))
       return false;
   }
@@ -2431,8 +2432,19 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       if (RB != SgprRB) {
         WFI.SgprWaterfallOperandRegs.insert(Reg);
         if (!WFI.Start.isValid()) {
+          // Waterfall range [WFI.Start, WFI.End). Use OldNextMI so that
+          // any instructions inserted by applyMappingDst are included.
           WFI.Start = MI.getIterator();
-          WFI.End = std::next(MI.getIterator());
+          WFI.End = OldNextMI;
+
+          // Mark any COPY as exec-dependent since machine-sink may move
+          // it out of the loop body.
+          MCRegister ExecReg = ST.getRegisterInfo()->getExec();
+          for (auto It = std::next(MI.getIterator()); It != OldNextMI; ++It) {
+            if (It->isCopy())
+              It->addOperand(MachineOperand::CreateReg(ExecReg, /*isDef=*/false,
+                                                       /*isImp=*/true));
+          }
         }
       }
       break;
