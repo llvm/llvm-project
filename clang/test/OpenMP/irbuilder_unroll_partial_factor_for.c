@@ -121,7 +121,7 @@ void unroll_partial_heuristic_for(int n, float *a, float *b, float *c, float *d)
 // CHECK-NEXT:    br label [[OMP_TILE0_INC]]
 // CHECK:       omp_tile0.inc:
 // CHECK-NEXT:    [[OMP_TILE0_NEXT]] = add nuw i32 [[OMP_TILE0_IV]], 1
-// CHECK-NEXT:    br label [[OMP_TILE0_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+// CHECK-NEXT:    br label [[OMP_TILE0_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
 // CHECK:       omp_tile0.exit:
 // CHECK-NEXT:    br label [[OMP_TILE0_AFTER:%.*]]
 // CHECK:       omp_tile0.after:
@@ -152,11 +152,11 @@ void unroll_partial_heuristic_for(int n, float *a, float *b, float *c, float *d)
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTSTART]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP0]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 // CHECK-NEXT:    store i32 [[TMP6]], ptr [[DOTSTOP]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[DOTSTEP]], align 4
@@ -178,7 +178,7 @@ void unroll_partial_heuristic_for(int n, float *a, float *b, float *c, float *d)
 // CHECK-NEXT:    br label [[COND_END]]
 // CHECK:       cond.end:
 // CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[DIV]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
-// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[DISTANCE_ADDR]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[DISTANCE_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 [[COND]], ptr [[TMP13]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -198,7 +198,7 @@ void unroll_partial_heuristic_for(int n, float *a, float *b, float *c, float *d)
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LOGICAL_ADDR]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = mul i32 1, [[TMP3]]
 // CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP2]], [[MUL]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    ret void
 //
