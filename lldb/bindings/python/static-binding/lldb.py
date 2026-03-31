@@ -1573,6 +1573,8 @@ eTypeOptionHideEmptyAggregates = _lldb.eTypeOptionHideEmptyAggregates
 
 eTypeOptionFrontEndWantsDereference = _lldb.eTypeOptionFrontEndWantsDereference
 
+eTypeOptionCustomSubscripting = _lldb.eTypeOptionCustomSubscripting
+
 eFrameCompareInvalid = _lldb.eFrameCompareInvalid
 
 eFrameCompareUnknown = _lldb.eFrameCompareUnknown
