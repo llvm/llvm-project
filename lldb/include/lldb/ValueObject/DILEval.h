@@ -40,9 +40,7 @@ class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
               std::shared_ptr<StackFrame> frame_sp,
-              lldb::DynamicValueType use_dynamic, bool use_synthetic,
-              bool fragile_ivar, bool check_ptr_vs_member,
-              bool allow_var_updates);
+              lldb::DynamicValueType use_dynamic, uint32_t options);
 
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.

@@ -1216,7 +1216,7 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
   }
 
   // Verify, if current object is associated with a program variable, that
-  // we are allowing updating progrma variables in this case.
+  // we are allowing updating program variables in this case.
   if (GetVariable() && !can_update_var) {
     error = Status::FromErrorString(
         "Not allowed to update program variables in this case.");
@@ -1255,7 +1255,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   }
 
   // Verify, if current object is associated with a program variable, that
-  // we are allowing updating progrma variables in this case.
+  // we are allowing updating program variables in this case.
   if (GetVariable() && !can_update_var) {
     error = Status::FromErrorString(
         "Not allowed to update program variables in this case.");
