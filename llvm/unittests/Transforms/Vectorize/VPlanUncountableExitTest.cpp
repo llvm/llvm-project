@@ -21,8 +21,6 @@ namespace {
 class VPUncountableExitTest : public VPlanTestIRBase {};
 using namespace VPlanPatternMatch;
 
-// TODO: This performs part of VPlanTransforms::handleUncountableEarlyExits,
-//       perhaps we could share the code...
 static void combineExitConditions(VPlan &Plan) {
   struct EarlyExitInfo {
     VPBasicBlock *EarlyExitingVPBB;
@@ -34,75 +32,46 @@ static void combineExitConditions(VPlan &Plan) {
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
 
-  VPDominatorTree VPDT(Plan);
-  VPBuilder Builder(LatchVPBB->getTerminator());
-  SmallVector<EarlyExitInfo> Exits;
+  // Find the single early exit: a non-middle predecessor of an exit block.
+  VPBasicBlock *EarlyExitingVPBB = nullptr;
+  VPIRBasicBlock *EarlyExitVPBB = nullptr;
   for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(ExitBlock->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-      // Collect condition for this early exit.
-      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
-      VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
-      VPValue *CondOfEarlyExitingVPBB;
-      [[maybe_unused]] bool Matched =
-          match(EarlyExitingVPBB->getTerminator(),
-                m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
-      assert(Matched && "Terminator must be BranchOnCond");
-      VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
-      auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
-          VPInstruction::MaskedCond,
-          TrueSucc == ExitBlock
-              ? CondOfEarlyExitingVPBB
-              : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
-      assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
-              !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
-              VPDT.properlyDominates(
-                  CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
-                  LatchVPBB)) &&
-             "exit condition must dominate the latch");
-      Exits.push_back({
-          EarlyExitingVPBB,
-          ExitBlock,
-          CondToEarlyExit,
-      });
+    for (VPBlockBase *Pred : ExitBlock->getPredecessors()) {
+      if (Pred != MiddleVPBB) {
+        EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
+        EarlyExitVPBB = ExitBlock;
+      }
     }
   }
-
-  // For the negative test case.
-  if (Exits.empty())
+  if (!EarlyExitingVPBB)
     return;
 
-  // Build the AnyOf condition for the latch terminator using logical OR
-  // to avoid poison propagation from later exit conditions when an earlier
-  // exit is taken.
-  VPValue *Combined = Exits[0].CondToExit;
-  for (const EarlyExitInfo &Info : drop_begin(Exits))
-    Combined = Builder.createLogicalOr(Combined, Info.CondToExit);
+  // Wrap the early exit condition in a MaskedCond.
+  VPValue *Cond;
+  [[maybe_unused]] bool Matched =
+      match(EarlyExitingVPBB->getTerminator(), m_BranchOnCond(m_VPValue(Cond)));
+  assert(Matched && "Terminator must be BranchOnCond");
+  VPBuilder EarlyExitBuilder(EarlyExitingVPBB->getTerminator());
+  if (EarlyExitingVPBB->getSuccessors()[0] != EarlyExitVPBB)
+    Cond = EarlyExitBuilder.createNot(Cond);
+  auto *MaskedCond =
+      EarlyExitBuilder.createNaryOp(VPInstruction::MaskedCond, {Cond});
 
-  VPValue *IsAnyExitTaken =
-      Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
-
-  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
-  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
-         "Unexpected terminator");
-  auto *IsLatchExitTaken =
-      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
-                         LatchExitingBranch->getOperand(1));
-  LatchExitingBranch->eraseFromParent();
+  // Combine the early exit with the latch exit on the latch terminator.
+  VPBuilder Builder(LatchVPBB->getTerminator());
+  auto *IsAnyExitTaken =
+      Builder.createNaryOp(VPInstruction::AnyOf, {MaskedCond});
+  auto *LatchBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  auto *IsLatchExitTaken = Builder.createICmp(
+      CmpInst::ICMP_EQ, LatchBranch->getOperand(0), LatchBranch->getOperand(1));
+  LatchBranch->eraseFromParent();
   Builder.setInsertPoint(LatchVPBB);
-  VPValue *CombineAllExits = Builder.createOr(IsAnyExitTaken, IsLatchExitTaken);
-  Builder.createNaryOp(VPInstruction::BranchOnCond, {CombineAllExits});
+  Builder.createNaryOp(VPInstruction::BranchOnCond,
+                       {Builder.createOr(IsAnyExitTaken, IsLatchExitTaken)});
 
-  // Disconnect early exiting blocks from successors, remove branches. We
-  // currently don't support multiple uses for recipes involved in creating
-  // the uncountable exit condition.
-  for (auto &Exit : Exits) {
-    if (Exit.EarlyExitingVPBB == LatchVPBB)
-      continue;
-    Exit.EarlyExitingVPBB->getTerminator()->eraseFromParent();
-    VPBlockUtils::disconnectBlocks(Exit.EarlyExitingVPBB, Exit.EarlyExitVPBB);
-  }
+  // Disconnect the early exit edge.
+  EarlyExitingVPBB->getTerminator()->eraseFromParent();
+  VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EarlyExitVPBB);
 }
 
 TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
@@ -120,9 +89,7 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
       "  %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv\n"
       "  %data = load i16, ptr %st.addr, align 2\n"
       "  %inc = add nsw i16 %data, 1\n"
-      // TODO: Uncomment store once more support is added for uncountable exits
-      //       in loops with stores.
-      // "  store i16 %inc, ptr %st.addr, align 2\n"
+      "  store i16 %inc, ptr %st.addr, align 2\n"
       "  %uncountable.addr = getelementptr inbounds nuw i16, ptr %pred, i64 "
       "%iv\n"
       "  %uncountable.val = load i16, ptr %uncountable.addr, align 2\n"
