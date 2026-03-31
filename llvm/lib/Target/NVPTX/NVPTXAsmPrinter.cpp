@@ -759,17 +759,7 @@ NVPTXTargetStreamer *NVPTXAsmPrinter::getTargetStreamer() const {
   return static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer());
 }
 
-void NVPTXAsmPrinter::emitHeader(Module &M, const NVPTXSubtarget &STI) {
-  auto *TS = getTargetStreamer();
-
-  TS->emitBanner();
-
-  const unsigned PTXVersion = STI.getPTXVersion();
-  TS->emitVersionDirective(PTXVersion);
-
-  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  bool IsNVOpenCL = NTM.getDrvInterface() == NVPTX::NVCL;
-
+static bool hasFullDebugInfo(Module &M) {
   bool HasFullDebugInfo = false;
   for (DICompileUnit *CU : M.debug_compile_units()) {
     switch(CU->getEmissionKind()) {
@@ -784,8 +774,23 @@ void NVPTXAsmPrinter::emitHeader(Module &M, const NVPTXSubtarget &STI) {
     if (HasFullDebugInfo)
       break;
   }
-  TS->emitTargetDirective(STI.getTargetName(), IsNVOpenCL, HasFullDebugInfo);
-  TS->emitAddressSizeDirective(NTM.is64Bit());
+
+  return HasFullDebugInfo;
+}
+
+void NVPTXAsmPrinter::emitHeader(Module &M, const NVPTXSubtarget &STI) {
+  auto *TS = getTargetStreamer();
+
+  TS->emitBanner();
+
+  const unsigned PTXVersion = STI.getPTXVersion();
+  TS->emitVersionDirective(PTXVersion);
+
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  bool IsNVOpenCL = NTM.getDrvInterface() == NVPTX::NVCL;
+
+  TS->emitTargetDirective(STI.getTargetName(), IsNVOpenCL, hasFullDebugInfo(M));
+  TS->emitAddressSizeDirective(M.getDataLayout().getPointerSizeInBits() == 64);
 }
 
 bool NVPTXAsmPrinter::doFinalization(Module &M) {
