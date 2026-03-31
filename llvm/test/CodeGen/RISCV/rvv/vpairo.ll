@@ -10,7 +10,7 @@ define <vscale x 1 x i8> @test_vpairo_i8mf8(<vscale x 1 x i8> %passthru, <vscale
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i8> @llvm.riscv.vpairo.nxv1i8.iXLen(
+  %a = call <vscale x 1 x i8> @llvm.riscv.vpairo(
     <vscale x 1 x i8> %passthru,
     <vscale x 1 x i8> %arg1,
     <vscale x 1 x i8> %arg2,
@@ -24,7 +24,7 @@ define <vscale x 1 x i8> @test_vpairo_mask_i8mf8(<vscale x 1 x i8> %passthru, <v
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i8> @llvm.riscv.vpairo.mask.nxv1i8(
+  %a = call <vscale x 1 x i8> @llvm.riscv.vpairo.mask(
     <vscale x 1 x i8> %passthru,
     <vscale x 1 x i8> %arg1,
     <vscale x 1 x i8> %arg2,
@@ -39,7 +39,7 @@ define <vscale x 2 x i8> @test_vpairo_i8mf4(<vscale x 2 x i8> %passthru, <vscale
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i8> @llvm.riscv.vpairo.nxv2i8.iXLen(
+  %a = call <vscale x 2 x i8> @llvm.riscv.vpairo(
     <vscale x 2 x i8> %passthru,
     <vscale x 2 x i8> %arg1,
     <vscale x 2 x i8> %arg2,
@@ -53,7 +53,7 @@ define <vscale x 2 x i8> @test_vpairo_mask_i8mf4(<vscale x 2 x i8> %passthru, <v
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i8> @llvm.riscv.vpairo.mask.nxv2i8(
+  %a = call <vscale x 2 x i8> @llvm.riscv.vpairo.mask(
     <vscale x 2 x i8> %passthru,
     <vscale x 2 x i8> %arg1,
     <vscale x 2 x i8> %arg2,
@@ -68,7 +68,7 @@ define <vscale x 4 x i8> @test_vpairo_i8mf2(<vscale x 4 x i8> %passthru, <vscale
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i8> @llvm.riscv.vpairo.nxv4i8.iXLen(
+  %a = call <vscale x 4 x i8> @llvm.riscv.vpairo(
     <vscale x 4 x i8> %passthru,
     <vscale x 4 x i8> %arg1,
     <vscale x 4 x i8> %arg2,
@@ -82,7 +82,7 @@ define <vscale x 4 x i8> @test_vpairo_mask_i8mf2(<vscale x 4 x i8> %passthru, <v
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i8> @llvm.riscv.vpairo.mask.nxv4i8(
+  %a = call <vscale x 4 x i8> @llvm.riscv.vpairo.mask(
     <vscale x 4 x i8> %passthru,
     <vscale x 4 x i8> %arg1,
     <vscale x 4 x i8> %arg2,
@@ -97,7 +97,7 @@ define <vscale x 8 x i8> @test_vpairo_i8m1(<vscale x 8 x i8> %passthru, <vscale 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 8 x i8> @llvm.riscv.vpairo.nxv8i8.iXLen(
+  %a = call <vscale x 8 x i8> @llvm.riscv.vpairo(
     <vscale x 8 x i8> %passthru,
     <vscale x 8 x i8> %arg1,
     <vscale x 8 x i8> %arg2,
@@ -111,7 +111,7 @@ define <vscale x 8 x i8> @test_vpairo_mask_i8m1(<vscale x 8 x i8> %passthru, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 8 x i8> @llvm.riscv.vpairo.mask.nxv8i8(
+  %a = call <vscale x 8 x i8> @llvm.riscv.vpairo.mask(
     <vscale x 8 x i8> %passthru,
     <vscale x 8 x i8> %arg1,
     <vscale x 8 x i8> %arg2,
@@ -126,7 +126,7 @@ define <vscale x 16 x i8> @test_vpairo_i8m2(<vscale x 16 x i8> %passthru, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 16 x i8> @llvm.riscv.vpairo.nxv16i8.iXLen(
+  %a = call <vscale x 16 x i8> @llvm.riscv.vpairo(
     <vscale x 16 x i8> %passthru,
     <vscale x 16 x i8> %arg1,
     <vscale x 16 x i8> %arg2,
@@ -140,7 +140,7 @@ define <vscale x 16 x i8> @test_vpairo_mask_i8m2(<vscale x 16 x i8> %passthru, <
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 16 x i8> @llvm.riscv.vpairo.mask.nxv16i8(
+  %a = call <vscale x 16 x i8> @llvm.riscv.vpairo.mask(
     <vscale x 16 x i8> %passthru,
     <vscale x 16 x i8> %arg1,
     <vscale x 16 x i8> %arg2,
@@ -155,7 +155,7 @@ define <vscale x 32 x i8> @test_vpairo_i8m4(<vscale x 32 x i8> %passthru, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 32 x i8> @llvm.riscv.vpairo.nxv32i8.iXLen(
+  %a = call <vscale x 32 x i8> @llvm.riscv.vpairo(
     <vscale x 32 x i8> %passthru,
     <vscale x 32 x i8> %arg1,
     <vscale x 32 x i8> %arg2,
@@ -169,7 +169,7 @@ define <vscale x 32 x i8> @test_vpairo_mask_i8m4(<vscale x 32 x i8> %passthru, <
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 32 x i8> @llvm.riscv.vpairo.mask.nxv32i8(
+  %a = call <vscale x 32 x i8> @llvm.riscv.vpairo.mask(
     <vscale x 32 x i8> %passthru,
     <vscale x 32 x i8> %arg1,
     <vscale x 32 x i8> %arg2,
@@ -185,7 +185,7 @@ define <vscale x 64 x i8> @test_vpairo_i8m8(<vscale x 64 x i8> %passthru, <vscal
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 64 x i8> @llvm.riscv.vpairo.nxv64i8.iXLen(
+  %a = call <vscale x 64 x i8> @llvm.riscv.vpairo(
     <vscale x 64 x i8> %passthru,
     <vscale x 64 x i8> %arg1,
     <vscale x 64 x i8> %arg2,
@@ -200,7 +200,7 @@ define <vscale x 64 x i8> @test_vpairo_mask_i8m8(<vscale x 64 x i8> %passthru, <
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 64 x i8> @llvm.riscv.vpairo.mask.nxv64i8(
+  %a = call <vscale x 64 x i8> @llvm.riscv.vpairo.mask(
     <vscale x 64 x i8> %passthru,
     <vscale x 64 x i8> %arg1,
     <vscale x 64 x i8> %arg2,
@@ -215,7 +215,7 @@ define <vscale x 1 x i16> @test_vpairo_i16mf4(<vscale x 1 x i16> %passthru, <vsc
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i16> @llvm.riscv.vpairo.nxv1i16.iXLen(
+  %a = call <vscale x 1 x i16> @llvm.riscv.vpairo(
     <vscale x 1 x i16> %passthru,
     <vscale x 1 x i16> %arg1,
     <vscale x 1 x i16> %arg2,
@@ -229,7 +229,7 @@ define <vscale x 1 x i16> @test_vpairo_mask_i16mf4(<vscale x 1 x i16> %passthru,
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i16> @llvm.riscv.vpairo.mask.nxv1i16(
+  %a = call <vscale x 1 x i16> @llvm.riscv.vpairo.mask(
     <vscale x 1 x i16> %passthru,
     <vscale x 1 x i16> %arg1,
     <vscale x 1 x i16> %arg2,
@@ -244,7 +244,7 @@ define <vscale x 2 x i16> @test_vpairo_i16mf2(<vscale x 2 x i16> %passthru, <vsc
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i16> @llvm.riscv.vpairo.nxv2i16.iXLen(
+  %a = call <vscale x 2 x i16> @llvm.riscv.vpairo(
     <vscale x 2 x i16> %passthru,
     <vscale x 2 x i16> %arg1,
     <vscale x 2 x i16> %arg2,
@@ -258,7 +258,7 @@ define <vscale x 2 x i16> @test_vpairo_mask_i16mf2(<vscale x 2 x i16> %passthru,
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i16> @llvm.riscv.vpairo.mask.nxv2i16(
+  %a = call <vscale x 2 x i16> @llvm.riscv.vpairo.mask(
     <vscale x 2 x i16> %passthru,
     <vscale x 2 x i16> %arg1,
     <vscale x 2 x i16> %arg2,
@@ -273,7 +273,7 @@ define <vscale x 4 x i16> @test_vpairo_i16m1(<vscale x 4 x i16> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i16> @llvm.riscv.vpairo.nxv4i16.iXLen(
+  %a = call <vscale x 4 x i16> @llvm.riscv.vpairo(
     <vscale x 4 x i16> %passthru,
     <vscale x 4 x i16> %arg1,
     <vscale x 4 x i16> %arg2,
@@ -287,7 +287,7 @@ define <vscale x 4 x i16> @test_vpairo_mask_i16m1(<vscale x 4 x i16> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i16> @llvm.riscv.vpairo.mask.nxv4i16(
+  %a = call <vscale x 4 x i16> @llvm.riscv.vpairo.mask(
     <vscale x 4 x i16> %passthru,
     <vscale x 4 x i16> %arg1,
     <vscale x 4 x i16> %arg2,
@@ -302,7 +302,7 @@ define <vscale x 8 x i16> @test_vpairo_i16m2(<vscale x 8 x i16> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 8 x i16> @llvm.riscv.vpairo.nxv8i16.iXLen(
+  %a = call <vscale x 8 x i16> @llvm.riscv.vpairo(
     <vscale x 8 x i16> %passthru,
     <vscale x 8 x i16> %arg1,
     <vscale x 8 x i16> %arg2,
@@ -316,7 +316,7 @@ define <vscale x 8 x i16> @test_vpairo_mask_i16m2(<vscale x 8 x i16> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 8 x i16> @llvm.riscv.vpairo.mask.nxv8i16(
+  %a = call <vscale x 8 x i16> @llvm.riscv.vpairo.mask(
     <vscale x 8 x i16> %passthru,
     <vscale x 8 x i16> %arg1,
     <vscale x 8 x i16> %arg2,
@@ -331,7 +331,7 @@ define <vscale x 16 x i16> @test_vpairo_i16m4(<vscale x 16 x i16> %passthru, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 16 x i16> @llvm.riscv.vpairo.nxv16i16.iXLen(
+  %a = call <vscale x 16 x i16> @llvm.riscv.vpairo(
     <vscale x 16 x i16> %passthru,
     <vscale x 16 x i16> %arg1,
     <vscale x 16 x i16> %arg2,
@@ -345,7 +345,7 @@ define <vscale x 16 x i16> @test_vpairo_mask_i16m4(<vscale x 16 x i16> %passthru
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 16 x i16> @llvm.riscv.vpairo.mask.nxv16i16(
+  %a = call <vscale x 16 x i16> @llvm.riscv.vpairo.mask(
     <vscale x 16 x i16> %passthru,
     <vscale x 16 x i16> %arg1,
     <vscale x 16 x i16> %arg2,
@@ -361,7 +361,7 @@ define <vscale x 32 x i16> @test_vpairo_i16m8(<vscale x 32 x i16> %passthru, <vs
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 32 x i16> @llvm.riscv.vpairo.nxv32i16.iXLen(
+  %a = call <vscale x 32 x i16> @llvm.riscv.vpairo(
     <vscale x 32 x i16> %passthru,
     <vscale x 32 x i16> %arg1,
     <vscale x 32 x i16> %arg2,
@@ -376,7 +376,7 @@ define <vscale x 32 x i16> @test_vpairo_mask_i16m8(<vscale x 32 x i16> %passthru
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 32 x i16> @llvm.riscv.vpairo.mask.nxv32i16(
+  %a = call <vscale x 32 x i16> @llvm.riscv.vpairo.mask(
     <vscale x 32 x i16> %passthru,
     <vscale x 32 x i16> %arg1,
     <vscale x 32 x i16> %arg2,
@@ -391,7 +391,7 @@ define <vscale x 1 x i32> @test_vpairo_i32mf2(<vscale x 1 x i32> %passthru, <vsc
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i32> @llvm.riscv.vpairo.nxv1i32.iXLen(
+  %a = call <vscale x 1 x i32> @llvm.riscv.vpairo(
     <vscale x 1 x i32> %passthru,
     <vscale x 1 x i32> %arg1,
     <vscale x 1 x i32> %arg2,
@@ -405,7 +405,7 @@ define <vscale x 1 x i32> @test_vpairo_mask_i32mf2(<vscale x 1 x i32> %passthru,
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i32> @llvm.riscv.vpairo.mask.nxv1i32(
+  %a = call <vscale x 1 x i32> @llvm.riscv.vpairo.mask(
     <vscale x 1 x i32> %passthru,
     <vscale x 1 x i32> %arg1,
     <vscale x 1 x i32> %arg2,
@@ -420,7 +420,7 @@ define <vscale x 2 x i32> @test_vpairo_i32m1(<vscale x 2 x i32> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i32> @llvm.riscv.vpairo.nxv2i32.iXLen(
+  %a = call <vscale x 2 x i32> @llvm.riscv.vpairo(
     <vscale x 2 x i32> %passthru,
     <vscale x 2 x i32> %arg1,
     <vscale x 2 x i32> %arg2,
@@ -434,7 +434,7 @@ define <vscale x 2 x i32> @test_vpairo_mask_i32m1(<vscale x 2 x i32> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i32> @llvm.riscv.vpairo.mask.nxv2i32(
+  %a = call <vscale x 2 x i32> @llvm.riscv.vpairo.mask(
     <vscale x 2 x i32> %passthru,
     <vscale x 2 x i32> %arg1,
     <vscale x 2 x i32> %arg2,
@@ -449,7 +449,7 @@ define <vscale x 4 x i32> @test_vpairo_i32m2(<vscale x 4 x i32> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i32> @llvm.riscv.vpairo.nxv4i32.iXLen(
+  %a = call <vscale x 4 x i32> @llvm.riscv.vpairo(
     <vscale x 4 x i32> %passthru,
     <vscale x 4 x i32> %arg1,
     <vscale x 4 x i32> %arg2,
@@ -463,7 +463,7 @@ define <vscale x 4 x i32> @test_vpairo_mask_i32m2(<vscale x 4 x i32> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i32> @llvm.riscv.vpairo.mask.nxv4i32(
+  %a = call <vscale x 4 x i32> @llvm.riscv.vpairo.mask(
     <vscale x 4 x i32> %passthru,
     <vscale x 4 x i32> %arg1,
     <vscale x 4 x i32> %arg2,
@@ -478,7 +478,7 @@ define <vscale x 8 x i32> @test_vpairo_i32m4(<vscale x 8 x i32> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 8 x i32> @llvm.riscv.vpairo.nxv8i32.iXLen(
+  %a = call <vscale x 8 x i32> @llvm.riscv.vpairo(
     <vscale x 8 x i32> %passthru,
     <vscale x 8 x i32> %arg1,
     <vscale x 8 x i32> %arg2,
@@ -492,7 +492,7 @@ define <vscale x 8 x i32> @test_vpairo_mask_i32m4(<vscale x 8 x i32> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 8 x i32> @llvm.riscv.vpairo.mask.nxv8i32(
+  %a = call <vscale x 8 x i32> @llvm.riscv.vpairo.mask(
     <vscale x 8 x i32> %passthru,
     <vscale x 8 x i32> %arg1,
     <vscale x 8 x i32> %arg2,
@@ -508,7 +508,7 @@ define <vscale x 16 x i32> @test_vpairo_i32m8(<vscale x 16 x i32> %passthru, <vs
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 16 x i32> @llvm.riscv.vpairo.nxv16i32.iXLen(
+  %a = call <vscale x 16 x i32> @llvm.riscv.vpairo(
     <vscale x 16 x i32> %passthru,
     <vscale x 16 x i32> %arg1,
     <vscale x 16 x i32> %arg2,
@@ -523,7 +523,7 @@ define <vscale x 16 x i32> @test_vpairo_mask_i32m8(<vscale x 16 x i32> %passthru
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 16 x i32> @llvm.riscv.vpairo.mask.nxv16i32(
+  %a = call <vscale x 16 x i32> @llvm.riscv.vpairo.mask(
     <vscale x 16 x i32> %passthru,
     <vscale x 16 x i32> %arg1,
     <vscale x 16 x i32> %arg2,
@@ -538,7 +538,7 @@ define <vscale x 1 x i64> @test_vpairo_i64m1(<vscale x 1 x i64> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vpairo.nxv1i64.iXLen(
+  %a = call <vscale x 1 x i64> @llvm.riscv.vpairo(
     <vscale x 1 x i64> %passthru,
     <vscale x 1 x i64> %arg1,
     <vscale x 1 x i64> %arg2,
@@ -552,7 +552,7 @@ define <vscale x 1 x i64> @test_vpairo_mask_i64m1(<vscale x 1 x i64> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vpairo.mask.nxv1i64(
+  %a = call <vscale x 1 x i64> @llvm.riscv.vpairo.mask(
     <vscale x 1 x i64> %passthru,
     <vscale x 1 x i64> %arg1,
     <vscale x 1 x i64> %arg2,
@@ -567,7 +567,7 @@ define <vscale x 2 x i64> @test_vpairo_i64m2(<vscale x 2 x i64> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i64> @llvm.riscv.vpairo.nxv2i64.iXLen(
+  %a = call <vscale x 2 x i64> @llvm.riscv.vpairo(
     <vscale x 2 x i64> %passthru,
     <vscale x 2 x i64> %arg1,
     <vscale x 2 x i64> %arg2,
@@ -581,7 +581,7 @@ define <vscale x 2 x i64> @test_vpairo_mask_i64m2(<vscale x 2 x i64> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x i64> @llvm.riscv.vpairo.mask.nxv2i64(
+  %a = call <vscale x 2 x i64> @llvm.riscv.vpairo.mask(
     <vscale x 2 x i64> %passthru,
     <vscale x 2 x i64> %arg1,
     <vscale x 2 x i64> %arg2,
@@ -596,7 +596,7 @@ define <vscale x 4 x i64> @test_vpairo_i64m4(<vscale x 4 x i64> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i64> @llvm.riscv.vpairo.nxv4i64.iXLen(
+  %a = call <vscale x 4 x i64> @llvm.riscv.vpairo(
     <vscale x 4 x i64> %passthru,
     <vscale x 4 x i64> %arg1,
     <vscale x 4 x i64> %arg2,
@@ -610,7 +610,7 @@ define <vscale x 4 x i64> @test_vpairo_mask_i64m4(<vscale x 4 x i64> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 4 x i64> @llvm.riscv.vpairo.mask.nxv4i64(
+  %a = call <vscale x 4 x i64> @llvm.riscv.vpairo.mask(
     <vscale x 4 x i64> %passthru,
     <vscale x 4 x i64> %arg1,
     <vscale x 4 x i64> %arg2,
@@ -626,7 +626,7 @@ define <vscale x 8 x i64> @test_vpairo_i64m8(<vscale x 8 x i64> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 8 x i64> @llvm.riscv.vpairo.nxv8i64.iXLen(
+  %a = call <vscale x 8 x i64> @llvm.riscv.vpairo(
     <vscale x 8 x i64> %passthru,
     <vscale x 8 x i64> %arg1,
     <vscale x 8 x i64> %arg2,
@@ -641,7 +641,7 @@ define <vscale x 8 x i64> @test_vpairo_mask_i64m8(<vscale x 8 x i64> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 8 x i64> @llvm.riscv.vpairo.mask.nxv8i64(
+  %a = call <vscale x 8 x i64> @llvm.riscv.vpairo.mask(
     <vscale x 8 x i64> %passthru,
     <vscale x 8 x i64> %arg1,
     <vscale x 8 x i64> %arg2,
@@ -659,7 +659,7 @@ define <vscale x 1 x half> @test_vpairo_f16mf4(<vscale x 1 x half> %passthru, <v
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 1 x half> @llvm.riscv.vpairo.nxv1f16.iXLen(
+  %r = call <vscale x 1 x half> @llvm.riscv.vpairo(
     <vscale x 1 x half> %passthru,
     <vscale x 1 x half> %a1,
     <vscale x 1 x half> %a2,
@@ -673,7 +673,7 @@ define <vscale x 1 x half> @test_vpairo_mask_f16mf4(<vscale x 1 x half> %passthr
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 1 x half> @llvm.riscv.vpairo.mask.nxv1f16(
+  %r = call <vscale x 1 x half> @llvm.riscv.vpairo.mask(
     <vscale x 1 x half> %passthru,
     <vscale x 1 x half> %a1,
     <vscale x 1 x half> %a2,
@@ -689,7 +689,7 @@ define <vscale x 2 x half> @test_vpairo_f16mf2(<vscale x 2 x half> %passthru, <v
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 2 x half> @llvm.riscv.vpairo.nxv2f16.iXLen(
+  %r = call <vscale x 2 x half> @llvm.riscv.vpairo(
     <vscale x 2 x half> %passthru,
     <vscale x 2 x half> %a1,
     <vscale x 2 x half> %a2,
@@ -703,7 +703,7 @@ define <vscale x 2 x half> @test_vpairo_mask_f16mf2(<vscale x 2 x half> %passthr
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 2 x half> @llvm.riscv.vpairo.mask.nxv2f16(
+  %r = call <vscale x 2 x half> @llvm.riscv.vpairo.mask(
     <vscale x 2 x half> %passthru,
     <vscale x 2 x half> %a1,
     <vscale x 2 x half> %a2,
@@ -719,7 +719,7 @@ define <vscale x 4 x half> @test_vpairo_f16m1(<vscale x 4 x half> %passthru, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 4 x half> @llvm.riscv.vpairo.nxv4f16.iXLen(
+  %r = call <vscale x 4 x half> @llvm.riscv.vpairo(
     <vscale x 4 x half> %passthru,
     <vscale x 4 x half> %a1,
     <vscale x 4 x half> %a2,
@@ -733,7 +733,7 @@ define <vscale x 4 x half> @test_vpairo_mask_f16m1(<vscale x 4 x half> %passthru
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 4 x half> @llvm.riscv.vpairo.mask.nxv4f16(
+  %r = call <vscale x 4 x half> @llvm.riscv.vpairo.mask(
     <vscale x 4 x half> %passthru,
     <vscale x 4 x half> %a1,
     <vscale x 4 x half> %a2,
@@ -749,7 +749,7 @@ define <vscale x 8 x half> @test_vpairo_f16m2(<vscale x 8 x half> %passthru, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 8 x half> @llvm.riscv.vpairo.nxv8f16.iXLen(
+  %r = call <vscale x 8 x half> @llvm.riscv.vpairo(
     <vscale x 8 x half> %passthru,
     <vscale x 8 x half> %a1,
     <vscale x 8 x half> %a2,
@@ -763,7 +763,7 @@ define <vscale x 8 x half> @test_vpairo_mask_f16m2(<vscale x 8 x half> %passthru
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 8 x half> @llvm.riscv.vpairo.mask.nxv8f16(
+  %r = call <vscale x 8 x half> @llvm.riscv.vpairo.mask(
     <vscale x 8 x half> %passthru,
     <vscale x 8 x half> %a1,
     <vscale x 8 x half> %a2,
@@ -779,7 +779,7 @@ define <vscale x 16 x half> @test_vpairo_f16m4(<vscale x 16 x half> %passthru, <
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 16 x half> @llvm.riscv.vpairo.nxv16f16.iXLen(
+  %r = call <vscale x 16 x half> @llvm.riscv.vpairo(
     <vscale x 16 x half> %passthru,
     <vscale x 16 x half> %a1,
     <vscale x 16 x half> %a2,
@@ -793,7 +793,7 @@ define <vscale x 16 x half> @test_vpairo_mask_f16m4(<vscale x 16 x half> %passth
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 16 x half> @llvm.riscv.vpairo.mask.nxv16f16(
+  %r = call <vscale x 16 x half> @llvm.riscv.vpairo.mask(
     <vscale x 16 x half> %passthru,
     <vscale x 16 x half> %a1,
     <vscale x 16 x half> %a2,
@@ -810,7 +810,7 @@ define <vscale x 32 x half> @test_vpairo_f16m8(<vscale x 32 x half> %passthru, <
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 32 x half> @llvm.riscv.vpairo.nxv32f16.iXLen(
+  %r = call <vscale x 32 x half> @llvm.riscv.vpairo(
     <vscale x 32 x half> %passthru,
     <vscale x 32 x half> %a1,
     <vscale x 32 x half> %a2,
@@ -825,7 +825,7 @@ define <vscale x 32 x half> @test_vpairo_mask_f16m8(<vscale x 32 x half> %passth
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 32 x half> @llvm.riscv.vpairo.mask.nxv32f16(
+  %r = call <vscale x 32 x half> @llvm.riscv.vpairo.mask(
     <vscale x 32 x half> %passthru,
     <vscale x 32 x half> %a1,
     <vscale x 32 x half> %a2,
@@ -842,7 +842,7 @@ define <vscale x 1 x float> @test_vpairo_f32mf2(<vscale x 1 x float> %passthru, 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 1 x float> @llvm.riscv.vpairo.nxv1f32.iXLen(
+  %r = call <vscale x 1 x float> @llvm.riscv.vpairo(
     <vscale x 1 x float> %passthru,
     <vscale x 1 x float> %a1,
     <vscale x 1 x float> %a2,
@@ -856,7 +856,7 @@ define <vscale x 1 x float> @test_vpairo_mask_f32mf2(<vscale x 1 x float> %passt
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 1 x float> @llvm.riscv.vpairo.mask.nxv1f32(
+  %r = call <vscale x 1 x float> @llvm.riscv.vpairo.mask(
     <vscale x 1 x float> %passthru,
     <vscale x 1 x float> %a1,
     <vscale x 1 x float> %a2,
@@ -872,7 +872,7 @@ define <vscale x 2 x float> @test_vpairo_f32m1(<vscale x 2 x float> %passthru, <
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 2 x float> @llvm.riscv.vpairo.nxv2f32.iXLen(
+  %r = call <vscale x 2 x float> @llvm.riscv.vpairo(
     <vscale x 2 x float> %passthru,
     <vscale x 2 x float> %a1,
     <vscale x 2 x float> %a2,
@@ -886,7 +886,7 @@ define <vscale x 2 x float> @test_vpairo_mask_f32m1(<vscale x 2 x float> %passth
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 2 x float> @llvm.riscv.vpairo.mask.nxv2f32(
+  %r = call <vscale x 2 x float> @llvm.riscv.vpairo.mask(
     <vscale x 2 x float> %passthru,
     <vscale x 2 x float> %a1,
     <vscale x 2 x float> %a2,
@@ -902,7 +902,7 @@ define <vscale x 4 x float> @test_vpairo_f32m2(<vscale x 4 x float> %passthru, <
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 4 x float> @llvm.riscv.vpairo.nxv4f32.iXLen(
+  %r = call <vscale x 4 x float> @llvm.riscv.vpairo(
     <vscale x 4 x float> %passthru,
     <vscale x 4 x float> %a1,
     <vscale x 4 x float> %a2,
@@ -916,7 +916,7 @@ define <vscale x 4 x float> @test_vpairo_mask_f32m2(<vscale x 4 x float> %passth
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 4 x float> @llvm.riscv.vpairo.mask.nxv4f32(
+  %r = call <vscale x 4 x float> @llvm.riscv.vpairo.mask(
     <vscale x 4 x float> %passthru,
     <vscale x 4 x float> %a1,
     <vscale x 4 x float> %a2,
@@ -932,7 +932,7 @@ define <vscale x 8 x float> @test_vpairo_f32m4(<vscale x 8 x float> %passthru, <
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 8 x float> @llvm.riscv.vpairo.nxv8f32.iXLen(
+  %r = call <vscale x 8 x float> @llvm.riscv.vpairo(
     <vscale x 8 x float> %passthru,
     <vscale x 8 x float> %a1,
     <vscale x 8 x float> %a2,
@@ -946,7 +946,7 @@ define <vscale x 8 x float> @test_vpairo_mask_f32m4(<vscale x 8 x float> %passth
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 8 x float> @llvm.riscv.vpairo.mask.nxv8f32(
+  %r = call <vscale x 8 x float> @llvm.riscv.vpairo.mask(
     <vscale x 8 x float> %passthru,
     <vscale x 8 x float> %a1,
     <vscale x 8 x float> %a2,
@@ -963,7 +963,7 @@ define <vscale x 16 x float> @test_vpairo_f32m8(<vscale x 16 x float> %passthru,
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 16 x float> @llvm.riscv.vpairo.nxv16f32.iXLen(
+  %r = call <vscale x 16 x float> @llvm.riscv.vpairo(
     <vscale x 16 x float> %passthru,
     <vscale x 16 x float> %a1,
     <vscale x 16 x float> %a2,
@@ -978,7 +978,7 @@ define <vscale x 16 x float> @test_vpairo_mask_f32m8(<vscale x 16 x float> %pass
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 16 x float> @llvm.riscv.vpairo.mask.nxv16f32(
+  %r = call <vscale x 16 x float> @llvm.riscv.vpairo.mask(
     <vscale x 16 x float> %passthru,
     <vscale x 16 x float> %a1,
     <vscale x 16 x float> %a2,
@@ -995,7 +995,7 @@ define <vscale x 1 x double> @test_vpairo_f64m1(<vscale x 1 x double> %passthru,
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 1 x double> @llvm.riscv.vpairo.nxv1f64.iXLen(
+  %r = call <vscale x 1 x double> @llvm.riscv.vpairo(
     <vscale x 1 x double> %passthru,
     <vscale x 1 x double> %a1,
     <vscale x 1 x double> %a2,
@@ -1009,7 +1009,7 @@ define <vscale x 1 x double> @test_vpairo_mask_f64m1(<vscale x 1 x double> %pass
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 1 x double> @llvm.riscv.vpairo.mask.nxv1f64(
+  %r = call <vscale x 1 x double> @llvm.riscv.vpairo.mask(
     <vscale x 1 x double> %passthru,
     <vscale x 1 x double> %a1,
     <vscale x 1 x double> %a2,
@@ -1025,7 +1025,7 @@ define <vscale x 2 x double> @test_vpairo_f64m2(<vscale x 2 x double> %passthru,
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 2 x double> @llvm.riscv.vpairo.nxv2f64.iXLen(
+  %r = call <vscale x 2 x double> @llvm.riscv.vpairo(
     <vscale x 2 x double> %passthru,
     <vscale x 2 x double> %a1,
     <vscale x 2 x double> %a2,
@@ -1039,7 +1039,7 @@ define <vscale x 2 x double> @test_vpairo_mask_f64m2(<vscale x 2 x double> %pass
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v10, v12, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 2 x double> @llvm.riscv.vpairo.mask.nxv2f64(
+  %r = call <vscale x 2 x double> @llvm.riscv.vpairo.mask(
     <vscale x 2 x double> %passthru,
     <vscale x 2 x double> %a1,
     <vscale x 2 x double> %a2,
@@ -1055,7 +1055,7 @@ define <vscale x 4 x double> @test_vpairo_f64m4(<vscale x 4 x double> %passthru,
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 4 x double> @llvm.riscv.vpairo.nxv4f64.iXLen(
+  %r = call <vscale x 4 x double> @llvm.riscv.vpairo(
     <vscale x 4 x double> %passthru,
     <vscale x 4 x double> %a1,
     <vscale x 4 x double> %a2,
@@ -1069,7 +1069,7 @@ define <vscale x 4 x double> @test_vpairo_mask_f64m4(<vscale x 4 x double> %pass
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 4 x double> @llvm.riscv.vpairo.mask.nxv4f64(
+  %r = call <vscale x 4 x double> @llvm.riscv.vpairo.mask(
     <vscale x 4 x double> %passthru,
     <vscale x 4 x double> %a1,
     <vscale x 4 x double> %a2,
@@ -1086,7 +1086,7 @@ define <vscale x 8 x double> @test_vpairo_f64m8(<vscale x 8 x double> %passthru,
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, tu, ma
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 8 x double> @llvm.riscv.vpairo.nxv8f64.iXLen(
+  %r = call <vscale x 8 x double> @llvm.riscv.vpairo(
     <vscale x 8 x double> %passthru,
     <vscale x 8 x double> %a1,
     <vscale x 8 x double> %a2,
@@ -1101,7 +1101,7 @@ define <vscale x 8 x double> @test_vpairo_mask_f64m8(<vscale x 8 x double> %pass
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
 ; CHECK-NEXT:    vpairo.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
-  %r = call <vscale x 8 x double> @llvm.riscv.vpairo.mask.nxv8f64(
+  %r = call <vscale x 8 x double> @llvm.riscv.vpairo.mask(
     <vscale x 8 x double> %passthru,
     <vscale x 8 x double> %a1,
     <vscale x 8 x double> %a2,
