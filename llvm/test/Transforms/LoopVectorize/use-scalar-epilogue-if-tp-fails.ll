@@ -100,7 +100,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[SIZE:%.*]], 3
 ; FORCED-TF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
 ; FORCED-TF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
-; FORCED-TF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i32 [[SIZE]], 1
+; FORCED-TF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw i32 [[SIZE]], 1
 ; FORCED-TF-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[SIZE]]
 ; FORCED-TF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; FORCED-TF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -167,7 +167,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[SIZE:%.*]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i32 [[SIZE]], 1
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw i32 [[SIZE]], 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[SIZE]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer

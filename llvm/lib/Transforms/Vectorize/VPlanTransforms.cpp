@@ -4997,7 +4997,7 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   auto *TCMO =
       Builder.createSub(Plan.getTripCount(), Plan.getConstantInt(TCTy, 1),
                         DebugLoc::getCompilerGenerated(), "trip.count.minus.1",
-                        {/*HasNUW=*/true, /*HasNSW=*/true});
+                        {/*HasNUW=*/true, /*HasNSW=*/false});
   BTC->replaceAllUsesWith(TCMO);
 }
 

@@ -90,7 +90,7 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-TF-NEXT:    EMIT vp<%n.rnd.up> = add ir<%N>, ir<7>
 ; IC2-TF-NEXT:    EMIT vp<%n.mod.vf> = urem vp<%n.rnd.up>, ir<8>
 ; IC2-TF-NEXT:    EMIT vp<%n.vec> = sub vp<%n.rnd.up>, vp<%n.mod.vf>
-; IC2-TF-NEXT:    EMIT vp<%trip.count.minus.1> = sub nuw nsw ir<%N>, ir<1>
+; IC2-TF-NEXT:    EMIT vp<%trip.count.minus.1> = sub nuw ir<%N>, ir<1>
 ; IC2-TF-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; IC2-TF-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast ir<%a>
 ; IC2-TF-NEXT:  Successor(s): vector.body
