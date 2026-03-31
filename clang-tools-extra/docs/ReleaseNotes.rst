@@ -284,8 +284,8 @@ Changes in existing checks
   a false positive for constrained template parameters.
 
 - Improved :doc:`cppcoreguidelines-owning-memory
-  <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to detect `new`
-  expressions through implicit casts (e.g., `C* x = new D`).
+  <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to detect ``new``
+  expressions through implicit casts (e.g., ``C* x = new D``).
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
