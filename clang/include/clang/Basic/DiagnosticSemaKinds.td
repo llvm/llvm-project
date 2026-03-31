@@ -968,7 +968,7 @@ def warn_fortify_source_size_mismatch : Warning<
 
 def warn_stringop_overread
     : Warning<"'%0' reading %1 byte%s1 from a region of size %2">,
-      InGroup<StringopOverread>;
+      InGroup<DiagGroup<"stringop-overread">>;
 
 def warn_fortify_strlen_overflow: Warning<
   "'%0' will always overflow; destination buffer has size %1,"

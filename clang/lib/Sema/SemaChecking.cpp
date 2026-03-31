@@ -1163,7 +1163,7 @@ public:
     // argument index to refer to the arguments of the called function. Unless
     // the index is out of bounds, which presumably means it's a variadic
     // function.
-    if (DABAttr == nullptr) // Not using DABAttr.
+    if (!DABAttr)
       return Index;
     unsigned DABIndices = DABAttr->argIndices_size();
     unsigned NewIndex = Index < DABIndices
@@ -1239,7 +1239,7 @@ public:
   unsigned getSizeTypeWidth() const { return SizeTypeWidth; }
 
   /// Return function name after stripping __builtin_ and _chk affixes.
-  std::string GetFunctionName(unsigned BuiltinID, bool IsChkVariant) const {
+  std::string getFunctionName(unsigned BuiltinID, bool IsChkVariant) const {
     std::string Name = S.getASTContext().BuiltinInfo.getName(BuiltinID);
     llvm::StringRef Ref = Name;
     if (IsChkVariant) {
@@ -1267,8 +1267,7 @@ void Sema::checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
 
   const Expr *SrcArg = TheCall->getArg(SrcArgIdx);
   const Expr *SizeArg = TheCall->getArg(SizeArgIdx);
-  if (SrcArg->isValueDependent() || SrcArg->isTypeDependent() ||
-      SizeArg->isValueDependent() || SizeArg->isTypeDependent())
+  if (SrcArg->isInstantiationDependent() || SizeArg->isInstantiationDependent())
     return;
 
   FortifiedBufferChecker Checker(*this, FD, TheCall);
@@ -1303,8 +1302,7 @@ void Sema::checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
 
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
-  if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
-      isConstantEvaluatedContext())
+  if (TheCall->isInstantiationDependent() || isConstantEvaluatedContext())
     return;
 
   FortifiedBufferChecker Checker(*this, FD, TheCall);
