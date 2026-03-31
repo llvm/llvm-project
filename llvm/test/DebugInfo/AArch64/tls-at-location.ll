@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=aarch64 --aarch64-emit-debug-tls-location -filetype=obj < %s \
-; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=TLS
+; RUN:     | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefix=TLS --implicit-check-not=warning:
 
 ; RUN: llc -O0 -mtriple=aarch64 --aarch64-emit-debug-tls-location=false -filetype=obj < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=NO-TLS

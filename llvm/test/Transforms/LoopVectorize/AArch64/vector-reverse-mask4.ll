@@ -46,8 +46,8 @@ define void @vector_reverse_mask_v4i1(ptr noalias %a, ptr noalias %cond, i64 %N)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -24
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -56
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP8]], <4 x i1> [[REVERSE3]], <4 x double> poison)
 ; CHECK-NEXT:    [[REVERSE5:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP8]], <4 x i1> [[REVERSE3]], <4 x double> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD6:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP9]], <4 x i1> [[REVERSE5]], <4 x double> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[WIDE_MASKED_LOAD]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[WIDE_MASKED_LOAD6]], splat (double 1.000000e+00)
