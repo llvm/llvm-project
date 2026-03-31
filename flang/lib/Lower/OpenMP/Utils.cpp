@@ -1395,6 +1395,189 @@ makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
   return dynamicCond;
 }
 
+// Lower the stable base entity for an iterator map/motion locator.
+//
+// MapInfoOp stores this base in var_ptr and represents the iterator-selected
+// elements or sections with map bounds. For component array locators such as
+// v%a(i) or v%a(i:i+1), return v%a so each iteration maps offsets from the
+// same base.
+static std::optional<hlfir::Entity>
+getIteratorMapEntity(Fortran::lower::AbstractConverter &converter,
+                     fir::FirOpBuilder &builder,
+                     Fortran::semantics::SemanticsContext &semaCtx,
+                     Fortran::lower::StatementContext &stmtCtx,
+                     const omp::Object &object, mlir::Location loc) {
+  const semantics::Symbol *sym = object.sym();
+  assert(sym && "expected symbol for iterator object");
+
+  if (!sym->owner().IsDerivedType()) {
+    // Keep the same base address as ordinary map lowering for non-component
+    // objects.
+    fir::factory::AddrAndBoundsInfo info =
+        Fortran::lower::getDataOperandBaseAddr(converter, builder, *sym, loc,
+                                               /*unwrapFirBox=*/false);
+    return hlfir::Entity{info.addr};
+  }
+
+  const std::optional<ExprTy> &ref = object.ref();
+  if (!ref)
+    return std::nullopt;
+
+  auto arrayRef = Fortran::lower::detail::getRef<evaluate::ArrayRef>(*ref);
+  if (!arrayRef)
+    return std::nullopt;
+
+  evaluate::ExpressionAnalyzer ea{semaCtx};
+  std::optional<ExprTy> arrayBase;
+  const evaluate::NamedEntity &base = arrayRef->base();
+  // Component array references carry the array base separately from the
+  // subscript list. Lower that base, e.g. v%a in v%a(i), and leave the
+  // subscript-dependent part to map bounds.
+  if (const semantics::SymbolRef *symRef = base.UnwrapSymbolRef())
+    arrayBase = ea.Designate(evaluate::DataRef{*symRef});
+  else if (const evaluate::Component *component = base.UnwrapComponent())
+    arrayBase = ea.Designate(evaluate::DataRef{*component});
+  else
+    llvm_unreachable("unexpected NamedEntity");
+
+  assert(arrayBase);
+  // Preserve mutable-box lowering for allocatable and pointer bases; MapInfoOp
+  // still records the address returned by the lowered base expression.
+  fir::ExtendedValue dataExv;
+  if (semantics::IsAllocatableOrPointer(base.GetLastSymbol()))
+    dataExv = converter.genExprMutableBox(loc, *arrayBase);
+  else
+    dataExv = converter.genExprAddr(loc, *arrayBase, stmtCtx);
+  return hlfir::Entity{fir::getBase(dataExv)};
+}
+
+// Build normalized map bounds for an iterator-dependent map/motion object.
+// MapInfoOp keeps the array base address as var_ptr; these bounds describe the
+// selected element or contiguous array section for each dimension.
+//
+// Examples:
+//   a(i)     -> lower_bound == upper_bound == i - base lower bound
+//   a(i:i+1) -> lower_bound == i - base lower bound,
+//               upper_bound == i + 1 - base lower bound
+static std::optional<llvm::SmallVector<mlir::Value>>
+genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
+                     hlfir::Entity entity, const omp::Object &object,
+                     Fortran::lower::StatementContext &stmtCtx,
+                     mlir::Location loc) {
+  const std::optional<ExprTy> &ref = object.ref();
+  assert(ref && "expected iterator-dependent object to have a reference");
+
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      Fortran::evaluate::ExtractDataRef(*ref);
+  if (!dataRef)
+    return std::nullopt;
+  const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef || arrayRef->subscript().empty())
+    return std::nullopt;
+
+  auto &builder = converter.getFirOpBuilder();
+  using SubscriptExpr =
+      Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>;
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type boundTy = builder.getType<mlir::omp::MapBoundsType>();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+
+  auto convertToIndex = [&](mlir::Value value) -> mlir::Value {
+    if (value.getType().isIndex())
+      return value;
+    return fir::ConvertOp::create(builder, loc, idxTy, value);
+  };
+
+  auto lowerSubscriptToIndex = [&](const SubscriptExpr &expr) -> mlir::Value {
+    mlir::Value value = fir::getBase(createSomeExtendedExpression(
+        loc, converter, toEvExpr(expr), converter.getSymbolMap(), stmtCtx));
+    return convertToIndex(value);
+  };
+
+  llvm::SmallVector<mlir::Value> bounds;
+  bounds.reserve(arrayRef->subscript().size());
+  // Translate each Fortran subscript into an OpenMP map bound for the
+  // corresponding array dimension.
+  for (const auto &[dim, subscript] : llvm::enumerate(arrayRef->subscript())) {
+    mlir::Value baseLb =
+        convertToIndex(hlfir::genLBound(loc, builder, entity, dim));
+    mlir::Value extent =
+        convertToIndex(hlfir::genExtent(loc, builder, entity, dim));
+    mlir::Value lbound;
+    mlir::Value ubound;
+
+    if (const auto *triplet =
+            std::get_if<Fortran::evaluate::Triplet>(&subscript.u)) {
+      // Triplet subscripts map a section. Missing lower/upper bounds select the
+      // whole dimension, which normalizes to 0/extent-1.
+      if (std::optional<SubscriptExpr> lowerBound = triplet->lower()) {
+        mlir::Value lower = lowerSubscriptToIndex(*lowerBound);
+        lbound = mlir::arith::SubIOp::create(builder, loc, lower, baseLb);
+      } else {
+        lbound = zero;
+      }
+
+      if (std::optional<SubscriptExpr> upperBound = triplet->upper()) {
+        mlir::Value upper = lowerSubscriptToIndex(*upperBound);
+        ubound = mlir::arith::SubIOp::create(builder, loc, upper, baseLb);
+      } else {
+        ubound = mlir::arith::SubIOp::create(builder, loc, extent, one);
+      }
+
+      // Sema only rejects statically-known non-positive strides, so valid
+      // OpenMP may still reach here with a positive non-unit or dynamic stride.
+      std::optional<std::int64_t> stride =
+          Fortran::evaluate::ToInt64(triplet->GetStride());
+      if (!stride || *stride != 1)
+        TODO(loc, "iterator modifier with non-unit array section stride");
+    } else {
+      // Not handling vector subscripts for now.
+      if (subscript.Rank() > 0)
+        return std::nullopt;
+
+      const auto *indirect =
+          std::get_if<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
+              &subscript.u);
+      assert(indirect && "expected non-triplet subscript");
+
+      // Scalar subscripts map one element, so lower and upper are identical.
+      mlir::Value index = lowerSubscriptToIndex(indirect->value());
+      lbound = mlir::arith::SubIOp::create(builder, loc, index, baseLb);
+      ubound = lbound;
+    }
+
+    mlir::Value bound = mlir::omp::MapBoundsOp::create(
+        builder, loc, boundTy, lbound, ubound, extent, /*stride=*/one,
+        /*stride_in_bytes=*/false, /*start_idx=*/baseLb);
+    bounds.push_back(bound);
+  }
+
+  return bounds;
+}
+
+// Lower an iterated map/motion object to its stable base entity and
+// normalized bounds. The entity serves as var_ptr in MapInfoOp, and the bounds
+// describe the iterator-selected element or section.
+std::optional<IteratorMapInfo>
+genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
+                   fir::FirOpBuilder &builder,
+                   Fortran::semantics::SemanticsContext &semaCtx,
+                   Fortran::lower::StatementContext &stmtCtx,
+                   const omp::Object &object, mlir::Location loc) {
+  std::optional<hlfir::Entity> entity =
+      getIteratorMapEntity(converter, builder, semaCtx, stmtCtx, object, loc);
+  if (!entity)
+    return std::nullopt;
+
+  std::optional<llvm::SmallVector<mlir::Value>> bounds =
+      genIteratorMapBounds(converter, *entity, object, stmtCtx, loc);
+  if (!bounds)
+    return std::nullopt;
+
+  return IteratorMapInfo{*entity, std::move(*bounds)};
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

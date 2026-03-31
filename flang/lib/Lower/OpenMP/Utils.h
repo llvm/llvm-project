@@ -251,6 +251,18 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
                 mlir::omp::ClauseMapFlags mapTypeBits,
                 llvm::omp::Directive directive, bool hasParentObj);
 
+struct IteratorMapInfo {
+  hlfir::Entity entity;
+  llvm::SmallVector<mlir::Value> bounds;
+};
+
+std::optional<IteratorMapInfo>
+genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
+                   fir::FirOpBuilder &builder,
+                   Fortran::semantics::SemanticsContext &semaCtx,
+                   Fortran::lower::StatementContext &stmtCtx,
+                   const omp::Object &object, mlir::Location loc);
+
 std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
