@@ -828,8 +828,8 @@ void CXXNameMangler::mangleSourceNameWithAbiTags(
 
 void CXXNameMangler::mangle(GlobalDecl GD) {
   // <mangled-name> ::= _Z <encoding>
-  //            ::= <data name>
-  //            ::= <special-name>
+  //                ::= <data name>
+  //                ::= <special-name>
   Out << "_Z";
   if (isa<FunctionDecl>(GD.getDecl()))
     mangleFunctionEncoding(GD);
@@ -1130,10 +1130,10 @@ void CXXNameMangler::mangleModuleName(const NamedDecl *ND) {
 }
 
 // <module-name> ::= <module-subname>
-//		 ::= <module-name> <module-subname>
-//	 	 ::= <substitution>
+//               ::= <module-name> <module-subname>
+//               ::= <substitution>
 // <module-subname> ::= W <source-name>
-//		    ::= W P <source-name>
+//                  ::= W P <source-name>
 void CXXNameMangler::mangleModuleNamePrefix(StringRef Name, bool IsPartition) {
   //  <substitution> ::= S <seq-id> _
   auto It = ModuleSubstitutions.find(Name);
@@ -7266,16 +7266,8 @@ bool CXXNameMangler::shouldHaveAbiTags(ItaniumMangleContextImpl &C,
   return TrackAbiTags.AbiTagsRoot.getUsedAbiTags().size();
 }
 
-//
-
-/// Mangles the name of the declaration D and emits that name to the given
-/// output stream.
-///
-/// If the declaration D requires a mangled name, this routine will emit that
-/// mangled name to \p os and return true. Otherwise, \p os will be unchanged
-/// and this routine will return false. In this case, the caller should just
-/// emit the identifier of the declaration (\c D->getIdentifier()) as its
-/// name.
+/// Mangles the name of the declaration \p GD and emits that name to the given
+/// output stream \p Out.
 void ItaniumMangleContextImpl::mangleCXXName(GlobalDecl GD,
                                              raw_ostream &Out) {
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
