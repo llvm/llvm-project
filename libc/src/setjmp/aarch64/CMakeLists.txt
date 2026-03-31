@@ -1,5 +1,6 @@
 if(LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER)
   libc_set_definition(setjmp_config_options "LIBC_COPT_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER")
+endif()
 
 add_entrypoint_object(
   setjmp
