@@ -264,3 +264,13 @@
 // RUN:   | FileCheck %s --check-prefix=COMPRESS
 // COMPRESS: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld"
 // COMPRESS: "--compress-debug-sections=zlib"
+
+/// Check LTO
+// RUN: %clang --target=x86_64-unknown-serenity -flto %s -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=LTO_FULL
+// LTO_FULL: "-plugin-opt=
+// LTO_FULL-NOT: thin
+
+// RUN: %clang --target=x86_64-unknown-serenity -flto=thin %s -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=LTO_THIN
+// LTO_THIN: "-plugin-opt=thinlto"
