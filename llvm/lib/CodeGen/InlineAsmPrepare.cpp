@@ -243,7 +243,9 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
       NewFTy, IA->getAsmString(), NewConstraintStr, IA->hasSideEffects(),
       IA->isAlignStack(), IA->getDialect(), IA->canThrow());
 
-  CallInst *NewCall = Builder.CreateCall(NewFTy, NewIA, NewArgs);
+  SmallVector<OperandBundleDef, 1> Bundles;
+  CB->getOperandBundlesAsDefs(Bundles);
+  CallInst *NewCall = Builder.CreateCall(NewFTy, NewIA, NewArgs, Bundles);
   NewCall->setCallingConv(CB->getCallingConv());
 
   // Rebuild the parameter attribute list. Arguments whose types changed (e.g.
