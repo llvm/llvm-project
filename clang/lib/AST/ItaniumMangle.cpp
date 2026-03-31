@@ -799,10 +799,6 @@ bool ItaniumMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
     // Variables at global scope are not mangled unless they have internal
     // linkage or are specializations or are attached to a named module.
     const DeclContext *DC = getEffectiveDeclContext(D);
-    // Check for extern variable declared locally.
-    if (DC->isFunctionOrMethod() && D->hasLinkage())
-      while (!DC->isFileContext())
-        DC = getEffectiveParentContext(DC);
     if (DC->isTranslationUnit() && D->getFormalLinkage() != Linkage::Internal &&
         !CXXNameMangler::shouldHaveAbiTags(*this, VD) &&
         !isa<VarTemplateSpecializationDecl>(VD) &&
@@ -1076,15 +1072,8 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
   const DeclContext *DC = Context.getEffectiveDeclContext(ND);
   bool IsLambda = isLambda(ND);
 
-  // If this is an extern variable declared locally, the relevant DeclContext
-  // is that of the containing namespace, or the translation unit.
-  // FIXME: This is a hack; extern variables declared locally should have
-  // a proper semantic declaration context!
-  if (isLocalContainerContext(DC) && ND->hasLinkage() && !IsLambda)
-    while (!DC->isNamespace() && !DC->isTranslationUnit())
-      DC = Context.getEffectiveParentContext(DC);
-  else if (GetLocalClassDecl(ND) &&
-           (!IsLambda || isCompatibleWith(LangOptions::ClangABI::Ver18))) {
+  if (GetLocalClassDecl(ND) &&
+      (!IsLambda || isCompatibleWith(LangOptions::ClangABI::Ver18))) {
     mangleLocalName(GD, AdditionalAbiTags);
     return;
   }
