@@ -538,9 +538,11 @@ public:
       return Tmp;
     }
 
+#ifndef __swift__
     bool operator==(const PartIterator &RHS) const {
       return OffsetIt == RHS.OffsetIt;
     }
+#endif
 
     bool operator!=(const PartIterator &RHS) const {
       return OffsetIt != RHS.OffsetIt;
