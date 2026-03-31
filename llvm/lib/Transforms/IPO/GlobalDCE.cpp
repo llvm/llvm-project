@@ -229,21 +229,19 @@ void GlobalDCEPass::ScanVTables(Module &M) {
     // If the type corresponding to the vtable is private to this translation
     // unit, we know that we can see all virtual functions which might use it,
     // so VFE is safe.
-    if (auto GO = dyn_cast<GlobalObject>(&GV)) {
-      GlobalObject::VCallVisibility TypeVis = GO->getVCallVisibility();
-      if (TypeVis == GlobalObject::VCallVisibilityTranslationUnit ||
-          (InLTOPostLink &&
-           TypeVis == GlobalObject::VCallVisibilityLinkageUnit)) {
-        LLVM_DEBUG(dbgs() << GV.getName() << " is safe for VFE\n");
+    GlobalObject::VCallVisibility TypeVis = GV.getVCallVisibility();
+    if (TypeVis == GlobalObject::VCallVisibilityTranslationUnit ||
+        (InLTOPostLink &&
+         TypeVis == GlobalObject::VCallVisibilityLinkageUnit)) {
+      LLVM_DEBUG(dbgs() << GV.getName() << " is safe for VFE\n");
 
-        // Find and record all the vfunctions that are within the offset range
-        // specified in the !vcall_visibility attribute.
-        auto Range = GO->getVTableOffsetRange();
-        SmallPtrSet<GlobalValue *, 8> VFuncs;
-        FindVirtualFunctionsInVTable(M, GV.getInitializer(), std::get<0>(Range),
+      // Find and record all the vfunctions that are within the offset range
+      // specified in the !vcall_visibility attribute.
+      auto Range = GV.getVTableOffsetRange();
+      SmallPtrSet<GlobalValue *, 8> VFuncs;
+      FindVirtualFunctionsInVTable(M, GV.getInitializer(), std::get<0>(Range),
                                      std::get<1>(Range), &VFuncs);
-        VFESafeVTablesAndFns[&GV] = VFuncs;
-      }
+      VFESafeVTablesAndFns[&GV] = VFuncs;
     }
   }
 }
