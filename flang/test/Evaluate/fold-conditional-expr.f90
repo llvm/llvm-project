@@ -33,4 +33,10 @@ module m
   logical, parameter :: test_true_const_else_nonconstant  = (.true.  ? 10 : non_const) == 10
   logical, parameter :: test_false_const_then_nonconstant = (.false. ? non_const : 10) == 10
 
+  ! Named constant condition with a non-constant branch.
+  logical, parameter :: flag = .true.
+  logical, parameter :: test_named_cond_nonconstant = (flag ? 1 : non_const) == 1
+  logical, parameter :: flag_false = .false.
+  logical, parameter :: test_named_cond_false_nonconstant = (flag_false ? non_const : 1) == 1
+
 end module

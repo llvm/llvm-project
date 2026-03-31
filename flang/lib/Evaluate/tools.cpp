@@ -1730,15 +1730,11 @@ struct ArgumentExtractor
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
-    // ConditionalExpr is a top-level operation; collect its immediate operands
-    Arguments args{AsSomeExpr(x.condition()), AsSomeExpr(x.thenValue())};
-    if (const auto *nested{std::get_if<ConditionalExpr<T>>(&x.elseValue().u)}) {
-      auto moreArgs{(*this)(*nested).second};
-      args.insert(args.end(), moreArgs.begin(), moreArgs.end());
-    } else {
-      args.push_back(AsSomeExpr(x.elseValue()));
-    }
-    return {Operator::Conditional, std::move(args)};
+    // Conditional expressions are not valid atomic operations; return the
+    // immediate operands without descending into nested conditionals.
+    return {Operator::Conditional,
+        {AsSomeExpr(x.condition()), AsSomeExpr(x.thenValue()),
+            AsSomeExpr(x.elseValue())}};
   }
 
   template <typename... Rs>

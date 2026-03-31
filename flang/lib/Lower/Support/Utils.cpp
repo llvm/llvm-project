@@ -424,7 +424,6 @@ public:
   template <typename T>
   static bool isEqual(const Fortran::evaluate::ConditionalExpr<T> &x,
                       const Fortran::evaluate::ConditionalExpr<T> &y) {
-    // Compare all conditions and values
     return isEqual(x.condition(), y.condition()) &&
            isEqual(x.thenValue(), y.thenValue()) &&
            isEqual(x.elseValue(), y.elseValue());

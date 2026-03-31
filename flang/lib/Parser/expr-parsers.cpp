@@ -68,21 +68,26 @@ struct ConditionalExprLookahead {
   using resultType = Success;
   constexpr ConditionalExprLookahead() {}
   std::optional<Success> Parse(ParseState &state) const {
-    if (std::optional<const char *> at{state.PeekAtNextChar()}) {
-      if (**at != '(') {
-        return std::nullopt;
-      }
-      const char *const start{*at};
-      const char *const limit{start + state.BytesRemaining()};
-      int nestLevel{0};
-      for (const char *p{start}; p < limit; ++p) {
-        if (*p == '(') {
-          ++nestLevel;
-        } else if (*p == ')' && --nestLevel == 0) {
+    ParseState scan{state};
+    if (!attempt("("_tok).Parse(scan)) {
+      return std::nullopt;
+    }
+    int nestLevel{1};
+    while (!scan.IsAtEnd()) {
+      if (attempt(charLiteralConstant).Parse(scan)) {
+        // Skip character literals; don't check contents.
+      } else if (attempt("("_tok).Parse(scan)) {
+        ++nestLevel;
+      } else if (attempt(")"_tok).Parse(scan)) {
+        if (--nestLevel == 0) {
           return std::nullopt;
-        } else if (*p == '?' && nestLevel == 1) {
+        }
+      } else if (attempt("?"_tok).Parse(scan)) {
+        if (nestLevel == 1) {
           return {Success{}};
         }
+      } else {
+        scan.UncheckedAdvance();
       }
     }
     return std::nullopt;

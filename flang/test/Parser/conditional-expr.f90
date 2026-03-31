@@ -270,3 +270,17 @@ subroutine question_mark_chars(flag, str1, str2, str3)
   ! CHECK: str2 = ( flag ? "MAYBE?" : "NOPE" )
   str2 = (flag ? "MAYBE?" : "NOPE")  ! ? in a trailing comment
 end subroutine
+
+! Verify that '(' and ')' inside character literals are handled correctly by
+! ConditionalExprLookahead.
+subroutine paren_in_char_literal(c, i)
+  character(*), intent(in) :: c
+  integer, intent(out) :: i
+  ! CHECK-LABEL: paren_in_char_literal
+  ! CHECK: i = ( c==")" ? 1 : 2 )
+  i = (c == ")" ? 1 : 2)
+  ! CHECK: i = ( c=="(" ? 1 : 2 )
+  i = (c == "(" ? 1 : 2)
+  ! CHECK: i = ( c=="()" ? 1 : 2 )
+  i = (c == "()" ? 1 : 2)
+end subroutine

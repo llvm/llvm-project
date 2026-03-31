@@ -3894,7 +3894,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
         "type (e.g., INT(z'FF'), REAL(z'3F800000'))"_err_en_US);
     return std::nullopt;
   }
-  if (IsNullPointer(&*thenExpr) || IsNullPointer(&*elseExpr)) {
+  if (IsNullPointerOrAllocatable(&*thenExpr) ||
+      IsNullPointerOrAllocatable(&*elseExpr)) {
     Say("NULL() not allowed in a conditional expression"_err_en_US);
     return std::nullopt;
   }
