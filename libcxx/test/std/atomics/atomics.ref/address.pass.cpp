@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-deprecated-volatile
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile
 
 // constexpr address-return-type address() const noexcept;
 
@@ -47,96 +49,35 @@ struct copy_cv<const volatile _From> {
 template <class _From, class _To>
 using copy_cv_t _LIBCPP_NODEBUG = typename copy_cv<_From>::template apply<_To>;
 
+template <class T>
+using identity_t = T;
+
+template <class T>
+using add_const_t = const T;
+
+template <class T>
+using add_volatile_t = volatile T;
+
+template <class T>
+using add_const_volatile_t = const volatile T;
+
+template <template <class TestArg> class TestFunctor, template <class> class AddQualifier>
+struct TestEachAtomicTypeWithCV {
+  template <class T>
+  struct Qualified {
+    void operator()() const { TestFunctor<AddQualifier<T>>()(); }
+  };
+
+  void operator()() const { TestEachAtomicType<Qualified>()(); }
+};
+
 template <template <class TestArg> class TestFunctor>
 struct TestEachCVAtomicType {
   void operator()() const {
-    // integral types
-
-    TestFunctor<char>()();
-    TestFunctor<signed char>()();
-    TestFunctor<unsigned char>()();
-    TestFunctor<short>()();
-    TestFunctor<unsigned short>()();
-    TestFunctor<int>()();
-    TestFunctor<unsigned int>()();
-    TestFunctor<long>()();
-    TestFunctor<unsigned long>()();
-    TestFunctor<long long>()();
-    TestFunctor<unsigned long long>()();
-    TestFunctor<wchar_t>()();
-#if TEST_STD_VER >= 20 && defined(__cpp_char8_t)
-    TestFunctor<char8_t>()();
-#endif
-    TestFunctor<char16_t>()();
-    TestFunctor<char32_t>()();
-    TestFunctor<std::int8_t>()();
-    TestFunctor<std::uint8_t>()();
-    TestFunctor<std::int16_t>()();
-    TestFunctor<std::uint16_t>()();
-    TestFunctor<std::int32_t>()();
-    TestFunctor<std::uint32_t>()();
-    TestFunctor<std::int64_t>()();
-    TestFunctor<std::uint64_t>()();
-
-    TestFunctor<const char>()();
-    TestFunctor<const signed char>()();
-    TestFunctor<const unsigned char>()();
-    TestFunctor<const short>()();
-    TestFunctor<const unsigned short>()();
-    TestFunctor<const int>()();
-    TestFunctor<const unsigned int>()();
-    TestFunctor<const long>()();
-    TestFunctor<const unsigned long>()();
-    TestFunctor<const long long>()();
-    TestFunctor<const unsigned long long>()();
-    TestFunctor<const wchar_t>()();
-#if TEST_STD_VER >= 20 && defined(__cpp_char8_t)
-    TestFunctor<const char8_t>()();
-#endif
-    TestFunctor<const char16_t>()();
-    TestFunctor<const char32_t>()();
-    TestFunctor<const std::int8_t>()();
-    TestFunctor<const std::uint8_t>()();
-    TestFunctor<const std::int16_t>()();
-    TestFunctor<const std::uint16_t>()();
-    TestFunctor<const std::int32_t>()();
-    TestFunctor<const std::uint32_t>()();
-    TestFunctor<const std::int64_t>()();
-    TestFunctor<const std::uint64_t>()();
-
-    TestFunctor<char>()();
-    TestFunctor<signed char>()();
-    TestFunctor<unsigned char>()();
-    TestFunctor<short>()();
-    TestFunctor<unsigned short>()();
-    TestFunctor<int>()();
-    TestFunctor<unsigned int>()();
-    TestFunctor<long>()();
-    TestFunctor<unsigned long>()();
-    TestFunctor<long long>()();
-    TestFunctor<unsigned long long>()();
-    TestFunctor<wchar_t>()();
-#if TEST_STD_VER >= 20 && defined(__cpp_char8_t)
-    TestFunctor<char8_t>()();
-#endif
-    TestFunctor<char16_t>()();
-    TestFunctor<char32_t>()();
-    TestFunctor<std::int8_t>()();
-    TestFunctor<std::uint8_t>()();
-    TestFunctor<std::int16_t>()();
-    TestFunctor<std::uint16_t>()();
-    TestFunctor<std::int32_t>()();
-    TestFunctor<std::uint32_t>()();
-    TestFunctor<std::int64_t>()();
-    TestFunctor<std::uint64_t>()();
-
-    // floating-point types
-
-    TestFunctor<float>()();
-    TestFunctor<double>()();
-
-    TestFunctor<const float>()();
-    TestFunctor<const double>()();
+    TestEachAtomicTypeWithCV<TestFunctor, identity_t>()();
+    TestEachAtomicTypeWithCV<TestFunctor, add_const_t>()();
+    TestEachAtomicTypeWithCV<TestFunctor, add_volatile_t>()();
+    TestEachAtomicTypeWithCV<TestFunctor, add_const_volatile_t>()();
   }
 };
 
