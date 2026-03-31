@@ -997,12 +997,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
       return {};
     }
 
-    llvm::StringRef TripleStr =
+    llvm::Triple Triple =
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
-    if (TripleStr.empty())
-      continue;
-
-    llvm::Triple Triple(TripleStr);
 
     // Make a new argument that dispatches this argument to the appropriate
     // toolchain. This is required when we infer it and create potentially
@@ -1015,7 +1011,10 @@ static TripleSet inferOffloadToolchains(Compilation &C,
     A->claim();
     C.getArgs().append(A);
     C.getArgs().AddSynthesizedArg(A);
-    Triples.insert(Triple);
+
+    auto It = Triples.lower_bound(Triple);
+    if (It == Triples.end() || *It != Triple)
+      Triples.insert(It, Triple);
   }
 
   // Infer the default target triple if no specific architectures are given.
@@ -1096,15 +1095,16 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   if (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ)) {
     std::vector<std::string> ArgValues =
         C.getInputArgs().getAllArgValues(options::OPT_offload_targets_EQ);
-    for (llvm::StringRef Target : ArgValues)
-      Triples.insert(llvm::Triple(C.getInputArgs().MakeArgString(Target)));
+    for (llvm::StringRef Target : ArgValues) {
+      Triples.insert(ToolChain::normalizeOffloadTriple(Target));
+    }
 
     if (ArgValues.empty())
       Diag(clang::diag::warn_drv_empty_joined_argument)
           << C.getInputArgs()
                  .getLastArg(options::OPT_offload_targets_EQ)
                  ->getAsString(C.getInputArgs());
-  } else if (Kinds.size() > 0) {
+  } else {
     for (Action::OffloadKind Kind : Kinds)
       Triples = inferOffloadToolchains(C, Kind);
   }
@@ -1132,15 +1132,13 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
     // Create a device toolchain for every specified kind and triple.
     for (Action::OffloadKind Kind : Kinds) {
-      llvm::Triple TT = Kind == Action::OFK_OpenMP
-                            ? ToolChain::getOpenMPTriple(Target)
-                            : llvm::Triple(Target);
-      if (TT.getArch() == llvm::Triple::ArchType::UnknownArch) {
-        Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT.str();
+      if (Target.getArch() == llvm::Triple::ArchType::UnknownArch) {
+        Diag(diag::err_drv_invalid_or_unsupported_offload_target)
+            << Target.str();
         continue;
       }
 
-      std::string NormalizedName = TT.normalize();
+      std::string NormalizedName = Target.normalize();
       auto [TripleIt, Inserted] =
           FoundNormalizedTriples.try_emplace(NormalizedName, Target.str());
       if (!Inserted) {
@@ -1149,7 +1147,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         continue;
       }
 
-      auto &TC = getOffloadToolChain(C.getInputArgs(), Kind, TT,
+      auto &TC = getOffloadToolChain(C.getInputArgs(), Kind, Target,
                                      C.getDefaultToolChain().getTriple());
 
       // Emit a warning if the detected CUDA version is too new.
