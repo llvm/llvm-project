@@ -2282,14 +2282,16 @@ public:
     SmallVector<OpFoldResult> sizes = op.getConstifiedMixedSizes();
     SmallVector<OpFoldResult> strides = op.getConstifiedMixedStrides();
 
-    // Do not fold if the offset is a negative constant; ViewLikeInterface
-    // verifies that static offsets are non-negative.
+    // If the offset is a negative constant, we can't fold it because the
+    // resulting memref type would be invalid. In that case, we keep the
+    // original offset.
     if (auto cst = getConstantIntValue(offsets[0]))
       if (*cst < 0)
         offsets[0] = op.getMixedOffsets()[0];
 
-    // Do not fold if any size is a negative constant; MemRefType::get asserts
-    // non-negative static sizes.
+    // If the size is a negative constant, we can't fold it because the
+    // resulting memref type would be invalid. In that case, we keep the
+    // original size.
     for (auto [srcSizeOfr, sizeOfr] : llvm::zip(op.getMixedSizes(), sizes)) {
       if (auto cst = getConstantIntValue(sizeOfr))
         if (*cst < 0)
