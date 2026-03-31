@@ -605,8 +605,9 @@ static cir::StoreOp findDominatingStoreToReturnValue(CIRGenFunction &cgf) {
     // These aren't actually possible for non-coerced returns, and we
     // only care about non-coerced returns on this code path.
     // All memory instructions inside __try block are volatile.
-    assert(!storeOp.getMemOrder() && "atomic store to return-value slot");
-    assert(!storeOp.getIsVolatile() && "volatile __retval store (SEH) NYI");
+    // TODO: SEH is not implemented in CIR yet. Once it is, allow volatile stores
+    // to the return-value slot when the enclosing function uses __try
+    assert(!storeOp.getMemOrder() && !storeOp.getIsVolatile());
     return storeOp;
   };
   // If there are multiple uses of the return-value slot, just check
