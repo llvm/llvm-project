@@ -723,6 +723,21 @@ class MapInfoFinalizationPass
 
       if (auto mapUser = llvm::dyn_cast<mlir::omp::MapInfoOp>(user))
         return getFirstTargetUser(mapUser);
+
+      // MapInfoOp inside an omp.iterator body is yielded back to the iterator,
+      // whose result is used by the target op.
+      if (llvm::isa<mlir::omp::YieldOp>(user)) {
+        if (auto iterOp = user->getParentOfType<mlir::omp::IteratorOp>()) {
+          for (auto *iterUser : iterOp->getUsers()) {
+            if (llvm::isa<mlir::omp::TargetOp, mlir::omp::TargetDataOp,
+                          mlir::omp::TargetUpdateOp,
+                          mlir::omp::TargetExitDataOp,
+                          mlir::omp::TargetEnterDataOp,
+                          mlir::omp::DeclareMapperInfoOp>(iterUser))
+              return iterUser;
+          }
+        }
+      }
     }
 
     return nullptr;
