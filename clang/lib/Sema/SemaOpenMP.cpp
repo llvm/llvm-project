@@ -16096,9 +16096,9 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     if (!IncrExpr.isUsable())
       return StmtError();
 
-    ExprResult UpdateExpr = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Assign,
-                                               OrigVar, MakeIVRef());
-    if (!UpdateExpr.isUsable())
+    ExprResult IVAssign = SemaRef.BuildBinOp(
+        CurScope, OrigVarLoc, BO_Assign, IterationVarRef, MakeIVRef());
+    if (!IVAssign.isUsable())
       return StmtError();
 
     SmallVector<Stmt *, 4> BodyStmts;
