@@ -504,6 +504,7 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
     "SPIRV_TosaExtAccTypeAttr",
     "SPIRV_TosaExtResizeModeAttr",
     "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_TosaExtRoundingModeAttr",
     "SPIRV_QuadSwapDirectionAttr",
 };
 

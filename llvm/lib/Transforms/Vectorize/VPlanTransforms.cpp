@@ -2630,8 +2630,9 @@ void VPlanTransforms::cse(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
   DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
 
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : *VPBB) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))

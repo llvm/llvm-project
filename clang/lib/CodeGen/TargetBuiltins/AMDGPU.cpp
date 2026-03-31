@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -456,6 +457,19 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   llvm::sort(MMRAs);
   MMRAs.erase(llvm::unique(MMRAs), MMRAs.end());
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
+}
+
+static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
+  Constant *SpecId = ConstantInt::getAllOnesValue(CGF.Int32Ty);
+
+  LLVMContext &Ctx = CGF.getLLVMContext();
+  MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
+  std::vector<Value *> Args = {SpecId, ConstantInt::getFalse(Ctx),
+                               MetadataAsValue::get(Ctx, Predicate)};
+  CallInst *Call = CGF.Builder.CreateIntrinsic(
+      Intrinsic::spv_named_boolean_spec_constant, Args);
+
+  return Call;
 }
 
 static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
@@ -1013,6 +1027,23 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                    {llvm::Type::getInt64Ty(getLLVMContext())});
     llvm::Value *Env = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(F, {Env});
+  }
+  case AMDGPU::BI__builtin_amdgcn_processor_is: {
+    assert(CGM.getTriple().isSPIRV() &&
+           "__builtin_amdgcn_processor_is should never reach CodeGen for "
+           "concrete targets!");
+    StringRef Proc = cast<clang::StringLiteral>(E->getArg(0))->getString();
+    return GetAMDGPUPredicate(*this, "is." + Proc);
+  }
+  case AMDGPU::BI__builtin_amdgcn_is_invocable: {
+    assert(CGM.getTriple().isSPIRV() &&
+           "__builtin_amdgcn_is_invocable should never reach CodeGen for "
+           "concrete targets!");
+    auto *FD = cast<FunctionDecl>(
+        cast<DeclRefExpr>(E->getArg(0))->getReferencedDeclOfCallee());
+    StringRef RF =
+        getContext().BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
+    return GetAMDGPUPredicate(*this, "has." + RF);
   }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
     return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);
@@ -1631,8 +1662,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16f32_16x16x32_bf16:
       NeedReturnType = true;
-      ArgsForMatchingMatrixTypes = {1, 5};
+      ArgsForMatchingMatrixTypes = {0, 3};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16;
+      RemoveABNeg = true;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x64_fp8_fp8:
       ArgsForMatchingMatrixTypes = {3, 0};

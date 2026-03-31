@@ -295,11 +295,6 @@ class BytecodeSection:
             builder.emit_uleb(len(bc), "program size")
             builder.emit_bytes(bc, "program")
 
-    @property
-    def _var_name(self):
-        var_name = re.sub(r"\W", "_", self.type_name)
-        return f"_{var_name}_formatter"
-
     def write_c(self, output: TextIO) -> None:
         self.validate()
 
@@ -322,7 +317,8 @@ class BytecodeSection:
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char {self._var_name}[] =", file=output)
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
         for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
@@ -339,7 +335,7 @@ class BytecodeSection:
             textwrap.dedent(
                 """\
                 #if swift(>=6.3)
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+                #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
                 @section(".lldbformatters")
@@ -349,7 +345,7 @@ class BytecodeSection:
             file=output,
         )
         print(
-            f"let {self._var_name}: {builder.type_decl} = (",
+            f"let `{self.type_name} formatter`: {builder.type_decl} = (",
             file=output,
         )
         indent = "    "
