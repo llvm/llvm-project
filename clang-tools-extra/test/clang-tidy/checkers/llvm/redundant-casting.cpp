@@ -209,8 +209,8 @@ void testCastUpcastDiamondExplicit(G& value) {
   (void)a21;
 }
 
-void testCastUpcastDiamondImplicit(G& asdf) {
-  A& a22 = llvm::cast<C>(asdf);
+void testCastUpcastDiamondImplicit(G& value) {
+  A& a22 = llvm::cast<C>(value);
   (void)a22;
 }
 
@@ -278,3 +278,9 @@ void testCastImplicitlyLLVMUnresolved(T& value) {
 }
 } // namespace magic
 } // namespace llvm
+
+// FIXME: this cast is redundant since it's immediately undone by the implicit cast
+void testCastUpdown(A& value) {
+  A& a29 = cast<C>(value);
+  (void)a29;
+}
