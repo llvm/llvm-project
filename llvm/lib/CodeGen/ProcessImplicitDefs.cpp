@@ -115,6 +115,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   constexpr unsigned SearchLimit = 35;
   unsigned Count = 0;
   for (++SearchMI; SearchMI != SearchE; ++SearchMI) {
+    if (SearchMI->isDebugInstr())
+      continue;
     if (++Count > SearchLimit) {
       SearchedWholeBlock = false;
       break;
