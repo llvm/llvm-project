@@ -241,11 +241,11 @@
 
 /// Check that unwind tables are enabled
 // RUN: %clang --target=x86_64-unknown-serenity -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=UNWIND-TABLES %s
+// RUN:   FileCheck -check-prefix=UNWIND-TABLES %s
 // RUN: %clang --target=aarch64-unknown-serenity -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=UNWIND-TABLES %s
+// RUN:   FileCheck -check-prefix=UNWIND-TABLES %s
 // RUN: %clang --target=riscv64-unknown-serenity -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=UNWIND-TABLES %s
+// RUN:   FileCheck -check-prefix=UNWIND-TABLES %s
 // UNWIND-TABLES: "-funwind-tables=2"
 
 /// Check that parameters are forwarded to the linker
