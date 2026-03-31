@@ -147,7 +147,7 @@ public:
   }
 };
 
-/// Represents a G_INDEXED_ZEXTLOAD.
+/// Represents a G_ZEXTLOAD.
 class GIndexedZExtLoad : GIndexedExtLoad {
 public:
   static bool classof(const MachineInstr *MI) {
@@ -155,7 +155,7 @@ public:
   }
 };
 
-/// Represents a G_INDEXED_SEXTLOAD.
+/// Represents a G_SEXTLOAD.
 class GIndexedSExtLoad : GIndexedExtLoad {
 public:
   static bool classof(const MachineInstr *MI) {
