@@ -1567,7 +1567,7 @@ class AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
@@ -1576,7 +1576,7 @@ class AdvSIMD_GatherLoad_SV_64b_Offsets_WriteFFR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
                 ],
                 [IntrInaccessibleMemOrArgMemOnly]>;
@@ -1585,7 +1585,7 @@ class AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
@@ -1594,7 +1594,7 @@ class AdvSIMD_GatherLoad_SV_32b_Offsets_WriteFFR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                 ],
                 [IntrInaccessibleMemOrArgMemOnly]>;
@@ -1621,7 +1621,7 @@ class AdvSIMD_GatherLoadQ_SV_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [
                   llvm_nxv1i1_ty,
-                  llvm_ptr_ty,
+                  llvm_anyptr_ty,
                   llvm_nxv2i64_ty
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
@@ -1640,7 +1640,7 @@ class AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic
                [
                  llvm_anyvector_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                 llvm_ptr_ty,
+                 llvm_anyptr_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
                ],
                [IntrWriteMem, IntrArgMemOnly]>;
@@ -1650,7 +1650,7 @@ class AdvSIMD_ScatterStore_SV_32b_Offsets_Intrinsic
                [
                  llvm_anyvector_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                 llvm_ptr_ty,
+                 llvm_anyptr_ty,
                  LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                ],
                [IntrWriteMem, IntrArgMemOnly]>;
@@ -1679,7 +1679,7 @@ class AdvSIMD_ScatterStoreQ_SV_Intrinsic
                [
                  llvm_anyvector_ty,
                  llvm_nxv1i1_ty,
-                 llvm_ptr_ty,
+                 llvm_anyptr_ty,
                  llvm_nxv2i64_ty
                ],
                [IntrWriteMem, IntrArgMemOnly]>;
@@ -1687,8 +1687,8 @@ class AdvSIMD_ScatterStoreQ_SV_Intrinsic
 class SVE_gather_prf_SV
     : DefaultAttrsIntrinsic<[],
                 [
-                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, // Predicate
-                  llvm_ptr_ty, // Base address
+                  LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>, // Predicate
+                  llvm_anyptr_ty, // Base address
                   llvm_anyvector_ty, // Offsets
                   llvm_i32_ty // Prfop
                 ],
@@ -1752,7 +1752,7 @@ def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 //
 
 def int_aarch64_sve_prf
-  : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, llvm_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, llvm_anyptr_ty, llvm_i32_ty],
                   [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
 
 // Scalar + 32-bit scaled offset vector, zero extend, packed and
@@ -2861,13 +2861,13 @@ def int_aarch64_sve_bfmlalt_lane_v2 : SVE_4Vec_BF16_Indexed;
 
   class SVE2p1_Load_PN_X2_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
-                [llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                [llvm_aarch64_svcount_ty, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
   class SVE2p1_Load_PN_X4_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
                              LLVMMatchType<0>, LLVMMatchType<0>],
-                [llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                [llvm_aarch64_svcount_ty, llvm_anyptr_ty],
                 [IntrReadMem, IntrArgMemOnly]>;
 
 def int_aarch64_sve_ld1_pn_x2 : SVE2p1_Load_PN_X2_Intrinsic;
@@ -2881,7 +2881,7 @@ def int_aarch64_sve_ldnt1_pn_x4 : SVE2p1_Load_PN_X4_Intrinsic;
 
 class SVE2p1_Single_Load_Quadword
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                            [llvm_nxv1i1_ty, llvm_ptr_ty],
+                            [llvm_nxv1i1_ty, llvm_anyptr_ty],
                             [IntrReadMem, IntrArgMemOnly]>;
 def int_aarch64_sve_ld1uwq : SVE2p1_Single_Load_Quadword;
 def int_aarch64_sve_ld1udq : SVE2p1_Single_Load_Quadword;
@@ -2892,7 +2892,7 @@ def int_aarch64_sve_ld1udq : SVE2p1_Single_Load_Quadword;
 
 class SVE2p1_Single_Store_Quadword
     : DefaultAttrsIntrinsic<[],
-                            [llvm_anyvector_ty, llvm_nxv1i1_ty, llvm_ptr_ty],
+                            [llvm_anyvector_ty, llvm_nxv1i1_ty, llvm_anyptr_ty],
                             [IntrWriteMem, IntrArgMemOnly]>;
 def int_aarch64_sve_st1wq : SVE2p1_Single_Store_Quadword;
 def int_aarch64_sve_st1dq : SVE2p1_Single_Store_Quadword;
@@ -2912,13 +2912,13 @@ def int_aarch64_sve_st4q : AdvSIMD_4Vec_PredStore_Intrinsic;
 
   class SVE2p1_Store_PN_X2_Intrinsic
     : DefaultAttrsIntrinsic<[], [ llvm_anyvector_ty, LLVMMatchType<0>,
-                                  llvm_aarch64_svcount_ty, llvm_ptr_ty ],
+                                  llvm_aarch64_svcount_ty, llvm_anyptr_ty ],
                 [IntrWriteMem, IntrArgMemOnly]>;
 
   class SVE2p1_Store_PN_X4_Intrinsic
     : DefaultAttrsIntrinsic<[], [ llvm_anyvector_ty, LLVMMatchType<0>,
                                   LLVMMatchType<0>, LLVMMatchType<0>,
-                                  llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                                  llvm_aarch64_svcount_ty, llvm_anyptr_ty],
                 [IntrWriteMem, IntrArgMemOnly]>;
 
 def int_aarch64_sve_st1_pn_x2 : SVE2p1_Store_PN_X2_Intrinsic;
