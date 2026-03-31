@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
@@ -1305,4 +1306,52 @@ TEST(GSYMV2Test, TestVersionRoundTripV2ToV1ToV2) {
   for (size_t I = 0; I < TestAddrs.size(); ++I)
     EXPECT_EQ(FinalResults[I], OrigResults[I])
         << "Mismatch at address " << TestAddrs[I] << " after V2->V1->V2";
+}
+
+//===----------------------------------------------------------------------===//
+// Segmenting tests
+//===----------------------------------------------------------------------===//
+
+TEST(GSYMV2Test, TestV2Segmenting) {
+  // Test that V2 segmenting works correctly with variable StrpSize.
+  // This exercises the FunctionInfo::cacheEncoding() path which creates
+  // a FileWriter without a GsymCreator, potentially using a wrong StrpSize.
+  GsymCreatorV2 GC;
+  const uint64_t BaseAddr = 0x1000;
+  const uint32_t FileIdx = GC.insertFile("/tmp/test.c");
+  // Add 4 functions that will be split into 2 segments.
+  for (uint32_t I = 0; I < 4; ++I) {
+    std::string Name = "func_" + std::to_string(I);
+    uint32_t NameOff = GC.insertString(Name);
+    FunctionInfo FI(BaseAddr + I * 0x100, 0x100, NameOff);
+    FI.OptLineTable = LineTable();
+    FI.OptLineTable->push(LineEntry(BaseAddr + I * 0x100, FileIdx, I + 1));
+    GC.addFunctionInfo(std::move(FI));
+  }
+  OutputAggregator Null(nullptr);
+  ASSERT_FALSE(GC.finalize(Null));
+
+  // Use a small segment size to force segmenting.
+  size_t FuncIdx = 0;
+  auto SegOrErr = GC.createSegment(/*SegmentSize=*/200, FuncIdx);
+  ASSERT_THAT_EXPECTED(SegOrErr, Succeeded());
+  ASSERT_NE(SegOrErr->get(), nullptr);
+
+  GsymCreator &Seg = *SegOrErr->get();
+  ASSERT_FALSE(Seg.finalize(Null));
+
+  // Encode and decode the segment.
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, llvm::endianness::native, &Seg);
+  ASSERT_FALSE(Seg.encode(FW));
+
+  auto GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  EXPECT_GT((*GR)->getNumAddresses(), 0u);
+
+  // Verify we can look up the first function in the segment.
+  auto FI = (*GR)->getFunctionInfo(BaseAddr);
+  ASSERT_THAT_EXPECTED(FI, Succeeded());
+  EXPECT_EQ((*GR)->getString(FI->Name), "func_0");
 }

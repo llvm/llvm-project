@@ -114,12 +114,12 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(GsymDataExtractor &Data,
   return std::move(FI);
 }
 
-uint64_t FunctionInfo::cacheEncoding() {
+uint64_t FunctionInfo::cacheEncoding(const GsymCreator *GC) {
   EncodingCache.clear();
   if (!isValid())
     return 0;
   raw_svector_ostream OutStrm(EncodingCache);
-  FileWriter FW(OutStrm, llvm::endianness::native);
+  FileWriter FW(OutStrm, llvm::endianness::native, GC);
   llvm::Expected<uint64_t> Result = encode(FW);
   if (!Result) {
     EncodingCache.clear();

@@ -433,7 +433,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
   }
   std::lock_guard<std::mutex> Guard(Mutex);
   Funcs.emplace_back(DstFI);
-  return Funcs.back().cacheEncoding();
+  return Funcs.back().cacheEncoding(this);
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,
