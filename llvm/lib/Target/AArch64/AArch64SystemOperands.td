@@ -1036,7 +1036,7 @@ foreach I = TLBIRMI in {
   }
 }
 
-// Armv9-A Realm Management Extension TLBI Instructions
+// Armv9-A Realm Management Extension TLBI Instructions.
 defvar TLBIRME = [
   //    name        op1    CRm     op2    reguse
   TLBI<"RPAOS",     0b110, 0b0100, 0b011, REG_REQUIRED>,

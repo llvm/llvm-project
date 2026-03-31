@@ -1548,38 +1548,64 @@ public:
     return Action == Legal || Action == Custom;
   }
 
+  /// Returns an alternative action to use when the coarser lookups (configured
+  /// through `setTruncStoreAction` yield
+  /// `LegalizeAction::Custom`. Allows targets to use builtin behaviors (e.g.
+  /// Legal, Promote) specialized by Alignment and AddrSpace, rather than just
+  /// types.
+  virtual LegalizeAction getCustomTruncStoreAction(EVT ValVT, EVT MemVT,
+                                                   Align Alignment,
+                                                   unsigned AddrSpace) const {
+    return LegalizeAction::Custom;
+  }
+
   /// Return how this store with truncation should be treated: either it is
   /// legal, needs to be promoted to a larger size, needs to be expanded to some
   /// other code sequence, or the target has a custom expander for it.
-  LegalizeAction getTruncStoreAction(EVT ValVT, EVT MemVT) const {
-    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
-    unsigned ValI = (unsigned) ValVT.getSimpleVT().SimpleTy;
-    unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
+  LegalizeAction getTruncStoreAction(EVT ValVT, EVT MemVT, Align Alignment,
+                                     unsigned AddrSpace) const {
+    if (ValVT.isExtended() || MemVT.isExtended())
+      return Expand;
+    unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
+    unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
     assert(ValI < MVT::VALUETYPE_SIZE && MemI < MVT::VALUETYPE_SIZE &&
            "Table isn't big enough!");
-    return TruncStoreActions[ValI][MemI];
+
+    LegalizeAction Action = TruncStoreActions[ValI][MemI];
+
+    if (Action == LegalizeAction::Custom) {
+      return getCustomTruncStoreAction(ValVT, MemVT, Alignment, AddrSpace);
+    }
+
+    return Action;
   }
 
   /// Return true if the specified store with truncation is legal on this
   /// target.
-  bool isTruncStoreLegal(EVT ValVT, EVT MemVT) const {
-    return isTypeLegal(ValVT) && getTruncStoreAction(ValVT, MemVT) == Legal;
+  bool isTruncStoreLegal(EVT ValVT, EVT MemVT, Align Alignment,
+                         unsigned AddrSpace) const {
+    return isTypeLegal(ValVT) &&
+           getTruncStoreAction(ValVT, MemVT, Alignment, AddrSpace) == Legal;
   }
 
   /// Return true if the specified store with truncation has solution on this
   /// target.
-  bool isTruncStoreLegalOrCustom(EVT ValVT, EVT MemVT) const {
-    return isTypeLegal(ValVT) &&
-      (getTruncStoreAction(ValVT, MemVT) == Legal ||
-       getTruncStoreAction(ValVT, MemVT) == Custom);
+  bool isTruncStoreLegalOrCustom(EVT ValVT, EVT MemVT, Align Alignment,
+                                 unsigned AddrSpace) const {
+    if (!isTypeLegal(ValVT))
+      return false;
+
+    LegalizeAction Action =
+        getTruncStoreAction(ValVT, MemVT, Alignment, AddrSpace);
+    return (Action == Legal || Action == Custom);
   }
 
-  virtual bool canCombineTruncStore(EVT ValVT, EVT MemVT,
-                                    bool LegalOnly) const {
+  virtual bool canCombineTruncStore(EVT ValVT, EVT MemVT, Align Alignment,
+                                    unsigned AddrSpace, bool LegalOnly) const {
     if (LegalOnly)
-      return isTruncStoreLegal(ValVT, MemVT);
+      return isTruncStoreLegal(ValVT, MemVT, Alignment, AddrSpace);
 
-    return isTruncStoreLegalOrCustom(ValVT, MemVT);
+    return isTruncStoreLegalOrCustom(ValVT, MemVT, Alignment, AddrSpace);
   }
 
   /// Return how the indexed load should be treated: either it is legal, needs
