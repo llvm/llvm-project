@@ -107,6 +107,26 @@ module attributes {gpu.container_module} {
 
 // -----
 
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+} {
+  gpu.module @kernels {
+    // expected-error @below {{failed to legalize operation 'gpu.func'}}
+    // expected-error @below {{SPIR-V lowering of private attributions is not supported}}
+    gpu.func @private_attribution_unsupported(
+      %arg0: memref<256xf32, #spirv.storage_class<StorageBuffer>>)
+      workgroup(%wg: memref<256xf32, #spirv.storage_class<Workgroup>>)
+      private(%priv: memref<4xf32, #spirv.storage_class<Function>>)
+      kernel attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [256, 1, 1]>} {
+      gpu.return
+    }
+  }
+}
+
+// -----
+
 module attributes {gpu.container_module} {
   gpu.module @kernels {
     // CHECK-LABEL: spirv.func @barrier
@@ -125,6 +145,100 @@ module attributes {gpu.container_module} {
     gpu.launch_func @kernels::@barrier
         blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
         args(%0 : f32, %1 : memref<12xf32, #spirv.storage_class<StorageBuffer>>)
+    return
+  }
+}
+
+// -----
+
+// Test gpu.func with a single workgroup attribution.
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    // CHECK:       spirv.module @{{.*}} Logical GLSL450 {
+    // CHECK-DAG:   spirv.GlobalVariable @__workgroup_mem__kernel_wg_0 : !spirv.ptr<!spirv.struct<(!spirv.array<256 x f32>)>, Workgroup>
+    // CHECK-LABEL: spirv.func @kernel_wg
+    // CHECK-SAME:  {{%.*}}: f32 {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 0), StorageBuffer>}
+    // CHECK-NOT:   Workgroup
+    // CHECK-SAME:  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [256, 1, 1]>
+    // CHECK:       spirv.mlir.addressof @__workgroup_mem__kernel_wg_0
+    // CHECK:       spirv.Return
+    gpu.func @kernel_wg(%arg0 : f32)
+      workgroup(%wg : memref<256xf32, #spirv.storage_class<Workgroup>>)
+      kernel attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [256, 1, 1]>} {
+      gpu.return
+    }
+  }
+
+  func.func @main() {
+    %0 = "op"() : () -> (f32)
+    %cst = arith.constant 1 : index
+    gpu.launch_func @kernels::@kernel_wg
+        blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
+        args(%0 : f32)
+    return
+  }
+}
+
+// -----
+
+// Test gpu.func with multiple workgroup attributions.
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    // CHECK:       spirv.module @{{.*}} Logical GLSL450 {
+    // CHECK-DAG:   spirv.GlobalVariable @__workgroup_mem__kernel_multi_wg_0 : !spirv.ptr<!spirv.struct<(!spirv.array<128 x f32>)>, Workgroup>
+    // CHECK-DAG:   spirv.GlobalVariable @__workgroup_mem__kernel_multi_wg_1 : !spirv.ptr<!spirv.struct<(!spirv.array<64 x i32>)>, Workgroup>
+    // CHECK-LABEL: spirv.func @kernel_multi_wg
+    // CHECK-SAME:  {{%.*}}: !spirv.ptr<!spirv.struct<(!spirv.array<256 x f32, stride=4> [0])>, StorageBuffer> {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 0)>}
+    // CHECK-SAME:  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [128, 1, 1]>
+    // CHECK:       spirv.mlir.addressof @__workgroup_mem__kernel_multi_wg_0
+    // CHECK:       spirv.mlir.addressof @__workgroup_mem__kernel_multi_wg_1
+    // CHECK:       spirv.Return
+    gpu.func @kernel_multi_wg(
+      %arg0: memref<256xf32, #spirv.storage_class<StorageBuffer>>)
+      workgroup(
+        %wg0: memref<128xf32, #spirv.storage_class<Workgroup>>,
+        %wg1: memref<64xi32, #spirv.storage_class<Workgroup>>)
+      kernel attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [128, 1, 1]>} {
+      gpu.return
+    }
+  }
+
+  func.func @main() {
+    %0 = "op"() : () -> (memref<256xf32, #spirv.storage_class<StorageBuffer>>)
+    %cst = arith.constant 1 : index
+    gpu.launch_func @kernels::@kernel_multi_wg
+        blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
+        args(%0 : memref<256xf32, #spirv.storage_class<StorageBuffer>>)
+    return
+  }
+}
+
+// -----
+
+// Test gpu.func with workgroup attribution and barrier.
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    // CHECK:       spirv.module @{{.*}} Logical GLSL450 {
+    // CHECK-DAG:   spirv.GlobalVariable @__workgroup_mem__kernel_wg_barrier_0 : !spirv.ptr<!spirv.struct<(!spirv.array<256 x f32>)>, Workgroup>
+    // CHECK-LABEL: spirv.func @kernel_wg_barrier
+    // CHECK:       spirv.mlir.addressof @__workgroup_mem__kernel_wg_barrier_0
+    // CHECK:       spirv.ControlBarrier <Workgroup>, <Workgroup>, <AcquireRelease|WorkgroupMemory>
+    // CHECK:       spirv.Return
+    gpu.func @kernel_wg_barrier(
+      %arg0: memref<256xf32, #spirv.storage_class<StorageBuffer>>)
+      workgroup(%wg: memref<256xf32, #spirv.storage_class<Workgroup>>)
+      kernel attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [256, 1, 1]>} {
+      gpu.barrier
+      gpu.return
+    }
+  }
+
+  func.func @main() {
+    %0 = "op"() : () -> (memref<256xf32, #spirv.storage_class<StorageBuffer>>)
+    %cst = arith.constant 1 : index
+    gpu.launch_func @kernels::@kernel_wg_barrier
+        blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
+        args(%0 : memref<256xf32, #spirv.storage_class<StorageBuffer>>)
     return
   }
 }
