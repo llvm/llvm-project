@@ -705,6 +705,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 
   // Track physical register defs and uses (only if enabled).
   if (TrackPhysRegs) {
+    GCNRegPressure ECPhysDefPressure;
+    bool HasECPhysDefs = false;
+
     // Kill physical register defs (moving backward in upward tracking).
     for (const MachineOperand &MO : MI.all_defs()) {
       if (!MO.getReg().isPhysical())
@@ -712,6 +715,11 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
       Register Reg = MO.getReg();
       if (!MRI->isAllocatable(Reg))
         continue;
+
+      if (MO.isEarlyClobber()) {
+        ECPhysDefPressure.inc(Reg.asMCReg(), /*IsAdd=*/true, *MRI);
+        HasECPhysDefs = true;
+      }
 
       // Check if any unit of this register was live before and if so,
       // erase all of the regunits from PhysLiveRegs.
@@ -738,7 +746,10 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
         CurPhysPressure.inc(Reg.asMCReg(), /*IsAdd=*/true, *MRI);
     }
 
-    MaxPhysPressure = max(MaxPhysPressure, CurPhysPressure);
+    // Early-clobber physical defs are live alongside uses.
+    MaxPhysPressure = HasECPhysDefs ? max(CurPhysPressure + ECPhysDefPressure,
+                                          MaxPhysPressure)
+                                    : max(CurPhysPressure, MaxPhysPressure);
   }
 
   assert(CurPressure == getVirtRegPressure(*MRI, VirtLiveRegs));
