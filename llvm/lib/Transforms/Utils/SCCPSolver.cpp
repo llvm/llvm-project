@@ -120,16 +120,20 @@ static ConstantRange getRange(Value *Op, SCCPSolver &Solver,
 /// If no such range preserves the active semantics under KnownCR, keep CmpCR.
 static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
                                       const ConstantRange &KnownCR) {
-  assert(!KnownCR.inverse().contains(CmpCR) &&
-         "CmpCR ∩ KnowCR should not be ∅");
   assert((!CmpCR.isFullSet() && !CmpCR.isEmptySet()) && "Unexpected CmpCR");
-  assert((!KnownCR.isFullSet() && !KnownCR.isEmptySet()) &&
-         "Unexpected KnownCR");
+  assert(!KnownCR.isEmptySet() && "Unexpected KnownCR");
+
+  // If KnownCR is full, bail out early.
+  if (KnownCR.isFullSet())
+    return CmpCR;
 
   const unsigned BW = CmpCR.getBitWidth();
-  // All reachable value satisfy CmpCR --> always true.
+  // All reachable values satisfy CmpCR --> always true.
   if (CmpCR.contains(KnownCR))
     return ConstantRange::getFull(BW);
+  // All values in CmpCR are unreachable --> always false.
+  if (KnownCR.inverse().contains(CmpCR))
+    return ConstantRange::getEmpty(BW);
 
   std::optional<ConstantRange> ActCmpCR = CmpCR.exactIntersectWith(KnownCR);
   if (!ActCmpCR)
