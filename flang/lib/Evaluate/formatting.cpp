@@ -589,6 +589,8 @@ llvm::raw_ostream &ArrayConstructor<SomeDerived>::AsFortran(
 
 template <typename T>
 llvm::raw_ostream &ConditionalExpr<T>::AsFortran(llvm::raw_ostream &o) const {
+  // Iterate over chained else-branches to avoid adding extra parentheses for
+  // chained conditional expressions.
   o << '(';
   const ConditionalExpr<T> *node{this};
   while (true) {
