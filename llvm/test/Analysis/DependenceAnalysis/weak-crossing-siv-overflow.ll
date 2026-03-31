@@ -11,11 +11,17 @@
 ;     A[3*i - 2] = 1;
 ; }
 ;
+; FIXME: DependenceAnalysis currently detects no dependency between
+; `A[-3*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
+;
 ;  memory access       | i == 1           | i == max_i
 ; ---------------------|------------------|------------------
 ;  A[-3*i + INT64_MAX] | A[INT64_MAX - 3] | A[1]
 ;  A[3*i - 2]          | A[1]             | A[INT64_MAX - 3]
 ;
+; The root cause is that the calculation of the differenct between the two
+; constants (INT64_MAX and -2) triggers an overflow.
+
 define void @weakcorssing_delta_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'weakcorssing_delta_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
