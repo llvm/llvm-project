@@ -204,9 +204,16 @@ llvm::Error GsymReaderV2::parse() {
   // Read file table using StrpSize for Dir/Base fields. This handles both
   // swap and non-swap paths since variable StrpSize prevents mmap-casting.
   {
+    if (FileTableGD.FileSize < 4)
+      return createStringError(std::errc::invalid_argument,
+                               "FileTable section too small");
     uint64_t FTOff = FileTableGD.FileOffset;
     uint32_t NumFiles = DE.getU32(&FTOff);
     const uint8_t SP = Hdr->StrpSize;
+    if (FileTableGD.FileSize < 4 + NumFiles * 2 * SP)
+      return createStringError(std::errc::invalid_argument,
+                               "FileTable section too small for %u files",
+                               NumFiles);
     ResolvedFiles.resize(NumFiles);
     for (uint32_t I = 0; I < NumFiles; ++I) {
       ResolvedFiles[I].Dir = DE.getUnsigned(&FTOff, SP);

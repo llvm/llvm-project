@@ -788,6 +788,46 @@ TEST(GSYMV2Test, TestReaderV2TooSmall) {
   EXPECT_THAT_EXPECTED(GR, Failed());
 }
 
+TEST(GSYMV2Test, TestReaderV2TruncatedFileTable) {
+  // Build a valid V2 binary, then truncate the file table by reducing its
+  // GlobalData FileSize. The reader should report the file table is too small.
+  auto Bytes = buildMinimalV2Binary(0x1000, 0x100);
+  // The binary has 1 file entry. Find the FileTable GlobalData entry and
+  // shrink its FileSize to be too small.
+  // GlobalData entries start at offset 24 (after HeaderV2).
+  // Each entry is 20 bytes: Type(4) + FileOffset(8) + FileSize(8).
+  // We need to find the FileTable entry and modify its FileSize.
+  DataExtractor DE(StringRef(Bytes.data(), Bytes.size()),
+                   llvm::endianness::native == llvm::endianness::little, 8);
+  uint64_t Offset = 24;
+  while (Offset < Bytes.size()) {
+    uint64_t EntryOffset = Offset;
+    uint32_t Type = DE.getU32(&Offset);
+    uint64_t FileOffset = DE.getU64(&Offset);
+    uint64_t FileSize = DE.getU64(&Offset);
+    (void)FileOffset;
+    (void)FileSize;
+    if (Type == static_cast<uint32_t>(GlobalInfoType::FileTable)) {
+      // Set FileSize to 4 (just the NumFiles field, no room for entries).
+      // FileSize is at EntryOffset + 4 (Type) + 8 (FileOffset) = +12.
+      uint64_t FileSizeOffset = EntryOffset + 12;
+      memcpy(Bytes.data() + FileSizeOffset, "\x04\x00\x00\x00\x00\x00\x00\x00",
+             8);
+      break;
+    }
+    if (Type == static_cast<uint32_t>(GlobalInfoType::EndOfList))
+      break;
+  }
+  auto GR = GsymReaderV2::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
+  ASSERT_FALSE(bool(GR));
+  std::string ErrMsg;
+  handleAllErrors(GR.takeError(), [&](const ErrorInfoBase &E) {
+    ErrMsg = E.message();
+  });
+  EXPECT_NE(ErrMsg.find("FileTable section too small"), std::string::npos)
+      << "Unexpected error: " << ErrMsg;
+}
+
 //===----------------------------------------------------------------------===//
 // Creator/reader round-trip tests: Creator V2 -> Reader V2
 //===----------------------------------------------------------------------===//
