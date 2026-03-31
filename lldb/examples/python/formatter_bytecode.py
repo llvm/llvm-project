@@ -1153,11 +1153,6 @@ def _main():
     )
     parser.add_argument("-n", "--type-name", help="source type of formatter")
     parser.add_argument(
-        "--skip-invocation-comment",
-        action="store_true",
-        help="do not print invocation comment in compiled output",
-    )
-    parser.add_argument(
         "-o",
         "--output",
         help="output file (required for --assemble)",
@@ -1198,9 +1193,6 @@ def _main():
         else:
             mode = "a" if args.append else "w"
             with open(args.output, mode) as output:
-                if not args.skip_invocation_comment:
-                    print("// Generated with:", file=output)
-                    print("//  ", shlex.join(sys.argv), file=output)
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:
