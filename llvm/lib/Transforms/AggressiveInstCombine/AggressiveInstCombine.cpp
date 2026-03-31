@@ -388,7 +388,7 @@ static bool tryToRecognizePopCount(Instruction &I) {
 // uWord = (uWord & 0x3333333333333333) + ((uWord>>2) & 0x3333333333333333);
 // uWord = (uWord & 0x0F0F0F0F0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F0F0F0F0F);
 // uWord = (uWord & 0x00FF00FF00FF00FF) + ((uWord>>8) & 0x00FF00FF00FF00FF);
-// uWord =  (uWord & 0x0000FFFF0000FFFF) + ((uWord>>16) & 0x0000FFFF0000FFFF);
+// uWord = (uWord & 0x0000FFFF0000FFFF) + ((uWord>>16) & 0x0000FFFF0000FFFF);
 // return  (uWord & 0x00000000FFFFFFFF) + (uWord>>32) & 0x00000000FFFFFFFF;
 // }
 static bool tryToRecognizePopCount1(Instruction &I) {
@@ -409,45 +409,16 @@ static bool tryToRecognizePopCount1(Instruction &I) {
 
   APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
   APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
-  APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
-  APInt Mask00FF;
-  if (Len == 16) {
-    Mask00FF = APInt(16, 0x00FF);
-  } else {
-    Mask00FF = APInt::getSplat(Len, APInt(16, 0x00FF));
-  }
-  APInt Mask0000FFFF;
-  if (Len <= 32) {
-    Mask0000FFFF = APInt(32, 0x0000FFFF);
-  } else {
-    Mask0000FFFF = APInt::getSplat(Len, APInt(32, 0x0000FFFF));
-  }
 
-  APInt Mask64 = APInt(64, 0x00000000FFFFFFFF);
   Value *ShiftOp;
   Value *Start = &I;
-  APInt Mask;
   for (unsigned I = Len; I >= 8; I = I / 2) {
-    switch (I) {
-    case 64:
-      Mask = Mask64;
-      break;
-    case 32:
-      Mask = Mask0000FFFF;
-      break;
-    case 16:
-      Mask = Mask00FF;
-      break;
-    case 8:
-      Mask = Mask0F;
-      break;
-    }
+    APInt Mask = APInt::getSplat(Len, APInt::getLowBitsSet(I, I / 2));
     // Matching "(uWord & Mask) + (uWord>>I/2)".
     // OR
     // Matching "(uWord & Mask) + ((uWord>>I/2) &
-    // 0x00000000FFFFFFFF)".
-    if (Len >= I &&
-        !(match(Start,
+    // Mask)".
+    if (!(match(Start,
                 m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
                               m_SpecificInt(Mask)),
                         m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask)))) ||
@@ -461,7 +432,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
   }
 
   ShiftOp = nullptr;
-  // Matching "uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333)".
+  // Matching "uWord = (uWord & Mask33) + ((uWord>>2) & Mask33)".
   if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(2)),
                                   m_SpecificInt(Mask33)),
                             m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask33)))))
@@ -469,8 +440,8 @@ static bool tryToRecognizePopCount1(Instruction &I) {
 
   Start = ShiftOp;
   ShiftOp = nullptr;
-  // Matching "uWord = (uWord & 0x55555555) + ((uWord>>1) &
-  // 0x55555555)".
+  // Matching "uWord = (uWord & Mask55) + ((uWord>>1) &
+  // Mask55)".
   if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(1)),
                                   m_SpecificInt(Mask55)),
                             m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask55)))))
