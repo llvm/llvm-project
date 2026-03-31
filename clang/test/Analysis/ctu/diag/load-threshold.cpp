@@ -3,7 +3,9 @@
 //
 // With threshold=1, the first external AST (foo) is loaded successfully.
 // The second lookup (bar) finds the threshold exhausted and emits a remark once.
-// All subsequent threshold-blocked lookups fail silently.
+// All subsequent threshold-blocked lookups fail silently, including those in a
+// second analysis entry point (test2): the remark is not repeated, and the
+// already-cached AST for foo remains accessible.
 //
 // RUN: rm -rf %t && mkdir %t
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-pc-linux-gnu \
@@ -29,10 +31,22 @@
 // foo is loaded successfully (first load, within threshold).
 // bar is the first to hit the threshold; the remark is emitted once.
 // Subsequent threshold-blocked lookups (bar(2), third) fail silently.
+//
+// test2() is a second entry point analyzed after test(). It is defined first
+// to be analyzed last.
 
 int foo(int);
 int bar(int);
 int third(int);
+
+// In a second entry point the threshold state persists from test(): the remark
+// is not repeated, foo's AST is still accessible from cache, and new
+// threshold-blocked lookups (bar, third) fail silently.
+void test2() {
+  foo(1);    // no remark: foo's AST was cached during test()'s analysis
+  bar(1);    // no remark: threshold already reported in test()
+  third(1);  // no remark: threshold already reported in test()
+}
 
 void test() {
   foo(1);
