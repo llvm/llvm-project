@@ -52,6 +52,18 @@
 // PATH_NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // PATH_NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include"
 
+/// Check that PIC and PIE are enabled by default
+// RUN: %clang -c %s --target=x86_64-unkown-serenity -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s --target=aarch64-unkown-serenity -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s --target=riscv64-unkown-serenity -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+
+// CHECK-PIE2: "-mrelocation-model" "pic"
+// CHECK-PIE2-SAME: "-pic-level" "2"
+// CHECK-PIE2-SAME: "-pic-is-pie"
+
 /// Check default linker args for each supported triple
 // RUN: %clang -### %s --target=x86_64-unknown-serenity -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir 2>&1 | FileCheck %s --check-prefix=SERENITY_X86_64,DEFAULT_LINKER
 // SERENITY_X86_64: "-cc1" "-triple" "[[TRIPLE:x86_64-unknown-serenity]]"
