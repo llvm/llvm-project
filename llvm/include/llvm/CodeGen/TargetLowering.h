@@ -2476,11 +2476,31 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. Default is to never expand.
+  /// AtomicRMW, if at all. Default is to never expand scalar atomics and expand
+  /// FP atomics via CmpXChg.
+  ///
+  /// Precondition: \p RMW is not elementwise. Elementwise atomicrmw
+  /// instructions are routed through \c shouldExpandAtomicRMWElementwiseInIR.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return RMW->isFloatingPointOperation() ?
       AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+  }
+
+  /// Returns whether the IR-level AtomicExpand pass should expand the given
+  /// elementwise AtomicRMW into per-lane scalar atomicrmw instructions.
+  ///
+  /// Returning \c true (the default) tells AtomicExpand to first try to
+  /// conservatively drop the elementwise modifier and reuse an existing
+  /// whole-value atomicrmw lowering. If that is not possible, it scalarizes
+  /// into per-lane scalar atomicrmw instructions that are each fed back
+  /// through the normal atomic expansion pipeline.
+  ///
+  /// Targets that support native vector atomic instructions should return
+  /// \c false to preserve the elementwise atomicrmw for the backend.
+  virtual bool
+  shouldExpandAtomicRMWElementwiseInIR(const AtomicRMWInst *RMW) const {
+    return true;
   }
 
   /// Returns how the given atomic atomicrmw should be cast by the IR-level

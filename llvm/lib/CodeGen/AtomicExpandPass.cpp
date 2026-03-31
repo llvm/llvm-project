@@ -44,6 +44,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -105,6 +106,8 @@ private:
   bool tryExpandAtomicStore(StoreInst *SI);
   void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
+  bool canReuseWholeValueAtomicRMW(AtomicRMWInst *AI);
+  bool expandElementwiseAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
   insertRMWLLSCLoop(IRBuilderBase &Builder, Type *ResultTy, Value *Addr,
@@ -304,6 +307,26 @@ void AtomicExpandImpl::handleUnsupportedAtomicSize(
                 DiagnosticInst);
 }
 
+<<<<<<< HEAD
+=======
+/// Returns true if we can lower atomicrmw elementwise using normal atomicrmw.
+bool AtomicExpandImpl::canReuseWholeValueAtomicRMW(AtomicRMWInst *AI) {
+  assert(AI->isElementwise() && "expected elementwise atomicrmw");
+
+  // Integer non-elementwise vector atomicrmw is illegal IR, so we need to be
+  // careful to reject these before removing the elementwise modifier.
+  if (!AI->isFloatingPointOperation())
+    return false;
+
+  AI->setElementwise(false);
+  bool CanReuse = atomicSizeSupported(TLI, AI) &&
+                  TLI->shouldExpandAtomicRMWInIR(AI) ==
+                      TargetLoweringBase::AtomicExpansionKind::None;
+  AI->setElementwise(true);
+  return CanReuse;
+}
+
+>>>>>>> 0075944a40cd (IR)
 bool AtomicExpandImpl::tryInsertTrailingSeqCstFence(Instruction *AtomicI) {
   if (!TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(AtomicI))
     return false;
@@ -381,11 +404,31 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
     if (!atomicSizeSupported(TLI, RMWI)) {
+      if (RMWI->isElementwise())
+        return expandElementwiseAtomicRMW(RMWI);
       expandAtomicRMWToLibcall(RMWI);
       return true;
     }
 
     bool MadeChange = false;
+<<<<<<< HEAD
+=======
+
+    if (RMWI->isElementwise()) {
+      if (!TLI->shouldExpandAtomicRMWElementwiseInIR(RMWI))
+        return false;
+      if (canReuseWholeValueAtomicRMW(RMWI)) {
+        // Dropping the elementwise modifier strengthens the semantics, which is
+        // conservatively correct. Prefer the target's existing whole-value
+        // lowering over IR expansion.
+        RMWI->setElementwise(false);
+        MadeChange = true;
+      } else {
+        return expandElementwiseAtomicRMW(RMWI);
+      }
+    }
+
+>>>>>>> 0075944a40cd (IR)
     if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       RMWI = convertAtomicXchgToIntegerType(RMWI);
@@ -602,6 +645,45 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
   RMWI->replaceAllUsesWith(NewRVal);
   RMWI->eraseFromParent();
   return NewRMWI;
+}
+
+// Scalarize an elementwise vector atomicrmw into one scalar atomicrmw per
+// lane. Each lane keeps the original ordering/scope/volatility and is fed back
+// through processAtomicInstr() so the usual atomic expansion and fence logic
+// applies per lane rather than to the whole vector value.
+bool AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
+  auto *VecTy = cast<FixedVectorType>(AI->getType());
+  Type *LaneTy = VecTy->getElementType();
+  LLVMContext &Ctx = AI->getContext();
+  Value *Result = Constant::getNullValue(VecTy);
+  const uint64_t LaneSize = DL->getTypeStoreSize(LaneTy).getFixedValue();
+
+  for (unsigned Lane = 0, NumLanes = VecTy->getNumElements(); Lane != NumLanes;
+       ++Lane) {
+    ReplacementIRBuilder Builder(AI, *DL);
+    Value *Idx0 = ConstantInt::get(Type::getInt64Ty(Ctx), 0);
+    Value *Idx = ConstantInt::get(Type::getInt64Ty(Ctx), Lane);
+    Value *Indices[] = {Idx0, Idx};
+    Value *LanePtr = Builder.CreateInBoundsGEP(VecTy, AI->getPointerOperand(),
+                                               Indices, "lane.ptr");
+    Value *LaneVal =
+        Builder.CreateExtractElement(AI->getValOperand(), Idx, "lane.val");
+    auto *LaneRMW = Builder.CreateAtomicRMW(
+        AI->getOperation(), LanePtr, LaneVal,
+        commonAlignment(AI->getAlign(), LaneSize * Lane), AI->getOrdering(),
+        AI->getSyncScopeID());
+    LaneRMW->setVolatile(AI->isVolatile());
+    copyMetadataForAtomic(*LaneRMW, *AI);
+    Result = Builder.CreateInsertElement(Result, LaneRMW, Idx, "lane.old");
+
+    // Each scalar lane atomic may still need casts, fences, or further
+    // expansion, so re-run the normal atomic pipeline on it.
+    processAtomicInstr(LaneRMW);
+  }
+
+  AI->replaceAllUsesWith(Result);
+  AI->eraseFromParent();
+  return true;
 }
 
 bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {

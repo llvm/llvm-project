@@ -12149,7 +12149,7 @@ Syntax:
 
 ::
 
-      atomicrmw [volatile] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
+      atomicrmw [volatile] [elementwise] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
 
 Overview:
 """""""""
@@ -12196,7 +12196,9 @@ or fixed vector of floating-point type.  The type of the '``<pointer>``'
 operand must be a pointer to that type. If the ``atomicrmw`` is marked
 as ``volatile``, then the optimizer is not allowed to modify the
 number or order of execution of this ``atomicrmw`` with other
-:ref:`volatile operations <volatile>`.
+:ref:`volatile operations <volatile>`. If the ``elementwise`` modifier is present,
+then ``<value>`` must be a fixed vector type whose element type is legal for the
+corresponding scalar ``atomicrmw`` operation.
 
 Note: if the alignment is not greater or equal to the size of the `<value>`
 type, the atomic operation is likely to require a lock and have poor
@@ -12210,6 +12212,16 @@ isn't specified.
 
 An ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
+
+If the ``elementwise`` modifier is present, the instruction has per-element vector
+atomic semantics. It behaves as if it were expanded into one scalar ``atomicrmw`` per element, executed in an arbitrary order.
+Without ``elementwise``, vector ``atomicrmw`` keeps whole-value atomic semantics.
+
+Targets may implement ``atomicrmw elementwise`` either by lowering it to a
+native elementwise vector atomic, by scalarizing it into per-element scalar
+``atomicrmw`` operations, or by using an existing stronger whole-value atomic
+implementation, as long as the observable semantics are at least as strong as
+the IR definition above.
 
 Semantics:
 """"""""""
