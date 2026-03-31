@@ -5166,7 +5166,76 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
     ErrInfo = "illegal copy from vector register to SGPR";
     return false;
   }
+  // check for sreg32/vgpr3/vgpr16 mismatch
+  unsigned DstSubReg = MI.getOperand(0).getSubReg();
+  unsigned SrcSubReg = MI.getOperand(1).getSubReg();
+  auto *TRI = MRI.getTargetRegisterInfo();
+
+  if (RI.isAGPR(MRI, DstReg) || RI.isAGPR(MRI, SrcReg))
+    return true;
+
+  if (!DstReg.isVirtual() || !SrcReg.isVirtual())
+    return true;
+
+  auto *DstRC = getOpRegClass(MI, 0);
+  if (DstSubReg != AMDGPU::NoSubRegister)
+    DstRC = TRI->getSubRegisterClass(DstRC, DstSubReg);
+
+  auto *SrcRC = getOpRegClass(MI, 1);
+  if (SrcSubReg != AMDGPU::NoSubRegister)
+    SrcRC = TRI->getSubRegisterClass(SrcRC, SrcSubReg);
+
+  DstRC = RI.getEquivalentVGPRClass(DstRC);
+  SrcRC = RI.getEquivalentVGPRClass(SrcRC);
+  if (RI.getMatchingSuperRegClass(SrcRC, DstRC, AMDGPU::lo16) ||
+      RI.getMatchingSuperRegClass(DstRC, SrcRC, AMDGPU::lo16)) {
+    ErrInfo = "illegal copy with different size src/dst reg";
+    return false;
+  }
+
   return true;
+}
+
+bool SIInstrInfo::verifyRegsequence(const MachineInstr &MI,
+                                    const MachineRegisterInfo &MRI,
+                                    StringRef &ErrInfo) const {
+  auto *TRI = MRI.getTargetRegisterInfo();
+  auto *SuperClass = getOpRegClass(MI, 0);
+  if (RI.isAGPR(MRI, MI.getOperand(0).getReg()))
+    return true;
+  for (int I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+    auto *OpClass = getOpRegClass(MI, I);
+    unsigned SubReg = MI.getOperand(I).getSubReg();
+    if (MI.getOperand(I).isUndef() || RI.isAGPR(MRI, MI.getOperand(I).getReg()))
+      continue;
+    const TargetRegisterClass *SubClass;
+    if (SubReg != AMDGPU::NoSubRegister)
+      SubClass = TRI->getSubRegisterClass(OpClass, SubReg);
+    else
+      SubClass = OpClass;
+
+    SuperClass = RI.getEquivalentVGPRClass(SuperClass);
+    SubClass = RI.getEquivalentVGPRClass(SubClass);
+    if (!TRI->getMatchingSuperRegClass(SuperClass, SubClass,
+                                       MI.getOperand(I + 1).getImm())) {
+      ErrInfo = "illegal sub register in reg_sequence";
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool isSRegHiLo16(const MachineRegisterInfo &MRI,
+                         const SIRegisterInfo &RI, const MachineOperand &MO) {
+  if (!MO.isReg())
+    return false;
+
+  Register Reg = MO.getReg();
+  if (!Reg || !Reg.isVirtual() || !MRI.getRegClassOrNull(Reg))
+    return false;
+
+  return RI.isSGPRReg(MRI, Reg) &&
+         (MO.getSubReg() == AMDGPU::lo16 || MO.getSubReg() == AMDGPU::hi16);
 }
 
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
@@ -5181,8 +5250,21 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   // We can only enforce this check after SIFixSGPRCopies pass so that the
   // illegal copies are legalized and thereafter we don't expect a pass
   // inserting similar copies.
-  if (!MRI.isSSA() && MI.isCopy())
-    return verifyCopy(MI, MRI, ErrInfo);
+  if (!MRI.isSSA()) {
+    if (MI.isCopy())
+      return verifyCopy(MI, MRI, ErrInfo);
+    if (MI.isRegSequence())
+      return verifyRegsequence(MI, MRI, ErrInfo);
+  }
+
+  // check for illegal sreg subreg
+  const MCInstrDesc &Desc = get(Opcode);
+  for (int I = 0, E = Desc.getNumOperands(); I != E; ++I) {
+    if (isSRegHiLo16(MRI, RI, MI.getOperand(I))) {
+      ErrInfo = "cannot use sreg hi/lo16";
+      return false;
+    }
+  }
 
   if (SIInstrInfo::isGenericOpcode(Opcode))
     return true;
@@ -5200,7 +5282,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   // Make sure the number of operands is correct.
-  const MCInstrDesc &Desc = get(Opcode);
   if (!Desc.isVariadic() &&
       Desc.getNumOperands() != MI.getNumExplicitOperands()) {
     ErrInfo = "Instruction has wrong number of operands.";
