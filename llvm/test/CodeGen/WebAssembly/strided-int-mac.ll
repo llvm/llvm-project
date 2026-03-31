@@ -371,7 +371,7 @@ bb2053.loop:
   br i1 %exit, label %bb2053.exit, label %bb2053.loop
 
 bb2053.exit:
-  %res0 = insertvalue { i32, i32, i32, i32 } undef, i32 %accA.sum, 0
+  %res0 = insertvalue { i32, i32, i32, i32 } poison, i32 %accA.sum, 0
   %res1 = insertvalue { i32, i32, i32, i32 } %res0, i32 %accB.sum, 1
   %res2 = insertvalue { i32, i32, i32, i32 } %res1, i32 %accC.sum, 2
   %res3 = insertvalue { i32, i32, i32, i32 } %res2, i32 %accD.sum, 3
