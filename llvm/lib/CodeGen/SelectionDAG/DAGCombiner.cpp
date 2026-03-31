@@ -260,15 +260,6 @@ namespace {
       ForCodeSize = DAG.shouldOptForSize();
       DisableGenericCombines =
           DisableCombines || (STI && STI->disableGenericCombines(OptLevel));
-
-      MaximumLegalStoreInBits = 0;
-      // We use the minimum store size here, since that's all we can guarantee
-      // for the scalable vector types.
-      for (MVT VT : MVT::all_valuetypes())
-        if (EVT(VT).isSimple() && VT != MVT::Other &&
-            TLI.isTypeLegal(EVT(VT)) &&
-            VT.getSizeInBits().getKnownMinValue() >= MaximumLegalStoreInBits)
-          MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
     }
 
     void ConsiderForPruning(SDNode *N) {
@@ -344,8 +335,6 @@ namespace {
     void CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO);
 
   private:
-    unsigned MaximumLegalStoreInBits;
-
     /// Check the specified integer node value to see if it can be simplified or
     /// if things it uses can be simplified by bit propagation.
     /// If so, return true.
@@ -6342,7 +6331,8 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // If we know the range of vscale, see if we can fold it given a constant.
   if (N0.getOpcode() == ISD::VSCALE) {
     if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
-      ConstantRange Range = DAG.computeConstantRange(N0, 0);
+      bool ForSigned = (Opcode == ISD::SMAX || Opcode == ISD::SMIN);
+      ConstantRange Range = DAG.computeConstantRange(N0, ForSigned);
 
       const APInt &C1V = C1->getAPIntValue();
       if ((Opcode == ISD::UMAX && Range.getUnsignedMax().ule(C1V)) ||
@@ -7174,7 +7164,8 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
       return false;
 
     if (LegalOperations &&
-        !TLI.isTruncStoreLegal(Store->getValue().getValueType(), MemVT))
+        !TLI.isTruncStoreLegal(Store->getValue().getValueType(), MemVT,
+                               Store->getAlign(), Store->getAddressSpace()))
       return false;
   }
   return true;
@@ -13205,7 +13196,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   if ((Value.getOpcode() == ISD::TRUNCATE) && Value->hasOneUse() &&
       MST->isUnindexed() && !MST->isCompressingStore() &&
       TLI.canCombineTruncStore(Value.getOperand(0).getValueType(),
-                               MST->getMemoryVT(), LegalOperations)) {
+                               MST->getMemoryVT(), MST->getAlign(),
+                               MST->getAddressSpace(), LegalOperations)) {
     auto Mask = TLI.promoteTargetBoolean(DAG, MST->getMask(),
                                          Value.getOperand(0).getValueType());
     return DAG.getMaskedStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
@@ -21789,7 +21781,8 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
   if (DC->isTypeLegal(VT))
     UseTruncStore = false;
   else if (TLI.isTypeLegal(IVal.getValueType()) &&
-           TLI.isTruncStoreLegal(IVal.getValueType(), VT))
+           TLI.isTruncStoreLegal(IVal.getValueType(), VT, St->getAlign(),
+                                 St->getAddressSpace()))
     UseTruncStore = true;
   else
     return SDValue();
@@ -22718,7 +22711,7 @@ bool DAGCombiner::tryStoreMergeOfConstants(
       unsigned IsFast = 0;
 
       // Break early when size is too large to be legal.
-      if (StoreTy.getSizeInBits() > MaximumLegalStoreInBits)
+      if (StoreTy.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
         break;
 
       if (TLI.isTypeLegal(StoreTy) &&
@@ -22734,7 +22727,8 @@ bool DAGCombiner::tryStoreMergeOfConstants(
                  TargetLowering::TypePromoteInteger) {
         EVT LegalizedStoredValTy =
             TLI.getTypeToTransformTo(Context, StoredVal.getValueType());
-        if (TLI.isTruncStoreLegal(LegalizedStoredValTy, StoreTy) &&
+        if (TLI.isTruncStoreLegal(LegalizedStoredValTy, StoreTy,
+                                  FirstStoreAlign, FirstStoreAS) &&
             TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValTy,
                                  DAG.getMachineFunction()) &&
             TLI.allowsMemoryAccess(Context, DL, StoreTy,
@@ -22826,7 +22820,7 @@ bool DAGCombiner::tryStoreMergeOfExtracts(
       unsigned IsFast = 0;
 
       // Break early when size is too large to be legal.
-      if (Ty.getSizeInBits() > MaximumLegalStoreInBits)
+      if (Ty.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
         break;
 
       if (TLI.isTypeLegal(Ty) &&
@@ -22973,7 +22967,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       EVT StoreTy = EVT::getVectorVT(Context, MemVT.getScalarType(), Elts);
 
       // Break early when size is too large to be legal.
-      if (StoreTy.getSizeInBits() > MaximumLegalStoreInBits)
+      if (StoreTy.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
         break;
 
       unsigned IsFastSt = 0;
@@ -23012,7 +23006,8 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       } else if (TLI.getTypeAction(Context, StoreTy) ==
                  TargetLowering::TypePromoteInteger) {
         EVT LegalizedStoredValTy = TLI.getTypeToTransformTo(Context, StoreTy);
-        if (TLI.isTruncStoreLegal(LegalizedStoredValTy, StoreTy) &&
+        if (TLI.isTruncStoreLegal(LegalizedStoredValTy, StoreTy,
+                                  FirstStoreAlign, FirstStoreAS) &&
             TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValTy,
                                  DAG.getMachineFunction()) &&
             TLI.isLoadLegal(LegalizedStoredValTy, StoreTy,
@@ -23193,7 +23188,8 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   EVT MemVT = St->getMemoryVT();
   if (MemVT.isScalableVT())
     return false;
-  if (!MemVT.isSimple() || MemVT.getSizeInBits() * 2 > MaximumLegalStoreInBits)
+  if (!MemVT.isSimple() ||
+      MemVT.getSizeInBits() * 2 > TLI.getMaximumLegalStoreInBits())
     return false;
 
   // This function cannot currently deal with non-byte-sized memory sizes.
@@ -23705,9 +23701,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
        Value.getOpcode() == ISD::TRUNCATE) &&
       Value->hasOneUse() && ST->isUnindexed() &&
       TLI.canCombineTruncStore(Value.getOperand(0).getValueType(),
-                               ST->getMemoryVT(), LegalOperations)) {
-    return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0),
-                             Ptr, ST->getMemoryVT(), ST->getMemOperand());
+                               ST->getMemoryVT(), ST->getAlign(),
+                               ST->getAddressSpace(), LegalOperations)) {
+    return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
+                             ST->getMemoryVT(), ST->getMemOperand());
   }
 
   // Always perform this optimization before types are legal. If the target

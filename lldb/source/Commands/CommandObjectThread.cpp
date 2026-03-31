@@ -1025,8 +1025,8 @@ protected:
         }
 
         new_plan_sp = thread->QueueThreadPlanForStepUntil(
-            abort_other_plans, &address_list.front(), address_list.size(),
-            m_options.m_stop_others, m_options.m_frame_idx, new_plan_status);
+            abort_other_plans, address_list, m_options.m_stop_others,
+            m_options.m_frame_idx, new_plan_status);
         if (new_plan_sp) {
           // User level plans should be controlling plans so they can be
           // interrupted
