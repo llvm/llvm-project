@@ -113,6 +113,14 @@ LIBC_INLINE int restore_signals(const sigset_t &set) {
                                            &set, nullptr, sizeof(sigset_t));
 }
 
+LIBC_INLINE int unblock_signal(int signal) {
+  sigset_t set;
+  if (!add_signal(set, signal))
+    return -EINVAL;
+  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_UNBLOCK,
+                                           &set, nullptr, sizeof(sigset_t));
+}
+
 LIBC_INLINE ErrorOr<int>
 do_sigaction(int signal, const struct sigaction *__restrict libc_new,
              struct sigaction *__restrict libc_old) {

@@ -1,3 +1,15 @@
+add_header_library(
+  abort_utils
+  HDRS
+    abort_utils.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.signal.raise
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.linux.rwlock
+    libc.src.signal.linux.__restore
+)
+
 add_entrypoint_object(
   abort
   SRCS
@@ -5,7 +17,7 @@ add_entrypoint_object(
   HDRS
     ../abort.h
   DEPENDS
+    .abort_utils
+    libc.src.signal.linux.__restore
     libc.include.stdlib
-    libc.src.signal.raise
-    libc.src.stdlib._Exit
 )
