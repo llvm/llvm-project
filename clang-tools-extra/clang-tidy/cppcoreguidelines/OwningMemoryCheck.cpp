@@ -57,14 +57,13 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // owner. Best example is `::free()`.
   const auto LegacyOwnerConsumers = functionDecl(LegacyConsumerFunctions);
 
-  const auto CreatesOwner =
+  const auto CreatesOwner = ignoringImpCasts(
       anyOf(cxxNewExpr(),
             callExpr(callee(
                 functionDecl(returns(qualType(hasDeclaration(OwnerDecl)))))),
-            CreatesLegacyOwner, LegacyOwnerCast);
+            CreatesLegacyOwner, LegacyOwnerCast));
 
-  const auto ConsideredOwner =
-      eachOf(IsOwnerType, ignoringImpCasts(CreatesOwner));
+  const auto ConsideredOwner = eachOf(IsOwnerType, CreatesOwner);
   const auto ScopeDeclaration = anyOf(translationUnitDecl(), namespaceDecl(),
                                       recordDecl(), functionDecl());
 
@@ -128,17 +127,16 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // but the LHS is not an owner.
   Finder->addMatcher(binaryOperator(isAssignmentOperator(),
                                     hasLHS(unless(IsOwnerType)),
-                                    hasRHS(ignoringImpCasts(CreatesOwner)))
+                                    hasRHS(CreatesOwner))
                          .bind("bad_owner_creation_assignment"),
                      this);
 
   // Matching on initialization operations where the initial value is a newly
   // created owner, but the LHS is not an owner.
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               namedDecl(varDecl(hasInitializer(ignoringImpCasts(CreatesOwner)),
-                                 unless(IsOwnerType))
-                             .bind("bad_owner_creation_variable"))),
+      traverse(TK_AsIs, namedDecl(varDecl(hasInitializer(CreatesOwner),
+                                          unless(IsOwnerType))
+                                      .bind("bad_owner_creation_variable"))),
       this);
 
   // Match on all function calls that expect owners as arguments, but didn't
@@ -152,8 +150,7 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // Matching for function calls where one argument is a created owner, but the
   // parameter type is not an owner.
   Finder->addMatcher(callExpr(forEachArgumentWithParam(
-                         expr(ignoringImpCasts(CreatesOwner))
-                             .bind("bad_owner_creation_argument"),
+                         expr(CreatesOwner).bind("bad_owner_creation_argument"),
                          parmVarDecl(unless(IsOwnerType))
                              .bind("bad_owner_creation_parameter"))),
                      this);
