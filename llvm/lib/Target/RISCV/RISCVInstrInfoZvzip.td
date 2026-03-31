@@ -84,7 +84,8 @@ multiclass VPseudoVUNZIP {
     defvar mx = m.MX;
     let VLMul = m.value in {
       def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.wvrclass>,
-                       SchedUnary<"WriteVIALUV", "ReadVIALUV", mx, forcePassthruRead=true>;
+                       SchedUnary<"WriteVIALUV", "ReadVIALUV", mx,
+                                  forcePassthruRead=true>;
       def "_V_" # mx # "_MASK" :
         VPseudoUnaryMask<m.vrclass, m.wvrclass>,
         RISCVMaskedPseudo<MaskIdx=2>,
@@ -102,11 +103,13 @@ let Predicates = [HasStdExtZvzip],
   defm PseudoVPAIRO  : VPseudoVALU_VV;
 }
 
-multiclass VPatVUNZIPIntrinsic<string intrinsic_name, string instruction_name> {
+multiclass VPatVUnzipIntrinsic<string intrinsic_name,
+                               string instruction_name> {
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<wti>.Predicates, [HasStdExtZvzip]) in {
+    let Predicates = !listconcat(GetVTypePredicates<wti>.Predicates,
+                                 [HasStdExtZvzip]) in {
       def : VPatUnaryNoMask<intrinsic_name, instruction_name, "V",
                             vti.Vector, wti.Vector, vti.Log2SEW,
                             vti.LMul, vti.RegClass, wti.RegClass>;
@@ -117,8 +120,11 @@ multiclass VPatVUNZIPIntrinsic<string intrinsic_name, string instruction_name> {
   }
 }
 
-defm : VPatVUNZIPIntrinsic<"int_riscv_vunzipe", "PseudoVUNZIPE">;
-defm : VPatVUNZIPIntrinsic<"int_riscv_vunzipo", "PseudoVUNZIPO">;
-defm : VPatBinaryV_VV<"int_riscv_vpaire", "PseudoVPAIRE", AllVectors>;
-defm : VPatBinaryV_VV<"int_riscv_vpairo", "PseudoVPAIRO", AllVectors>;
-defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors>;
+defm : VPatVUnzipIntrinsic<"int_riscv_vunzipe", "PseudoVUNZIPE">;
+defm : VPatVUnzipIntrinsic<"int_riscv_vunzipo", "PseudoVUNZIPO">;
+defm : VPatBinaryV_VV<"int_riscv_vpaire", "PseudoVPAIRE", AllVectors,
+                      ExtraPreds = [HasStdExtZvzip]>;
+defm : VPatBinaryV_VV<"int_riscv_vpairo", "PseudoVPAIRO", AllVectors,
+                      ExtraPreds = [HasStdExtZvzip]>;
+defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors,
+                      ExtraPreds = [HasStdExtZvzip]>;
