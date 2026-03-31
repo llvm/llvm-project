@@ -1142,7 +1142,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    0.31
 # CHECK-NEXT: IPC:               0.31
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
@@ -2011,10 +2011,10 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2026,7 +2026,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   brkn	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   brkn	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   brkn	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   brkn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   brkn	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2037,18 +2037,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       brkn	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       brkn	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       brkn	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       brkn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [43] Code Region - brkns
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2060,7 +2060,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   brkns	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   brkns	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   brkns	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   brkns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   brkns	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2071,8 +2071,8 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       brkns	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       brkns	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       brkns	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       brkns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [44] Code Region - sel
 
@@ -2116,10 +2116,10 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2131,7 +2131,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   and	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   and	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   and	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   and	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2142,18 +2142,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       and	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       and	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       and	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [46] Code Region - ands
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2165,7 +2165,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   ands	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   ands	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   ands	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   ands	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2176,18 +2176,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       ands	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       ands	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       ands	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [47] Code Region - bic
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2199,7 +2199,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   bic	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   bic	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   bic	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   bic	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2210,18 +2210,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       bic	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       bic	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       bic	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [48] Code Region - bics
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2233,7 +2233,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   bics	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   bics	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   bics	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   bics	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2244,18 +2244,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       bics	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       bics	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       bics	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [49] Code Region - eor
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2267,7 +2267,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   eor	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   eor	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   eor	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   eor	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2278,18 +2278,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       eor	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       eor	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       eor	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [50] Code Region - eors
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2301,7 +2301,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   eors	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   eors	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   eors	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   eors	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2312,18 +2312,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       eors	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       eors	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       eors	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [51] Code Region - nand
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2335,7 +2335,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   nand	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   nand	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   nand	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   nand	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2346,18 +2346,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       nand	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       nand	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       nand	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [52] Code Region - nands
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2369,7 +2369,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   nands	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   nands	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   nands	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   nands	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2380,18 +2380,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       nands	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       nands	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       nands	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [53] Code Region - nor
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2403,7 +2403,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   nor	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   nor	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   nor	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   nor	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2414,18 +2414,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       nor	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       nor	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       nor	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [54] Code Region - nors
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2437,7 +2437,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   nors	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   nors	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   nors	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   nors	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2448,18 +2448,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       nors	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       nors	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       nors	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [55] Code Region - orn
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2471,7 +2471,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   orn	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   orn	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   orn	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   orn	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2482,18 +2482,18 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       orn	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       orn	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       orn	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>
 
 # CHECK:      [56] Code Region - orns
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
 # CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        600
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    10
-# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 3.0
 
@@ -2505,7 +2505,7 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [0,2]     D==eeER  .   orns	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,0]     D===eeER .   orns	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: [1,1]     D====eeER.   orns	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: [1,2]     .D====eeER   orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     D=====eeER   orns	p0.b, p15/z, p1.b, p0.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2516,5 +2516,5 @@ orns p0.b, p15/z, p1.b, p0.b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     2.5    0.5    0.0       orns	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT: 1.     2     3.5    0.0    0.0       orns	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT: 2.     2     4.0    0.0    0.0       orns	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+# CHECK-NEXT: 2.     2     4.5    0.0    0.0       orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.5    0.2    0.0       <total>

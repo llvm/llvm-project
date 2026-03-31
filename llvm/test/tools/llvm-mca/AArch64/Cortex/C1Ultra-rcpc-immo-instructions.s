@@ -19,10 +19,10 @@
 # CHECK-NEXT:  1      4     0.25    *             U     ldapursh	w17, [x19]
 # CHECK-NEXT:  1      4     0.25    *             U     ldapursh	x3, [x3]
 # CHECK-NEXT:  1      4     0.25    *             U     ldapursw	x3, [x18]
-# CHECK-NEXT:  2      1     0.50           *            stlur	w3, [x27]
-# CHECK-NEXT:  2      1     0.50           *            stlur	x23, [x25]
-# CHECK-NEXT:  2      1     0.50           *            stlurb	w30, [x17]
-# CHECK-NEXT:  2      1     0.50           *            stlurh	w9, [x29]
+# CHECK-NEXT:  1      1     0.50           *            stlur	w3, [x27]
+# CHECK-NEXT:  1      1     0.50           *            stlur	x23, [x25]
+# CHECK-NEXT:  1      1     0.50           *            stlurb	w30, [x17]
+# CHECK-NEXT:  1      1     0.50           *            stlurh	w9, [x29]
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - C1UUnitB

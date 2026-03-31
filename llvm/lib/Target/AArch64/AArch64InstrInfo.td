@@ -3274,7 +3274,6 @@ def : InstAlias<"mov $dst, $imm", (ORRWri GPR32sp:$dst, WZR,
 def : InstAlias<"mov $dst, $imm", (ORRXri GPR64sp:$dst, XZR,
                                           logical_imm64:$imm), 0>;
 
-
 // (register)
 defm ANDS : LogicalRegS<0b11, 0, "ands", AArch64and_flag>;
 defm BICS : LogicalRegS<0b11, 1, "bics",
@@ -3345,7 +3344,6 @@ def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
 let AddedComplexity = 6 in
 def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
           (SUBREG_TO_REG (ORRWrr WZR, (EXTRACT_SUBREG GPR64:$Rn, sub_32)), sub_32)>;
-
 
 //===----------------------------------------------------------------------===//
 // One operand data processing instructions.
