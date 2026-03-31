@@ -77,8 +77,14 @@ public:
   // that has no associated Document, and the result of getEmptyNode(), which
   // does have an associated document.
   bool isEmpty() const { return !KindAndDoc || getKind() == Type::Empty; }
-  Type getKind() const { return KindAndDoc->Kind; }
-  Document *getDocument() const { return KindAndDoc->Doc; }
+  Type getKind() const {
+    assert(KindAndDoc);
+    return KindAndDoc->Kind;
+  }
+  Document *getDocument() const {
+    assert(KindAndDoc);
+    return KindAndDoc->Doc;
+  }
 
   int64_t &getInt() {
     assert(getKind() == Type::Int);
@@ -181,7 +187,8 @@ public:
     case Type::Binary:
       return Lhs.Raw < Rhs.Raw;
     default:
-      llvm_unreachable("bad map key type");
+      assert(false && "bad map key type");
+      return false;
     }
   }
 

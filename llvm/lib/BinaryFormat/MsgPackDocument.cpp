@@ -155,7 +155,8 @@ bool llvm::msgpack::operator==(const DocNode &Lhs, const DocNode &Rhs) {
     return true;
   }
   default:
-    llvm_unreachable("unhandled DocNode type in operator==");
+    assert(false && "unhandled DocNode type in operator==");
+    return false;
   }
 }
 
@@ -175,6 +176,9 @@ DocNode Document::copyNode(DocNode Src) {
   case Type::Float:
     return getNode(Src.getFloat());
   case Type::String:
+    // TODO: Restructure string interning so that no-copy strings from the
+    // source Document become no-copy strings in the destination Document,
+    // avoiding duplicate copies when the caller retains the source.
     return getNode(Src.getString(), /*Copy=*/true);
   case Type::Binary:
     return getNode(Src.getBinary(), /*Copy=*/true);
@@ -191,7 +195,8 @@ DocNode Document::copyNode(DocNode Src) {
     return NewArray;
   }
   default:
-    llvm_unreachable("unhandled DocNode type in copyNode");
+    assert(false && "unhandled DocNode type in copyNode");
+    return getEmptyNode();
   }
 }
 
