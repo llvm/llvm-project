@@ -310,19 +310,13 @@ bool CachingVPExpander::expandPredicationToFPCall(
     return true;
   }
   case Intrinsic::fma:
-  case Intrinsic::fmuladd:
-  case Intrinsic::experimental_constrained_fma:
-  case Intrinsic::experimental_constrained_fmuladd: {
+  case Intrinsic::fmuladd: {
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
     Value *Op2 = VPI.getOperand(2);
     Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
-    Value *NewOp;
-    if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
-      NewOp = Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2});
-    else
-      NewOp = Builder.CreateCall(Fn, {Op0, Op1, Op2});
+    Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1, Op2});
     replaceOperation(*NewOp, VPI);
     return true;
   }
@@ -645,10 +639,6 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_scatter:
     return expandPredicationInMemoryIntrinsic(Builder, VPI);
   }
-
-  if (auto CID = VPI.getConstrainedIntrinsicID())
-    if (expandPredicationToFPCall(Builder, VPI, *CID))
-      return true;
 
   return false;
 }

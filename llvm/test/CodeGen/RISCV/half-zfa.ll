@@ -157,14 +157,14 @@ define half @froundnx_h(half %a) nounwind {
 define i32 @fcmp_olt_q(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_olt_q:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fltq.h a0, fa0, fa1
+; CHECK-NEXT:    flt.h a0, fa0, fa1
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: fcmp_olt_q:
 ; ZFHMIN:       # %bb.0:
 ; ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
-; ZFHMIN-NEXT:    fltq.s a0, fa4, fa5
+; ZFHMIN-NEXT:    flt.s a0, fa4, fa5
 ; ZFHMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"olt", metadata !"fpexcept.strict") strictfp
   %2 = zext i1 %1 to i32
@@ -174,14 +174,14 @@ define i32 @fcmp_olt_q(half %a, half %b) nounwind strictfp {
 define i32 @fcmp_ole_q(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_ole_q:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fleq.h a0, fa0, fa1
+; CHECK-NEXT:    fle.h a0, fa0, fa1
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: fcmp_ole_q:
 ; ZFHMIN:       # %bb.0:
 ; ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
-; ZFHMIN-NEXT:    fleq.s a0, fa4, fa5
+; ZFHMIN-NEXT:    fle.s a0, fa4, fa5
 ; ZFHMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ole", metadata !"fpexcept.strict") strictfp
   %2 = zext i1 %1 to i32
@@ -191,8 +191,8 @@ define i32 @fcmp_ole_q(half %a, half %b) nounwind strictfp {
 define i32 @fcmp_one_q(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_one_q:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fltq.h a0, fa0, fa1
-; CHECK-NEXT:    fltq.h a1, fa1, fa0
+; CHECK-NEXT:    flt.h a0, fa0, fa1
+; CHECK-NEXT:    flt.h a1, fa1, fa0
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    ret
 ;
@@ -200,8 +200,8 @@ define i32 @fcmp_one_q(half %a, half %b) nounwind strictfp {
 ; ZFHMIN:       # %bb.0:
 ; ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
-; ZFHMIN-NEXT:    fltq.s a0, fa4, fa5
-; ZFHMIN-NEXT:    fltq.s a1, fa5, fa4
+; ZFHMIN-NEXT:    flt.s a0, fa4, fa5
+; ZFHMIN-NEXT:    flt.s a1, fa5, fa4
 ; ZFHMIN-NEXT:    or a0, a1, a0
 ; ZFHMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"one", metadata !"fpexcept.strict") strictfp
@@ -212,8 +212,8 @@ define i32 @fcmp_one_q(half %a, half %b) nounwind strictfp {
 define i32 @fcmp_ueq_q(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_ueq_q:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fltq.h a0, fa0, fa1
-; CHECK-NEXT:    fltq.h a1, fa1, fa0
+; CHECK-NEXT:    flt.h a0, fa0, fa1
+; CHECK-NEXT:    flt.h a1, fa1, fa0
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    xori a0, a0, 1
 ; CHECK-NEXT:    ret
@@ -222,8 +222,8 @@ define i32 @fcmp_ueq_q(half %a, half %b) nounwind strictfp {
 ; ZFHMIN:       # %bb.0:
 ; ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
-; ZFHMIN-NEXT:    fltq.s a0, fa4, fa5
-; ZFHMIN-NEXT:    fltq.s a1, fa5, fa4
+; ZFHMIN-NEXT:    flt.s a0, fa4, fa5
+; ZFHMIN-NEXT:    flt.s a1, fa5, fa4
 ; ZFHMIN-NEXT:    or a0, a1, a0
 ; ZFHMIN-NEXT:    xori a0, a0, 1
 ; ZFHMIN-NEXT:    ret

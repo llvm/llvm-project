@@ -34,7 +34,7 @@ define <16 x i16> @test_v16f16_ogt_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ; AVX512-32-NEXT:    movl %esp, %ebp
 ; AVX512-32-NEXT:    andl $-32, %esp
 ; AVX512-32-NEXT:    subl $32, %esp
-; AVX512-32-NEXT:    vcmpgt_oqph 8(%ebp), %ymm2, %k1
+; AVX512-32-NEXT:    vcmpgtph 8(%ebp), %ymm2, %k1
 ; AVX512-32-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
@@ -42,7 +42,7 @@ define <16 x i16> @test_v16f16_ogt_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ;
 ; AVX512-64-LABEL: test_v16f16_ogt_q:
 ; AVX512-64:       # %bb.0:
-; AVX512-64-NEXT:    vcmplt_oqph %ymm2, %ymm3, %k1
+; AVX512-64-NEXT:    vcmpltph %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f16(
@@ -59,7 +59,7 @@ define <16 x i16> @test_v16f16_oge_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ; AVX512-32-NEXT:    movl %esp, %ebp
 ; AVX512-32-NEXT:    andl $-32, %esp
 ; AVX512-32-NEXT:    subl $32, %esp
-; AVX512-32-NEXT:    vcmpge_oqph 8(%ebp), %ymm2, %k1
+; AVX512-32-NEXT:    vcmpgeph 8(%ebp), %ymm2, %k1
 ; AVX512-32-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
@@ -67,7 +67,7 @@ define <16 x i16> @test_v16f16_oge_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ;
 ; AVX512-64-LABEL: test_v16f16_oge_q:
 ; AVX512-64:       # %bb.0:
-; AVX512-64-NEXT:    vcmple_oqph %ymm2, %ymm3, %k1
+; AVX512-64-NEXT:    vcmpleph %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f16(
@@ -84,7 +84,7 @@ define <16 x i16> @test_v16f16_olt_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ; AVX512-32-NEXT:    movl %esp, %ebp
 ; AVX512-32-NEXT:    andl $-32, %esp
 ; AVX512-32-NEXT:    subl $32, %esp
-; AVX512-32-NEXT:    vcmplt_oqph 8(%ebp), %ymm2, %k1
+; AVX512-32-NEXT:    vcmpltph 8(%ebp), %ymm2, %k1
 ; AVX512-32-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
@@ -92,7 +92,7 @@ define <16 x i16> @test_v16f16_olt_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ;
 ; AVX512-64-LABEL: test_v16f16_olt_q:
 ; AVX512-64:       # %bb.0:
-; AVX512-64-NEXT:    vcmplt_oqph %ymm3, %ymm2, %k1
+; AVX512-64-NEXT:    vcmpltph %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f16(
@@ -109,7 +109,7 @@ define <16 x i16> @test_v16f16_ole_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ; AVX512-32-NEXT:    movl %esp, %ebp
 ; AVX512-32-NEXT:    andl $-32, %esp
 ; AVX512-32-NEXT:    subl $32, %esp
-; AVX512-32-NEXT:    vcmple_oqph 8(%ebp), %ymm2, %k1
+; AVX512-32-NEXT:    vcmpleph 8(%ebp), %ymm2, %k1
 ; AVX512-32-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
@@ -117,7 +117,7 @@ define <16 x i16> @test_v16f16_ole_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ;
 ; AVX512-64-LABEL: test_v16f16_ole_q:
 ; AVX512-64:       # %bb.0:
-; AVX512-64-NEXT:    vcmple_oqph %ymm3, %ymm2, %k1
+; AVX512-64-NEXT:    vcmpleph %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f16(
@@ -209,7 +209,7 @@ define <16 x i16> @test_v16f16_ugt_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ; AVX512-32-NEXT:    movl %esp, %ebp
 ; AVX512-32-NEXT:    andl $-32, %esp
 ; AVX512-32-NEXT:    subl $32, %esp
-; AVX512-32-NEXT:    vcmpnle_uqph 8(%ebp), %ymm2, %k1
+; AVX512-32-NEXT:    vcmpnleph 8(%ebp), %ymm2, %k1
 ; AVX512-32-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
@@ -217,7 +217,7 @@ define <16 x i16> @test_v16f16_ugt_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ;
 ; AVX512-64-LABEL: test_v16f16_ugt_q:
 ; AVX512-64:       # %bb.0:
-; AVX512-64-NEXT:    vcmpnle_uqph %ymm3, %ymm2, %k1
+; AVX512-64-NEXT:    vcmpnleph %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f16(
@@ -234,7 +234,7 @@ define <16 x i16> @test_v16f16_uge_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ; AVX512-32-NEXT:    movl %esp, %ebp
 ; AVX512-32-NEXT:    andl $-32, %esp
 ; AVX512-32-NEXT:    subl $32, %esp
-; AVX512-32-NEXT:    vcmpnlt_uqph 8(%ebp), %ymm2, %k1
+; AVX512-32-NEXT:    vcmpnltph 8(%ebp), %ymm2, %k1
 ; AVX512-32-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
@@ -242,7 +242,7 @@ define <16 x i16> @test_v16f16_uge_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ;
 ; AVX512-64-LABEL: test_v16f16_uge_q:
 ; AVX512-64:       # %bb.0:
-; AVX512-64-NEXT:    vcmpnlt_uqph %ymm3, %ymm2, %k1
+; AVX512-64-NEXT:    vcmpnltph %ymm3, %ymm2, %k1
 ; AVX512-64-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f16(
@@ -259,7 +259,7 @@ define <16 x i16> @test_v16f16_ult_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ; AVX512-32-NEXT:    movl %esp, %ebp
 ; AVX512-32-NEXT:    andl $-32, %esp
 ; AVX512-32-NEXT:    subl $32, %esp
-; AVX512-32-NEXT:    vcmpnge_uqph 8(%ebp), %ymm2, %k1
+; AVX512-32-NEXT:    vcmpngeph 8(%ebp), %ymm2, %k1
 ; AVX512-32-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
@@ -267,7 +267,7 @@ define <16 x i16> @test_v16f16_ult_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ;
 ; AVX512-64-LABEL: test_v16f16_ult_q:
 ; AVX512-64:       # %bb.0:
-; AVX512-64-NEXT:    vcmpnle_uqph %ymm2, %ymm3, %k1
+; AVX512-64-NEXT:    vcmpnleph %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f16(
@@ -284,7 +284,7 @@ define <16 x i16> @test_v16f16_ule_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ; AVX512-32-NEXT:    movl %esp, %ebp
 ; AVX512-32-NEXT:    andl $-32, %esp
 ; AVX512-32-NEXT:    subl $32, %esp
-; AVX512-32-NEXT:    vcmpngt_uqph 8(%ebp), %ymm2, %k1
+; AVX512-32-NEXT:    vcmpngtph 8(%ebp), %ymm2, %k1
 ; AVX512-32-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-32-NEXT:    movl %ebp, %esp
 ; AVX512-32-NEXT:    popl %ebp
@@ -292,7 +292,7 @@ define <16 x i16> @test_v16f16_ule_q(<16 x i16> %a, <16 x i16> %b, <16 x half> %
 ;
 ; AVX512-64-LABEL: test_v16f16_ule_q:
 ; AVX512-64:       # %bb.0:
-; AVX512-64-NEXT:    vcmpnlt_uqph %ymm2, %ymm3, %k1
+; AVX512-64-NEXT:    vcmpnltph %ymm2, %ymm3, %k1
 ; AVX512-64-NEXT:    vpblendmw %ymm0, %ymm1, %ymm0 {%k1}
 ; AVX512-64-NEXT:    retq
   %cond = call <16 x i1> @llvm.experimental.constrained.fcmp.v16f16(

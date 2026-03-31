@@ -5859,8 +5859,8 @@ define <2 x half> @fneg_fma_fneg_dagcombine_loop(<2 x half> %arg, <2 x half> %ar
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0x8000
 ; VI-NEXT:    v_fma_f16 v3, v1, -v2, s4
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_fma_f16 v1, v1, -v4, s4
 ; VI-NEXT:    v_sub_f16_e32 v3, v3, v0
 ; VI-NEXT:    v_sub_f16_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1

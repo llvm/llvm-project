@@ -18,12 +18,12 @@ define <1 x bfloat> @vfmadd_vv_v1bf16(<1 x bfloat> %va, <1 x bfloat> %vb, <1 x b
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v10
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v9
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfmadd.vv v9, v10, v11
+; ZVFH-NEXT:    vfmadd.vv v12, v10, v11
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v9
+; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v12
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_v1bf16:
@@ -40,12 +40,12 @@ define <2 x bfloat> @vfmadd_vv_v2bf16(<2 x bfloat> %va, <2 x bfloat> %vb, <2 x b
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v9
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v10
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFH-NEXT:    vfmadd.vv v10, v9, v11
+; ZVFH-NEXT:    vfmadd.vv v12, v9, v11
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v10
+; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v12
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_v2bf16:
@@ -62,12 +62,12 @@ define <4 x bfloat> @vfmadd_vv_v4bf16(<4 x bfloat> %va, <4 x bfloat> %vb, <4 x b
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v11, v10
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v8
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v9
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v9, v8
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFH-NEXT:    vfmadd.vv v12, v10, v11
+; ZVFH-NEXT:    vfmadd.vv v9, v10, v11
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v12
+; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v9
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_v4bf16:
@@ -84,12 +84,12 @@ define <8 x bfloat> @vfmadd_vv_v8bf16(<8 x bfloat> %va, <8 x bfloat> %vb, <8 x b
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v8
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v14, v10
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v9
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v14, v9
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v10
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFH-NEXT:    vfmadd.vv v10, v14, v12
+; ZVFH-NEXT:    vfmadd.vv v16, v14, v12
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v10
+; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_v8bf16:
@@ -106,12 +106,12 @@ define <16 x bfloat> @vfmadd_vv_v16bf16(<16 x bfloat> %va, <16 x bfloat> %vb, <1
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v10
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v20, v8
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v24, v12
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v20, v12
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFH-NEXT:    vfmadd.vv v24, v20, v16
+; ZVFH-NEXT:    vfmadd.vv v12, v20, v16
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v24
+; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v12
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_v16bf16:
@@ -126,15 +126,31 @@ define <16 x bfloat> @vfmadd_vv_v16bf16(<16 x bfloat> %va, <16 x bfloat> %vb, <1
 define <32 x bfloat> @vfmadd_vv_v32bf16(<32 x bfloat> %va, <32 x bfloat> %vb, <32 x bfloat> %vc) strictfp {
 ; ZVFH-LABEL: vfmadd_vv_v32bf16:
 ; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    addi sp, sp, -16
+; ZVFH-NEXT:    .cfi_def_cfa_offset 16
+; ZVFH-NEXT:    csrr a0, vlenb
+; ZVFH-NEXT:    slli a0, a0, 2
+; ZVFH-NEXT:    sub sp, sp, a0
+; ZVFH-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
+; ZVFH-NEXT:    addi a0, sp, 16
+; ZVFH-NEXT:    vs4r.v v16, (a0) # vscale x 32-byte Folded Spill
 ; ZVFH-NEXT:    li a0, 32
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v0, v12
+; ZVFH-NEXT:    addi a0, sp, 16
+; ZVFH-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v24, v8
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v0, v16
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v12
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFH-NEXT:    vfmadd.vv v16, v0, v24
+; ZVFH-NEXT:    vfmadd.vv v24, v0, v16
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v16
+; ZVFH-NEXT:    vfncvtbf16.f.f.w v8, v24
+; ZVFH-NEXT:    csrr a0, vlenb
+; ZVFH-NEXT:    slli a0, a0, 2
+; ZVFH-NEXT:    add sp, sp, a0
+; ZVFH-NEXT:    .cfi_def_cfa sp, 16
+; ZVFH-NEXT:    addi sp, sp, 16
+; ZVFH-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_v32bf16:
@@ -158,12 +174,12 @@ define <2 x half> @vfmadd_vv_v2f16(<2 x half> %va, <2 x half> %vb, <2 x half> %v
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v10
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfmadd.vv v10, v9, v11
+; ZVFBFA-NEXT:    vfmadd.vv v12, v9, v11
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v10
+; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v12
 ; ZVFBFA-NEXT:    ret
   %vd = call <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half> %va, <2 x half> %vc, <2 x half> %vb, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x half> %vd
@@ -206,12 +222,12 @@ define <4 x half> @vfmadd_vv_v4f16(<4 x half> %va, <4 x half> %vb, <4 x half> %v
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v11, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v9
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vfmadd.vv v12, v10, v11
+; ZVFBFA-NEXT:    vfmadd.vv v9, v10, v11
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v12
+; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFBFA-NEXT:    ret
   %vd = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %vb, <4 x half> %va, <4 x half> %vc, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x half> %vd
@@ -254,12 +270,12 @@ define <8 x half> @vfmadd_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x half> %v
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v14, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v14, v9
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFBFA-NEXT:    vfmadd.vv v10, v14, v12
+; ZVFBFA-NEXT:    vfmadd.vv v16, v14, v12
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v10
+; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFBFA-NEXT:    ret
   %vd = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> %vb, <8 x half> %vc, <8 x half> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <8 x half> %vd
@@ -302,12 +318,12 @@ define <16 x half> @vfmadd_vv_v16f16(<16 x half> %va, <16 x half> %vb, <16 x hal
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v10
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v20, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v12
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v20, v12
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFBFA-NEXT:    vfmadd.vv v24, v20, v16
+; ZVFBFA-NEXT:    vfmadd.vv v12, v20, v16
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v24
+; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v12
 ; ZVFBFA-NEXT:    ret
   %vd = call <16 x half> @llvm.experimental.constrained.fma.v16f16(<16 x half> %vc, <16 x half> %va, <16 x half> %vb, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <16 x half> %vd
@@ -349,31 +365,15 @@ define <32 x half> @vfmadd_vv_v32f16(<32 x half> %va, <32 x half> %vb, <32 x hal
 ;
 ; ZVFBFA-LABEL: vfmadd_vv_v32f16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    addi sp, sp, -16
-; ZVFBFA-NEXT:    .cfi_def_cfa_offset 16
-; ZVFBFA-NEXT:    csrr a0, vlenb
-; ZVFBFA-NEXT:    slli a0, a0, 2
-; ZVFBFA-NEXT:    sub sp, sp, a0
-; ZVFBFA-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; ZVFBFA-NEXT:    addi a0, sp, 16
-; ZVFBFA-NEXT:    vs4r.v v16, (a0) # vscale x 32-byte Folded Spill
 ; ZVFBFA-NEXT:    li a0, 32
 ; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v12
-; ZVFBFA-NEXT:    addi a0, sp, 16
-; ZVFBFA-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v8
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v16
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFBFA-NEXT:    vfmadd.vv v24, v0, v16
+; ZVFBFA-NEXT:    vfmadd.vv v16, v0, v24
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v24
-; ZVFBFA-NEXT:    csrr a0, vlenb
-; ZVFBFA-NEXT:    slli a0, a0, 2
-; ZVFBFA-NEXT:    add sp, sp, a0
-; ZVFBFA-NEXT:    .cfi_def_cfa sp, 16
-; ZVFBFA-NEXT:    addi sp, sp, 16
-; ZVFBFA-NEXT:    .cfi_def_cfa_offset 0
+; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFBFA-NEXT:    ret
   %vd = call <32 x half> @llvm.experimental.constrained.fma.v32f16(<32 x half> %vc, <32 x half> %vb, <32 x half> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <32 x half> %vd

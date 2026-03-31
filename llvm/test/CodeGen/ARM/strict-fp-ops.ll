@@ -16,9 +16,6 @@ entry:
 define void @unused_div_fpexcept_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: unused_div_fpexcept_strict:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov s0, r1
-; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vdiv.f32 s0, s2, s0
 ; CHECK-NEXT:    bx lr
 entry:
   %add = call float @llvm.experimental.constrained.fdiv.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -66,13 +63,13 @@ if.end:
 define float @add_twice_fpexcept_strict(float %x, float %y, i32 %n) #0 {
 ; CHECK-LABEL: add_twice_fpexcept_strict:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov s2, r1
+; CHECK-NEXT:    vmov s0, r1
 ; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vadd.f32 s0, s4, s2
-; CHECK-NEXT:    vaddne.f32 s2, s4, s2
-; CHECK-NEXT:    vmulne.f32 s0, s0, s2
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-NEXT:    vmul.f32 s2, s0, s0
+; CHECK-NEXT:    vmoveq.f32 s2, s0
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    bx lr
 entry:
   %add = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -96,8 +93,9 @@ define float @add_twice_round_dynamic(float %x, float %y, i32 %n) #0 {
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
-; CHECK-NEXT:    vmulne.f32 s0, s0, s0
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmul.f32 s2, s0, s0
+; CHECK-NEXT:    vmoveq.f32 s2, s0
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    bx lr
 entry:
   %add = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -145,18 +143,17 @@ entry:
 define float @set_rounding_fpexcept_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: set_rounding_fpexcept_strict:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov s0, r1
+; CHECK-NEXT:    vmrs r2, fpscr
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vadd.f32 s4, s2, s0
-; CHECK-NEXT:    vmrs r0, fpscr
-; CHECK-NEXT:    orr r0, r0, #12582912
-; CHECK-NEXT:    vmsr fpscr, r0
+; CHECK-NEXT:    vmov s0, r1
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
-; CHECK-NEXT:    vmrs r0, fpscr
-; CHECK-NEXT:    bic r0, r0, #12582912
+; CHECK-NEXT:    vsub.f32 s0, s0, s0
+; CHECK-NEXT:    orr r0, r2, #12582912
 ; CHECK-NEXT:    vmsr fpscr, r0
-; CHECK-NEXT:    vsub.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmrs r1, fpscr
+; CHECK-NEXT:    bic r1, r1, #12582912
+; CHECK-NEXT:    vmsr fpscr, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %add1 = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -170,18 +167,17 @@ entry:
 define float @set_rounding_round_dynamic(float %x, float %y) #0 {
 ; CHECK-LABEL: set_rounding_round_dynamic:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmrs r2, fpscr
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmrs r0, fpscr
 ; CHECK-NEXT:    vmov s0, r1
-; CHECK-NEXT:    vadd.f32 s4, s2, s0
-; CHECK-NEXT:    orr r0, r0, #12582912
-; CHECK-NEXT:    vmsr fpscr, r0
-; CHECK-NEXT:    vmrs r0, fpscr
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
-; CHECK-NEXT:    bic r0, r0, #12582912
+; CHECK-NEXT:    vsub.f32 s0, s0, s0
+; CHECK-NEXT:    orr r0, r2, #12582912
 ; CHECK-NEXT:    vmsr fpscr, r0
-; CHECK-NEXT:    vsub.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmrs r1, fpscr
+; CHECK-NEXT:    bic r1, r1, #12582912
+; CHECK-NEXT:    vmsr fpscr, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %add1 = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0

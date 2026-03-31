@@ -5,19 +5,6 @@
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+sve,+neon,+fullfp16,+fprcvt -force-streaming-compatible | FileCheck %s --check-prefixes=CHECK-SVE
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -global-isel -global-isel-abort=2 -mattr=+fprcvt,+fullfp16 2>&1  | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI: warning: Instruction selection used fallback path for fptosi_i32_f16_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptosi_i64_f16_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptosi_i64_f32_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptosi_i32_f64_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptosi_i64_f64_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptosi_i32_f32_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i32_f16_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i64_f16_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i64_f32_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i32_f64_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i64_f64_simd
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fptoui_i32_f32_simd
-
 ;
 ; FPTOI strictfp
 ;

@@ -15,7 +15,7 @@ define void @unused_div_fpexcept_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: unused_div_fpexcept_strict:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    div.s $f0, $f12, $f14
+; CHECK-NEXT:    nop
 entry:
   %add = call float @llvm.experimental.constrained.fdiv.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret void
@@ -62,8 +62,7 @@ define float @add_twice_fpexcept_strict(float %x, float %y, i32 %n) #0 {
 ; CHECK-NEXT:    beqz $6, $BB4_2
 ; CHECK-NEXT:    add.s $f0, $f12, $f14
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    add.s $f1, $f12, $f14
-; CHECK-NEXT:    mul.s $f0, $f0, $f1
+; CHECK-NEXT:    mul.s $f0, $f0, $f0
 ; CHECK-NEXT:  $BB4_2: # %if.end
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    nop

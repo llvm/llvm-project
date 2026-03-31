@@ -64,11 +64,11 @@ out:
 
 define double @branching_exceptignore(i64 %a) #0 {
 ; CHECK-LABEL: @branching_exceptignore(
-; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.uitofp.f64.i64(i64 [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
-; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[OUT:%.*]]
 ; CHECK:       if.end3:
 ; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 false) #[[ATTR0]]
@@ -94,8 +94,8 @@ out:
 
 define double @branching_exceptignore_dynround(i64 %a) #0 {
 ; CHECK-LABEL: @branching_exceptignore_dynround(
-; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 [[A:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.uitofp.f64.i64(i64 [[A:%.*]]) [ "fp.except"(metadata !"ignore") ]
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt") [ "fp.except"(metadata !"ignore") ]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
 ; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #[[ATTR0]]
@@ -124,8 +124,8 @@ out:
 
 define double @branching_maytrap(i64 %a) #0 {
 ; CHECK-LABEL: @branching_maytrap(
-; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.uitofp.f64.i64(i64 [[A:%.*]]) [ "fp.control"(metadata !"rte"), "fp.except"(metadata !"maytrap") ]
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt") [ "fp.except"(metadata !"maytrap") ]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
 ; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #[[ATTR0]]
@@ -156,8 +156,8 @@ out:
 ; TODO: This may or may not be worth the added complication and risk.
 define double @branching_ebstrict(i64 %a) #0 {
 ; CHECK-LABEL: @branching_ebstrict(
-; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.uitofp.f64.i64(i64 [[A:%.*]]) [ "fp.control"(metadata !"rte") ]
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt")
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
 ; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 [[CMP2]]) #[[ATTR0]]

@@ -1287,119 +1287,149 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-LABEL: test_fptoui_ppc_i32_ppc_fp128:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    stdu 1, -48(1)
+; PC64LE-NEXT:    stfd 28, -32(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    stfd 29, -24(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    stdu 1, -64(1)
 ; PC64LE-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
-; PC64LE-NEXT:    xxlxor 3, 3, 3
-; PC64LE-NEXT:    std 0, 64(1)
-; PC64LE-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
-; PC64LE-NEXT:    fcmpo 1, 2, 3
-; PC64LE-NEXT:    lis 3, -32768
-; PC64LE-NEXT:    fcmpo 0, 1, 0
-; PC64LE-NEXT:    crand 20, 2, 4
-; PC64LE-NEXT:    crandc 21, 0, 2
-; PC64LE-NEXT:    cror 20, 21, 20
-; PC64LE-NEXT:    isel 30, 0, 3, 20
-; PC64LE-NEXT:    bc 12, 20, .LBB31_2
-; PC64LE-NEXT:  # %bb.1: # %entry
-; PC64LE-NEXT:    fmr 3, 0
-; PC64LE-NEXT:  .LBB31_2: # %entry
 ; PC64LE-NEXT:    xxlxor 4, 4, 4
+; PC64LE-NEXT:    std 0, 80(1)
+; PC64LE-NEXT:    fmr 31, 2
+; PC64LE-NEXT:    fmr 30, 1
+; PC64LE-NEXT:    xxlxor 28, 28, 28
+; PC64LE-NEXT:    lfs 29, .LCPI31_0@toc@l(3)
+; PC64LE-NEXT:    fmr 3, 29
 ; PC64LE-NEXT:    bl __gcc_qsub
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    mffs 0
 ; PC64LE-NEXT:    mtfsb1 31
 ; PC64LE-NEXT:    mtfsb0 30
+; PC64LE-NEXT:    fcmpu 0, 31, 28
+; PC64LE-NEXT:    fcmpu 1, 30, 29
 ; PC64LE-NEXT:    fadd 1, 2, 1
 ; PC64LE-NEXT:    mtfsf 1, 0
 ; PC64LE-NEXT:    xscvdpsxws 0, 1
+; PC64LE-NEXT:    crandc 20, 6, 0
+; PC64LE-NEXT:    cror 20, 5, 20
 ; PC64LE-NEXT:    mffprwz 3, 0
-; PC64LE-NEXT:    xor 3, 3, 30
-; PC64LE-NEXT:    addi 1, 1, 48
+; PC64LE-NEXT:    addis 3, 3, -32768
+; PC64LE-NEXT:    mffs 0
+; PC64LE-NEXT:    mtfsb1 31
+; PC64LE-NEXT:    mtfsb0 30
+; PC64LE-NEXT:    fadd 1, 31, 30
+; PC64LE-NEXT:    mtfsf 1, 0
+; PC64LE-NEXT:    xscvdpsxws 0, 1
+; PC64LE-NEXT:    mffprwz 4, 0
+; PC64LE-NEXT:    isel 3, 3, 4, 20
+; PC64LE-NEXT:    addi 1, 1, 64
 ; PC64LE-NEXT:    ld 0, 16(1)
-; PC64LE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    lfd 30, -16(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    mtlr 0
+; PC64LE-NEXT:    lfd 29, -24(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    lfd 28, -32(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: test_fptoui_ppc_i32_ppc_fp128:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    stdu 1, -48(1)
+; PC64LE9-NEXT:    stfd 28, -32(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stfd 29, -24(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    stdu 1, -64(1)
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
-; PC64LE9-NEXT:    xxlxor 3, 3, 3
-; PC64LE9-NEXT:    std 0, 64(1)
-; PC64LE9-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
-; PC64LE9-NEXT:    fcmpo 1, 2, 3
-; PC64LE9-NEXT:    lis 3, -32768
-; PC64LE9-NEXT:    fcmpo 0, 1, 0
-; PC64LE9-NEXT:    crand 20, 2, 4
-; PC64LE9-NEXT:    crandc 21, 0, 2
-; PC64LE9-NEXT:    cror 20, 21, 20
-; PC64LE9-NEXT:    isel 30, 0, 3, 20
-; PC64LE9-NEXT:    bc 12, 20, .LBB31_2
-; PC64LE9-NEXT:  # %bb.1: # %entry
-; PC64LE9-NEXT:    fmr 3, 0
-; PC64LE9-NEXT:  .LBB31_2: # %entry
 ; PC64LE9-NEXT:    xxlxor 4, 4, 4
+; PC64LE9-NEXT:    std 0, 80(1)
+; PC64LE9-NEXT:    fmr 31, 2
+; PC64LE9-NEXT:    xxlxor 28, 28, 28
+; PC64LE9-NEXT:    fmr 30, 1
+; PC64LE9-NEXT:    lfs 29, .LCPI31_0@toc@l(3)
+; PC64LE9-NEXT:    fmr 3, 29
 ; PC64LE9-NEXT:    bl __gcc_qsub
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    mffs 0
 ; PC64LE9-NEXT:    mtfsb1 31
 ; PC64LE9-NEXT:    mtfsb0 30
+; PC64LE9-NEXT:    fcmpu 0, 31, 28
+; PC64LE9-NEXT:    fcmpu 1, 30, 29
 ; PC64LE9-NEXT:    fadd 1, 2, 1
 ; PC64LE9-NEXT:    mtfsf 1, 0
+; PC64LE9-NEXT:    crandc 20, 6, 0
 ; PC64LE9-NEXT:    xscvdpsxws 0, 1
+; PC64LE9-NEXT:    cror 20, 5, 20
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    xor 3, 3, 30
-; PC64LE9-NEXT:    addi 1, 1, 48
+; PC64LE9-NEXT:    addis 3, 3, -32768
+; PC64LE9-NEXT:    mffs 0
+; PC64LE9-NEXT:    mtfsb1 31
+; PC64LE9-NEXT:    mtfsb0 30
+; PC64LE9-NEXT:    fadd 1, 31, 30
+; PC64LE9-NEXT:    mtfsf 1, 0
+; PC64LE9-NEXT:    xscvdpsxws 0, 1
+; PC64LE9-NEXT:    mffprwz 4, 0
+; PC64LE9-NEXT:    isel 3, 3, 4, 20
+; PC64LE9-NEXT:    addi 1, 1, 64
 ; PC64LE9-NEXT:    ld 0, 16(1)
-; PC64LE9-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    lfd 30, -16(1) # 8-byte Folded Reload
 ; PC64LE9-NEXT:    mtlr 0
+; PC64LE9-NEXT:    lfd 29, -24(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    lfd 28, -32(1) # 8-byte Folded Reload
 ; PC64LE9-NEXT:    blr
 ;
 ; PC64-LABEL: test_fptoui_ppc_i32_ppc_fp128:
 ; PC64:       # %bb.0: # %entry
-; PC64-NEXT:    mfcr 12
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    stw 12, 8(1)
-; PC64-NEXT:    stdu 1, -128(1)
+; PC64-NEXT:    stdu 1, -160(1)
 ; PC64-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
-; PC64-NEXT:    std 0, 144(1)
-; PC64-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
+; PC64-NEXT:    std 0, 176(1)
+; PC64-NEXT:    stfd 29, 136(1) # 8-byte Folded Spill
+; PC64-NEXT:    lfs 29, .LCPI31_0@toc@l(3)
 ; PC64-NEXT:    addis 3, 2, .LCPI31_1@toc@ha
-; PC64-NEXT:    lfs 4, .LCPI31_1@toc@l(3)
-; PC64-NEXT:    fcmpo 0, 1, 0
-; PC64-NEXT:    crandc 21, 0, 2
-; PC64-NEXT:    fcmpo 1, 2, 4
-; PC64-NEXT:    crand 20, 2, 4
-; PC64-NEXT:    cror 8, 21, 20
-; PC64-NEXT:    fmr 3, 4
-; PC64-NEXT:    bc 12, 8, .LBB31_2
-; PC64-NEXT:  # %bb.1: # %entry
-; PC64-NEXT:    fmr 3, 0
-; PC64-NEXT:  .LBB31_2: # %entry
+; PC64-NEXT:    stfd 28, 128(1) # 8-byte Folded Spill
+; PC64-NEXT:    lfs 28, .LCPI31_1@toc@l(3)
+; PC64-NEXT:    fmr 3, 29
+; PC64-NEXT:    stfd 30, 144(1) # 8-byte Folded Spill
+; PC64-NEXT:    fmr 30, 1
+; PC64-NEXT:    fmr 4, 28
+; PC64-NEXT:    stfd 31, 152(1) # 8-byte Folded Spill
+; PC64-NEXT:    fmr 31, 2
 ; PC64-NEXT:    bl __gcc_qsub
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    mffs 0
 ; PC64-NEXT:    mtfsb1 31
-; PC64-NEXT:    li 3, 0
 ; PC64-NEXT:    mtfsb0 30
 ; PC64-NEXT:    fadd 1, 2, 1
 ; PC64-NEXT:    mtfsf 1, 0
 ; PC64-NEXT:    fctiwz 0, 1
 ; PC64-NEXT:    stfd 0, 120(1)
-; PC64-NEXT:    bc 12, 8, .LBB31_4
-; PC64-NEXT:  # %bb.3: # %entry
-; PC64-NEXT:    lis 3, -32768
-; PC64-NEXT:  .LBB31_4: # %entry
-; PC64-NEXT:    lwz 4, 124(1)
-; PC64-NEXT:    xor 3, 4, 3
-; PC64-NEXT:    addi 1, 1, 128
+; PC64-NEXT:    mffs 0
+; PC64-NEXT:    mtfsb1 31
+; PC64-NEXT:    mtfsb0 30
+; PC64-NEXT:    fcmpu 0, 31, 28
+; PC64-NEXT:    fcmpu 1, 30, 29
+; PC64-NEXT:    fadd 1, 31, 30
+; PC64-NEXT:    mtfsf 1, 0
+; PC64-NEXT:    crandc 20, 6, 0
+; PC64-NEXT:    cror 20, 5, 20
+; PC64-NEXT:    fctiwz 0, 1
+; PC64-NEXT:    stfd 0, 112(1)
+; PC64-NEXT:    bc 12, 20, .LBB31_2
+; PC64-NEXT:  # %bb.1: # %entry
+; PC64-NEXT:    lwz 3, 116(1)
+; PC64-NEXT:    b .LBB31_3
+; PC64-NEXT:  .LBB31_2:
+; PC64-NEXT:    lwz 3, 124(1)
+; PC64-NEXT:    addis 3, 3, -32768
+; PC64-NEXT:  .LBB31_3: # %entry
+; PC64-NEXT:    lfd 31, 152(1) # 8-byte Folded Reload
+; PC64-NEXT:    lfd 30, 144(1) # 8-byte Folded Reload
+; PC64-NEXT:    lfd 29, 136(1) # 8-byte Folded Reload
+; PC64-NEXT:    lfd 28, 128(1) # 8-byte Folded Reload
+; PC64-NEXT:    addi 1, 1, 160
 ; PC64-NEXT:    ld 0, 16(1)
-; PC64-NEXT:    lwz 12, 8(1)
 ; PC64-NEXT:    mtlr 0
-; PC64-NEXT:    mtcrf 32, 12 # cr2
 ; PC64-NEXT:    blr
 entry:
   %fpext = call i32 @llvm.experimental.constrained.fptoui.i32.ppcf128(
@@ -1414,13 +1444,11 @@ define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 
 ; PC64LE-LABEL: test_constrained_libcall_multichain:
 ; PC64LE:       # %bb.0:
 ; PC64LE-NEXT:    mflr 0
-; PC64LE-NEXT:    std 29, -48(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    std 30, -40(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    stfd 29, -24(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    std 29, -32(1) # 8-byte Folded Spill
+; PC64LE-NEXT:    std 30, -24(1) # 8-byte Folded Spill
 ; PC64LE-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; PC64LE-NEXT:    stdu 1, -80(1)
-; PC64LE-NEXT:    std 0, 96(1)
+; PC64LE-NEXT:    stdu 1, -64(1)
+; PC64LE-NEXT:    std 0, 80(1)
 ; PC64LE-NEXT:    mr 29, 3
 ; PC64LE-NEXT:    xxlxor 2, 2, 2
 ; PC64LE-NEXT:    xxlxor 4, 4, 4
@@ -1433,45 +1461,36 @@ define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 
 ; PC64LE-NEXT:    stfd 31, 0(4)
 ; PC64LE-NEXT:    bl __gcc_qadd
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    fmr 3, 1
-; PC64LE-NEXT:    fmr 4, 2
-; PC64LE-NEXT:    stfd 2, 24(30)
 ; PC64LE-NEXT:    stfd 1, 16(30)
-; PC64LE-NEXT:    fmr 30, 1
-; PC64LE-NEXT:    fmr 29, 2
-; PC64LE-NEXT:    bl __gcc_qmul
-; PC64LE-NEXT:    nop
+; PC64LE-NEXT:    stfd 1, 32(30)
 ; PC64LE-NEXT:    fmr 1, 31
+; PC64LE-NEXT:    fmr 3, 31
+; PC64LE-NEXT:    stfd 2, 24(30)
+; PC64LE-NEXT:    stfd 2, 40(30)
 ; PC64LE-NEXT:    xxlxor 2, 2, 2
-; PC64LE-NEXT:    li 5, 2
-; PC64LE-NEXT:    stfd 29, 40(30)
-; PC64LE-NEXT:    stfd 30, 32(30)
-; PC64LE-NEXT:    bl __powitf2
+; PC64LE-NEXT:    xxlxor 4, 4, 4
+; PC64LE-NEXT:    bl __gcc_qmul
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xsrsp 0, 1
 ; PC64LE-NEXT:    stfs 0, 0(29)
-; PC64LE-NEXT:    stfd 1, -16(30)
 ; PC64LE-NEXT:    stfd 2, -8(30)
-; PC64LE-NEXT:    addi 1, 1, 80
+; PC64LE-NEXT:    stfd 1, -16(30)
+; PC64LE-NEXT:    addi 1, 1, 64
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
-; PC64LE-NEXT:    lfd 30, -16(1) # 8-byte Folded Reload
-; PC64LE-NEXT:    ld 30, -40(1) # 8-byte Folded Reload
-; PC64LE-NEXT:    lfd 29, -24(1) # 8-byte Folded Reload
-; PC64LE-NEXT:    ld 29, -48(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    ld 30, -24(1) # 8-byte Folded Reload
+; PC64LE-NEXT:    ld 29, -32(1) # 8-byte Folded Reload
 ; PC64LE-NEXT:    mtlr 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: test_constrained_libcall_multichain:
 ; PC64LE9:       # %bb.0:
 ; PC64LE9-NEXT:    mflr 0
-; PC64LE9-NEXT:    std 29, -48(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    std 30, -40(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    stfd 29, -24(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    std 29, -32(1) # 8-byte Folded Spill
+; PC64LE9-NEXT:    std 30, -24(1) # 8-byte Folded Spill
 ; PC64LE9-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; PC64LE9-NEXT:    stdu 1, -80(1)
-; PC64LE9-NEXT:    std 0, 96(1)
+; PC64LE9-NEXT:    stdu 1, -64(1)
+; PC64LE9-NEXT:    std 0, 80(1)
 ; PC64LE9-NEXT:    mr 29, 3
 ; PC64LE9-NEXT:    xxlxor 2, 2, 2
 ; PC64LE9-NEXT:    mr 30, 4
@@ -1484,86 +1503,70 @@ define void @test_constrained_libcall_multichain(ptr %firstptr, ptr %result) #0 
 ; PC64LE9-NEXT:    stfd 31, 0(4)
 ; PC64LE9-NEXT:    bl __gcc_qadd
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    fmr 3, 1
-; PC64LE9-NEXT:    fmr 4, 2
-; PC64LE9-NEXT:    fmr 30, 1
-; PC64LE9-NEXT:    fmr 29, 2
 ; PC64LE9-NEXT:    stfd 2, 24(30)
 ; PC64LE9-NEXT:    stfd 1, 16(30)
-; PC64LE9-NEXT:    bl __gcc_qmul
-; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    fmr 1, 31
+; PC64LE9-NEXT:    xxlxor 4, 4, 4
+; PC64LE9-NEXT:    stfd 2, 40(30)
 ; PC64LE9-NEXT:    xxlxor 2, 2, 2
-; PC64LE9-NEXT:    li 5, 2
-; PC64LE9-NEXT:    stfd 29, 40(30)
-; PC64LE9-NEXT:    stfd 30, 32(30)
-; PC64LE9-NEXT:    bl __powitf2
+; PC64LE9-NEXT:    stfd 1, 32(30)
+; PC64LE9-NEXT:    fmr 1, 31
+; PC64LE9-NEXT:    fmr 3, 31
+; PC64LE9-NEXT:    bl __gcc_qmul
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xsrsp 0, 1
 ; PC64LE9-NEXT:    stfs 0, 0(29)
-; PC64LE9-NEXT:    stfd 1, -16(30)
 ; PC64LE9-NEXT:    stfd 2, -8(30)
-; PC64LE9-NEXT:    addi 1, 1, 80
+; PC64LE9-NEXT:    stfd 1, -16(30)
+; PC64LE9-NEXT:    addi 1, 1, 64
 ; PC64LE9-NEXT:    ld 0, 16(1)
 ; PC64LE9-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
-; PC64LE9-NEXT:    lfd 30, -16(1) # 8-byte Folded Reload
-; PC64LE9-NEXT:    ld 30, -40(1) # 8-byte Folded Reload
-; PC64LE9-NEXT:    ld 29, -48(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    ld 30, -24(1) # 8-byte Folded Reload
+; PC64LE9-NEXT:    ld 29, -32(1) # 8-byte Folded Reload
 ; PC64LE9-NEXT:    mtlr 0
-; PC64LE9-NEXT:    lfd 29, -24(1) # 8-byte Folded Reload
 ; PC64LE9-NEXT:    blr
 ;
 ; PC64-LABEL: test_constrained_libcall_multichain:
 ; PC64:       # %bb.0:
 ; PC64-NEXT:    mflr 0
-; PC64-NEXT:    stdu 1, -176(1)
-; PC64-NEXT:    std 0, 192(1)
+; PC64-NEXT:    stdu 1, -160(1)
+; PC64-NEXT:    std 0, 176(1)
 ; PC64-NEXT:    std 29, 120(1) # 8-byte Folded Spill
 ; PC64-NEXT:    mr 29, 3
 ; PC64-NEXT:    li 3, 0
-; PC64-NEXT:    stfd 31, 168(1) # 8-byte Folded Spill
+; PC64-NEXT:    stfd 31, 152(1) # 8-byte Folded Spill
 ; PC64-NEXT:    std 30, 128(1) # 8-byte Folded Spill
 ; PC64-NEXT:    mr 30, 4
 ; PC64-NEXT:    lfs 31, 0(29)
 ; PC64-NEXT:    std 3, 8(4)
 ; PC64-NEXT:    addis 3, 2, .LCPI32_0@toc@ha
-; PC64-NEXT:    stfd 30, 160(1) # 8-byte Folded Spill
+; PC64-NEXT:    stfd 30, 144(1) # 8-byte Folded Spill
 ; PC64-NEXT:    lfs 30, .LCPI32_0@toc@l(3)
 ; PC64-NEXT:    fmr 1, 31
 ; PC64-NEXT:    fmr 3, 31
-; PC64-NEXT:    stfd 28, 144(1) # 8-byte Folded Spill
+; PC64-NEXT:    stfd 31, 0(4)
 ; PC64-NEXT:    fmr 2, 30
 ; PC64-NEXT:    fmr 4, 30
-; PC64-NEXT:    stfd 29, 152(1) # 8-byte Folded Spill
-; PC64-NEXT:    stfd 31, 0(4)
 ; PC64-NEXT:    bl __gcc_qadd
 ; PC64-NEXT:    nop
-; PC64-NEXT:    fmr 3, 1
-; PC64-NEXT:    fmr 4, 2
-; PC64-NEXT:    fmr 29, 1
-; PC64-NEXT:    fmr 28, 2
 ; PC64-NEXT:    stfd 2, 24(30)
+; PC64-NEXT:    fmr 3, 31
 ; PC64-NEXT:    stfd 1, 16(30)
-; PC64-NEXT:    bl __gcc_qmul
-; PC64-NEXT:    nop
-; PC64-NEXT:    fmr 1, 31
+; PC64-NEXT:    fmr 4, 30
+; PC64-NEXT:    stfd 2, 40(30)
 ; PC64-NEXT:    fmr 2, 30
-; PC64-NEXT:    li 5, 2
-; PC64-NEXT:    stfd 28, 40(30)
-; PC64-NEXT:    stfd 29, 32(30)
-; PC64-NEXT:    bl __powitf2
+; PC64-NEXT:    stfd 1, 32(30)
+; PC64-NEXT:    fmr 1, 31
+; PC64-NEXT:    bl __gcc_qmul
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    frsp 0, 1
 ; PC64-NEXT:    stfs 0, 0(29)
 ; PC64-NEXT:    ld 29, 120(1) # 8-byte Folded Reload
-; PC64-NEXT:    stfd 1, -16(30)
 ; PC64-NEXT:    stfd 2, -8(30)
+; PC64-NEXT:    stfd 1, -16(30)
 ; PC64-NEXT:    ld 30, 128(1) # 8-byte Folded Reload
-; PC64-NEXT:    lfd 31, 168(1) # 8-byte Folded Reload
-; PC64-NEXT:    lfd 30, 160(1) # 8-byte Folded Reload
-; PC64-NEXT:    lfd 29, 152(1) # 8-byte Folded Reload
-; PC64-NEXT:    lfd 28, 144(1) # 8-byte Folded Reload
-; PC64-NEXT:    addi 1, 1, 176
+; PC64-NEXT:    lfd 31, 152(1) # 8-byte Folded Reload
+; PC64-NEXT:    lfd 30, 144(1) # 8-byte Folded Reload
+; PC64-NEXT:    addi 1, 1, 160
 ; PC64-NEXT:    ld 0, 16(1)
 ; PC64-NEXT:    mtlr 0
 ; PC64-NEXT:    blr

@@ -3235,14 +3235,10 @@ define void @PR43024_strictfp() strictfp {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    movaps %xmm0, (%rax)
+; SSE2-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    mulps %xmm1, %xmm0
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
-; SSE2-NEXT:    addps %xmm0, %xmm2
-; SSE2-NEXT:    addps %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE2-NEXT:    addps %xmm2, %xmm0
+; SSE2-NEXT:    addss %xmm1, %xmm0
+; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    movss %xmm0, (%rax)
 ; SSE2-NEXT:    retq
 ;
@@ -3250,13 +3246,10 @@ define void @PR43024_strictfp() strictfp {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; SSSE3-NEXT:    movaps %xmm0, (%rax)
+; SSSE3-NEXT:    addss %xmm0, %xmm0
 ; SSSE3-NEXT:    xorps %xmm1, %xmm1
-; SSSE3-NEXT:    mulps %xmm1, %xmm0
-; SSSE3-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSSE3-NEXT:    addps %xmm0, %xmm2
-; SSSE3-NEXT:    addps %xmm1, %xmm2
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSSE3-NEXT:    addps %xmm2, %xmm0
+; SSSE3-NEXT:    addss %xmm1, %xmm0
+; SSSE3-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-NEXT:    movss %xmm0, (%rax)
 ; SSSE3-NEXT:    retq
 ;
@@ -3264,13 +3257,10 @@ define void @PR43024_strictfp() strictfp {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; SSE41-NEXT:    movaps %xmm0, (%rax)
+; SSE41-NEXT:    addss %xmm0, %xmm0
 ; SSE41-NEXT:    xorps %xmm1, %xmm1
-; SSE41-NEXT:    mulps %xmm1, %xmm0
-; SSE41-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE41-NEXT:    addps %xmm0, %xmm2
-; SSE41-NEXT:    addps %xmm1, %xmm2
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE41-NEXT:    addps %xmm2, %xmm0
+; SSE41-NEXT:    addss %xmm1, %xmm0
+; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    movss %xmm0, (%rax)
 ; SSE41-NEXT:    retq
 ;
@@ -3278,13 +3268,10 @@ define void @PR43024_strictfp() strictfp {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; AVX-NEXT:    vmovaps %xmm0, (%rax)
+; AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vaddps %xmm2, %xmm0, %xmm2
-; AVX-NEXT:    vaddps %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%rax)
 ; AVX-NEXT:    retq
   store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16

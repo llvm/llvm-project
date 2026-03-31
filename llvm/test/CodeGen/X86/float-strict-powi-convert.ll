@@ -7,18 +7,12 @@ declare float @llvm.experimental.constrained.powi.f32(float, i32, metadata, meta
 define float @powi_f64(float %a, i32 %b) nounwind strictfp {
 ; WIN-LABEL: powi_f64:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    subq $40, %rsp
 ; WIN-NEXT:    cvtsi2ss %edx, %xmm1
-; WIN-NEXT:    callq powf
-; WIN-NEXT:    addq $40, %rsp
-; WIN-NEXT:    retq
+; WIN-NEXT:    jmp powf # TAILCALL
 ;
 ; UNIX-LABEL: powi_f64:
 ; UNIX:       # %bb.0:
-; UNIX-NEXT:    pushq %rax
-; UNIX-NEXT:    callq __powisf2@PLT
-; UNIX-NEXT:    popq %rax
-; UNIX-NEXT:    retq
+; UNIX-NEXT:    jmp __powisf2@PLT # TAILCALL
   %1 = call float @llvm.experimental.constrained.powi.f32(float %a, i32 %b, metadata !"round.tonearest", metadata !"fpexcept.ignore") strictfp
   ret float %1
 }

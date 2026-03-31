@@ -1138,6 +1138,40 @@ def int_experimental_memset_pattern
 // rounding modes and FP exception handling.
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
+  // Intrinsic versions of the basic binary FP operations, allowing operand
+  // bundles (e.g. "fp.control") to carry per-call FP environment flags such
+  // as flush-to-zero denormal mode that cannot be attached to plain IR
+  // instructions (fadd/fsub/fmul).
+  def int_fadd : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_fsub : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_fmul : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_fneg : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>]>;
+
+  // fdiv and frem: same binary pattern as fadd/fsub/fmul
+  def int_fdiv : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_frem : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                           [LLVMMatchType<0>, LLVMMatchType<0>]>;
+
+  // fptrunc/fpext: unary; result type differs from operand type
+  def int_fptrunc : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyfloat_ty]>;
+  def int_fpext   : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyfloat_ty]>;
+
+  // Integer/FP conversions: result type differs from operand type
+  def int_sitofp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty]>;
+  def int_uitofp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty]>;
+  def int_fptosi : DefaultAttrsIntrinsic<[llvm_anyint_ty],   [llvm_anyfloat_ty]>;
+  def int_fptoui : DefaultAttrsIntrinsic<[llvm_anyint_ty],   [llvm_anyfloat_ty]>;
+
+  // fcmp: produces i1 (or vector of i1); predicate passed as metadata string
+  def int_fcmp : DefaultAttrsIntrinsic<
+      [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+      [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_metadata_ty]>;
+
   def int_fma  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>,
                             LLVMMatchType<0>]>;
@@ -1211,6 +1245,17 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   // TODO: Should constrain all element counts to match
   def int_frexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty, llvm_anyint_ty], [LLVMMatchType<0>]>;
 }
+
+// fcmps: signaling FP compare — raises Invalid exception for any NaN operand
+// (not just signaling NaN, unlike non-signaling fcmp).  Uses the fp.except
+// operand bundle to control exception observability; without a bundle the
+// exception is always observable (strict behaviour).
+// Note: defined outside the IntrNoMem let-block above so that
+// IntrInaccessibleMemOnly and IntrWillReturn are not overridden.
+def int_fcmps : Intrinsic<
+    [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+    [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_metadata_ty],
+    [IntrInaccessibleMemOnly, IntrWillReturn, IntrNoCreateUndefOrPoison]>;
 
 // TODO: Move all of these into the IntrNoCreateUndefOrPoison case above.
 let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
@@ -1289,232 +1334,10 @@ def int_is_fpclass
                             [llvm_anyfloat_ty, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>]>;
 
-//===--------------- Constrained Floating Point Intrinsics ----------------===//
-//
-
-/// IntrStrictFP - The intrinsic is allowed to be used in an alternate
-/// floating point environment.
-def IntrStrictFP : IntrinsicProperty;
-
-let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
-  def int_experimental_constrained_fadd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_fsub : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_fmul : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_fdiv : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_frem : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_fma : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_fmuladd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                       [ LLVMMatchType<0>,
-                                                         LLVMMatchType<0>,
-                                                         LLVMMatchType<0>,
-                                                         llvm_metadata_ty,
-                                                         llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_fptosi : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                    [ llvm_anyfloat_ty,
-                                                      llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_fptoui : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                    [ llvm_anyfloat_ty,
-                                                      llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_sitofp : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                       [ llvm_anyint_ty,
-                                                         llvm_metadata_ty,
-                                                         llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_uitofp : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                       [ llvm_anyint_ty,
-                                                         llvm_metadata_ty,
-                                                         llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_fptrunc : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                       [ llvm_anyfloat_ty,
-                                                         llvm_metadata_ty,
-                                                         llvm_metadata_ty ]>;
-
-  def int_experimental_constrained_fpext : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                     [ llvm_anyfloat_ty,
-                                                       llvm_metadata_ty ]>;
-
-  // These intrinsics are sensitive to the rounding mode so we need constrained
-  // versions of each of them.  When strict rounding and exception control are
-  // not required the non-constrained versions of these intrinsics should be
-  // used.
-  def int_experimental_constrained_sqrt : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_powi : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_i32_ty,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_ldexp : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_anyint_ty,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_asin  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_acos  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_atan  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_atan2 : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_sin  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_cos  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_tan  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_sinh  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_cosh  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_tanh  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_pow  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_log  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_log10: DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_log2 : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_exp  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_exp2 : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_rint  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                     [ LLVMMatchType<0>,
-                                                       llvm_metadata_ty,
-                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_nearbyint : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                         [ LLVMMatchType<0>,
-                                                           llvm_metadata_ty,
-                                                           llvm_metadata_ty ]>;
-  def int_experimental_constrained_lrint : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                     [ llvm_anyfloat_ty,
-                                                       llvm_metadata_ty,
-                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_llrint : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                      [ llvm_anyfloat_ty,
-                                                        llvm_metadata_ty,
-                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_maxnum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                      [ LLVMMatchType<0>,
-                                                        LLVMMatchType<0>,
-                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_minnum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                      [ LLVMMatchType<0>,
-                                                        LLVMMatchType<0>,
-                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_maximum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                       [ LLVMMatchType<0>,
-                                                         LLVMMatchType<0>,
-                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_minimum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                       [ LLVMMatchType<0>,
-                                                         LLVMMatchType<0>,
-                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_ceil : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                    [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_floor : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                     [ LLVMMatchType<0>,
-                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_lround : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                      [ llvm_anyfloat_ty,
-                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_llround : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                       [ llvm_anyfloat_ty,
-                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                     [ LLVMMatchType<0>,
-                                                      llvm_metadata_ty ]>;
-  def int_experimental_constrained_roundeven : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                         [ LLVMMatchType<0>,
-                                                           llvm_metadata_ty ]>;
-  def int_experimental_constrained_trunc : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                     [ LLVMMatchType<0>,
-                                                       llvm_metadata_ty ]>;
-
-  // Constrained floating-point comparison (quiet and signaling variants).
-  // Third operand is the predicate represented as a metadata string.
-  def int_experimental_constrained_fcmp
-      : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
-                  [ llvm_anyfloat_ty, LLVMMatchType<0>,
-                    llvm_metadata_ty, llvm_metadata_ty ]>;
-  def int_experimental_constrained_fcmps
-      : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
-                  [ llvm_anyfloat_ty, LLVMMatchType<0>,
-                    llvm_metadata_ty, llvm_metadata_ty ]>;
-}
-// FIXME: Consider maybe adding intrinsics for sitofp, uitofp.
-
+// Constrained Floating Point Intrinsics (experimental_constrained_*) have been
+// removed. They are auto-upgraded to new FP intrinsics with fp.control /
+// fp.except operand bundles on IR load. See lib/IR/AutoUpgrade.cpp.
+// experimental_constrained_fcmps is upgraded to llvm.fcmps.
 
 //===------------------------- Expect Intrinsics --------------------------===//
 //

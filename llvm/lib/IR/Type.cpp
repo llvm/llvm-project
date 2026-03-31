@@ -107,17 +107,32 @@ bool Type::containsNonLocalTargetExtType() const {
   return containsNonLocalTargetExtType(Visited);
 }
 
-const fltSemantics &Type::getFltSemantics() const {
+const fltSemantics *Type::hasFltSemantics() const {
   switch (getTypeID()) {
-  case HalfTyID: return APFloat::IEEEhalf();
-  case BFloatTyID: return APFloat::BFloat();
-  case FloatTyID: return APFloat::IEEEsingle();
-  case DoubleTyID: return APFloat::IEEEdouble();
-  case X86_FP80TyID: return APFloat::x87DoubleExtended();
-  case FP128TyID: return APFloat::IEEEquad();
-  case PPC_FP128TyID: return APFloat::PPCDoubleDouble();
-  default: llvm_unreachable("Invalid floating type");
+  case HalfTyID:
+    return &APFloat::IEEEhalf();
+  case BFloatTyID:
+    return &APFloat::BFloat();
+  case FloatTyID:
+    return &APFloat::IEEEsingle();
+  case DoubleTyID:
+    return &APFloat::IEEEdouble();
+  case X86_FP80TyID:
+    return &APFloat::x87DoubleExtended();
+  case FP128TyID:
+    return &APFloat::IEEEquad();
+  case PPC_FP128TyID:
+    return &APFloat::PPCDoubleDouble();
+  default:
+    break;
   }
+  return nullptr;
+}
+
+const fltSemantics &Type::getFltSemantics() const {
+  if (auto *FltSem = hasFltSemantics())
+    return *FltSem;
+  llvm_unreachable("Invalid floating type");
 }
 
 bool Type::isScalableTargetExtTy() const {

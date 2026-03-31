@@ -9,22 +9,12 @@ declare <4 x i1> @llvm.experimental.constrained.fcmp.v4f32(<4 x float>, <4 x flo
 define <4 x i1> @f0() {
 ; LA32-LABEL: f0:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    movgr2fr.w $fa0, $zero
-; LA32-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
-; LA32-NEXT:    addi.w $a0, $zero, -1
-; LA32-NEXT:    movcf2gr $a1, $fcc0
-; LA32-NEXT:    maskeqz $a0, $a0, $a1
-; LA32-NEXT:    vreplgr2vr.w $vr0, $a0
+; LA32-NEXT:    vrepli.b $vr0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: f0:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    movgr2fr.w $fa0, $zero
-; LA64-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
-; LA64-NEXT:    addi.d $a0, $zero, -1
-; LA64-NEXT:    movcf2gr $a1, $fcc0
-; LA64-NEXT:    maskeqz $a0, $a0, $a1
-; LA64-NEXT:    vreplgr2vr.w $vr0, $a0
+; LA64-NEXT:    vrepli.b $vr0, 0
 ; LA64-NEXT:    ret
 entry:
   %0 = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f32(<4 x float> zeroinitializer, <4 x float> zeroinitializer, metadata !"uno", metadata !"fpexcept.strict")

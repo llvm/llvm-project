@@ -89,36 +89,15 @@ define <4 x float> @fadd_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ;
 ; NOVSX-LABEL: fadd_v4f32:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -16
-; NOVSX-NEXT:    lfs f0, -20(r1)
-; NOVSX-NEXT:    lfs f1, -36(r1)
-; NOVSX-NEXT:    fadds f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -40(r1)
-; NOVSX-NEXT:    stfs f0, -4(r1)
-; NOVSX-NEXT:    lfs f0, -24(r1)
-; NOVSX-NEXT:    fadds f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -44(r1)
-; NOVSX-NEXT:    stfs f0, -8(r1)
-; NOVSX-NEXT:    lfs f0, -28(r1)
-; NOVSX-NEXT:    fadds f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -48(r1)
-; NOVSX-NEXT:    stfs f0, -12(r1)
-; NOVSX-NEXT:    lfs f0, -32(r1)
-; NOVSX-NEXT:    fadds f0, f1, f0
-; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v2, 0, r3
+; NOVSX-NEXT:    vaddfp v2, v2, v3
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fadd_v4f32:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efsadd r6, r6, r10
-; SPE-NEXT:    efsadd r5, r5, r9
-; SPE-NEXT:    efsadd r4, r4, r8
 ; SPE-NEXT:    efsadd r3, r3, r7
+; SPE-NEXT:    efsadd r4, r4, r8
+; SPE-NEXT:    efsadd r5, r5, r9
+; SPE-NEXT:    efsadd r6, r6, r10
 ; SPE-NEXT:    blr
   %res = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(
                         <4 x float> %vf1, <4 x float> %vf2,
@@ -135,8 +114,8 @@ define <2 x double> @fadd_v2f64(<2 x double> %vf1, <2 x double> %vf2) #0 {
 ;
 ; NOVSX-LABEL: fadd_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fadd f2, f2, f4
 ; NOVSX-NEXT:    fadd f1, f1, f3
+; NOVSX-NEXT:    fadd f2, f2, f4
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fadd_v2f64:
@@ -215,36 +194,15 @@ define <4 x float> @fsub_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ;
 ; NOVSX-LABEL: fsub_v4f32:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -16
-; NOVSX-NEXT:    lfs f0, -20(r1)
-; NOVSX-NEXT:    lfs f1, -36(r1)
-; NOVSX-NEXT:    fsubs f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -40(r1)
-; NOVSX-NEXT:    stfs f0, -4(r1)
-; NOVSX-NEXT:    lfs f0, -24(r1)
-; NOVSX-NEXT:    fsubs f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -44(r1)
-; NOVSX-NEXT:    stfs f0, -8(r1)
-; NOVSX-NEXT:    lfs f0, -28(r1)
-; NOVSX-NEXT:    fsubs f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -48(r1)
-; NOVSX-NEXT:    stfs f0, -12(r1)
-; NOVSX-NEXT:    lfs f0, -32(r1)
-; NOVSX-NEXT:    fsubs f0, f1, f0
-; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v2, 0, r3
+; NOVSX-NEXT:    vsubfp v2, v2, v3
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fsub_v4f32:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efssub r6, r6, r10
-; SPE-NEXT:    efssub r5, r5, r9
-; SPE-NEXT:    efssub r4, r4, r8
 ; SPE-NEXT:    efssub r3, r3, r7
+; SPE-NEXT:    efssub r4, r4, r8
+; SPE-NEXT:    efssub r5, r5, r9
+; SPE-NEXT:    efssub r6, r6, r10
 ; SPE-NEXT:    blr
   %res = call <4 x float> @llvm.experimental.constrained.fsub.v4f32(
                         <4 x float> %vf1, <4 x float> %vf2,
@@ -261,8 +219,8 @@ define <2 x double> @fsub_v2f64(<2 x double> %vf1, <2 x double> %vf2) #0 {
 ;
 ; NOVSX-LABEL: fsub_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fsub f2, f2, f4
 ; NOVSX-NEXT:    fsub f1, f1, f3
+; NOVSX-NEXT:    fsub f2, f2, f4
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fsub_v2f64:
@@ -341,36 +299,17 @@ define <4 x float> @fmul_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ;
 ; NOVSX-LABEL: fmul_v4f32:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -16
-; NOVSX-NEXT:    lfs f0, -20(r1)
-; NOVSX-NEXT:    lfs f1, -36(r1)
-; NOVSX-NEXT:    fmuls f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -40(r1)
-; NOVSX-NEXT:    stfs f0, -4(r1)
-; NOVSX-NEXT:    lfs f0, -24(r1)
-; NOVSX-NEXT:    fmuls f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -44(r1)
-; NOVSX-NEXT:    stfs f0, -8(r1)
-; NOVSX-NEXT:    lfs f0, -28(r1)
-; NOVSX-NEXT:    fmuls f0, f1, f0
-; NOVSX-NEXT:    lfs f1, -48(r1)
-; NOVSX-NEXT:    stfs f0, -12(r1)
-; NOVSX-NEXT:    lfs f0, -32(r1)
-; NOVSX-NEXT:    fmuls f0, f1, f0
-; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v2, 0, r3
+; NOVSX-NEXT:    vspltisw v4, -1
+; NOVSX-NEXT:    vslw v4, v4, v4
+; NOVSX-NEXT:    vmaddfp v2, v2, v3, v4
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fmul_v4f32:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efsmul r6, r6, r10
-; SPE-NEXT:    efsmul r5, r5, r9
-; SPE-NEXT:    efsmul r4, r4, r8
 ; SPE-NEXT:    efsmul r3, r3, r7
+; SPE-NEXT:    efsmul r4, r4, r8
+; SPE-NEXT:    efsmul r5, r5, r9
+; SPE-NEXT:    efsmul r6, r6, r10
 ; SPE-NEXT:    blr
   %res = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(
                         <4 x float> %vf1, <4 x float> %vf2,
@@ -387,8 +326,8 @@ define <2 x double> @fmul_v2f64(<2 x double> %vf1, <2 x double> %vf2) #0 {
 ;
 ; NOVSX-LABEL: fmul_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fmul f2, f2, f4
 ; NOVSX-NEXT:    fmul f1, f1, f3
+; NOVSX-NEXT:    fmul f2, f2, f4
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fmul_v2f64:
@@ -493,10 +432,10 @@ define <4 x float> @fdiv_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ;
 ; SPE-LABEL: fdiv_v4f32:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efsdiv r6, r6, r10
-; SPE-NEXT:    efsdiv r5, r5, r9
-; SPE-NEXT:    efsdiv r4, r4, r8
 ; SPE-NEXT:    efsdiv r3, r3, r7
+; SPE-NEXT:    efsdiv r4, r4, r8
+; SPE-NEXT:    efsdiv r5, r5, r9
+; SPE-NEXT:    efsdiv r6, r6, r10
 ; SPE-NEXT:    blr
   %res = call <4 x float> @llvm.experimental.constrained.fdiv.v4f32(
                         <4 x float> %vf1, <4 x float> %vf2,
@@ -513,8 +452,8 @@ define <2 x double> @fdiv_v2f64(<2 x double> %vf1, <2 x double> %vf2) #0 {
 ;
 ; NOVSX-LABEL: fdiv_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fdiv f2, f2, f4
 ; NOVSX-NEXT:    fdiv f1, f1, f3
+; NOVSX-NEXT:    fdiv f2, f2, f4
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fdiv_v2f64:
@@ -648,34 +587,7 @@ define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ;
 ; NOVSX-LABEL: fmadd_v4f32:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v4, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -64
-; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -16
-; NOVSX-NEXT:    lfs f0, -20(r1)
-; NOVSX-NEXT:    lfs f1, -36(r1)
-; NOVSX-NEXT:    lfs f2, -52(r1)
-; NOVSX-NEXT:    fmadds f0, f2, f1, f0
-; NOVSX-NEXT:    lfs f1, -40(r1)
-; NOVSX-NEXT:    lfs f2, -56(r1)
-; NOVSX-NEXT:    stfs f0, -4(r1)
-; NOVSX-NEXT:    lfs f0, -24(r1)
-; NOVSX-NEXT:    fmadds f0, f2, f1, f0
-; NOVSX-NEXT:    lfs f1, -44(r1)
-; NOVSX-NEXT:    lfs f2, -60(r1)
-; NOVSX-NEXT:    stfs f0, -8(r1)
-; NOVSX-NEXT:    lfs f0, -28(r1)
-; NOVSX-NEXT:    fmadds f0, f2, f1, f0
-; NOVSX-NEXT:    lfs f1, -48(r1)
-; NOVSX-NEXT:    lfs f2, -64(r1)
-; NOVSX-NEXT:    stfs f0, -12(r1)
-; NOVSX-NEXT:    lfs f0, -32(r1)
-; NOVSX-NEXT:    fmadds f0, f2, f1, f0
-; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v2, 0, r3
+; NOVSX-NEXT:    vmaddfp v2, v2, v3, v4
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fmadd_v4f32:
@@ -695,47 +607,47 @@ define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; SPE-NEXT:    .cfi_offset r28, -16
 ; SPE-NEXT:    .cfi_offset r29, -12
 ; SPE-NEXT:    .cfi_offset r30, -8
-; SPE-NEXT:    stw r27, 44(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r27, r5
-; SPE-NEXT:    lwz r5, 84(r1)
-; SPE-NEXT:    stw r25, 36(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r25, r3
 ; SPE-NEXT:    stw r26, 40(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r26, r4
-; SPE-NEXT:    mr r3, r6
-; SPE-NEXT:    mr r4, r10
+; SPE-NEXT:    mr r26, r5
+; SPE-NEXT:    lwz r5, 72(r1)
+; SPE-NEXT:    stw r25, 36(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r25, r4
+; SPE-NEXT:    mr r4, r7
 ; SPE-NEXT:    stw r21, 20(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    stw r22, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    stw r23, 28(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    stw r24, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r27, 44(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r6
 ; SPE-NEXT:    stw r28, 48(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r28, r7
+; SPE-NEXT:    mr r28, r8
 ; SPE-NEXT:    stw r29, 52(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r29, r8
+; SPE-NEXT:    mr r29, r9
 ; SPE-NEXT:    stw r30, 56(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r30, r9
-; SPE-NEXT:    lwz r24, 72(r1)
-; SPE-NEXT:    lwz r23, 76(r1)
-; SPE-NEXT:    lwz r22, 80(r1)
+; SPE-NEXT:    mr r30, r10
+; SPE-NEXT:    lwz r24, 84(r1)
+; SPE-NEXT:    lwz r23, 80(r1)
+; SPE-NEXT:    lwz r22, 76(r1)
 ; SPE-NEXT:    bl fmaf
 ; SPE-NEXT:    mr r21, r3
-; SPE-NEXT:    mr r3, r27
-; SPE-NEXT:    mr r4, r30
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    mr r5, r22
 ; SPE-NEXT:    bl fmaf
-; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r28, r3
 ; SPE-NEXT:    mr r3, r26
 ; SPE-NEXT:    mr r4, r29
 ; SPE-NEXT:    mr r5, r23
 ; SPE-NEXT:    bl fmaf
 ; SPE-NEXT:    mr r29, r3
-; SPE-NEXT:    mr r3, r25
-; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r30
 ; SPE-NEXT:    mr r5, r24
 ; SPE-NEXT:    bl fmaf
-; SPE-NEXT:    mr r4, r29
-; SPE-NEXT:    mr r5, r30
-; SPE-NEXT:    mr r6, r21
+; SPE-NEXT:    mr r6, r3
+; SPE-NEXT:    mr r3, r21
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r29
 ; SPE-NEXT:    lwz r30, 56(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r29, 52(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r28, 48(r1) # 4-byte Folded Reload
@@ -766,8 +678,8 @@ define <2 x double> @fmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ;
 ; NOVSX-LABEL: fmadd_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fmadd f2, f2, f4, f6
 ; NOVSX-NEXT:    fmadd f1, f1, f3, f5
+; NOVSX-NEXT:    fmadd f2, f2, f4, f6
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fmadd_v2f64:
@@ -911,36 +823,9 @@ define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; NOVSX-LABEL: fmsub_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    vspltisb v5, -1
-; NOVSX-NEXT:    addi r3, r1, -48
 ; NOVSX-NEXT:    vslw v5, v5, v5
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -64
 ; NOVSX-NEXT:    vxor v4, v4, v5
-; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v4, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -16
-; NOVSX-NEXT:    lfs f0, -36(r1)
-; NOVSX-NEXT:    lfs f1, -52(r1)
-; NOVSX-NEXT:    lfs f2, -20(r1)
-; NOVSX-NEXT:    fmadds f0, f1, f0, f2
-; NOVSX-NEXT:    lfs f1, -56(r1)
-; NOVSX-NEXT:    lfs f2, -24(r1)
-; NOVSX-NEXT:    stfs f0, -4(r1)
-; NOVSX-NEXT:    lfs f0, -40(r1)
-; NOVSX-NEXT:    fmadds f0, f1, f0, f2
-; NOVSX-NEXT:    lfs f1, -60(r1)
-; NOVSX-NEXT:    lfs f2, -28(r1)
-; NOVSX-NEXT:    stfs f0, -8(r1)
-; NOVSX-NEXT:    lfs f0, -44(r1)
-; NOVSX-NEXT:    fmadds f0, f1, f0, f2
-; NOVSX-NEXT:    lfs f1, -64(r1)
-; NOVSX-NEXT:    lfs f2, -32(r1)
-; NOVSX-NEXT:    stfs f0, -12(r1)
-; NOVSX-NEXT:    lfs f0, -48(r1)
-; NOVSX-NEXT:    fmadds f0, f1, f0, f2
-; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v2, 0, r3
+; NOVSX-NEXT:    vmaddfp v2, v2, v3, v4
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fmsub_v4f32:
@@ -961,50 +846,50 @@ define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; SPE-NEXT:    .cfi_offset r29, -12
 ; SPE-NEXT:    .cfi_offset r30, -8
 ; SPE-NEXT:    stw r25, 36(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r25, r3
+; SPE-NEXT:    mr r25, r4
 ; SPE-NEXT:    stw r26, 40(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r26, r4
-; SPE-NEXT:    stw r27, 44(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    mr r26, r5
 ; SPE-NEXT:    stw r28, 48(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r28, r7
-; SPE-NEXT:    lwz r3, 80(r1)
-; SPE-NEXT:    lwz r4, 72(r1)
-; SPE-NEXT:    lwz r5, 76(r1)
-; SPE-NEXT:    lwz r7, 84(r1)
+; SPE-NEXT:    mr r28, r8
+; SPE-NEXT:    lwz r4, 76(r1)
+; SPE-NEXT:    lwz r5, 84(r1)
+; SPE-NEXT:    lwz r8, 72(r1)
+; SPE-NEXT:    stw r27, 44(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r6
+; SPE-NEXT:    lwz r6, 80(r1)
 ; SPE-NEXT:    stw r22, 24(r1) # 4-byte Folded Spill
-; SPE-NEXT:    efsneg r22, r3
-; SPE-NEXT:    stw r23, 28(r1) # 4-byte Folded Spill
-; SPE-NEXT:    efsneg r23, r5
+; SPE-NEXT:    efsneg r22, r4
 ; SPE-NEXT:    stw r24, 32(r1) # 4-byte Folded Spill
-; SPE-NEXT:    efsneg r24, r4
-; SPE-NEXT:    efsneg r5, r7
-; SPE-NEXT:    mr r3, r6
-; SPE-NEXT:    mr r4, r10
+; SPE-NEXT:    efsneg r24, r5
+; SPE-NEXT:    efsneg r5, r8
+; SPE-NEXT:    mr r4, r7
 ; SPE-NEXT:    stw r21, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r23, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    efsneg r23, r6
 ; SPE-NEXT:    stw r29, 52(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r29, r8
+; SPE-NEXT:    mr r29, r9
 ; SPE-NEXT:    stw r30, 56(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r30, r9
+; SPE-NEXT:    mr r30, r10
 ; SPE-NEXT:    bl fmaf
 ; SPE-NEXT:    mr r21, r3
-; SPE-NEXT:    mr r3, r27
-; SPE-NEXT:    mr r4, r30
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
 ; SPE-NEXT:    mr r5, r22
 ; SPE-NEXT:    bl fmaf
-; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r28, r3
 ; SPE-NEXT:    mr r3, r26
 ; SPE-NEXT:    mr r4, r29
 ; SPE-NEXT:    mr r5, r23
 ; SPE-NEXT:    bl fmaf
 ; SPE-NEXT:    mr r29, r3
-; SPE-NEXT:    mr r3, r25
-; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r30
 ; SPE-NEXT:    mr r5, r24
 ; SPE-NEXT:    bl fmaf
-; SPE-NEXT:    mr r4, r29
-; SPE-NEXT:    mr r5, r30
-; SPE-NEXT:    mr r6, r21
+; SPE-NEXT:    mr r6, r3
+; SPE-NEXT:    mr r3, r21
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r29
 ; SPE-NEXT:    lwz r30, 56(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r29, 52(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r28, 48(r1) # 4-byte Folded Reload
@@ -1036,8 +921,8 @@ define <2 x double> @fmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ;
 ; NOVSX-LABEL: fmsub_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fmsub f2, f2, f4, f6
 ; NOVSX-NEXT:    fmsub f1, f1, f3, f5
+; NOVSX-NEXT:    fmsub f2, f2, f4, f6
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fmsub_v2f64:
@@ -1177,42 +1062,15 @@ define double @fnmadd_f64(double %f0, double %f1, double %f2) #0 {
 define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> %vf2) #0 {
 ; CHECK-LABEL: fnmadd_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvmaddasp v4, v2, v3
-; CHECK-NEXT:    xvnegsp v2, v4
+; CHECK-NEXT:    xvnmaddasp v4, v2, v3
+; CHECK-NEXT:    vmr v2, v4
 ; CHECK-NEXT:    blr
 ;
 ; NOVSX-LABEL: fnmadd_v4f32:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    addi r3, r1, -32
+; NOVSX-NEXT:    vmaddfp v2, v2, v3, v4
 ; NOVSX-NEXT:    vspltisb v5, -1
-; NOVSX-NEXT:    stvx v4, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -64
 ; NOVSX-NEXT:    vslw v3, v5, v5
-; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -16
-; NOVSX-NEXT:    lfs f0, -20(r1)
-; NOVSX-NEXT:    lfs f1, -36(r1)
-; NOVSX-NEXT:    lfs f2, -52(r1)
-; NOVSX-NEXT:    fmadds f0, f2, f1, f0
-; NOVSX-NEXT:    lfs f1, -40(r1)
-; NOVSX-NEXT:    lfs f2, -56(r1)
-; NOVSX-NEXT:    stfs f0, -4(r1)
-; NOVSX-NEXT:    lfs f0, -24(r1)
-; NOVSX-NEXT:    fmadds f0, f2, f1, f0
-; NOVSX-NEXT:    lfs f1, -44(r1)
-; NOVSX-NEXT:    lfs f2, -60(r1)
-; NOVSX-NEXT:    stfs f0, -8(r1)
-; NOVSX-NEXT:    lfs f0, -28(r1)
-; NOVSX-NEXT:    fmadds f0, f2, f1, f0
-; NOVSX-NEXT:    lfs f1, -48(r1)
-; NOVSX-NEXT:    lfs f2, -64(r1)
-; NOVSX-NEXT:    stfs f0, -12(r1)
-; NOVSX-NEXT:    lfs f0, -32(r1)
-; NOVSX-NEXT:    fmadds f0, f2, f1, f0
-; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v2, 0, r3
 ; NOVSX-NEXT:    vxor v2, v2, v3
 ; NOVSX-NEXT:    blr
 ;
@@ -1306,8 +1164,8 @@ define <2 x double> @fnmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ;
 ; NOVSX-LABEL: fnmadd_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fnmadd f2, f2, f4, f6
 ; NOVSX-NEXT:    fnmadd f1, f1, f3, f5
+; NOVSX-NEXT:    fnmadd f2, f2, f4, f6
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fnmadd_v2f64:
@@ -1457,38 +1315,7 @@ define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ;
 ; NOVSX-LABEL: fnmsub_v4f32:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    vspltisb v5, -1
-; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    vslw v5, v5, v5
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -64
-; NOVSX-NEXT:    vxor v4, v4, v5
-; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v4, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -16
-; NOVSX-NEXT:    lfs f0, -36(r1)
-; NOVSX-NEXT:    lfs f1, -52(r1)
-; NOVSX-NEXT:    lfs f2, -20(r1)
-; NOVSX-NEXT:    fmadds f0, f1, f0, f2
-; NOVSX-NEXT:    lfs f1, -56(r1)
-; NOVSX-NEXT:    lfs f2, -24(r1)
-; NOVSX-NEXT:    stfs f0, -4(r1)
-; NOVSX-NEXT:    lfs f0, -40(r1)
-; NOVSX-NEXT:    fmadds f0, f1, f0, f2
-; NOVSX-NEXT:    lfs f1, -60(r1)
-; NOVSX-NEXT:    lfs f2, -28(r1)
-; NOVSX-NEXT:    stfs f0, -8(r1)
-; NOVSX-NEXT:    lfs f0, -44(r1)
-; NOVSX-NEXT:    fmadds f0, f1, f0, f2
-; NOVSX-NEXT:    lfs f1, -64(r1)
-; NOVSX-NEXT:    lfs f2, -32(r1)
-; NOVSX-NEXT:    stfs f0, -12(r1)
-; NOVSX-NEXT:    lfs f0, -48(r1)
-; NOVSX-NEXT:    fmadds f0, f1, f0, f2
-; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v2, 0, r3
-; NOVSX-NEXT:    vxor v2, v2, v5
+; NOVSX-NEXT:    vnmsubfp v2, v2, v3, v4
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fnmsub_v4f32:
@@ -1586,8 +1413,8 @@ define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ;
 ; NOVSX-LABEL: fnmsub_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fnmsub f2, f2, f4, f6
 ; NOVSX-NEXT:    fnmsub f1, f1, f3, f5
+; NOVSX-NEXT:    fnmsub f2, f2, f4, f6
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fnmsub_v2f64:
@@ -1754,27 +1581,27 @@ define <4 x float> @fsqrt_v4f32(<4 x float> %vf1) #0 {
 ; SPE-NEXT:    .cfi_offset r28, -16
 ; SPE-NEXT:    .cfi_offset r29, -12
 ; SPE-NEXT:    .cfi_offset r30, -8
-; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r28, r3
-; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    stw r27, 12(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r4
 ; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    mr r29, r5
 ; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
-; SPE-NEXT:    mr r30, r5
+; SPE-NEXT:    mr r30, r6
 ; SPE-NEXT:    bl sqrtf
 ; SPE-NEXT:    mr r27, r3
-; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    mr r3, r28
 ; SPE-NEXT:    bl sqrtf
-; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r28, r3
 ; SPE-NEXT:    mr r3, r29
 ; SPE-NEXT:    bl sqrtf
 ; SPE-NEXT:    mr r29, r3
-; SPE-NEXT:    mr r3, r28
+; SPE-NEXT:    mr r3, r30
 ; SPE-NEXT:    bl sqrtf
-; SPE-NEXT:    mr r4, r29
-; SPE-NEXT:    mr r5, r30
-; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    mr r6, r3
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r29
 ; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    lwz r28, 16(r1) # 4-byte Folded Reload
@@ -1798,8 +1625,8 @@ define <2 x double> @fsqrt_v2f64(<2 x double> %vf1) #0 {
 ;
 ; NOVSX-LABEL: fsqrt_v2f64:
 ; NOVSX:       # %bb.0:
-; NOVSX-NEXT:    fsqrt f2, f2
 ; NOVSX-NEXT:    fsqrt f1, f1
+; NOVSX-NEXT:    fsqrt f2, f2
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fsqrt_v2f64:

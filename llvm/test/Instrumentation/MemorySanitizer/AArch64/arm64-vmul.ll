@@ -18,7 +18,7 @@ define <8 x i16> @smull8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[A]], align 8
@@ -29,7 +29,7 @@ define <8 x i16> @smull8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[B]], align 8
@@ -59,7 +59,7 @@ define <4 x i32> @smull4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -70,7 +70,7 @@ define <4 x i32> @smull4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -100,7 +100,7 @@ define <2 x i64> @smull2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -111,7 +111,7 @@ define <2 x i64> @smull2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -145,7 +145,7 @@ define <8 x i16> @umull8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[A]], align 8
@@ -156,7 +156,7 @@ define <8 x i16> @umull8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[B]], align 8
@@ -186,7 +186,7 @@ define <4 x i32> @umull4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -197,7 +197,7 @@ define <4 x i32> @umull4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -227,7 +227,7 @@ define <2 x i64> @umull2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -238,7 +238,7 @@ define <2 x i64> @umull2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -272,7 +272,7 @@ define <4 x i32> @sqdmull4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -283,7 +283,7 @@ define <4 x i32> @sqdmull4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -298,7 +298,7 @@ define <4 x i32> @sqdmull4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP3]], [[_MSCMP4]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB15:.*]], label %[[BB16:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB15]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -320,7 +320,7 @@ define <2 x i64> @sqdmull2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -331,7 +331,7 @@ define <2 x i64> @sqdmull2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -346,7 +346,7 @@ define <2 x i64> @sqdmull2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP3]], [[_MSCMP4]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB15:.*]], label %[[BB16:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB15]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -368,7 +368,7 @@ define <4 x i32> @sqdmull2_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load <8 x i16>, ptr [[A]], align 16
@@ -379,7 +379,7 @@ define <4 x i32> @sqdmull2_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load <8 x i16>, ptr [[B]], align 16
@@ -398,7 +398,7 @@ define <4 x i32> @sqdmull2_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB15:.*]], label %[[BB16:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB15]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -422,7 +422,7 @@ define <2 x i64> @sqdmull2_2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i32>, ptr [[A]], align 16
@@ -433,7 +433,7 @@ define <2 x i64> @sqdmull2_2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load <4 x i32>, ptr [[B]], align 16
@@ -452,7 +452,7 @@ define <2 x i64> @sqdmull2_2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB15:.*]], label %[[BB16:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB15]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -480,7 +480,7 @@ define <8 x i16> @pmull8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[A]], align 8
@@ -491,7 +491,7 @@ define <8 x i16> @pmull8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[B]], align 8
@@ -523,7 +523,7 @@ define <4 x i16> @sqdmulh_4h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -534,7 +534,7 @@ define <4 x i16> @sqdmulh_4h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -562,7 +562,7 @@ define <8 x i16> @sqdmulh_8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[A]], align 16
@@ -573,7 +573,7 @@ define <8 x i16> @sqdmulh_8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[B]], align 16
@@ -601,7 +601,7 @@ define <2 x i32> @sqdmulh_2s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -612,7 +612,7 @@ define <2 x i32> @sqdmulh_2s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -640,7 +640,7 @@ define <4 x i32> @sqdmulh_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[A]], align 16
@@ -651,7 +651,7 @@ define <4 x i32> @sqdmulh_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B]], align 16
@@ -679,7 +679,7 @@ define i32 @sqdmulh_1s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
@@ -690,7 +690,7 @@ define i32 @sqdmulh_1s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[B]], align 4
@@ -724,7 +724,7 @@ define <4 x i16> @sqrdmulh_4h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -735,7 +735,7 @@ define <4 x i16> @sqrdmulh_4h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -763,7 +763,7 @@ define <8 x i16> @sqrdmulh_8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[A]], align 16
@@ -774,7 +774,7 @@ define <8 x i16> @sqrdmulh_8h(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[B]], align 16
@@ -802,7 +802,7 @@ define <2 x i32> @sqrdmulh_2s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -813,7 +813,7 @@ define <2 x i32> @sqrdmulh_2s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -841,7 +841,7 @@ define <4 x i32> @sqrdmulh_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[A]], align 16
@@ -852,7 +852,7 @@ define <4 x i32> @sqrdmulh_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B]], align 16
@@ -880,7 +880,7 @@ define i32 @sqrdmulh_1s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
@@ -891,7 +891,7 @@ define i32 @sqrdmulh_1s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[B]], align 4
@@ -925,7 +925,7 @@ define <2 x float> @fmulx_2s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A]], align 8
@@ -936,7 +936,7 @@ define <2 x float> @fmulx_2s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[B]], align 8
@@ -965,7 +965,7 @@ define <4 x float> @fmulx_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 16
@@ -976,7 +976,7 @@ define <4 x float> @fmulx_4s(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 16
@@ -1005,7 +1005,7 @@ define <2 x double> @fmulx_2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 16
@@ -1016,7 +1016,7 @@ define <2 x double> @fmulx_2d(ptr %A, ptr %B) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B]], align 16
@@ -1050,7 +1050,7 @@ define <4 x i32> @smlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -1061,7 +1061,7 @@ define <4 x i32> @smlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -1072,7 +1072,7 @@ define <4 x i32> @smlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C]], align 16
@@ -1107,7 +1107,7 @@ define <2 x i64> @smlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -1118,7 +1118,7 @@ define <2 x i64> @smlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -1129,7 +1129,7 @@ define <2 x i64> @smlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[C]], align 16
@@ -1214,7 +1214,7 @@ define <4 x i32> @smlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -1225,7 +1225,7 @@ define <4 x i32> @smlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -1236,7 +1236,7 @@ define <4 x i32> @smlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C]], align 16
@@ -1271,7 +1271,7 @@ define <2 x i64> @smlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -1282,7 +1282,7 @@ define <2 x i64> @smlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -1293,7 +1293,7 @@ define <2 x i64> @smlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[C]], align 16
@@ -1383,7 +1383,7 @@ define <4 x i32> @sqdmlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -1394,7 +1394,7 @@ define <4 x i32> @sqdmlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -1405,7 +1405,7 @@ define <4 x i32> @sqdmlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP4]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C]], align 16
@@ -1420,7 +1420,7 @@ define <4 x i32> @sqdmlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP5]], [[_MSCMP6]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB21:.*]], label %[[BB22:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB21]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -1447,7 +1447,7 @@ define <2 x i64> @sqdmlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -1458,7 +1458,7 @@ define <2 x i64> @sqdmlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -1469,7 +1469,7 @@ define <2 x i64> @sqdmlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP4]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[C]], align 16
@@ -1484,7 +1484,7 @@ define <2 x i64> @sqdmlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP5]], [[_MSCMP6]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB21:.*]], label %[[BB22:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB21]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -1511,7 +1511,7 @@ define <4 x i32> @sqdmlal2_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load <8 x i16>, ptr [[A]], align 16
@@ -1522,7 +1522,7 @@ define <4 x i32> @sqdmlal2_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load <8 x i16>, ptr [[B]], align 16
@@ -1533,7 +1533,7 @@ define <4 x i32> @sqdmlal2_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C]], align 16
@@ -1552,7 +1552,7 @@ define <4 x i32> @sqdmlal2_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP7]], [[_MSCMP8]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB21:.*]], label %[[BB22:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB21]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -1581,7 +1581,7 @@ define <2 x i64> @sqdmlal2_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i32>, ptr [[A]], align 16
@@ -1592,7 +1592,7 @@ define <2 x i64> @sqdmlal2_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load <4 x i32>, ptr [[B]], align 16
@@ -1603,7 +1603,7 @@ define <2 x i64> @sqdmlal2_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[C]], align 16
@@ -1622,7 +1622,7 @@ define <2 x i64> @sqdmlal2_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP7]], [[_MSCMP8]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB21:.*]], label %[[BB22:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB21]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -1651,7 +1651,7 @@ define <4 x i32> @sqdmlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -1662,7 +1662,7 @@ define <4 x i32> @sqdmlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -1673,7 +1673,7 @@ define <4 x i32> @sqdmlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP4]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C]], align 16
@@ -1688,7 +1688,7 @@ define <4 x i32> @sqdmlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP5]], [[_MSCMP6]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB21:.*]], label %[[BB22:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB21]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -1715,7 +1715,7 @@ define <2 x i64> @sqdmlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -1726,7 +1726,7 @@ define <2 x i64> @sqdmlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -1737,7 +1737,7 @@ define <2 x i64> @sqdmlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP4]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[C]], align 16
@@ -1752,7 +1752,7 @@ define <2 x i64> @sqdmlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP5]], [[_MSCMP6]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB21:.*]], label %[[BB22:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB21]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -1779,7 +1779,7 @@ define <4 x i32> @sqdmlsl2_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load <8 x i16>, ptr [[A]], align 16
@@ -1790,7 +1790,7 @@ define <4 x i32> @sqdmlsl2_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load <8 x i16>, ptr [[B]], align 16
@@ -1801,7 +1801,7 @@ define <4 x i32> @sqdmlsl2_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C]], align 16
@@ -1820,7 +1820,7 @@ define <4 x i32> @sqdmlsl2_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP7]], [[_MSCMP8]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB21:.*]], label %[[BB22:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB21]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -1849,7 +1849,7 @@ define <2 x i64> @sqdmlsl2_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i32>, ptr [[A]], align 16
@@ -1860,7 +1860,7 @@ define <2 x i64> @sqdmlsl2_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load <4 x i32>, ptr [[B]], align 16
@@ -1871,7 +1871,7 @@ define <2 x i64> @sqdmlsl2_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[C]], align 16
@@ -1890,7 +1890,7 @@ define <2 x i64> @sqdmlsl2_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP7]], [[_MSCMP8]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB21:.*]], label %[[BB22:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB21]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -1919,7 +1919,7 @@ define <4 x i32> @umlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -1930,7 +1930,7 @@ define <4 x i32> @umlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -1941,7 +1941,7 @@ define <4 x i32> @umlal4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C]], align 16
@@ -1976,7 +1976,7 @@ define <2 x i64> @umlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -1987,7 +1987,7 @@ define <2 x i64> @umlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -1998,7 +1998,7 @@ define <2 x i64> @umlal2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[C]], align 16
@@ -2083,7 +2083,7 @@ define <4 x i32> @umlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 8
@@ -2094,7 +2094,7 @@ define <4 x i32> @umlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[B]], align 8
@@ -2105,7 +2105,7 @@ define <4 x i32> @umlsl4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C]], align 16
@@ -2140,7 +2140,7 @@ define <2 x i64> @umlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 8
@@ -2151,7 +2151,7 @@ define <2 x i64> @umlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 8
@@ -2162,7 +2162,7 @@ define <2 x i64> @umlsl2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[C]], align 16
@@ -2247,7 +2247,7 @@ define <2 x float> @fmla_2s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A]], align 8
@@ -2258,7 +2258,7 @@ define <2 x float> @fmla_2s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP4]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[B]], align 8
@@ -2269,7 +2269,7 @@ define <2 x float> @fmla_2s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[C]], align 8
@@ -2300,7 +2300,7 @@ define <4 x float> @fmla_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 16
@@ -2311,7 +2311,7 @@ define <4 x float> @fmla_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP4]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 16
@@ -2322,7 +2322,7 @@ define <4 x float> @fmla_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[C]], align 16
@@ -2353,7 +2353,7 @@ define <2 x double> @fmla_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 16
@@ -2364,7 +2364,7 @@ define <2 x double> @fmla_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP4]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B]], align 16
@@ -2375,7 +2375,7 @@ define <2 x double> @fmla_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[C]], align 16
@@ -2410,7 +2410,7 @@ define <2 x float> @fmls_2s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A]], align 8
@@ -2421,7 +2421,7 @@ define <2 x float> @fmls_2s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[B]], align 8
@@ -2432,7 +2432,7 @@ define <2 x float> @fmls_2s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[C]], align 8
@@ -2466,7 +2466,7 @@ define <4 x float> @fmls_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 16
@@ -2477,7 +2477,7 @@ define <4 x float> @fmls_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 16
@@ -2488,7 +2488,7 @@ define <4 x float> @fmls_4s(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[C]], align 16
@@ -2522,7 +2522,7 @@ define <2 x double> @fmls_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 16
@@ -2533,7 +2533,7 @@ define <2 x double> @fmls_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B]], align 16
@@ -2544,7 +2544,7 @@ define <2 x double> @fmls_2d(ptr %A, ptr %B, ptr %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[C]], align 16
@@ -2578,7 +2578,7 @@ define <2 x float> @fmls_commuted_neg_2s(ptr %A, ptr %B, ptr %C) nounwind saniti
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A]], align 8
@@ -2589,7 +2589,7 @@ define <2 x float> @fmls_commuted_neg_2s(ptr %A, ptr %B, ptr %C) nounwind saniti
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[B]], align 8
@@ -2600,7 +2600,7 @@ define <2 x float> @fmls_commuted_neg_2s(ptr %A, ptr %B, ptr %C) nounwind saniti
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[C]], align 8
@@ -2634,7 +2634,7 @@ define <4 x float> @fmls_commuted_neg_4s(ptr %A, ptr %B, ptr %C) nounwind saniti
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 16
@@ -2645,7 +2645,7 @@ define <4 x float> @fmls_commuted_neg_4s(ptr %A, ptr %B, ptr %C) nounwind saniti
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 16
@@ -2656,7 +2656,7 @@ define <4 x float> @fmls_commuted_neg_4s(ptr %A, ptr %B, ptr %C) nounwind saniti
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[C]], align 16
@@ -2690,7 +2690,7 @@ define <2 x double> @fmls_commuted_neg_2d(ptr %A, ptr %B, ptr %C) nounwind sanit
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 16
@@ -2701,7 +2701,7 @@ define <2 x double> @fmls_commuted_neg_2d(ptr %A, ptr %B, ptr %C) nounwind sanit
 ; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP5]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B]], align 16
@@ -2712,7 +2712,7 @@ define <2 x double> @fmls_commuted_neg_2d(ptr %A, ptr %B, ptr %C) nounwind sanit
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[C]], align 16
@@ -2797,7 +2797,7 @@ define <2 x float> @fmla_indexed_scalar_2s(<2 x float> %a, <2 x float> %b, float
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x float> undef, float [[C]], i32 0
 ; CHECK-NEXT:    [[V2:%.*]] = insertelement <2 x float> [[V1]], float [[C]], i32 1
-; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <2 x float> @llvm.fma.v2f32(<2 x float> [[V1]], <2 x float> [[B]], <2 x float> [[A]]) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <2 x float> @llvm.fma.v2f32(<2 x float> [[V1]], <2 x float> [[B]], <2 x float> [[A]]) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[FMLA1]]
 ;
@@ -2817,7 +2817,7 @@ define <4 x float> @fmla_indexed_scalar_4s(<4 x float> %a, <4 x float> %b, float
 ; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x float> [[V1]], float [[C]], i32 1
 ; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[V2]], float [[C]], i32 2
 ; CHECK-NEXT:    [[V4:%.*]] = insertelement <4 x float> [[V3]], float [[C]], i32 3
-; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <4 x float> @llvm.fma.v4f32(<4 x float> [[V4]], <4 x float> [[B]], <4 x float> [[A]]) #[[ATTR7]]
+; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <4 x float> @llvm.fma.v4f32(<4 x float> [[V4]], <4 x float> [[B]], <4 x float> [[A]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[FMLA1]]
 ;
@@ -2837,7 +2837,7 @@ define <2 x double> @fmla_indexed_scalar_2d(<2 x double> %a, <2 x double> %b, do
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x double> undef, double [[C]], i32 0
 ; CHECK-NEXT:    [[V2:%.*]] = insertelement <2 x double> [[V1]], double [[C]], i32 1
-; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <2 x double> @llvm.fma.v2f64(<2 x double> [[V2]], <2 x double> [[B]], <2 x double> [[A]]) #[[ATTR7]]
+; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <2 x double> @llvm.fma.v2f64(<2 x double> [[V2]], <2 x double> [[B]], <2 x double> [[A]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[FMLA1]]
 ;
@@ -2855,7 +2855,7 @@ define <2 x float> @fmls_indexed_2s_strict(<2 x float> %a, <2 x float> %b, <2 x 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = fneg <2 x float> [[C]]
 ; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x float> [[B]], <2 x float> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[FMLS1:%.*]] = tail call <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float> [[TMP0]], <2 x float> [[LANE]], <2 x float> [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    [[FMLS1:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[TMP0]], <2 x float> [[LANE]], <2 x float> [[A]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[FMLS1]]
 ;
@@ -2873,7 +2873,7 @@ define <4 x float> @fmls_indexed_4s_strict(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = fneg <4 x float> [[C]]
 ; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <4 x float> [[B]], <4 x float> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[FMLS1:%.*]] = tail call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> [[TMP0]], <4 x float> [[LANE]], <4 x float> [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR9]]
+; CHECK-NEXT:    [[FMLS1:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[TMP0]], <4 x float> [[LANE]], <4 x float> [[A]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[FMLS1]]
 ;
@@ -2891,7 +2891,7 @@ define <2 x double> @fmls_indexed_2d_strict(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = fneg <2 x double> [[C]]
 ; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x double> [[B]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[FMLS1:%.*]] = tail call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[LANE]], <2 x double> [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR9]]
+; CHECK-NEXT:    [[FMLS1:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[LANE]], <2 x double> [[A]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[FMLS1]]
 ;
@@ -2909,7 +2909,7 @@ define <2 x float> @fmla_indexed_scalar_2s_strict(<2 x float> %a, <2 x float> %b
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x float> undef, float [[C]], i32 0
 ; CHECK-NEXT:    [[V2:%.*]] = insertelement <2 x float> [[V1]], float [[C]], i32 1
-; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float> [[V2]], <2 x float> [[B]], <2 x float> [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR9]]
+; CHECK-NEXT:    [[FMLA1:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[V2]], <2 x float> [[B]], <2 x float> [[A]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[FMLA1]]
 ;
@@ -2929,7 +2929,7 @@ define <4 x float> @fmla_indexed_scalar_4s_strict(<4 x float> %a, <4 x float> %b
 ; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x float> [[V1]], float [[C]], i32 1
 ; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[V2]], float [[C]], i32 2
 ; CHECK-NEXT:    [[V4:%.*]] = insertelement <4 x float> [[V3]], float [[C]], i32 3
-; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> [[V4]], <4 x float> [[B]], <4 x float> [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR9]]
+; CHECK-NEXT:    [[FMLA1:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[V4]], <4 x float> [[B]], <4 x float> [[A]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[FMLA1]]
 ;
@@ -2949,7 +2949,7 @@ define <2 x double> @fmla_indexed_scalar_2d_strict(<2 x double> %a, <2 x double>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x double> undef, double [[C]], i32 0
 ; CHECK-NEXT:    [[V2:%.*]] = insertelement <2 x double> [[V1]], double [[C]], i32 1
-; CHECK-NEXT:    [[FMLA1:%.*]] = tail call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> [[V2]], <2 x double> [[B]], <2 x double> [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR9]]
+; CHECK-NEXT:    [[FMLA1:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[V2]], <2 x double> [[B]], <2 x double> [[A]]) [ "fp.control"(metadata !"rte") ]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[FMLA1]]
 ;
@@ -3397,7 +3397,7 @@ define <4 x i32> @sqdmull_lane_4s(<4 x i16> %A, <4 x i16> %B) nounwind sanitize_
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[A]], <4 x i16> [[TMP3]])
@@ -3424,7 +3424,7 @@ define <2 x i64> @sqdmull_lane_2d(<2 x i32> %A, <2 x i32> %B) nounwind sanitize_
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[A]], <2 x i32> [[TMP3]])
@@ -3453,7 +3453,7 @@ define <4 x i32> @sqdmull2_lane_4s(<8 x i16> %A, <8 x i16> %B) nounwind sanitize
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -3483,7 +3483,7 @@ define <2 x i64> @sqdmull2_lane_2d(<4 x i32> %A, <4 x i32> %B) nounwind sanitize
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -3640,7 +3640,7 @@ define <4 x i32> @sqdmlal_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) noun
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[A]], <4 x i16> [[TMP4]])
@@ -3671,7 +3671,7 @@ define <2 x i64> @sqdmlal_lane_2d(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) noun
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[A]], <2 x i32> [[TMP4]])
@@ -3704,7 +3704,7 @@ define <4 x i32> @sqdmlal2_lane_4s(<8 x i16> %A, <8 x i16> %B, <4 x i32> %C) nou
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -3738,7 +3738,7 @@ define <2 x i64> @sqdmlal2_lane_2d(<4 x i32> %A, <4 x i32> %B, <2 x i64> %C) nou
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -3772,7 +3772,7 @@ define i32 @sqdmlal_lane_1s(i32 %A, i16 %B, <4 x i16> %C) nounwind sanitize_memo
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[PROD_VEC:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[LHS]], <4 x i16> [[RHS]])
@@ -3809,7 +3809,7 @@ define i32 @sqdmlsl_lane_1s(i32 %A, i16 %B, <4 x i16> %C) nounwind sanitize_memo
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[PROD_VEC:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[LHS]], <4 x i16> [[RHS]])
@@ -3842,7 +3842,7 @@ define i32 @sqadd_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind s
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[PROD_VEC:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[B]], <4 x i16> [[C]])
@@ -3872,7 +3872,7 @@ define i32 @sqsub_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind s
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[PROD_VEC:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[B]], <4 x i16> [[C]])
@@ -3902,7 +3902,7 @@ define i64 @sqdmlal_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind sanitize_memo
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[PROD:%.*]] = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 [[B]], i32 [[RHS]])
@@ -3933,7 +3933,7 @@ define i64 @sqdmlsl_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind sanitize_memo
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[PROD:%.*]] = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 [[B]], i32 [[RHS]])
@@ -4063,7 +4063,7 @@ define <4 x i32> @sqdmlsl_lane_4s(<4 x i16> %A, <4 x i16> %B, <4 x i32> %C) noun
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[A]], <4 x i16> [[TMP4]])
@@ -4094,7 +4094,7 @@ define <2 x i64> @sqdmlsl_lane_2d(<2 x i32> %A, <2 x i32> %B, <2 x i64> %C) noun
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[A]], <2 x i32> [[TMP4]])
@@ -4127,7 +4127,7 @@ define <4 x i32> @sqdmlsl2_lane_4s(<8 x i16> %A, <8 x i16> %B, <4 x i32> %C) nou
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -4161,7 +4161,7 @@ define <2 x i64> @sqdmlsl2_lane_2d(<4 x i32> %A, <4 x i32> %B, <2 x i64> %C) nou
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
@@ -4234,7 +4234,7 @@ define float @fmulxs(float %a, float %b) nounwind sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i32 [[_MSPROP]], 0
-; CHECK-NEXT:    [[FMULX_I:%.*]] = tail call float @llvm.aarch64.neon.fmulx.f32(float [[A]], float [[B]]) #[[ATTR7]]
+; CHECK-NEXT:    [[FMULX_I:%.*]] = tail call float @llvm.aarch64.neon.fmulx.f32(float [[A]], float [[B]]) #[[ATTR6]]
 ; CHECK-NEXT:    store i32 [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[FMULX_I]]
 ;
@@ -4250,7 +4250,7 @@ define double @fmulxd(double %a, double %b) nounwind sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
-; CHECK-NEXT:    [[FMULX_I:%.*]] = tail call double @llvm.aarch64.neon.fmulx.f64(double [[A]], double [[B]]) #[[ATTR7]]
+; CHECK-NEXT:    [[FMULX_I:%.*]] = tail call double @llvm.aarch64.neon.fmulx.f64(double [[A]], double [[B]]) #[[ATTR6]]
 ; CHECK-NEXT:    store i64 [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[FMULX_I]]
 ;
@@ -4268,7 +4268,7 @@ define float @fmulxs_lane(float %a, <4 x float> %vec) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[B:%.*]] = extractelement <4 x float> [[VEC]], i32 3
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i32 [[TMP2]], [[_MSPROP]]
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or i32 [[_MSPROP1]], 0
-; CHECK-NEXT:    [[FMULX_I:%.*]] = tail call float @llvm.aarch64.neon.fmulx.f32(float [[A]], float [[B]]) #[[ATTR7]]
+; CHECK-NEXT:    [[FMULX_I:%.*]] = tail call float @llvm.aarch64.neon.fmulx.f32(float [[A]], float [[B]]) #[[ATTR6]]
 ; CHECK-NEXT:    store i32 [[_MSPROP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[FMULX_I]]
 ;
@@ -4287,7 +4287,7 @@ define double @fmulxd_lane(double %a, <2 x double> %vec) nounwind sanitize_memor
 ; CHECK-NEXT:    [[B:%.*]] = extractelement <2 x double> [[VEC]], i32 1
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[TMP2]], [[_MSPROP]]
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or i64 [[_MSPROP1]], 0
-; CHECK-NEXT:    [[FMULX_I:%.*]] = tail call double @llvm.aarch64.neon.fmulx.f64(double [[A]], double [[B]]) #[[ATTR7]]
+; CHECK-NEXT:    [[FMULX_I:%.*]] = tail call double @llvm.aarch64.neon.fmulx.f64(double [[A]], double [[B]]) #[[ATTR6]]
 ; CHECK-NEXT:    store i64 [[_MSPROP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[FMULX_I]]
 ;
@@ -4344,7 +4344,7 @@ define <8 x i16> @foo0(<16 x i8> %a, <16 x i8> %b) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <8 x i8> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <8 x i8> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <8 x i8> [[_MSPROP3]] to <8 x i16>
-; CHECK-NEXT:    [[VMULL_I_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL_I_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <8 x i16> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[VMULL_I_I]]
 ;
@@ -4379,7 +4379,7 @@ define <4 x i32> @foo1(<8 x i16> %a, <8 x i16> %b) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <4 x i16> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i16> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i16> [[_MSPROP3]] to <4 x i32>
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I_I]]
 ;
@@ -4414,7 +4414,7 @@ define <2 x i64> @foo2(<4 x i32> %a, <4 x i32> %b) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <2 x i32> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i32> [[_MSPROP3]] to <2 x i64>
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[VMULL2_I_I]]
 ;
@@ -4449,7 +4449,7 @@ define <8 x i16> @foo3(<16 x i8> %a, <16 x i8> %b) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <8 x i8> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <8 x i8> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <8 x i8> [[_MSPROP3]] to <8 x i16>
-; CHECK-NEXT:    [[VMULL_I_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL_I_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <8 x i16> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[VMULL_I_I]]
 ;
@@ -4484,7 +4484,7 @@ define <4 x i32> @foo4(<8 x i16> %a, <8 x i16> %b) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <4 x i16> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i16> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i16> [[_MSPROP3]] to <4 x i32>
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I_I]]
 ;
@@ -4519,7 +4519,7 @@ define <2 x i64> @foo5(<4 x i32> %a, <4 x i32> %b) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <2 x i32> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <2 x i32> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i32> [[_MSPROP3]] to <2 x i64>
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[VMULL2_I_I]]
 ;
@@ -4535,14 +4535,14 @@ define <2 x i64> @foo5(<4 x i32> %a, <4 x i32> %b) nounwind sanitize_memory {
 
 define <4 x i32> @foo6(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <4 x i32> @foo6(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[B]] to <2 x i64>
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> undef, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <4 x i16>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[C]], <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[SHUFFLE]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[SHUFFLE]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I]]
 ;
@@ -4557,14 +4557,14 @@ entry:
 
 define <4 x i32> @foo6a(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <4 x i32> @foo6a(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[B]] to <2 x i64>
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <4 x i16>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[C]], <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[SHUFFLE]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[SHUFFLE]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I]]
 ;
@@ -4579,14 +4579,14 @@ entry:
 
 define <2 x i64> @foo7(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <2 x i64> @foo7(
-; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> undef, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <2 x i32>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[C]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[VMULL2_I]]
 ;
@@ -4601,14 +4601,14 @@ entry:
 
 define <2 x i64> @foo7a(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <2 x i64> @foo7a(
-; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <2 x i32>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[C]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[VMULL2_I]]
 ;
@@ -4624,14 +4624,14 @@ entry:
 
 define <4 x i32> @foo8(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <4 x i32> @foo8(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[B]] to <2 x i64>
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> undef, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <4 x i16>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[C]], <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[SHUFFLE]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[SHUFFLE]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I]]
 ;
@@ -4646,14 +4646,14 @@ entry:
 
 define <4 x i32> @foo8a(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <4 x i32> @foo8a(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[B]] to <2 x i64>
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <4 x i16>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[C]], <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[SHUFFLE]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[SHUFFLE]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I]]
 ;
@@ -4668,14 +4668,14 @@ entry:
 
 define <2 x i64> @foo9(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <2 x i64> @foo9(
-; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> undef, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <2 x i32>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[C]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[VMULL2_I]]
 ;
@@ -4690,14 +4690,14 @@ entry:
 
 define <2 x i64> @foo9a(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <2 x i64> @foo9a(
-; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
 ; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <2 x i32>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[C]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[VMULL2_I]]
 ;
@@ -4732,7 +4732,7 @@ define <8 x i16> @bar0(<8 x i16> %a, <16 x i8> %b, <16 x i8> %c) nounwind saniti
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <8 x i8> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <8 x i8> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i8> [[_MSPROP3]] to <8 x i16>
-; CHECK-NEXT:    [[VMULL_I_I_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL_I_I_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <8 x i16> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[VMULL_I_I_I]], [[A]]
 ; CHECK-NEXT:    store <8 x i16> [[_MSPROP4]], ptr @__msan_retval_tls, align 8
@@ -4771,7 +4771,7 @@ define <4 x i32> @bar1(<4 x i32> %a, <8 x i16> %b, <8 x i16> %c) nounwind saniti
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <4 x i16> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i16> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i16> [[_MSPROP3]] to <4 x i32>
-; CHECK-NEXT:    [[VMULL2_I_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <4 x i32> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[VMULL2_I_I_I]], [[A]]
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP4]], ptr @__msan_retval_tls, align 8
@@ -4810,7 +4810,7 @@ define <2 x i64> @bar2(<2 x i64> %a, <4 x i32> %b, <4 x i32> %c) nounwind saniti
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <2 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <2 x i32> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i32> [[_MSPROP3]] to <2 x i64>
-; CHECK-NEXT:    [[VMULL2_I_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <2 x i64> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[VMULL2_I_I_I]], [[A]]
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP4]], ptr @__msan_retval_tls, align 8
@@ -4849,7 +4849,7 @@ define <8 x i16> @bar3(<8 x i16> %a, <16 x i8> %b, <16 x i8> %c) nounwind saniti
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <8 x i8> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <8 x i8> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i8> [[_MSPROP3]] to <8 x i16>
-; CHECK-NEXT:    [[VMULL_I_I_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL_I_I_I:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <8 x i16> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[VMULL_I_I_I]], [[A]]
 ; CHECK-NEXT:    store <8 x i16> [[_MSPROP4]], ptr @__msan_retval_tls, align 8
@@ -4888,7 +4888,7 @@ define <4 x i32> @bar4(<4 x i32> %a, <8 x i16> %b, <8 x i16> %c) nounwind saniti
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <4 x i16> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i16> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i16> [[_MSPROP3]] to <4 x i32>
-; CHECK-NEXT:    [[VMULL2_I_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <4 x i32> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[VMULL2_I_I_I]], [[A]]
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP4]], ptr @__msan_retval_tls, align 8
@@ -4927,7 +4927,7 @@ define <2 x i64> @bar5(<2 x i64> %a, <4 x i32> %b, <4 x i32> %c) nounwind saniti
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <2 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <2 x i32> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i32> [[_MSPROP3]] to <2 x i64>
-; CHECK-NEXT:    [[VMULL2_I_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <2 x i64> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[VMULL2_I_I_I]], [[A]]
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP4]], ptr @__msan_retval_tls, align 8
@@ -4968,7 +4968,7 @@ define <4 x i32> @mlal2_1(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c) nounwind san
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i16> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <4 x i16> [[_MSPROP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i16> [[_MSPROP4]] to <4 x i32>
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP5:%.*]] = or <4 x i32> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[VMULL2_I_I]], [[A]]
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
@@ -5010,7 +5010,7 @@ define <2 x i64> @mlal2_2(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c) nounwind san
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <2 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <2 x i32> [[_MSPROP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i32> [[_MSPROP4]] to <2 x i64>
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP5:%.*]] = or <2 x i64> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i64> [[VMULL2_I_I]], [[A]]
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
@@ -5052,7 +5052,7 @@ define <4 x i32> @mlal2_4(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c) nounwind san
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i16> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <4 x i16> [[_MSPROP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i16> [[_MSPROP4]] to <4 x i32>
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP5:%.*]] = or <4 x i32> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[VMULL2_I_I]], [[A]]
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
@@ -5094,7 +5094,7 @@ define <2 x i64> @mlal2_5(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c) nounwind san
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <2 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <2 x i32> [[_MSPROP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i32> [[_MSPROP4]] to <2 x i64>
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[TMP3]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[_MSPROP5:%.*]] = or <2 x i64> [[TMP8]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i64> [[VMULL2_I_I]], [[A]]
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP5]], ptr @__msan_retval_tls, align 8
@@ -5312,7 +5312,7 @@ entry:
 
 define <4 x i32> @vmull_low_n_s16_test(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c, i32 %d) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <4 x i32> @vmull_low_n_s16_test(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[D]] to i16
@@ -5323,7 +5323,7 @@ define <4 x i32> @vmull_low_n_s16_test(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c,
 ; CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 [[CONV]], i32 1
 ; CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 [[CONV]], i32 2
 ; CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 [[CONV]], i32 3
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[VECINIT3_I]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[VECINIT3_I]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I_I]]
 ;
@@ -5342,7 +5342,7 @@ entry:
 
 define <4 x i32> @vmull_high_n_s16_test(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c, i32 %d) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <4 x i32> @vmull_high_n_s16_test(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[D]] to i16
@@ -5353,7 +5353,7 @@ define <4 x i32> @vmull_high_n_s16_test(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c
 ; CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 [[CONV]], i32 1
 ; CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 [[CONV]], i32 2
 ; CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 [[CONV]], i32 3
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[VECINIT3_I]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[VECINIT3_I]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I_I]]
 ;
@@ -5372,7 +5372,7 @@ entry:
 
 define <2 x i64> @vmull_high_n_s32_test(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c, i32 %d) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <2 x i64> @vmull_high_n_s32_test(
-; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
@@ -5380,7 +5380,7 @@ define <2 x i64> @vmull_high_n_s32_test(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I]] to <2 x i32>
 ; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 [[D]], i32 0
 ; CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 [[D]], i32 1
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[VECINIT1_I]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[VECINIT1_I]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[VMULL2_I_I]]
 ;
@@ -5396,7 +5396,7 @@ entry:
 
 define <4 x i32> @vmull_high_n_u16_test(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c, i32 %d) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <4 x i32> @vmull_high_n_u16_test(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[A:%.*]], <8 x i16> [[B:%.*]], <4 x i16> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[D]] to i16
@@ -5407,7 +5407,7 @@ define <4 x i32> @vmull_high_n_u16_test(<4 x i32> %a, <8 x i16> %b, <4 x i16> %c
 ; CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 [[CONV]], i32 1
 ; CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 [[CONV]], i32 2
 ; CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 [[CONV]], i32 3
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[VECINIT3_I]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[VECINIT3_I]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMULL2_I_I]]
 ;
@@ -5426,7 +5426,7 @@ entry:
 
 define <2 x i64> @vmull_high_n_u32_test(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c, i32 %d) nounwind readnone optsize ssp {
 ; CHECK-LABEL: define <2 x i64> @vmull_high_n_u32_test(
-; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <2 x i64> [[A:%.*]], <4 x i32> [[B:%.*]], <2 x i32> [[C:%.*]], i32 [[D:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
@@ -5434,7 +5434,7 @@ define <2 x i64> @vmull_high_n_u32_test(<2 x i64> %a, <4 x i32> %b, <2 x i32> %c
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[SHUFFLE_I_I]] to <2 x i32>
 ; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 [[D]], i32 0
 ; CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 [[D]], i32 1
-; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[VECINIT1_I]]) #[[ATTR7]]
+; CHECK-NEXT:    [[VMULL2_I_I:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[TMP1]], <2 x i32> [[VECINIT1_I]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[VMULL2_I_I]]
 ;
@@ -5528,7 +5528,7 @@ define <2 x i64> @mull_from_two_extracts(<4 x i32> %lhs, <4 x i32> %rhs) {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -5545,7 +5545,7 @@ define <2 x i64> @mlal_from_two_extracts(<2 x i64> %accum, <4 x i32> %lhs, <4 x 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[SUM:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> [[ACCUM]], <2 x i64> [[RES]])
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[SUM]]
@@ -5565,7 +5565,7 @@ define <2 x i64> @mull_from_extract_dup_low(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[RHS]], i32 0
 ; CHECK-NEXT:    [[RHSVEC:%.*]] = insertelement <2 x i32> [[RHSVEC_TMP]], i32 [[RHS]], i32 1
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHSVEC]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHSVEC]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -5585,7 +5585,7 @@ define <2 x i64> @mull_from_extract_dup_high(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-NEXT:    [[RHSVEC_TMP:%.*]] = insertelement <2 x i32> undef, i32 [[RHS]], i32 0
 ; CHECK-NEXT:    [[RHSVEC:%.*]] = insertelement <2 x i32> [[RHSVEC_TMP]], i32 [[RHS]], i32 1
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHSVEC]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHSVEC]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -5605,7 +5605,7 @@ define <8 x i16> @pmull_from_extract_dup_low(<16 x i8> %lhs, i8 %rhs) {
 ; CHECK-NEXT:    [[RHSVEC_0:%.*]] = insertelement <8 x i8> undef, i8 [[RHS]], i32 0
 ; CHECK-NEXT:    [[RHSVEC:%.*]] = shufflevector <8 x i8> [[RHSVEC_0]], <8 x i8> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <16 x i8> [[LHS]], <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[LHS_HIGH]], <8 x i8> [[RHSVEC]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[LHS_HIGH]], <8 x i8> [[RHSVEC]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
@@ -5625,7 +5625,7 @@ define <8 x i16> @pmull_from_extract_dup_high(<16 x i8> %lhs, i8 %rhs) {
 ; CHECK-NEXT:    [[RHSVEC_0:%.*]] = insertelement <8 x i8> undef, i8 [[RHS]], i32 0
 ; CHECK-NEXT:    [[RHSVEC:%.*]] = shufflevector <8 x i8> [[RHSVEC_0]], <8 x i8> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <16 x i8> [[LHS]], <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[LHS_HIGH]], <8 x i8> [[RHSVEC]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[LHS_HIGH]], <8 x i8> [[RHSVEC]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
@@ -5644,7 +5644,7 @@ define <8 x i16> @pmull_from_extract_duplane_low(<16 x i8> %lhs, <8 x i8> %rhs) 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <16 x i8> [[LHS]], <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <8 x i8> [[RHS]], <8 x i8> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[LHS_HIGH]], <8 x i8> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[LHS_HIGH]], <8 x i8> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
@@ -5661,7 +5661,7 @@ define <8 x i16> @pmull_from_extract_duplane_high(<16 x i8> %lhs, <8 x i8> %rhs)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <16 x i8> [[LHS]], <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <8 x i8> [[RHS]], <8 x i8> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[LHS_HIGH]], <8 x i8> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> [[LHS_HIGH]], <8 x i8> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
@@ -5678,7 +5678,7 @@ define <2 x i64> @sqdmull_from_extract_duplane_low(<4 x i32> %lhs, <4 x i32> %rh
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -5695,7 +5695,7 @@ define <2 x i64> @sqdmull_from_extract_duplane_high(<4 x i32> %lhs, <4 x i32> %r
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
@@ -5712,7 +5712,7 @@ define <2 x i64> @sqdmlal_from_extract_duplane_low(<2 x i64> %accum, <4 x i32> %
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[SUM:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> [[ACCUM]], <2 x i64> [[RES]])
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[SUM]]
@@ -5731,7 +5731,7 @@ define <2 x i64> @sqdmlal_from_extract_duplane_high(<2 x i64> %accum, <4 x i32> 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[SUM:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> [[ACCUM]], <2 x i64> [[RES]])
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[SUM]]
@@ -5750,7 +5750,7 @@ define <2 x i64> @umlal_from_extract_duplane_low(<2 x i64> %accum, <4 x i32> %lh
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add <2 x i64> [[ACCUM]], [[RES]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[SUM]]
@@ -5769,7 +5769,7 @@ define <2 x i64> @umlal_from_extract_duplane_high(<2 x i64> %accum, <4 x i32> %l
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[LHS_HIGH:%.*]] = shufflevector <4 x i32> [[LHS]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[RHS_HIGH:%.*]] = shufflevector <4 x i32> [[RHS]], <4 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR7]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> [[LHS_HIGH]], <2 x i32> [[RHS_HIGH]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add <2 x i64> [[ACCUM]], [[RES]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[SUM]]
@@ -6004,7 +6004,7 @@ define i32 @sqdmlal_s(i16 %A, i16 %B, i32 %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -6034,7 +6034,7 @@ define i64 @sqdmlal_d(i32 %A, i32 %B, i64 %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 [[A]], i32 [[B]])
@@ -6066,7 +6066,7 @@ define i32 @sqdmlsl_s(i16 %A, i16 %B, i32 %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP3]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
@@ -6096,7 +6096,7 @@ define i64 @sqdmlsl_d(i32 %A, i32 %B, i64 %C) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 [[A]], i32 [[B]])

@@ -166,8 +166,6 @@ define <4 x float> @f18(<4 x float> %a0, <8 x half> %a1) #0 {
 define <2 x float> @f19(<2 x half> %a) #0 {
 ; CHECK-LABEL: f19:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; CHECK-NEXT:    vcvtph2psx %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(
@@ -190,7 +188,6 @@ define <4 x float> @f20(<4 x half> %a) #0 {
 define <2 x half> @f21(<2 x float> %a) #0 {
 ; CHECK-LABEL: f21:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vcvtps2phx %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(

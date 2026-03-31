@@ -17,7 +17,6 @@ define void @f16_arg(half %arg, ptr %ptr) #0 {
 ; NOFP16-LABEL: f16_arg:
 ; NOFP16:       @ %bb.0:
 ; NOFP16-NEXT:    push {r4, lr}
-; NOFP16-NEXT:    uxth r0, r0
 ; NOFP16-NEXT:    mov r4, r1
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    str r0, [r4]
@@ -33,12 +32,11 @@ define void @v2f16_arg(<2 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    push {r4, r5, r11, lr}
 ; NOFP16-NEXT:    vpush {d8}
 ; NOFP16-NEXT:    mov r5, r0
-; NOFP16-NEXT:    uxth r0, r1
+; NOFP16-NEXT:    mov r0, r1
 ; NOFP16-NEXT:    mov r4, r2
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
-; NOFP16-NEXT:    uxth r1, r5
 ; NOFP16-NEXT:    vmov s17, r0
-; NOFP16-NEXT:    mov r0, r1
+; NOFP16-NEXT:    mov r0, r5
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s16, r0
 ; NOFP16-NEXT:    vstr d8, [r4]
@@ -55,16 +53,15 @@ define void @v3f16_arg(<3 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    push {r4, r5, r6, lr}
 ; NOFP16-NEXT:    vpush {d8}
 ; NOFP16-NEXT:    mov r6, r0
-; NOFP16-NEXT:    uxth r0, r1
+; NOFP16-NEXT:    mov r0, r1
 ; NOFP16-NEXT:    mov r4, r3
 ; NOFP16-NEXT:    mov r5, r2
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
-; NOFP16-NEXT:    uxth r1, r6
 ; NOFP16-NEXT:    vmov s17, r0
-; NOFP16-NEXT:    mov r0, r1
+; NOFP16-NEXT:    mov r0, r6
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s16, r0
-; NOFP16-NEXT:    uxth r0, r5
+; NOFP16-NEXT:    mov r0, r5
 ; NOFP16-NEXT:    vst1.32 {d8}, [r4:64]!
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    str r0, [r4]
@@ -81,19 +78,19 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; NOFP16-NEXT:    vpush {d8, d9}
 ; NOFP16-NEXT:    mov r6, r0
-; NOFP16-NEXT:    uxth r0, r1
+; NOFP16-NEXT:    mov r0, r1
 ; NOFP16-NEXT:    mov r4, r3
 ; NOFP16-NEXT:    mov r5, r2
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    mov r7, r0
-; NOFP16-NEXT:    uxth r0, r4
+; NOFP16-NEXT:    mov r0, r4
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s19, r0
-; NOFP16-NEXT:    uxth r0, r5
+; NOFP16-NEXT:    mov r0, r5
 ; NOFP16-NEXT:    ldr r4, [sp, #40]
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s18, r0
-; NOFP16-NEXT:    uxth r0, r6
+; NOFP16-NEXT:    mov r0, r6
 ; NOFP16-NEXT:    vmov s17, r7
 ; NOFP16-NEXT:    bl __gnu_h2f_ieee
 ; NOFP16-NEXT:    vmov s16, r0
@@ -144,25 +141,30 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
  define <3 x half> @v3f16_return(<3 x float> %arg) #0 {
 ; NOFP16-LABEL: v3f16_return:
 ; NOFP16:       @ %bb.0:
-; NOFP16-NEXT:    push {r4, r5, r6, lr}
-; NOFP16-NEXT:    vmov d1, r2, r3
-; NOFP16-NEXT:    mov r5, r0
-; NOFP16-NEXT:    vmov d0, r0, r1
-; NOFP16-NEXT:    mov r4, r1
-; NOFP16-NEXT:    vmov r0, s2
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
-; NOFP16-NEXT:    uxth r6, r0
-; NOFP16-NEXT:    mov r0, r4
+; NOFP16-NEXT:    push {r4, r5, r11, lr}
+; NOFP16-NEXT:    vpush {d8, d9}
+; NOFP16-NEXT:    vmov d8, r2, r3
+; NOFP16-NEXT:    vmov d9, r0, r1
+; NOFP16-NEXT:    vmov r2, s17
+; NOFP16-NEXT:    mov r0, r2
 ; NOFP16-NEXT:    bl __gnu_f2h_ieee
 ; NOFP16-NEXT:    mov r4, r0
-; NOFP16-NEXT:    mov r0, r5
+; NOFP16-NEXT:    vmov r0, s16
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    vmov r1, s19
+; NOFP16-NEXT:    pkhbt r5, r0, r4, lsl #16
+; NOFP16-NEXT:    mov r0, r1
+; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    mov r4, r0
+; NOFP16-NEXT:    vmov r0, s18
 ; NOFP16-NEXT:    bl __gnu_f2h_ieee
 ; NOFP16-NEXT:    pkhbt r0, r0, r4, lsl #16
-; NOFP16-NEXT:    vmov d16, r0, r6
+; NOFP16-NEXT:    vmov d16, r0, r5
 ; NOFP16-NEXT:    vmov.u16 r0, d16[0]
 ; NOFP16-NEXT:    vmov.u16 r1, d16[1]
 ; NOFP16-NEXT:    vmov.u16 r2, d16[2]
-; NOFP16-NEXT:    pop {r4, r5, r6, pc}
+; NOFP16-NEXT:    vpop {d8, d9}
+; NOFP16-NEXT:    pop {r4, r5, r11, pc}
    %fptrunc = call <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
    ret <3 x half> %fptrunc
  }

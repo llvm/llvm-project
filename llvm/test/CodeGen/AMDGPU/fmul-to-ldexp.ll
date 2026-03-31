@@ -8347,7 +8347,7 @@ define double @v_constrained_fmul_32_f64(double %x, double %y) #0 {
 ; GFX10-GISEL-LABEL: v_constrained_fmul_32_f64:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], 0x40400000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], 0x40400000, v[0:1]
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-LABEL: v_constrained_fmul_32_f64:
@@ -8359,7 +8359,7 @@ define double @v_constrained_fmul_32_f64(double %x, double %y) #0 {
 ; GFX11-GISEL-LABEL: v_constrained_fmul_32_f64:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], 0x40400000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], 0x40400000, v[0:1]
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %val = call double @llvm.experimental.constrained.fmul.f64(double %x, double 32.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %val
@@ -8389,7 +8389,7 @@ define double @v_constrained_fmul_0x1p64_f64(double %x, double %y) #0 {
 ; GFX10-GISEL-LABEL: v_constrained_fmul_0x1p64_f64:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], 0x43f00000
+; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], 0x43f00000, v[0:1]
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-LABEL: v_constrained_fmul_0x1p64_f64:
@@ -8401,7 +8401,7 @@ define double @v_constrained_fmul_0x1p64_f64(double %x, double %y) #0 {
 ; GFX11-GISEL-LABEL: v_constrained_fmul_0x1p64_f64:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], 0x43f00000
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], 0x43f00000, v[0:1]
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %val = call double @llvm.experimental.constrained.fmul.f64(double %x, double 18446744073709551616.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %val

@@ -50,7 +50,7 @@ define float @div_f32(float %x, float %y) #0 {
 }
 
 ; CHECK-LABEL: frem_f32:
-; CHECK: bl fmodf
+; CHECK: {{b|bl}} fmodf
 define float @frem_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.frem.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
@@ -74,7 +74,6 @@ define i32 @fptosi_f32(float %x) #0 {
 
 ; CHECK-LABEL: fptosi_f32_twice:
 ; CHECK-NOSP: bl __aeabi_f2iz
-; CHECK-NOSP: bl __aeabi_f2iz
 ; CHECK-SP: vcvt.s32.f32
 define void @fptosi_f32_twice(float %arg, ptr %ptr) #0 {
 entry:
@@ -95,7 +94,6 @@ define i32 @fptoui_f32(float %x) #0 {
 }
 
 ; CHECK-LABEL: fptoui_f32_twice:
-; CHECK-NOSP: bl __aeabi_f2uiz
 ; CHECK-NOSP: bl __aeabi_f2uiz
 ; FIXME-CHECK-SP: vcvt.u32.f32
 ; FIXME-CHECK-SP: vcvt.u32.f32
@@ -118,70 +116,70 @@ define float @sqrt_f32(float %x) #0 {
 }
 
 ; CHECK-LABEL: powi_f32:
-; CHECK: bl __powisf2
+; CHECK: {{b|bl}} __powisf2
 define float @powi_f32(float %x, i32 %y) #0 {
   %val = call float @llvm.experimental.constrained.powi.f32(float %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: sin_f32:
-; CHECK: bl sinf
+; CHECK: {{b|bl}} sinf
 define float @sin_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.sin.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: cos_f32:
-; CHECK: bl cosf
+; CHECK: {{b|bl}} cosf
 define float @cos_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.cos.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: tan_f32:
-; CHECK: bl tanf
+; CHECK: {{b|bl}} tanf
 define float @tan_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.tan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: acos_f32:
-; CHECK: bl acosf
+; CHECK: {{b|bl}} acosf
 define float @acos_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.acos.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: asin_f32:
-; CHECK: bl asinf
+; CHECK: {{b|bl}} asinf
 define float @asin_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.asin.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: atan_f32:
-; CHECK: bl atanf
+; CHECK: {{b|bl}} atanf
 define float @atan_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.atan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: cosh_f32:
-; CHECK: bl coshf
+; CHECK: {{b|bl}} coshf
 define float @cosh_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.cosh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: sinh_f32:
-; CHECK: bl sinhf
+; CHECK: {{b|bl}} sinhf
 define float @sinh_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.sinh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: tanh_f32:
-; CHECK: bl tanhf
+; CHECK: {{b|bl}} tanhf
 define float @tanh_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.tanh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
@@ -197,7 +195,7 @@ define float @fmuladd_f32(float %x, float %y, float %z) #0 {
 }
 
 ; CHECK-LABEL: ldexp_f32:
-; CHECK: bl ldexpf
+; CHECK: {{b|bl}} ldexpf
 define float @ldexp_f32(float %x, i32 %y) #0 {
   %val = call float @llvm.experimental.constrained.ldexp.f32.i32(float %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
@@ -220,49 +218,49 @@ define float @uitofp_f32_i32(i32 %x) #0 {
 }
 
 ; CHECK-LABEL: atan2_f32:
-; CHECK: bl atan2f
+; CHECK: {{b|bl}} atan2f
 define float @atan2_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.atan2.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: pow_f32:
-; CHECK: bl powf
+; CHECK: {{b|bl}} powf
 define float @pow_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.pow.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: log_f32:
-; CHECK: bl logf
+; CHECK: {{b|bl}} logf
 define float @log_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.log.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: log10_f32:
-; CHECK: bl log10f
+; CHECK: {{b|bl}} log10f
 define float @log10_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.log10.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: log2_f32:
-; CHECK: bl log2f
+; CHECK: {{b|bl}} log2f
 define float @log2_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.log2.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: exp_f32:
-; CHECK: bl expf
+; CHECK: {{b|bl}} expf
 define float @exp_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.exp.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: exp2_f32:
-; CHECK: bl exp2f
+; CHECK: {{b|bl}} exp2f
 define float @exp2_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.exp2.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
@@ -270,7 +268,7 @@ define float @exp2_f32(float %x) #0 {
 
 ; CHECK-LABEL: rint_f32:
 ; CHECK-NOSP: bl rintf
-; CHECK-SP-NOV8: bl rintf
+; CHECK-SP-NOV8: {{b|bl}} rintf
 ; CHECK-SP-V8: vrintx.f32
 define float @rint_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.rint.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -279,7 +277,7 @@ define float @rint_f32(float %x) #0 {
 
 ; CHECK-LABEL: nearbyint_f32:
 ; CHECK-NOSP: bl nearbyintf
-; CHECK-SP-NOV8: bl nearbyintf
+; CHECK-SP-NOV8: {{b|bl}} nearbyintf
 ; CHECK-SP-V8: vrintr.f32
 define float @nearbyint_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.nearbyint.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -287,14 +285,14 @@ define float @nearbyint_f32(float %x) #0 {
 }
 
 ; CHECK-LABEL: lrint_f32:
-; CHECK: bl lrintf
+; CHECK: {{b|bl}} lrintf
 define i32 @lrint_f32(float %x) #0 {
   %val = call i32 @llvm.experimental.constrained.lrint.i32.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 ; CHECK-LABEL: llrint_f32:
-; CHECK: bl llrintf
+; CHECK: {{b|bl}} llrintf
 define i32 @llrint_f32(float %x) #0 {
   %val = call i32 @llvm.experimental.constrained.llrint.i32.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
@@ -302,7 +300,7 @@ define i32 @llrint_f32(float %x) #0 {
 
 ; CHECK-LABEL: maxnum_f32:
 ; CHECK-NOSP: bl fmaxf
-; CHECK-SP-NOV8: bl fmaxf
+; CHECK-SP-NOV8: {{b|bl}} fmaxf
 ; CHECK-SP-V8: vmaxnm.f32
 define float @maxnum_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.maxnum.f32(float %x, float %y, metadata !"fpexcept.strict") #0
@@ -311,7 +309,7 @@ define float @maxnum_f32(float %x, float %y) #0 {
 
 ; CHECK-LABEL: minnum_f32:
 ; CHECK-NOSP: bl fminf
-; CHECK-SP-NOV8: bl fminf
+; CHECK-SP-NOV8: {{b|bl}} fminf
 ; CHECK-SP-V8: vminnm.f32
 define float @minnum_f32(float %x, float %y) #0 {
   %val = call float @llvm.experimental.constrained.minnum.f32(float %x, float %y, metadata !"fpexcept.strict") #0
@@ -320,7 +318,7 @@ define float @minnum_f32(float %x, float %y) #0 {
 
 ; CHECK-LABEL: ceil_f32:
 ; CHECK-NOSP: bl ceilf
-; CHECK-SP-NOV8: bl ceilf
+; CHECK-SP-NOV8: {{b|bl}} ceilf
 ; CHECK-SP-V8: vrintp.f32
 define float @ceil_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.ceil.f32(float %x, metadata !"fpexcept.strict") #0
@@ -329,7 +327,7 @@ define float @ceil_f32(float %x) #0 {
 
 ; CHECK-LABEL: floor_f32:
 ; CHECK-NOSP: bl floorf
-; CHECK-SP-NOV8: bl floorf
+; CHECK-SP-NOV8: {{b|bl}} floorf
 ; CHECK-SP-V8: vrintm.f32
 define float @floor_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.floor.f32(float %x, metadata !"fpexcept.strict") #0
@@ -337,14 +335,14 @@ define float @floor_f32(float %x) #0 {
 }
 
 ; CHECK-LABEL: lround_f32:
-; CHECK: bl lroundf
+; CHECK: {{b|bl}} lroundf
 define i32 @lround_f32(float %x) #0 {
   %val = call i32 @llvm.experimental.constrained.lround.i32.f32(float %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 ; CHECK-LABEL: llround_f32:
-; CHECK: bl llroundf
+; CHECK: {{b|bl}} llroundf
 define i32 @llround_f32(float %x) #0 {
   %val = call i32 @llvm.experimental.constrained.llround.i32.f32(float %x, metadata !"fpexcept.strict") #0
   ret i32 %val
@@ -352,7 +350,7 @@ define i32 @llround_f32(float %x) #0 {
 
 ; CHECK-LABEL: round_f32:
 ; CHECK-NOSP: bl roundf
-; CHECK-SP-NOV8: bl roundf
+; CHECK-SP-NOV8: {{b|bl}} roundf
 ; CHECK-SP-V8: vrinta.f32
 define float @round_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.round.f32(float %x, metadata !"fpexcept.strict") #0
@@ -361,7 +359,7 @@ define float @round_f32(float %x) #0 {
 
 ; CHECK-LABEL: trunc_f32:
 ; CHECK-NOSP: bl truncf
-; CHECK-SP-NOV8: bl truncf
+; CHECK-SP-NOV8: {{b|bl}} truncf
 ; CHECK-SP-V8: vrintz.f32
 define float @trunc_f32(float %x) #0 {
   %val = call float @llvm.experimental.constrained.trunc.f32(float %x, metadata !"fpexcept.strict") #0
@@ -592,7 +590,7 @@ define i32 @fcmps_une_f32(float %a, float %b) #0 {
 ; Double-precision intrinsics
 
 ; CHECK-LABEL: add_f64:
-; CHECK-NODP: bl __aeabi_dadd
+; CHECK-NODP: {{b|bl}} __aeabi_dadd
 ; CHECK-DP: vadd.f64
 define double @add_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.fadd.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -600,7 +598,7 @@ define double @add_f64(double %x, double %y) #0 {
 }
 
 ; CHECK-LABEL: sub_f64:
-; CHECK-NODP: bl __aeabi_dsub
+; CHECK-NODP: {{b|bl}} __aeabi_dsub
 ; CHECK-DP: vsub.f64
 define double @sub_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.fsub.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -608,7 +606,7 @@ define double @sub_f64(double %x, double %y) #0 {
 }
 
 ; CHECK-LABEL: mul_f64:
-; CHECK-NODP: bl __aeabi_dmul
+; CHECK-NODP: {{b|bl}} __aeabi_dmul
 ; CHECK-DP: vmul.f64
 define double @mul_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.fmul.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -616,7 +614,7 @@ define double @mul_f64(double %x, double %y) #0 {
 }
 
 ; CHECK-LABEL: div_f64:
-; CHECK-NODP: bl __aeabi_ddiv
+; CHECK-NODP: {{b|bl}} __aeabi_ddiv
 ; CHECK-DP: vdiv.f64
 define double @div_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.fdiv.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -624,14 +622,14 @@ define double @div_f64(double %x, double %y) #0 {
 }
 
 ; CHECK-LABEL: frem_f64:
-; CHECK: bl fmod
+; CHECK: {{b|bl}} fmod
 define double @frem_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.frem.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: fma_f64:
-; CHECK-NODP: bl fma
+; CHECK-NODP: {{b|bl}} fma
 ; CHECK-DP: vfma.f64
 define double @fma_f64(double %x, double %y, double %z) #0 {
   %val = call double @llvm.experimental.constrained.fma.f64(double %x, double %y, double %z, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -639,7 +637,7 @@ define double @fma_f64(double %x, double %y, double %z) #0 {
 }
 
 ; CHECK-LABEL: fptosi_f64:
-; CHECK-NODP: bl __aeabi_d2iz
+; CHECK-NODP: {{b|bl}} __aeabi_d2iz
 ; CHECK-DP: vcvt.s32.f64
 define i32 @fptosi_f64(double %x) #0 {
   %val = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %x, metadata !"fpexcept.strict") #0
@@ -647,7 +645,7 @@ define i32 @fptosi_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: fptoui_f64:
-; CHECK-NODP: bl __aeabi_d2uiz
+; CHECK-NODP: {{b|bl}} __aeabi_d2uiz
 ; FIXME-CHECK-DP: vcvt.u32.f64
 define i32 @fptoui_f64(double %x) #0 {
   %val = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x, metadata !"fpexcept.strict") #0
@@ -655,7 +653,7 @@ define i32 @fptoui_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: sqrt_f64:
-; CHECK-NODP: bl sqrt
+; CHECK-NODP: {{b|bl}} sqrt
 ; CHECK-DP: vsqrt.f64
 define double @sqrt_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.sqrt.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -663,70 +661,70 @@ define double @sqrt_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: powi_f64:
-; CHECK: bl __powidf2
+; CHECK: {{b|bl}} __powidf2
 define double @powi_f64(double %x, i32 %y) #0 {
   %val = call double @llvm.experimental.constrained.powi.f64(double %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: sin_f64:
-; CHECK: bl sin
+; CHECK: {{b|bl}} sin
 define double @sin_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.sin.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: cos_f64:
-; CHECK: bl cos
+; CHECK: {{b|bl}} cos
 define double @cos_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.cos.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: tan_f64:
-; CHECK: bl tan
+; CHECK: {{b|bl}} tan
 define double @tan_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.tan.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: acos_f64:
-; CHECK: bl acos
+; CHECK: {{b|bl}} acos
 define double @acos_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.acos.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: asin_f64:
-; CHECK: bl asin
+; CHECK: {{b|bl}} asin
 define double @asin_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.asin.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: atan_f64:
-; CHECK: bl atan
+; CHECK: {{b|bl}} atan
 define double @atan_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.atan.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: cosh_f64:
-; CHECK: bl cosh
+; CHECK: {{b|bl}} cosh
 define double @cosh_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.cosh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: sinh_f64:
-; CHECK: bl sinh
+; CHECK: {{b|bl}} sinh
 define double @sinh_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.sinh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: tanh_f64:
-; CHECK: bl tanh
+; CHECK: {{b|bl}} tanh
 define double @tanh_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.tanh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
@@ -734,15 +732,15 @@ define double @tanh_f64(double %x, double %y) #0 {
 
 ; CHECK-LABEL: fmuladd_f64:
 ; CHECK-DP: vfma.f64
-; CHECK-NODP: bl __aeabi_dmul
-; CHECK-NODP: bl __aeabi_dadd
+; CHECK-NODP: {{b|bl}} __aeabi_dmul
+; CHECK-NODP: {{b|bl}} __aeabi_dadd
 define double @fmuladd_f64(double %x, double %y, double %z) #0 {
   %val = call double @llvm.experimental.constrained.fmuladd.f64(double %x, double %y, double %z, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: ldexp_f64:
-; CHECK: bl ldexp
+; CHECK: {{b|bl}} ldexp
 define double @ldexp_f64(double %x, i32 %y) #0 {
   %val = call double @llvm.experimental.constrained.ldexp.f64.i32(double %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
@@ -750,7 +748,7 @@ define double @ldexp_f64(double %x, i32 %y) #0 {
 
 ; CHECK-LABEL: roundeven_f64:
 ; CHECK-DP-V8: vrintn.f64
-; CHECK-NODP: bl roundeven
+; CHECK-NODP: {{b|bl}} roundeven
 define double @roundeven_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.roundeven.f64(double %x, metadata !"fpexcept.strict") #0
   ret double %val
@@ -765,57 +763,57 @@ define double @uitofp_f64_i32(i32 %x) #0 {
 }
 
 ; CHECK-LABEL: atan2_f64:
-; CHECK: bl atan2
+; CHECK: {{b|bl}} atan2
 define double @atan2_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.atan2.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: pow_f64:
-; CHECK: bl pow
+; CHECK: {{b|bl}} pow
 define double @pow_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.pow.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: log_f64:
-; CHECK: bl log
+; CHECK: {{b|bl}} log
 define double @log_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.log.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: log10_f64:
-; CHECK: bl log10
+; CHECK: {{b|bl}} log10
 define double @log10_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.log10.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: log2_f64:
-; CHECK: bl log2
+; CHECK: {{b|bl}} log2
 define double @log2_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.log2.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: exp_f64:
-; CHECK: bl exp
+; CHECK: {{b|bl}} exp
 define double @exp_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.exp.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: exp2_f64:
-; CHECK: bl exp2
+; CHECK: {{b|bl}} exp2
 define double @exp2_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.exp2.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 ; CHECK-LABEL: rint_f64:
-; CHECK-NODP: bl rint
-; CHECK-DP-NOV8: bl rint
+; CHECK-NODP: {{b|bl}} rint
+; CHECK-DP-NOV8: {{b|bl}} rint
 ; CHECK-DP-V8: vrintx.f64
 define double @rint_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.rint.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -823,8 +821,8 @@ define double @rint_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: nearbyint_f64:
-; CHECK-NODP: bl nearbyint
-; CHECK-DP-NOV8: bl nearbyint
+; CHECK-NODP: {{b|bl}} nearbyint
+; CHECK-DP-NOV8: {{b|bl}} nearbyint
 ; CHECK-DP-V8: vrintr.f64
 define double @nearbyint_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.nearbyint.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -832,22 +830,22 @@ define double @nearbyint_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: lrint_f64:
-; CHECK: bl lrint
+; CHECK: {{b|bl}} {{l?}}rint
 define i32 @lrint_f64(double %x) #0 {
   %val = call i32 @llvm.experimental.constrained.lrint.i32.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 ; CHECK-LABEL: llrint_f64:
-; CHECK: bl llrint
+; CHECK: {{b|bl}} {{l?l?}}rint
 define i32 @llrint_f64(double %x) #0 {
   %val = call i32 @llvm.experimental.constrained.llrint.i32.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 ; CHECK-LABEL: maxnum_f64:
-; CHECK-NODP: bl fmax
-; CHECK-DP-NOV8: bl fmax
+; CHECK-NODP: {{b|bl}} fmax
+; CHECK-DP-NOV8: {{b|bl}} fmax
 ; CHECK-DP-V8: vmaxnm.f64
 define double @maxnum_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.maxnum.f64(double %x, double %y, metadata !"fpexcept.strict") #0
@@ -855,8 +853,8 @@ define double @maxnum_f64(double %x, double %y) #0 {
 }
 
 ; CHECK-LABEL: minnum_f64:
-; CHECK-NODP: bl fmin
-; CHECK-DP-NOV8: bl fmin
+; CHECK-NODP: {{b|bl}} fmin
+; CHECK-DP-NOV8: {{b|bl}} fmin
 ; CHECK-DP-V8: vminnm.f64
 define double @minnum_f64(double %x, double %y) #0 {
   %val = call double @llvm.experimental.constrained.minnum.f64(double %x, double %y, metadata !"fpexcept.strict") #0
@@ -864,8 +862,8 @@ define double @minnum_f64(double %x, double %y) #0 {
 }
 
 ; CHECK-LABEL: ceil_f64:
-; CHECK-NODP: bl ceil
-; CHECK-DP-NOV8: bl ceil
+; CHECK-NODP: {{b|bl}} ceil
+; CHECK-DP-NOV8: {{b|bl}} ceil
 ; CHECK-DP-V8: vrintp.f64
 define double @ceil_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.ceil.f64(double %x, metadata !"fpexcept.strict") #0
@@ -873,8 +871,8 @@ define double @ceil_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: floor_f64:
-; CHECK-NODP: bl floor
-; CHECK-DP-NOV8: bl floor
+; CHECK-NODP: {{b|bl}} floor
+; CHECK-DP-NOV8: {{b|bl}} floor
 ; CHECK-DP-V8: vrintm.f64
 define double @floor_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.floor.f64(double %x, metadata !"fpexcept.strict") #0
@@ -882,22 +880,22 @@ define double @floor_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: lround_f64:
-; CHECK: bl lround
+; CHECK: {{b|bl}} {{l?}}round
 define i32 @lround_f64(double %x) #0 {
   %val = call i32 @llvm.experimental.constrained.lround.i32.f64(double %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 ; CHECK-LABEL: llround_f64:
-; CHECK: bl llround
+; CHECK: {{b|bl}} {{l?l?}}round
 define i32 @llround_f64(double %x) #0 {
   %val = call i32 @llvm.experimental.constrained.llround.i32.f64(double %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 ; CHECK-LABEL: round_f64:
-; CHECK-NODP: bl round
-; CHECK-DP-NOV8: bl round
+; CHECK-NODP: {{b|bl}} round
+; CHECK-DP-NOV8: {{b|bl}} round
 ; CHECK-DP-V8: vrinta.f64
 define double @round_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.round.f64(double %x, metadata !"fpexcept.strict") #0
@@ -905,8 +903,8 @@ define double @round_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: trunc_f64:
-; CHECK-NODP: bl trunc
-; CHECK-DP-NOV8: bl trunc
+; CHECK-NODP: {{b|bl}} trunc
+; CHECK-DP-NOV8: {{b|bl}} trunc
 ; CHECK-DP-V8: vrintz.f64
 define double @trunc_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.trunc.f64(double %x, metadata !"fpexcept.strict") #0
@@ -914,7 +912,7 @@ define double @trunc_f64(double %x) #0 {
 }
 
 ; CHECK-LABEL: fcmp_olt_f64:
-; CHECK-NODP: bl __aeabi_dcmplt
+; CHECK-NODP: {{b|bl}} __aeabi_dcmplt
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_olt_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") #0
@@ -923,7 +921,7 @@ define i32 @fcmp_olt_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_ole_f64:
-; CHECK-NODP: bl __aeabi_dcmple
+; CHECK-NODP: {{b|bl}} __aeabi_dcmple
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_ole_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ole", metadata !"fpexcept.strict") #0
@@ -932,7 +930,7 @@ define i32 @fcmp_ole_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_ogt_f64:
-; CHECK-NODP: bl __aeabi_dcmpgt
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpgt
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_ogt_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ogt", metadata !"fpexcept.strict") #0
@@ -941,7 +939,7 @@ define i32 @fcmp_ogt_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_oge_f64:
-; CHECK-NODP: bl __aeabi_dcmpge
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpge
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_oge_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oge", metadata !"fpexcept.strict") #0
@@ -950,7 +948,7 @@ define i32 @fcmp_oge_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_oeq_f64:
-; CHECK-NODP: bl __aeabi_dcmpeq
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpeq
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_oeq_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.strict") #0
@@ -969,7 +967,7 @@ define i32 @fcmp_one_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_ult_f64:
-; CHECK-NODP: bl __aeabi_dcmpge
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpge
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_ult_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ult", metadata !"fpexcept.strict") #0
@@ -978,7 +976,7 @@ define i32 @fcmp_ult_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_ule_f64:
-; CHECK-NODP: bl __aeabi_dcmpgt
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpgt
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_ule_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ule", metadata !"fpexcept.strict") #0
@@ -987,7 +985,7 @@ define i32 @fcmp_ule_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_ugt_f64:
-; CHECK-NODP: bl __aeabi_dcmple
+; CHECK-NODP: {{b|bl}} __aeabi_dcmple
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_ugt_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ugt", metadata !"fpexcept.strict") #0
@@ -996,7 +994,7 @@ define i32 @fcmp_ugt_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_uge_f64:
-; CHECK-NODP: bl __aeabi_dcmplt
+; CHECK-NODP: {{b|bl}} __aeabi_dcmplt
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_uge_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"uge", metadata !"fpexcept.strict") #0
@@ -1015,7 +1013,7 @@ define i32 @fcmp_ueq_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmp_une_f64:
-; CHECK-NODP: bl __aeabi_dcmpeq
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpeq
 ; CHECK-DP: vcmp.f64
 define i32 @fcmp_une_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"une", metadata !"fpexcept.strict") #0
@@ -1024,7 +1022,7 @@ define i32 @fcmp_une_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_olt_f64:
-; CHECK-NODP: bl __aeabi_dcmplt
+; CHECK-NODP: {{b|bl}} __aeabi_dcmplt
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_olt_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") #0
@@ -1033,7 +1031,7 @@ define i32 @fcmps_olt_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_ole_f64:
-; CHECK-NODP: bl __aeabi_dcmple
+; CHECK-NODP: {{b|bl}} __aeabi_dcmple
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_ole_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ole", metadata !"fpexcept.strict") #0
@@ -1042,7 +1040,7 @@ define i32 @fcmps_ole_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_ogt_f64:
-; CHECK-NODP: bl __aeabi_dcmpgt
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpgt
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_ogt_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ogt", metadata !"fpexcept.strict") #0
@@ -1051,7 +1049,7 @@ define i32 @fcmps_ogt_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_oge_f64:
-; CHECK-NODP: bl __aeabi_dcmpge
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpge
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_oge_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oge", metadata !"fpexcept.strict") #0
@@ -1060,7 +1058,7 @@ define i32 @fcmps_oge_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_oeq_f64:
-; CHECK-NODP: bl __aeabi_dcmpeq
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpeq
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_oeq_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.strict") #0
@@ -1079,7 +1077,7 @@ define i32 @fcmps_one_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_ult_f64:
-; CHECK-NODP: bl __aeabi_dcmpge
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpge
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_ult_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ult", metadata !"fpexcept.strict") #0
@@ -1088,7 +1086,7 @@ define i32 @fcmps_ult_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_ule_f64:
-; CHECK-NODP: bl __aeabi_dcmpgt
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpgt
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_ule_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ule", metadata !"fpexcept.strict") #0
@@ -1097,7 +1095,7 @@ define i32 @fcmps_ule_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_ugt_f64:
-; CHECK-NODP: bl __aeabi_dcmple
+; CHECK-NODP: {{b|bl}} __aeabi_dcmple
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_ugt_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ugt", metadata !"fpexcept.strict") #0
@@ -1106,7 +1104,7 @@ define i32 @fcmps_ugt_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_uge_f64:
-; CHECK-NODP: bl __aeabi_dcmplt
+; CHECK-NODP: {{b|bl}} __aeabi_dcmplt
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_uge_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"uge", metadata !"fpexcept.strict") #0
@@ -1125,7 +1123,7 @@ define i32 @fcmps_ueq_f64(double %a, double %b) #0 {
 }
 
 ; CHECK-LABEL: fcmps_une_f64:
-; CHECK-NODP: bl __aeabi_dcmpeq
+; CHECK-NODP: {{b|bl}} __aeabi_dcmpeq
 ; CHECK-DP: vcmpe.f64
 define i32 @fcmps_une_f64(double %a, double %b) #0 {
   %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"une", metadata !"fpexcept.strict") #0
@@ -1137,7 +1135,7 @@ define i32 @fcmps_une_f64(double %a, double %b) #0 {
 ; Single/Double conversion intrinsics
 
 ; CHECK-LABEL: fptrunc_f32:
-; CHECK-NODP: bl __aeabi_d2f
+; CHECK-NODP: {{b|bl}} __aeabi_d2f
 ; CHECK-DP: vcvt.f32.f64
 define float @fptrunc_f32(double %x) #0 {
   %val = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -1145,7 +1143,7 @@ define float @fptrunc_f32(double %x) #0 {
 }
 
 ; CHECK-LABEL: fpext_f32:
-; CHECK-NODP: bl __aeabi_f2d
+; CHECK-NODP: {{b|bl}} __aeabi_f2d
 ; CHECK-DP: vcvt.f64.f32
 define double @fpext_f32(float %x) #0 {
   %val = call double @llvm.experimental.constrained.fpext.f64.f32(float %x, metadata !"fpexcept.strict") #0
@@ -1153,8 +1151,7 @@ define double @fpext_f32(float %x) #0 {
 }
 
 ; CHECK-LABEL: fpext_f32_twice:
-; CHECK-NODP: bl __aeabi_f2d
-; CHECK-NODP: bl __aeabi_f2d
+; CHECK-NODP: {{b|bl}} __aeabi_f2d
 ; CHECK-DP: vcvt.f64.f32
 ; FIXME-CHECK-DP: vcvt.f64.f32
 define void @fpext_f32_twice(float %arg, ptr %ptr) #0 {

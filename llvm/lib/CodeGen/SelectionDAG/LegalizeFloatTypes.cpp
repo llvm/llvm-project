@@ -2482,11 +2482,18 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_XINT(SDNode *N) {
   TargetLowering::MakeLibCallOptions CallOptions;
   std::pair<SDValue, SDValue> Tmp =
       TLI.makeLibCall(DAG, LC, NVT, Op, CallOptions, dl, Chain);
+
+  // Truncate the result if the libcall returns a larger type (e.g. ppc_fp128
+  // to i1 uses a __gcc_qtou libcall that returns i32).
+  SDValue Res = Tmp.first;
+  if (NVT != RVT)
+    Res = DAG.getNode(ISD::TRUNCATE, dl, RVT, Res);
+
   if (!IsStrict)
-    return Tmp.first;
+    return Res;
 
   ReplaceValueWith(SDValue(N, 1), Tmp.second);
-  ReplaceValueWith(SDValue(N, 0), Tmp.first);
+  ReplaceValueWith(SDValue(N, 0), Res);
   return SDValue();
 }
 

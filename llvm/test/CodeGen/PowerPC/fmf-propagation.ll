@@ -248,7 +248,7 @@ define float @sqrt_afn_ieee_inf(float %x) #0 {
 }
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn_preserve_sign:'
-; FMFDEBUG:         fmul ninf afn {{t[0-9]+}}
+; FMFDEBUG:         fmul ninf afn zero {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn_preserve_sign:'
 
 
@@ -321,7 +321,7 @@ define float @sqrt_fast_ieee(float %x) #0 {
 ; The call is now fully 'fast'. This implies that approximation is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
-; FMFDEBUG:         fmul ninf contract afn reassoc {{t[0-9]+}}
+; FMFDEBUG:         fmul ninf contract afn reassoc zero {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
 
 

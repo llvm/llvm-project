@@ -4,10 +4,9 @@
 define <1 x i1> @test_oeq_q_v1f64(<1 x double> %a, <1 x double> %b) {
 ; CHECK-LABEL: test_oeq_q_v1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vucomisd %xmm1, %xmm0
-; CHECK-NEXT:    setnp %cl
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    vcmpeqsd %xmm1, %xmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %cond = tail call <1 x i1> @llvm.experimental.constrained.fcmp.v1f64(<1 x double> %a, <1 x double> %b, metadata !"oeq", metadata !"fpexcept.strict")
   ret <1 x i1> %cond
@@ -126,10 +125,9 @@ define <1 x i1> @test_ule_q_v1f64(<1 x double> %a, <1 x double> %b) {
 define <1 x i1> @test_une_q_v1f64(<1 x double> %a, <1 x double> %b) {
 ; CHECK-LABEL: test_une_q_v1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vucomisd %xmm1, %xmm0
-; CHECK-NEXT:    setp %cl
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    vcmpneqsd %xmm1, %xmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %cond = tail call <1 x i1> @llvm.experimental.constrained.fcmp.v1f64(<1 x double> %a, <1 x double> %b, metadata !"une", metadata !"fpexcept.strict")
   ret <1 x i1> %cond

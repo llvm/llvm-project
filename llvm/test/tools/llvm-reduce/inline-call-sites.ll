@@ -730,9 +730,9 @@ define float @nonstrictfp_callee(float %a) {
 }
 
 ; CHECK-LABEL: define float @strictfp_caller(
-; RESULT-NEXT: call float @llvm.experimental.constrained.fadd.f32(
-; RESULT-NEXT: call float @llvm.experimental.constrained.fadd.f32(
-; RESULT-NEXT: ret float %add
+; RESULT-NEXT: fadd float
+; RESULT-NEXT: fadd float
+; RESULT-NEXT: ret float
 define float @strictfp_caller(float %a) strictfp {
   %call = call float @nonstrictfp_callee(float %a) strictfp
   %add = call float @llvm.experimental.constrained.fadd.f32(float %call, float 2.0, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -740,7 +740,7 @@ define float @strictfp_caller(float %a) strictfp {
 }
 
 ; CHECK-LABEL: define float @strictfp_callee(
-; RESULT-NEXT: call float @llvm.experimental.constrained.fadd.f32(
+; RESULT-NEXT: fadd float
 ; RESULT-NEXT: ret float
 define float @strictfp_callee(float %a) strictfp {
   %add = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -750,7 +750,7 @@ define float @strictfp_callee(float %a) strictfp {
 ; FIXME: This should not inline. The inlined case should fail the
 ; verifier, but it does not.
 ; CHECK-LABEL: define float @nonstrictfp_caller(
-; RESULT-NEXT: call float @llvm.experimental.constrained.fadd.f32(
+; RESULT-NEXT: fadd float
 ; RESULT-NEXT: fadd float
 ; RESULT-NEXT: ret float
 define float @nonstrictfp_caller(float %a) {

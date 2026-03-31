@@ -7,9 +7,9 @@ declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, me
 define float @func1(float %a, float %b) {
 ; CHECK-LABEL: define float @func1
 ; CHECK-SAME: (float [[A:%.*]], float [[B:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[A]], float [[B]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    [[RESULT_2:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[A]], float [[B]], metadata !"round.dynamic", metadata !"fpexcept.strict")
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    [[RESULT2:%.*]] = fadd float [[A]], [[B]]
+; CHECK-NEXT:    [[RESULT_21:%.*]] = fadd float [[A]], [[B]]
+; CHECK-NEXT:    ret float [[RESULT2]]
 ;
   %result = call float @llvm.experimental.constrained.fadd.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   %result_2 = call float @llvm.experimental.constrained.fadd.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict")

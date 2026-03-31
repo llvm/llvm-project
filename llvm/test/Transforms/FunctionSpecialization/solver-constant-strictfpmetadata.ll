@@ -5,7 +5,7 @@ define float @test(ptr %this, float %cm, i1 %0) strictfp {
 ; CHECK-LABEL: define float @test(
 ; CHECK-SAME: ptr [[THIS:%.*]], float [[CM:%.*]], i1 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f32(float [[CM]], float 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[CMP1:%.*]] = call i1 @llvm.fcmps.f32(float [[CM]], float 0.000000e+00, metadata !"ole")
 ; CHECK-NEXT:    [[CALL295:%.*]] = call float @test.specialized.1(ptr null, float 0.000000e+00, i1 false)
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
