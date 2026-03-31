@@ -106,6 +106,10 @@ public:
 private:
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
+  friend class Value;
+  /// Index of first metadata attachment in context, or zero.
+  unsigned MetadataIndex = 0;
+
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;
@@ -116,6 +120,7 @@ public:
   /// debugging information present.
   DbgMarker *DebugMarker = nullptr;
 
+public:
   /// Clone any debug-info attached to \p From onto this instruction. Used to
   /// copy debugging information from one block to another, when copying entire
   /// blocks. \see DebugProgramInstruction.h , because the ordering of
