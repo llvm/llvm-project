@@ -327,7 +327,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // the new arguments, also transferring over the names as well.
   Function::arg_iterator I2 = NF->arg_begin();
   for (Argument &Arg : F->args()) {
-    if (!ArgsToPromote.count(&Arg)) {
+    auto It = ArgsToPromote.find(&Arg);
+    if (It == ArgsToPromote.end()) {
       // If this is an unmodified argument, move the name and users over to the
       // new version.
       Arg.replaceAllUsesWith(&*I2);
@@ -336,11 +337,11 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
       continue;
     }
 
-    const auto &ArgParts = ArgsToPromote.find(&Arg)->second;
+    const auto &ArgParts = It->second;
 
     // For single-part promoted pointer arguments, preserve debug info by
-    // emitting DW_OP_LLVM_implicit_pointer referencing the promoted scalar
-    // value.
+    // prepending DW_OP_LLVM_implicit_pointer to the existing expression,
+    // referencing the promoted scalar value.
     // Multi-part promotions and dead arguments fall back to poisoning
     // (multi-part would need DW_OP_LLVM_fragment combined with implicit
     // pointer, which is future work).
@@ -349,11 +350,11 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
       SmallVector<DbgVariableRecord *> DVRs;
       findDbgUsers(&Arg, DVRs);
       if (!DVRs.empty()) {
-        auto *ImplicitPtrExpr = DIExpression::get(
-            Arg.getContext(), {dwarf::DW_OP_LLVM_implicit_pointer});
+        SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_LLVM_implicit_pointer};
         for (auto *DVR : DVRs) {
           DVR->replaceVariableLocationOp(&Arg, PromotedNewArg);
-          DVR->setExpression(ImplicitPtrExpr);
+          DVR->setExpression(
+              DIExpression::prependOpcodes(DVR->getExpression(), Ops));
         }
       }
     }
