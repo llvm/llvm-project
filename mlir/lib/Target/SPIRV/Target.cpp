@@ -96,18 +96,6 @@ SPIRVTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
-  // If compilation target is assembly, attach bool attribute
-  // "requires_null_terminator=false". This indicates, even if the compilation
-  // target is assembly, a null terminator is not required for SPIR-V. Because
-  // SPIR-V is a binary blob and does not require a null terminator.
-  if (format == gpu::CompilationTarget::Assembly) {
-    objectProps = DictionaryAttr::get(
-        attribute.getContext(),
-        {NamedAttribute(
-            "requires_null_terminator",
-            builder.getBoolAttr(
-                false /*SPIR-V binary does not need null terminator*/))});
-  }
 
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,

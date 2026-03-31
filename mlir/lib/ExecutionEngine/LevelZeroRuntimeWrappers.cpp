@@ -522,8 +522,14 @@ extern "C" ze_module_handle_t mgpuModuleLoad(const void *data,
 
 extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
                                                 size_t assemblySize) {
+  // Account for extra null terminator added in embedBinaryImpl.
+  // A null terminator is added during embedding binary for assembly format to
+  // support JIT paths that expect null-terminated strings. However, for SPIR-V
+  // binary format, the null terminator is not expected. So we need to subtract
+  // the null terminator when loading SPIR-V binary.
+  auto actualAssemblySize = assemblySize - 1;
   return catchAll([&]() {
-    return loadModule(data, assemblySize, ZE_MODULE_FORMAT_IL_SPIRV);
+    return loadModule(data, actualAssemblySize, ZE_MODULE_FORMAT_IL_SPIRV);
   });
 }
 

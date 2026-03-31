@@ -95,32 +95,10 @@ namespace llvm {
 static LogicalResult embedBinaryImpl(StringRef moduleName,
                                      gpu::ObjectAttr object, Module &module) {
 
-  // Default JIT optimization level.
-  auto optLevel = APInt::getZero(32);
-  std::optional<StringRef> section = std::nullopt;
-  bool addNull = (object.getFormat() == gpu::CompilationTarget::Assembly);
-
-  if (DictionaryAttr objectProps = object.getProperties()) {
-    if (auto sectionAttr = dyn_cast_or_null<StringAttr>(
-            objectProps.get(gpu::elfSectionName))) {
-      section = sectionAttr.getValue();
-    }
-    // Check if there's an optimization level embedded in the object.
-    if (auto optAttr = dyn_cast_or_null<IntegerAttr>(objectProps.get("O")))
-      optLevel = optAttr.getValue();
-    // Check if there's an attribute indicating whether a null terminator is
-    // needed for the object.
-    if (auto nullTerminatorAttr = dyn_cast_or_null<BoolAttr>(
-            objectProps.get("requires_null_terminator"))) {
-      addNull = nullTerminatorAttr.getValue();
-    }
-  }
-
   // Embed the object as a global string.
   // Add null for assembly output for JIT paths that expect null-terminated
-  // strings. SPIR-V (for both XeVM and SPIR-V target) is passed as a binary
-  // blob and should not have a null terminator.
-
+  // strings.
+  bool addNull = (object.getFormat() == gpu::CompilationTarget::Assembly);
   StringRef serializedStr = object.getObject().getValue();
   Constant *serializedCst =
       ConstantDataArray::getString(module.getContext(), serializedStr, addNull);
@@ -130,8 +108,19 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
                          serializedCst, moduleName + "_binary");
   serializedObj->setAlignment(MaybeAlign(8));
   serializedObj->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-  if (section)
-    serializedObj->setSection(*section);
+
+  // Default JIT optimization level.
+  auto optLevel = APInt::getZero(32);
+
+  if (DictionaryAttr objectProps = object.getProperties()) {
+    if (auto section = dyn_cast_or_null<StringAttr>(
+            objectProps.get(gpu::elfSectionName))) {
+      serializedObj->setSection(section.getValue());
+    }
+    // Check if there's an optimization level embedded in the object.
+    if (auto optAttr = dyn_cast_or_null<IntegerAttr>(objectProps.get("O")))
+      optLevel = optAttr.getValue();
+  }
 
   IRBuilder<> builder(module.getContext());
   auto *i32Ty = builder.getInt32Ty();
