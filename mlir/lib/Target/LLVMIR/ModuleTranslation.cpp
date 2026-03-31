@@ -1009,30 +1009,6 @@ LogicalResult ModuleTranslation::convertOperation(Operation &op,
   return convertDialectAttributes(&op, scope.getCapturedInstructions());
 }
 
-void ModuleTranslation::registerPendingOmpAllocateFree(Block *block,
-                                                       llvm::Value *ptr,
-                                                       llvm::Value *allocator) {
-  pendingOmpAllocateFrees[block].push_back({ptr, allocator});
-}
-
-void ModuleTranslation::emitPendingOmpAllocateFrees(
-    Block &bb, llvm::IRBuilderBase &builder) {
-  auto it = pendingOmpAllocateFrees.find(&bb);
-  if (it == pendingOmpAllocateFrees.end() || it->second.empty())
-    return;
-  llvm::OpenMPIRBuilder *ompBuilder = getOpenMPBuilder();
-  llvm::BasicBlock *llvmBB = lookupBlock(&bb);
-  llvm::Instruction *term = llvmBB->getTerminator();
-  if (term)
-    builder.SetInsertPoint(term);
-  else
-    builder.SetInsertPoint(llvmBB);
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  for (auto it2 = it->second.rbegin(); it2 != it->second.rend(); ++it2)
-    ompBuilder->createOMPFree(ompLoc, it2->first, it2->second, "");
-  pendingOmpAllocateFrees.erase(it);
-}
-
 /// Convert block to LLVM IR.  Unless `ignoreArguments` is set, emit PHI nodes
 /// to define values corresponding to the MLIR block arguments.  These nodes
 /// are not connected to the source basic blocks, which may not exist yet.  Uses
@@ -1072,9 +1048,10 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
 
   // Traverse operations.
   for (auto &op : bb) {
-    // Emit pending OpenMP allocate frees before the terminator.
+    // Give registered dialect interfaces a chance to inject IR before the
+    // terminator.
     if (op.hasTrait<OpTrait::IsTerminator>())
-      emitPendingOmpAllocateFrees(bb, builder);
+      iface.preTranslateTerminator(bb, builder, *this);
 
     // Set the current debug location within the builder.
     builder.SetCurrentDebugLocation(

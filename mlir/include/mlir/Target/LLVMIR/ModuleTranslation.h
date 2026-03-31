@@ -272,11 +272,6 @@ public:
   /// constructed.
   llvm::OpenMPIRBuilder *getOpenMPBuilder();
 
-  /// Registers a pending __kmpc_free call for the given block. These are
-  /// emitted before the block's terminator during block conversion.
-  void registerPendingOmpAllocateFree(Block *block, llvm::Value *ptr,
-                                      llvm::Value *allocator);
-
   /// Returns the LLVM module in which the IR is being constructed.
   llvm::Module *getLLVMModule() { return llvmModule.get(); }
 
@@ -406,9 +401,6 @@ private:
                                  llvm::IRBuilderBase &builder,
                                  bool recordInsertions);
 
-  /// Emits pending __kmpc_free calls for the block, before its terminator.
-  void emitPendingOmpAllocateFrees(Block &bb, llvm::IRBuilderBase &builder);
-
   /// Returns the LLVM metadata corresponding to the given mlir LLVM dialect
   /// TBAATagAttr.
   llvm::MDNode *getTBAANode(TBAATagAttr tbaaAttr) const;
@@ -516,10 +508,6 @@ private:
   /// Mapping from a BlockAddressAttr attribute to it's matching LLVM basic
   /// block.
   DenseMap<BlockAddressAttr, llvm::BasicBlock *> blockAddressToLLVMMapping;
-
-  /// Pending __kmpc_free calls per block, emitted before the terminator.
-  DenseMap<Block *, llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>>>
-      pendingOmpAllocateFrees;
 
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.

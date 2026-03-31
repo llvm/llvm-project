@@ -79,6 +79,17 @@ public:
                          attribute.getName().str() + "'");
     return success();
   }
+
+  /// Calls the `preTranslateTerminator` hook on every registered dialect
+  /// interface. This is broadcast to all interfaces because any dialect may
+  /// have registered deferred work for the given block, independent of which
+  /// dialect owns the terminator.
+  virtual void
+  preTranslateTerminator(Block &block, llvm::IRBuilderBase &builder,
+                         LLVM::ModuleTranslation &moduleTranslation) const {
+    for (const LLVMTranslationDialectInterface &iface : *this)
+      iface.preTranslateTerminator(block, builder, moduleTranslation);
+  }
 };
 
 } // namespace mlir

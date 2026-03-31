@@ -4636,7 +4636,11 @@ static Value getBaseValueForTypeLookup(Value value) {
   while (Operation *op = value.getDefiningOp()) {
     if (auto addrCast = dyn_cast_if_present<LLVM::AddrSpaceCastOp>(op))
       value = addrCast.getOperand();
-    else if (op->getName().getIdentifier()) {
+    // Traces through hlfir.declare, fir.declare to reach the base address and
+    // use for type lookup.
+    else if (op->getName().getIdentifier() &&
+             (op->getName().getIdentifier().str() == "hlfir.declare" ||
+              op->getName().getIdentifier().str() == "fir.declare")) {
       if (op->getNumOperands() > 0)
         value = op->getOperand(0);
       else
@@ -7313,9 +7317,49 @@ public:
   amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
+
+  /// Emits pending __kmpc_free calls just before the block's terminator.
+  void preTranslateTerminator(
+      Block &block, llvm::IRBuilderBase &builder,
+      LLVM::ModuleTranslation &moduleTranslation) const final;
+
+  /// Registers a deferred __kmpc_free call to be emitted before the
+  /// terminator of the given block.
+  void registerPendingOmpAllocateFree(Block *block, llvm::Value *ptr,
+                                      llvm::Value *allocator) const {
+    pendingOmpAllocateFrees[block].push_back({ptr, allocator});
+  }
+
+private:
+  /// Pending __kmpc_free calls per block, emitted via preTranslateTerminator.
+  mutable DenseMap<Block *,
+                   llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>>>
+      pendingOmpAllocateFrees;
 };
 
 } // namespace
+
+void OpenMPDialectLLVMIRTranslationInterface::preTranslateTerminator(
+    Block &block, llvm::IRBuilderBase &builder,
+    LLVM::ModuleTranslation &moduleTranslation) const {
+  auto it = pendingOmpAllocateFrees.find(&block);
+  if (it == pendingOmpAllocateFrees.end() || it->second.empty())
+    return;
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  if (!ompBuilder)
+    return;
+  llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(&block);
+  if (!llvmBB)
+    return;
+  if (!llvmBB->empty() && llvmBB->back().isTerminator())
+    builder.SetInsertPoint(&llvmBB->back());
+  else
+    builder.SetInsertPoint(llvmBB);
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  for (auto it2 = it->second.rbegin(); it2 != it->second.rend(); ++it2)
+    ompBuilder->createOMPFree(ompLoc, it2->first, it2->second, "");
+  pendingOmpAllocateFrees.erase(it);
+}
 
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
     Operation *op, ArrayRef<llvm::Instruction *> instructions,
@@ -7492,7 +7536,8 @@ convertTargetAllocMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
 
 static LogicalResult
 convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation) {
+                     LLVM::ModuleTranslation &moduleTranslation,
+                     const OpenMPDialectLLVMIRTranslationInterface &ompIface) {
   auto allocateDirOp = cast<omp::AllocateDirOp>(opInst);
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
@@ -7570,11 +7615,11 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     allocatedVars.push_back({allocCall, allocator});
   }
 
-  // Register __kmpc_free calls to be emitted before the block terminator.
+  // Register __kmpc_free calls to be emitted before the block terminator via
+  // preTranslateTerminator()
   Block *block = allocateDirOp->getBlock();
   for (auto &alloc : allocatedVars)
-    moduleTranslation.registerPendingOmpAllocateFree(block, alloc.first,
-                                                     alloc.second);
+    ompIface.registerPendingOmpAllocateFree(block, alloc.first, alloc.second);
 
   return success();
 }
@@ -7825,7 +7870,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             return convertTargetFreeMemOp(*op, builder, moduleTranslation);
           })
           .Case([&](omp::AllocateDirOp) {
-            return convertAllocateDirOp(*op, builder, moduleTranslation);
+            return convertAllocateDirOp(*op, builder, moduleTranslation, *this);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()

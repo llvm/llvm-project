@@ -1,19 +1,15 @@
-! This test checks lowering of OpenMP allocate Directive to LLVM IR.
+! This test checks lowering of OpenMP allocate Directive to HLFIR.
 ! Verifies code generation for default (no align, null allocator) case.
 
-! RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 program main
   integer :: x, y
   !$omp allocate(x, y)
 end program
 
-! CHECK: define void @_QQmain()
-! CHECK: call i32 @__kmpc_global_thread_num(
-! CHECK: call ptr @__kmpc_alloc(i32 {{.*}}, i64 8, ptr null)
-! CHECK: call ptr @__kmpc_alloc(i32 {{.*}}, i64 8, ptr null)
-! CHECK: call void @__kmpc_free(i32 {{.*}}, ptr {{.*}}, ptr null)
-! CHECK: call void @__kmpc_free(i32 {{.*}}, ptr {{.*}}, ptr null)
-! CHECK: ret void
-! CHECK: declare noalias ptr @__kmpc_alloc(i32, i64, ptr)
-! CHECK: declare void @__kmpc_free(i32, ptr, ptr)
+! CHECK: %[[X_ALLOC:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
+! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ALLOC]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[Y_ALLOC:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
+! CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_ALLOC]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: omp.allocate_dir(%[[X_DECL]]#0, %[[Y_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>)

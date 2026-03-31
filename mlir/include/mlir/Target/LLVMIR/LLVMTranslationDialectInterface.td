@@ -55,6 +55,16 @@ def LLVMTranslationDialectInterface : DialectInterface<"LLVMTranslationDialectIn
       [{
         return ::llvm::success();
       }]
+    >,
+    InterfaceMethod<[{
+        Hook called just before a block's terminator operation is translated.
+        Dialects can override this to inject IR that must appear at the end of
+        a basic block.
+      }],
+      "void", "preTranslateTerminator",
+      (ins "::mlir::Block &":$block, "::llvm::IRBuilderBase &":$builder,
+           "::mlir::LLVM::ModuleTranslation &":$moduleTranslation),
+      [{ }]
     >
   ];
 }
