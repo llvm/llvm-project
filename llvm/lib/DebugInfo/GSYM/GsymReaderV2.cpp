@@ -201,23 +201,25 @@ llvm::Error GsymReaderV2::parse() {
     StrTab.Data = Buf.substr(StringTableGD.FileOffset, StringTableGD.FileSize);
   }
 
-  // Read file table using StrpSize for Dir/Base fields. This handles both
+  // Read file table using getStrp() for Dir/Base fields. This handles both
   // swap and non-swap paths since variable StrpSize prevents mmap-casting.
+  // It is safe to create a GsymDataExtractor here because Hdr->StrpSize has
+  // already been read and validated by this point.
   {
+    GsymDataExtractor GDE(DE, this);
     if (FileTableGD.FileSize < 4)
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small");
     uint64_t FTOff = FileTableGD.FileOffset;
-    uint32_t NumFiles = DE.getU32(&FTOff);
-    const uint8_t SP = Hdr->StrpSize;
-    if (FileTableGD.FileSize < 4 + NumFiles * 2 * SP)
+    uint32_t NumFiles = GDE.getU32(&FTOff);
+    if (FileTableGD.FileSize < 4 + NumFiles * 2 * GDE.getStrpSize())
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small for %u files",
                                NumFiles);
     ResolvedFiles.resize(NumFiles);
     for (uint32_t I = 0; I < NumFiles; ++I) {
-      ResolvedFiles[I].Dir = DE.getUnsigned(&FTOff, SP);
-      ResolvedFiles[I].Base = DE.getUnsigned(&FTOff, SP);
+      ResolvedFiles[I].Dir = GDE.getStrp(&FTOff);
+      ResolvedFiles[I].Base = GDE.getStrp(&FTOff);
     }
     Files = ArrayRef<FileEntry>(ResolvedFiles);
   }
