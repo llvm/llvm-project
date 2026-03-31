@@ -1405,3 +1405,17 @@ entry:
   %1 = call i32 @llvm.smin.i32(i32 %0, i32 4294967295)
   ret i32 %1
 }
+
+; Negative test where the inner operation does not have a constant operand.
+define i32 @mm_usati_nonconstantinnner_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: mm_usati_nonconstantinnner_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    max a0, a0, a1
+; CHECK-NEXT:    li a1, 255
+; CHECK-NEXT:    min a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.smax.i32(i32 %x, i32 %y)
+  %1 = call i32 @llvm.smin.i32(i32 %0, i32 255)
+  ret i32 %1
+}

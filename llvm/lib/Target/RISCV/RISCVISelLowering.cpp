@@ -21474,7 +21474,7 @@ static SDValue combineMinMaxToSat(SDNode *N,
 
   if ((N0.getOpcode() != ISD::SMIN && N0.getOpcode() != ISD::SMAX) ||
       !isa<ConstantSDNode>(N->getOperand(1)) ||
-      !isa<ConstantSDNode>(N->getOperand(1)))
+      !isa<ConstantSDNode>(N0.getOperand(1)))
     return SDValue();
 
   SDValue Min = SDValue(N, 0);
