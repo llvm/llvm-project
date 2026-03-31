@@ -6824,8 +6824,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_mask_pmovus_qd_512:
     case Intrinsic::x86_avx512_mask_pmovs_wb_512:
     case Intrinsic::x86_avx512_mask_pmovus_wb_512: {
-      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} do not exist, we
-      // cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
+      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} do not exist,
+      // we cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
       // slow-path handler.
       handleAVX512VectorDownConvert(I);
       break;
