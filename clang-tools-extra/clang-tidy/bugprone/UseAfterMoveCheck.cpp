@@ -28,6 +28,7 @@ using namespace clang::tidy::utils;
 
 namespace clang::tidy::bugprone {
 
+using ast_matchers::optionally;
 using matchers::hasUnevaluatedContext;
 
 namespace {
@@ -52,7 +53,8 @@ class UseAfterMoveFinder {
 public:
   UseAfterMoveFinder(ASTContext *TheContext,
                      llvm::ArrayRef<StringRef> InvalidationFunctions,
-                     llvm::ArrayRef<StringRef> ReinitializationFunctions);
+                     llvm::ArrayRef<StringRef> ReinitializationFunctions,
+                     const CXXRecordDecl *MovedAs);
 
   // Within the given code block, finds the first use of 'MovedVariable' that
   // occurs after 'MovingCall' (the expression that performs the move). If a
@@ -77,6 +79,7 @@ private:
   ASTContext *Context;
   llvm::ArrayRef<StringRef> InvalidationFunctions;
   llvm::ArrayRef<StringRef> ReinitializationFunctions;
+  const CXXRecordDecl *MovedAs;
   std::unique_ptr<ExprSequence> Sequence;
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
@@ -193,9 +196,10 @@ static StatementMatcher inDecltypeOrTemplateArg() {
 
 UseAfterMoveFinder::UseAfterMoveFinder(
     ASTContext *TheContext, llvm::ArrayRef<StringRef> InvalidationFunctions,
-    llvm::ArrayRef<StringRef> ReinitializationFunctions)
+    llvm::ArrayRef<StringRef> ReinitializationFunctions,
+    const CXXRecordDecl *MovedAs)
     : Context(TheContext), InvalidationFunctions(InvalidationFunctions),
-      ReinitializationFunctions(ReinitializationFunctions) {}
+      ReinitializationFunctions(ReinitializationFunctions), MovedAs(MovedAs) {}
 
 std::optional<UseAfterMove>
 UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
@@ -405,7 +409,13 @@ void UseAfterMoveFinder::getDeclRefs(
                         DeclRefs](const ArrayRef<BoundNodes> Matches) {
       for (const auto &Match : Matches) {
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
+        const auto *Member = Match.getNodeAs<MemberExpr>("member-expr");
         const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
+        // Non-moved member as the move only implies a base class.
+        if (Member && MovedAs &&
+            !MovedAs->hasMemberName(Member->getMemberDecl()->getIdentifier())) {
+          continue;
+        }
         if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
           // Ignore uses of a standard smart pointer or classes annotated as
           // "null_after_move" (smart-pointer-like behavior) that don't
@@ -420,7 +430,8 @@ void UseAfterMoveFinder::getDeclRefs(
         declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
                     unless(inDecltypeOrTemplateArg()),
                     unless(hasParentIgnoringParenImpCasts(
-                        memberExpr(hasDeclaration(cxxDestructorDecl())))))
+                        memberExpr(hasDeclaration(cxxDestructorDecl())))),
+                    optionally(hasParent(memberExpr().bind("member-expr"))))
             .bind("declref");
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
@@ -548,6 +559,7 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
                               hasArgument(0, Arg))),
                unless(inDecltypeOrTemplateArg()),
                unless(hasParent(TryEmplaceMatcher)), expr().bind("call-move"),
+               optionally(hasParent(implicitCastExpr().bind("optional-cast"))),
                anyOf(hasAncestor(compoundStmt(
                          hasParent(lambdaExpr().bind("containing-lambda")))),
                      hasAncestor(functionDecl(anyOf(
@@ -593,6 +605,8 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MovingCall = Result.Nodes.getNodeAs<Expr>("moving-call");
   const auto *Arg = Result.Nodes.getNodeAs<DeclRefExpr>("arg");
   const auto *MoveDecl = Result.Nodes.getNodeAs<FunctionDecl>("move-decl");
+  const auto *ParentCast =
+      Result.Nodes.getNodeAs<ImplicitCastExpr>("optional-cast");
 
   if (!MovingCall || !MovingCall->getExprLoc().isValid())
     MovingCall = CallMove;
@@ -623,9 +637,13 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     CodeBlocks.push_back(ContainingFunc->getBody());
   }
 
+  const CXXRecordDecl *MovedAs = nullptr;
+  if (ParentCast && ParentCast->getCastKind() == CK_DerivedToBase)
+    MovedAs = ParentCast->getType()->getAsCXXRecordDecl();
+
   for (Stmt *CodeBlock : CodeBlocks) {
     UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions,
-                              ReinitializationFunctions);
+                              ReinitializationFunctions, MovedAs);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
                      determineMoveType(MoveDecl), MoveDecl);
