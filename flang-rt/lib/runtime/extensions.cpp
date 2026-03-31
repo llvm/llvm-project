@@ -422,7 +422,7 @@ std::int64_t RTNAME(time)() { return time(nullptr); }
  * elapsed since the first time TIMEF was called.
  * For the first call, it returns 0.
  *
- * TIMEF_IN_MILLISECONDS=1 sets the resolution to
+ * FLANG_TIMEF_IN_MILLISECONDS=1 sets the resolution to
  * milliseconds
  */
 double RTNAME(Timef)() {
@@ -460,6 +460,7 @@ double RTNAME(Timef)() {
   }
 #else
 // TODO: Windows implementation
+return 0.0;
 #endif
 }
 

@@ -12,6 +12,7 @@
 #include <cctype>
 #include <cerrno>
 #include <string>
+#include <unistd.h>
 
 using namespace Fortran::runtime;
 
@@ -35,14 +36,13 @@ TEST(TimeIntrinsics, Timef) {
   // We can't really test that we get the "right" result for Timef, but we
   // can have a smoke test to see that we get something reasonable on the
   // platforms where we expect to support it.
-  double start{RTNAME(Timef)()};
+  double start{RTNAME(Timef)()}, end{0.0};
   ASSERT_GE(start, 0.0);
 
-  // Loop until we get a different value from Timef
-  for (double end = start; end == start; end = RTNAME(CpuTime)()) {
-    ASSERT_GE(end, 0.0);
-    ASSERT_GE(end, start);
-  }
+  sleep(2);
+
+  ASSERT_GE(end, 0.0);
+  ASSERT_GE(end, start);
 }
 
 using count_t = std::int64_t;
