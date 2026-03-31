@@ -1,7 +1,7 @@
 import os
+import platform
 
 import lit.formats
-import lit.util
 
 config.name = "Comgr"
 config.suffixes = {".hip", ".cl", ".c", ".cpp"}
@@ -15,13 +15,24 @@ config.test_exec_root = config.my_obj_root
 if not config.comgr_disable_spirv:
     config.available_features.add("comgr-has-spirv")
 
+if platform.system() == "Windows":
+    config.available_features.add("system-windows")
+elif platform.system() == "Linux":
+    config.available_features.add("system-linux")
+
 # By default, disable the cache for the tests.
 # Test for the cache must explicitly enable this variable.
 config.environment['AMD_COMGR_CACHE'] = "0"
 
-# Add substitutions for LLVM tools
-config.substitutions.append(('%clang', os.path.join(config.llvm_tools_dir, 'clang')))
-config.substitutions.append(('%llvm-dis', os.path.join(config.llvm_tools_dir, 'llvm-dis')))
-config.substitutions.append(('%llvm-objdump', os.path.join(config.llvm_tools_dir, 'llvm-objdump')))
-config.substitutions.append(('%FileCheck', os.path.join(config.llvm_tools_dir, 'FileCheck')))
-config.substitutions.append(('%amd-llvm-spirv', os.path.join(config.llvm_tools_dir, 'amd-llvm-spirv')))
+# Resolve tool paths at configure time with forward slashes.  On Windows,
+# os.path.join may return paths with backslashes, which break when written
+# into bash scripts (e.g. "bin\clang" -> "binclang").
+def _fwd(*parts):
+    return os.path.join(*parts).replace("\\", "/")
+
+# %-prefixed substitutions for LLVM tools (used as %clang, %llvm-dis, etc.)
+config.substitutions.append(('%clang', _fwd(config.llvm_tools_dir, 'clang')))
+config.substitutions.append(('%llvm-dis', _fwd(config.llvm_tools_dir, 'llvm-dis')))
+config.substitutions.append(('%llvm-objdump', _fwd(config.llvm_tools_dir, 'llvm-objdump')))
+config.substitutions.append(('%FileCheck', _fwd(config.llvm_tools_dir, 'FileCheck')))
+config.substitutions.append(('%amd-llvm-spirv', _fwd(config.llvm_tools_dir, 'amd-llvm-spirv')))

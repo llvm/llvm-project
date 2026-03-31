@@ -42,6 +42,10 @@ llvm::StringRef getCachePolicy();
 /// $HOME/.cache/comgr_cache (depends on XDG_CACHE_HOME)
 llvm::StringRef getCacheDirectory();
 
+/// If environment variable AMD_COMGR_DRIVER_OPTIONS_APPEND is set, return the
+/// space-separated options to append to clang driver invocations.
+llvm::StringRef getDriverOptionsAppend();
+
 } // namespace env
 } // namespace COMGR
 

@@ -23,11 +23,20 @@ endmacro()
 # Creates target ${name} which depends on a clang command to compile ${input} to
 # ${output}, with any additional arguments from ${ARGN}, and add it to the
 # TEST_INPUT_BITCODES target list.
+set(TEST_INPUT_WCHAR_FLAG)
+if(WIN32)
+  # Match -fshort-wchar used by device libs on Windows (see
+  # amd/device-libs/cmake/OCL.cmake). Without this, linking fails with
+  # conflicting wchar_size module flags.
+  set(TEST_INPUT_WCHAR_FLAG -fshort-wchar)
+endif()
+
 macro(add_test_input_bitcode name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c -emit-llvm -target amdgcn-amd-amdhsa
     -mcpu=gfx900 -nogpulib -nogpuinc
+    ${TEST_INPUT_WCHAR_FLAG}
     ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
     -o "${output}"
     VERBATIM
