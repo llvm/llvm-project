@@ -3602,7 +3602,7 @@ Error AMDGPUEventTy::releaseTimingSignal(AMDGPUSignalTy **ReusableSignalPtr) {
   if (!Signal->decreaseUseCount())
     return Plugin::success();
 
-  if (ReusableSignalPtr && !(*ReusableSignalPtr)) {
+  if (ReusableSignalPtr) {
     *ReusableSignalPtr = Signal;
     return Plugin::success();
   }
