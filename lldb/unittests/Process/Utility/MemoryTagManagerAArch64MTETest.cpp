@@ -233,8 +233,7 @@ static MemoryRegionInfo MakeRegionInfo(lldb::addr_t base, lldb::addr_t size,
   return MemoryRegionInfo(MemoryRegionInfo::RangeType(base, size),
                           MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
                           MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
-                          MemoryRegionInfo::eYes, ConstString(),
-                          MemoryRegionInfo::eNo, 0)
+                          MemoryRegionInfo::eYes, ConstString())
       .SetMemoryTagged(tagged ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
 }
 
