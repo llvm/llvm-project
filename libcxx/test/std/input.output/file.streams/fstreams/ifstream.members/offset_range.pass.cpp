@@ -18,15 +18,14 @@
 //
 // XFAIL: target={{i686|arm.*}}-{{.+}}-android{{.*}}
 
-// Writing the >4 GB test file fails on 32 bit AIX.
-//
-// XFAIL: target=powerpc-{{.+}}-aix{{.*}}
-
 // By default, off_t is typically a 32-bit integer on ARMv7 Linux systems,
 // meaning it can represent file sizes up to 2GB (2^31 bytes) only.
 //
 // UNSUPPORTED: target=armv7-unknown-linux-gnueabihf
 
+#if defined(_AIX) && !defined(__64BIT__) && !defined(_LARGE_FILES)
+#  define _LARGE_FILES 1
+#endif
 #include <fstream>
 #include <iostream>
 #include <cassert>
