@@ -16095,8 +16095,8 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     if (!IncrExpr.isUsable())
       return StmtError();
 
-    ExprResult IVAssign = SemaRef.BuildBinOp(
-        CurScope, OrigVarLoc, BO_Assign, IterationVarRef, MakeIVRef());
+    ExprResult IVAssign = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Assign,
+                                             IterationVarRef, MakeIVRef());
     if (!IVAssign.isUsable())
       return StmtError();
 
