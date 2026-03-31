@@ -15,15 +15,15 @@
 
 // Tests the behavior of
 //
-// runtime-format-string<char> dynamic_format(string_view fmt) noexcept;
-// runtime-format-string<wchar_t> dynamic_format(wstring_view fmt) noexcept;
+// dynamic-format-string<char> dynamic_format(string_view fmt) noexcept;
+// dynamic-format-string<wchar_t> dynamic_format(wstring_view fmt) noexcept;
 //
 // and
 //
 // template<class charT, class... Args>
 //   struct basic_format_string {
 //   ...
-//   basic_format_string(runtime-format-string<charT> s) noexcept : str(s.str) {}
+//   basic_format_string(dynamic-format-string<charT> s) noexcept : str(s.str) {}
 //   ...
 // }
 //
@@ -36,7 +36,7 @@
 //
 // The basics of dynamic_format and basic_format_string's constructor are tested in
 // - libcxx/test/std/utilities/format/format.syn/dynamic_format_string.pass.cpp
-// - libcxx/test/std/utilities/format/format.fmt.string/ctor.runtime-format-string.pass.cpp
+// - libcxx/test/std/utilities/format/format.fmt.string/ctor.dynamic-format-string.pass.cpp
 
 #include <format>
 #include <cassert>

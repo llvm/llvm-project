@@ -10,19 +10,19 @@
 
 // <format>
 
-// template<class charT> struct runtime-format-string {  // exposition-only
+// template<class charT> struct dynamic-format-string {  // exposition-only
 // private:
 //   basic_string_view<charT> str;  // exposition-only
 //
 // public:
-//   runtime-format-string(basic_string_view<charT> s) noexcept : str(s) {}
+//   dynamic-format-string(basic_string_view<charT> s) noexcept : str(s) {}
 //
-//   runtime-format-string(const runtime-format-string&) = delete;
-//   runtime-format-string& operator=(const runtime-format-string&) = delete;
+//   dynamic-format-string(const dynamic-format-string&) = delete;
+//   dynamic-format-string& operator=(const dynamic-format-string&) = delete;
 // };
 //
-// runtime-format-string<char> dynamic_format(string_view fmt) noexcept;
-// runtime-format-string<wchar_t> dynamic_format(wstring_view fmt) noexcept;
+// dynamic-format-string<char> dynamic_format(string_view fmt) noexcept;
+// dynamic-format-string<wchar_t> dynamic_format(wstring_view fmt) noexcept;
 //
 // Additional testing is done in
 // - libcxx/test/std/utilities/format/format.functions/format.dynamic_format.pass.cpp

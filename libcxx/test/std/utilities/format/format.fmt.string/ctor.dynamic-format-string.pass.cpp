@@ -13,7 +13,7 @@
 // template<class charT, class... Args>
 // class basic_format_string<charT, type_identity_t<Args>...>
 //
-// basic_format_string(runtime-format-string<charT> s) noexcept : str(s.str) {}
+// basic_format_string(dynamic-format-string<charT> s) noexcept : str(s.str) {}
 //
 // Additional testing is done in
 // - libcxx/test/std/utilities/format/format.functions/format.dynamic_format.pass.cpp
