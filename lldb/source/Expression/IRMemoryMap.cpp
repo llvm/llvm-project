@@ -123,11 +123,11 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
           // in the inferior.
           ret = region_info.GetRange().GetRangeEnd();
         } else if (region_info.GetReadable() !=
-                       MemoryRegionInfo::OptionalBool::eNo ||
+                       eLazyBoolNo ||
                    region_info.GetWritable() !=
-                       MemoryRegionInfo::OptionalBool::eNo ||
+                       eLazyBoolNo ||
                    region_info.GetExecutable() !=
-                       MemoryRegionInfo::OptionalBool::eNo) {
+                       eLazyBoolNo) {
           if (region_info.GetRange().GetRangeEnd() - 1 >= end_of_memory) {
             ret = LLDB_INVALID_ADDRESS;
             break;
