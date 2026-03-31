@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/hexagon.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
 
 #define DEBUG_TYPE "jitlink"
