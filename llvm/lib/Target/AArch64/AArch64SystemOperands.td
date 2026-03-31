@@ -2450,15 +2450,10 @@ def : RWSysReg<"ACTLRALIAS_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b101>;
 // v9.6a PCDPHINT instruction options.
 //===----------------------------------------------------------------------===//
 
-class PHint<bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
-              bits<3> op2, string name> {
+class PHint<string name, bits<7> encoding> {
   string Name = name;
-  bits<16> Encoding;
-  let Encoding{15-14} = op0;
-  let Encoding{13-11} = op1;
-  let Encoding{10-7} = crn;
-  let Encoding{6-3} = crm;
-  let Encoding{2-0} = op2;
+  bits<7> Encoding;
+  let Encoding = encoding;
   code Requires = [{ {} }];
 }
 
@@ -2481,8 +2476,8 @@ def lookupPHintByName : SearchIndex {
   let Key = ["Name"];
 }
 
-def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
-def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
+def KEEP : PHint<"keep", 0b0110000>;
+def STRM : PHint<"strm", 0b0110001>;
 
 // v9.6a Realm management extension enhancements
 def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;

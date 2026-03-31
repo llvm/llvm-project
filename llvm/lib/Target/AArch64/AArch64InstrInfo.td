@@ -1566,7 +1566,10 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 
 def : InstAlias<"nop", (NOP)>;
 
-def STSHH: STSHHI;
+def : InstAlias<"stshh $policy", (HINT phint_op:$policy)>;
+def : InstAlias<"shuh", (HINT 50)>;
+def : InstAlias<"shuh $op", (HINT shuhint_op:$op)>;
+def : InstAlias<"stcph", (HINT 52)>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
@@ -1596,12 +1599,6 @@ def DSB   : CRmSystemI<barrier_op, 0b100, "dsb",
 
 def ISB   : CRmSystemI<barrier_op, 0b110, "isb",
                        [(int_aarch64_isb (i32 imm32_0_15:$CRm))]>;
-
-def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
-  let CRm        = 0b0010;
-  let Inst{12}   = 0;
-  let Predicates = [HasTRACEV8_4];
-}
 
 def DSBnXS  : CRmSystemI<barrier_nxs_op, 0b001, "dsb"> {
   let CRm{1-0}   = 0b11;
@@ -1672,6 +1669,7 @@ def GCSPOPM_NoOp : InstAlias<"gcspopm", (GCSPOPM XZR)>, Requires<[HasGCS]>; // R
 
 def GCSB_DSYNC_disable : InstAlias<"gcsb\tdsync", (HINT 19), 0>;
 def GCSB_DSYNC         : InstAlias<"gcsb\tdsync", (HINT 19), 1>, Requires<[HasGCS]>;
+def : InstAlias<"tsb\t$op", (HINT tsbhint_op:$op)>, Requires<[HasTRACEV8_4]>;
 
 def : TokenAlias<"DSYNC", "dsync">;
 
@@ -11931,13 +11929,6 @@ let Predicates = [HasF16F32MM] in
 
 let Uses = [FPMR, FPCR] in
   defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
-
-//===----------------------------------------------------------------------===//
-// Contention Management Hints (FEAT_CMH)
-//===----------------------------------------------------------------------===//
-
-defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
-def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
 
 //===----------------------------------------------------------------------===//
 // Permission Overlays Extension 2 (FEAT_S1POE2)

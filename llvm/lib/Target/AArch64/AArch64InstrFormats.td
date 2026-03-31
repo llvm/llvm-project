@@ -1869,19 +1869,51 @@ def PHintInstOperand : AsmOperandClass {
 def phint_op : Operand<i32> {
     let ParserMatchClass = PHintInstOperand;
     let PrintMethod = "printPHintOp";
+    let MCOperandPredicate = [{
+      if (!MCOp.isImm())
+        return false;
+      return AArch64PHint::lookupPHintByEncoding(MCOp.getImm()) != nullptr;
+    }];
     let OperandType = "OPERAND_IMMEDIATE";
     let MIOperandInfo = (ops i32imm: $policy);
-    let DecoderMethod = "DecodeUImm<3>";
+    let DecoderMethod = "DecodeUImm<7>";
 }
 
-class STSHHI
-    : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
-      Sched<[WriteHint]> {
-  bits<1> policy;
-  let Inst{20-12} = 0b000110010;
-  let Inst{11-8} = 0b0110;
-  let Inst{7-6} = 0b00;
-  let Inst{5} = policy;
+def TSBHintOperand : AsmOperandClass {
+    let Name = "TSBHint";
+    let ParserMethod = "tryParseTSBHintOperand";
+}
+
+def tsbhint_op : Operand<i32> {
+    let ParserMatchClass = TSBHintOperand;
+    let PrintMethod = "printTSBHintOp";
+    let MCOperandPredicate = [{
+      if (!MCOp.isImm() || MCOp.getImm() < 16)
+        return false;
+      return AArch64TSB::lookupTSBByEncoding(MCOp.getImm() - 16) != nullptr;
+    }];
+    let OperandType = "OPERAND_IMMEDIATE";
+    let MIOperandInfo = (ops i32imm: $policy);
+    let DecoderMethod = "DecodeUImm<7>";
+}
+
+def SHUHintOperand : AsmOperandClass {
+    let Name = "SHUHint";
+    let ParserMethod = "tryParseSHUHintOperand";
+}
+
+def shuhint_op : Operand<i32> {
+    let ParserMatchClass = SHUHintOperand;
+    let PrintMethod = "printSHUHintOp";
+    let MCOperandPredicate = [{
+      if (!MCOp.isImm() || MCOp.getImm() < 50)
+        return false;
+      return AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(
+                 MCOp.getImm() - 50) != nullptr;
+    }];
+    let OperandType = "OPERAND_IMMEDIATE";
+    let MIOperandInfo = (ops i32imm: $priority);
+    let DecoderMethod = "DecodeUImm<7>";
 }
 
 // System instructions taking a single literal operand which encodes into
@@ -13598,37 +13630,6 @@ multiclass SIMDThreeSameVectorFP8MatrixMul<string asm, SDPatternOperator OpNode>
                                                (v16i8 V128:$Rm)))]> {
       let Predicates = [HasNEON, HasF8F32MM];
     }
-}
-
-//----------------------------------------------------------------------------
-// Contention Management Hints - FEAT_CMH
-//----------------------------------------------------------------------------
-
-class SHUHInst<string asm> : I<
-    (outs),
-    (ins CMHPriorityHint_op:$priority),
-    asm, "\t$priority", "", []>, Sched<[]> {
-  bits<1> priority;
-  let Inst{31-12} = 0b11010101000000110010;
-  let Inst{11-8}  = 0b0110;
-  let Inst{7-6}   = 0b01;
-  let Inst{5}     = priority;
-  let Inst{4-0}   = 0b11111;
-}
-
-multiclass SHUH<string asm> {
-  def NAME : SHUHInst<asm>;
-  def      : InstAlias<asm, (!cast<Instruction>(NAME) 0), 1>;
-}
-
-class STCPHInst<string asm> : I<
-    (outs),
-    (ins),
-    asm, "", "", []>, Sched<[]> {
-    let Inst{31-12} = 0b11010101000000110010;
-    let Inst{11-8}  = 0b0110;
-    let Inst{7-5}   = 0b100;
-    let Inst{4-0}   = 0b11111;
 }
 
 //---

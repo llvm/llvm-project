@@ -726,7 +726,7 @@ struct PHint {
 #include "AArch64GenSystemOperands.inc"
 
 const PHint *lookupPHintByName(StringRef);
-const PHint *lookupPHintByEncoding(uint16_t);
+const PHint *lookupPHintByEncoding(uint8_t);
 } // namespace AArch64PHint
 
 namespace AArch64BTIHint {

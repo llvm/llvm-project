@@ -3202,8 +3202,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (CurrentPatchableFunctionEntrySym &&
         CurrentPatchableFunctionEntrySym == CurrentFnBegin &&
         MI == &MF->front().front()) {
-      int64_t Imm = MI->getOperand(0).getImm();
-      if ((Imm & 32) && (Imm & 6)) {
+      uint64_t Imm = MI->getOperand(0).getImm();
+      // Match only exact BTI encodings in HINT space.
+      if (Imm >= 32 && Imm < 64 &&
+          AArch64BTIHint::lookupBTIByEncoding(Imm ^ 32)) {
         MCInst Inst;
         MCInstLowering.Lower(MI, Inst);
         EmitToStreamer(*OutStreamer, Inst);

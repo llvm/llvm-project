@@ -1596,6 +1596,28 @@ void AArch64InstPrinter::printBTIHintOp(const MCInst *MI, unsigned OpNum,
                    AArch64BTIHint::lookupBTIByEncoding, decodeBTIHint);
 }
 
+void AArch64InstPrinter::printSHUHintOp(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned shuhintop = MI->getOperand(OpNum).getImm() - 50;
+  auto SHU = AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(shuhintop);
+  if (SHU)
+    O << SHU->Name;
+  else
+    markup(O, Markup::Immediate) << '#' << formatImm(shuhintop);
+}
+
+void AArch64InstPrinter::printTSBHintOp(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned tsbhintop = MI->getOperand(OpNum).getImm() ^ 16;
+  auto TSB = AArch64TSB::lookupTSBByEncoding(tsbhintop);
+  if (TSB)
+    O << TSB->Name;
+  else
+    markup(O, Markup::Immediate) << '#' << formatImm(tsbhintop);
+}
+
 void AArch64InstPrinter::printCMHPriorityHintOp(const MCInst *MI,
                                                 unsigned OpNum,
                                                 const MCSubtargetInfo &STI,
@@ -1962,9 +1984,6 @@ void AArch64InstPrinter::printBarrierOption(const MCInst *MI, unsigned OpNo,
   if (Opcode == AArch64::ISB) {
     auto ISB = AArch64ISB::lookupISBByEncoding(Val);
     Name = ISB ? ISB->Name : "";
-  } else if (Opcode == AArch64::TSB) {
-    auto TSB = AArch64TSB::lookupTSBByEncoding(Val);
-    Name = TSB ? TSB->Name : "";
   } else {
     auto DB = AArch64DB::lookupDBByEncoding(Val);
     Name = DB ? DB->Name : "";
