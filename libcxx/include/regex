@@ -1288,7 +1288,7 @@ public:
       : __regex_search_state<_CharT>(__s), __machine_(std::move(__machine)) {}
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __exec(__state<_CharT>& __state) const override {
-    auto __res = __machine_.__execute(
+    auto __res = __machine_.__execute_match(
         __state.__flags_ | (__state.__at_first_ ? regex_constants::__at_first : regex_constants::match_flag_type()),
         __state.__first_,
         __state.__last_,

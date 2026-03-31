@@ -806,10 +806,9 @@ public:
   size_t size() const { return __machine_.size(); }
 
   pair<bool, const _CharT*>
-  __execute(regex_constants::match_flag_type __flags,
+  __execute(__global_execution_state<_CharT, _Traits>& __gexec_state,
             const _CharT* __first,
             const _CharT* __last,
-            size_t __submatch_count,
             vector<sub_match<const _CharT*>>& __sub_matches) const {
     using __local_state = __local_execution_state<_CharT, _Traits>;
 
@@ -827,9 +826,10 @@ public:
         };
 
     __local_state __base_state{
-        .__current_ = __first,
-        .__sub_matches_ =
-            __submatch_count ? std::make_unique<pair<const _CharT*, const _CharT*>[]>(__submatch_count) : nullptr,
+        .__current_     = __first,
+        .__sub_matches_ = __gexec_state.__submatch_count_
+                            ? std::make_unique<pair<const _CharT*, const _CharT*>[]>(__gexec_state.__submatch_count_)
+                            : nullptr,
         .__current_pos_ = 0,
         .__loop_values_ = __initial_loop_values_.empty()
                             ? nullptr
@@ -838,7 +838,6 @@ public:
     if (!__initial_loop_values_.empty())
       std::copy(__initial_loop_values_.begin(), __initial_loop_values_.end(), __base_state.__loop_values_.get());
 
-    __global_execution_state __gexec_state{{}, *this, __submatch_count, __flags};
     auto [__base_state_matched, __gcounter] = __base_state.__execute(__first, __last, __gexec_state);
 
     size_t __length = __last - __first + 1;
@@ -857,7 +856,7 @@ public:
           if (!__found_match || __base_state.__current_ < __state.__current_)
             __base_state = std::move(__state);
           if (__base_state.__current_ == __last) {
-            __copy_to_submatches(__base_state.__sub_matches_.get(), __submatch_count, __sub_matches);
+            __copy_to_submatches(__base_state.__sub_matches_.get(), __gexec_state.__submatch_count_, __sub_matches);
             return {true, __base_state.__current_};
           }
           __found_match = true;
@@ -865,11 +864,11 @@ public:
       }
       if (!__found_match)
         return {false, {}};
-      __copy_to_submatches(__base_state.__sub_matches_.get(), __submatch_count, __sub_matches);
+      __copy_to_submatches(__base_state.__sub_matches_.get(), __gexec_state.__submatch_count_, __sub_matches);
       return {true, __base_state.__current_};
     } else {
       if (__base_state_matched) {
-        __copy_to_submatches(__base_state.__sub_matches_.get(), __submatch_count, __sub_matches);
+        __copy_to_submatches(__base_state.__sub_matches_.get(), __gexec_state.__submatch_count_, __sub_matches);
         return {true, __base_state.__current_};
       }
       while (!__gexec_state.__states_.empty()) {
@@ -878,7 +877,7 @@ public:
         __base_state = std::move(__gexec_state.__states_.back());
         __gexec_state.__states_.pop_back();
         if (auto [__success, __counter] = __base_state.__execute(__first, __last, __gexec_state); __success) {
-          __copy_to_submatches(__base_state.__sub_matches_.get(), __submatch_count, __sub_matches);
+          __copy_to_submatches(__base_state.__sub_matches_.get(), __gexec_state.__submatch_count_, __sub_matches);
           return {true, __base_state.__current_};
         } else {
           __gcounter += __counter;
@@ -888,38 +887,49 @@ public:
     }
   }
 
+  pair<bool, const _CharT*> __execute_match(
+      regex_constants::match_flag_type __flags,
+      const _CharT* __first,
+      const _CharT* __last,
+      size_t __submatch_count,
+      vector<sub_match<const _CharT*>>& __sub_matches) const {
+    __global_execution_state __gexec_state{{}, *this, __submatch_count, __flags};
+    return __execute(__gexec_state, __first, __last, __sub_matches);
+  }
+
   __search_result<_CharT> __execute_search(
-      const _CharT* __first, const _CharT* __last, regex_constants::match_flag_type __flags, size_t __marked_count) {
+      const _CharT* __first,
+      const _CharT* __last,
+      regex_constants::match_flag_type __flags,
+      size_t __marked_count) const {
     sub_match<const _CharT*> __unmatched;
     __unmatched.first   = __last;
     __unmatched.second  = __last;
     __unmatched.matched = false;
 
+    __global_execution_state __gexec_state{
+        {},
+        *this,
+        __marked_count,
+        __flags | ((__flags & regex_constants::__no_update_pos) ? regex_constants::match_flag_type()
+                                                                : regex_constants::__at_first)};
     vector<sub_match<const _CharT*>> __sub_matches;
-    if (auto [__success, __last_val] = __execute(
-            __flags | ((__flags & regex_constants::__no_update_pos) ? regex_constants::match_flag_type()
-                                                                    : regex_constants::__at_first),
-            __first,
-            __last,
-            __marked_count,
-            __sub_matches);
-        __success) {
+    if (auto [__success, __last_val] = __execute(__gexec_state, __first, __last, __sub_matches); __success) {
       return {__first, __last_val, std::move(__sub_matches)};
     }
 
     if (__first == __last || (__flags & regex_constants::match_continuous))
       return {};
 
-    __flags |= regex_constants::match_prev_avail;
+    __gexec_state.__flags_ = __flags | regex_constants::match_prev_avail;
 
     for (++__first; __first != __last; ++__first) {
-      if (auto [__success, __last_val] = __execute(__flags, __first, __last, __marked_count, __sub_matches);
-          __success) {
+      if (auto [__success, __last_val] = __execute(__gexec_state, __first, __last, __sub_matches); __success) {
         return {__first, __last_val, std::move(__sub_matches)};
       }
     }
 
-    if (auto [__success, __last_val] = __execute(__flags, __first, __last, __marked_count, __sub_matches); __success) {
+    if (auto [__success, __last_val] = __execute(__gexec_state, __first, __last, __sub_matches); __success) {
       return {__first, __last_val, std::move(__sub_matches)};
     }
 

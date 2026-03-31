@@ -48,4 +48,15 @@ static void BM_regex_run_almost_match(benchmark::State& state) {
 }
 BENCHMARK(BM_regex_run_almost_match);
 
+static void BM_regex_run_any_matcher(benchmark::State& state) {
+  std::regex r(".*");
+  std::string input;
+  input.append(1 << 16, 'a');
+
+  for (auto _ : state) {
+    std::regex_search(input, r);
+  }
+}
+BENCHMARK(BM_regex_run_any_matcher);
+
 BENCHMARK_MAIN();
