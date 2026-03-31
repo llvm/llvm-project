@@ -12,8 +12,6 @@
 #include "clc/integer/clc_abs.h"
 #include "clc/integer/definitions.h"
 #include "clc/math/clc_nextafter.h"
-#include "clc/math/clc_nextdown.h"
-#include "clc/math/clc_nextup.h"
 #include "clc/relational/clc_select.h"
 #include "clc/shared/clc_clamp.h"
 #include "clc/shared/clc_max.h"

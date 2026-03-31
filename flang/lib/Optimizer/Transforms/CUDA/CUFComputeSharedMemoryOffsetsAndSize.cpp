@@ -105,10 +105,11 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       unsigned short alignment = 0;
       mlir::Value crtDynOffset;
 
-      // Walk all shared memory operations (including those nested inside
-      // scf.parallel from reduction lowering) and compute their start offset
-      // and the size and alignment of the global to be generated.
-      funcOp.walk([&](cuf::SharedMemoryOp sharedOp) {
+      // Go over each shared memory operation and compute their start offset and
+      // the size and alignment of the global to be generated if all variables
+      // are static. If this is dynamic shared memory, then only the alignment
+      // is computed.
+      for (auto sharedOp : funcOp.getOps<cuf::SharedMemoryOp>()) {
         mlir::Location loc = sharedOp.getLoc();
         builder.setInsertionPoint(sharedOp);
         if (fir::hasDynamicSize(sharedOp.getInType())) {
@@ -154,7 +155,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           sharedOp.setIsStatic(true);
           ++nbStaticSharedVariables;
         }
-      });
+      }
 
       if (nbDynamicSharedVariables == 0 && nbStaticSharedVariables == 0)
         continue;

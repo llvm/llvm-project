@@ -136,12 +136,9 @@ def DICompileUnitAttr : DialectAttribute<(attr
   Bool:$isOptimized,
   EnumClassFlag<"DIEmissionKind", "getEmissionKind()">:$_rawEmissionKind,
   LocalVar<"DIEmissionKind", "(DIEmissionKind)_rawEmissionKind">:$emissionKind,
-  Bool:$isDebugInfoForProfiling,
   EnumClassFlag<"DINameTableKind", "getNameTableKind()">:$_rawNameTableKind,
   LocalVar<"DINameTableKind",
-           "(DINameTableKind)_rawNameTableKind">:$nameTableKind,
-  OptionalAttribute<"StringAttr">:$splitDebugFilename,
-  OptionalArrayRef<"DINodeAttr">:$importedEntities
+           "(DINameTableKind)_rawNameTableKind">:$nameTableKind
 )>;
 
 //===----------------------------------------------------------------------===//

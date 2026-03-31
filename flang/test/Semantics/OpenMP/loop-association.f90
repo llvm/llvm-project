@@ -16,16 +16,14 @@
 10   print *, a
   !$omp end parallel
 
-  !ERROR: This construct requires a canonical loop nest
   !$omp parallel do
-  !ERROR: DO CONCURRENT loop is not a valid affected loop
+  !ERROR: DO CONCURRENT loops cannot form part of a loop nest.
   DO CONCURRENT (i = 1:N)
      a = 3.14
   END DO
 
-  !ERROR: This construct requires a canonical loop nest
   !$omp parallel do simd
-  !BECAUSE: DO WHILE loop is not a valid affected loop
+  !ERROR: The associated loop of a loop-associated directive cannot be a DO WHILE.
   outer: DO WHILE (c > 1)
      inner: do while (b > 100)
         a = 3.14
@@ -45,10 +43,9 @@
   !$OMP END PARALLEL DO
 
   c = 16
-  !ERROR: This construct requires a canonical loop nest
   !$omp parallel do
-  !BECAUSE: DO loop without loop control is not a valid affected loop
   !ERROR: Loop control is not present in the DO LOOP
+  !ERROR: The associated loop of a loop-associated directive cannot be a DO without control.
   do
      a = 3.14
      c = c - 1
@@ -107,7 +104,7 @@
   !$omp parallel do private(c)
   do i = 1, N
      do j = 1, N
-        !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+        !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
         !$omp parallel do shared(b)
         a = 3.14
      enddo
@@ -127,7 +124,7 @@
   !ERROR: Misplaced OpenMP end-directive
   !$omp end parallel do
 
-  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp parallel do private(c)
 5 FORMAT (1PE12.4, I10)
   do i=1, N
@@ -144,7 +141,7 @@
   !ERROR: Misplaced OpenMP end-directive
   !$omp end parallel do simd
 
-  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp simd
     a = i + 1
   !ERROR: Misplaced OpenMP end-directive

@@ -48,9 +48,7 @@ private:
   SmallVector<OpFoldResult> mixedStrides;
 };
 
-// Inline size chosen empirically based on compilation profiling.
-// Profiled: 488K calls, avg=1.5+-0.5. N=2 covers >90% of cases inline.
-using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>, 2>;
+using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>>;
 
 /// A helper class to be used with `ValueBoundsOpInterface`. This class stores a
 /// constraint system and mapping of constrained variables to index-typed
@@ -417,9 +415,7 @@ protected:
   void projectOutAnonymous(std::optional<int64_t> except = std::nullopt);
 
   /// Mapping of columns to values/shape dimensions.
-  // Inline size chosen empirically based on compilation profiling.
-  // Profiled: 2.1M calls, avg=3.0+-1.9. N=4 covers ~70% of cases inline.
-  SmallVector<std::optional<ValueDim>, 4> positionToValueDim;
+  SmallVector<std::optional<ValueDim>> positionToValueDim;
   /// Reverse mapping of values/shape dimensions to columns.
   DenseMap<ValueDim, int64_t> valueDimToPosition;
 

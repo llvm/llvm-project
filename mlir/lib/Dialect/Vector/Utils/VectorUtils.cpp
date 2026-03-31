@@ -357,7 +357,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       builder, loc,
       /*vectorType=*/vecToReadTy,
       /*source=*/source,
-      /*indices=*/Repeated<Value>(vecToReadRank, zero),
+      /*indices=*/SmallVector<Value>(vecToReadRank, zero),
       /*padding=*/padValue,
       /*inBounds=*/inBoundsVal);
 

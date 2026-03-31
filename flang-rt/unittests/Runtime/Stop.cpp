@@ -14,31 +14,26 @@
 #include "CrashHandlerFixture.h"
 #include "flang-rt/runtime/environment.h"
 #include <cstdlib>
-#include <cstring>
 #include <gtest/gtest.h>
 
 using namespace Fortran::runtime;
 
 struct TestProgramEnd : CrashHandlerFixture {};
 
-TEST_F(TestProgramEnd, StopTest) {
+TEST(TestProgramEnd, StopTest) {
   EXPECT_EXIT(RTNAME(StopStatement)(), testing::ExitedWithCode(EXIT_SUCCESS),
       "Fortran STOP");
 }
 
-TEST_F(TestProgramEnd, StopTestNoStopMessage) {
+TEST(TestProgramEnd, StopTestNoStopMessage) {
+  putenv(const_cast<char *>("NO_STOP_MESSAGE=1"));
+  Fortran::runtime::executionEnvironment.Configure(
+      0, nullptr, nullptr, nullptr);
   EXPECT_EXIT(
-      {
-        static char noStopMessage[] = "NO_STOP_MESSAGE=1";
-        putenv(noStopMessage);
-        Fortran::runtime::executionEnvironment.Configure(
-            0, nullptr, nullptr, nullptr);
-        RTNAME(StopStatement)();
-      },
-      testing::ExitedWithCode(EXIT_SUCCESS), "");
+      RTNAME(StopStatement)(), testing::ExitedWithCode(EXIT_SUCCESS), "");
 }
 
-TEST_F(TestProgramEnd, StopMessageTest) {
+TEST(TestProgramEnd, StopMessageTest) {
   static const char *message{"bye bye"};
   EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
                   /*isErrorStop=*/false, /*quiet=*/false),
@@ -57,73 +52,48 @@ TEST_F(TestProgramEnd, StopMessageTest) {
       testing::ExitedWithCode(EXIT_FAILURE), "");
 }
 
-TEST_F(TestProgramEnd, NoStopMessageTest) {
+TEST(TestProgramEnd, NoStopMessageTest) {
+  putenv(const_cast<char *>("NO_STOP_MESSAGE=1"));
+  Fortran::runtime::executionEnvironment.Configure(
+      0, nullptr, nullptr, nullptr);
   static const char *message{"bye bye"};
-  EXPECT_EXIT(
-      {
-        static char noStopMessage[] = "NO_STOP_MESSAGE=1";
-        putenv(noStopMessage);
-        Fortran::runtime::executionEnvironment.Configure(
-            0, nullptr, nullptr, nullptr);
-        RTNAME(StopStatementText)(message, std::strlen(message),
-            /*isErrorStop=*/false, /*quiet=*/false);
-      },
+  EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
+                  /*isErrorStop=*/false, /*quiet=*/false),
       testing::ExitedWithCode(EXIT_SUCCESS), "bye bye");
 
-  EXPECT_EXIT(
-      {
-        static char noStopMessage[] = "NO_STOP_MESSAGE=1";
-        putenv(noStopMessage);
-        Fortran::runtime::executionEnvironment.Configure(
-            0, nullptr, nullptr, nullptr);
-        RTNAME(StopStatementText)(message, std::strlen(message),
-            /*isErrorStop=*/false, /*quiet=*/true);
-      },
+  EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
+                  /*isErrorStop=*/false, /*quiet=*/true),
       testing::ExitedWithCode(EXIT_SUCCESS), "");
 
-  EXPECT_EXIT(
-      {
-        static char noStopMessage[] = "NO_STOP_MESSAGE=1";
-        putenv(noStopMessage);
-        Fortran::runtime::executionEnvironment.Configure(
-            0, nullptr, nullptr, nullptr);
-        RTNAME(StopStatementText)(message, std::strlen(message),
-            /*isErrorStop=*/true, /*quiet=*/false);
-      },
+  EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
+                  /*isErrorStop=*/true, /*quiet=*/false),
       testing::ExitedWithCode(EXIT_FAILURE), "Fortran ERROR STOP: bye bye");
 
-  EXPECT_EXIT(
-      {
-        static char noStopMessage[] = "NO_STOP_MESSAGE=1";
-        putenv(noStopMessage);
-        Fortran::runtime::executionEnvironment.Configure(
-            0, nullptr, nullptr, nullptr);
-        RTNAME(StopStatementText)(message, std::strlen(message),
-            /*isErrorStop=*/true, /*quiet=*/true);
-      },
+  EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
+                  /*isErrorStop=*/true, /*quiet=*/true),
       testing::ExitedWithCode(EXIT_FAILURE), "");
 }
 
-TEST_F(TestProgramEnd, FailImageTest) {
+TEST(TestProgramEnd, FailImageTest) {
   EXPECT_EXIT(
       RTNAME(FailImageStatement)(), testing::ExitedWithCode(EXIT_FAILURE), "");
 }
 
-TEST_F(TestProgramEnd, ExitTest) {
+TEST(TestProgramEnd, ExitTest) {
   EXPECT_EXIT(RTNAME(Exit)(), testing::ExitedWithCode(EXIT_SUCCESS), "");
   EXPECT_EXIT(
       RTNAME(Exit)(EXIT_FAILURE), testing::ExitedWithCode(EXIT_FAILURE), "");
 }
 
-TEST_F(TestProgramEnd, AbortTest) { EXPECT_DEATH(RTNAME(Abort)(), ""); }
+TEST(TestProgramEnd, AbortTest) { EXPECT_DEATH(RTNAME(Abort)(), ""); }
 
-TEST_F(TestProgramEnd, CrashTest) {
+TEST(TestProgramEnd, CrashTest) {
   static const std::string crashMessage{"bad user code"};
   static const std::string fileName{"file name"};
-  // CrashHandlerFixture installs a custom crash handler that formats messages
-  // as: "Test <name> crashed in file <file>(<line>): <message>"
-  static const std::string fullMessage{"Test CrashTest crashed in file " +
-      fileName + "\\(343\\): " + crashMessage};
+  static const std::string headMessage{"fatal Fortran runtime error\\("};
+  static const std::string tailMessage{":343\\): "};
+  static const std::string fullMessage{
+      headMessage + fileName + tailMessage + crashMessage};
   EXPECT_DEATH(
       RTNAME(ReportFatalUserError)(crashMessage.c_str(), fileName.c_str(), 343),
       fullMessage.c_str());

@@ -1,7 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-posix-return %t
 
-#include <cstddef>
-
+#define NULL nullptr
 #define ZERO 0
 #define NEGATIVE_ONE -1
 

@@ -827,14 +827,14 @@ ObjectFile *ObjectFileMachO::CreateMemoryInstance(
   return nullptr;
 }
 
-ModuleSpecList ObjectFileMachO::GetModuleSpecifications(
+size_t ObjectFileMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length) {
+    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
+  const size_t initial_count = specs.GetSize();
   if (!extractor_sp || !extractor_sp->HasData())
-    return {};
+    return initial_count;
 
-  ModuleSpecList specs;
   if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
                                        extractor_sp->GetByteSize())) {
     llvm::MachO::mach_header header;
@@ -857,7 +857,7 @@ ModuleSpecList ObjectFileMachO::GetModuleSpecifications(
       }
     }
   }
-  return specs;
+  return specs.GetSize() - initial_count;
 }
 
 ConstString ObjectFileMachO::GetSegmentNameTEXT() {

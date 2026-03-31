@@ -1,7 +1,5 @@
 // RUN: %check_clang_tidy %s readability-isolate-declaration %t -- -- -fexceptions
 
-#include <cstddef>
-
 void f() {
   int i;
 }
@@ -192,6 +190,7 @@ void forbidden_transformations() {
     ;
 }
 
+#define NULL 0
 #define MY_NICE_TYPE int **
 #define VAR_NAME(name) name##__LINE__
 #define A_BUNCH_OF_VARIABLES int m1 = 42, m2 = 43, m3 = 44;

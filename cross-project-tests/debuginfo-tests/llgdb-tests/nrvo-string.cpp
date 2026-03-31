@@ -1,16 +1,10 @@
-// REQUIRES: system-darwin || has-gdb
-//
 // This ensures that DW_OP_deref is inserted when necessary, such as when NRVO
 // of a string object occurs in C++.
 //
-// RUN: %clangxx -O0 -fno-exceptions %target_itanium_abi_host_triple %s \
-// RUN:    -o %t.out -g
+// RUN: %clangxx -O0 -fno-exceptions %target_itanium_abi_host_triple %s -o %t.out -g
 // RUN: %test_debuginfo %s %t.out
-
-// RUN: %clangxx -O1 -fno-exceptions %target_itanium_abi_host_triple %s \
-// RUN:     -o %t.out -g
+// RUN: %clangxx -O1 -fno-exceptions %target_itanium_abi_host_triple %s -o %t.out -g
 // RUN: %test_debuginfo %s %t.out
-
 // XFAIL: !system-darwin && gdb-clang-incompatibility
 // PR34513
 volatile int sideeffect = 0;
@@ -25,7 +19,7 @@ struct string {
 string __attribute__((noinline)) get_string() {
   string unused;
   string result = 3;
-  // DEBUGGER: break 29
+  // DEBUGGER: break 23
   stop();
   return result;
 }
@@ -41,7 +35,7 @@ string2 __attribute__((noinline)) get_string2() {
   some_function(result.i);
   // Test that the debugger can get the value of result after another
   // function is called.
-  // DEBUGGER: break 45
+  // DEBUGGER: break 39
   stop();
   return result;
 }

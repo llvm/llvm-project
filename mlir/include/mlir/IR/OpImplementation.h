@@ -1165,15 +1165,14 @@ public:
       typename = std::enable_if_t<!llvm::is_one_of<
           AttrType, Attribute, ArrayAttr, StringAttr, SymbolRefAttr>::value>>
   OptionalParseResult parseOptionalAttribute(AttrType &result, Type type = {}) {
-    llvm::SMLoc loc = getCurrentLocation();
     Attribute attr;
     OptionalParseResult parseResult = parseOptionalAttribute(attr, type);
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
     result = dyn_cast<AttrType>(attr);
     if (!result)
-      return emitError(loc) << "expected attribute of type '" << AttrType::name
-                            << "', but found attribute '" << attr << "'";
+      return emitError(getCurrentLocation())
+             << "expected attribute of a different type";
     return success();
   }
 

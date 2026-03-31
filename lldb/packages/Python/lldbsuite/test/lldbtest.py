@@ -1523,7 +1523,6 @@ class Base(unittest.TestCase):
 
     def build(
         self,
-        *,
         debug_info=None,
         architecture=None,
         compiler=None,
@@ -1531,12 +1530,6 @@ class Base(unittest.TestCase):
         make_targets=None,
     ):
         """Platform specific way to build binaries."""
-        if debug_info or architecture or compiler or dictionary or make_targets:
-            self.assertFalse(
-                self.SHARED_BUILD_TESTCASE,
-                "shared build tests reuse the same compilation artifacts for all test functions",
-            )
-
         if not architecture and configuration.arch:
             architecture = configuration.arch
 

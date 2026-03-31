@@ -76,12 +76,3 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: struct stat *__restrict
-  - name: utimensat
-    standards:
-      - POSIX
-    return_type: int
-    arguments:
-      - type: int
-      - type: const char *
-      - type: const struct timespec *
-      - type: int

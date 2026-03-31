@@ -69,8 +69,6 @@ class StringSet;
 template <typename T, typename R>
 class StringSwitch;
 template <typename T>
-struct Repeated;
-template <typename T>
 class TinyPtrVector;
 template <typename T, typename ResultT>
 class TypeSwitch;
@@ -127,7 +125,6 @@ template <typename AllocatorTy = llvm::MallocAllocator>
 using StringSet = llvm::StringSet<AllocatorTy>;
 using llvm::MutableArrayRef;
 using llvm::PointerUnion;
-using llvm::Repeated;
 using llvm::SmallPtrSet;
 using llvm::SmallPtrSetImpl;
 using llvm::SmallVector;

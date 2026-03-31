@@ -401,8 +401,7 @@ private:
 template <template <typename T> class Trait>
 class DynamicOpTraitImpl : public DynamicOpTrait {
 public:
-  static TypeID getStaticTypeID() { return TypeID::get<Trait>(); }
-  TypeID getTypeID() const override { return getStaticTypeID(); }
+  TypeID getTypeID() const override { return TypeID::get<Trait>(); }
 };
 
 namespace DynamicOpTraits {

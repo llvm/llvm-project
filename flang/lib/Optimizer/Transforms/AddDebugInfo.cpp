@@ -936,7 +936,7 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
-      isOptimized, debugLevel, debugInfoForProfiling,
+      isOptimized, debugLevel,
       /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
       splitDwarfFile.empty() ? mlir::StringAttr()
                              : mlir::StringAttr::get(context, splitDwarfFile));

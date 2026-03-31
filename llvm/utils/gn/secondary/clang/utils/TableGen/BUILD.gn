@@ -24,7 +24,6 @@ executable("clang-tblgen") {
     "ClangSACheckersEmitter.cpp",
     "ClangSyntaxEmitter.cpp",
     "ClangTypeNodesEmitter.cpp",
-    "HLSLEmitter.cpp",
     "MveEmitter.cpp",
     "NeonEmitter.cpp",
     "RISCVVEmitter.cpp",

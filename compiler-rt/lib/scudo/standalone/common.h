@@ -248,7 +248,6 @@ enum class ReleaseToOS : u8 {
              // take.
   ForceFast, // Force release pages to the OS, but do it quickly and skip any
              // cases where a lock is held by another thread.
-  Last = ForceFast, // Must be set to the last entry in the enum.
 };
 
 constexpr unsigned char PatternFillByte = 0xAB;

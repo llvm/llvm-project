@@ -176,12 +176,16 @@ class DbgEng(DebuggerBase):
         return self.finished
 
     def evaluate_expression(self, expression, frame_idx=0):
+        # XXX: cdb insists on using '->' to examine fields of structures,
+        # as it appears to reserve '.' for other purposes.
+        fixed_expr = expression.replace(".", "->")
+
         orig_scope_idx = self.client.Symbols.GetCurrentScopeFrameIndex()
         self.client.Symbols.SetScopeFrameByIndex(frame_idx)
 
-        res = self.client.Control.Evaluate(expression)
+        res = self.client.Control.Evaluate(fixed_expr)
         if res is not None:
-            result, typename = self.client.Control.Evaluate(expression)
+            result, typename = self.client.Control.Evaluate(fixed_expr)
             could_eval = True
         else:
             result, typename = (None, None)

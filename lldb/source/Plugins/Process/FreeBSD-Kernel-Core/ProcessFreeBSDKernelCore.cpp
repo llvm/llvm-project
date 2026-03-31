@@ -67,13 +67,8 @@ ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
     : PostMortemProcess(target_sp, listener_sp, core_file), m_kvm(kvm) {}
 
 ProcessFreeBSDKernelCore::~ProcessFreeBSDKernelCore() {
-  m_thread_list.Clear();
-
-  // We need to call finalize on the process before destroying ourselves to
-  // make sure all of the broadcaster cleanup goes as planned. If we destruct
-  // this class, then Process::~Process() might have problems trying to fully
-  // destroy the broadcaster.
-  Finalize(/*destructing=*/true);
+  if (m_kvm)
+    kvm_close(m_kvm);
 }
 
 lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
@@ -131,13 +126,7 @@ DynamicLoader *ProcessFreeBSDKernelCore::GetDynamicLoader() {
   return m_dyld_up.get();
 }
 
-Status ProcessFreeBSDKernelCore::DoDestroy() {
-  if (!m_kvm)
-    return Status::FromErrorString("kvm file descriptor is not set.");
-
-  kvm_close(m_kvm);
-  return Status();
-}
+Status ProcessFreeBSDKernelCore::DoDestroy() { return Status(); }
 
 void ProcessFreeBSDKernelCore::RefreshStateAfterStop() {
   if (!m_printed_unread_message) {
@@ -404,6 +393,9 @@ void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
 void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
   Target &target = GetTarget();
   Debugger &debugger = target.GetDebugger();
+
+  if (!debugger.GetCommandInterpreter().IsInteractive())
+    return;
 
   Status error;
 

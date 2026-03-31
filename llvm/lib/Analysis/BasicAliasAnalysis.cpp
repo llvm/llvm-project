@@ -31,7 +31,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -216,10 +215,7 @@ CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
 }
 
 static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
-                         const LoopInfo *LI, const CycleInfo *CI) {
-  if (CI)
-    return !CI->getCycle(I->getParent());
-
+                         const LoopInfo *LI) {
   BasicBlock *BB = const_cast<BasicBlock *>(I->getParent());
   SmallVector<BasicBlock *> Succs(successors(BB));
   return Succs.empty() ||
@@ -256,10 +252,10 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
     if (I == CaptureInst) {
       if (OrAt)
         return false;
-      return isNotInCycle(I, &DT, LI, CI);
+      return isNotInCycle(I, &DT, LI);
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
+    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI);
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
@@ -1914,7 +1910,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  return isNotInCycle(Inst, getDT(AAQI), /*LI=*/nullptr, /*CI=*/nullptr);
+  return isNotInCycle(Inst, getDT(AAQI), /*LI*/ nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.

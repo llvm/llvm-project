@@ -23,7 +23,6 @@
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/ExprObjC.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
@@ -1913,6 +1912,14 @@ bool Sema::mightHaveNonExternalLinkage(const DeclaratorDecl *D) {
   return !D->isExternallyVisible();
 }
 
+// FIXME: This needs to be refactored; some other isInMainFile users want
+// these semantics.
+static bool isMainFileLoc(const Sema &S, SourceLocation Loc) {
+  if (S.TUKind != TU_Complete || S.getLangOpts().IsHeaderFile)
+    return false;
+  return S.SourceMgr.isInMainFile(Loc);
+}
+
 bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
   assert(D);
 
@@ -1939,7 +1946,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
         return false;
     } else {
       // 'static inline' functions are defined in headers; don't warn.
-      if (FD->isInlined() && !isMainFileLoc(FD->getLocation()))
+      if (FD->isInlined() && !isMainFileLoc(*this, FD->getLocation()))
         return false;
     }
 
@@ -1950,7 +1957,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
     // Constants and utility variables are defined in headers with internal
     // linkage; don't warn.  (Unlike functions, there isn't a convenient marker
     // like "inline".)
-    if (!isMainFileLoc(VD->getLocation()))
+    if (!isMainFileLoc(*this, VD->getLocation()))
       return false;
 
     if (Context.DeclMustBeEmitted(VD))
@@ -1964,7 +1971,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
         VD->getMemberSpecializationInfo() && !VD->isOutOfLine())
       return false;
 
-    if (VD->isInline() && !isMainFileLoc(VD->getLocation()))
+    if (VD->isInline() && !isMainFileLoc(*this, VD->getLocation()))
       return false;
   } else {
     return false;
@@ -2208,11 +2215,6 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
       return;
   }
 
-  // Don't warn on volatile file-scope variables. They are visible beyond their
-  // declaring function and writes to them could be observable side effects.
-  if (VD->getType().isVolatileQualified() && VD->isFileVarDecl())
-    return;
-
   // Don't warn about __block Objective-C pointer variables, as they might
   // be assigned in the block but not used elsewhere for the purpose of lifetime
   // extension.
@@ -2225,7 +2227,7 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
   if (VD->hasAttr<ObjCPreciseLifetimeAttr>() && Ty->isObjCObjectPointerType())
     return;
 
-  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
+  auto iter = RefsMinusAssignments.find(VD);
   if (iter == RefsMinusAssignments.end())
     return;
 
@@ -2246,13 +2248,8 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
       return;
   }
 
-  unsigned DiagID;
-  if (isa<ParmVarDecl>(VD))
-    DiagID = diag::warn_unused_but_set_parameter;
-  else if (VD->isFileVarDecl())
-    DiagID = diag::warn_unused_but_set_global;
-  else
-    DiagID = diag::warn_unused_but_set_variable;
+  unsigned DiagID = isa<ParmVarDecl>(VD) ? diag::warn_unused_but_set_parameter
+                                         : diag::warn_unused_but_set_variable;
   DiagReceiver(VD->getLocation(), PDiag(DiagID) << VD);
 }
 
@@ -2308,11 +2305,9 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       DiagnoseUnusedDecl(D, addDiag);
       if (const auto *RD = dyn_cast<RecordDecl>(D))
         DiagnoseUnusedNestedTypedefs(RD, addDiag);
-      // Wait until end of TU to diagnose internal linkage file vars.
-      if (auto *VD = dyn_cast<VarDecl>(D);
-          VD && !VD->isInternalLinkageFileVar()) {
+      if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
         DiagnoseUnusedButSetDecl(VD, addDiag);
-        RefsMinusAssignments.erase(VD->getCanonicalDecl());
+        RefsMinusAssignments.erase(VD);
       }
     }
 
@@ -2903,8 +2898,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
         D, *AA, AA->getPlatform(), AA->isImplicit(), AA->getIntroduced(),
         AA->getDeprecated(), AA->getObsoleted(), AA->getUnavailable(),
         AA->getMessage(), AA->getStrict(), AA->getReplacement(), AMK,
-        AA->getPriority(), AA->getEnvironment(),
-        AA->getOrigAnyAppleOSVersion());
+        AA->getPriority(), AA->getEnvironment());
   else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
     NewAttr = S.mergeVisibilityAttr(D, *VA, VA->getVisibility());
   else if (const auto *VA = dyn_cast<TypeVisibilityAttr>(Attr))
@@ -12883,51 +12877,6 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
   const Expr *Culprit;
   if (Init->isConstantInitializer(Context, false, &Culprit))
     return false;
-
-  // Emit ObjC-specific diagnostics for non-constant literals at file scope.
-  if (getLangOpts().ObjCConstantLiterals && isa<ObjCObjectLiteral>(Culprit)) {
-
-    // For collection literals iterate the elements to highlight which one is
-    // the offender.
-    if (auto ALE = dyn_cast<ObjCArrayLiteral>(Init)) {
-      for (auto *Elm : ALE->elements()) {
-        if (!Elm->isConstantInitializer(Context, false, nullptr)) {
-          Diag(Elm->getExprLoc(),
-               diag::err_objc_literal_nonconstant_at_file_scope)
-              << ObjC().CheckLiteralKind(Init) << Elm->getSourceRange();
-          return true;
-        }
-      }
-    }
-
-    if (auto DLE = dyn_cast<ObjCDictionaryLiteral>(Init)) {
-      for (size_t I = 0, N = DLE->getNumElements(); I != N; ++I) {
-        const ObjCDictionaryElement Elm = DLE->getKeyValueElement(I);
-
-        // Check that the key is a string literal and is constant.
-        if (!isa<ObjCStringLiteral>(Elm.Key) ||
-            !Elm.Key->isConstantInitializer(Context, false, nullptr)) {
-          Diag(Elm.Key->getExprLoc(),
-               diag::err_objc_literal_nonconstant_at_file_scope)
-              << ObjC().CheckLiteralKind(Init) << Elm.Key->getSourceRange();
-          return true;
-        }
-
-        if (!Elm.Value->isConstantInitializer(Context, false, nullptr)) {
-          Diag(Elm.Value->getExprLoc(),
-               diag::err_objc_literal_nonconstant_at_file_scope)
-              << ObjC().CheckLiteralKind(Init) << Elm.Value->getSourceRange();
-          return true;
-        }
-      }
-    }
-
-    Diag(Culprit->getExprLoc(),
-         diag::err_objc_literal_nonconstant_at_file_scope)
-        << ObjC().CheckLiteralKind(Init) << Culprit->getSourceRange();
-    return true;
-  }
-
   Diag(Culprit->getExprLoc(), DiagID) << Culprit->getSourceRange();
   return true;
 }

@@ -70,11 +70,12 @@ void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill) {
 /// This function should be called whenever a DeclRefExpr represents a borrow.
 /// \param DRE The declaration reference expression that initiates the borrow.
 /// \return The new Loan on success, nullptr otherwise.
-static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
+static const PathLoan *createLoan(FactManager &FactMgr,
+                                  const DeclRefExpr *DRE) {
   if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
     AccessPath Path(VD);
     // The loan is created at the location of the DeclRefExpr.
-    return FactMgr.getLoanMgr().createLoan(Path, DRE);
+    return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, DRE);
   }
   return nullptr;
 }
@@ -82,10 +83,10 @@ static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
 /// Creates a loan for the storage location of a temporary object.
 /// \param MTE The MaterializeTemporaryExpr that represents the temporary
 /// binding. \return The new Loan.
-static const Loan *createLoan(FactManager &FactMgr,
-                              const MaterializeTemporaryExpr *MTE) {
+static const PathLoan *createLoan(FactManager &FactMgr,
+                                  const MaterializeTemporaryExpr *MTE) {
   AccessPath Path(MTE);
-  return FactMgr.getLoanMgr().createLoan(Path, MTE);
+  return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, MTE);
 }
 
 void FactsGenerator::run() {
@@ -512,16 +513,38 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
     if (!escapesViaReturn(OID))
       ExpiredOID = OID;
   }
-  CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-      AccessPath(LifetimeEndsVD), LifetimeEnds.getTriggerStmt()->getEndLoc(),
-      ExpiredOID));
+  // Iterate through all loans to see if any expire.
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
+      // Check if the loan is for a stack variable and if that variable
+      // is the one being destructed.
+      const AccessPath AP = BL->getAccessPath();
+      const ValueDecl *Path = AP.getAsValueDecl();
+      if (Path == LifetimeEndsVD)
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc(),
+            ExpiredOID));
+    }
+  }
 }
 
 void FactsGenerator::handleFullExprCleanup(
     const CFGFullExprCleanup &FullExprCleanup) {
-  for (const auto *MTE : FullExprCleanup.getExpiringMTEs())
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<ExpireFact>(AccessPath(MTE), MTE->getEndLoc()));
+  // Iterate through all loans to see if any expire.
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
+      // Check if the loan is for a temporary materialization and if that
+      // storage location is the one being destructed.
+      const AccessPath &AP = PL->getAccessPath();
+      const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
+      if (!Path)
+        continue;
+      if (llvm::is_contained(FullExprCleanup.getExpiringMTEs(), Path)) {
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<ExpireFact>(PL->getID(), Path->getEndLoc()));
+      }
+    }
+  }
 }
 
 void FactsGenerator::handleExitBlock() {
@@ -768,9 +791,8 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
     OriginList *List = *ThisOrigins;
-    const Loan *L = FactMgr.getLoanMgr().createLoan(
-        AccessPath::Placeholder(cast<CXXMethodDecl>(FD)),
-        /*IssuingExpr=*/nullptr);
+    const PlaceholderLoan *L = FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(
+        cast<CXXMethodDecl>(FD));
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }
@@ -778,8 +800,8 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     OriginList *List = getOriginsList(*PVD);
     if (!List)
       continue;
-    const Loan *L = FactMgr.getLoanMgr().createLoan(
-        AccessPath::Placeholder(PVD), /*IssuingExpr=*/nullptr);
+    const PlaceholderLoan *L =
+        FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(PVD);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }

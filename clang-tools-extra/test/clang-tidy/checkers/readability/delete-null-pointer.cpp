@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-delete-null-pointer %t -- -- -fno-delayed-template-parsing
 
-#include <cstddef>
+#define NULL 0
 
 template <typename T>
 struct Templ {

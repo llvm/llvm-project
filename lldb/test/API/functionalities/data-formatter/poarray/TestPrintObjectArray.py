@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class PrintObjectArrayTestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
-
     @skipUnlessDarwin
     def test_print_array(self):
         """Test that expr -O -Z works"""

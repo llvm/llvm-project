@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class ObjectDescriptionAPITestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

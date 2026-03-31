@@ -108,19 +108,19 @@ ObjectFile *ObjectFileJSON::CreateMemoryInstance(const ModuleSP &module_sp,
   return nullptr;
 }
 
-ModuleSpecList ObjectFileJSON::GetModuleSpecifications(
+size_t ObjectFileJSON::GetModuleSpecifications(
     const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length) {
+    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
   if (!extractor_sp ||
       !MagicBytesMatch(extractor_sp->GetSubsetExtractorSP(data_offset)))
-    return {};
+    return 0;
 
   // Update the data to contain the entire file if it doesn't already.
   if (extractor_sp->GetByteSize() < length) {
     if (DataBufferSP file_data_sp = MapFileData(file, length, file_offset))
       extractor_sp->SetData(file_data_sp);
     if (!extractor_sp->HasData())
-      return {};
+      return 0;
     data_offset = 0;
   }
 
@@ -132,7 +132,7 @@ ModuleSpecList ObjectFileJSON::GetModuleSpecifications(
   if (!json) {
     LLDB_LOG_ERROR(log, json.takeError(),
                    "failed to parse JSON object file: {0}");
-    return {};
+    return 0;
   }
 
   json::Path::Root root;
@@ -140,7 +140,7 @@ ModuleSpecList ObjectFileJSON::GetModuleSpecifications(
   if (!fromJSON(*json, header, root)) {
     LLDB_LOG_ERROR(log, root.getError(),
                    "failed to parse JSON object file header: {0}");
-    return {};
+    return 0;
   }
 
   ArchSpec arch(header.triple);
@@ -149,9 +149,8 @@ ModuleSpecList ObjectFileJSON::GetModuleSpecifications(
 
   ModuleSpec spec(file, std::move(arch));
   spec.GetUUID() = std::move(uuid);
-  ModuleSpecList specs;
   specs.Append(spec);
-  return specs;
+  return 1;
 }
 
 ObjectFileJSON::ObjectFileJSON(const ModuleSP &module_sp,

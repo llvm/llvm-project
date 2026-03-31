@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVIRMapping.h"
@@ -691,4 +691,4 @@ public:
   void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };
 } // end namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H
+#endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

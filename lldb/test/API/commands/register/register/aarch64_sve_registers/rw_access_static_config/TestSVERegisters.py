@@ -15,8 +15,6 @@ class Mode(Enum):
 
 
 class RegisterCommandsTestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
-
     def check_sve_register_size(self, set, name, expected):
         reg_value = set.GetChildMemberWithName(name)
         self.assertTrue(

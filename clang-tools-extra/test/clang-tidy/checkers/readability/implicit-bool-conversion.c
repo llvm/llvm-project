@@ -1,10 +1,11 @@
-// RUN: %check_clang_tidy -std=c23-or-later %s readability-implicit-bool-conversion %t --system-headers
-// RUN: %check_clang_tidy -std=c23-or-later -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- --system-headers \
+// RUN: %check_clang_tidy -std=c23-or-later %s readability-implicit-bool-conversion %t
+// RUN: %check_clang_tidy -std=c23-or-later -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
 // RUN:     }}'
 
-#include <stddef.h>
+#undef NULL
+#define NULL 0L
 
 void functionTakingBool(bool);
 void functionTakingInt(int);

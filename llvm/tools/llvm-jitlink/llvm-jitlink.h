@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
@@ -75,7 +74,6 @@ struct Session {
   };
 
   orc::ExecutionSession ES;
-  std::unique_ptr<orc::DylibManager> DylibMgr;
   orc::JITDylib *MainJD = nullptr;
   orc::JITDylib *ProcessSymsJD = nullptr;
   orc::JITDylib *PlatformJD = nullptr;

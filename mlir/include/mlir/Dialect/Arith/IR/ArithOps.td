@@ -678,8 +678,7 @@ def Arith_FloorDivSIOp : Arith_TotalIntBinaryOp<"floordivsi"> {
 // RemUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_RemUIOp : Arith_IntBinaryOp<"remui",
-                                      [ConditionallySpeculatable]> {
+def Arith_RemUIOp : Arith_TotalIntBinaryOp<"remui"> {
   let summary = "unsigned integer division remainder operation";
   let description = [{
     Unsigned integer division remainder. Treats the leading bit as the most
@@ -702,12 +701,6 @@ def Arith_RemUIOp : Arith_IntBinaryOp<"remui",
     %x = arith.remui %y, %z : tensor<4x?xi8>
     ```
   }];
-
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
-  }];
-
   let hasFolder = 1;
 }
 
@@ -715,8 +708,7 @@ def Arith_RemUIOp : Arith_IntBinaryOp<"remui",
 // RemSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_RemSIOp : Arith_IntBinaryOp<"remsi",
-                                      [ConditionallySpeculatable]> {
+def Arith_RemSIOp : Arith_TotalIntBinaryOp<"remsi"> {
   let summary = "signed integer division remainder operation";
   let description = [{
     Signed integer division remainder. Treats the leading bit as sign, i.e. `6 %
@@ -739,12 +731,6 @@ def Arith_RemSIOp : Arith_IntBinaryOp<"remsi",
     %x = arith.remsi %y, %z : tensor<4x?xi8>
     ```
   }];
-
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
-  }];
-
   let hasFolder = 1;
 }
 
@@ -1433,40 +1419,6 @@ def Arith_TruncFOp :
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-  let hasVerifier = 1;
-  let assemblyFormat = [{ $in ($roundingmode^)?
-                          (`fastmath` `` $fastmath^)?
-                          attr-dict `:` type($in) `to` type($out) }];
-}
-
-//===----------------------------------------------------------------------===//
-// ConvertFOp
-//===----------------------------------------------------------------------===//
-
-def Arith_ConvertFOp :
-    Arith_Op<"convertf",
-      [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
-       DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
-       DeclareOpInterfaceMethods<ArithFastMathInterface>,
-       DeclareOpInterfaceMethods<CastOpInterface>]>,
-    Arguments<(ins FloatLike:$in,
-                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
-                   OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
-    Results<(outs FloatLike:$out)> {
-  let summary = "cast between floating-point types of the same bitwidth";
-  let description = [{
-    Cast a floating-point value to a different floating-point type of the same
-    bitwidth. This operation handles conversions between types that have the
-    same bitwidth but different semantics (e.g., f16 to bf16), which cannot
-    be represented by `arith.extf` or `arith.truncf`.
-
-    The source and destination element types must be different and must have
-    the same bitwidth. If the value cannot be exactly represented, it is
-    rounded using the provided rounding mode or the default one if no rounding
-    mode is provided. When operating on vectors, casts elementwise.
-  }];
-
-  let hasFolder = 1;
   let hasVerifier = 1;
   let assemblyFormat = [{ $in ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?

@@ -18,15 +18,14 @@ namespace llvm {
 namespace orc {
 
 Expected<std::unique_ptr<ExecutorResolutionGenerator>>
-ExecutorResolutionGenerator::Load(ExecutionSession &ES, DylibManager &DylibMgr,
-                                  const char *LibraryPath,
+ExecutorResolutionGenerator::Load(ExecutionSession &ES, const char *LibraryPath,
                                   SymbolPredicate Allow,
                                   AbsoluteSymbolsFn AbsoluteSymbols) {
-  auto H = DylibMgr.loadDylib(LibraryPath);
+  auto H = ES.getExecutorProcessControl().getDylibMgr().loadDylib(LibraryPath);
   if (H)
     return H.takeError();
   return std::make_unique<ExecutorResolutionGenerator>(
-      ES, DylibMgr, *H, std::move(Allow), std::move(AbsoluteSymbols));
+      ES, *H, std::move(Allow), std::move(AbsoluteSymbols));
 }
 
 Error ExecutorResolutionGenerator::tryToGenerate(
@@ -49,7 +48,7 @@ Error ExecutorResolutionGenerator::tryToGenerate(
   }
 
   DylibManager::LookupRequest LR(H, LookupSymbols);
-  DylibMgr.lookupSymbolsAsync(
+  EPC.getDylibMgr().lookupSymbolsAsync(
       LR, [this, LS = std::move(LS), JD = JITDylibSP(&JD),
            LookupSymbols](auto Result) mutable {
         if (Result) {
@@ -87,7 +86,7 @@ Error ExecutorResolutionGenerator::tryToGenerate(
 
         if (LLVM_UNLIKELY(!MissingSymbols.empty()))
           return LS.continueLookup(make_error<SymbolsNotFound>(
-              this->ES.getSymbolStringPool(), std::move(MissingSymbols)));
+              this->EPC.getSymbolStringPool(), std::move(MissingSymbols)));
 
         LS.continueLookup(JD->define(AbsoluteSymbols(std::move(NewSyms))));
       });

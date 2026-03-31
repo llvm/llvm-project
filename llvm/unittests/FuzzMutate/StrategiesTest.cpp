@@ -733,12 +733,11 @@ TEST(AllStrategies, SkipEHPad) {
   StringRef Source = "\n\
     define void @f(i32 %x) personality ptr @__CxxFrameHandler3 { \n\
     entry: \n\
-      %I = alloca i32, align 4 \n\
       invoke void @g() to label %try.cont unwind label %catch.dispatch \n\
     catch.dispatch: \n\
       %0 = catchswitch within none [label %catch] unwind to caller \n\
     catch: \n\
-      %1 = catchpad within %0 [ptr null, i32 64, ptr %I] \n\
+      %1 = catchpad within %0 [ptr null, i32 64, ptr null] \n\
       catchret from %1 to label %try.cont \n\
     try.cont: \n\
       ret void \n\

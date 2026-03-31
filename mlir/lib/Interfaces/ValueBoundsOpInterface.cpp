@@ -114,9 +114,7 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
 
   // Turn all dims into symbols.
   Builder b(map.getContext());
-  // Inline size chosen empirically based on compilation profiling.
-  // Profiled: 490K calls, avg=1.5+-0.6. N=4 covers >99% of cases inline.
-  SmallVector<AffineExpr, 4> dimReplacements, symReplacements;
+  SmallVector<AffineExpr> dimReplacements, symReplacements;
   for (int64_t i = 0, e = map.getNumDims(); i < e; ++i)
     dimReplacements.push_back(b.getAffineSymbolExpr(i));
   for (int64_t i = 0, e = map.getNumSymbols(); i < e; ++i)
@@ -720,9 +718,7 @@ bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
            comparePos(lhsPos, ComparisonOperator::GE, rhsPos);
 
   // Construct inequality.
-  // Inline size chosen empirically based on compilation profiling.
-  // Profiled: 3.2M calls, avg=4.0+-2.3. N=8 covers ~95% of cases inline.
-  SmallVector<int64_t, 8> eq(cstr.getNumCols(), 0);
+  SmallVector<int64_t> eq(cstr.getNumCols(), 0);
   if (cmp == LT || cmp == LE) {
     ++eq[lhsPos];
     --eq[rhsPos];

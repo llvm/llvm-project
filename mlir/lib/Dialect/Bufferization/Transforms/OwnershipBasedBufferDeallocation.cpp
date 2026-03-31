@@ -723,7 +723,7 @@ BufferDeallocation::handleInterface(RegionBranchOpInterface op) {
   // the outside.
   Value falseVal = buildBoolValue(builder, op.getLoc(), false);
   op->insertOperands(op->getNumOperands(),
-                     Repeated<Value>(numMemrefOperands, falseVal));
+                     SmallVector<Value>(numMemrefOperands, falseVal));
 
   int counter = op->getNumResults();
   unsigned numMemrefResults = llvm::count_if(op->getResults(), isMemref);

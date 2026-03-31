@@ -57,9 +57,6 @@ clangd
 | Nathan Ridge
 | zeratul976@hotmail.com (email), HighCommander4 (GitHub), HighCommander4 (Discourse), nridge (Discord)
 
-| Aleksandr Platonov
-| arcsinx45@gmail.com (email), ArcsinX (GitHub), ArcsinX (Discourse)
-
 
 Inactive Maintainers
 ====================

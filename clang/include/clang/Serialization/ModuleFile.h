@@ -144,8 +144,10 @@ enum class InputFilesValidation {
 /// other modules.
 class ModuleFile {
 public:
-  ModuleFile(ModuleKind Kind, ModuleFileKey FileKey, unsigned Generation)
-      : Kind(Kind), FileKey(std::move(FileKey)), Generation(Generation) {}
+  ModuleFile(ModuleKind Kind, ModuleFileKey FileKey, FileEntryRef File,
+             unsigned Generation)
+      : Kind(Kind), FileKey(std::move(FileKey)), File(File),
+        Generation(Generation) {}
   ~ModuleFile();
 
   // === General information ===
@@ -199,11 +201,8 @@ public:
   /// Whether the top-level module has been read from the AST file.
   bool DidReadTopLevelSubmodule = false;
 
-  /// Size of the module file.
-  off_t Size = 0;
-
-  /// Modification of the module file.
-  time_t ModTime = 0;
+  /// The file entry for the module file.
+  FileEntryRef File;
 
   /// The signature of the module file, which may be used instead of the size
   /// and modification time to identify this particular file.

@@ -8,10 +8,6 @@
 
 #include "clc/utils.h"
 
-#ifndef __CLC_FUNCTION
-#error missing function def
-#endif
-
 #ifndef __CLC_IMPL_FUNCTION
 #define __CLC_IMPL_FUNCTION __CLC_FUNCTION
 #endif

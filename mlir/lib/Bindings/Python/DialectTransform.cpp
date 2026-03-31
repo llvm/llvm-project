@@ -46,20 +46,18 @@ public:
 
   MlirTransformResults get() const { return results; }
 
-  void setOps(PyValue &result,
-              const nb::typed<nb::sequence, PyOperationBase> &ops) {
+  void setOps(PyValue &result, const nb::list &ops) {
     std::vector<MlirOperation> opsVec;
-    opsVec.reserve(nb::len(ops));
+    opsVec.reserve(ops.size());
     for (auto op : ops) {
       opsVec.push_back(nb::cast<MlirOperation>(op));
     }
     mlirTransformResultsSetOps(results, result, opsVec.size(), opsVec.data());
   }
 
-  void setValues(PyValue &result,
-                 const nb::typed<nb::sequence, PyValue> &values) {
+  void setValues(PyValue &result, const nb::list &values) {
     std::vector<MlirValue> valuesVec;
-    valuesVec.reserve(nb::len(values));
+    valuesVec.reserve(values.size());
     for (auto item : values) {
       valuesVec.push_back(nb::cast<MlirValue>(item));
     }
@@ -67,10 +65,9 @@ public:
                                   valuesVec.data());
   }
 
-  void setParams(PyValue &result,
-                 const nb::typed<nb::sequence, PyAttribute> &params) {
+  void setParams(PyValue &result, const nb::list &params) {
     std::vector<MlirAttribute> paramsVec;
-    paramsVec.reserve(nb::len(params));
+    paramsVec.reserve(params.size());
     for (auto item : params) {
       paramsVec.push_back(nb::cast<MlirAttribute>(item));
     }

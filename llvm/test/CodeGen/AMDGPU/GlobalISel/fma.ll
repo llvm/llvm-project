@@ -169,8 +169,7 @@ define half @v_fma_f16(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
-; GFX12-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %fma
@@ -230,7 +229,7 @@ define half @v_fma_f16_fneg_lhs(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_f16 v0.l, -v0.l, v1.l, v2.l
+; GFX12-NEXT:    v_fma_f16 v0, -v0, v1, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg half %x
   %fma = call half @llvm.fma.f16(half %neg.x, half %y, half %z)
@@ -291,7 +290,7 @@ define half @v_fma_f16_fneg_rhs(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_f16 v0.l, v0.l, -v1.l, v2.l
+; GFX12-NEXT:    v_fma_f16 v0, v0, -v1, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.y = fneg half %y
   %fma = call half @llvm.fma.f16(half %x, half %neg.y, half %z)
@@ -352,7 +351,7 @@ define half @v_fma_f16_fneg_add(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, -v2.l
+; GFX12-NEXT:    v_fma_f16 v0, v0, v1, -v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.z = fneg half %z
   %fma = call half @llvm.fma.f16(half %x, half %y, half %neg.z)

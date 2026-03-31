@@ -44,7 +44,7 @@ static bool StripConPTYInitSequences(void *dst, size_t dst_len, size_t &len) {
 }
 
 ConnectionConPTY::ConnectionConPTY(std::shared_ptr<PseudoConsole> pty)
-    : ConnectionGenericFile(pty->GetSTDOUTHandle(), false), m_pty(pty) {}
+    : m_pty(pty), ConnectionGenericFile(pty->GetSTDOUTHandle(), false) {};
 
 ConnectionConPTY::~ConnectionConPTY() {}
 

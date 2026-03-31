@@ -20,6 +20,5 @@
 
 int main()
 {
-  [Foo doSomethingWithString:@"Set a breakpoint here"];
-  return 0;
+  return 0; // Set breakpoint here.
 }

@@ -2491,8 +2491,9 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
+  } else {
+    multiples = convertToMlirShape(multiples);
   }
-  multiples = convertToMlirShape(multiples);
 
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   SmallVector<int64_t> outputShape;
@@ -2501,8 +2502,7 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     inferredReturnShapes.push_back(
         ShapedTypeComponents(outputShape, inputType));
     return success();
-  }
-  if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
+  } else if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
     return failure();
 
   // Any non dynamic dimension can be multiplied to a known size.
@@ -2576,8 +2576,9 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
+  } else {
+    newShapeValue = convertToMlirShape(newShapeValue);
   }
-  newShapeValue = convertToMlirShape(newShapeValue);
 
   // We cannot infer from the total number of elements so we must take the
   // shape attribute as exact.
@@ -2695,7 +2696,8 @@ static FailureOr<int64_t> getZeroPoint(Value val, bool signExtend) {
   if (llvm::isa<IntegerType>(zpElemType)) {
     if (signExtend)
       return zpAttr.getValues<APInt>()[0].getSExtValue();
-    return zpAttr.getValues<APInt>()[0].getZExtValue();
+    else
+      return zpAttr.getValues<APInt>()[0].getZExtValue();
   }
 
   // return non-zero value to trigger error check

@@ -17,7 +17,6 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/Sequence.h"
 #include <optional>
 
@@ -384,14 +383,13 @@ private:
 class ValueRange final
     : public llvm::detail::indexed_accessor_range_base<
           ValueRange,
-          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *,
-                       const Repeated<Value> *>,
+          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>,
           Value, Value, Value> {
 public:
   /// The type representing the owner of a ValueRange. This is either a list of
-  /// values, operands, results, or a repeated single value.
-  using OwnerT = PointerUnion<const Value *, OpOperand *,
-                              detail::OpResultImpl *, const Repeated<Value> *>;
+  /// values, operands, or results.
+  using OwnerT =
+      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>;
 
   using RangeBaseT::RangeBaseT;
 
@@ -414,10 +412,6 @@ public:
   ValueRange(ArrayRef<Value> values = {});
   ValueRange(OperandRange values);
   ValueRange(ResultRange values);
-  /// Constructs a range from a repeated value. The Repeated object must outlive
-  /// this range.
-  ValueRange(const Repeated<Value> &repeatedValue LLVM_LIFETIME_BOUND)
-      : RangeBaseT(&repeatedValue, repeatedValue.count) {}
 
   /// Returns the types of the values within this range.
   using type_iterator = ValueTypeIterator<iterator>;

@@ -6,9 +6,8 @@ subroutine loop_assoc
   implicit none
   integer :: i = 0
 
-  !ERROR: This construct requires a canonical loop nest
   !$omp tile sizes(2)
-  !BECAUSE: DO WHILE loop is not a valid affected loop
+  !ERROR: The associated loop of a loop-associated directive cannot be a DO WHILE.
   do while (i <= 10)
     i = i + 1
     print *, i

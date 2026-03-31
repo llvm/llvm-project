@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class ConstStringTestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
     d = {"OBJC_SOURCES": "const-strings.m"}
 
     def setUp(self):

@@ -1556,28 +1556,13 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  Register isStackAccess(const MachineInstr &MI, int &FrameIndex,
-                         TypeSize &MemBytes) const;
-  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
-                             TypeSize &MemBytes) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
-                               int &FrameIndex) const override {
-    TypeSize MemBytes = TypeSize::getZero();
-    return isLoadFromStackSlot(MI, FrameIndex, MemBytes);
-  }
-
-  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
-                               TypeSize &MemBytes) const override;
-
+                               int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
-                              int &FrameIndex) const override {
-    TypeSize MemBytes = TypeSize::getZero();
-    return isStoreToStackSlot(MI, FrameIndex, MemBytes);
-  }
-
-  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
-                              TypeSize &MemBytes) const override;
+                              int &FrameIndex) const override;
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;

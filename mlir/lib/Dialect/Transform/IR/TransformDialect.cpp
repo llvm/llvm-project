@@ -24,7 +24,7 @@ using namespace mlir;
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifndef NDEBUG
 void transform::detail::checkImplementsTransformOpInterface(
     StringRef name, MLIRContext *context) {
   // Since the operation is being inserted into the Transform dialect and the
@@ -61,7 +61,7 @@ void transform::detail::checkImplementsTransformHandleTypeInterface(
          "expected Transform dialect type to implement one of the three "
          "interfaces");
 }
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+#endif // NDEBUG
 
 void transform::TransformDialect::initialize() {
   // Using the checked versions to enable the same assertions as for the ops

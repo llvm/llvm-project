@@ -351,8 +351,11 @@ public:
                                                  StringRef InFile) override {
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
 
-    if (!PPOpts.ImplicitPCHInclude.empty())
-      DataConsumer->importedPCH(PPOpts.ImplicitPCHInclude);
+    if (!PPOpts.ImplicitPCHInclude.empty()) {
+      if (auto File =
+              CI.getFileManager().getOptionalFileRef(PPOpts.ImplicitPCHInclude))
+        DataConsumer->importedPCH(*File);
+    }
 
     DataConsumer->setASTContext(CI.getASTContextPtr());
     Preprocessor &PP = CI.getPreprocessor();
@@ -692,7 +695,7 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
 
   ASTUnit::ConcurrencyCheck Check(*Unit);
 
-  if (std::optional<StringRef> PCHFile = Unit->getPCHFile())
+  if (OptionalFileEntryRef PCHFile = Unit->getPCHFile())
     DataConsumer.importedPCH(*PCHFile);
 
   FileManager &FileMgr = Unit->getFileManager();

@@ -119,8 +119,6 @@ public:
                          MachineIRBuilder &B) const;
   bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
-  bool legalizeCTLS(MachineInstr &MI, MachineRegisterInfo &MRI,
-                    MachineIRBuilder &B) const;
 
   void buildLoadInputValue(Register DstReg, MachineIRBuilder &B,
                            const ArgDescriptor *Arg,

@@ -743,19 +743,15 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
     // Zero extend to the promoted type and do the count there.
     SDValue Op = ZExtPromotedInteger(N->getOperand(0));
 
-    // At this stage SUB is guaranteed to be positive no-wrap,
-    // that to be used in further KnownBits optimizations.
-    SDNodeFlags SubFlags;
-    SubFlags.setNoUnsignedWrap(true);
     if (!N->isVPOpcode())
       return DAG.getNode(ISD::SUB, dl, NVT,
                          DAG.getNode(N->getOpcode(), dl, NVT, Op),
-                         ExtractLeadingBits, SubFlags);
+                         ExtractLeadingBits);
     SDValue Mask = N->getOperand(1);
     SDValue EVL = N->getOperand(2);
     return DAG.getNode(ISD::VP_SUB, dl, NVT,
                        DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
-                       ExtractLeadingBits, Mask, EVL, SubFlags);
+                       ExtractLeadingBits, Mask, EVL);
   }
   if (CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
       CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) {
@@ -2995,17 +2991,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N,
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
                                                                unsigned OpNo) {
-  assert(OpNo == 0 && "Unexpected operand for promotion");
-  SDValue Op = N->getOperand(0);
-
-  SDValue NewOp;
-  if (TLI.getBooleanContents(Op.getValueType()) ==
-      TargetLowering::ZeroOrNegativeOneBooleanContent)
-    NewOp = SExtPromotedInteger(Op);
-  else
-    NewOp = ZExtPromotedInteger(Op);
-
-  return SDValue(DAG.UpdateNodeOperands(N, NewOp), 0);
+  SmallVector<SDValue, 1> NewOps(N->ops());
+  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N) {

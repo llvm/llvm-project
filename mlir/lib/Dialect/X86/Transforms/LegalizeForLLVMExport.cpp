@@ -54,8 +54,7 @@ void mlir::configureX86LegalizeForExportTarget(LLVMConversionTarget &target) {
 namespace {
 /// Implement the interface to convert X86 to LLVM.
 struct X86ToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  X86ToLLVMDialectInterface(Dialect *dialect)
-      : ConvertToLLVMPatternInterface(dialect) {}
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
 
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,

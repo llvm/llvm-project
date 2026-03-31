@@ -24,9 +24,15 @@ using namespace llvm::AArch64PAuth;
 
 namespace {
 
-class AArch64PointerAuthImpl {
+class AArch64PointerAuth : public MachineFunctionPass {
 public:
-  bool run(MachineFunction &MF);
+  static char ID;
+
+  AArch64PointerAuth() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override { return AARCH64_POINTER_AUTH_NAME; }
 
 private:
   const AArch64Subtarget *Subtarget = nullptr;
@@ -38,27 +44,16 @@ private:
                       MachineBasicBlock::iterator MBBI) const;
 };
 
-class AArch64PointerAuthLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-
-  AArch64PointerAuthLegacy() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override { return AARCH64_POINTER_AUTH_NAME; }
-};
-
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64PointerAuthLegacy, "aarch64-ptrauth",
+INITIALIZE_PASS(AArch64PointerAuth, "aarch64-ptrauth",
                 AARCH64_POINTER_AUTH_NAME, false, false)
 
 FunctionPass *llvm::createAArch64PointerAuthPass() {
-  return new AArch64PointerAuthLegacy();
+  return new AArch64PointerAuth();
 }
 
-char AArch64PointerAuthLegacy::ID = 0;
+char AArch64PointerAuth::ID = 0;
 
 static void emitPACSymOffsetIntoX16(const TargetInstrInfo &TII,
                                     MachineBasicBlock &MBB,
@@ -85,8 +80,8 @@ static void emitPACCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                                  : CFIBuilder.buildNegateRAState();
 }
 
-void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
-                                    MachineBasicBlock::iterator MBBI) const {
+void AArch64PointerAuth::signLR(MachineFunction &MF,
+                                MachineBasicBlock::iterator MBBI) const {
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
   bool UseBKey = MFnI.shouldSignWithBKey();
   bool EmitCFI = MFnI.needsDwarfUnwindInfo(MF);
@@ -139,7 +134,7 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   }
 }
 
-void AArch64PointerAuthImpl::authenticateLR(
+void AArch64PointerAuth::authenticateLR(
     MachineFunction &MF, MachineBasicBlock::iterator MBBI) const {
   const AArch64FunctionInfo *MFnI = MF.getInfo<AArch64FunctionInfo>();
   bool UseBKey = MFnI->shouldSignWithBKey();
@@ -228,7 +223,7 @@ unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
   llvm_unreachable("Unknown AuthCheckMethod enum");
 }
 
-bool AArch64PointerAuthImpl::run(MachineFunction &MF) {
+bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
 
@@ -265,19 +260,4 @@ bool AArch64PointerAuthImpl::run(MachineFunction &MF) {
   }
 
   return Modified;
-}
-
-bool AArch64PointerAuthLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return AArch64PointerAuthImpl().run(MF);
-}
-
-PreservedAnalyses
-AArch64PointerAuthPass::run(MachineFunction &MF,
-                            MachineFunctionAnalysisManager &MFAM) {
-  const bool Changed = AArch64PointerAuthImpl().run(MF);
-  if (!Changed)
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
 }

@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-spuriously-wake-up-functions %t -- --
-#include <cstddef>
+#define NULL 0
 
 namespace std {
 using intmax_t = int;

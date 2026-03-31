@@ -22,7 +22,6 @@
 
 # RUN: llvm-objdump -d --syms %t/all | FileCheck %s --check-prefix=FOLD
 # RUN: llvm-objdump -d --syms %t/all2 | FileCheck %s --check-prefix=FOLD
-# RUN: llvm-objdump -d --syms %t/safe | FileCheck %s --check-prefix=NOOP
 # RUN: llvm-objdump -d --syms %t/none | FileCheck %s --check-prefix=NOOP
 # RUN: llvm-objdump -d --syms %t/none2 | FileCheck %s --check-prefix=NOOP
 # RUN: llvm-objdump -d --syms %t/no_dedup | FileCheck %s --check-prefix=NOOP

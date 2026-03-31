@@ -4132,8 +4132,7 @@ void createOpenACCRoutineConstruct(
                                 workerDeviceTypes, vectorDeviceTypes) &&
           routineOp.getNohost() == hasNohost)
         return;
-      fir::emitFatalError(loc,
-                          "Routine already specified with different clauses");
+      mlir::emitError(loc, "Routine already specified with different clauses");
     }
   }
   std::stringstream routineOpName;
@@ -4433,10 +4432,9 @@ void Fortran::lower::attachDeclarePostAllocAction(
   fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
 
-  if (op && op->hasTrait<mlir::OpTrait::IsTerminator>()) {
-    if (op->getNumOperands() != 0)
-      fir::emitFatalError(op->getLoc(),
-                          "expect only terminator op with no operand");
+  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
+    assert(resOp.getOperands().size() == 0 &&
+           "expect only fir.result op with no operand");
     op = op->getPrevNode();
   }
   assert(op && "expect operation to attach the post allocation action");
@@ -4507,10 +4505,9 @@ void Fortran::lower::attachDeclarePostDeallocAction(
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostDeallocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
-  if (op && op->hasTrait<mlir::OpTrait::IsTerminator>()) {
-    if (op->getNumOperands() != 0)
-      fir::emitFatalError(op->getLoc(),
-                          "expect only terminator op with no operand");
+  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
+    assert(resOp.getOperands().size() == 0 &&
+           "expect only fir.result op with no operand");
     op = op->getPrevNode();
   }
   assert(op && "expect operation to attach the post deallocation action");

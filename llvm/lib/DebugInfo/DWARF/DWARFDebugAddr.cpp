@@ -10,8 +10,6 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 
@@ -137,36 +135,35 @@ Error DWARFDebugAddrTable::extract(const DWARFDataExtractor &Data,
 
 void DWARFDebugAddrTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (DumpOpts.Verbose)
-    OS << formatv("{0:x+8}: ", Offset);
+    OS << format("0x%8.8" PRIx64 ": ", Offset);
   if (Length) {
     int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);
     OS << "Address table header: "
-       << formatv("length = 0x{0:x-}",
-                  fmt_align(Length, AlignStyle::Right, OffsetDumpWidth, '0'))
+       << format("length = 0x%0*" PRIx64, OffsetDumpWidth, Length)
        << ", format = " << dwarf::FormatString(Format)
-       << formatv(", version = {0:x+4}", Version)
-       << formatv(", addr_size = {0:x+2}", AddrSize)
-       << formatv(", seg_size = {0:x+2}", SegSize) << "\n";
+       << format(", version = 0x%4.4" PRIx16, Version)
+       << format(", addr_size = 0x%2.2" PRIx8, AddrSize)
+       << format(", seg_size = 0x%2.2" PRIx8, SegSize) << "\n";
   }
 
   if (Addrs.size() > 0) {
     const char *AddrFmt;
     switch (AddrSize) {
     case 2:
-      AddrFmt = "{0:x+4}\n";
+      AddrFmt = "0x%4.4" PRIx64 "\n";
       break;
     case 4:
-      AddrFmt = "{0:x+8}\n";
+      AddrFmt = "0x%8.8" PRIx64 "\n";
       break;
     case 8:
-      AddrFmt = "{0:x+16}\n";
+      AddrFmt = "0x%16.16" PRIx64 "\n";
       break;
     default:
       llvm_unreachable("unsupported address size");
     }
     OS << "Addrs: [\n";
     for (uint64_t Addr : Addrs)
-      OS << formatv(AddrFmt, Addr);
+      OS << format(AddrFmt, Addr);
     OS << "]\n";
   }
 }

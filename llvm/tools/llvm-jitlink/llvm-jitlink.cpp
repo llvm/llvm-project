@@ -891,7 +891,7 @@ static Error loadProcessSymbols(Session &S) {
       };
   S.ProcessSymsJD->addGenerator(
       ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          S.ES, *S.DylibMgr, std::move(FilterMainEntryPoint))));
+          S.ES, std::move(FilterMainEntryPoint))));
 
   return Error::success();
 }
@@ -1222,13 +1222,6 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   ErrorAsOutParameter _(&Err);
 
-  if (auto DM = ES.getExecutorProcessControl().createDefaultDylibMgr())
-    DylibMgr = std::move(*DM);
-  else {
-    Err = DM.takeError();
-    return;
-  }
-
   ES.setErrorReporter(reportLLVMJITLinkError);
 
   // Attach WaitingOnGraph recorder if requested.
@@ -1490,8 +1483,7 @@ Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
   if (It != DynLibJDs.end()) {
     return It->second;
   }
-  auto G =
-      EPCDynamicLibrarySearchGenerator::Load(ES, *DylibMgr, LibPath.data());
+  auto G = EPCDynamicLibrarySearchGenerator::Load(ES, LibPath.data());
   if (!G)
     return G.takeError();
   auto JD = &ES.createBareJITDylib(LibPath.str());
@@ -2253,8 +2245,7 @@ LoadLibraryWeak(Session &S, StringRef Path) {
     return Symbols.takeError();
 
   return std::make_unique<EPCDynamicLibrarySearchGenerator>(
-      S.ES, *S.DylibMgr,
-      [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
+      S.ES, [Symbols = std::move(*Symbols)](const SymbolStringPtr &Sym) {
         return Symbols.count(Sym);
       });
 }
@@ -2787,12 +2778,12 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.intern(Symbol);
+    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
     return S.isSymbolRegistered(InternedSymbol);
   };
 
   auto GetSymbolInfo = [&S](StringRef Symbol) {
-    auto InternedSymbol = S.ES.intern(Symbol);
+    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
     return S.findSymbolInfo(InternedSymbol, "Can not get symbol info");
   };
 

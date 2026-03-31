@@ -66,7 +66,7 @@ protected:
       : TransformDialectDataBase(TypeID::get<DerivedTy>(), ctx) {}
 };
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifndef NDEBUG
 namespace detail {
 /// Asserts that the operations provided as template arguments implement the
 /// TransformOpInterface and MemoryEffectsOpInterface. This must be a dynamic
@@ -79,7 +79,7 @@ void checkImplementsTransformOpInterface(StringRef name, MLIRContext *context);
 void checkImplementsTransformHandleTypeInterface(TypeID typeID,
                                                  MLIRContext *context);
 } // namespace detail
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+#endif // NDEBUG
 } // namespace transform
 } // namespace mlir
 
@@ -256,10 +256,10 @@ void TransformDialect::addOperationIfNotRegistered() {
       RegisteredOperationName::lookup(TypeID::get<OpTy>(), getContext());
   if (!opName) {
     addOperations<OpTy>();
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifndef NDEBUG
     StringRef name = OpTy::getOperationName();
     detail::checkImplementsTransformOpInterface(name, getContext());
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+#endif // NDEBUG
     return;
   }
 
@@ -289,10 +289,10 @@ void TransformDialect::addTypeIfNotRegistered() {
       });
   addTypes<Type>();
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifndef NDEBUG
   detail::checkImplementsTransformHandleTypeInterface(TypeID::get<Type>(),
                                                       getContext());
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+#endif // NDEBUG
 }
 
 template <typename DataTy>

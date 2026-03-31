@@ -57,10 +57,3 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.stat
 )
-
-add_entrypoint_object(
-  utimensat
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.utimensat
-)

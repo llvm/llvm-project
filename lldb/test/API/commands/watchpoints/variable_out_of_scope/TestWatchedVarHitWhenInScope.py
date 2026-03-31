@@ -10,7 +10,6 @@ from lldbsuite.test.decorators import *
 
 
 class WatchedVariableHitWhenInScopeTestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     # This test depends on not tracking watchpoint expression hits if we have

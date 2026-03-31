@@ -208,9 +208,6 @@ public:
       DefRangeFramePointerRelSym &DefRangeFramePointerRel) override;
   Error visitKnownRecord(CVSymbol &Record,
                          DefRangeRegisterRelSym &DefRangeRegisterRel) override;
-  Error visitKnownRecord(
-      CVSymbol &Record,
-      DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) override;
   Error visitKnownRecord(CVSymbol &Record,
                          DefRangeRegisterSym &DefRangeRegister) override;
   Error visitKnownRecord(

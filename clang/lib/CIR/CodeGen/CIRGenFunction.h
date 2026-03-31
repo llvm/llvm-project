@@ -1939,9 +1939,6 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
-  std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
-                                                  const CallExpr *expr);
-
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 

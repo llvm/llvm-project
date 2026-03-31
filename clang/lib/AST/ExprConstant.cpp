@@ -1984,9 +1984,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCEncodeExprClass:
     return true;
   case Expr::ObjCBoxedExprClass:
-  case Expr::ObjCArrayLiteralClass:
-  case Expr::ObjCDictionaryLiteralClass:
-    return cast<ObjCObjectLiteral>(E)->isExpressibleAsConstantInitializer();
+    return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
     return IsOpaqueConstantCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
@@ -9900,12 +9898,6 @@ public:
     if (Info.noteFailure())
       EvaluateIgnoredValue(Info, E->getSubExpr());
     return Error(E);
-  }
-  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
-    return E->isExpressibleAsConstantInitializer() ? Success(E) : Error(E);
-  }
-  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E) {
-    return E->isExpressibleAsConstantInitializer() ? Success(E) : Error(E);
   }
   bool VisitAddrLabelExpr(const AddrLabelExpr *E)
       { return Success(E); }

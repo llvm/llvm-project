@@ -57,20 +57,12 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
       static_cast<
           std::underlying_type_t<llvm::DICompileUnit::DebugNameTableKind>>(
           node->getNameTableKind()));
-  SmallVector<DINodeAttr> imports;
-  if (node->getImportedEntities()) {
-    for (llvm::DIImportedEntity *importedEntity : node->getImportedEntities())
-      if (DINodeAttr nodeAttr =
-              translate(static_cast<llvm::DINode *>(importedEntity)))
-        imports.push_back(nodeAttr);
-  }
   return DICompileUnitAttr::get(
       context, getOrCreateDistinctID(node),
       node->getSourceLanguage().getUnversionedName(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value(),
-      node->isDebugInfoForProfiling(), nameTableKind.value(),
-      getStringAttrOrNull(node->getRawSplitDebugFilename()), imports);
+      node->isOptimized(), emissionKind.value(), nameTableKind.value(),
+      getStringAttrOrNull(node->getRawSplitDebugFilename()));
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {

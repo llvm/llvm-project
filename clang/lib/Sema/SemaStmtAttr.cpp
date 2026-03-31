@@ -143,7 +143,6 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("pipeline_initiation_interval",
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
-                 .Case("licm", LoopHintAttr::LICMDisabled)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->getIdentifierInfo())) &&
@@ -169,8 +168,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::VectorizePredicate ||
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
-               Option == LoopHintAttr::PipelineDisabled ||
-               Option == LoopHintAttr::LICMDisabled) {
+               Option == LoopHintAttr::PipelineDisabled) {
       assert(StateLoc && StateLoc->getIdentifierInfo() &&
              "Loop hint must have an argument");
       if (StateLoc->getIdentifierInfo()->isStr("disable"))
@@ -424,12 +422,11 @@ static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
     if (!FirstValue)
       FirstValue = CAFA->getResultAsAPSInt();
 
-    if (llvm::APSInt::isSameValue(*FirstValue, SecondValue))
-      continue;
-
-    S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
-        << *FirstItr;
-    S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
+    if (FirstValue != SecondValue) {
+      S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
+          << *FirstItr;
+      S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
+    }
   }
 }
 
@@ -477,9 +474,6 @@ CheckForIncompatibleAttributes(Sema &S,
     // The vector predication only has a state form that is exposed by
     // #pragma clang loop vectorize_predicate (enable | disable).
     VectorizePredicate,
-    // The LICM transformation only has a disable state form that is
-    // exposed by #pragma clang loop licm(disable).
-    LICM,
     // This serves as a indicator to how many category are listed in this enum.
     NumberOfCategories
   };
@@ -527,9 +521,6 @@ CheckForIncompatibleAttributes(Sema &S,
     case LoopHintAttr::VectorizePredicate:
       Category = VectorizePredicate;
       break;
-    case LoopHintAttr::LICMDisabled:
-      Category = LICM;
-      break;
     };
 
     assert(Category != NumberOfCategories && "Unhandled loop hint option");
@@ -540,7 +531,6 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::UnrollAndJam ||
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
-        Option == LoopHintAttr::LICMDisabled ||
         Option == LoopHintAttr::Distribute) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;

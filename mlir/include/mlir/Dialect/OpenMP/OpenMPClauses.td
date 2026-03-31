@@ -773,14 +773,12 @@ class OpenMP_LinearClauseSkip<
                     extraClassDeclaration> {
   let arguments = (ins Variadic<AnyType>:$linear_vars,
       Variadic<AnyInteger>:$linear_step_vars,
-      OptionalAttr<ArrayAttr>:$linear_var_types,
-      OptionalAttr<ArrayAttr>:$linear_modifiers);
+      OptionalAttr<ArrayAttr>:$linear_var_types);
 
   let optAssemblyFormat = [{
     `linear` `(`
       custom<LinearClause>($linear_vars, type($linear_vars),
-                           $linear_step_vars, type($linear_step_vars),
-                           $linear_modifiers) `)`
+                           $linear_step_vars, type($linear_step_vars)) `)`
   }];
 
   let description = [{
@@ -788,10 +786,6 @@ class OpenMP_LinearClauseSkip<
     associated linear operand. Note that the `linear_vars` and
     `linear_step_vars` variadic lists should contain the same number of
     elements.
-
-    The `linear_modifiers` attribute optionally specifies a per-variable
-    linear-modifier: `val`, `ref`, or `uval`. When omitted, the default
-    modifier is determined by the language semantics.
   }];
 }
 

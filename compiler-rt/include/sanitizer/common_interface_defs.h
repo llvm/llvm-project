@@ -273,9 +273,7 @@ void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
 __attribute__((__internal_linkage__)) inline int
     SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
                                                             const void *mid,
-                                                            const void *end) {
-  return 1;
-}
+                                                            const void *end) {}
 #else
 int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
                                                             const void *mid,
@@ -308,9 +306,7 @@ __attribute__((__internal_linkage__)) inline int SANITIZER_CDECL
 __sanitizer_verify_double_ended_contiguous_container(const void *storage_beg,
                                                      const void *container_beg,
                                                      const void *container_end,
-                                                     const void *storage_end) {
-  return 1;
-}
+                                                     const void *storage_end) {}
 #else
 int SANITIZER_CDECL __sanitizer_verify_double_ended_contiguous_container(
     const void *storage_beg, const void *container_beg,
@@ -331,9 +327,7 @@ int SANITIZER_CDECL __sanitizer_verify_double_ended_contiguous_container(
 __attribute__((__internal_linkage__)) inline const void *SANITIZER_CDECL
 __sanitizer_contiguous_container_find_bad_address(const void *beg,
                                                   const void *mid,
-                                                  const void *end) {
-  return NULL;
-}
+                                                  const void *end) {}
 #else
 const void *SANITIZER_CDECL __sanitizer_contiguous_container_find_bad_address(
     const void *beg, const void *mid, const void *end);
@@ -353,9 +347,7 @@ const void *SANITIZER_CDECL __sanitizer_contiguous_container_find_bad_address(
 __attribute__((__internal_linkage__)) inline const void *SANITIZER_CDECL
 __sanitizer_double_ended_contiguous_container_find_bad_address(
     const void *storage_beg, const void *container_beg,
-    const void *container_end, const void *storage_end) {
-  return NULL;
-}
+    const void *container_end, const void *storage_end) {}
 #else
 const void *SANITIZER_CDECL
 __sanitizer_double_ended_contiguous_container_find_bad_address(

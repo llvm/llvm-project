@@ -194,7 +194,7 @@ private:
 } // anonymous namespace
 
 void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
-  Streamer.initSections(*BC.STI);
+  Streamer.initSections(false, *BC.STI);
   Streamer.setUseAssemblerInfoForParsing(false);
 
   if (opts::UpdateDebugSections && BC.isELF()) {

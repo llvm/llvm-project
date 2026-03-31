@@ -345,20 +345,13 @@ MlirStringRef mlirLLVMDIFileAttrGetName(void) { return wrap(DIFileAttr::name); }
 MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
     MlirAttribute file, MlirAttribute producer, bool isOptimized,
-    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
-    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
-    intptr_t nImportedEntities, MlirAttribute const *importedEntities) {
-  SmallVector<Attribute> importsStorage;
-  importsStorage.reserve(nImportedEntities);
+    MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind,
+    MlirAttribute splitDebugFilename) {
   return wrap(DICompileUnitAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)), sourceLanguage,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
-      isOptimized, DIEmissionKind(emissionKind), isDebugInfoForProfiling,
-      DINameTableKind(nameTableKind),
-      cast<StringAttr>(unwrap(splitDebugFilename)),
-      llvm::map_to_vector(
-          unwrapList(nImportedEntities, importedEntities, importsStorage),
-          llvm::CastTo<DINodeAttr>)));
+      isOptimized, DIEmissionKind(emissionKind), DINameTableKind(nameTableKind),
+      cast<StringAttr>(unwrap(splitDebugFilename))));
 }
 
 MlirStringRef mlirLLVMDICompileUnitAttrGetName(void) {

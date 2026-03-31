@@ -13,7 +13,6 @@ from lldbsuite.test import lldbutil
 
 
 class WatchpointSizeTestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

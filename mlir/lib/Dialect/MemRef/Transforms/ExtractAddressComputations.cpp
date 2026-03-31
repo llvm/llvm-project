@@ -20,7 +20,6 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/ADT/Repeated.h"
 
 using namespace mlir;
 
@@ -41,7 +40,7 @@ static FailureOr<Value> getLoadOpSrcMemRef(memref::LoadOp loadOp) {
 // \see LoadStoreLikeOpRewriter.
 static memref::LoadOp rebuildLoadOp(RewriterBase &rewriter,
                                     memref::LoadOp loadOp, Value srcMemRef,
-                                    ValueRange indices) {
+                                    ArrayRef<Value> indices) {
   Location loc = loadOp.getLoc();
   return memref::LoadOp::create(rewriter, loc, srcMemRef, indices,
                                 loadOp.getNontemporal());
@@ -71,7 +70,7 @@ static FailureOr<Value> getStoreOpSrcMemRef(memref::StoreOp storeOp) {
 // \see LoadStoreLikeOpRewriter.
 static memref::StoreOp rebuildStoreOp(RewriterBase &rewriter,
                                       memref::StoreOp storeOp, Value srcMemRef,
-                                      ValueRange indices) {
+                                      ArrayRef<Value> indices) {
   Location loc = storeOp.getLoc();
   return memref::StoreOp::create(rewriter, loc, storeOp.getValueToStore(),
                                  srcMemRef, indices, storeOp.getNontemporal());
@@ -102,7 +101,7 @@ static FailureOr<Value> getLdMatrixOpSrcMemRef(nvgpu::LdMatrixOp ldMatrixOp) {
 static nvgpu::LdMatrixOp rebuildLdMatrixOp(RewriterBase &rewriter,
                                            nvgpu::LdMatrixOp ldMatrixOp,
                                            Value srcMemRef,
-                                           ValueRange indices) {
+                                           ArrayRef<Value> indices) {
   Location loc = ldMatrixOp.getLoc();
   return nvgpu::LdMatrixOp::create(
       rewriter, loc, ldMatrixOp.getResult().getType(), srcMemRef, indices,
@@ -130,7 +129,7 @@ getTransferLikeOpSrcMemRef(TransferLikeOp transferLikeOp) {
 static vector::TransferReadOp
 rebuildTransferReadOp(RewriterBase &rewriter,
                       vector::TransferReadOp transferReadOp, Value srcMemRef,
-                      ValueRange indices) {
+                      ArrayRef<Value> indices) {
   Location loc = transferReadOp.getLoc();
   return vector::TransferReadOp::create(
       rewriter, loc, transferReadOp.getResult().getType(), srcMemRef, indices,
@@ -148,7 +147,7 @@ rebuildTransferReadOp(RewriterBase &rewriter,
 static vector::TransferWriteOp
 rebuildTransferWriteOp(RewriterBase &rewriter,
                        vector::TransferWriteOp transferWriteOp, Value srcMemRef,
-                       ValueRange indices) {
+                       ArrayRef<Value> indices) {
   Location loc = transferWriteOp.getLoc();
   return vector::TransferWriteOp::create(
       rewriter, loc, transferWriteOp.getValue(), srcMemRef, indices,
@@ -222,7 +221,7 @@ template <typename LoadStoreLikeOp,
           FailureOr<Value> (*getFailureOrSrcMemRef)(LoadStoreLikeOp),
           LoadStoreLikeOp (*rebuildOpFromAddressAndIndices)(
               RewriterBase & /*rewriter*/, LoadStoreLikeOp /*loadStoreOp*/,
-              Value /*srcMemRef*/, ValueRange /*indices*/),
+              Value /*srcMemRef*/, ArrayRef<Value> /*indices*/),
           SmallVector<OpFoldResult> (*getViewSizeForEachDim)(
               RewriterBase & /*rewriter*/, LoadStoreLikeOp /*loadStoreOp*/) =
               getGenericOpViewSizeForEachDim<
@@ -270,8 +269,8 @@ struct LoadStoreLikeOpRewriter : public OpRewritePattern<LoadStoreLikeOp> {
                                   /*offsets=*/indices,
                                   /*sizes=*/sizes, /*strides=*/ones);
     // Rewrite the load/store with the subview as the base pointer.
-    Repeated<Value> zeros(loadStoreRank,
-                          arith::ConstantIndexOp::create(rewriter, loc, 0));
+    SmallVector<Value> zeros(loadStoreRank,
+                             arith::ConstantIndexOp::create(rewriter, loc, 0));
     LoadStoreLikeOp newLoadStore = rebuildOpFromAddressAndIndices(
         rewriter, loadStoreLikeOp, subview.getResult(), zeros);
     rewriter.replaceOp(loadStoreLikeOp, newLoadStore->getResults());

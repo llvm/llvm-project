@@ -331,9 +331,7 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
     if (op->getNumResults() == 0)
       return rewriter.notifyMatchFailure(op, "can't narrow resultless op");
 
-    // Inline size chosen empirically based on compilation profiling.
-    // Profiled: 2.6M calls, avg=1.7+-1.3. N=4 covers >95% of cases inline.
-    SmallVector<ConstantIntRanges, 4> ranges;
+    SmallVector<ConstantIntRanges> ranges;
     if (failed(collectRanges(solver, op->getOperands(), ranges)))
       return rewriter.notifyMatchFailure(op, "input without specified range");
     if (failed(collectRanges(solver, op->getResults(), ranges)))

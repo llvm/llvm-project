@@ -367,7 +367,7 @@ public:
                       bool isModuleImport);
 
   void importedModule(const ImportDecl *ImportD);
-  void importedPCH(StringRef FileName);
+  void importedPCH(FileEntryRef File);
 
   void startedTranslationUnit();
 

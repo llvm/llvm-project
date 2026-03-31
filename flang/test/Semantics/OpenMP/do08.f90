@@ -11,7 +11,6 @@ program omp
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
-    !BECAUSE: This code prevents perfect nesting
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
     if (i .lt. 1) cycle
     do j = 0, 10
@@ -27,7 +26,6 @@ program omp
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10
-      !BECAUSE: This code prevents perfect nesting
       !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
       if (i .lt. 1) cycle
       do k  = 0, 10
@@ -41,7 +39,6 @@ program omp
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp do  collapse(2)
   do i = 0, 10
-    !BECAUSE: This code prevents perfect nesting
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
     if (i .lt. 1) cycle
     do j = 0, 10
@@ -57,7 +54,6 @@ program omp
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp do  collapse(2)
   foo: do i = 0, 10
-    !BECAUSE: This code prevents perfect nesting
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
     if (i .lt. 1) cycle foo
     do j = 0, 10
@@ -74,11 +70,10 @@ program omp
   !$omp do collapse(3)
   do 60 i=2,200,2
     do j=1,10
-      !BECAUSE: This code prevents perfect nesting
       !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
-      if (i == 100) cycle
-      do k = 1, 10
-        print *, i
+      if(i==100) cycle
+      do k=1,10
+        print *,i
       end do
     end do
   60 continue
@@ -139,13 +134,12 @@ program omp
   !$omp do  collapse(2) ordered(3)
   foo: do i = 0, 10
     foo1: do j = 0, 10
-      !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
-      !BECAUSE: This code prevents perfect nesting
-      if (k .lt. 1) cycle foo
-      foo2:  do k  = 0, 10
-        print *, i, j, k
-      end do foo2
-    end do foo1
+             !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
+             if (k .lt. 1) cycle foo
+         foo2:  do k  = 0, 10
+             print *, i, j, k
+           end do foo2
+         end do foo1
   end do foo
   !$omp end do
 

@@ -5,12 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_HDR_TYPES_RSIZE_T_H
-#define LLVM_LIBC_HDR_TYPES_RSIZE_T_H
-
-#ifndef __STDC_WANT_LIB_EXT1__
-#define __STDC_WANT_LIB_EXT1__ 1
-#endif
+#ifndef LLVM_LIBC_HDR_TYPES_SIZE_T_H
+#define LLVM_LIBC_HDR_TYPES_SIZE_T_H
 
 #ifdef LIBC_FULL_BUILD
 
@@ -24,8 +20,4 @@
 
 #endif // LIBC_FULL_BUILD
 
-#ifdef __STDC_WANT_LIB_EXT1__
-#undef __STDC_WANT_LIB_EXT1__
-#endif
-
-#endif // LLVM_LIBC_HDR_TYPES_RSIZE_T_H
+#endif // LLVM_LIBC_HDR_TYPES_SIZE_T_H

@@ -651,12 +651,6 @@ MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
 }
 
-bool mlirOperationNameHasTrait(MlirStringRef opName, MlirTypeID traitTypeID,
-                               MlirContext context) {
-  return OperationName(unwrap(opName), unwrap(context))
-      .hasTrait(unwrap(traitTypeID));
-}
-
 MlirLocation mlirOperationGetLocation(MlirOperation op) {
   return wrap(unwrap(op)->getLoc());
 }

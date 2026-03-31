@@ -596,10 +596,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   bool SkipModule =
       CPUStr == "help" || TuneCPUStr == "help" || is_contained(MAttrs, "help");
   if (SkipModule) {
-    if (!TargetTriple.empty())
-      TheTriple = Triple(Triple::normalize(TargetTriple));
-    else
-      TheTriple = Triple(sys::getDefaultTargetTriple());
+    TheTriple = Triple(Triple::normalize(TargetTriple));
+    if (TheTriple.getTriple().empty())
+      TheTriple.setTriple(sys::getDefaultTargetTriple());
 
     // Get the target specific parser.
     std::string Error;

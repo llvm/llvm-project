@@ -118,8 +118,7 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUIDAssumingExternalLinkage(
-        FunctionSamples::getCanonicalFnName(FProfileName)));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(FProfileName));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {

@@ -10,6 +10,7 @@
 // Ensure that leaf function can be unwund.
 // REQUIRES: target={{(aarch64|loongarch64|riscv64|s390x|x86_64)-.+}}
 // UNSUPPORTED: target={{.*-windows.*}}
+// UNSUPPORTED: target={{.*-apple.*}}
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
@@ -22,7 +23,6 @@
 // XFAIL: target={{.*}}-musl
 
 #undef NDEBUG
-#include "support/func_bounds.h"
 #include <assert.h>
 #include <signal.h>
 #include <stdio.h>
@@ -32,7 +32,12 @@
 #include <unistd.h>
 #include <unwind.h>
 
-FUNC_BOUNDS_DECL(main_func);
+// Using __attribute__((section("main_func"))) is ELF specific, but then
+// this entire test is marked as requiring Linux, so we should be good.
+//
+// We don't use dladdr() because on musl it's a no-op when statically linked.
+extern char __start_main_func;
+extern char __stop_main_func;
 
 _Unwind_Reason_Code frame_handler(struct _Unwind_Context* ctx, void* arg) {
   (void)arg;
@@ -40,8 +45,8 @@ _Unwind_Reason_Code frame_handler(struct _Unwind_Context* ctx, void* arg) {
   // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
   uintptr_t ip = _Unwind_GetIP(ctx);
-  if (ip >= (uintptr_t)FUNC_START(main_func) &&
-      ip < (uintptr_t)FUNC_END(main_func)) {
+  if (ip >= (uintptr_t)&__start_main_func &&
+      ip < (uintptr_t)&__stop_main_func) {
     _Exit(0);
   }
 
@@ -67,7 +72,7 @@ __attribute__((noinline)) void crashing_leaf_func(int do_trap) {
     __builtin_trap();
 }
 
-FUNC_ATTR(main_func) int main(int, char **) {
+__attribute__((section("main_func"))) int main(int, char **) {
   signal(SIGTRAP, signal_handler);
   signal(SIGILL, signal_handler);
   crashing_leaf_func(1);

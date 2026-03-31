@@ -1,5 +1,3 @@
-.. _undefined_behavior:
-
 ===========================
 Defining Undefined Behavior
 ===========================

@@ -180,13 +180,6 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(I);
   }
 
-  void visitCatchPadInst(CatchPadInst &I) {
-    // Windows EH requires exception objects allocated on the stack,
-    // shortcut the traversal and keep it on stack.
-    ShouldLiveOnFrame = false;
-    Base::Worklist.clear();
-  }
-
   void visitInsertElementInst(InsertElementInst &I) {
     enqueueUsers(I);
     handleAlias(I);

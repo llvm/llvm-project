@@ -12,7 +12,6 @@ exe_name = "StripMe"  # Must match Makefile
 
 
 class FunctionStartsTestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote

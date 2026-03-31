@@ -61,11 +61,8 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
     // We have a driver that supports at least one device.
     ContextList.emplace_back(*this, Driver, DriverId);
     auto &DrvInfo = ContextList.back();
-    if (auto Err = DrvInfo.init()) {
-      // Remove the partially initialized context from the list
-      ContextList.pop_back();
+    if (auto Err = DrvInfo.init())
       return std::move(Err);
-    }
     llvm::SmallVector<ze_device_handle_t> FoundDevices(DeviceCount);
     CALL_ZE_RET_ERROR(zeDeviceGet, Driver, &DeviceCount, FoundDevices.data());
 

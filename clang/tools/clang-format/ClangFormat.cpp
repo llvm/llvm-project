@@ -343,15 +343,16 @@ static void outputReplacementsXML(const Replacements &Replaces) {
   }
 }
 
-static bool emitReplacementWarnings(const Replacements &Replaces,
-                                    StringRef AssumedFileName,
-                                    std::unique_ptr<llvm::MemoryBuffer> Code) {
+static bool
+emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
+                        const std::unique_ptr<llvm::MemoryBuffer> &Code) {
   unsigned Errors = 0;
   if (WarnFormat && !NoWarnFormat) {
     SourceMgr Mgr;
     const char *StartBuf = Code->getBufferStart();
 
-    Mgr.AddNewSourceBuffer(std::move(Code), SMLoc());
+    Mgr.AddNewSourceBuffer(
+        MemoryBuffer::getMemBuffer(StartBuf, AssumedFileName), SMLoc());
     for (const auto &R : Replaces) {
       SMDiagnostic Diag = Mgr.GetMessage(
           SMLoc::getFromPointer(StartBuf + R.getOffset()),
@@ -504,7 +505,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   Replaces = Replaces.merge(FormatChanges);
   if (DryRun) {
     return Replaces.size() > (IsJson ? 1u : 0u) &&
-           emitReplacementWarnings(Replaces, AssumedFileName, std::move(Code));
+           emitReplacementWarnings(Replaces, AssumedFileName, Code);
   }
   if (OutputXML) {
     outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);

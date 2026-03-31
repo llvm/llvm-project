@@ -1680,13 +1680,13 @@ bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   // so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT events doesn't cause
   // out-of-order completion.
   if (T == LOAD_CNT) {
-    WaitEventSet Events = PendingEvents & Context->getWaitEvents(T);
+    unsigned Events = hasPendingEvent(T);
     // Remove GLOBAL_INV_ACCESS from the event mask before checking for mixed
     // events
-    Events.remove(GLOBAL_INV_ACCESS);
+    Events &= ~(1 << GLOBAL_INV_ACCESS);
     // Return true only if there are still multiple event types after removing
     // GLOBAL_INV
-    return Events.twoOrMore();
+    return Events & (Events - 1);
   }
 
   return hasMixedPendingEvents(T);

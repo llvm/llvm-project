@@ -44,7 +44,7 @@ p PointerIntPair
 # CHECK: Containing int * = {pointer = 0xabc}
 p PointerUnion
 
-# CHECK: Containing Z * = {pointer = 0x0}
+# CHECK: PointerUnionMembers<llvm::PointerUnion<Z*, float*>,
 p RawPrintingPointerUnion
 
 # Switch to print pretty adds newlines to the following statements.

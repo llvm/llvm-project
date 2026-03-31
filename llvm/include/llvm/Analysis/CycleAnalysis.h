@@ -56,9 +56,6 @@ public:
   /// Run the analysis pass over a function and produce a dominator tree.
   CycleInfo run(Function &F, FunctionAnalysisManager &);
 
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
-
   // TODO: verify analysis?
 };
 

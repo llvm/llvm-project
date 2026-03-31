@@ -108,7 +108,6 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_uproduct:
     // Quad Op Variants
   case Intrinsic::dx_quad_read_across_x:
-  case Intrinsic::dx_quad_read_across_y:
     return true;
   }
 }

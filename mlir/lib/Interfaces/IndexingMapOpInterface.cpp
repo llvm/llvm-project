@@ -16,9 +16,8 @@ namespace mlir {
 
 static LogicalResult verifyIndexingMapOperandType(Operation *op, Type t,
                                                   unsigned operandNumber) {
-  // Non-shaped types are treated as scalars (rank-0). This includes builtin
-  // types (integer, float, complex) as well as custom dialect types.
-  if (!isa<ShapedType>(t))
+  // Scalars are allowed (treated as rank-0). verifyImpl checks the rank.
+  if (t.isIntOrIndexOrFloat() || isa<ComplexType>(t))
     return success();
 
   // Vectors are allowed.
@@ -56,9 +55,7 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
            << ") to be equal to the number of input/output operands ("
            << getOperation()->getNumOperands() << ")";
 
-  // Inline size chosen empirically based on compilation profiling.
-  // Profiled: 7.5M calls, avg=5.9+-3.1. N=8 covers 67% of cases inline.
-  SmallVector<int64_t, 8> allShapesSizes;
+  SmallVector<int64_t> allShapesSizes;
 
   for (OpOperand &opOperand : getOperation()->getOpOperands()) {
     Type ty = opOperand.get().getType();
@@ -70,9 +67,8 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
     if (indexingMap.getNumSymbols() != 0)
       return this->emitOpError("unexpected symbols in indexing_map #")
              << opOperand.getOperandNumber();
-    // Handle scalars (non-shaped types: integer, float, complex, custom types,
-    // etc.).
-    if (!isa<ShapedType>(ty)) {
+    // Handle scalars.
+    if (ty.isIntOrIndexOrFloat() || isa<ComplexType>(ty)) {
       int64_t rank = 0;
       if (indexingMap.getNumResults() != rank)
         return this->emitOpError("expected operand #")

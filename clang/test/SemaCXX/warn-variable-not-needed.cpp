@@ -18,7 +18,7 @@ namespace test2 {
   };
   namespace {
     struct foo : bah {
-      static char bar;  // expected-warning {{variable 'bar' set but not used}}
+      static char bar;
       virtual void zed();
     };
     void foo::zed() {

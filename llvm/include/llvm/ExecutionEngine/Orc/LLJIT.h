@@ -17,7 +17,6 @@
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
@@ -214,12 +213,6 @@ public:
     return PS->deinitialize(JD);
   }
 
-  /// Returns a reference to the DylibManager for the target process.
-  DylibManager &getDylibMgr() {
-    assert(DylibMgr && "No DylibMgr set");
-    return *DylibMgr;
-  }
-
   /// Returns a reference to the ObjLinkingLayer
   ObjectLayer &getObjLinkingLayer() { return *ObjLinkingLayer; }
 
@@ -254,7 +247,6 @@ protected:
 
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<PlatformSupport> PS;
-  std::unique_ptr<DylibManager> DylibMgr;
 
   JITDylib *ProcessSymbols = nullptr;
   JITDylib *Platform = nullptr;

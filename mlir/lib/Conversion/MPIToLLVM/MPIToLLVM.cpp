@@ -991,9 +991,7 @@ struct ReduceScatterBlockOpLowering
 
 /// Implement the interface to convert Func to LLVM.
 struct FuncToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  FuncToLLVMDialectInterface(Dialect *dialect)
-      : ConvertToLLVMPatternInterface(dialect) {}
-
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
   void populateConvertToLLVMConversionPatterns(

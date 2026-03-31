@@ -101,11 +101,11 @@ ObjectFile *ObjectFileBreakpad::CreateMemoryInstance(
   return nullptr;
 }
 
-ModuleSpecList ObjectFileBreakpad::GetModuleSpecifications(
+size_t ObjectFileBreakpad::GetModuleSpecifications(
     const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length) {
+    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
   if (!extractor_sp || !extractor_sp->HasData())
-    return {};
+    return 0;
   // If this is opearting on a VirtualDataExtractor, it can have
   // gaps between valid bytes in the DataBuffer. We extract an
   // ArrayRef of the raw bytes, and can segfault.
@@ -114,12 +114,11 @@ ModuleSpecList ObjectFileBreakpad::GetModuleSpecifications(
   auto text = toStringRef(contiguous_extractor_sp->GetData());
   std::optional<Header> header = Header::parse(text);
   if (!header)
-    return {};
+    return 0;
   ModuleSpec spec(file, std::move(header->arch));
   spec.GetUUID() = std::move(header->uuid);
-  ModuleSpecList specs;
   specs.Append(spec);
-  return specs;
+  return 1;
 }
 
 ObjectFileBreakpad::ObjectFileBreakpad(const ModuleSP &module_sp,

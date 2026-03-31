@@ -752,12 +752,9 @@ private:
                     /*printBlockTerminators=*/true);
     }
 
-    // Visit all the types used in the operation. Null operands/types can
-    // occur when operating on invalid IR (e.g., with
-    // --mlir-very-unsafe-disable-verifier-on-parsing), so guard against them.
-    for (Value operand : op->getOperands())
-      if (operand && operand.getType())
-        printType(operand.getType());
+    // Visit all the types used in the operation.
+    for (Type type : op->getOperandTypes())
+      printType(type);
     for (Type type : op->getResultTypes())
       printType(type);
 
@@ -823,10 +820,7 @@ private:
   }
 
   /// Consider the given type to be printed for an alias.
-  void printType(Type type) override {
-    if (type)
-      initializer.visit(type);
-  }
+  void printType(Type type) override { initializer.visit(type); }
 
   /// Consider the given attribute to be printed for an alias.
   void printAttribute(Attribute attr) override { initializer.visit(attr); }
@@ -976,8 +970,6 @@ private:
     }
   }
   void printAndVisitNestedAliasesImpl(Type type) {
-    if (!type)
-      return;
     if (!isa<BuiltinDialect>(type.getDialect()))
       return type.getDialect().printType(type, *this);
 

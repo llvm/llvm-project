@@ -23,8 +23,8 @@ from typing import Union, Optional
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
-class GetLoadOp(GetLoadOp):
-    """Specialization for GetLoadOp class."""
+class GetDescOp(GetDescOp):
+    """Specialization for GetDescOp class."""
 
     def __init__(
         self,
@@ -33,27 +33,100 @@ class GetLoadOp(GetLoadOp):
         loc=None,
         ip=None,
     ):
-        load_nd_type = transform.AnyOpType.get()
+        desc_type = transform.AnyOpType.get()
         super().__init__(
-            load_nd_type,
+            desc_type,
             target,
             loc=loc,
             ip=ip,
         )
 
 
-def get_load_op(
+def get_desc_op(
     target: Value,
     *,
     loc=None,
     ip=None,
 ) -> OpResult:
-    return GetLoadOp(target, loc=loc, ip=ip).result
+    return GetDescOp(target, loc=loc, ip=ip).result
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
-class SetAnchorLayoutOp(SetAnchorLayoutOp):
-    """Specialization for SetAnchorLayoutOp class."""
+class SetDescLayoutOp(SetDescLayoutOp):
+    """Specialization for SetDescLayoutOp class."""
+
+    def __init__(
+        self,
+        target: Union[Operation, Value],
+        sg_layout: MixedValues,
+        sg_data: MixedValues,
+        *,
+        inst_data: Optional[MixedValues] = None,
+        order: Optional[MixedInt] = None,
+        slice_dims: Optional[MixedInt] = None,
+        loc=None,
+        ip=None,
+    ):
+        target_handle = _get_op_result_or_value(target)
+        inst_data = [] if inst_data is None else inst_data
+        (
+            dynamic_sg_layout,
+            static_sg_layout,
+            _,
+        ) = _dispatch_dynamic_index_list(sg_layout)
+        (
+            dynamic_sg_data,
+            static_sg_data,
+            _,
+        ) = _dispatch_dynamic_index_list(sg_data)
+        (
+            dynamic_inst_data,
+            static_inst_data,
+            _,
+        ) = _dispatch_dynamic_index_list(inst_data)
+
+        super().__init__(
+            target_handle.type,
+            target_handle,
+            dynamic_sg_layout,
+            dynamic_sg_data,
+            dynamic_inst_data,
+            static_sg_layout=static_sg_layout,
+            static_sg_data=static_sg_data,
+            static_inst_data=static_inst_data,
+            order=order,
+            slice_dims=slice_dims,
+            loc=loc,
+            ip=ip,
+        )
+
+
+def set_desc_layout(
+    target: Union[Operation, Value],
+    sg_layout: MixedValues,
+    sg_data: MixedValues,
+    *,
+    inst_data: Optional[MixedValues] = None,
+    order: Optional[MixedInt] = None,
+    slice_dims: Optional[MixedInt] = None,
+    loc=None,
+    ip=None,
+) -> OpResult:
+    return SetDescLayoutOp(
+        target,
+        sg_layout,
+        sg_data,
+        inst_data=inst_data,
+        order=order,
+        slice_dims=slice_dims,
+        loc=loc,
+        ip=ip,
+    ).result
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
+    """Specialization for SetOpLayoutAttrOp class."""
 
     def __init__(
         self,
@@ -65,6 +138,8 @@ class SetAnchorLayoutOp(SetAnchorLayoutOp):
         order: Optional[MixedInt] = None,
         slice_dims: Optional[MixedInt] = None,
         index: Optional[Union[int, Attribute]] = None,
+        result: Optional[Union[bool, Attribute]] = None,
+        operand: Optional[Union[bool, Attribute]] = None,
         loc=None,
         ip=None,
     ):
@@ -95,12 +170,14 @@ class SetAnchorLayoutOp(SetAnchorLayoutOp):
             order=order,
             slice_dims=slice_dims,
             index=index,
+            result=result,
+            operand=operand,
             loc=loc,
             ip=ip,
         )
 
 
-def set_anchor_layout(
+def set_op_layout_attr(
     target: Union[Operation, Value],
     sg_layout: MixedValues,
     sg_data: MixedValues,
@@ -109,10 +186,12 @@ def set_anchor_layout(
     order: Optional[MixedInt] = None,
     slice_dims: Optional[MixedInt] = None,
     index: Optional[Union[int, Attribute]] = None,
+    result: Optional[Union[bool, Attribute]] = None,
+    operand: Optional[Union[bool, Attribute]] = None,
     loc=None,
     ip=None,
-) -> SetAnchorLayoutOp:
-    return SetAnchorLayoutOp(
+) -> SetOpLayoutAttrOp:
+    return SetOpLayoutAttrOp(
         target,
         sg_layout,
         sg_data,
@@ -120,6 +199,8 @@ def set_anchor_layout(
         order=order,
         slice_dims=slice_dims,
         index=index,
+        result=result,
+        operand=operand,
         loc=loc,
         ip=ip,
     )
@@ -168,7 +249,7 @@ class InsertPrefetchOp(InsertPrefetchOp):
 
     def __init__(
         self,
-        target: Union[Operation, Value],
+        target: Value,
         *,
         nb_prefetch: Optional[MixedInt] = 1,
         loc=None,
@@ -194,7 +275,7 @@ class InsertPrefetchOp(InsertPrefetchOp):
 
 
 def insert_prefetch(
-    target: Union[Operation, Value],
+    target: Value,
     *,
     nb_prefetch: Optional[MixedInt] = 1,
     loc=None,

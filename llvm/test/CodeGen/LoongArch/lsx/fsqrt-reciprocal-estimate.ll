@@ -17,6 +17,7 @@ define void @one_div_sqrt_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vfrsqrte.s $vr1, $vr0
+; CHECK-NEXT:    vfmul.s $vr1, $vr0, $vr1
 ; CHECK-NEXT:    vfmul.s $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vldi $vr2, -1400
 ; CHECK-NEXT:    vfmadd.s $vr0, $vr0, $vr1, $vr2
@@ -47,6 +48,7 @@ define void @one_div_sqrt_v2f64(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vfrsqrte.d $vr1, $vr0
+; CHECK-NEXT:    vfmul.d $vr1, $vr0, $vr1
 ; CHECK-NEXT:    vfmul.d $vr2, $vr0, $vr1
 ; CHECK-NEXT:    vldi $vr3, -888
 ; CHECK-NEXT:    vfmadd.d $vr2, $vr2, $vr1, $vr3

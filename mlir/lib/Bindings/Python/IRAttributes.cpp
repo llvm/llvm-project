@@ -280,8 +280,7 @@ MlirAttribute PyArrayAttribute::getItem(intptr_t i) const {
 void PyArrayAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
-      [](nb::typed<nb::sequence, PyAttribute> attributes,
-         DefaultingPyMlirContext context) {
+      [](const nb::list &attributes, DefaultingPyMlirContext context) {
         std::vector<MlirAttribute> mlirAttributes;
         mlirAttributes.reserve(nb::len(attributes));
         for (auto attribute : attributes) {
@@ -307,8 +306,7 @@ void PyArrayAttribute::bindDerived(ClassTy &c) {
       .def("__iter__", [](const PyArrayAttribute &arr) {
         return PyArrayAttributeIterator(arr);
       });
-  c.def("__add__", [](PyArrayAttribute arr,
-                      nb::typed<nb::sequence, PyAttribute> extras) {
+  c.def("__add__", [](PyArrayAttribute arr, const nb::list &extras) {
     std::vector<MlirAttribute> attributes;
     intptr_t numOldElements = mlirArrayAttrGetNumElements(arr);
     attributes.reserve(numOldElements + nb::len(extras));
@@ -579,10 +577,10 @@ void PyOpaqueAttribute::bindDerived(ClassTy &c) {
       "Returns the data for the Opaqued attributes as `bytes`");
 }
 
-PyDenseElementsAttribute PyDenseElementsAttribute::getFromList(
-    const nb::typed<nb::sequence, PyAttribute> &attributes,
-    std::optional<PyType> explicitType,
-    DefaultingPyMlirContext contextWrapper) {
+PyDenseElementsAttribute
+PyDenseElementsAttribute::getFromList(const nb::list &attributes,
+                                      std::optional<PyType> explicitType,
+                                      DefaultingPyMlirContext contextWrapper) {
   const size_t numAttributes = nb::len(attributes);
   if (numAttributes == 0)
     throw nb::value_error("Attributes list must be non-empty.");
@@ -1175,8 +1173,7 @@ void PyDictAttribute::bindDerived(ClassTy &c) {
   c.def("__len__", &PyDictAttribute::dunderLen);
   c.def_static(
       "get",
-      [](const nb::typed<nb::dict, nb::str, PyAttribute> &attributes,
-         DefaultingPyMlirContext context) {
+      [](const nb::dict &attributes, DefaultingPyMlirContext context) {
         std::vector<MlirNamedAttribute> mlirNamedAttributes;
         mlirNamedAttributes.reserve(attributes.size());
         for (std::pair<nb::handle, nb::handle> it : attributes) {

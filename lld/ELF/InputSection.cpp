@@ -1548,7 +1548,10 @@ void MergeInputSection::splitIntoPieces() {
 }
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
-  assert(offset < content().size());
+  if (content().size() <= offset) {
+    Err(getCtx()) << this << ": offset is outside the section";
+    return pieces[0];
+  }
   return partition_point(
       pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
 }

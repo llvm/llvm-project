@@ -16,7 +16,6 @@
 #include "orc-rt/RTTI.h"
 
 #include <cassert>
-#include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <string>

@@ -5673,12 +5673,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         ExpectedRTy->getElementCount(),
         ConstantInt::get(ExpectedRTy->getElementType(), 0x8));
 
-    ShadowAB = IRB.CreateICmpNE(ShadowAB, FullyInit);
+    ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
+                              ShadowAB->getType());
 
-    ShadowR = IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy));
-    ShadowR = IRB.CreateOr(ShadowAB, ShadowR);
+    ShadowR = IRB.CreateSExt(
+        IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy)), ExpectedRTy);
 
-    setShadow(&I, IRB.CreateSExt(ShadowR, ExpectedRTy));
+    setShadow(&I, IRB.CreateOr(ShadowAB, ShadowR));
     setOriginForNaryOp(I);
   }
 

@@ -17,7 +17,7 @@ def run(f):
 
 
 @run
-def getLoadOp():
+def getDescOpDefaultIndex():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
@@ -25,107 +25,216 @@ def getLoadOp():
     )
     with InsertionPoint(sequence.body):
         operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
-        load_handle = xegpu.get_load_op(operand)
+        desc_handle = xegpu.get_desc_op(operand)
         transform.YieldOp()
-    # CHECK-LABEL: TEST: getLoadOp
-    # CHECK: transform.xegpu.get_load_op %
+    # CHECK-LABEL: TEST: getDescOpDefaultIndex
+    # CHECK: transform.xegpu.get_desc_op %
 
 
 @run
-def setAnchorLayout():
+def setDescLayoutMinimal():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("xegpu.load_nd"),
+        transform.OperationType.get("xegpu.create_nd_tdesc"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.set_anchor_layout(
-            sequence.bodyTarget,
-            sg_layout=[6, 4],
-            sg_data=[32, 16],
-            inst_data=[8, 16],
+        xegpu.set_desc_layout(sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setDescLayoutMinimal
+    # CHECK: %0 = transform.xegpu.set_desc_layout %
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+
+
+@run
+def setDescLayoutInstData():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.create_nd_tdesc"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_desc_layout(
+            sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16], inst_data=[8, 16]
         )
         transform.YieldOp()
-    # CHECK-LABEL: TEST: setAnchorLayout
-    # CHECK: transform.xegpu.set_anchor_layout %
-    # CHECK-NOT: index = 0
+    # CHECK-LABEL: TEST: setDescLayoutInstData
+    # CHECK: %0 = transform.xegpu.set_desc_layout %
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
 
 
 @run
-def setAnchorLayoutDPAS():
+def setDescLayoutSlice():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.create_nd_tdesc"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_desc_layout(
+            sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16], slice_dims=[0]
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setDescLayoutSlice
+    # CHECK: %0 = transform.xegpu.set_desc_layout %
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: slice_dims = [0]
+
+
+@run
+def setDescLayoutOrder():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.create_nd_tdesc"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_desc_layout(
+            sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16], order=[0, 1]
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setDescLayoutOrder
+    # CHECK: %0 = transform.xegpu.set_desc_layout %
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: order = [0, 1]
+
+
+@run
+def setOpLayoutAttrOperandMinimal():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
         transform.OperationType.get("xegpu.dpas"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.set_anchor_layout(
+        xegpu.set_op_layout_attr(
             sequence.bodyTarget,
-            index=1,
             sg_layout=[6, 4],
             sg_data=[32, 16],
-            inst_data=[8, 16],
+            operand=True,
         )
         transform.YieldOp()
-    # CHECK-LABEL: TEST: setAnchorLayoutDPAS
-    # CHECK: transform.xegpu.set_anchor_layout %
-    # CHECK: index = 1
+    # CHECK-LABEL: TEST: setOpLayoutAttr
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # CHECK: operand
+    # CHECK-NOT: index = 0
+    # CHECK-NOT: result
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
-    # CHECK: inst_data = [8, 16]
+    # CHECK-NOT: inst_data
 
 
 @run
-def setAnchorLayoutOrder():
+def setOpLayoutAttrResult():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("xegpu.load_nd"),
+        transform.OperationType.get("xegpu.dpas"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.set_anchor_layout(
+        xegpu.set_op_layout_attr(
             sequence.bodyTarget,
+            index=0,
             sg_layout=[6, 4],
             sg_data=[32, 16],
             inst_data=[8, 16],
-            order=[1, 0],
+            result=True,
         )
         transform.YieldOp()
-    # CHECK-LABEL: TEST: setAnchorLayoutOrder
-    # CHECK: transform.xegpu.set_anchor_layout %
+    # CHECK-LABEL: TEST: setOpLayoutAttrResult
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # CHECK: result
     # CHECK-NOT: index = 0
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
-    # CHECK: order = [1, 0]
 
 
 @run
-def setAnchorLayoutSlice():
+def setOpLayoutAttrResultSlice():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("xegpu.load"),
+        transform.OperationType.get("xegpu.dpas"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.set_anchor_layout(
+        xegpu.set_op_layout_attr(
             sequence.bodyTarget,
+            index=0,
             sg_layout=[6, 4],
             sg_data=[32, 16],
             inst_data=[8, 16],
             slice_dims=[0],
+            result=True,
         )
         transform.YieldOp()
-    # CHECK-LABEL: TEST: setAnchorLayoutSlice
-    # CHECK: transform.xegpu.set_anchor_layout %
+    # CHECK-LABEL: TEST: setOpLayoutAttrResultSlice
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # CHECK: result
     # CHECK-NOT: index = 0
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
     # CHECK: slice_dims = [0]
+
+
+@run
+def setOpLayoutAttrResultOrder():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_op_layout_attr(
+            sequence.bodyTarget,
+            index=0,
+            sg_layout=[6, 4],
+            sg_data=[32, 16],
+            inst_data=[8, 16],
+            order=[0, 1],
+            result=True,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setOpLayoutAttrResultOrder
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # CHECK: result
+    # CHECK-NOT: index = 0
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: inst_data = [8, 16]
+    # CHECK: order = [0, 1]
+
+
+@run
+def setOpLayoutAttrAnchor():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_op_layout_attr(
+            sequence.bodyTarget,
+            index=0,
+            sg_layout=[6, 4],
+            sg_data=[32, 16],
+            inst_data=[8, 16],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setOpLayoutAttrAnchor
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # CHECK-NOT: result
+    # CHECK-NOT: operand
+    # CHECK-NOT: index = 0
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: inst_data = [8, 16]
 
 
 @run
@@ -144,17 +253,21 @@ def setGPULaunchThreadsOp():
 
 
 @run
-def insertPrefetch():
+def insertPrefetch0():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("xegpu.load_nd"),
+        transform.OperationType.get("xegpu.dpas"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.insert_prefetch(sequence.bodyTarget)
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
+        xegpu.insert_prefetch(
+            operand,
+        )
         transform.YieldOp()
-    # CHECK-LABEL: TEST: insertPrefetch
-    # CHECK: transform.xegpu.insert_prefetch
+    # CHECK-LABEL: TEST: insertPrefetch0
+    # CHECK: %[[OPR:.*]] = get_operand
+    # CHECK: transform.xegpu.insert_prefetch %[[OPR]]
 
 
 @run
@@ -162,13 +275,18 @@ def insertPrefetchNbPrefetch():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("xegpu.load_nd"),
+        transform.OperationType.get("xegpu.dpas"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.insert_prefetch(sequence.bodyTarget, nb_prefetch=2)
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
+        xegpu.insert_prefetch(
+            operand,
+            nb_prefetch=2,
+        )
         transform.YieldOp()
     # CHECK-LABEL: TEST: insertPrefetchNbPrefetch
-    # CHECK: transform.xegpu.insert_prefetch
+    # CHECK: %[[OPR:.*]] = get_operand
+    # CHECK: transform.xegpu.insert_prefetch %[[OPR]]
     # CHECK-SAME: nb_prefetch = 2
 
 
@@ -177,20 +295,25 @@ def insertPrefetchNbPrefetchParam():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("xegpu.load_nd"),
+        transform.OperationType.get("xegpu.dpas"),
     )
     with InsertionPoint(sequence.body):
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
         int32_t = IntegerType.get_signless(32)
         param_int32_t = transform.ParamType.get(int32_t)
         nb_param = transform.ParamConstantOp(
             param_int32_t,
             IntegerAttr.get(int32_t, 2),
         )
-        xegpu.insert_prefetch(sequence.bodyTarget, nb_prefetch=nb_param)
+        xegpu.insert_prefetch(
+            operand,
+            nb_prefetch=nb_param,
+        )
         transform.YieldOp()
     # CHECK-LABEL: TEST: insertPrefetchNbPrefetchParam
+    # CHECK: %[[OPR:.*]] = get_operand
     # CHECK: %[[PARAM_OP:.*]] = transform.param.constant 2
-    # CHECK: transform.xegpu.insert_prefetch
+    # CHECK: transform.xegpu.insert_prefetch %[[OPR]]
     # CHECK-SAME: nb_prefetch = %[[PARAM_OP]]
 
 

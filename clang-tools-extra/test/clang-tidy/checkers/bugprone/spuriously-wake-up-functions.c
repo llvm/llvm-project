@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-spuriously-wake-up-functions %t -- --
-
-#include <stddef.h>
+#define NULL 0
 
 struct Node1 {
   void *Node1;

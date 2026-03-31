@@ -370,79 +370,35 @@ class PointerUnionSynthProvider:
 
         return self.pointer_valobj
 
-    @staticmethod
-    def _get_low_bits_for_type(ty: lldb.SBType) -> int:
-        """Return NumLowBitsAvailable for a pointer type (from pointee byte alignment)."""
-        pointee = ty.GetPointeeType()
-        if pointee.IsValid():
-            align = pointee.GetByteAlign()
-            return align.bit_length() - 1 if align > 0 else 0
-        return 0
-
-    def _make_pointer_value(self, name, pointer, ty):
-        """Create an SBValue for a pointer, using proper byte order and address size."""
-        data = lldb.SBData.CreateDataFromUInt64Array(
-            self.valobj.target.GetByteOrder(),
-            self.valobj.process.GetAddressByteSize(),
-            [pointer],
-        )
-        return self.valobj.CreateValueFromData(name, data, ty)
-
     def update(self):
-        self.pointer_valobj = None
+        pointer_int_pair: lldb.SBValue = self.valobj.GetChildMemberWithName(
+            "Val"
+        ).GetSyntheticValue()
 
-        valobj_type = self.valobj.GetType()
-        num_args = valobj_type.GetNumberOfTemplateArguments()
-        if num_args == 0:
+        if not pointer_int_pair:
             return
 
-        # Read the raw uintptr_t from PunnedPointer<void*>.
-        val: lldb.SBValue = self.valobj.GetChildMemberWithName("Val")
-        if not val:
+        pointer: lldb.SBValue = pointer_int_pair.GetChildAtIndex(0)
+        if not pointer:
             return
-        byteorder = (
-            "big"
-            if self.valobj.target.GetByteOrder() == lldb.eByteOrderBig
-            else "little"
+
+        active_tag: lldb.SBValue = pointer_int_pair.GetChildAtIndex(1)
+        if not active_tag:
+            return
+
+        # Index into the parameter pack of llvm::PointerUnion to find the active type.
+        active_type: lldb.SBType = self.valobj.GetType().GetTemplateArgumentType(
+            active_tag.GetValueAsUnsigned()
         )
-        raw_bytes = val.GetData().uint8s
-        if not raw_bytes:
-            return
-        raw_value = int.from_bytes(raw_bytes, byteorder)
-
-        # Compute tag from type alignments (fixed-width encoding).
-        tag_bits = (num_args - 1).bit_length()
-        min_low_bits = min(
-            self._get_low_bits_for_type(valobj_type.GetTemplateArgumentType(i))
-            for i in range(num_args)
-        )
-        if tag_bits > min_low_bits:
-            return self._set_raw_pointer(raw_value, min_low_bits)
-        tag_shift = min_low_bits - tag_bits
-        tag_mask = (1 << tag_bits) - 1
-        active_tag = (raw_value >> tag_shift) & tag_mask
-
-        if active_tag >= num_args:
-            return self._set_raw_pointer(raw_value, min_low_bits)
-
-        active_type: lldb.SBType = valobj_type.GetTemplateArgumentType(active_tag)
         if not active_type:
-            return self._set_raw_pointer(raw_value, min_low_bits)
+            return
 
-        # Clear the active type's low bits to recover the pointer.
-        low_bits = self._get_low_bits_for_type(active_type)
-        pointer = raw_value & ~((1 << low_bits) - 1)
+        data = lldb.SBData()
+        data.SetDataFromUInt64Array([pointer.GetValueAsUnsigned()])
 
-        self.pointer_valobj = self._make_pointer_value("Pointer", pointer, active_type)
-
-    def _set_raw_pointer(self, raw_value, min_low_bits):
-        """Fallback: strip tag bits and show as void* when active type is unknown."""
-        pointer = raw_value & ~((1 << min_low_bits) - 1)
-        void_ptr_ty = self.valobj.target.FindFirstType("void").GetPointerType()
-        if void_ptr_ty.IsValid():
-            self.pointer_valobj = self._make_pointer_value(
-                "Pointer", pointer, void_ptr_ty
-            )
+        self.pointer_valobj = self.valobj.CreateValueFromData(
+            "Pointer", data, active_type
+        )
 
 
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:

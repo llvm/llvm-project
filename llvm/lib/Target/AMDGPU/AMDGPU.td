@@ -2026,7 +2026,6 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureNoF16PseudoScalarTransInlineConstants,
-   FeatureRealTrue16Insts,
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<

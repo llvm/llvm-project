@@ -223,7 +223,7 @@ public:
   }
 
   /// This is called for each AST file loaded.
-  virtual void visitModuleFile(ModuleFileName Filename,
+  virtual void visitModuleFile(StringRef Filename,
                                serialization::ModuleKind Kind) {}
 
   /// Returns true if this \c ASTReaderListener wants to receive the
@@ -313,7 +313,7 @@ public:
   void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
-  void visitModuleFile(ModuleFileName Filename,
+  void visitModuleFile(StringRef Filename,
                        serialization::ModuleKind Kind) override;
   bool visitInputFile(StringRef Filename, bool isSystem,
                       bool isOverridden, bool isExplicitModule) override;

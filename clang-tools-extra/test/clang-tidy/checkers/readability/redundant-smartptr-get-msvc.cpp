@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-redundant-smartptr-get %t
 
-#include <cstddef>
+#define NULL __null
 
 namespace std {
 

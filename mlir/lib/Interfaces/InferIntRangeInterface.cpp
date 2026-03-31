@@ -168,9 +168,7 @@ mlir::getIntValueRanges(ArrayRef<OpFoldResult> values,
 void mlir::intrange::detail::defaultInferResultRanges(
     InferIntRangeInterface interface, ArrayRef<IntegerValueRange> argRanges,
     SetIntLatticeFn setResultRanges) {
-  // Inline size chosen empirically based on compilation profiling.
-  // Profiled: 1.6M calls, avg=1.2+-0.8. N=2 covers ~84% of cases inline.
-  llvm::SmallVector<ConstantIntRanges, 2> unpacked;
+  llvm::SmallVector<ConstantIntRanges> unpacked;
   unpacked.reserve(argRanges.size());
 
   for (const IntegerValueRange &range : argRanges) {

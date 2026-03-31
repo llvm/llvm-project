@@ -419,38 +419,40 @@ size_t detail::PassOptions::getOptionWidth() const {
 // OpPassManager: OptionValue
 //===----------------------------------------------------------------------===//
 
-namespace llvm::cl {
-
-OptionValue<OpPassManager>::OptionValue() = default;
-OptionValue<OpPassManager>::OptionValue(const mlir::OpPassManager &value) {
+llvm::cl::OptionValue<OpPassManager>::OptionValue() = default;
+llvm::cl::OptionValue<OpPassManager>::OptionValue(
+    const mlir::OpPassManager &value) {
   setValue(value);
 }
-OptionValue<OpPassManager>::OptionValue(
-    const OptionValue<mlir::OpPassManager> &rhs) {
+llvm::cl::OptionValue<OpPassManager>::OptionValue(
+    const llvm::cl::OptionValue<mlir::OpPassManager> &rhs) {
   if (rhs.hasValue())
     setValue(rhs.getValue());
 }
-OptionValue<OpPassManager> &
-OptionValue<OpPassManager>::operator=(const mlir::OpPassManager &rhs) {
+llvm::cl::OptionValue<OpPassManager> &
+llvm::cl::OptionValue<OpPassManager>::operator=(
+    const mlir::OpPassManager &rhs) {
   setValue(rhs);
   return *this;
 }
 
-OptionValue<OpPassManager>::~OptionValue() = default;
+llvm::cl::OptionValue<OpPassManager>::~OptionValue<OpPassManager>() = default;
 
-void OptionValue<OpPassManager>::setValue(const OpPassManager &newValue) {
+void llvm::cl::OptionValue<OpPassManager>::setValue(
+    const OpPassManager &newValue) {
   if (hasValue())
     *value = newValue;
   else
     value = std::make_unique<mlir::OpPassManager>(newValue);
 }
-void OptionValue<OpPassManager>::setValue(StringRef pipelineStr) {
+void llvm::cl::OptionValue<OpPassManager>::setValue(StringRef pipelineStr) {
   FailureOr<OpPassManager> pipeline = parsePassPipeline(pipelineStr);
   assert(succeeded(pipeline) && "invalid pass pipeline");
   setValue(*pipeline);
 }
 
-bool OptionValue<OpPassManager>::compare(const mlir::OpPassManager &rhs) const {
+bool llvm::cl::OptionValue<OpPassManager>::compare(
+    const mlir::OpPassManager &rhs) const {
   std::string lhsStr, rhsStr;
   {
     raw_string_ostream lhsStream(lhsStr);
@@ -464,17 +466,17 @@ bool OptionValue<OpPassManager>::compare(const mlir::OpPassManager &rhs) const {
   return lhsStr == rhsStr;
 }
 
-void OptionValue<OpPassManager>::anchor() {}
-
-} // namespace llvm::cl
+void llvm::cl::OptionValue<OpPassManager>::anchor() {}
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: Parser
 //===----------------------------------------------------------------------===//
 
-namespace llvm::cl {
+namespace llvm {
+namespace cl {
 template class basic_parser<OpPassManager>;
-} // namespace llvm::cl
+} // namespace cl
+} // namespace llvm
 
 bool llvm::cl::parser<OpPassManager>::parse(Option &, StringRef, StringRef arg,
                                             ParsedPassManager &value) {

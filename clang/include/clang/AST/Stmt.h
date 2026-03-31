@@ -1272,14 +1272,6 @@ protected:
 
   //===--- Obj-C Expression bitfields classes ---===//
 
-  class ObjCObjectLiteralBitfields {
-    friend class ObjCObjectLiteral;
-
-    unsigned : NumExprBits;
-
-    unsigned IsExpressibleAsConstantInitializer : 1;
-  };
-
   class ObjCIndirectCopyRestoreExprBitfields {
     friend class ObjCIndirectCopyRestoreExpr;
 
@@ -1401,7 +1393,6 @@ protected:
     CoawaitExprBitfields CoawaitBits;
 
     // Obj-C Expressions
-    ObjCObjectLiteralBitfields ObjCObjectLiteralBits;
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
 
     // Clang Extensions

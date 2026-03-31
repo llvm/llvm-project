@@ -32,7 +32,6 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -3380,7 +3379,7 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
   // Add a region and a block to yield the pad value.
   Region *region = result.regions[0].get();
   int sourceRank = llvm::cast<RankedTensorType>(source.getType()).getRank();
-  Repeated<Type> blockArgTypes(sourceRank, b.getIndexType());
+  SmallVector<Type> blockArgTypes(sourceRank, b.getIndexType());
   SmallVector<Location> blockArgLocs(sourceRank, result.location);
 
   // `builder.createBlock` changes the insertion point within the block. Create

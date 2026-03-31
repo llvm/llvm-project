@@ -13,7 +13,6 @@
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/Repeated.h"
 #include <cassert>
 
 namespace mlir {
@@ -175,7 +174,7 @@ public:
     Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
 
     auto srcType = cast<MemRefType>(src.getType());
-    Repeated<Value> loadIndices(srcType.getRank(), zero);
+    SmallVector<Value> loadIndices(srcType.getRank(), zero);
     auto offsets = rc.getMixedOffsets();
     assert(offsets.size() == 1 && "Expecting single offset");
     OpFoldResult offset = offsets[0];

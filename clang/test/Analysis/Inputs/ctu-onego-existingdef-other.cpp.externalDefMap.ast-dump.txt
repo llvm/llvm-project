@@ -1,0 +1,2 @@
+9:c:@F@bar# ctu-onego-existingdef-other.cpp.ast
+11:c:@F@other# ctu-onego-existingdef-other.cpp.ast

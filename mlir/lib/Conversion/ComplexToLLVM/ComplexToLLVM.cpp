@@ -375,9 +375,7 @@ void ConvertComplexToLLVMPass::runOnOperation() {
 namespace {
 /// Implement the interface to convert MemRef to LLVM.
 struct ComplexToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  ComplexToLLVMDialectInterface(Dialect *dialect)
-      : ConvertToLLVMPatternInterface(dialect) {}
-
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

@@ -1,5 +1,3 @@
-.. _fuzzing:
-
 Fuzzing for LLVM-libc functions
 ===============================
 

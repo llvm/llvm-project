@@ -142,10 +142,8 @@ class Run(object):
 
     def _wait_for(self, async_results, deadline):
         timeout = deadline - time.time()
-        idx = 0
-        while len(async_results) > 0:
+        for idx, ar in enumerate(async_results):
             try:
-                ar = async_results.pop(0)
                 test = ar.get(timeout)
             except multiprocessing.TimeoutError:
                 raise TimeoutError()
@@ -155,7 +153,6 @@ class Run(object):
                     self.failures += 1
                     if self.failures == self.max_failures:
                         raise MaxFailuresError()
-            idx += 1
 
     # Update local test object "in place" from remote test object.  This
     # ensures that the original test object which is used for printing test

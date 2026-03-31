@@ -1,16 +1,13 @@
-.. _implementation_standard:
-
 Convention for implementing entrypoints
 =======================================
 
-The implementations of LLVM-libc entrypoints live in the ``src/`` directory,
-organized by the public header they belong to. Some entrypoints are platform-
-specific, and so their implementations are in a subdirectory with the name of
-the platform (e.g., ``stdio/linux/remove.cpp``).
-
-For a complete overview of what an entrypoint is and how it is managed in the
-build system, see the :ref:`entrypoints` documentation.
-
+LLVM-libc entrypoints are defined in the entrypoints document. In this document,
+we explain how the entrypoints are implemented. The source layout document
+explains that, within the high level ``src`` directory, there exists one
+directory for every public header file provided by LLVM-libc. The
+implementations of entrypoints live in the directory for the header they belong
+to. Some entrypoints are platform specific, and so their implementations are in
+a subdirectory with the name of the platform (e.g. ``stdio/linux/remove.cpp``).
 
 Implementation of entrypoints can span multiple ``.cpp`` and ``.h`` files, but
 there will be at least one header file with name of the form

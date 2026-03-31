@@ -1526,26 +1526,23 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   bool OptionUnrollAndJam = false;
   bool OptionDistribute = false;
   bool OptionPipelineDisabled = false;
-  bool OptionLICMDisabled = false;
   bool StateOption = false;
   if (OptionInfo) { // Pragma Unroll does not specify an option.
     OptionUnroll = OptionInfo->isStr("unroll");
     OptionUnrollAndJam = OptionInfo->isStr("unroll_and_jam");
     OptionDistribute = OptionInfo->isStr("distribute");
     OptionPipelineDisabled = OptionInfo->isStr("pipeline");
-    OptionLICMDisabled = OptionInfo->isStr("licm");
     StateOption = llvm::StringSwitch<bool>(OptionInfo->getName())
                       .Case("vectorize", true)
                       .Case("interleave", true)
                       .Case("vectorize_predicate", true)
                       .Default(false) ||
                   OptionUnroll || OptionUnrollAndJam || OptionDistribute ||
-                  OptionPipelineDisabled || OptionLICMDisabled;
+                  OptionPipelineDisabled;
   }
 
   bool AssumeSafetyArg = !OptionUnroll && !OptionUnrollAndJam &&
-                         !OptionDistribute && !OptionPipelineDisabled &&
-                         !OptionLICMDisabled;
+                         !OptionDistribute && !OptionPipelineDisabled;
   // Verify loop hint has an argument.
   if (Toks[0].is(tok::eof)) {
     ConsumeAnnotationToken();
@@ -1562,16 +1559,15 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     SourceLocation StateLoc = Toks[0].getLocation();
     IdentifierInfo *StateInfo = Toks[0].getIdentifierInfo();
 
-    bool Valid =
-        StateInfo &&
-        llvm::StringSwitch<bool>(StateInfo->getName())
-            .Case("disable", true)
-            .Case("enable", !OptionPipelineDisabled && !OptionLICMDisabled)
-            .Case("full", OptionUnroll || OptionUnrollAndJam)
-            .Case("assume_safety", AssumeSafetyArg)
-            .Default(false);
+    bool Valid = StateInfo &&
+                 llvm::StringSwitch<bool>(StateInfo->getName())
+                     .Case("disable", true)
+                     .Case("enable", !OptionPipelineDisabled)
+                     .Case("full", OptionUnroll || OptionUnrollAndJam)
+                     .Case("assume_safety", AssumeSafetyArg)
+                     .Default(false);
     if (!Valid) {
-      if (OptionPipelineDisabled || OptionLICMDisabled) {
+      if (OptionPipelineDisabled) {
         Diag(Toks[0].getLocation(), diag::err_pragma_pipeline_invalid_keyword);
       } else {
         Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
@@ -3730,7 +3726,6 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                            .Case("unroll_count", true)
                            .Case("pipeline", true)
                            .Case("pipeline_initiation_interval", true)
-                           .Case("licm", true)
                            .Default(false);
     if (!OptionValid) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_loop_invalid_option)

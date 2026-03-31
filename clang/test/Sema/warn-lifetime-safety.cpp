@@ -328,9 +328,9 @@ void multiple_expiry_of_same_loan(bool cond) {
     if (cond) {
       p = &unsafe;    // expected-warning {{does not live long enough}}
       if (cond)
-        break;        // expected-note {{destroyed here}}
+        break;
     }
-  }
+  }                   // expected-note {{destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 
   p = &safe;
@@ -349,8 +349,8 @@ void multiple_expiry_of_same_loan(bool cond) {
     if (cond)
       p = &unsafe;    // expected-warning {{does not live long enough}}
     if (cond)
-      break;          // expected-note {{destroyed here}}
-  }
+      break;          
+  }                   // expected-note {{destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 }
 
@@ -717,12 +717,12 @@ View uar_before_uaf(const MyObj& safe, bool c) {
   View p;
   {
     MyObj local_obj; 
-    p = local_obj;  // expected-warning {{ddress of stack memory is returned later}}
+    p = local_obj;  // expected-warning {{object whose reference is captured does not live long enough}}
     if (c) {
-      return p;     // expected-note {{returned here}}
+      return p;
     }
-  }
-  p.use();
+  }         // expected-note {{destroyed here}}
+  p.use();  // expected-note {{later used here}}
   p = safe;
   return p;
 }

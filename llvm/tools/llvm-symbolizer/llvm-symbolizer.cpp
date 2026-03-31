@@ -153,6 +153,10 @@ static StringRef getSpaceDelimitedWord(StringRef &Source) {
   return Result;
 }
 
+static Error makeStringError(StringRef Msg) {
+  return make_error<StringError>(Msg, inconvertibleErrorCode());
+}
+
 static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
                           StringRef InputString, Command &Cmd,
                           std::string &ModuleName, object::BuildID &BuildID,
@@ -176,13 +180,13 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
     InputString = InputString.ltrim();
     if (InputString.consume_front("FILE:")) {
       if (HasFilePrefix || HasBuildIDPrefix)
-        return createStringError("duplicate input file specification prefix");
+        return makeStringError("duplicate input file specification prefix");
       HasFilePrefix = true;
       continue;
     }
     if (InputString.consume_front("BUILDID:")) {
       if (HasBuildIDPrefix || HasFilePrefix)
-        return createStringError("duplicate input file specification prefix");
+        return makeStringError("duplicate input file specification prefix");
       HasBuildIDPrefix = true;
       continue;
     }
@@ -195,21 +199,21 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
     InputString = InputString.ltrim();
     if (InputString.empty()) {
       if (HasFilePrefix)
-        return createStringError("must be followed by an input file");
+        return makeStringError("must be followed by an input file");
       else
-        return createStringError("must be followed by a hash");
+        return makeStringError("must be followed by a hash");
     }
 
     if (!BinaryName.empty() || !BuildID.empty())
-      return createStringError("input file has already been specified");
+      return makeStringError("input file has already been specified");
 
     StringRef Name = getSpaceDelimitedWord(InputString);
     if (Name.empty())
-      return createStringError("unbalanced quotes in input file name");
+      return makeStringError("unbalanced quotes in input file name");
     if (HasBuildIDPrefix) {
       BuildID = parseBuildID(Name);
       if (BuildID.empty())
-        return createStringError("wrong format of build-id");
+        return makeStringError("wrong format of build-id");
     } else {
       ModuleName = Name;
     }
@@ -218,14 +222,14 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
     // two items, assume that the first item is a file name.
     ModuleName = getSpaceDelimitedWord(InputString);
     if (ModuleName.empty())
-      return createStringError("no input filename has been specified");
+      return makeStringError("no input filename has been specified");
   }
 
   // Parse address specification, which can be an offset in module or a
   // symbol with optional offset.
   InputString = InputString.trim();
   if (InputString.empty())
-    return createStringError("no module offset has been specified");
+    return makeStringError("no module offset has been specified");
 
   // If input string contains a space, ignore everything after it. This behavior
   // is consistent with GNU addr2line.
@@ -251,7 +255,7 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
   // If address specification starts with a digit, but is not a number, consider
   // it as invalid.
   if (StartsWithDigit || AddrSpec.empty())
-    return createStringError("expected a number as module offset");
+    return makeStringError("expected a number as module offset");
 
   // Otherwise it is a symbol name, potentially with an offset.
   Symbol = AddrSpec;

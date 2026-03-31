@@ -434,13 +434,13 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
+size_t ObjectContainerBSDArchive::GetModuleSpecifications(
     const FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size) {
+    lldb::offset_t file_size, ModuleSpecList &specs) {
 
   if (!file || !extractor_sp)
-    return {};
+    return 0;
 
   DataExtractorSP data_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(data_offset);
@@ -449,8 +449,9 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
   // contents for the archive and cache it
   ArchiveType archive_type = MagicBytesMatch(*data_extractor_sp);
   if (archive_type == ArchiveType::Invalid)
-    return {};
+    return 0;
 
+  const size_t initial_count = specs.GetSize();
   llvm::sys::TimePoint<> file_mod_time =
       FileSystem::Instance().GetModificationTime(file);
   ArchiveSP archive_sp(
@@ -468,7 +469,6 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
     }
   }
 
-  ModuleSpecList specs;
   if (archive_sp) {
     const size_t num_objects = archive_sp->GetNumObjects();
     for (size_t idx = 0; idx < num_objects; ++idx) {
@@ -512,10 +512,11 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
     }
   }
   const size_t end_count = specs.GetSize();
-  if (set_archive_arch && specs.GetSize() > 0) {
+  size_t num_specs_added = end_count - initial_count;
+  if (set_archive_arch && num_specs_added > 0) {
     // The archive was created but we didn't have an architecture so we need to
     // set it
-    for (size_t i = 0; i < end_count; ++i) {
+    for (size_t i = initial_count; i < end_count; ++i) {
       ModuleSpec module_spec;
       if (specs.GetModuleSpecAtIndex(i, module_spec)) {
         if (module_spec.GetArchitecture().IsValid()) {
@@ -525,5 +526,5 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
       }
     }
   }
-  return specs;
+  return num_specs_added;
 }

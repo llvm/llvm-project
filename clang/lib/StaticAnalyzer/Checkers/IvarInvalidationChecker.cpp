@@ -740,5 +740,3 @@ bool ento::shouldRegisterIvarInvalidationModeling(const CheckerManager &mgr) {
 
 REGISTER_CHECKER(InstanceVariableInvalidation)
 REGISTER_CHECKER(MissingInvalidationMethod)
-
-#undef REGISTER_CHECKER

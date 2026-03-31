@@ -20,7 +20,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/NSAPI.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -63,14 +62,6 @@ llvm::Value *CodeGenFunction::EmitObjCStringLiteral(const ObjCStringLiteral *E)
 ///
 llvm::Value *
 CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
-  // If decided in Sema constant initializers are supported by the runtime, not
-  // disabled, and the contents can be emitted as a constant NSNumber subclass;
-  // use the ConstEmitter
-  if (E->isExpressibleAsConstantInitializer()) {
-    ConstantEmitter ConstEmitter(CGM);
-    return ConstEmitter.tryEmitAbstract(E, E->getType());
-  }
-
   // Generate the correct selector for this literal's concrete type.
   // Get the method.
   const ObjCMethodDecl *BoxingMethod = E->getBoxingMethod();
@@ -137,18 +128,9 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   if (!ALE)
     DLE = cast<ObjCDictionaryLiteral>(E);
 
-  const bool CanBeExpressedAsConstant =
-      ALE ? ALE->isExpressibleAsConstantInitializer()
-          : DLE->isExpressibleAsConstantInitializer();
-  if (CanBeExpressedAsConstant) {
-    ConstantEmitter ConstEmitter(CGM);
-    return ConstEmitter.tryEmitAbstract(E, E->getType());
-  }
-
-  // Optimize empty collections by referencing constants, when available and
-  // constant initializers aren't supported
-  uint64_t NumElements = ALE ? ALE->getNumElements() : DLE->getNumElements();
-
+  // Optimize empty collections by referencing constants, when available.
+  uint64_t NumElements =
+    ALE ? ALE->getNumElements() : DLE->getNumElements();
   if (NumElements == 0 && CGM.getLangOpts().ObjCRuntime.hasEmptyCollections()) {
     StringRef ConstantName = ALE ? "__NSArray0__" : "__NSDictionary0__";
     QualType IdTy(CGM.getContext().getObjCIdType());

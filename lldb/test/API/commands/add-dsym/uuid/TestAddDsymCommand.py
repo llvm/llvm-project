@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 @skipUnlessDarwin
 class AddDsymCommandCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
-
     def setUp(self):
         TestBase.setUp(self)
         self.template = "main.cpp.template"

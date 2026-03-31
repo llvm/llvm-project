@@ -377,9 +377,7 @@ LogicalResult TypeOffsetOpConversion::matchAndRewrite(
 namespace {
 /// Implement the interface to convert Ptr to LLVM.
 struct PtrToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  PtrToLLVMDialectInterface(Dialect *dialect)
-      : ConvertToLLVMPatternInterface(dialect) {}
-
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

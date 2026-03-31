@@ -502,14 +502,13 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     for (llvm::StringRef s : targetTriplesOpenMP)
       targetTriples.emplace_back(s);
 
-    auto offloadModuleOpts = mlir::omp::OffloadModuleOpts(
+    auto offloadModuleOpts = OffloadModuleOpts(
         setOpenMPTargetDebug, setOpenMPTeamSubscription,
         setOpenMPThreadSubscription, setOpenMPNoThreadState,
         setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
         enableOpenMPForceUSM, setOpenMPVersion, "", targetTriples, setNoGPULib);
-    mlir::omp::setOffloadModuleInterfaceAttributes(mlirModule,
-                                                   offloadModuleOpts);
-    mlir::omp::setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
+    setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
+    setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }
   burnside.lower(parseTree, semanticsContext);
   std::error_code ec;

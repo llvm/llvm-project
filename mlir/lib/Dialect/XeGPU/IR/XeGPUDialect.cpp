@@ -798,16 +798,14 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   if (!other)
     return false;
   if (getEffectiveOrderAsInt() == other.getEffectiveOrderAsInt()) {
-    // short cut when order is the same, no need to compute coords and compare
     if (level == xegpu::LayoutKind::Subgroup)
-      if (getEffectiveSgLayoutAsInt() == other.getEffectiveSgLayoutAsInt() &&
-          getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt())
-        return true;
+      return (getEffectiveSgLayoutAsInt() ==
+                  other.getEffectiveSgLayoutAsInt() &&
+              getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt());
     if (level == xegpu::LayoutKind::Lane)
-      if (getEffectiveLaneLayoutAsInt() ==
-              other.getEffectiveLaneLayoutAsInt() &&
-          getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt())
-        return true;
+      return (getEffectiveLaneLayoutAsInt() ==
+                  other.getEffectiveLaneLayoutAsInt() &&
+              getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt());
   }
 
   auto compareCoordsForAllIds = [&](int64_t size) {

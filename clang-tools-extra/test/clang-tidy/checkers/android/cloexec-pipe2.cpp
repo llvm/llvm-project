@@ -10,6 +10,7 @@
       _rc = (exp);              \
     } while (_rc == -1);        \
   })
+#define NULL 0
 
 extern "C" int pipe2(int pipefd[2], int flags);
 

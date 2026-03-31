@@ -155,11 +155,11 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
       int count = vectorType.getNumElements();
       intType = VectorType::get(count, intType);
 
-      Repeated<Value> signSplat(count, signMask);
+      SmallVector<Value> signSplat(count, signMask);
       signMask = spirv::CompositeConstructOp::create(rewriter, loc, intType,
                                                      signSplat);
 
-      Repeated<Value> valueSplat(count, valueMask);
+      SmallVector<Value> valueSplat(count, valueMask);
       valueMask = spirv::CompositeConstructOp::create(rewriter, loc, intType,
                                                       valueSplat);
     }

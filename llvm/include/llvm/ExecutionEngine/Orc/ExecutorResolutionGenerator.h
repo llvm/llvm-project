@@ -18,7 +18,6 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 
 namespace llvm::orc {
 
@@ -29,17 +28,16 @@ public:
       unique_function<std::unique_ptr<MaterializationUnit>(SymbolMap)>;
 
   ExecutorResolutionGenerator(
-      ExecutionSession &ES, DylibManager &DylibMgr, tpctypes::ResolverHandle H,
+      ExecutionSession &ES, tpctypes::ResolverHandle H,
       SymbolPredicate Allow = SymbolPredicate(),
       AbsoluteSymbolsFn AbsoluteSymbols = absoluteSymbols)
-      : ES(ES), DylibMgr(DylibMgr), H(H), Allow(std::move(Allow)),
+      : EPC(ES.getExecutorProcessControl()), H(H), Allow(std::move(Allow)),
         AbsoluteSymbols(std::move(AbsoluteSymbols)) {}
 
   ExecutorResolutionGenerator(
-      ExecutionSession &ES, DylibManager &DylibMgr,
-      SymbolPredicate Allow = SymbolPredicate(),
+      ExecutionSession &ES, SymbolPredicate Allow = SymbolPredicate(),
       AbsoluteSymbolsFn AbsoluteSymbols = absoluteSymbols)
-      : ES(ES), DylibMgr(DylibMgr), Allow(std::move(Allow)),
+      : EPC(ES.getExecutorProcessControl()), Allow(std::move(Allow)),
         AbsoluteSymbols(std::move(AbsoluteSymbols)) {}
 
   /// Permanently loads the library at the given path and, on success, returns
@@ -47,18 +45,17 @@ public:
   /// definitions in the library. On failure returns the reason the library
   /// failed to load.
   static Expected<std::unique_ptr<ExecutorResolutionGenerator>>
-  Load(ExecutionSession &ES, DylibManager &DylibMgr, const char *LibraryPath,
+  Load(ExecutionSession &ES, const char *LibraryPath,
        SymbolPredicate Allow = SymbolPredicate(),
        AbsoluteSymbolsFn AbsoluteSymbols = absoluteSymbols);
 
   /// Creates a ExecutorResolutionGenerator that searches for symbols in
   /// the target process.
   static Expected<std::unique_ptr<ExecutorResolutionGenerator>>
-  GetForTargetProcess(ExecutionSession &ES, DylibManager &DylibMgr,
+  GetForTargetProcess(ExecutionSession &ES,
                       SymbolPredicate Allow = SymbolPredicate(),
                       AbsoluteSymbolsFn AbsoluteSymbols = absoluteSymbols) {
-    return Load(ES, DylibMgr, nullptr, std::move(Allow),
-                std::move(AbsoluteSymbols));
+    return Load(ES, nullptr, std::move(Allow), std::move(AbsoluteSymbols));
   }
 
   Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
@@ -66,8 +63,7 @@ public:
                       const SymbolLookupSet &LookupSet) override;
 
 private:
-  ExecutionSession &ES;
-  DylibManager &DylibMgr;
+  ExecutorProcessControl &EPC;
   tpctypes::ResolverHandle H;
   SymbolPredicate Allow;
   AbsoluteSymbolsFn AbsoluteSymbols;

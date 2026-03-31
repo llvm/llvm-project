@@ -843,7 +843,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       auto &JD =
           J.getExecutionSession().createBareJITDylib("<Process Symbols>");
       auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          J.getExecutionSession(), J.getDylibMgr());
+          J.getExecutionSession());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));
@@ -873,7 +873,7 @@ Expected<JITDylib &> LLJIT::createJITDylib(std::string Name) {
 }
 
 Expected<JITDylib &> LLJIT::loadPlatformDynamicLibrary(const char *Path) {
-  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, *DylibMgr, Path);
+  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, Path);
   if (!G)
     return G.takeError();
 
@@ -1010,13 +1010,6 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
       Err = EPC.takeError();
       return;
     }
-  }
-
-  if (auto DM = ES->getExecutorProcessControl().createDefaultDylibMgr())
-    DylibMgr = std::move(*DM);
-  else {
-    Err = DM.takeError();
-    return;
   }
 
   auto ObjLayer = createObjectLinkingLayer(S, *ES);

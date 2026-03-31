@@ -126,8 +126,6 @@ class TimeoutHelper(object):
         if not self.active():
             return
         self._timer.cancel()
-        # Break reference cycle so that thread stack is freed immediately.
-        self._timer = None
 
     def active(self):
         return self.timeout > 0

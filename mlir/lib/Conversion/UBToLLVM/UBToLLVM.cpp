@@ -124,9 +124,7 @@ void mlir::ub::populateUBToLLVMConversionPatterns(
 namespace {
 /// Implement the interface to convert UB to LLVM.
 struct UBToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  UBToLLVMDialectInterface(Dialect *dialect)
-      : ConvertToLLVMPatternInterface(dialect) {}
-
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

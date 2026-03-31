@@ -76,9 +76,6 @@ struct LoopAttributes {
   /// Value for llvm.loop.pipeline.disable metadata.
   bool PipelineDisabled;
 
-  /// Value for llvm.licm.disable metadata.
-  bool LICMDisabled;
-
   /// Value for llvm.loop.pipeline.iicount metadata.
   unsigned PipelineInitiationInterval;
 
@@ -254,11 +251,6 @@ public:
   void setDistributeState(bool Enable = true) {
     StagedAttrs.DistributeEnable =
         Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
-  }
-
-  /// Set the next pushed loop LICM disable state.
-  void setLICMDisabled(bool Disabled = true) {
-    StagedAttrs.LICMDisabled = Disabled;
   }
 
   /// Set the next pushed loop unroll state.

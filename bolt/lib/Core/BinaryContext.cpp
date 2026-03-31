@@ -2628,7 +2628,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
       *TheTriple, *LocalCtx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),
       std::unique_ptr<MCCodeEmitter>(MCEInstance.MCE.release()), *STI));
 
-  Streamer->initSections(*STI);
+  Streamer->initSections(false, *STI);
 
   MCSection *Section = MCEInstance.LocalMOFI->getTextSection();
   Section->setHasInstructions(true);

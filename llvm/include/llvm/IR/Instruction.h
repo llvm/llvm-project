@@ -78,7 +78,6 @@ public:
       : iterator_adaptor_base<succ_iterator, op_iterator,
                               std::random_access_iterator_tag, BasicBlock *,
                               ptrdiff_t, BasicBlock *, BasicBlock *> {
-    succ_iterator() = default;
     explicit succ_iterator(op_iterator I) : iterator_adaptor_base(I) {}
 
     BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
@@ -93,7 +92,6 @@ public:
                               std::random_access_iterator_tag,
                               const BasicBlock *, ptrdiff_t, const BasicBlock *,
                               const BasicBlock *> {
-    const_succ_iterator() = default;
     explicit const_succ_iterator(const_op_iterator I)
         : iterator_adaptor_base(I) {}
 

@@ -273,15 +273,16 @@ bool ObjectFileWasm::DecodeSections() {
   return true;
 }
 
-ModuleSpecList ObjectFileWasm::GetModuleSpecifications(
+size_t ObjectFileWasm::GetModuleSpecifications(
     const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length) {
-  if (!ValidateModuleHeader(extractor_sp->GetData()))
-    return {};
+    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
+  if (!ValidateModuleHeader(extractor_sp->GetData())) {
+    return 0;
+  }
 
-  ModuleSpecList specs;
-  specs.Append(ModuleSpec(file, ArchSpec("wasm32-unknown-unknown-wasm")));
-  return specs;
+  ModuleSpec spec(file, ArchSpec("wasm32-unknown-unknown-wasm"));
+  specs.Append(spec);
+  return 1;
 }
 
 ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,

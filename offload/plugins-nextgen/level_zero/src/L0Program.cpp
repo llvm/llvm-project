@@ -83,29 +83,16 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pInputModule = Image;
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
-  Error CreateErrors = Error::success();
-  auto handleError = [&](Error Err) {
-    if (BuildLog)
-      zeModuleBuildLogDestroy(BuildLog);
-    CreateErrors = joinErrors(std::move(CreateErrors), std::move(Err));
-  };
-  CALL_ZE_HANDLE_ERROR(handleError, zeModuleCreate, l0Device.getZeContext(),
-                       l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
-  if (CreateErrors)
-    return CreateErrors;
-
-  if (BuildLog)
-    zeModuleBuildLogDestroy(BuildLog);
+  CALL_ZE_RET_ERROR(zeModuleCreate, l0Device.getZeContext(),
+                    l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
 
   // Check if module link is required. We do not need this check for
   // library module.
   if (!RequiresModuleLink && !IsLibModule) {
     ze_module_properties_t Properties = {ZE_STRUCTURE_TYPE_MODULE_PROPERTIES,
                                          nullptr, 0};
-    ze_result_t RC;
-    CALL_ZE(RC, zeModuleGetProperties, Module, &Properties);
-    if (RC == ZE_RESULT_SUCCESS)
-      RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
+    CALL_ZE_RET_ERROR(zeModuleGetProperties, Module, &Properties);
+    RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
   }
   // For now, assume the first module contains libraries, globals.
   if (Modules.empty())

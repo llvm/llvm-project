@@ -11,8 +11,6 @@ from lldbsuite.test_event.build_exception import BuildError
 
 
 class MemoryHistoryTestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
-
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer

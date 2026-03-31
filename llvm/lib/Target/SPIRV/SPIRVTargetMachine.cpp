@@ -13,7 +13,6 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
-#include "SPIRVEmitIntrinsics.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
@@ -67,7 +66,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPrepareFunctionsPass(PR);
   initializeSPIRVPrepareGlobalsPass(PR);
   initializeSPIRVStripConvergentIntrinsicsPass(PR);
-  initializeSPIRVCtorDtorLoweringLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -188,7 +186,6 @@ void SPIRVPassConfig::addIRPasses() {
   }
 
   addPass(createSPIRVRegularizerPass());
-  addPass(createSPIRVCtorDtorLoweringLegacyPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
 }
@@ -230,7 +227,7 @@ void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
   addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
-  addPass(createSPIRVEmitIntrinsicsPass(TM));
+  addPass(createSPIRVEmitIntrinsicsPass(&TM));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&TM));
   TargetPassConfig::addISelPrepare();

@@ -1418,5 +1418,3 @@ REGISTER_CHECKER(NullReturnedFromNonnull, false)
 REGISTER_CHECKER(NullableDereferenced, true)
 REGISTER_CHECKER(NullablePassedToNonnull, true)
 REGISTER_CHECKER(NullableReturnedFromNonnull, true)
-
-#undef REGISTER_CHECKER

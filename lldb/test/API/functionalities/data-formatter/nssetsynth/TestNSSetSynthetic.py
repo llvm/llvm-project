@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class NSSetSyntheticTestCase(TestBase):
-    SHARED_BUILD_TESTCASE = False
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

@@ -446,8 +446,6 @@ public:
     return true;
   }
 
-  bool shouldConsiderVectorizationRegPressure() const override;
-
   bool hasArmWideBranch(bool Thumb) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
