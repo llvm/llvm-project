@@ -50,7 +50,7 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
                                              const CallGraphNode *N) {
   const FunctionDecl *Definition = N->getDefinition();
 
-  // CallGraph does not work for primary templates.
+  // FIXME: `clang::CallGraph` does not create entries for primary templates.
   assert(!Definition->isTemplated());
 
   auto CallerName = getEntityName(Definition);
