@@ -29,10 +29,8 @@ add_entrypoint_object(
   HDRS
     ../raise.h
   DEPENDS
-    .signal_utils
-    libc.hdr.types.sigset_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.raise
+    libc.src.errno.errno
 )
 
 add_object_library(
