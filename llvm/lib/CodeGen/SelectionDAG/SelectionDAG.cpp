@@ -6126,6 +6126,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     if (VTNumElts != SrcVTNumElts)
       break;
 
+    // FIXME: assert VT.isFloatingPoint() at top level of function.
     if (VT.isFloatingPoint()) {
       KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
       Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);

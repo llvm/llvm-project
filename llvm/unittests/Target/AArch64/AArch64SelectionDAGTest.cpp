@@ -1576,45 +1576,71 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
   EXPECT_TRUE(DAG->isKnownNeverZero(VSelect4444, DemandAll));
 }
 
-TEST_F(AArch64SelectionDAGTest, KnownNeverNaN_Bitcast) {
+TEST_F(AArch64SelectionDAGTest, KnownFPClass_Bitcast) {
   SDLoc Loc;
+  SDValue Cond = DAG->getRegister(1, MVT::i1);
 
-  auto UnknownI32 = DAG->getRegister(1, MVT::i32);
-  auto FiniteMask = DAG->getConstant(0x3fff'ffff, Loc, MVT::i32);
-  auto NeverNaNI32 =
-      DAG->getNode(ISD::AND, Loc, MVT::i32, FiniteMask, UnknownI32);
+  SDValue ConstZeroI32 = DAG->getConstant(0x0000'0000, Loc, MVT::i32);
+  SDValue ConstFiniteI32 = DAG->getConstant(0xbfff'ffff, Loc, MVT::i32);
+  SDValue AlwaysFiniteI32 =
+      DAG->getSelect(Loc, MVT::i32, Cond, ConstZeroI32, ConstFiniteI32);
+  SDValue AlwaysFiniteF32 = DAG->getBitcast(MVT::f32, AlwaysFiniteI32);
+  KnownFPClass AlwaysFiniteFPClass =
+      DAG->computeKnownFPClass(AlwaysFiniteF32, fcAllFlags);
+  EXPECT_TRUE(AlwaysFiniteFPClass.isKnownNeverInfOrNaN());
 
-  auto NeverNaNF32 = DAG->getBitcast(MVT::f32, NeverNaNI32);
-  EXPECT_TRUE(DAG->isKnownNeverNaN(NeverNaNF32));
+  SDValue ConstNegInfI32 = DAG->getConstant(0xff80'0000, Loc, MVT::i32);
+  SDValue NeverNaNI32 =
+      DAG->getSelect(Loc, MVT::i32, Cond, ConstZeroI32, ConstNegInfI32);
+  SDValue NeverNaNF32 = DAG->getBitcast(MVT::f32, NeverNaNI32);
+  KnownFPClass NeverNaNFPClass =
+      DAG->computeKnownFPClass(NeverNaNF32, fcAllFlags);
+  EXPECT_FALSE(NeverNaNFPClass.isKnownNeverInfinity());
+  EXPECT_TRUE(NeverNaNFPClass.isKnownNeverNaN());
 
-  auto UnknownF32 = DAG->getBitcast(MVT::f32, UnknownI32);
-  EXPECT_FALSE(DAG->isKnownNeverNaN(UnknownF32));
+  SDValue ConstPosNaNI32 = DAG->getConstant(0x7f80'0001, Loc, MVT::i32);
+  SDValue MaybeNaNI32 =
+      DAG->getSelect(Loc, MVT::i32, Cond, ConstPosNaNI32, ConstNegInfI32);
+  SDValue MaybeNaNF32 = DAG->getBitcast(MVT::f32, MaybeNaNI32);
+  KnownFPClass MaybeNaNFPClass =
+      DAG->computeKnownFPClass(MaybeNaNF32, fcAllFlags);
+  EXPECT_FALSE(MaybeNaNFPClass.isKnownNeverNaN());
+  EXPECT_FALSE(MaybeNaNFPClass.isKnownAlwaysNaN());
 
-  auto NeverNaNV2I32 = DAG->getSplat(MVT::v2i32, Loc, NeverNaNI32);
-  auto NeverNaNV2F32 = DAG->getBitcast(MVT::v2f32, NeverNaNV2I32);
-  EXPECT_TRUE(DAG->isKnownNeverNaN(NeverNaNV2F32));
+  SDValue ConstNegNaNI32 = DAG->getConstant(0xffff'ffff, Loc, MVT::i32);
+  SDValue AlwaysNaNI32 =
+      DAG->getSelect(Loc, MVT::i32, Cond, ConstPosNaNI32, ConstNegNaNI32);
+  SDValue AlwaysNaNF32 = DAG->getBitcast(MVT::f32, AlwaysNaNI32);
+  KnownFPClass AlwaysNaNFPClass =
+      DAG->computeKnownFPClass(AlwaysNaNF32, fcAllFlags);
+  EXPECT_TRUE(AlwaysNaNFPClass.isKnownAlwaysNaN());
 
-  auto PartialNaNV2I32 =
-      DAG->getBuildVector(MVT::v2i32, Loc, {UnknownI32, NeverNaNI32});
-  auto PartialNaNV2F32 = DAG->getBitcast(MVT::v2f32, PartialNaNV2I32);
-  EXPECT_FALSE(DAG->isKnownNeverNaN(PartialNaNV2F32));
+  SDValue AlwaysFiniteSplat = DAG->getSplat(MVT::v2i32, Loc, AlwaysFiniteI32);
+  SDValue AlwaysFiniteV2F32 = DAG->getBitcast(MVT::v2f32, AlwaysFiniteSplat);
+  KnownFPClass AlwaysFiniteV2FPClass =
+      DAG->computeKnownFPClass(AlwaysFiniteV2F32, fcAllFlags);
+  EXPECT_TRUE(AlwaysFiniteV2FPClass.isKnownNeverInfOrNaN());
+
+  SDValue UpperAlwaysNaN =
+      DAG->getBuildVector(MVT::v2i32, Loc, {NeverNaNI32, AlwaysNaNI32});
+  SDValue UpperAlwaysNaNV2F32 = DAG->getBitcast(MVT::v2f32, UpperAlwaysNaN);
+  KnownFPClass UpperAlwaysNaNFullFPClass =
+      DAG->computeKnownFPClass(UpperAlwaysNaNV2F32, fcAllFlags);
+  EXPECT_FALSE(UpperAlwaysNaNFullFPClass.isKnownNeverNaN());
   APInt DemandLo(2, 1);
-  EXPECT_FALSE(DAG->isKnownNeverNaN(PartialNaNV2F32, DemandLo));
+  KnownFPClass UpperAlwaysNaNLoFPClass =
+      DAG->computeKnownFPClass(UpperAlwaysNaNV2F32, DemandLo, fcAllFlags);
+  EXPECT_TRUE(UpperAlwaysNaNLoFPClass.isKnownNeverNaN());
   APInt DemandHi(2, 2);
-  EXPECT_TRUE(DAG->isKnownNeverNaN(PartialNaNV2F32, DemandHi));
+  KnownFPClass UpperAlwaysNaNHiFPClass =
+      DAG->computeKnownFPClass(UpperAlwaysNaNV2F32, DemandHi, fcAllFlags);
+  EXPECT_TRUE(UpperAlwaysNaNHiFPClass.isKnownAlwaysNaN());
 
-  auto PartialNaNAsF64 = DAG->getBitcast(MVT::f64, PartialNaNV2I32);
-  EXPECT_TRUE(DAG->isKnownNeverNaN(PartialNaNAsF64));
-
-  auto UnknownI64 = DAG->getRegister(2, MVT::i64);
-  auto Lo32NeverNaNMask =
-      DAG->getConstant(0xffff'ffff'3fff'ffff, Loc, MVT::i64);
-  auto PartialNaNPack64 =
-      DAG->getNode(ISD::AND, Loc, MVT::i64, Lo32NeverNaNMask, UnknownI64);
-  auto PartialNaNUnpackV2F32 = DAG->getBitcast(MVT::v2f32, PartialNaNPack64);
-  EXPECT_FALSE(DAG->isKnownNeverNaN(PartialNaNUnpackV2F32));
-  EXPECT_TRUE(DAG->isKnownNeverNaN(PartialNaNUnpackV2F32, DemandLo));
-  EXPECT_FALSE(DAG->isKnownNeverNaN(PartialNaNUnpackV2F32, DemandHi));
+  SDValue UpperAlwaysNaNAsF64 = DAG->getBitcast(MVT::f64, UpperAlwaysNaN);
+  KnownFPClass UpperAlwaysNaNAsF64FPClass =
+      DAG->computeKnownFPClass(UpperAlwaysNaNAsF64, fcAllFlags);
+  EXPECT_FALSE(UpperAlwaysNaNAsF64FPClass.isKnownNeverNaN());
+  EXPECT_FALSE(UpperAlwaysNaNAsF64FPClass.isKnownAlwaysNaN());
 }
 
 // tests for SelectionDAG::computeKnownFPClass
