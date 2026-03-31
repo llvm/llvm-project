@@ -1174,16 +1174,17 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
                               Register SaveWQM) {
   assert(LiveMaskReg.isVirtual());
 
-  auto MBBE = MBB.end();
+  MachineBasicBlock::iterator MBBE = MBB.end();
   bool IsTerminator = Before == MBBE;
   if (!IsTerminator) {
     auto FirstTerm = MBB.getFirstTerminator();
-    auto FirstNonDbg = skipDebugInstructionsForward(FirstTerm, MBBE);
-    if (FirstNonDbg != MBBE) {
-      auto BeforeNonDbg = skipDebugInstructionsForward(Before, MBBE);
-      SlotIndex FirstTermIdx = LIS->getInstructionIndex(*FirstNonDbg);
-      SlotIndex BeforeIdx = LIS->getInstructionIndex(*BeforeNonDbg);
-      IsTerminator = BeforeIdx > FirstTermIdx;
+    if (FirstTerm != MBBE) {
+      MachineBasicBlock::iterator BeforeNonDbg = skipDebugInstructionsForward(Before, MBBE);
+      if (BeforeNonDbg != MBBE) {
+        SlotIndex FirstTermIdx = LIS->getInstructionIndex(*FirstTerm);
+        SlotIndex BeforeIdx = LIS->getInstructionIndex(*BeforeNonDbg);
+        IsTerminator = BeforeIdx > FirstTermIdx;
+      }
     }
   }
 
