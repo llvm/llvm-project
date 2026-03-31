@@ -453,8 +453,12 @@ public:
     rewriter.setInsertionPointToEnd(entry);
     cir::BrOp::create(rewriter, op.getLoc(), &op.getEntry().front());
 
-    // Branch from condition region to body or exit.
-    auto conditionOp = cast<cir::ConditionOp>(cond->getTerminator());
+    // Branch from condition region to body or exit. The ConditionOp may not
+    // be in the first block of the condition region if a cleanup scope was
+    // already flattened within it, introducing multiple blocks. The
+    // ConditionOp is always the terminator of the last block.
+    auto conditionOp =
+        cast<cir::ConditionOp>(op.getCond().back().getTerminator());
     lowerConditionOp(conditionOp, body, exit, rewriter);
 
     // TODO(cir): Remove the walks below. It visits operations unnecessarily.
@@ -488,10 +492,13 @@ public:
         lowerTerminator(bodyYield, (step ? step : cond), rewriter);
     }
 
-    // Lower mandatory step region yield.
+    // Lower mandatory step region yield. Like the condition region, the
+    // YieldOp may be in the last block rather than the first if a cleanup
+    // scope was already flattened within the step region.
     if (step)
-      lowerTerminator(cast<cir::YieldOp>(step->getTerminator()), cond,
-                      rewriter);
+      lowerTerminator(
+          cast<cir::YieldOp>(op.maybeGetStep()->back().getTerminator()), cond,
+          rewriter);
 
     // Move region contents out of the loop op.
     rewriter.inlineRegionBefore(op.getCond(), exit);
@@ -648,12 +655,44 @@ static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
 
   // Build the try_call to replace the original call.
   rewriter.setInsertionPoint(callOp);
-  mlir::Type resType = callOp->getNumResults() > 0
-                           ? callOp->getResult(0).getType()
-                           : mlir::Type();
-  auto tryCallOp =
-      cir::TryCallOp::create(rewriter, loc, callOp.getCalleeAttr(), resType,
-                             normalDest, unwindDest, callOp.getArgOperands());
+  cir::TryCallOp tryCallOp;
+  if (callOp.isIndirect()) {
+    mlir::Value indTarget = callOp.getIndirectCall();
+    auto ptrTy = mlir::cast<cir::PointerType>(indTarget.getType());
+    auto resTy = mlir::cast<cir::FuncType>(ptrTy.getPointee());
+    tryCallOp =
+        cir::TryCallOp::create(rewriter, loc, indTarget, resTy, normalDest,
+                               unwindDest, callOp.getArgOperands());
+  } else {
+    mlir::Type resType = callOp->getNumResults() > 0
+                             ? callOp->getResult(0).getType()
+                             : mlir::Type();
+    tryCallOp =
+        cir::TryCallOp::create(rewriter, loc, callOp.getCalleeAttr(), resType,
+                               normalDest, unwindDest, callOp.getArgOperands());
+  }
+
+  // Copy all attributes from the original call except those already set by
+  // TryCallOp::create or that are operation-specific and should not be copied.
+  llvm::StringRef excludedAttrs[] = {
+      CIRDialect::getCalleeAttrName(), // Set by create()
+      CIRDialect::getOperandSegmentSizesAttrName(),
+  };
+#ifndef NDEBUG
+  // We don't expect to ever see any of these attributes on a call that we
+  // converted to a try_call.
+  llvm::StringRef unexpectedAttrs[] = {
+      CIRDialect::getNoThrowAttrName(),
+      CIRDialect::getNoUnwindAttrName(),
+  };
+#endif
+  for (mlir::NamedAttribute attr : callOp->getAttrs()) {
+    if (llvm::is_contained(excludedAttrs, attr.getName()))
+      continue;
+    assert(!llvm::is_contained(unexpectedAttrs, attr.getName()) &&
+           "unexpected attribute on converted call");
+    tryCallOp->setAttr(attr.getName(), attr.getValue());
+  }
 
   // Replace uses of the call result with the try_call result.
   if (callOp->getNumResults() > 0)
@@ -676,6 +715,19 @@ static mlir::Block *buildUnwindBlock(mlir::Block *dest, bool hasCleanup,
   cir::BrOp::create(rewriter, loc, mlir::ValueRange{ehInitiate.getEhToken()},
                     dest);
   return unwindBlock;
+}
+
+// Create a shared terminate unwind block for throwing calls in EH cleanup
+// regions. When an exception is thrown during cleanup (unwinding), the C++
+// standard requires that std::terminate() be called.
+static mlir::Block *buildTerminateUnwindBlock(mlir::Location loc,
+                                              mlir::Block *insertBefore,
+                                              mlir::PatternRewriter &rewriter) {
+  mlir::Block *terminateBlock = rewriter.createBlock(insertBefore);
+  rewriter.setInsertionPointToEnd(terminateBlock);
+  auto ehInitiate = cir::EhInitiateOp::create(rewriter, loc, /*cleanup=*/false);
+  cir::EhTerminateOp::create(rewriter, loc, ehInitiate.getEhToken());
+  return terminateBlock;
 }
 
 class CIRCleanupScopeOpFlattening
@@ -1293,6 +1345,28 @@ public:
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
     }
 
+    // Handle throwing calls in EH cleanup blocks. When an exception is thrown
+    // during cleanup code that runs on the exception unwind path, the C++
+    // standard requires that std::terminate() be called. Replace such calls
+    // with try_call operations that unwind to a terminate block containing
+    // cir.eh.initiate + cir.eh.terminate.
+    if (ehCleanupEntry) {
+      llvm::SmallVector<cir::CallOp> ehCleanupThrowingCalls;
+      for (mlir::Block *block = ehCleanupEntry; block != continueBlock;
+           block = block->getNextNode()) {
+        block->walk([&](cir::CallOp callOp) {
+          if (!callOp.getNothrow())
+            ehCleanupThrowingCalls.push_back(callOp);
+        });
+      }
+      if (!ehCleanupThrowingCalls.empty()) {
+        mlir::Block *terminateBlock =
+            buildTerminateUnwindBlock(loc, continueBlock, rewriter);
+        for (cir::CallOp callOp : ehCleanupThrowingCalls)
+          replaceCallWithTryCall(callOp, terminateBlock, loc, rewriter);
+      }
+    }
+
     // Chain inner EH cleanup resume ops to this cleanup's EH handler.
     // Each cir.resume from an already-flattened inner cleanup is replaced
     // with a branch to the outer EH cleanup entry, passing the eh_token
@@ -1332,17 +1406,6 @@ public:
       return mlir::failure();
 
     cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
-
-    // Throwing calls in the cleanup region of an EH-enabled cleanup scope
-    // are not yet supported. Such calls would need their own EH handling
-    // (e.g., terminate or nested cleanup) during the unwind path.
-    if (cleanupKind != cir::CleanupKind::Normal) {
-      llvm::SmallVector<cir::CallOp> cleanupThrowingCalls;
-      collectThrowingCalls(cleanupOp.getCleanupRegion(), cleanupThrowingCalls);
-      if (!cleanupThrowingCalls.empty())
-        return cleanupOp->emitError(
-            "throwing calls in cleanup region are not yet implemented");
-    }
 
     // Collect all exits from the body region.
     llvm::SmallVector<CleanupExit> exits;

@@ -66,6 +66,7 @@
 // AMDGCN-based processors.
 //
 
+// RUN: %clang -E -dM -target amdgcn %s 2>&1 | FileCheck --check-prefixes=DUMMY,SLOW_FMAF -DWAVEFRONT_SIZE=64 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx600 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx600 -DFAMILY=GFX6
 // RUN: %clang -E -dM -target amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx600 -DFAMILY=GFX6
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx601 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,SLOW_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx601 -DFAMILY=GFX6
@@ -144,6 +145,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx12-5-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx12_5_generic -DFAMILY=GFX12
 
 // ARCH-GCN-DAG: #define FP_FAST_FMA 1
+// ARCH-GCN-DAG: #define FP_FAST_FMA_HALF 1
 
 // FAST_FMAF-DAG: #define FP_FAST_FMAF 1
 // SLOW_FMAF-NOT: #define FP_FAST_FMAF 1
@@ -160,6 +162,15 @@
 // ARCH-GCN-DAG: #define __GCC_DESTRUCTIVE_SIZE 128
 // ARCH-GCN-DAG: #define __GCC_CONSTRUCTIVE_SIZE 128
 // UNSAFEFPATOMIC-DAG: #define __AMDGCN_UNSAFE_FP_ATOMICS__ 1
+
+
+// DUMMY-DAG: #define __AMDGCN__ 1
+// DUMMY-DAG: #define __AMDGPU__ 1
+// DUMMY-DAG: #define __AMD__ 1
+// DUMMY-DAG: #define __HAS_FMAF__ 1
+// DUMMY-DAG: #define __HAS_FP64__ 1
+// DUMMY-DAG: #define __HAS_LDEXPF__ 1
+
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s

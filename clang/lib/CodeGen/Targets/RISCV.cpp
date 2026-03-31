@@ -283,6 +283,13 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
         // bitwidth is XLen or less.
         if (getContext().getTypeSize(QTy) > XLen && BitWidth <= XLen)
           QTy = getContext().getIntTypeForBitwidth(XLen, false);
+        // Trim type to bitwidth if possible
+        else if (getContext().getTypeSize(QTy) > BitWidth) {
+          bool IsSigned =
+              FD->getType().getTypePtr()->hasSignedIntegerRepresentation();
+          unsigned Bits = std::max(8U, (unsigned)llvm::PowerOf2Ceil(BitWidth));
+          QTy = getContext().getIntTypeForBitwidth(Bits, IsSigned);
+        }
         if (BitWidth == 0) {
           ZeroWidthBitFieldCount++;
           continue;
@@ -721,18 +728,18 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (Size <= 2 * XLen) {
     unsigned Alignment = getContext().getTypeAlign(Ty);
 
-    // Use a single XLen int if possible, 2*XLen if 2*XLen alignment is
-    // required, and a 2-element XLen array if only XLen alignment is required.
     if (Size <= XLen) {
+      // Use the smallest integer type we can.
       return ABIArgInfo::getDirect(
-          llvm::IntegerType::get(getVMContext(), XLen));
-    } else if (Alignment == 2 * XLen) {
+          llvm::IntegerType::get(getVMContext(), Size));
+    }
+    // Use 2*XLen if 2*XLen alignment is required.
+    if (Alignment == 2 * XLen)
       return ABIArgInfo::getDirect(
           llvm::IntegerType::get(getVMContext(), 2 * XLen));
-    } else {
-      return ABIArgInfo::getDirect(llvm::ArrayType::get(
-          llvm::IntegerType::get(getVMContext(), XLen), 2));
-    }
+    // Use 2-element XLen array if only XLen alignment is required.
+    return ABIArgInfo::getDirect(
+        llvm::ArrayType::get(llvm::IntegerType::get(getVMContext(), XLen), 2));
   }
   return getNaturalAlignIndirect(
       Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),

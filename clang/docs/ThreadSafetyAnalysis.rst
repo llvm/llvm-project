@@ -153,16 +153,20 @@ general capability model.  The prior names are still in use, and will be
 mentioned under the tag *previously* where appropriate.
 
 
-GUARDED_BY(c) and PT_GUARDED_BY(c)
-----------------------------------
+GUARDED_BY(...) and PT_GUARDED_BY(...)
+--------------------------------------
 
 ``GUARDED_BY`` is an attribute on data members, which declares that the data
 member is protected by the given capability.  Read operations on the data
 require shared access, while write operations require exclusive access.
 
+Multiple capabilities may be specified, subject to the following rules:
+a writer must hold *all* listed capabilities exclusively, so holding *any one*
+of them is sufficient to guarantee at least shared (read) access.
+
 ``PT_GUARDED_BY`` is similar, but is intended for use on pointers and smart
 pointers. There is no constraint on the data member itself, but the *data that
-it points to* is protected by the given capability.
+it points to* is protected by the given capabilities.
 
 .. code-block:: c++
 
@@ -179,6 +183,25 @@ it points to* is protected by the given capability.
 
     *p3 = 42;           // Warning!
     p3.reset(new int);  // OK.
+  }
+
+When multiple capabilities are listed:
+
+* **Write** access requires all listed capabilities to be held exclusively.
+* **Read** access requires at least one of them to be held (shared or exclusive).
+
+.. code-block:: c++
+
+  Mutex mu1, mu2;
+  int a GUARDED_BY(mu1, mu2);
+
+  void reader() REQUIRES_SHARED(mu1) {
+    int x = a;   // OK: at least one capability is held.
+    a = 0;       // Warning!  Writing requires both mu1 and mu2.
+  }
+
+  void writer() REQUIRES(mu1, mu2) {
+    a = 0;       // OK: both capabilities are held exclusively.
   }
 
 
@@ -860,11 +883,11 @@ implementation.
   #define SCOPED_CAPABILITY \
     THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)
 
-  #define GUARDED_BY(x) \
-    THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(x))
+  #define GUARDED_BY(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(__VA_ARGS__))
 
-  #define PT_GUARDED_BY(x) \
-    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(x))
+  #define PT_GUARDED_BY(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(__VA_ARGS__))
 
   #define ACQUIRED_BEFORE(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(acquired_before(__VA_ARGS__))

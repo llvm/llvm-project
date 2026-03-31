@@ -93,7 +93,8 @@ void addTargetRewritePass(mlir::PassManager &pm);
 mlir::LLVM::DIEmissionKind
 getEmissionKind(llvm::codegenoptions::DebugInfoKind kind);
 
-void addBoxedProcedurePass(mlir::PassManager &pm);
+void addBoxedProcedurePass(mlir::PassManager &pm,
+                           bool enableSafeTrampoline = false);
 
 void addExternalNameConversionPass(mlir::PassManager &pm,
                                    bool appendUnderscore = true);
@@ -101,11 +102,8 @@ void addExternalNameConversionPass(mlir::PassManager &pm,
 void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm);
 
 void addDebugInfoPass(mlir::PassManager &pm,
-                      llvm::codegenoptions::DebugInfoKind debugLevel,
-                      llvm::OptimizationLevel optLevel,
-                      llvm::StringRef inputFilename, int32_t dwarfVersion,
-                      llvm::StringRef splitDwarfFile,
-                      llvm::StringRef dwarfDebugFlags);
+                      const MLIRToLLVMPassPipelineConfig &config,
+                      llvm::StringRef inputFilename);
 
 /// Create FIRToLLVMPassOptions from pipeline configuration.
 FIRToLLVMPassOptions
@@ -132,11 +130,11 @@ enum class EnableOpenMP { None, Simd, Full };
 /// Create a pass pipeline for lowering from HLFIR to FIR
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition
-/// \param optLevel - optimization level used for creating FIR optimization
-///   passes pipeline
-void createHLFIRToFIRPassPipeline(
-    mlir::PassManager &pm, EnableOpenMP enableOpenMP,
-    llvm::OptimizationLevel optLevel = defaultOptLevel);
+/// \param enableOpenMP - whether OpenMP lowering is enabled
+/// \param config - pipeline config (OptLevel, fpMaxminBehavior, etc.)
+void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
+                                  EnableOpenMP enableOpenMP,
+                                  const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
   /// Whether code is being generated for a target device rather than the host
@@ -163,11 +161,8 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 void createDebugPasses(mlir::PassManager &pm,
-                       llvm::codegenoptions::DebugInfoKind debugLevel,
-                       llvm::OptimizationLevel OptLevel,
-                       llvm::StringRef inputFilename, int32_t dwarfVersion,
-                       llvm::StringRef splitDwarfFile,
-                       llvm::StringRef dwarfDebugFlags);
+                       const MLIRToLLVMPassPipelineConfig &config,
+                       llvm::StringRef inputFilename);
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,

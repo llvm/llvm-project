@@ -27,6 +27,10 @@
 #include "llvm/TargetParser/Triple.h"
 #include <cstdlib> // ::getenv
 
+#ifdef CLANG_USE_XCSELECT
+#include <xcselect.h> // ::xcselect_host_sdk_path
+#endif
+
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
@@ -2480,6 +2484,12 @@ std::optional<DarwinSDKInfo> parseSDKSettings(llvm::vfs::FileSystem &VFS,
 
 void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const OptTable &Opts = getDriver().getOpts();
+  // TryXcselect keeps track of whether we use xcselect to find the SDK
+  // when CLANG_USE_XCSELECT is enabled. Currently, we do this when we
+  // do not have a sysroot from -isysroot, --sysroot, or SDKROOT, and
+  // we do not have --no-xcselect.
+  bool TryXcselect = false;
+  (void)TryXcselect;
 
   // Support allowing the SDKROOT environment variable used by xcrun and other
   // Xcode tools to define the default sysroot, by making it the default for
@@ -2488,16 +2498,17 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     // Warn if the path does not exist.
     if (!getVFS().exists(A->getValue()))
       getDriver().Diag(clang::diag::warn_missing_sysroot) << A->getValue();
-  } else {
-    if (char *env = ::getenv("SDKROOT")) {
-      // We only use this value as the default if it is an absolute path,
-      // exists, and it is not the root path.
-      if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
-          StringRef(env) != "/") {
-        Args.append(Args.MakeSeparateArg(
-            nullptr, Opts.getOption(options::OPT_isysroot), env));
-      }
+  } else if (const char *env = ::getenv("SDKROOT")) {
+    // We only use this value as the default if it is an absolute path,
+    // exists, and it is not the root path.
+    if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
+        StringRef(env) != "/") {
+      Args.append(Args.MakeSeparateArg(
+          nullptr, Opts.getOption(options::OPT_isysroot), env));
     }
+  } else {
+    TryXcselect = !Args.hasArg(options::OPT__sysroot_EQ) &&
+                  !Args.hasArg(options::OPT_no_xcselect);
   }
 
   // Read the SDKSettings.json file for more information, like the SDK version
@@ -2637,6 +2648,18 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const std::string OSVersionStr = OSVersion.getAsString();
   // Set the tool chain target information.
   if (Platform == MacOS) {
+#ifdef CLANG_USE_XCSELECT
+    if (TryXcselect) {
+      char *p;
+      if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
+        Args.append(Args.MakeSeparateArg(
+            nullptr, Opts.getOption(options::OPT_isysroot), p));
+        ::free(p);
+        if (!SDKInfo)
+          SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
+      }
+    }
+#endif
     if (!Driver::GetReleaseVersion(OSVersionStr, Major, Minor, Micro,
                                    HadExtra) ||
         HadExtra || Major < 10 || Major >= MajorVersionLimit || Minor >= 100 ||
@@ -3382,6 +3405,23 @@ void Darwin::addClangTargetOptions(
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Enable objc_msgSend selector stubs by default if the linker supports it.
+  // ld64-811.2+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fobjc_msgsend_selector_stubs,
+                                options::OPT_fno_objc_msgsend_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(811, 2)))
+    CC1Args.push_back("-fobjc-msgsend-selector-stubs");
+
+  // Enable objc_msgSend class selector stubs by default if the linker supports
+  // it. ld64-1250+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(
+          options::OPT_fobjc_msgsend_class_selector_stubs,
+          options::OPT_fno_objc_msgsend_class_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(1250, 0)))
+    CC1Args.push_back("-fobjc-msgsend-class-selector-stubs");
 
   // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
   // or disabled sized deallocations.

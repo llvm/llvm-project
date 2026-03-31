@@ -516,13 +516,22 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(X86::SSP);
 
   auto &ST = MF.getSubtarget<X86Subtarget>();
-  if (ST.is64Bit()) {
-    for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
-      // Set r# as reserved register if user required
-      if (ST.isRegisterReservedByUser(Reg)) {
-        for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
+  if (ST.hasUserReservedRegisters()) {
+    if (ST.is64Bit()) {
+      // Set r# as reserved register if user required.
+      for (unsigned Reg = X86::R8; Reg <= X86::R15; ++Reg)
+        if (ST.isRegisterReservedByUser(Reg))
+          for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
+            Reserved.set(SubReg);
+      if (ST.hasEGPR())
+        for (unsigned Reg = X86::R16; Reg <= X86::R31; ++Reg)
+          if (ST.isRegisterReservedByUser(Reg))
+            for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
+              Reserved.set(SubReg);
+    } else {
+      if (ST.isRegisterReservedByUser(X86::EDI))
+        for (const MCPhysReg &SubReg : sub_and_superregs_inclusive(X86::EDI))
           Reserved.set(SubReg);
-      }
     }
   }
 

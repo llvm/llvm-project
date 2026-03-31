@@ -1,5 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 %s -o - -filetype=obj | spirv-val %}
+; The backend is generating an invalid comparison. Issue https://github.com/llvm/llvm-project/issues/185409
+; Fails with:
+;   The types of Operand 1 and Operand 2 must match
+;   %15 = OpPtrEqual %bool %12 %arg
+; TODO: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
 ; CHECK: OpExtension "SPV_INTEL_function_pointers"

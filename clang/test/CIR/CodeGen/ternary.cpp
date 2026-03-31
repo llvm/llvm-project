@@ -10,13 +10,13 @@ int x(int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) {
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {nothrow} {
 // CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[YVAL:%.+]] = cir.load{{.*}} [[Y]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[ZERO:%.+]] = cir.const #cir.int<0> : !s32i
-// CIR: [[CMP:%.+]] = cir.cmp(gt, [[YVAL]], [[ZERO]]) : !s32i, !cir.bool
+// CIR: [[CMP:%.+]] = cir.cmp gt [[YVAL]], [[ZERO]] : !s32i
 // CIR: [[THREE:%.+]] = cir.const #cir.int<3> : !s32i
 // CIR: [[FIVE:%.+]] = cir.const #cir.int<5> : !s32i
 // CIR: [[SELECT_RES:%.+]] = cir.select if [[CMP]] then [[THREE]] else [[FIVE]] : (!cir.bool, !s32i, !s32i) -> !s32i
@@ -52,7 +52,7 @@ int foo(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) {
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {nothrow} {
 // CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
@@ -61,7 +61,7 @@ int foo(int a, int b) {
 // CIR: cir.scope {
 // CIR: [[ALOAD:%.+]] = cir.load{{.*}} [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[BLOAD:%.+]] = cir.load{{.*}} [[B]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP:%.+]] = cir.cmp(lt, [[ALOAD]], [[BLOAD]]) : !s32i, !cir.bool
+// CIR: [[CMP:%.+]] = cir.cmp lt [[ALOAD]], [[BLOAD]] : !s32i
 // CIR: [[TERNARY_RES:%.+]] = cir.ternary([[CMP]], true {
 // CIR: [[ZERO:%.+]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.yield [[ZERO]] : !s32i

@@ -216,7 +216,7 @@ foreach(opt IN LISTS global_config)
   message(STATUS "${opt_name}: ${opt_value}")
   set(${opt_name} ${opt_value})
 endforeach()
-generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
+generate_config_doc(${main_config_file} ${LIBC_BUILD_DIR}/docs/configure.rst)
 
 # Load each target specific config.
 foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)

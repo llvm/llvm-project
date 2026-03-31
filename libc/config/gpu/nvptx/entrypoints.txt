@@ -287,6 +287,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
     libc.src.math.asinpif
     libc.src.math.atan
     libc.src.math.atan2
@@ -299,6 +300,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
+    libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -339,6 +341,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorf
     libc.src.math.floorl
     libc.src.math.fma
+    libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
@@ -523,6 +526,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.asinf16
     libc.src.math.asinhf16
     libc.src.math.atanf16
+    libc.src.math.atan2f16
     libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
@@ -530,6 +534,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.cosf16
     libc.src.math.coshf16
     libc.src.math.cospif16
+    libc.src.math.erff16
+    libc.src.math.erfcf16
     libc.src.math.exp10f16
     libc.src.math.exp10m1f16
     libc.src.math.exp2f16
@@ -582,7 +588,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llrintf16
     libc.src.math.llroundf16
     libc.src.math.log10f16
+    libc.src.math.log10p1f16
     libc.src.math.log2f16
+    libc.src.math.log2p1f16
     libc.src.math.logbf16
     libc.src.math.logf16
     libc.src.math.lrintf16
@@ -620,6 +628,8 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -656,6 +666,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
+  libc.src.math.hypotbf16
   libc.src.math.ilogbbf16
   libc.src.math.iscanonicalbf16
   libc.src.math.issignalingbf16

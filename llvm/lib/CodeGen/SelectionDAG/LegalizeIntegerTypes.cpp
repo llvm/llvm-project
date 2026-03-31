@@ -78,6 +78,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTTZ:        Res = PromoteIntRes_CTTZ(N); break;
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+  case ISD::CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
   case ISD::VP_CTTZ_ELTS:
     Res = PromoteIntRes_VP_CttzElements(N);
@@ -741,15 +743,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
     // Zero extend to the promoted type and do the count there.
     SDValue Op = ZExtPromotedInteger(N->getOperand(0));
 
+    // At this stage SUB is guaranteed to be positive no-wrap,
+    // that to be used in further KnownBits optimizations.
     if (!N->isVPOpcode())
       return DAG.getNode(ISD::SUB, dl, NVT,
                          DAG.getNode(N->getOpcode(), dl, NVT, Op),
-                         ExtractLeadingBits);
+                         ExtractLeadingBits, SDNodeFlags::NoUnsignedWrap);
     SDValue Mask = N->getOperand(1);
     SDValue EVL = N->getOperand(2);
     return DAG.getNode(ISD::VP_SUB, dl, NVT,
                        DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
-                       ExtractLeadingBits, Mask, EVL);
+                       ExtractLeadingBits, Mask, EVL,
+                       SDNodeFlags::NoUnsignedWrap);
   }
   if (CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
       CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) {
@@ -2989,9 +2994,17 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N,
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
                                                                unsigned OpNo) {
-  SmallVector<SDValue, 1> NewOps(N->ops());
-  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
-  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+  assert(OpNo == 0 && "Unexpected operand for promotion");
+  SDValue Op = N->getOperand(0);
+
+  SDValue NewOp;
+  if (TLI.getBooleanContents(Op.getValueType()) ==
+      TargetLowering::ZeroOrNegativeOneBooleanContent)
+    NewOp = SExtPromotedInteger(Op);
+  else
+    NewOp = ZExtPromotedInteger(Op);
+
+  return SDValue(DAG.UpdateNodeOperands(N, NewOp), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N) {
@@ -3240,6 +3253,11 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::READ_REGISTER:
     ExpandIntRes_READ_REGISTER(N, Lo, Hi);
     break;
+
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    ExpandIntRes_CTTZ_ELTS(N, Lo, Hi);
+    break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -3308,12 +3326,18 @@ void DAGTypeLegalizer::ExpandShiftByConstant(SDNode *N, const APInt &Amt,
     } else {
       Lo = DAG.getNode(ISD::SHL, DL, NVT, InL,
                        DAG.getShiftAmountConstant(Amt, NVT, DL));
-      Hi = DAG.getNode(
-          ISD::OR, DL, NVT,
-          DAG.getNode(ISD::SHL, DL, NVT, InH,
-                      DAG.getShiftAmountConstant(Amt, NVT, DL)),
-          DAG.getNode(ISD::SRL, DL, NVT, InL,
-                      DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+      // Use FSHL if legal so we don't need to combine it later.
+      if (TLI.isOperationLegal(ISD::FSHL, NVT)) {
+        Hi = DAG.getNode(ISD::FSHL, DL, NVT, InH, InL,
+                         DAG.getShiftAmountConstant(Amt, NVT, DL));
+      } else {
+        Hi = DAG.getNode(
+            ISD::OR, DL, NVT,
+            DAG.getNode(ISD::SHL, DL, NVT, InH,
+                        DAG.getShiftAmountConstant(Amt, NVT, DL)),
+            DAG.getNode(ISD::SRL, DL, NVT, InL,
+                        DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+      }
     }
     return;
   }
@@ -3329,12 +3353,18 @@ void DAGTypeLegalizer::ExpandShiftByConstant(SDNode *N, const APInt &Amt,
       Lo = InH;
       Hi = DAG.getConstant(0, DL, NVT);
     } else {
-      Lo = DAG.getNode(
-          ISD::OR, DL, NVT,
-          DAG.getNode(ISD::SRL, DL, NVT, InL,
-                      DAG.getShiftAmountConstant(Amt, NVT, DL)),
-          DAG.getNode(ISD::SHL, DL, NVT, InH,
-                      DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+      // Use FSHR if legal so we don't need to combine it later.
+      if (TLI.isOperationLegal(ISD::FSHR, NVT)) {
+        Lo = DAG.getNode(ISD::FSHR, DL, NVT, InH, InL,
+                         DAG.getShiftAmountConstant(Amt, NVT, DL));
+      } else {
+        Lo = DAG.getNode(
+            ISD::OR, DL, NVT,
+            DAG.getNode(ISD::SRL, DL, NVT, InL,
+                        DAG.getShiftAmountConstant(Amt, NVT, DL)),
+            DAG.getNode(ISD::SHL, DL, NVT, InH,
+                        DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+      }
       Hi = DAG.getNode(ISD::SRL, DL, NVT, InH,
                        DAG.getShiftAmountConstant(Amt, NVT, DL));
     }
@@ -3355,12 +3385,18 @@ void DAGTypeLegalizer::ExpandShiftByConstant(SDNode *N, const APInt &Amt,
     Hi = DAG.getNode(ISD::SRA, DL, NVT, InH,
                      DAG.getShiftAmountConstant(NVTBits - 1, NVT, DL));
   } else {
-    Lo = DAG.getNode(
-        ISD::OR, DL, NVT,
-        DAG.getNode(ISD::SRL, DL, NVT, InL,
-                    DAG.getShiftAmountConstant(Amt, NVT, DL)),
-        DAG.getNode(ISD::SHL, DL, NVT, InH,
-                    DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+    // Use FSHR if legal so we don't need to combine it later.
+    if (TLI.isOperationLegal(ISD::FSHR, NVT)) {
+      Lo = DAG.getNode(ISD::FSHR, DL, NVT, InH, InL,
+                       DAG.getShiftAmountConstant(Amt, NVT, DL));
+    } else {
+      Lo = DAG.getNode(
+          ISD::OR, DL, NVT,
+          DAG.getNode(ISD::SRL, DL, NVT, InL,
+                      DAG.getShiftAmountConstant(Amt, NVT, DL)),
+          DAG.getNode(ISD::SHL, DL, NVT, InH,
+                      DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+    }
     Hi = DAG.getNode(ISD::SRA, DL, NVT, InH,
                      DAG.getShiftAmountConstant(Amt, NVT, DL));
   }
@@ -5539,6 +5575,20 @@ void DAGTypeLegalizer::ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo,
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   Lo = DAG.getPOISON(LoVT);
   Hi = DAG.getPOISON(HiVT);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_CTTZ_ELTS(SDNode *N, SDValue &Lo,
+                                              SDValue &Hi) {
+  // Assume that the maximum number of vector elements fits in getVectorIdxTy
+  // and expand to that.
+  EVT VT = N->getSimpleValueType(0);
+  EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+  assert(IdxVT.bitsLT(VT) &&
+         "VectorIdxTy should be smaller than type to be expanded?");
+
+  SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N), IdxVT, N->getOperand(0));
+  Res = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Res);
+  SplitInteger(Res, Lo, Hi);
 }
 
 //===----------------------------------------------------------------------===//

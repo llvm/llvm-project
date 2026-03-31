@@ -2857,8 +2857,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // This is already the correct result for CTPOP and CTTZs
     if (Opcode == TargetOpcode::G_CTLZ || Opcode == TargetOpcode::G_CTLS) {
       // The correct result is NewOp - (Difference in widety and current ty).
+      // At this stage SUB is guaranteed to be positive no-wrap,
+      // that to be used in further KnownBits optimizations for CTLZ.
       MIBNewOp = MIRBuilder.buildSub(
-          WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff));
+          WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff),
+          Opcode == TargetOpcode::G_CTLZ
+              ? std::optional<unsigned>(MachineInstr::NoUWrap)
+              : std::nullopt);
     }
 
     MIRBuilder.buildZExtOrTrunc(MI.getOperand(0), MIBNewOp);
@@ -5620,6 +5625,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_CTTZ:
   case G_CTTZ_ZERO_UNDEF:
   case G_CTPOP:
+  case G_CTLS:
   case G_FCOPYSIGN:
   case G_ZEXT:
   case G_SEXT:
@@ -9449,22 +9455,39 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
     }
   }
 
-  if (DstTy.isScalar() &&
-      (SrcTy.isScalar() ||
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  if ((SrcTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(SrcTy.getAddressSpace())) ||
+      (DstTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(DstTy.getAddressSpace()))) {
+    LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+    return UnableToLegalize;
+  }
+
+  if ((DstTy.isScalar() || DstTy.isPointer()) &&
+      (SrcTy.isScalar() || SrcTy.isPointer() ||
        (SrcTy.isVector() && DstTy == SrcTy.getElementType()))) {
     LLT SrcIntTy = SrcTy;
     if (!SrcTy.isScalar()) {
       SrcIntTy = LLT::scalar(SrcTy.getSizeInBits());
-      SrcReg = MIRBuilder.buildBitcast(SrcIntTy, SrcReg).getReg(0);
+      SrcReg = MIRBuilder.buildCast(SrcIntTy, SrcReg).getReg(0);
     }
 
+    Register ResultReg = DstReg;
+    if (DstTy.isPointer())
+      ResultReg =
+          MRI.createGenericVirtualRegister(LLT::scalar(DstTy.getSizeInBits()));
+
     if (Offset == 0)
-      MIRBuilder.buildTrunc(DstReg, SrcReg);
+      MIRBuilder.buildTrunc(ResultReg, SrcReg);
     else {
       auto ShiftAmt = MIRBuilder.buildConstant(SrcIntTy, Offset);
       auto Shr = MIRBuilder.buildLShr(SrcIntTy, SrcReg, ShiftAmt);
-      MIRBuilder.buildTrunc(DstReg, Shr);
+      MIRBuilder.buildTrunc(ResultReg, Shr);
     }
+
+    if (DstTy.isPointer())
+      MIRBuilder.buildIntToPtr(DstReg, ResultReg);
 
     MI.eraseFromParent();
     return Legalized;
@@ -9480,9 +9503,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Src);
   LLT InsertTy = MRI.getType(InsertSrc);
 
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  bool IsNonIntegralInsert =
+      InsertTy.isPointerOrPointerVector() &&
+      DL.isNonIntegralAddressSpace(InsertTy.getAddressSpace());
+  bool IsNonIntegralDst = DstTy.isPointerOrPointerVector() &&
+                          DL.isNonIntegralAddressSpace(DstTy.getAddressSpace());
+
   // Insert sub-vector or one element
-  if (DstTy.isVector() && !InsertTy.isPointer()) {
+  if (DstTy.isVector()) {
     LLT EltTy = DstTy.getElementType();
+
+    if ((IsNonIntegralInsert || IsNonIntegralDst) && InsertTy != EltTy) {
+      LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+      return UnableToLegalize;
+    }
+
     unsigned EltSize = EltTy.getSizeInBits();
     unsigned InsertSize = InsertTy.getSizeInBits();
 
@@ -9504,6 +9540,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
           DstElts.push_back(UnmergeInsertSrc.getReg(i));
         }
       } else {
+        if (InsertTy.isPointer() && !EltTy.isPointer())
+          InsertSrc = MIRBuilder.buildPtrToInt(EltTy, InsertSrc).getReg(0);
+        else if (!InsertTy.isPointer() && EltTy.isPointer())
+          InsertSrc = MIRBuilder.buildIntToPtr(EltTy, InsertSrc).getReg(0);
         DstElts.push_back(InsertSrc);
         ++Idx;
       }
@@ -9523,11 +9563,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
       (DstTy.isVector() && DstTy.getElementType() != InsertTy))
     return UnableToLegalize;
 
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-  if ((DstTy.isPointer() &&
-       DL.isNonIntegralAddressSpace(DstTy.getAddressSpace())) ||
-      (InsertTy.isPointer() &&
-       DL.isNonIntegralAddressSpace(InsertTy.getAddressSpace()))) {
+  if (IsNonIntegralDst || IsNonIntegralInsert) {
     LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
     return UnableToLegalize;
   }

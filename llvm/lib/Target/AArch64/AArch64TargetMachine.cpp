@@ -243,23 +243,23 @@ LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> V(getTheAArch64_32Target());
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeAArch64A53Fix835769Pass(PR);
+  initializeAArch64A53Fix835769LegacyPass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
-  initializeAArch64AdvSIMDScalarPass(PR);
+  initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
-  initializeAArch64BranchTargetsPass(PR);
-  initializeAArch64CollectLOHPass(PR);
-  initializeAArch64CompressJumpTablesPass(PR);
+  initializeAArch64BranchTargetsLegacyPass(PR);
+  initializeAArch64CollectLOHLegacyPass(PR);
+  initializeAArch64CompressJumpTablesLegacyPass(PR);
   initializeAArch64ConditionalComparesPass(PR);
-  initializeAArch64ConditionOptimizerPass(PR);
-  initializeAArch64DeadRegisterDefinitionsPass(PR);
-  initializeAArch64ExpandPseudoPass(PR);
+  initializeAArch64ConditionOptimizerLegacyPass(PR);
+  initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
+  initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
-  initializeAArch64MIPeepholeOptPass(PR);
+  initializeAArch64MIPeepholeOptLegacyPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
   initializeAArch64O0PreLegalizerCombinerPass(PR);
   initializeAArch64PreLegalizerCombinerPass(PR);
-  initializeAArch64PointerAuthPass(PR);
+  initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerPass(PR);
   initializeAArch64PostLegalizerCombinerPass(PR);
   initializeAArch64PostLegalizerLoweringPass(PR);
@@ -614,7 +614,7 @@ std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
-// This function checks whether the opt level is explictly set to none,
+// This function checks whether the opt level is explicitly set to none,
 // or whether GlobalISel was enabled due to SDAG encountering an optnone
 // function. If the opt level is greater than the level we automatically enable
 // globalisel at, and it wasn't enabled via CLI, we know that it must be because
@@ -812,12 +812,12 @@ void AArch64PassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64MIPeepholeOptPass());
+    addPass(createAArch64MIPeepholeOptLegacyPass());
 }
 
 bool AArch64PassConfig::addILPOpts() {
   if (EnableCondOpt)
-    addPass(createAArch64ConditionOptimizerPass());
+    addPass(createAArch64ConditionOptimizerLegacyPass());
   if (EnableCCMP)
     addPass(createAArch64ConditionalCompares());
   if (EnableMCR)
@@ -875,7 +875,7 @@ void AArch64PassConfig::addPreSched2() {
   if (EnableHomogeneousPrologEpilog)
     addPass(createAArch64LowerHomogeneousPrologEpilogPass());
   // Expand some pseudo instructions to allow proper scheduling.
-  addPass(createAArch64ExpandPseudoPass());
+  addPass(createAArch64ExpandPseudoLegacyPass());
   // Use load/store pair instructions when possible.
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoadStoreOpt)
@@ -910,7 +910,7 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createAArch64RedundantCondBranchPass());
 
-  addPass(createAArch64A53Fix835769());
+  addPass(createAArch64A53Fix835769LegacyPass());
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
@@ -941,7 +941,7 @@ void AArch64PassConfig::addPostBBSections() {
 void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
-  addPass(createUnpackMachineBundles(nullptr));
+  addPass(createUnpackMachineBundlesLegacy(nullptr));
 }
 
 bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {
