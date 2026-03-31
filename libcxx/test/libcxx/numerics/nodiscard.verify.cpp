@@ -29,7 +29,7 @@ void test() {
   std::saturating_sub(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::saturating_mul(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::saturating_div(94, 82);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::saturating_cast<signed int>(49); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::saturating_cast<signed int>(49);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif // TEST_STD_VER >= 26
   // clang-format on
 
