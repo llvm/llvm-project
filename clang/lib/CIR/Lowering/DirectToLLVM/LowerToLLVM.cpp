@@ -2571,7 +2571,7 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
     cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const {
   SmallVector<mlir::NamedAttribute> attributes;
 
-  if (auto sectionAttr = op.getSectionAttr())
+  if (mlir::StringAttr sectionAttr = op.getSectionAttr())
     attributes.push_back(rewriter.getNamedAttr("section", sectionAttr));
 
   mlir::LLVM::VisibilityAttr visibility = mlir::LLVM::VisibilityAttr::get(

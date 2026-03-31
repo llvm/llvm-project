@@ -12,3 +12,7 @@ int getExt(void) {
 int __attribute__((section(".shared"))) glob = 42;
 // CIR: cir.global external @glob = #cir.int<42> : !s32i {{{.*}}section = ".shared"}
 // LLVM: @glob = global i32 42, section ".shared"
+
+__attribute__((section(".custom_fn"))) void func_in_section(void) {}
+// CIR: cir.func {{.*}}@func_in_section() {{.*}}section = ".custom_fn"
+// LLVM: define {{.*}}@func_in_section(){{.*}}section ".custom_fn"

@@ -672,6 +672,7 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
     }
   }
 
+  assert(!cir::MissingFeatures::opGlobalPragmaClangSection());
   assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
   assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
 
