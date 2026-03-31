@@ -1755,7 +1755,7 @@ uint64_t APInt::urem(uint64_t RHS) const {
     return U.pVal[0] % RHS;
   if (llvm::isPowerOf2_64(RHS))
     // X % 2^w ===> X & (2^w - 1)
-    return getZExtValue() & (RHS - 1);
+    return U.pVal[0] & (RHS - 1);
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   uint64_t Remainder;
