@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-localize-resource-symbols=false < %s | FileCheck -check-prefix=ALL %s
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-localize-resource-symbols=false < %s | FileCheck -check-prefixes=ALL,GFX90A %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 < %s | FileCheck -check-prefix=ALL %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=ALL,GFX90A %s
 
 ; CallGraphAnalysis, which CodeGenSCC order depends on, does not look
 ; through aliases. If GlobalOpt is never run, we do not see direct
@@ -8,13 +8,13 @@
 @alias = hidden alias void (), ptr @aliasee_default
 
 ; ALL-LABEL: {{^}}kernel:
-; ALL:          .amdhsa_next_free_vgpr max(totalnumvgprs(kernel.num_agpr, kernel.num_vgpr), 1, 0)
-; ALL-NEXT:     .amdhsa_next_free_sgpr max(kernel.numbered_sgpr+extrasgprs(kernel.uses_vcc, kernel.uses_flat_scratch, 1), 1, 0)-extrasgprs(kernel.uses_vcc, kernel.uses_flat_scratch, 1)
-; GFX90A-NEXT:  .amdhsa_accum_offset (((((alignto(max(1, kernel.num_vgpr), 4)/4)-1)&~65536)&63)+1)*4
+; ALL:          .amdhsa_next_free_vgpr max(totalnumvgprs(.Lkernel.num_agpr, .Lkernel.num_vgpr), 1, 0)
+; ALL-NEXT:     .amdhsa_next_free_sgpr max(.Lkernel.numbered_sgpr+extrasgprs(.Lkernel.uses_vcc, .Lkernel.uses_flat_scratch, 1), 1, 0)-extrasgprs(.Lkernel.uses_vcc, .Lkernel.uses_flat_scratch, 1)
+; GFX90A-NEXT:  .amdhsa_accum_offset (((((alignto(max(1, .Lkernel.num_vgpr), 4)/4)-1)&~65536)&63)+1)*4
 
-; ALL:       .set kernel.num_vgpr, max(41, .Laliasee_default.num_vgpr)
-; ALL-NEXT:  .set kernel.num_agpr, max(0, .Laliasee_default.num_agpr)
-; ALL-NEXT:  .set kernel.numbered_sgpr, max(33, .Laliasee_default.numbered_sgpr)
+; ALL:       .set .Lkernel.num_vgpr, max(41, .Laliasee_default.num_vgpr)
+; ALL-NEXT:  .set .Lkernel.num_agpr, max(0, .Laliasee_default.num_agpr)
+; ALL-NEXT:  .set .Lkernel.numbered_sgpr, max(33, .Laliasee_default.numbered_sgpr)
 define amdgpu_kernel void @kernel() #0 {
 bb:
   call void @alias() #2

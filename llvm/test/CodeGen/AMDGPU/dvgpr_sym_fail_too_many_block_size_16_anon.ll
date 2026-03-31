@@ -1,10 +1,10 @@
 ; Test failure to generate the _dvgpr$ symbol for an anonymous amdgpu_cs_chain function with dynamic vgprs.
 
-; RUN: not llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -amdgpu-localize-resource-symbols=false < %s 2>&1 | FileCheck -check-prefixes=ERR %s
+; RUN: not llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s 2>&1 | FileCheck -check-prefixes=ERR %s
 
 ; Anonymous function with 129 VGPRs, which is too many with a block size of 16.
 ;
-; ERR-DAG: .set __unnamed_1.num_vgpr, 129
+; ERR-DAG: .set .L__unnamed_1.num_vgpr, 129
 ; ERR-DAG: too many DVGPR blocks for _dvgpr$ symbol for '__unnamed_1'
 ;
 define amdgpu_cs_chain void @0(<121 x float> %arg) #0 {
