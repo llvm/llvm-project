@@ -4228,6 +4228,21 @@ bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitObjCDictionaryLiteral(
+    const ObjCDictionaryLiteral *E) {
+  if (E->isExpressibleAsConstantInitializer())
+    return this->emitDummyPtr(E, E);
+  return this->emitError(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
+  if (E->isExpressibleAsConstantInitializer())
+    return this->emitDummyPtr(E, E);
+  return this->emitError(E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
