@@ -6,16 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// List of all Values.def across all SandboxIR IR specializations.
+// List of all *Values.def across all SandboxIR IR specializations.
 //
 
-#ifndef DEF_SPECIALIZATION
-#define DEF_SPECIALIZATION(NAME)
-#endif
-
-DEF_SPECIALIZATION(Base)
 #include "llvm/SandboxIR/Values.def"
-DEF_SPECIALIZATION(Vec)
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerIRValues.def"
-
-#undef DEF_SPECIALIZATION

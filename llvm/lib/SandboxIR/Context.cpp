@@ -644,8 +644,8 @@ Value *Context::getValue(llvm::Value *V) const {
   return nullptr;
 }
 
-Context::Context(LLVMContext &LLVMCtx, SandboxIRSpecialization Specialization)
-    : Specialization(Specialization), LLVMCtx(LLVMCtx), IRTracker(*this),
+Context::Context(LLVMContext &LLVMCtx)
+    : LLVMCtx(LLVMCtx), IRTracker(*this),
       LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
 
 Context::~Context() = default;

@@ -30,19 +30,8 @@ class Region;
 class Value;
 class Use;
 
-enum class SandboxIRSpecialization {
-#define DEF_SPECIALIZATION(NAME) NAME,
-#include "llvm/SandboxIR/ValuesDefFilesList.def"
-};
-
 class Context {
-  SandboxIRSpecialization Specialization = SandboxIRSpecialization::Base;
-
 public:
-  SandboxIRSpecialization getSpecialization() const { return Specialization; }
-  void assertSpecialization(SandboxIRSpecialization S) const {
-    assert(Specialization == S && "Unexpected SandboxIR Specialization!");
-  }
   // A EraseInstrCallback receives the instruction about to be erased.
   using EraseInstrCallback = std::function<void(Instruction *)>;
   // A CreateInstrCallback receives the instruction about to be created.
@@ -250,9 +239,7 @@ protected:
   friend FCmpInst; // For createFCmpInst()
 
 public:
-  LLVM_ABI
-  Context(LLVMContext &LLVMCtx, SandboxIRSpecialization Specialization =
-                                    SandboxIRSpecialization::Base);
+  LLVM_ABI Context(LLVMContext &LLVMCtx);
   LLVM_ABI ~Context();
   /// Clears function-level state.
   LLVM_ABI void clear();

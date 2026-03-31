@@ -35,9 +35,7 @@ class PackInst final : public Instruction {
 
   friend class SBVecContext;
   PackInst(ArrayRef<llvm::Instruction *> LLVMInstrs, Context &Ctx)
-      : Instruction(ClassID::Pack, Opcode::Pack, LLVMInstrs[0], Ctx) {
-    Ctx.assertSpecialization(SandboxIRSpecialization::Vec);
-  }
+      : Instruction(ClassID::Pack, Opcode::Pack, LLVMInstrs[0], Ctx) {}
 
 public:
   static Value *create(ArrayRef<Value *> PackOps, InsertPosition InsertBefore,
@@ -53,8 +51,7 @@ class SBVecContext : public Context {
   friend class PackInst; // For createPackInst()
 
 public:
-  SBVecContext(llvm::LLVMContext &LLVMCtx)
-      : Context(LLVMCtx, SandboxIRSpecialization::Vec) {}
+  SBVecContext(llvm::LLVMContext &LLVMCtx) : Context(LLVMCtx) {}
 };
 
 } // namespace llvm::sandboxir
