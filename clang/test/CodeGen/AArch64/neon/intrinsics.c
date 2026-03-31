@@ -1712,6 +1712,8 @@ float64x1_t test_vmin_f64(float64x1_t v1, float64x1_t v2) {
   // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
 
   // LLVM-SAME: <1 x double> {{.*}} [[V1:%.*]], <1 x double> noundef [[V2:%.*]]) {{.*}} {
+  // LLVM:    [[VMIN_V_I:%.*]] = bitcast <8 x i8> {{.*}} to <1 x double>
+  // LLVM:    [[VMIN_V1_I:%.*]] = bitcast <8 x i8> {{.*}} to <1 x double>
   // LLVM:    [[VMIN_V2_I:%.*]] = call <1 x double> @llvm.aarch64.neon.fmin.v1f64(<1 x double> [[VMIN_V_I]], <1 x double> [[VMIN_V1_I]])
   // LLVM:    ret <1 x double> [[VMIN_V2_I]]
   return vmin_f64(v1, v2);
@@ -1812,3 +1814,4 @@ float64x2_t test_vminnmq_f64(float64x2_t v1, float64x2_t v2) {
   // LLVM:    ret <2 x double> [[VMINNM_V2_I]]
   return vminnmq_f64(v1, v2);
 }
+
