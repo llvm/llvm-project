@@ -9994,9 +9994,14 @@ llvm::Error SwiftASTContext::GetCompileUnitImportsImpl(
     std::vector<SourceModule> cu_imports = compile_unit->GetImportedModules();
     LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
 
-    ThreadSafeASTContext ast = GetASTContext();
-    if (!ast)
-      return llvm::createStringError("invalid swift AST (nullptr)");
+    {
+      // Check if the AST is valid. We cannot hold the lock beyond this point
+      // as the code below might trigger the loading of libraries, which then
+      // in turn will try to access this AST to register themselves.
+      ThreadSafeASTContext ast = GetASTContext();
+      if (!ast)
+        return llvm::createStringError("invalid swift AST (nullptr)");
+    }
 
     std::string category = "Importing dependencies for ";
     category += compile_unit->GetPrimaryFile().GetFilename().GetString();
