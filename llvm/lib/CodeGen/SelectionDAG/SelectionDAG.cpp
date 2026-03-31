@@ -6076,7 +6076,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   if (Op.getOpcode() == ISD::UNDEF)
     return Known;
 
-  [[maybe_unused]] EVT VT = Op.getValueType();
+  EVT VT = Op.getValueType();
   assert((!VT.isFixedLengthVector() ||
           DemandedElts.getBitWidth() == VT.getVectorNumElements()) &&
          "Unexpected vector size");
@@ -6115,7 +6115,6 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   case ISD::BITCAST: {
     // Try to infer NaN from known bits, but only for detecting signaling or
     // nonsignaling NaNs
-    EVT VT = Op.getValueType();
     if (VT.isFloatingPoint()) {
       KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
       Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
