@@ -8859,8 +8859,6 @@ void SelectionDAGBuilder::visitVPCmp(const VPCmpIntrinsic &VPIntrin) {
 
   ISD::CondCode Condition;
   CmpInst::Predicate CondCode = VPIntrin.getPredicate();
-  bool IsFP = VPIntrin.getOperand(0)->getType()->isFPOrFPVectorTy();
-  Condition = IsFP ? getFCmpCondCode(CondCode) : getICmpCondCode(CondCode);
 
   SDValue Op1 = getValue(VPIntrin.getOperand(0));
   SDValue Op2 = getValue(VPIntrin.getOperand(1));
@@ -8872,10 +8870,16 @@ void SelectionDAGBuilder::visitVPCmp(const VPCmpIntrinsic &VPIntrin) {
          "Unexpected target EVL type");
   EVL = DAG.getNode(ISD::ZERO_EXTEND, DL, EVLParamVT, EVL);
 
+  if (VPIntrin.getOperand(0)->getType()->isFPOrFPVectorTy()) {
+    Condition = getFCmpCondCode(CondCode);
+    if (DAG.isKnownNeverNaN(Op1) && DAG.isKnownNeverNaN(Op2))
+      Condition = getFCmpCodeWithoutNaN(Condition);
+  } else {
+    Condition = getICmpCondCode(CondCode);
+  }
+
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         VPIntrin.getType());
-  if (DAG.isKnownNeverNaN(Op1) && DAG.isKnownNeverNaN(Op2))
-    Condition = getFCmpCodeWithoutNaN(Condition);
   setValue(&VPIntrin,
            DAG.getSetCCVP(DL, DestVT, Op1, Op2, Condition, MaskOp, EVL));
 }
