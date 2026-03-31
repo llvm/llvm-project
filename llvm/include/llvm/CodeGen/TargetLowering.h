@@ -5963,9 +5963,6 @@ public:
     return true;
   }
 
-  // For `castIntVectorSelect`, return true if should transform v1iX to iX
-  virtual bool shouldCastVectorSelectToScalar(EVT VT) const { return false; }
-
   // Expand vector operation by dividing it into smaller length operations and
   // joining their results. SDValue() is returned when expansion did not happen.
   SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
