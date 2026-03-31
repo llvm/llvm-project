@@ -67,7 +67,7 @@ func.func @no_mmt4d_bad_map(
 
   %0 = linalg.generic {
     indexing_maps = [
-      affine_map<(m, n, k, m0, n0, k0) -> (k, m, m0, k0)>, // bad map
+      affine_map<(m, n, k, m0, n0, k0) -> (k, n, k0, n0)>, // bad map
       affine_map<(m, n, k, m0, n0, k0) -> (n, k, n0, k0)>,
       affine_map<(m, n, k, m0, n0, k0) -> (m, n, m0, n0)>
     ],
