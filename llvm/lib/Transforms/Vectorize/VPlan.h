@@ -77,6 +77,22 @@ typedef unsigned ID;
 
 using VPlanPtr = std::unique_ptr<VPlan>;
 
+/// \enum UncountableExitStyle
+/// Different methods of handling early exits.
+///
+enum class UncountableExitStyle {
+  NoUncountableExit = 0,
+  /// No side effects to worry about, so we can process any uncountable exits
+  /// in the loop and branch either to the middle block if the trip count was
+  /// reached, or an early exitblock to determine which exit was taken.
+  ReadOnly,
+  /// All memory operations other than the load(s) required to determine whether
+  /// an uncountable exit occurre will be masked based on that condition. If an
+  /// uncountable exit is taken, then all lanes before the exiting lane will
+  /// complete, leaving just the final lane to execute in the scalar tail.
+  MaskedHandleExitInScalarLoop,
+};
+
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
 /// A VPBlockBase can be either a VPBasicBlock or a VPRegionBlock.
 class LLVM_ABI_FOR_TEST VPBlockBase {
@@ -1012,6 +1028,20 @@ public:
     default:
       llvm_unreachable("recipe doesn't have a NSW flag");
     }
+  }
+
+  bool hasNoWrapFlags() const {
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+    case OperationType::Trunc:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  WrapFlagsTy getNoWrapFlags() const {
+    return {hasNoUnsignedWrap(), hasNoSignedWrap()};
   }
 
   bool isDisjoint() const {
@@ -3182,7 +3212,7 @@ protected:
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
-/// a single scalar, only one copy, per lane zero, will be generated.
+/// a single scalar, only one copy will be generated.
 class LLVM_ABI_FOR_TEST VPReplicateRecipe : public VPRecipeWithIRFlags,
                                             public VPIRMetadata {
   /// Indicator if only a single replica per lane is needed.
@@ -3505,9 +3535,6 @@ protected:
   /// Whether the accessed addresses are consecutive.
   bool Consecutive;
 
-  /// Whether the consecutive accessed addresses are in reverse order.
-  bool Reverse;
-
   /// Whether the memory access is masked.
   bool IsMasked = false;
 
@@ -3521,15 +3548,10 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse,
-                      const VPIRMetadata &Metadata, DebugLoc DL)
+                      bool Consecutive, const VPIRMetadata &Metadata,
+                      DebugLoc DL)
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
-        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive),
-        Reverse(Reverse) {
-    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
-    assert((isa<VPVectorEndPointerRecipe>(getAddr()) || !Reverse) &&
-           "Reversed acccess without VPVectorEndPointerRecipe address?");
-  }
+        Alignment(getLoadStoreAlignment(&I)), Consecutive(Consecutive) {}
 
 public:
   VPWidenMemoryRecipe *clone() override {
@@ -3550,10 +3572,6 @@ public:
 
   /// Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
-
-  /// Return whether the consecutive loaded/stored addresses are in reverse
-  /// order.
-  bool isReverse() const { return Reverse; }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const { return getOperand(0); }
@@ -3588,18 +3606,16 @@ public:
 struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
                                                    public VPRecipeValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, bool Reverse,
-                    const VPIRMetadata &Metadata, DebugLoc DL)
+                    bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadSC, Load, {Addr},
-                            Consecutive, Reverse, Metadata, DL),
+                            Consecutive, Metadata, DL),
         VPRecipeValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, Reverse, *this,
-                                 getDebugLoc());
+                                 getMask(), Consecutive, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
@@ -3632,7 +3648,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe,
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenLoadEVLSC, L.getIngredient(),
-                            {Addr, &EVL}, L.isConsecutive(), L.isReverse(), L,
+                            {Addr, &EVL}, L.isConsecutive(), L,
                             L.getDebugLoc()),
         VPRecipeValue(this, &getIngredient()) {
     setMask(Mask);
@@ -3671,18 +3687,17 @@ protected:
 /// to store to and an optional mask.
 struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive, bool Reverse,
+                     VPValue *Mask, bool Consecutive,
                      const VPIRMetadata &Metadata, DebugLoc DL)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenStoreSC, Store,
-                            {Addr, StoredVal}, Consecutive, Reverse, Metadata,
-                            DL) {
+                            {Addr, StoredVal}, Consecutive, Metadata, DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  Reverse, *this, getDebugLoc());
+                                  *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStoreSC);
@@ -3717,8 +3732,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
                         VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPRecipeBase::VPWidenStoreEVLSC, S.getIngredient(),
-                            {Addr, StoredVal, &EVL}, S.isConsecutive(),
-                            S.isReverse(), S, S.getDebugLoc()) {
+                            {Addr, StoredVal, &EVL}, S.isConsecutive(), S,
+                            S.getDebugLoc()) {
     setMask(Mask);
   }
 

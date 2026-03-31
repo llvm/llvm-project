@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=bitstream -remarks-section=false -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-OVERRIDE-BITSTREAM %s
 ; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=yaml -remarks-section=true -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-OVERRIDE-YAML %s
 
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu --pass-remarks-format=bitstream -pass-remarks-output=%/t.yaml 2>&1 | FileCheck --check-prefix=CHECK-LINUX-DEFAULT-BITSTREAM %s
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu --pass-remarks-format=bitstream -remarks-section -pass-remarks-output=%/t.yaml 2>&1 | FileCheck --check-prefix=CHECK-LINUX-DEFAULT-BITSTREAM %s
 
 ; CHECK-DARWIN: .section __LLVM,__remarks,regular,debug
 ; CHECK-DARWIN-NEXT: .byte
@@ -25,5 +25,5 @@ define void @func1() {
   ret void
 }
 
-; Currently no ELF support for bitstream remarks
-; CHECK-LINUX-DEFAULT-BITSTREAM: warning: Current object file format does not support remarks sections. Use the yaml remark format instead.
+; Currently no ELF support for storing optional/additional metadata in the object file
+; CHECK-LINUX-DEFAULT-BITSTREAM: warning: Current object file format does not support remarks sections.

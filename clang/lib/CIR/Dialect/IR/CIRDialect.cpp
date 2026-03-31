@@ -284,6 +284,13 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
 }
 
+mlir::OptionalParseResult
+parseGlobalAddressSpaceValue(mlir::AsmParser &p,
+                             mlir::ptr::MemorySpaceAttrInterface &attr);
+
+void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp op,
+                                  mlir::ptr::MemorySpaceAttrInterface attr);
+
 //===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
@@ -1749,7 +1756,9 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 
 void cir::GlobalOp::build(
     OpBuilder &odsBuilder, OperationState &odsState, llvm::StringRef sym_name,
-    mlir::Type sym_type, bool isConstant, cir::GlobalLinkageKind linkage,
+    mlir::Type sym_type, bool isConstant,
+    mlir::ptr::MemorySpaceAttrInterface addrSpace,
+    cir::GlobalLinkageKind linkage,
     function_ref<void(OpBuilder &, Location)> ctorBuilder,
     function_ref<void(OpBuilder &, Location)> dtorBuilder) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
@@ -1759,6 +1768,10 @@ void cir::GlobalOp::build(
   if (isConstant)
     odsState.addAttribute(getConstantAttrName(odsState.name),
                           odsBuilder.getUnitAttr());
+
+  addrSpace = normalizeDefaultAddressSpace(addrSpace);
+  if (addrSpace)
+    odsState.addAttribute(getAddrSpaceAttrName(odsState.name), addrSpace);
 
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
@@ -1912,9 +1925,10 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << "' does not reference a valid cir.global or cir.func";
 
   mlir::Type symTy;
+  mlir::ptr::MemorySpaceAttrInterface symAddrSpaceAttr{};
   if (auto g = dyn_cast<GlobalOp>(op)) {
     symTy = g.getSymType();
-    assert(!cir::MissingFeatures::addressSpace());
+    symAddrSpaceAttr = g.getAddrSpaceAttr();
     // Verify that for thread local global access, the global needs to
     // be marked with tls bits.
     if (getTls() && !g.getTlsModel())
@@ -1939,6 +1953,13 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError("result type pointee type '")
            << resultType.getPointee() << "' does not match type " << symTy
            << " of the global @" << getName();
+
+  if (symAddrSpaceAttr != resultType.getAddrSpace()) {
+    return emitOpError()
+           << "result type address space does not match the address "
+              "space of the global @"
+           << getName();
+  }
 
   return success();
 }
@@ -2194,17 +2215,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   // Parse CXXSpecialMember attribute
   if (parser.parseOptionalKeyword("special_member").succeeded()) {
-    cir::CXXCtorAttr ctorAttr;
-    cir::CXXDtorAttr dtorAttr;
-    cir::CXXAssignAttr assignAttr;
     if (parser.parseLess().failed())
       return failure();
-    if (parser.parseOptionalAttribute(ctorAttr).has_value())
-      state.addAttribute(specialMemberAttr, ctorAttr);
-    else if (parser.parseOptionalAttribute(dtorAttr).has_value())
-      state.addAttribute(specialMemberAttr, dtorAttr);
-    else if (parser.parseOptionalAttribute(assignAttr).has_value())
-      state.addAttribute(specialMemberAttr, assignAttr);
+
+    mlir::Attribute attr;
+    if (parser.parseAttribute(attr).failed())
+      return failure();
+    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
+            attr))
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected a C++ special member attribute");
+    state.addAttribute(specialMemberAttr, attr);
+
     if (parser.parseGreater().failed())
       return failure();
   }

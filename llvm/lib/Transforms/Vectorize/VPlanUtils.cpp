@@ -62,9 +62,10 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 
   VPValue *A, *B;
 
-  auto m_CanonicalScalarIVSteps =
-      m_ScalarIVSteps(m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
-                      m_One(), m_Specific(&Plan.getVF()));
+  auto m_CanonicalScalarIVSteps = m_ScalarIVSteps(
+      m_CombineOr(m_CanonicalIV(),
+                  m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One())),
+      m_One(), m_Specific(&Plan.getVF()));
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
@@ -606,6 +607,27 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
     }
   }
   return HeaderMask;
+}
+
+SmallVector<VPBasicBlock *>
+VPBlockUtils::blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                                  VPBasicBlock *LastBB) {
+  assert(FirstBB->getParent() == LastBB->getParent() &&
+         "FirstBB and LastBB from different regions");
+#ifndef NDEBUG
+  bool InSingleSuccChain = false;
+  for (VPBlockBase *Succ = FirstBB; Succ; Succ = Succ->getSingleSuccessor())
+    InSingleSuccChain |= (Succ == LastBB);
+  assert(InSingleSuccChain &&
+         "LastBB unreachable from FirstBB in single-successor chain");
+#endif
+  auto Blocks = to_vector(
+      VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(FirstBB)));
+  auto *LastIt = find(Blocks, LastBB);
+  assert(LastIt != Blocks.end() &&
+         "LastBB unreachable from FirstBB in depth-first traversal");
+  Blocks.erase(std::next(LastIt), Blocks.end());
+  return Blocks;
 }
 
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,

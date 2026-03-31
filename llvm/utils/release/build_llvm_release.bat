@@ -146,8 +146,11 @@ if "%skip-checkout%" == "true" (
   set llvm_src=%build_dir%\llvm-project
 )
 
-curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
-tar zxf libxml2-v2.9.12.tar.gz
+set libxml_version=2.9.12
+curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v%libxml_version%/libxml2-v%libxml_version%.tar.gz || exit /b 1
+call :verify_checksum libxml2-v%libxml_version%.tar.gz sha256 98bfa7a9a5e2a75638422050740448ee9f02bf4dc2075c9822d7747d5ff9e617 || exit /b 1
+REM 'test' directory excluded because of symlinks.
+tar zxf libxml2-v%libxml_version%.tar.gz --exclude "test/*" || exit /b 1
 
 REM FIXME: It would be preferrable to use zlib-ng here since it is better
 REM        maintained and performs better than zlib, but lld tests currently
@@ -155,11 +158,14 @@ REM        assume the original zlib is used. They need to be fixed first:
 REM        https://github.com/llvm/llvm-project/pull/186630#discussion_r2939953952
 set zlib_version=1.3.2
 curl -LO https://github.com/madler/zlib/releases/download/v%zlib_version%/zlib-%zlib_version%.tar.gz || exit /b 1
-tar zxf zlib-%zlib_version%.tar.gz
+call :verify_checksum zlib-%zlib_version%.tar.gz sha256 bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16 || exit /b 1
+tar zxf zlib-%zlib_version%.tar.gz || exit /b 1
 
 set zstd_version=1.5.7
 curl -LO https://github.com/facebook/zstd/releases/download/v%zstd_version%/zstd-%zstd_version%.tar.gz || exit /b 1
-tar zxf zstd-%zstd_version%.tar.gz
+call :verify_checksum zstd-%zstd_version%.tar.gz sha256 eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3 || exit /b 1
+REM 'tests' directory excluded because of symlinks.
+tar zxf zstd-%zstd_version%.tar.gz --exclude "tests/*" || exit /b 1
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 REM Common flags for all builds.
@@ -407,6 +413,19 @@ exit /b 0
 ::=============================================================================
 
 ::==============================================================================
+:: Verify checksum.
+::==============================================================================
+:verify_checksum
+cmake -E %2sum %1 > %1.%2sum
+echo %3  %1> %1.%2sum.orig
+cmake -E compare_files --ignore-eol %1.%2sum %1.%2sum.orig
+if %ERRORLEVEL% NEQ 0 (
+  echo verify_checksum failed for %1
+  exit /b 1
+)
+exit /b 0
+
+::==============================================================================
 :: Build libxml.
 ::==============================================================================
 :do_build_libxml
@@ -426,7 +445,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^
   -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ^
   -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
-  ../../libxml2-v2.9.12 || exit /b 1
+  ../../libxml2-v%libxml_version% || exit /b 1
 ninja install || exit /b 1
 set libxmldir=%cd%\install
 set "libxmldir=%libxmldir:\=/%"

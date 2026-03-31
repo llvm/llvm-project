@@ -296,6 +296,40 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
   if (!expandShapeOp)
     return failure();
 
+  // For vector::TransferReadOp, validate preconditions before creating any IR.
+  // resolveSourceIndicesExpandShape creates new ops, so all checks that can
+  // fail must happen before that call to avoid "pattern returned failure but
+  // IR did change" errors (caught by MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS).
+  SmallVector<AffineExpr> transferReadNewResults;
+  if (auto transferOp =
+          dyn_cast<vector::TransferReadOp>(loadOp.getOperation())) {
+    const int64_t vectorRank = transferOp.getVectorType().getRank();
+    const int64_t sourceRank =
+        cast<MemRefType>(expandShapeOp.getViewSource().getType()).getRank();
+    if (sourceRank < vectorRank)
+      return failure();
+
+    // We can only fold if the permutation map uses only the least significant
+    // dimension from each expanded reassociation group.
+    for (AffineExpr result : transferOp.getPermutationMap().getResults()) {
+      bool foundExpr = false;
+      for (auto reassocationIndices :
+           llvm::enumerate(expandShapeOp.getReassociationIndices())) {
+        auto reassociation = reassocationIndices.value();
+        AffineExpr dim = getAffineDimExpr(
+            reassociation[reassociation.size() - 1], rewriter.getContext());
+        if (dim == result) {
+          transferReadNewResults.push_back(getAffineDimExpr(
+              reassocationIndices.index(), rewriter.getContext()));
+          foundExpr = true;
+          break;
+        }
+      }
+      if (!foundExpr)
+        return failure();
+    }
+  }
+
   SmallVector<Value> sourceIndices;
   // memref.load guarantees that indexes start inbounds while the vector
   // operations don't. This impacts if our linearization is `disjoint`
@@ -323,39 +357,9 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
         return success();
       })
       .Case([&](vector::TransferReadOp op) {
-        // We only support the case where the source of the expand shape has
-        // rank greater than or equal to the vector rank.
-        const int64_t vectorRank = op.getVectorType().getRank();
         const int64_t sourceRank = sourceIndices.size();
-        if (sourceRank < vectorRank)
-          return failure();
-
-        SmallVector<AffineExpr> newResults;
-        // We can only fold if the permutation map uses only the least
-        // significant dimension from an expanded shape.
-        for (AffineExpr result : op.getPermutationMap().getResults()) {
-          bool foundExpr = false;
-
-          for (auto reassocationIndices :
-               llvm::enumerate(expandShapeOp.getReassociationIndices())) {
-            auto reassociation = reassocationIndices.value();
-
-            AffineExpr dim = getAffineDimExpr(
-                reassociation[reassociation.size() - 1], rewriter.getContext());
-            if (dim == result) {
-              newResults.push_back(getAffineDimExpr(reassocationIndices.index(),
-                                                    rewriter.getContext()));
-              foundExpr = true;
-              break;
-            }
-          }
-          if (!foundExpr)
-            return failure();
-        }
-
-        auto newMap =
-            AffineMap::get(sourceRank, 0, newResults, op.getContext());
-
+        auto newMap = AffineMap::get(sourceRank, 0, transferReadNewResults,
+                                     op.getContext());
         rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
             op, op.getVectorType(), expandShapeOp.getViewSource(),
             sourceIndices, newMap, op.getPadding(), op.getMask(),

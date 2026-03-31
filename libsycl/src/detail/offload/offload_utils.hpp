@@ -13,6 +13,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/info/device_type.hpp>
+#include <sycl/__impl/usm_alloc_type.hpp>
 
 #include <OffloadAPI.h>
 
@@ -101,6 +102,13 @@ ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType);
 ///
 /// \returns SYCL device type matching specified liboffload device type.
 info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
+
+/// Converts a SYCL USM kind to a liboffload type.
+///
+/// \param USMKind a SYCL USM kind.
+///
+/// \returns ol_alloc_type_t matching the specified SYCL USM kind.
+ol_alloc_type_t getOlAllocType(usm::alloc USMKind);
 
 /// Helper to map SYCL information descriptors to OL_<HANDLE>_INFO_<SMTH>.
 ///

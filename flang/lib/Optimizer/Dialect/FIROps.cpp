@@ -560,6 +560,16 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
         return mlir::failure();
     } else if (auto reboxOp = mlir::dyn_cast_or_null<fir::ReboxOp>(
                    memref.getDefiningOp())) {
+      // Don't pull in rebox when the array_coor is inside an ACC construct
+      // and the rebox result is referenced by an ACC data clause.
+      // The data legalization pipeline relies on the rebox result being the
+      // copyin var; folding through it would leave the rebox source as an
+      // unhandled live-in inside the compute region.
+      if (op->getParentOfType<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>() &&
+          llvm::any_of(memref.getUsers(), [](mlir::Operation *u) {
+            return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
+          }))
+        return mlir::failure();
       boxedMemref = reboxOp.getBox();
       boxedShape = reboxOp.getShape();
       // Avoid pulling in rebox that performs reshaping.
@@ -1469,6 +1479,54 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
   result.attributes = attrs;
   result.addTypes({i1Type});
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// BitcastOp
+//===----------------------------------------------------------------------===//
+
+static bool isBitcastCompatibleType(mlir::Type ty) {
+  return mlir::isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>(ty) ||
+         (mlir::isa<fir::CharacterType>(ty) &&
+          mlir::cast<fir::CharacterType>(ty).getLen() ==
+              fir::CharacterType::singleton());
+}
+
+static std::optional<unsigned> getBitcastBitSize(mlir::Type ty) {
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
+    return intTy.getWidth();
+  if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(ty))
+    return floatTy.getWidth();
+  // Bit size of fir.logical and fir.char depends on the kind map which is not
+  // available in the verifier without an expensive lookup.
+  return std::nullopt;
+}
+
+llvm::LogicalResult fir::BitcastOp::verify() {
+  mlir::Type inType = getValue().getType();
+  mlir::Type outType = getType();
+  if (!isBitcastCompatibleType(inType))
+    return emitOpError("input type is not bitcast compatible: ") << inType;
+  if (!isBitcastCompatibleType(outType))
+    return emitOpError("output type is not bitcast compatible: ") << outType;
+  auto inBits = getBitcastBitSize(inType);
+  auto outBits = getBitcastBitSize(outType);
+  if (inBits && outBits && *inBits != *outBits)
+    return emitOpError("bit size mismatch: input has ")
+           << *inBits << " bits but output has " << *outBits << " bits";
+  return mlir::success();
+}
+
+mlir::OpFoldResult fir::BitcastOp::fold(FoldAdaptor adaptor) {
+  if (getValue().getType() == getType())
+    return getValue();
+  if (auto inner = getValue().getDefiningOp<fir::BitcastOp>()) {
+    if (inner.getValue().getType() == getType())
+      return inner.getValue();
+    getValueMutable().assign(inner.getValue());
+    return getResult();
+  }
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

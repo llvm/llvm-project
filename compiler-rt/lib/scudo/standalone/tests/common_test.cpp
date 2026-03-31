@@ -23,7 +23,7 @@ namespace scudo {
 
 TEST(ScudoCommonTest, VerifyGetResidentPages) {
   if (!SCUDO_LINUX)
-    GTEST_SKIP() << "Only valid on linux systems.";
+    TEST_SKIP("Only valid on linux systems.");
 
   constexpr uptr NumPages = 512;
   const uptr SizeBytes = NumPages * getPageSizeCached();
@@ -67,7 +67,7 @@ TEST(ScudoCommonTest, VerifyGetResidentPages) {
 
 TEST(ScudoCommonTest, VerifyReleasePagesToOS) {
   if (!SCUDO_LINUX)
-    GTEST_SKIP() << "Only valid on linux systems.";
+    TEST_SKIP("Only valid on linux systems.");
 
   constexpr uptr NumPages = 1000;
   const uptr SizeBytes = NumPages * getPageSizeCached();

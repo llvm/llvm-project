@@ -145,6 +145,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx12-5-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx12_5_generic -DFAMILY=GFX12
 
 // ARCH-GCN-DAG: #define FP_FAST_FMA 1
+// ARCH-GCN-DAG: #define FP_FAST_FMA_HALF 1
 
 // FAST_FMAF-DAG: #define FP_FAST_FMAF 1
 // SLOW_FMAF-NOT: #define FP_FAST_FMAF 1

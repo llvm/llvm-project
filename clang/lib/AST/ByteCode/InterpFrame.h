@@ -60,9 +60,11 @@ public:
   }
 
   static void free(InterpFrame *F) {
-    F->~InterpFrame();
     if (!F->isBottomFrame()) {
+      F->~InterpFrame();
       delete[] reinterpret_cast<char *>(F);
+    } else {
+      F->~InterpFrame();
     }
   }
 

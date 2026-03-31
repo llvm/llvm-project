@@ -840,6 +840,14 @@ public:
     markAllIdxsAsCovered();
     return actionIf(LegalizeAction::WidenScalar, Predicate, Mutation);
   }
+  /// Widen the scalar, specified in mutation, when type indexes 0 and 1 is any
+  /// type pair in the given list.
+  LegalizeRuleSet &
+  widenScalarFor(std::initializer_list<std::pair<LLT, LLT>> Types,
+                 LegalizeMutation Mutation) {
+    return actionFor(LegalizeAction::WidenScalar, Types, Mutation);
+  }
+
   /// Narrow the scalar to the one selected by the mutation if the predicate is
   /// true.
   LegalizeRuleSet &narrowScalarIf(LegalityPredicate Predicate,

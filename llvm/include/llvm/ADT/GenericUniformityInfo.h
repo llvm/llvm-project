@@ -54,9 +54,6 @@ public:
     DA->compute();
   }
 
-  /// Whether any divergence was detected.
-  bool hasDivergence() const;
-
   /// The GPU kernel this analysis result is for
   const FunctionT &getFunction() const;
 

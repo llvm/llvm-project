@@ -252,6 +252,15 @@ def __builtin_amdgcn_raw_buffer_load_b64 : AMDGPUBuiltin<"_ExtVector<2, unsigned
 def __builtin_amdgcn_raw_buffer_load_b96 : AMDGPUBuiltin<"_ExtVector<3, unsigned int>(__amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
 def __builtin_amdgcn_raw_buffer_load_b128 : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(__amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
 
+def __builtin_amdgcn_raw_buffer_load_format_v4f32 : AMDGPUBuiltin<"_ExtVector<4, float>(__amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
+def __builtin_amdgcn_raw_buffer_load_format_v4f16 : AMDGPUBuiltin<"_ExtVector<4, _Float16>(__amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
+def __builtin_amdgcn_raw_buffer_store_format_v4f32 : AMDGPUBuiltin<"void(_ExtVector<4, float>, __amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
+def __builtin_amdgcn_raw_buffer_store_format_v4f16 : AMDGPUBuiltin<"void(_ExtVector<4, _Float16>, __amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
+def __builtin_amdgcn_struct_buffer_load_format_v4f32 : AMDGPUBuiltin<"_ExtVector<4, float>(__amdgpu_buffer_rsrc_t, int, int, int, _Constant int)">;
+def __builtin_amdgcn_struct_buffer_load_format_v4f16 : AMDGPUBuiltin<"_ExtVector<4, _Float16>(__amdgpu_buffer_rsrc_t, int, int, int, _Constant int)">;
+def __builtin_amdgcn_struct_buffer_store_format_v4f32 : AMDGPUBuiltin<"void(_ExtVector<4, float>, __amdgpu_buffer_rsrc_t, int, int, int, _Constant int)">;
+def __builtin_amdgcn_struct_buffer_store_format_v4f16 : AMDGPUBuiltin<"void(_ExtVector<4, _Float16>, __amdgpu_buffer_rsrc_t, int, int, int, _Constant int)">;
+
 def __builtin_amdgcn_raw_ptr_buffer_atomic_add_i32 : AMDGPUBuiltin<"int(int, __amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
 
 def __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32 : AMDGPUBuiltin<"float(float, __amdgpu_buffer_rsrc_t, int, int, _Constant int)", [], "atomic-fadd-rtn-insts">;
@@ -513,6 +522,11 @@ def __builtin_amdgcn_endpgm : AMDGPUBuiltin<"void()", [NoReturn]>;
 
 def __builtin_amdgcn_get_fpenv : AMDGPUBuiltin<"uint64_t()">;
 def __builtin_amdgcn_set_fpenv : AMDGPUBuiltin<"void(uint64_t)">;
+
+// These are special FE only builtins intended for forwarding the requirements
+// to the ME.
+def __builtin_amdgcn_processor_is : AMDGPUBuiltin<"__amdgpu_feature_predicate_t(char const *)", [NoThrow, Const, CustomTypeChecking, UnevaluatedArguments]>;
+def __builtin_amdgcn_is_invocable : AMDGPUBuiltin<"__amdgpu_feature_predicate_t()", [NoThrow, Const, CustomTypeChecking, UnevaluatedArguments]>;
 
 //===----------------------------------------------------------------------===//
 

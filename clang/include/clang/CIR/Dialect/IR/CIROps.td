@@ -2834,6 +2834,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
+                       OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
@@ -2855,6 +2856,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     ($tls_model^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
+    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
@@ -2875,6 +2877,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
       "llvm::StringRef":$sym_name,
       "mlir::Type":$sym_type,
       CArg<"bool", "false">:$isConstant,
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace,
       // CIR defaults to external linkage.
       CArg<"cir::GlobalLinkageKind",
            "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
@@ -5693,6 +5696,8 @@ def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
     %1 = cir.bitreverse %0: !u32i
     ```
   }];
+  
+  let append traits = [Involution];
 }
 
 def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
@@ -5716,6 +5721,8 @@ def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
     %1 = cir.byte_swap %0 : !u32i
     ```
   }];
+  
+  let append traits = [Involution];
 }
 
 //===----------------------------------------------------------------------===//
@@ -7031,6 +7038,46 @@ def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Flattened EH Operations: EhTerminateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
+  Terminator
+]> {
+  let summary = "Terminate due to exception thrown during cleanup";
+  let description = [{
+    `cir.eh.terminate` terminates program execution when an exception is thrown
+    while executing cleanup code during exception unwinding. The C++ standard
+    requires that `std::terminate()` be called in this scenario.
+
+    This operation takes an `!cir.eh_token` from a `cir.eh.initiate` operation
+    and acts as a terminator. It is produced during CFG flattening when throwing
+    calls are found in EH cleanup regions.
+
+    During EH ABI lowering, this is replaced with target-specific termination
+    code. For the Itanium ABI, the `cir.eh.initiate` is lowered to
+    `cir.eh.inflight_exception` (producing an exception pointer), and the
+    `cir.eh.terminate` becomes a call to `__clang_call_terminate` with that
+    pointer, followed by an unreachable operation.
+
+    Example:
+
+    ```mlir
+    ^terminate_unwind:
+      %eh_token = cir.eh.initiate : !cir.eh_token
+      cir.eh.terminate %eh_token : !cir.eh_token
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Flattened EH Operations: EhDispatchOp
 //===----------------------------------------------------------------------===//
 
@@ -7290,7 +7337,9 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Or", 4, "or">,
     I32EnumAttrCase<"Nand", 5, "nand">,
     I32EnumAttrCase<"Max", 6, "max">,
-    I32EnumAttrCase<"Min", 7, "min">
+    I32EnumAttrCase<"Min", 7, "min">,
+    I32EnumAttrCase<"UIncWrap", 8, "uinc_wrap">,
+    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
@@ -7303,7 +7352,8 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     C/C++ atomic fetch-and-update operation. This operation implements the C/C++
     builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
     `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
-    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, and `min`.
+    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, `min`,
+    `uinc_wrap`, and `udec_wrap`.
 
     This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
     type of `val` must match the pointee type of `ptr`. If the binary operation

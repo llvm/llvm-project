@@ -159,7 +159,8 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
     return ResultReason::Unimplemented;
   case Instruction::Opcode::Opaque:
     return ResultReason::Unimplemented;
-  case Instruction::Opcode::Br:
+  case Instruction::Opcode::UncondBr:
+  case Instruction::Opcode::CondBr:
   case Instruction::Opcode::Ret:
   case Instruction::Opcode::AddrSpaceCast:
   case Instruction::Opcode::InsertElement:

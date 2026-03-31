@@ -68,3 +68,9 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswprint
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t

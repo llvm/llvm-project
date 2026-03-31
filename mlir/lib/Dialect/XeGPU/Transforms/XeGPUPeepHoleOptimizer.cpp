@@ -428,10 +428,8 @@ class MultiRed2dOpPattern
   matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto sourceVecType = reductionOp.getSourceVectorType();
-    if (reductionOp.getReductionDims().size() != 2 ||
-        sourceVecType.getRank() != 2)
-      return rewriter.notifyMatchFailure(
-          reductionOp, "Expected 2D multi reduction of a 2D source");
+    if (reductionOp.getReductionDims().size() != 2)
+      return rewriter.notifyMatchFailure(reductionOp, "Expected 2D reduction");
     auto resLayout = xegpu::getDistributeLayoutAttr(reductionOp.getResult());
     // Retrieve and order dims for 1D decomposition (prefer intra-lane first).
     auto dims = llvm::to_vector(reductionOp.getReductionDims());
@@ -444,33 +442,22 @@ class MultiRed2dOpPattern
     auto loc = reductionOp.getLoc();
     auto acc = reductionOp.getAcc();
 
-    // The first reduction's dist attribute does not have the cross lane dim.
-    auto resSliceLayoutAttr = cast<xegpu::SliceAttr>(resLayout);
-    SmallVector<int64_t> dropDims{crossLaneDim};
-    auto intraLaneRedResLayout = resSliceLayoutAttr.dropSliceDims(dropDims);
-
     SmallVector<int64_t> accShape(sourceVecType.getShape());
     accShape.erase(accShape.begin() + intraLaneDim);
-    if (acc) {
-      acc = vector::BroadcastOp::create(
-          rewriter, loc,
-          VectorType::get(accShape, sourceVecType.getElementType()), acc);
-      xegpu::setDistributeLayoutAttr(
-          llvm::dyn_cast<OpResult>(acc),
-          cast<xegpu::DistributeLayoutAttr>(intraLaneRedResLayout));
-    }
-    Value intraLaneReduced = vector::MultiDimReductionOp::create(
-        rewriter, loc, reductionOp.getKind(), reductionOp.getSource(), acc,
-        ArrayRef<int64_t>(intraLaneDim));
-    xegpu::setDistributeLayoutAttr(
-        llvm::dyn_cast<OpResult>(intraLaneReduced),
-        cast<xegpu::DistributeLayoutAttr>(intraLaneRedResLayout));
+    Type eTy = sourceVecType.getElementType();
+    Value constNeutralVal = xegpu::createReductionNeutralValue(
+        rewriter, loc, VectorType::get(accShape, eTy), reductionOp.getKind());
 
-    Value crossLaneReduced = vector::ReductionOp::create(
-        rewriter, loc, reductionOp.getKind(), intraLaneReduced, nullptr);
-    xegpu::setDistributeLayoutAttr(
-        llvm::dyn_cast<OpResult>(crossLaneReduced),
-        cast<xegpu::DistributeLayoutAttr>(resLayout));
+    Value intraLaneReduced = vector::MultiDimReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), reductionOp.getSource(),
+        constNeutralVal, ArrayRef<int64_t>(intraLaneDim));
+
+    // Adjust crossLaneDim after the first reduction.
+    if (crossLaneDim > intraLaneDim)
+      crossLaneDim -= 1;
+    Value crossLaneReduced = vector::MultiDimReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), intraLaneReduced, acc,
+        ArrayRef<int64_t>(crossLaneDim));
     assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
            "Type mismatch");
     rewriter.replaceOp(reductionOp, crossLaneReduced);
