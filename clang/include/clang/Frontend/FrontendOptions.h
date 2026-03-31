@@ -426,6 +426,9 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIREnableIdiomRecognizer : 1;
 
+  // Enable Clang IR call conv lowering pass.
+  unsigned ClangIRCallConvLowering : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.

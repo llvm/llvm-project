@@ -3355,6 +3355,14 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
+// FIXME(cir): Remove this option once all pre-existing tests are compatible with
+// the calling convention lowering pass.
+defm clangir_call_conv_lowering : BoolFOption<"clangir-call-conv-lowering",
+  FrontendOpts<"ClangIRCallConvLowering">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Transform CIR to abide to calling conventions during lowering">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Ignore calling convention during lowering">,
+  BothFlags<[], [ClangOption, CC1Option], "">>;
+
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,

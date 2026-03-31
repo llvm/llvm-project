@@ -34,6 +34,9 @@ std::unique_ptr<Pass> createGotoSolverPass();
 std::unique_ptr<Pass> createIdiomRecognizerPass();
 std::unique_ptr<Pass> createIdiomRecognizerPass(clang::ASTContext *astCtx);
 
+/// Create a pass to lower ABI-independent function definitions/calls.
+std::unique_ptr<Pass> createCallConvLoweringPass();
+
 void populateCIRPreLoweringPasses(mlir::OpPassManager &pm);
 
 //===----------------------------------------------------------------------===//

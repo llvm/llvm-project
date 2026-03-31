@@ -20,7 +20,8 @@ namespace cir {
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
                   clang::ASTContext &astContext, bool enableVerifier,
-                  bool enableIdiomRecognizer, bool enableCIRSimplify) {
+                  bool enableIdiomRecognizer, bool enableCIRSimplify,
+                  bool enableCallConvLowering) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -36,6 +37,11 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
   pm.addPass(mlir::createLoweringPreparePass(&astContext));
+
+  // FIXME(cir): This pass should run by default, but it is lacking support for
+  // several code bits. Once it's more mature, we should fix this.
+  if (enableCallConvLowering)
+    pm.addPass(mlir::createCallConvLoweringPass());
 
   pm.enableVerifier(enableVerifier);
   (void)mlir::applyPassManagerCLOptions(pm);
