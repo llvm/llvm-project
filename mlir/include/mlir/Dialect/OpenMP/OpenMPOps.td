@@ -1665,9 +1665,9 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region", clauses = [
 // 2.17.5 taskwait Construct
 //===----------------------------------------------------------------------===//
 
-def TaskwaitOp : OpenMP_Op<"taskwait", clauses = [
-    OpenMP_DependClause, OpenMP_NowaitClause
-  ]> {
+def TaskwaitOp
+    : OpenMP_Op<"taskwait", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
   let summary = "taskwait construct";
   let description = [{
     The taskwait construct specifies a wait on the completion of child tasks

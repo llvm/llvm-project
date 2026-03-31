@@ -55,8 +55,11 @@ Deprecations and Removals
 - The ``std::launch::any`` enumerator that was accidentally provided as an extension is now deprecated.
   It will be removed in LLVM 25.
 
-- In ``__wrap_iter`` (iterator wrapper type for ``array``, ``span``, ``string``, ``string_view`` and ``vector``), 
+- In ``__wrap_iter`` (iterator wrapper type for ``array``, ``span``, ``string``, ``string_view`` and ``vector``),
   the ``base()`` method and ``iterator_type`` member type have been removed as they are non-standard.
+
+- In ``__bit_reference`` (the proxy ``reference`` type of ``bitset`` and ``vector<bool>``), the overloaded ``operator&``
+  is removed as it is non-standard and causes non-conforming behavior.
 
 Potentially breaking changes
 ----------------------------

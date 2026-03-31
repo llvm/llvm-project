@@ -38,7 +38,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;UNROLL: store <4 x i32>
 ;UNROLL: store <4 x i32>
 ;UNROLL: ret void
-define void @example1() nounwind uwtable ssp {
+define void @example1() {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -68,7 +68,7 @@ define void @example1() nounwind uwtable ssp {
 ;UNROLL: store <4 x i32>
 ;UNROLL: store <4 x i32>
 ;UNROLL: ret void
-define void @example2(i32 %n, i32 %x) nounwind uwtable ssp {
+define void @example2(i32 %n, i32 %x) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph5, label %.preheader
 
@@ -118,7 +118,7 @@ define void @example2(i32 %n, i32 %x) nounwind uwtable ssp {
 ;UNROLL: <4 x i32>
 ;UNROLL: <4 x i32>
 ;UNROLL: ret void
-define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q) nounwind uwtable ssp {
+define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q) {
   %1 = icmp eq i32 %n, 0
   br i1 %1, label %._crit_edge, label %.lr.ph
 
@@ -147,7 +147,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ;UNROLL: load <4 x i32>
 ;UNROLL: load <4 x i32>
 ;UNROLL: ret void
-define void @example4(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q) nounwind uwtable ssp {
+define void @example4(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q) {
   %1 = add nsw i32 %n, -1
   %2 = icmp eq i32 %n, 0
   br i1 %2, label %.preheader4, label %.lr.ph10
@@ -213,7 +213,7 @@ define void @example4(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ;UNROLL: store <4 x i32>
 ;UNROLL: store <4 x i32>
 ;UNROLL: ret void
-define void @example8(i32 %x) nounwind uwtable ssp {
+define void @example8(i32 %x) {
   br label %.preheader
 
 .preheader:                                       ; preds = %3, %0
@@ -242,7 +242,7 @@ define void @example8(i32 %x) nounwind uwtable ssp {
 ;CHECK-LABEL: @example9(
 ;CHECK: phi <4 x i32>
 ;CHECK: ret i32
-define i32 @example9() nounwind uwtable readonly ssp {
+define i32 @example9() readonly {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -270,7 +270,7 @@ define i32 @example9() nounwind uwtable readonly ssp {
 ;CHECK: add <4 x i16>
 ;CHECK: store <4 x i16>
 ;CHECK: ret void
-define void @example10a(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) nounwind uwtable ssp {
+define void @example10a(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -303,7 +303,7 @@ define void @example10a(ptr noalias nocapture %sa, ptr noalias nocapture %sb, pt
 ;CHECK: sext <4 x i16>
 ;CHECK: store <4 x i32>
 ;CHECK: ret void
-define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) nounwind uwtable ssp {
+define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -332,7 +332,7 @@ define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, pt
 ;CHECK: insertelement
 ;CHECK: insertelement
 ;CHECK: ret void
-define void @example11() nounwind uwtable ssp {
+define void @example11() {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -391,7 +391,7 @@ define void @example12() {
 ;CHECK-LABEL: @example13(
 ;CHECK: <4 x i32>
 ;CHECK: ret void
-define void @example13(ptr nocapture %A, ptr nocapture %B, ptr nocapture %out) nounwind uwtable ssp {
+define void @example13(ptr nocapture %A, ptr nocapture %B, ptr nocapture %out) {
   br label %.preheader
 
 .preheader:                                       ; preds = %14, %0
@@ -432,7 +432,7 @@ define void @example13(ptr nocapture %A, ptr nocapture %B, ptr nocapture %out) n
 ;CHECK-LABEL: @example14(
 ;CHECK: <4 x i32>
 ;CHECK: ret void
-define void @example14(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %out) nounwind uwtable ssp {
+define void @example14(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %out) {
 .preheader3:
   br label %.preheader
 
@@ -578,7 +578,7 @@ define void @example14(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %o
 ;CHECK: load <4 x i32>
 ;CHECK: shufflevector {{.*}} <i32 3, i32 2, i32 1, i32 0>
 ;CHECK: ret i32
-define i32 @example21(ptr nocapture %b, i32 %n) nounwind uwtable readonly ssp {
+define i32 @example21(ptr nocapture %b, i32 %n) readonly {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -605,7 +605,7 @@ define i32 @example21(ptr nocapture %b, i32 %n) nounwind uwtable readonly ssp {
 ;CHECK-LABEL: @example23(
 ;CHECK: <4 x i32>
 ;CHECK: ret void
-define void @example23(ptr nocapture %src, ptr nocapture %dst) nounwind uwtable ssp {
+define void @example23(ptr nocapture %src, ptr nocapture %dst) {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -629,7 +629,7 @@ define void @example23(ptr nocapture %src, ptr nocapture %dst) nounwind uwtable 
 ;CHECK-LABEL: @example24(
 ;CHECK: shufflevector <4 x i16>
 ;CHECK: ret void
-define void @example24(i16 signext %x, i16 signext %y) nounwind uwtable ssp {
+define void @example24(i16 signext %x, i16 signext %y) {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -656,7 +656,7 @@ define void @example24(i16 signext %x, i16 signext %y) nounwind uwtable ssp {
 ;CHECK: and <4 x i1>
 ;CHECK: zext <4 x i1>
 ;CHECK: ret void
-define void @example25() nounwind uwtable ssp {
+define void @example25() {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0

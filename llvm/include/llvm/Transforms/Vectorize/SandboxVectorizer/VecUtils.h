@@ -17,6 +17,7 @@
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/Compiler.h"
+#include <iterator>
 
 namespace llvm {
 /// Traits for DenseMap.
@@ -302,6 +303,63 @@ public:
     }
     return ShuffleVectorInst::create(FromVec, PoisonValue::get(VecTy), Mask,
                                      WhereIt, Ctx, "Unpack");
+  }
+
+  /// Iterate over all lanes and Value pairs.
+  // For example, given a range: {i32 %v0, <2 x i32> %v1, i32 %v2} we get:
+  //  Lane Elm
+  //   0   %v0
+  //   1   %v1
+  //   3   %v2
+  template <typename RangeIteratorT> class LaneValueEnumerator {
+    /// Points to current element.
+    RangeIteratorT It;
+    RangeIteratorT ItE;
+    /// Accumulator of lanes.
+    unsigned Lane;
+
+  public:
+    // Note that We can start counting from a non-zero BeginLane, though the
+    // user must make sure it corresponds to the correct lane matching Begin.
+    LaneValueEnumerator(RangeIteratorT Begin, RangeIteratorT End,
+                        unsigned BeginLane)
+        : It(Begin), ItE(End), Lane(BeginLane) {}
+    using iterator_catecotry = std::input_iterator_tag;
+    // NOTE: dereference returns by value instead of by reference.
+    using value_type = std::pair<unsigned, Value *>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = std::pair<unsigned, Value *> *;
+    using reference = std::pair<unsigned, Value *> &;
+    LaneValueEnumerator operator++() {
+      assert(It != ItE && "Already at end!");
+      auto *Ty = Utils::getExpectedType(*It);
+      if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+        Lane += VecTy->getNumElements();
+      } else {
+        assert(!isa<VectorType>(Ty) && "Expected scalar type!");
+        Lane += 1;
+      }
+      ++It;
+      return *this;
+    }
+    value_type operator*() const { return {Lane, *It}; }
+    bool operator==(const LaneValueEnumerator &Other) const {
+      return It == Other.It;
+    }
+    bool operator!=(const LaneValueEnumerator &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  /// Helper for creating LaneValueEnumerator ranges. Can be used in for loops
+  /// like: `for (auto [Lane, V] : enumerateLanes(Range))`
+  template <typename ValueContainerT>
+  static auto enumerateLanes(const ValueContainerT &Range) {
+    auto Begin = LaneValueEnumerator<decltype(Range.begin())>(Range.begin(),
+                                                              Range.end(), 0);
+    auto End = LaneValueEnumerator<decltype(Range.begin())>(Range.end(),
+                                                            Range.end(), 0);
+    return make_range(Begin, End);
   }
 
 #ifndef NDEBUG

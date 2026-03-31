@@ -582,6 +582,11 @@ protected:
   LLVM_ABI MDNode *getMetadata(StringRef Kind) const;
   /// @}
 
+private:
+  LLVM_ABI unsigned getMetadataIndex() const;
+  LLVM_ABI unsigned &getMetadataIndex();
+
+protected:
   /// Appends all attachments with the given ID to \c MDs in insertion order.
   /// If the Value has no attachments with the given ID, or if ID is invalid,
   /// leaves MDs unchanged.

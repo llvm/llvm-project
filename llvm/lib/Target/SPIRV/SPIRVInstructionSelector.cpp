@@ -4239,7 +4239,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                    .addUse(GR.getSPIRVTypeID(ResType));
     MIB.constrainAllUses(TII, TRI, RBI);
     unsigned SpecId = I.getOperand(2).getImm();
-    buildOpDecorate(I.getOperand(0).getReg(), *MIB.getInstr(), TII,
+    buildOpDecorate(I.getOperand(0).getReg(), *++MIB->getIterator(), TII,
                     SPIRV::Decoration::SpecId, {SpecId});
 
     return true;

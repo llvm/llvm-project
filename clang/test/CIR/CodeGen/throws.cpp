@@ -271,3 +271,20 @@ void throw_pointer_type() {
 // OGCG: %[[TMP_PTR:.*]] = load ptr, ptr %[[PTR_ADDR]], align 8
 // OGCG: store ptr %[[TMP_PTR]], ptr %[[EXCEPTION_ADDR]], align 16
 // OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTIPi, ptr null)
+// Throwing a class type with a non-trivial destructor exercises
+// CIRGenItaniumCXXABI::emitThrow (destructor symbol for __cxa_throw).
+
+struct ThrowNonTrivialDtor {
+  ~ThrowNonTrivialDtor() {}
+};
+void throw_class_with_nontrivial_dtor() { throw ThrowNonTrivialDtor(); }
+
+// CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 1 -> !cir.ptr<!rec_ThrowNonTrivialDtor>
+// CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!rec_ThrowNonTrivialDtor>, @_ZTI19ThrowNonTrivialDtor, @_ZN19ThrowNonTrivialDtorD1Ev
+// CIR: cir.unreachable
+
+// LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 1)
+// LLVM: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTI19ThrowNonTrivialDtor, ptr @_ZN19ThrowNonTrivialDtorD1Ev)
+
+// OGCG: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 1)
+// OGCG: call void @__cxa_throw(ptr %[[EXCEPTION_ADDR]], ptr @_ZTI19ThrowNonTrivialDtor, ptr @_ZN19ThrowNonTrivialDtorD1Ev)

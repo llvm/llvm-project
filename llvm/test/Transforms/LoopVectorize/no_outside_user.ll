@@ -327,7 +327,7 @@ f1.exit.loopexit:
 ; non hdr phi that depends on reduction and is used outside the loop.
 ; reduction phis are only allowed to have bump or reduction operations as the inside user, so we should
 ; not vectorize this.
-define i32 @reduction_sum(i32 %n, ptr noalias nocapture %A, ptr noalias nocapture %B) nounwind uwtable readonly noinline ssp {
+define i32 @reduction_sum(i32 %n, ptr noalias nocapture %A, ptr noalias nocapture %B) readonly noinline {
 ; CHECK-LABEL: define i32 @reduction_sum(
 ; CHECK-SAME: i32 [[N:%.*]], ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -447,7 +447,7 @@ f1.exit.loopexit:
 
 ; non-reduction phi 'tmp17' used outside loop has cyclic dependence with %x.05 phi
 ; cannot vectorize.
-define i32 @not_valid_reduction(i32 %n, ptr noalias nocapture %A) nounwind uwtable readonly {
+define i32 @not_valid_reduction(i32 %n, ptr noalias nocapture %A) readonly {
 ; CHECK-LABEL: define i32 @not_valid_reduction(
 ; CHECK-SAME: i32 [[N:%.*]], ptr noalias captures(none) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -585,7 +585,7 @@ f1.exit.loopexit:
   ret i8 %.lcssa
 }
 
-define i32 @no_vectorize_reduction_with_outside_use(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable readonly {
+define i32 @no_vectorize_reduction_with_outside_use(i32 %n, ptr nocapture %A, ptr nocapture %B) readonly {
 ; CHECK-LABEL: define i32 @no_vectorize_reduction_with_outside_use(
 ; CHECK-SAME: i32 [[N:%.*]], ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:

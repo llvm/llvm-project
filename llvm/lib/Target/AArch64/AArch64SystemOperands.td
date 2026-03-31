@@ -411,30 +411,24 @@ def : PRFM<"pld", 0b00, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pld", 0b00, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pld", 0b00, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pld", 0b00, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"pli", 0b01, "l1",  0b00, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l1",  0b00, "strm", 0b1>;
 def : PRFM<"pli", 0b01, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pli", 0b01, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pli", 0b01, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pli", 0b01, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"pst", 0b10, "l1",  0b00, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l1",  0b00, "strm", 0b1>;
 def : PRFM<"pst", 0b10, "l2",  0b01, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l2",  0b01, "strm", 0b1>;
 def : PRFM<"pst", 0b10, "l3",  0b10, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "l3",  0b10, "strm", 0b1>;
-let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pst", 0b10, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "slc", 0b11, "strm", 0b1>;
-}
 def : PRFM<"ir",  0b11, "",    0b00, "",     0b0>;
 
 //===----------------------------------------------------------------------===//
@@ -1036,7 +1030,7 @@ foreach I = TLBIRMI in {
   }
 }
 
-// Armv9-A Realm Management Extension TLBI Instructions
+// Armv9-A Realm Management Extension TLBI Instructions.
 defvar TLBIRME = [
   //    name        op1    CRm     op2    reguse
   TLBI<"RPAOS",     0b110, 0b0100, 0b011, REG_REQUIRED>,

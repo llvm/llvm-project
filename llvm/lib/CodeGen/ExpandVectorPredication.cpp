@@ -287,7 +287,9 @@ bool CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::fabs:
   case Intrinsic::sqrt:
   case Intrinsic::maxnum:
-  case Intrinsic::minnum: {
+  case Intrinsic::minnum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimum: {
     SmallVector<Value *, 2> Argument;
     for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
       Argument.push_back(VPI.getOperand(i));

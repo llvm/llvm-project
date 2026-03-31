@@ -225,6 +225,9 @@ class _PlatformContext(object):
         self.shlib_prefix = shlib_prefix
         self.shlib_extension = shlib_extension
 
+    def getFullLibName(self, base_name):
+        return f"{self.shlib_prefix}{base_name}.{self.shlib_extension}"
+
 
 def createPlatformContext():
     if platformIsDarwin():

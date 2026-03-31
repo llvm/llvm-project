@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 ;CHECK: store <4 x double>
 ;CHECK-NOT: store <4 x double>
 ;CHECK: ret
-define void @reg_pressure(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
+define void @reg_pressure(ptr nocapture %A, i32 %n) {
   %1 = sext i32 %n to i64
   br label %2
 
@@ -52,7 +52,7 @@ define void @reg_pressure(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
 ;CHECK: xor
 ;CHECK: xor
 ;CHECK: ret
-define void @small_loop(ptr nocapture %A, i64 %n) nounwind uwtable ssp {
+define void @small_loop(ptr nocapture %A, i64 %n) {
   %1 = icmp eq i64 %n, 0
   br i1 %1, label %._crit_edge, label %.lr.ph
 

@@ -34,6 +34,7 @@
 //  Q -> target builtin type, followed by a character to distinguish the builtin type
 //    Qa -> AArch64 svcount_t builtin type.
 //    Qb -> AMDGPU __amdgpu_buffer_rsrc_t builtin type.
+//    Qc -> AMDGPU __amdgpu_feature_predicate_t builtin type.
 //    Qt -> AMDGPU __amdgpu_texture_t builtin type.
 //  E -> ext_vector, followed by the number of elements and the base type.
 //  X -> _Complex, followed by the base type.

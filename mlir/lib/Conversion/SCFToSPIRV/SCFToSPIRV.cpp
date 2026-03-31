@@ -13,6 +13,7 @@
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -135,8 +136,11 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     // a single back edge from the continue to header block, and a single exit
     // from header to merge.
     auto loc = forOp.getLoc();
-    auto loopOp =
-        spirv::LoopOp::create(rewriter, loc, spirv::LoopControl::None);
+    auto loopControl = spirv::LoopControl::None;
+    if (auto attr = forOp->getAttrOfType<spirv::LoopControlAttr>(
+            spirv::getLoopControlAttrName()))
+      loopControl = attr.getValue();
+    auto loopOp = spirv::LoopOp::create(rewriter, loc, loopControl);
     loopOp.addEntryAndMergeBlock(rewriter);
 
     OpBuilder::InsertionGuard guard(rewriter);
@@ -348,8 +352,11 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
   matchAndRewrite(scf::WhileOp whileOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = whileOp.getLoc();
-    auto loopOp =
-        spirv::LoopOp::create(rewriter, loc, spirv::LoopControl::None);
+    auto loopControl = spirv::LoopControl::None;
+    if (auto attr = whileOp->getAttrOfType<spirv::LoopControlAttr>(
+            spirv::getLoopControlAttrName()))
+      loopControl = attr.getValue();
+    auto loopOp = spirv::LoopOp::create(rewriter, loc, loopControl);
     loopOp.addEntryAndMergeBlock(rewriter);
 
     Region &beforeRegion = whileOp.getBefore();

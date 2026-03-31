@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: select <4 x i1>
 ;CHECK: store <4 x i16>
 ;CHECK: ret
-define void @fc(ptr nocapture %p, i32 %n, i32 %size) nounwind uwtable ssp {
+define void @fc(ptr nocapture %p, i32 %n, i32 %size) {
 entry:
   br label %do.body
 
@@ -44,7 +44,7 @@ do.end:                                           ; preds = %cond.end
 ;CHECK: select <4 x i1>
 ;CHECK: store <4 x i32>
 ;CHECK: ret
-define void @example1(ptr nocapture %a, i32 %n, i32 %wsize) nounwind uwtable ssp {
+define void @example1(ptr nocapture %a, i32 %n, i32 %wsize) {
 entry:
   br label %do.body
 

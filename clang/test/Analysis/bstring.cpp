@@ -3,28 +3,29 @@
 // DEFINE:     -analyzer-checker=unix.cstring \
 // DEFINE:     -analyzer-checker=unix.Malloc \
 // DEFINE:     -analyzer-checker=debug.ExprInspection \
-// DEFINE:     -analyzer-config eagerly-assume=false \
-// DEFINE:     -verify %s
+// DEFINE:     -analyzer-config eagerly-assume=false
 
+// All alpha.unix.cstring subcheckers enabled (OutOfBounds sinks at OOB memset).
+// RUN: %{analyzer} -analyzer-checker=alpha.unix.cstring \
+// RUN:     -verify=expected,oob,uninit %s
+// RUN: %{analyzer} -analyzer-checker=alpha.unix.cstring \
+// RUN:     -DUSE_BUILTINS -verify=expected,oob,uninit %s
+// RUN: %{analyzer} -analyzer-checker=alpha.unix.cstring \
+// RUN:     -DVARIANT -verify=expected,oob,uninit %s
+// RUN: %{analyzer} -analyzer-checker=alpha.unix.cstring \
+// RUN:     -DUSE_BUILTINS -DVARIANT -verify=expected,oob,uninit %s
+
+// OutOfBounds disabled: OOB memset doesn't sink, analysis continues.
 // RUN: %{analyzer} \
-// RUN:     -analyzer-checker=alpha.unix.cstring
-
-// RUN: %{analyzer} -DUSE_BUILTINS \
-// RUN:     -analyzer-checker=alpha.unix.cstring
-
-// RUN: %{analyzer} -DVARIANT \
-// RUN:     -analyzer-checker=alpha.unix.cstring
-
-// RUN: %{analyzer} -DUSE_BUILTINS -DVARIANT \
-// RUN:     -analyzer-checker=alpha.unix.cstring
-
-// RUN: %{analyzer} -DSUPPRESS_OUT_OF_BOUND \
 // RUN:     -analyzer-checker=alpha.unix.cstring.BufferOverlap \
-// RUN:     -analyzer-checker=unix.cstring.NotNullTerminated
+// RUN:     -analyzer-checker=unix.cstring.NotNullTerminated \
+// RUN:     -verify=expected,no-oob %s
 
+// UninitializedRead enabled without OutOfBounds: verifies that
+// UninitializedRead works independently of OutOfBounds.
 // RUN: %{analyzer} \
-// RUN:   -DUNINIT_WITHOUT_OUTOFBOUND \
-// RUN:   -analyzer-checker=alpha.unix.cstring.UninitializedRead
+// RUN:     -analyzer-checker=alpha.unix.cstring.UninitializedRead \
+// RUN:     -verify=expected,no-oob,uninit %s
 
 #include "Inputs/system-header-simulator-cxx.h"
 #include "Inputs/system-header-simulator-for-malloc.h"
@@ -122,32 +123,32 @@ void memset1_inheritance() {
   clang_analyzer_eval(d.d_mem == 0); // expected-warning{{TRUE}}
 }
 
-#ifdef SUPPRESS_OUT_OF_BOUND
 void memset2_inheritance_field() {
   Derived d;
-  // FIXME: This example wrongly calls `memset` on the derived field, with the
-  // size parameter that has the size of the whole derived class. The analysis
-  // should stop at that point as this is UB.
-  // This test asserts the current behavior of treating the not set part as
-  // UNKNOWN.
-  memset(&d.d_mem, 0, sizeof(Derived));
-  clang_analyzer_eval(d.b_mem == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(d.d_mem == 0); // expected-warning{{UNKNOWN}}
+  // FIXME: OOB memset on a derived field with sizeof(Derived).
+  // Current behavior: with 'oob' the analysis sinks; with 'no-oob' it
+  // continues and the evals produce UNKNOWN.
+  // Expected behavior: the OOB error is fatal regardless of whether the
+  // OutOfBounds checker frontend is enabled, so the evals should be unreachable
+  // in all configurations. The 'no-oob' expectations below should be removed.
+  memset(&d.d_mem, 0, sizeof(Derived)); // oob-warning{{overflows the destination buffer}}
+  clang_analyzer_eval(d.b_mem == 0); // no-oob-warning{{UNKNOWN}}
+  clang_analyzer_eval(d.d_mem == 0); // no-oob-warning{{UNKNOWN}}
 }
 
 void memset3_inheritance_field() {
   Derived d;
-  // FIXME: Here we are setting the field of the base with the size of the
-  // Derived class. By the letter of the standard this is UB, but practically
-  // this only touches memory it is supposed to with the above class
-  // definitions. If we were to be strict the analysis should stop here.
-  // This test asserts the current behavior of nevertheless treating the
-  // wrongly set field as correctly set to 0.
-  memset(&d.b_mem, 0, sizeof(Derived));
-  clang_analyzer_eval(d.b_mem == 0); // expected-warning{{TRUE}}
-  clang_analyzer_eval(d.d_mem == 0); // expected-warning{{TRUE}}
+  // FIXME: memset on the base field with sizeof(Derived). By the letter of
+  // the standard this is UB, but practically this only touches memory it is
+  // supposed to with the above class definitions.
+  // Current behavior: with 'oob' the analysis sinks. With 'no-oob' the fields are
+  // treated as correctly set to 0.
+  // Expected behavior: same as memset2. The OOB error should be fatal in all
+  // configurations and the 'no-oob' expectations should be removed.
+  memset(&d.b_mem, 0, sizeof(Derived)); // oob-warning{{overflows the destination buffer}}
+  clang_analyzer_eval(d.b_mem == 0); // no-oob-warning{{TRUE}}
+  clang_analyzer_eval(d.d_mem == 0); // no-oob-warning{{TRUE}}
 }
-#endif
 
 void memset4_array_nonpod_object() {
   Derived array[10];
@@ -206,42 +207,44 @@ public:
   int d_mem;
 };
 
-#ifdef SUPPRESS_OUT_OF_BOUND
 void memset8_virtual_inheritance_field() {
   DerivedVirtual d;
-  // FIXME: This example wrongly calls `memset` on the derived field, with the
-  // size parameter that has the size of the whole derived class. The analysis
-  // should stop at that point as this is UB. The situation is further
-  // complicated by the fact the base base a virtual function.
-  // This test asserts the current behavior of treating the not set part as
-  // UNKNOWN.
-  memset(&d.b_mem, 0, sizeof(Derived));
-  clang_analyzer_eval(d.b_mem == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(d.d_mem == 0); // expected-warning{{UNKNOWN}}
+  // FIXME: Same as memset3, but the base has a virtual function. In typical
+  // implementations &d.b_mem differs from &d because the vtable pointer
+  // precedes the first member, so this may also write past the object's
+  // extent.
+  // Current behavior: with 'oob' the analysis sinks. With 'no-oob' the fields
+  // are treated as UNKNOWN.
+  // Expected behavior: same as memset2. The OOB error should be fatal in all
+  // configurations and the 'no-oob' expectations should be removed.
+  memset(&d.b_mem, 0, sizeof(Derived)); // oob-warning{{overflows the destination buffer}}
+  clang_analyzer_eval(d.b_mem == 0); // no-oob-warning{{UNKNOWN}}
+  clang_analyzer_eval(d.d_mem == 0); // no-oob-warning{{UNKNOWN}}
 }
-#endif
+
 } // namespace memset_non_pod
 
-#ifdef SUPPRESS_OUT_OF_BOUND
 void memset1_new_array() {
   int *array = new int[10];
   memset(array, 0, 10 * sizeof(int));
   clang_analyzer_eval(array[2] == 0); // expected-warning{{TRUE}}
-  // FIXME: The analyzer should stop analysis after memset. Maybe the intent of
-  // this test was to test for this as a desired behaviour, but it shouldn't be.
-  // Going out-of-bounds with memset is a fatal error, even if we decide not to
-  // report it.
-  memset(array + 1, 'a', 10 * sizeof(9));
-  clang_analyzer_eval(array[2] == 0); // expected-warning{{UNKNOWN}}
+  // FIXME: OOB memset on a heap array.
+  // Current behavior: with 'oob' the analysis sinks. With 'no-oob' it
+  // continues and the eval produces UNKNOWN.
+  // Expected behavior: same as memset2. The OOB error should be fatal in all
+  // configurations and the 'no-oob' expectation should be removed.
+  memset(array + 1, 'a', 10 * sizeof(9)); // oob-warning{{overflows the destination buffer}}
+  clang_analyzer_eval(array[2] == 0); // no-oob-warning{{UNKNOWN}}
   delete[] array;
 }
-#endif
 
-#ifdef UNINIT_WITHOUT_OUTOFBOUND
 void memmove_uninit_without_outofbound() {
   int src[4];
   int dst[4];
-  memmove(dst, src, sizeof(src)); // expected-warning{{The first element of the 2nd argument is undefined}}
-                                  // expected-note@-1{{Other elements might also be undefined}}
+  // This test verifies that UninitializedRead produces warnings even when
+  // OutOfBounds is disabled. Previously, CheckBufferAccess would early-return
+  // before reaching checkInit() when OutOfBounds was disabled, suppressing
+  // UninitializedRead as a side effect.
+  memmove(dst, src, sizeof(src)); // uninit-warning{{The first element of the 2nd argument is undefined}}
+                                  // uninit-note@-1{{Other elements might also be undefined}}
 }
-#endif

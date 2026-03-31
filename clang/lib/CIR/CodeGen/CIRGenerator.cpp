@@ -12,7 +12,7 @@
 
 #include "CIRGenModule.h"
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/LLVMIR/Import.h"

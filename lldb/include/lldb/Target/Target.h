@@ -1842,6 +1842,8 @@ protected:
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
 
+  lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
+
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);
 

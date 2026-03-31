@@ -3448,6 +3448,15 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       g.setAddrSpace(
           static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Constant));
 
+    if (gpuMod && global.getDataAttr() &&
+        *global.getDataAttr() == cuf::DataAttribute::Managed &&
+        !mlir::isa<fir::BaseBoxType>(global.getType())) {
+      g.setAddrSpace(
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Global));
+      g->setAttr(mlir::NVVM::NVVMDialect::getManagedAttrName(),
+                 mlir::UnitAttr::get(global.getContext()));
+    }
+
     rewriter.eraseOp(global);
     return mlir::success();
   }

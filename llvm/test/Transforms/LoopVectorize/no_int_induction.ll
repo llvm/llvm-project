@@ -12,7 +12,7 @@ target datalayout = "e-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-
 ;CHECK: load <4 x i32>
 ;CHECK: add <4 x i32>
 ;CHECK: ret i32
-define i32 @sum_array(ptr %A, i32 %n) nounwind uwtable readonly noinline ssp {
+define i32 @sum_array(ptr %A, i32 %n) readonly noinline {
   %1 = sext i32 %n to i64
   %2 = getelementptr inbounds i32, ptr %A, i64 %1
   %3 = icmp eq i32 %n, 0
@@ -39,7 +39,7 @@ _ZSt10accumulateIPiiET0_T_S2_S1_.exit:            ; preds = %.lr.ph.i, %0
 ;CHECK: load <4 x i32>
 ;CHECK: add <4 x i32>
 ;CHECK: ret i32
-define i32 @sum_array_as1(ptr addrspace(1) %A, i32 %n) nounwind uwtable readonly noinline ssp {
+define i32 @sum_array_as1(ptr addrspace(1) %A, i32 %n) readonly noinline {
   %1 = sext i32 %n to i64
   %2 = getelementptr inbounds i32, ptr addrspace(1) %A, i64 %1
   %3 = icmp eq i32 %n, 0

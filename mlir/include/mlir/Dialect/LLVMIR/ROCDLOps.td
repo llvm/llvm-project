@@ -1252,12 +1252,10 @@ class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
   }];
 }
 
-class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> : ROCDL_IntrOp<mnemonic,
-    [0], [1, 5], [], 1, 0, 0, 0, [0, 2, 4, 6, 7], ["signA", "signB","modC","reuseA","reuseB"]>,
+class ROCDL_WMMA_ModsC_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> : ROCDL_IntrOp<mnemonic,
+    [0], [0, 3], [], 1, 0, 0, 0, [2, 4, 5], ["modC","reuseA","reuseB"]>,
   Arguments<(ins
-             DefaultValuedAttr<I1Attr, "0">:$signA,
              LLVM_ScalarOrVectorOf<AB>:$a,
-             DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
              DefaultValuedAttr<I16Attr, "0">:$modC,
              LLVM_ScalarOrVectorOf<C>:$c,
@@ -1397,7 +1395,7 @@ def ROCDL_wmma_f32_16x16x32_bf16 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x32.bf
 def ROCDL_wmma_f32_16x16x32_f16 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x32.f16", F16, F32>;
 def ROCDL_wmma_f16_16x16x32_f16 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x32.f16", F16, F16>;
 def ROCDL_wmma_bf16_16x16x32_bf16 : ROCDL_WMMA_ModsC_IntrOp<"wmma.bf16.16x16x32.bf16", BF16, BF16>;
-def ROCDL_wmma_bf16f32_16x16x32_bf16 : ROCDL_WMMA_ModsAll_Diff_IntrOp<"wmma.bf16f32.16x16x32.bf16", BF16, /*Type C=*/F32, /*Type D=*/BF16>;
+def ROCDL_wmma_bf16f32_16x16x32_bf16 : ROCDL_WMMA_ModsC_Diff_IntrOp<"wmma.bf16f32.16x16x32.bf16", BF16, /*Type C=*/F32, /*Type D=*/BF16>;
 def ROCDL_wmma_f32_16x16x64_fp8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x64.fp8_fp8", AnyInteger, F32>;
 def ROCDL_wmma_f32_16x16x64_fp8_bf8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x64.fp8_bf8", AnyInteger, F32>;
 def ROCDL_wmma_f32_16x16x64_bf8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f32.16x16x64.bf8_fp8", AnyInteger, F32>;

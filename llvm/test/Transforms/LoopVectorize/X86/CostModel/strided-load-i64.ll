@@ -7,7 +7,6 @@ target triple = "x86_64-unknown-linux-gnu"
 @A = global [10240 x i64] zeroinitializer, align 16
 @B = global [10240 x i64] zeroinitializer, align 16
 
-; Function Attrs: nounwind uwtable
 define void @load_i64_stride2() {
 ;CHECK-LABEL: load_i64_stride2
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load

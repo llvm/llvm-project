@@ -2,74 +2,61 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf external.s -o external.o
 # RUN: ld.lld -shared external.o -soname external.so -o external.so
+
+## PLT calls within range (2 MiB padding) — no thunks needed.
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf main.s -o main.o
 # RUN: ld.lld main.o external.so -o test
-# RUN: llvm-objdump -d --no-show-raw-insn test | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn test | \
+# RUN:     FileCheck --check-prefix=INRANGE %s
+
+## PLT calls out of range (>8 MiB padding) — thunks required.
+# RUN: llvm-mc -filetype=obj \
+# RUN:         -triple=hexagon-unknown-elf main-large.s -o main-large.o
+# RUN: ld.lld main-large.o external.so -o test-large
+# RUN: llvm-objdump -d --no-show-raw-insn test-large | \
+# RUN:     FileCheck --check-prefix=OUTRANGE %s
 
 ## Test thunk range scenarios for Hexagon R_HEX_PLT_B22_PCREL relocations.
-## PLT calls use the same ±8MB range as regular calls but go through PLT entries.
-## This test verifies thunk generation for PLT calls at range boundaries.
+## PLT calls use the same +/- 8 MiB range as regular B22_PCREL calls.
+## When the PLT entry is beyond this range, a thunk must be created.
 
 #--- external.s
-.globl extern_within_range, extern_beyond_range, extern_close
-.type extern_within_range, @function
-.type extern_beyond_range, @function
-.type extern_close, @function
-
-extern_within_range:
-  jumpr r31
-
-extern_beyond_range:
-  jumpr r31
-
-extern_close:
+.globl extern_func
+.type extern_func, @function
+extern_func:
   jumpr r31
 
 #--- main.s
+## Within-range case: 2 MiB padding keeps PLT entries reachable.
 .globl _start
 .type _start, @function
 _start:
-  ## Test PLT calls to external functions at various ranges
-  call extern_within_range@PLT
-  call extern_beyond_range@PLT
-  call extern_close@PLT
+  call extern_func@PLT
   jumpr r31
 
 .skip 0x200000
 
-# CHECK: Disassembly of section .text:
-# CHECK:     <_start>:
-# CHECK-NEXT:  2021c:  { call 0x220250 <extern_within_range@plt> }
-# CHECK-NEXT:    { call 0x220260 <extern_beyond_range@plt> }
-# CHECK-NEXT:    { call 0x220270 <extern_close@plt> }
-# CHECK-NEXT:    { jumpr r31 }
+#--- main-large.s
+## Out-of-range case: >8 MiB padding pushes PLT entries beyond B22_PCREL range.
+.globl _start
+.type _start, @function
+_start:
+  call extern_func@PLT
+  jumpr r31
 
-## Verify PLT header and entries are created with exact addresses
-# CHECK: Disassembly of section .plt:
-# CHECK:      <.plt>:
-# CHECK-NEXT:   220230:  { immext(#0x20080)
-# CHECK-NEXT:      r28 = add(pc,##0x200b8) }
-# CHECK-NEXT:    { r14 -= add(r28,#0x10)
-# CHECK-NEXT:      r15 = memw(r28+#0x8)
-# CHECK-NEXT:      r28 = memw(r28+#0x4) }
-# CHECK-NEXT:    { r14 = asr(r14,#0x2)
-# CHECK-NEXT:      jumpr r28 }
-# CHECK-NEXT:    { trap0(#0xdb) }
+.skip 0x900000
 
-# CHECK:      <extern_within_range@plt>:
-# CHECK-NEXT:   220250:  { immext(#0x20080)
-# CHECK-NEXT:      r14 = add(pc,##0x200a8) }
-# CHECK-NEXT:    { r28 = memw(r14+#0x0) }
-# CHECK-NEXT:    { jumpr r28 }
+## Within-range: _start calls the PLT entry directly (no thunk).
+# INRANGE:      <_start>:
+# INRANGE-NEXT:   201ac: { call 0x2201e0 <extern_func@plt> }
+# INRANGE-NEXT:          { jumpr r31 }
 
-# CHECK:      <extern_beyond_range@plt>:
-# CHECK-NEXT:   220260: { immext(#0x20080)
-# CHECK-NEXT:      r14 = add(pc,##0x2009c) }
-# CHECK-NEXT:    { r28 = memw(r14+#0x0) }
-# CHECK-NEXT:    { jumpr r28 }
+## Out-of-range: thunk uses immext+jump to reach the PLT entry.
+# OUTRANGE:      <__hexagon_thunk_extern_func_from_.text.thunk>:
+# OUTRANGE-NEXT:   201ac: { immext(#0x900000)
+# OUTRANGE-NEXT:            jump 0x9201e0 <extern_func@plt> }
 
-# CHECK:      <extern_close@plt>:
-# CHECK-NEXT:   220270:  { immext(#0x20080)
-# CHECK-NEXT:      r14 = add(pc,##0x20090) }
-# CHECK-NEXT:    { r28 = memw(r14+#0x0) }
-# CHECK-NEXT:    { jumpr r28 }
+## _start calls the thunk instead of the PLT entry directly.
+# OUTRANGE:      <_start>:
+# OUTRANGE-NEXT:   201b4: { call 0x201ac <__hexagon_thunk_extern_func_from_.text.thunk> }
+# OUTRANGE-NEXT:          { jumpr r31 }

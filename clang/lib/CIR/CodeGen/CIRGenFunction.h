@@ -972,6 +972,8 @@ public:
                         ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock();
 
+  void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
+
   /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
   /// it if it's the top of the stack.
   ///

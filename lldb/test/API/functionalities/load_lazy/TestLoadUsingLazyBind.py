@@ -25,16 +25,8 @@ class LoadUsingLazyBind(TestBase):
         self.build()
         wd = os.path.realpath(self.getBuildDir())
 
-        def make_lib_name(name):
-            return (
-                self.platformContext.shlib_prefix
-                + name
-                + "."
-                + self.platformContext.shlib_extension
-            )
-
         def make_lib_path(name):
-            libpath = os.path.join(wd, make_lib_name(name))
+            libpath = os.path.join(wd, self.platformContext.getFullLibName(name))
             self.assertTrue(os.path.exists(libpath))
             return libpath
 
@@ -51,7 +43,7 @@ class LoadUsingLazyBind(TestBase):
 
         # Load libt1; should fail unless we use RTLD_LAZY
         error = lldb.SBError()
-        lib_spec = lldb.SBFileSpec(make_lib_name("t1"))
+        lib_spec = lldb.SBFileSpec(self.platformContext.getFullLibName("t1"))
         paths = lldb.SBStringList()
         paths.AppendString(wd)
         out_spec = lldb.SBFileSpec()

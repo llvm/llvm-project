@@ -13,7 +13,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-LABEL: @kernel11(
 ; CHECK-NOT: <4 x double>
 ; CHECK: ret
-define i32 @kernel11(ptr %x, ptr %y, i32 %n) nounwind uwtable ssp {
+define i32 @kernel11(ptr %x, ptr %y, i32 %n) {
   %1 = alloca ptr, align 8
   %2 = alloca ptr, align 8
   %3 = alloca i32, align 4
@@ -77,7 +77,7 @@ define i32 @kernel11(ptr %x, ptr %y, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: @func2(
 ; CHECK: <4 x i32>
 ; CHECK: ret
-define i32 @func2(ptr nocapture %a) nounwind uwtable ssp {
+define i32 @func2(ptr nocapture %a) {
   br label %1
 
 ; <label>:1                                       ; preds = %7, %0

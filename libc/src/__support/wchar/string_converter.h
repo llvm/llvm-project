@@ -31,7 +31,7 @@ private:
   // # of pops we are allowed to perform (essentially size of the dest buffer)
   size_t num_to_write;
 
-  ErrorOr<size_t> pushFullCharacter() {
+  LIBC_INLINE ErrorOr<size_t> pushFullCharacter() {
     size_t num_pushed;
     for (num_pushed = 0; !cr.isFull() && src_idx + num_pushed < src_len;
          ++num_pushed) {
@@ -50,11 +50,11 @@ private:
   }
 
 public:
-  StringConverter(const T *s, mbstate *ps, size_t dstlen,
-                  size_t srclen = SIZE_MAX)
+  LIBC_INLINE StringConverter(const T *s, mbstate *ps, size_t dstlen,
+                              size_t srclen = SIZE_MAX)
       : cr(ps), src(s), src_len(srclen), src_idx(0), num_to_write(dstlen) {}
 
-  template <typename CharType> ErrorOr<CharType> pop() {
+  template <typename CharType> LIBC_INLINE ErrorOr<CharType> pop() {
     if (num_to_write == 0)
       return Error(-1);
 
@@ -81,7 +81,7 @@ public:
     return out;
   }
 
-  size_t getSourceIndex() { return src_idx; }
+  LIBC_INLINE size_t getSourceIndex() { return src_idx; }
 };
 
 } // namespace internal

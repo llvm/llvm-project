@@ -17,7 +17,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ;     }
 ; (relates to the testcase in PR50566)
 
-; Function Attrs: nofree norecurse nosync nounwind uwtable
 define void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: @test1(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
@@ -121,7 +120,6 @@ for.end:
 ;       points[i*4 + 1] = y[i];
 ;     }
 
-; Function Attrs: nofree norecurse nosync nounwind uwtable
 define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: @test2(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:
@@ -299,7 +297,6 @@ for.end:
 ;       if (x[i] > 0)
 ;         points[i*3] = x[i];
 ;     }
-; Function Attrs: nofree norecurse nosync nounwind uwtable
 define void @test(ptr noalias nocapture %points, ptr noalias nocapture readonly %x, ptr noalias nocapture readnone %y) {
 ; DISABLED_MASKED_STRIDED-LABEL: @test(
 ; DISABLED_MASKED_STRIDED-NEXT:  entry:

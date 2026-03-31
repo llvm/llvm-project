@@ -623,8 +623,10 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
     SDValue Result = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
     ReplaceNode(SDValue(Node, 0), Result);
   } else {
-    switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT)) {
-    default: llvm_unreachable("This action is not supported yet!");
+    switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT,
+                                    ST->getAlign(), ST->getAddressSpace())) {
+    default:
+      llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Legal: {
       EVT MemVT = ST->getMemoryVT();
       // If this is an unaligned store and the target doesn't support it,
@@ -1863,8 +1865,9 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
 
   // Don't convert with stack if the load/store is expensive.
-  if ((SrcVT.bitsGT(SlotVT) &&
-       !TLI.isTruncStoreLegalOrCustom(SrcOp.getValueType(), SlotVT)) ||
+  if ((SrcVT.bitsGT(SlotVT) && !TLI.isTruncStoreLegalOrCustom(
+                                   SrcOp.getValueType(), SlotVT, DestAlign,
+                                   DAG.getDataLayout().getAllocaAddrSpace())) ||
       (SlotVT.bitsLT(DestVT) &&
        !TLI.isLoadLegalOrCustom(DestVT, SlotVT, DestAlign,
                                 DAG.getDataLayout().getAllocaAddrSpace(),

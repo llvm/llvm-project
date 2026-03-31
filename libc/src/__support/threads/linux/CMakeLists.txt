@@ -26,15 +26,19 @@ add_header_library(
 
 set(monotonicity_flags)
 if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
-  set(monotonicity_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
+  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
 else()
-  set(monotonicity_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
+  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
 endif()
 
+libc_set_definition(rwlock_default_spin_count "LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}")
 add_header_library(
   rwlock
   HDRS
     rwlock.h
+  COMPILE_OPTIONS
+    ${rwlock_default_spin_count}
+    ${monotonicity_flags}
   DEPENDS
     .futex_utils
     libc.src.__support.threads.raw_mutex
@@ -42,9 +46,6 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.limits
     libc.src.__support.threads.identifier
-  COMPILE_OPTIONS
-    -DLIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}
-    ${monotonicity_flags}
 )
 
 add_object_library(

@@ -862,18 +862,30 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   return FindSDKInXcodeForModules(sdk_type, sdks_spec);
 }
 
+// Discovering the correct version and build can help us
+// identify the most likely SDK directory when looking for
+// files.
+//
+// The directory name can be one of many formats, such as
+//     10.0 (21R329) universal
+//     17.0 (23A200) arm64e
+//     17.0 (20A352)
+//     Watch4,2 10.0 (21R329)
 std::tuple<llvm::VersionTuple, llvm::StringRef>
 PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
   llvm::StringRef build;
-  llvm::StringRef version_str;
-  llvm::StringRef build_str;
-  std::tie(version_str, build_str) = dir.split(' ');
   llvm::VersionTuple version;
-  if (!version.tryParse(version_str) ||
-      build_str.empty()) {
-    if (build_str.consume_front("(")) {
-      size_t pos = build_str.find(')');
-      build = build_str.slice(0, pos);
+
+  llvm::SmallVector<llvm::StringRef> parts;
+  dir.split(parts, ' ');
+  for (llvm::StringRef part : parts) {
+    // Look for an OS version number, eg "17.0"
+    if (isdigit(part[0]))
+      version.tryParse(part);
+    // Look for a build number, eg "(20A352)"
+    if (part.consume_front("(")) {
+      size_t pos = part.find(')');
+      build = part.slice(0, pos);
     }
   }
 

@@ -13,7 +13,7 @@ target triple = "thumbv7-apple-ios3.0.0"
 ;CHECK: add nsw <4 x i32>
 ;CHECK: store <4 x i32>
 ;CHECK: ret void
-define void @example1() nounwind uwtable ssp {
+define void @example1() {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0
@@ -39,7 +39,7 @@ define void @example1() nounwind uwtable ssp {
 ;CHECK: sext <4 x i16>
 ;CHECK: store <4 x i32>
 ;CHECK: ret void
-define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) nounwind uwtable ssp {
+define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) {
   br label %1
 
 ; <label>:1                                       ; preds = %1, %0

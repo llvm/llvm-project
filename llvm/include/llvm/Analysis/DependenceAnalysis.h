@@ -583,9 +583,7 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// Works in some cases that symbolicRDIVtest doesn't,
   /// and vice versa.
-  bool exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                     const SCEV *SrcConst, const SCEV *DstConst,
-                     const Loop *SrcLoop, const Loop *DstLoop,
+  bool exactRDIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                      FullDependence &Result) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.

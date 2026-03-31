@@ -833,7 +833,7 @@ exit:
   ret void
 }
 
-attributes #0 = { noinline nounwind uwtable "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
+attributes #0 = { noinline "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
 attributes #1 = { "target-features"="+avx" }
 
 !0 = !{}

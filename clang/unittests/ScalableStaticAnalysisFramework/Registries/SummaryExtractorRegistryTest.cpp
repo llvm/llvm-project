@@ -12,6 +12,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -38,11 +39,8 @@ TEST(SummaryExtractorRegistryTest, EnumeratingRegistryEntries) {
     EXPECT_TRUE(Inserted);
   }
 
-  EXPECT_EQ(ActualNames, (std::set<llvm::StringRef>{
-                             "MockSummaryExtractor1",
-                             "MockSummaryExtractor2",
-                             "NoOpExtractor",
-                         }));
+  EXPECT_THAT(ActualNames, testing::IsSupersetOf({"MockSummaryExtractor1",
+                                                  "MockSummaryExtractor2"}));
 }
 
 TEST(SummaryExtractorRegistryTest, InstantiatingExtractor1) {

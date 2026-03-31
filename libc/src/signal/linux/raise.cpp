@@ -8,21 +8,20 @@
 
 #include "src/signal/raise.h"
 
-#include "hdr/types/sigset_t.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/raise.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/signal/linux/signal_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, raise, (int sig)) {
-  sigset_t sigset;
-  block_all_signals(sigset);
-  long pid = LIBC_NAMESPACE::syscall_impl<long>(SYS_getpid);
-  long tid = LIBC_NAMESPACE::syscall_impl<long>(SYS_gettid);
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_tgkill, pid, tid, sig);
-  restore_signals(sigset);
-  return ret;
+  auto result = linux_syscalls::raise(sig);
+  if (!result.has_value()) {
+    libc_errno = result.error();
+    return -1;
+  }
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

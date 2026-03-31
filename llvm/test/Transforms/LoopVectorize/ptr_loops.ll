@@ -10,7 +10,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: shufflevector <4 x i32>
 ;CHECK: store <4 x i32>
 ;CHECK: ret
-define i32 @_Z5test1v() nounwind uwtable ssp {
+define i32 @_Z5test1v() {
   br label %1
 
 ; <label>:1                                       ; preds = %0, %1
@@ -33,7 +33,7 @@ define i32 @_Z5test1v() nounwind uwtable ssp {
 ;CHECK: shufflevector <4 x i32>
 ;CHECK: store <4 x i32>
 ;CHECK: ret
-define i32 @_Z5test2v() nounwind uwtable ssp {
+define i32 @_Z5test2v() {
   br label %1
 
 ; <label>:1                                       ; preds = %0, %1
@@ -55,7 +55,7 @@ define i32 @_Z5test2v() nounwind uwtable ssp {
 ;CHECK: shufflevector <4 x i32>
 ;CHECK: store <4 x i32>
 ;CHECK: ret
-define i32 @_Z5test3v() nounwind uwtable ssp {
+define i32 @_Z5test3v() {
   br label %1
 
 ; <label>:1                                       ; preds = %0, %1

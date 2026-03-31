@@ -58,7 +58,7 @@ body:             |
     ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C1]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CLZW]], [[C1]]
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
@@ -129,7 +129,7 @@ body:             |
     ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C1]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CLZW]], [[C1]]
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
@@ -333,7 +333,7 @@ body:             |
     ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C1]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CLZW]], [[C1]]
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10
@@ -404,7 +404,7 @@ body:             |
     ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C1]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CLZW]], [[C1]]
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; RV64ZBB-NEXT: PseudoRET implicit $x10

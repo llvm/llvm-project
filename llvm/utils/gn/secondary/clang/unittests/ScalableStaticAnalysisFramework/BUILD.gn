@@ -18,8 +18,9 @@ unittest("ClangScalableAnalysisTests") {
   ]
   include_dirs = [ "." ]
   sources = [
-    "ASTEntityMappingTest.cpp",
+    "Analyses/CallGraph/CallGraphExtractorTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
+    "ASTEntityMappingTest.cpp",
     "BuildNamespaceTest.cpp",
     "EntityIdTableTest.cpp",
     "EntityIdTest.cpp",

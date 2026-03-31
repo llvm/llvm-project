@@ -28,10 +28,12 @@
 using namespace lldb;
 using namespace lldb_private;
 
+/// sdk_dir FileSpec may be .../17.0 (15A100)
+///            or it may be .../17.0 (15A100)/arm64e
+/// In both of these cases, dirname_str should be "17.0 (15A100)"
 PlatformRemoteDarwinDevice::SDKDirectoryInfo::SDKDirectoryInfo(
-    const lldb_private::FileSpec &sdk_dir)
-    : directory(sdk_dir), build(), user_cached(false) {
-  llvm::StringRef dirname_str = sdk_dir.GetFilename().GetStringRef();
+    const lldb_private::FileSpec &sdk_dir, llvm::StringRef dirname_str)
+    : directory(sdk_dir), build() {
   llvm::StringRef build_str;
   std::tie(version, build_str) = ParseVersionBuildDir(dirname_str);
   build.SetString(build_str);

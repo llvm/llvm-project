@@ -1295,6 +1295,52 @@ def AMDGPU_GatherToLDSOp :
   let hasCanonicalizer = 1;
 }
 
+def AMDGPU_GlobalLoadAsyncToLDSOp :
+    AMDGPU_Op<"global_load_async_to_lds", [AttrSizedOperandSegments]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "global memory to load from", [MemRead]>:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "LDS memory to write to", [MemWrite]>:$dst,
+                   Variadic<Index>:$dstIndices,
+                   TypeAttr:$transferType
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for async global load to lds instructions";
+  let description = [{
+    AMDGPU wrapper for `global.load.async.to.lds` instructions, which performs
+    asynchronous load of data from global memory into LDS while bypassing VGPRs.
+
+    * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
+    * `$srcIndices`: indices into `$src` for this thread's global read location.
+    * `$dst`: LDS memref to write to (workgroup addrspace).
+    * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
+    * `$transferType`: type of data to be transferred. Must be 8, 32, 64 or 128 bit scalar
+     or vector type.
+
+    Note: only supported on gfx1250 and later.
+
+    Examples:
+    ```mlir
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : f32, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : vector<4xf32>, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i], %dst[%j]
+        : i8, memref<512xi8, #gpu.address_space<global>>,
+          memref<256xi8, #gpu.address_space<workgroup>>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]`
+    attr-dict `:` $transferType `,` type($src) `,` type($dst)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_TransposeLoadOp :
     AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,

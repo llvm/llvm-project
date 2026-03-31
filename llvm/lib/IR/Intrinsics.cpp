@@ -517,15 +517,14 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return TargetExtType::get(Context, "aarch64.svcount");
 
   case IITDescriptor::Integer:
-    return IntegerType::get(Context, D.Integer_Width);
+    return IntegerType::get(Context, D.IntegerWidth);
   case IITDescriptor::Vector:
-    return VectorType::get(DecodeFixedType(Infos, Tys, Context),
-                           D.Vector_Width);
+    return VectorType::get(DecodeFixedType(Infos, Tys, Context), D.VectorWidth);
   case IITDescriptor::Pointer:
-    return PointerType::get(Context, D.Pointer_AddressSpace);
+    return PointerType::get(Context, D.PointerAddressSpace);
   case IITDescriptor::Struct: {
     SmallVector<Type *, 8> Elts;
-    for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
+    for (unsigned i = 0, e = D.StructNumElements; i != e; ++i)
       Elts.push_back(DecodeFixedType(Infos, Tys, Context));
     return StructType::get(Context, Elts);
   }
@@ -890,28 +889,28 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::PPCQuad:
     return !Ty->isPPC_FP128Ty();
   case IITDescriptor::Integer:
-    return !Ty->isIntegerTy(D.Integer_Width);
+    return !Ty->isIntegerTy(D.IntegerWidth);
   case IITDescriptor::AArch64Svcount:
     return !isa<TargetExtType>(Ty) ||
            cast<TargetExtType>(Ty)->getName() != "aarch64.svcount";
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
-    return !VT || VT->getElementCount() != D.Vector_Width ||
+    return !VT || VT->getElementCount() != D.VectorWidth ||
            matchIntrinsicType(VT->getElementType(), Infos, ArgTys,
                               DeferredChecks, IsDeferredCheck);
   }
   case IITDescriptor::Pointer: {
     PointerType *PT = dyn_cast<PointerType>(Ty);
-    return !PT || PT->getAddressSpace() != D.Pointer_AddressSpace;
+    return !PT || PT->getAddressSpace() != D.PointerAddressSpace;
   }
 
   case IITDescriptor::Struct: {
     StructType *ST = dyn_cast<StructType>(Ty);
     if (!ST || !ST->isLiteral() || ST->isPacked() ||
-        ST->getNumElements() != D.Struct_NumElements)
+        ST->getNumElements() != D.StructNumElements)
       return true;
 
-    for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
+    for (unsigned i = 0, e = D.StructNumElements; i != e; ++i)
       if (matchIntrinsicType(ST->getElementType(i), Infos, ArgTys,
                              DeferredChecks, IsDeferredCheck))
         return true;

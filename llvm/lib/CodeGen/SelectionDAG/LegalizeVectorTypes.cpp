@@ -909,6 +909,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(N);
     break;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Res = ScalarizeVecOp_CTTZ_ELTS(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1219,6 +1223,18 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
   //   %mask[1] ? 1 : 0
   EVT VT = N->getValueType(0);
   return DAG.getConstant(0, SDLoc(N), VT);
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecOp_CTTZ_ELTS(SDNode *N) {
+  // The number of trailing zero elements is 1 if the element is 0, and 0
+  // otherwise.
+  if (N->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON)
+    return DAG.getConstant(0, SDLoc(N), N->getValueType(0));
+  SDValue Op = GetScalarizedVector(N->getOperand(0));
+  SDValue SetCC =
+      DAG.getSetCC(SDLoc(N), MVT::i1, Op,
+                   DAG.getConstant(0, SDLoc(N), Op.getValueType()), ISD::SETEQ);
+  return DAG.getZExtOrTrunc(SetCC, SDLoc(N), N->getValueType(0));
 }
 
 //===----------------------------------------------------------------------===//
@@ -3742,6 +3758,10 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMINIMUM:
     Res = SplitVecOp_VP_REDUCE(N, OpNo);
     break;
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Res = SplitVecOp_CttzElts(N);
+    break;
   case ISD::VP_CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
     Res = SplitVecOp_VP_CttzElements(N);
@@ -4826,6 +4846,26 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_TO_XINT_SAT(SDNode *N) {
   Hi = DAG.getNode(N->getOpcode(), dl, NewResVT, Hi, N->getOperand(1));
 
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_CttzElts(SDNode *N) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+
+  SDValue Lo, Hi;
+  SDValue VecOp = N->getOperand(0);
+  GetSplitVector(VecOp, Lo, Hi);
+
+  // if CTTZ_ELTS(Lo) != VL => CTTZ_ELTS(Lo).
+  // else => VL + (CTTZ_ELTS(Hi) or CTTZ_ELTS_ZERO_POISON(Hi)).
+  SDValue ResLo = DAG.getNode(ISD::CTTZ_ELTS, DL, ResVT, Lo);
+  SDValue VL =
+      DAG.getElementCount(DL, ResVT, Lo.getValueType().getVectorElementCount());
+  SDValue ResLoNotVL =
+      DAG.getSetCC(DL, getSetCCResultType(ResVT), ResLo, VL, ISD::SETNE);
+  SDValue ResHi = DAG.getNode(N->getOpcode(), DL, ResVT, Hi);
+  return DAG.getSelect(DL, ResVT, ResLoNotVL, ResLo,
+                       DAG.getNode(ISD::ADD, DL, ResVT, VL, ResHi));
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VP_CttzElements(SDNode *N) {

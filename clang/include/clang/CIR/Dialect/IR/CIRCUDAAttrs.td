@@ -34,6 +34,7 @@ def CIR_CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName", "cu.kernel_name"> {
 
   let parameters = (ins "std::string":$kernel_name);
   let assemblyFormat = "`<` $kernel_name `>`";
+  let canHaveIllegalCXXABIType = 0;
 }
 
 def CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
@@ -47,6 +48,7 @@ def CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
 
     The attribute corresponds to the attribute on LLVM with the same name.
   }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRCUDAATTRS_TD

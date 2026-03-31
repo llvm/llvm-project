@@ -7,7 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: load <4 x float>
 ;CHECK: fadd <4 x float>
 ;CHECK: ret i32
-define i32 @cpp_new_arrays() uwtable ssp {
+define i32 @cpp_new_arrays() uwtable {
 entry:
   %call = call noalias ptr @_Znwm(i64 4)
   store float 1.000000e+03, ptr %call, align 4

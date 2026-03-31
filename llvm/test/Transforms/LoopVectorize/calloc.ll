@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: zext <4 x i8>
 ;CHECK: ret
 
-define noalias ptr @hexit(ptr nocapture %bytes, i64 %length) nounwind uwtable ssp {
+define noalias ptr @hexit(ptr nocapture %bytes, i64 %length) {
 entry:
   %shl = shl i64 %length, 1
   %add28 = or i64 %shl, 1

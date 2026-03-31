@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;    }
 ;}
 
-define void @loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
+define void @loop(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -63,7 +63,7 @@ for.end:                                          ; preds = %for.body
 ; The same loop with parallel loop metadata added to the loop branch
 ; and the memory instructions.
 
-define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
+define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @parallel_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -142,7 +142,7 @@ for.end:                                          ; preds = %for.body
 ; accesses refer to a different loop's identifier.
 
 
-define void @mixed_metadata(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
+define void @mixed_metadata(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @mixed_metadata(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]

@@ -122,10 +122,6 @@ static const DeclContext *getEffectiveDeclContext(const Decl *D) {
   return DC->getRedeclContext();
 }
 
-static const DeclContext *getEffectiveParentContext(const DeclContext *DC) {
-  return getEffectiveDeclContext(cast<Decl>(DC));
-}
-
 static const FunctionDecl *getStructor(const NamedDecl *ND) {
   if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
     return FTD->getTemplatedDecl()->getCanonicalDecl();
@@ -557,11 +553,6 @@ bool MicrosoftMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
 
     // Variables at global scope with internal linkage are not mangled.
     const DeclContext *DC = getEffectiveDeclContext(D);
-    // Check for extern variable declared locally.
-    if (DC->isFunctionOrMethod() && D->hasLinkage())
-      while (!DC->isNamespace() && !DC->isTranslationUnit())
-        DC = getEffectiveParentContext(DC);
-
     if (DC->isTranslationUnit() && D->getFormalLinkage() == Linkage::Internal &&
         !isa<VarTemplateSpecializationDecl>(D) && D->getIdentifier() != nullptr)
       return false;

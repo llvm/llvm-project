@@ -1083,7 +1083,7 @@ public:
       break;
     case KindTy::FRM:
       OS << "<frm: ";
-      roundingModeToString(getFRM());
+      OS << roundingModeToString(getFRM());
       OS << '>';
       break;
     case KindTy::Fence:

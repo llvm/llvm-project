@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK-LABEL: @start_at_nonzero(
 ;CHECK: mul nuw <4 x i32>
 ;CHECK: ret i32
-define i32 @start_at_nonzero(ptr nocapture %a, i32 %start, i32 %end) nounwind uwtable ssp {
+define i32 @start_at_nonzero(ptr nocapture %a, i32 %start, i32 %end) {
 entry:
   %cmp3 = icmp slt i32 %start, %end
   br i1 %cmp3, label %for.body.lr.ph, label %for.end

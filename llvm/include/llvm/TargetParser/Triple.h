@@ -1384,6 +1384,10 @@ public:
   /// The canonical type for the given LLVM architecture name (e.g., "x86").
   LLVM_ABI static ArchType getArchTypeForLLVMName(StringRef Str);
 
+  /// Parse anything recognized as an architecture for the first field of the
+  /// triple.
+  LLVM_ABI static ArchType parseArch(StringRef Str);
+
   /// @}
 
   /// Returns a canonicalized OS version number for the specified OS.

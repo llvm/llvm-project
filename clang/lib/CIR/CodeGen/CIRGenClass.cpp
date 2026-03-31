@@ -185,6 +185,25 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   }
 };
 
+/// If the delegating constructor's body throws after the delegated-to
+/// constructor completes, destroy the object (mirrors CGClass.cpp's
+/// CallDelegatingCtorDtor).
+struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
+  const CXXDestructorDecl *dtor;
+  Address addr;
+  CXXDtorType type;
+
+  CallDelegatingCtorDtor(const CXXDestructorDecl *dtor, Address addr,
+                         CXXDtorType type)
+      : dtor(dtor), addr(addr), type(type) {}
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    QualType thisTy = dtor->getFunctionObjectParameterType();
+    cgf.emitCXXDestructorCall(dtor, type, /*forVirtualBase=*/false,
+                              /*delegating=*/true, addr, thisTy);
+  }
+};
+
 /// A visitor which checks whether an initializer uses 'this' in a
 /// way which requires the vtable to be properly set.
 struct DynamicThisUseChecker
@@ -1110,9 +1129,10 @@ void CIRGenFunction::emitDelegatingCXXConstructorCall(
 
   const CXXRecordDecl *classDecl = ctor->getParent();
   if (cgm.getLangOpts().Exceptions && !classDecl->hasTrivialDestructor()) {
-    cgm.errorNYI(ctor->getSourceRange(),
-                 "emitDelegatingCXXConstructorCall: exception");
-    return;
+    CXXDtorType dtorType =
+        curGD.getCtorType() == Ctor_Complete ? Dtor_Complete : Dtor_Base;
+    ehStack.pushCleanup<CallDelegatingCtorDtor>(
+        EHCleanup, classDecl->getDestructor(), thisPtr, dtorType);
   }
 }
 

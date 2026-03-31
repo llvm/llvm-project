@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; now non-vectorizable.
 
 ;CHECK-NOT: <4 x i32>
-define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
+define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) {
 entry:
   %indvars.iv.next.reg2mem = alloca i64
   %indvars.iv.reg2mem = alloca i64

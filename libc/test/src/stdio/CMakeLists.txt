@@ -118,23 +118,23 @@ add_libc_test(
 )
 
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
-  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
+  libc_add_definition(sprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
     LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
-  list(APPEND sprintf_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+  libc_add_definition(sprintf_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
-  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
+  libc_add_definition(sprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
-  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
+  libc_add_definition(sprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_WRITE_INT")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
-  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+  libc_add_definition(sprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
-  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
+  libc_add_definition(sprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_STRERROR")
 endif()
 
 if(LIBC_CONF_PRINTF_DISABLE_WIDE)
@@ -185,7 +185,7 @@ if(LLVM_LIBC_FULL_BUILD)
   set(hermetic_test_only HERMETIC_TEST_ONLY)
 else()
 # Else in overlay mode they use the system's FILE.
- set(use_system_file "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
+ libc_set_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_libc_test(
@@ -328,10 +328,10 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
 endif()
 
 if(LIBC_CONF_SCANF_DISABLE_FLOAT)
-  list(APPEND sscanf_test_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+  libc_add_definition(sscanf_test_copts "LIBC_COPT_SCANF_DISABLE_FLOAT")
 endif()
 if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
-  list(APPEND sscanf_test_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+  libc_add_definition(sscanf_test_copts "LIBC_COPT_SCANF_DISABLE_INDEX_MODE")
 endif()
 
 add_libc_test(

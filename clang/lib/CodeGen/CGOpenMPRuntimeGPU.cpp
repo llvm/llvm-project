@@ -2261,18 +2261,9 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   return false;
 }
 
-// Get current OffloadArch and ignore any unknown values
-static OffloadArch getOffloadArch(CodeGenModule &CGM) {
-  if (!CGM.getTarget().hasFeature("ptx"))
-    return OffloadArch::Unknown;
-  for (const auto &Feature : CGM.getTarget().getTargetOpts().FeatureMap) {
-    if (Feature.getValue()) {
-      OffloadArch Arch = StringToOffloadArch(Feature.getKey());
-      if (Arch != OffloadArch::Unknown)
-        return Arch;
-    }
-  }
-  return OffloadArch::Unknown;
+static OffloadArch getOffloadArch(const CodeGenModule &CGM) {
+  // FIXME: This should not require parsing
+  return StringToOffloadArch(CGM.getTarget().getTargetOpts().CPU);
 }
 
 /// Check to see if target architecture supports unified addressing which is

@@ -1742,13 +1742,13 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
-def STD_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
+def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisVT<2, XLenVT>]>;
-def riscv_pshl : RVSDNode<"PSHL", STD_RISCVPackedShift>;
-def riscv_psrl : RVSDNode<"PSRL", STD_RISCVPackedShift>;
-def riscv_psra : RVSDNode<"PSRA", STD_RISCVPackedShift>;
-def riscv_psslai : RVSDNode<"PSSLAI", STD_RISCVPackedShift>;
+def riscv_pshl : RVSDNode<"PSHL", SDT_RISCVPackedShift>;
+def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
+def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
+def riscv_psslai : RVSDNode<"PSSLAI", SDT_RISCVPackedShift>;
 
 // Bitwise merge: res = (~op0 & op1) | (op0 & op2)
 def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,

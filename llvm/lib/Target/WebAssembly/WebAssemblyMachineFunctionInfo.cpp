@@ -86,22 +86,28 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
   if (Ty->isVarArg())
     Params.push_back(PtrVT);
 
-  // For swiftcc, emit additional swiftself and swifterror parameters
-  // if there aren't. These additional parameters are also passed for caller.
-  // They are necessary to match callee and caller signature for indirect
-  // call.
+  // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
+  // (for swifttailcc) swiftasync parameters if there aren't. These additional
+  // parameters are also passed for caller. They are necessary to match callee
+  // and caller signature for indirect call.
 
-  if (TargetFunc && TargetFunc->getCallingConv() == CallingConv::Swift) {
+  if (TargetFunc && (TargetFunc->getCallingConv() == CallingConv::Swift ||
+                     TargetFunc->getCallingConv() == CallingConv::SwiftTail)) {
     MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
     bool HasSwiftErrorArg = false;
     bool HasSwiftSelfArg = false;
+    bool HasSwiftAsyncArg = false;
     for (const auto &Arg : TargetFunc->args()) {
       HasSwiftErrorArg |= Arg.hasAttribute(Attribute::SwiftError);
       HasSwiftSelfArg |= Arg.hasAttribute(Attribute::SwiftSelf);
+      HasSwiftAsyncArg |= Arg.hasAttribute(Attribute::SwiftAsync);
     }
+    if (!HasSwiftSelfArg)
+      Params.push_back(PtrVT);
     if (!HasSwiftErrorArg)
       Params.push_back(PtrVT);
-    if (!HasSwiftSelfArg)
+    if (TargetFunc->getCallingConv() == CallingConv::SwiftTail &&
+        !HasSwiftAsyncArg)
       Params.push_back(PtrVT);
   }
 }

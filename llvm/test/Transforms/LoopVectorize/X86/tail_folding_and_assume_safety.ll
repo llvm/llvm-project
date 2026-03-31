@@ -20,7 +20,6 @@ target triple = "x86_64-pc-linux-gnu"
 ;CHECK: call <8 x i32> @llvm.masked.load
 ;CHECK: call void @llvm.masked.store
 
-; Function Attrs: nofree norecurse nounwind uwtable
 define void @fold_tail(ptr noalias nocapture %p, ptr noalias nocapture readonly %q1, ptr noalias nocapture readonly %q2,
 i32 %guard) #0 {
 entry:
@@ -66,7 +65,6 @@ for.inc:
 ;CHECK:  call <8 x i32> @llvm.masked.load
 ;CHECK:  call void @llvm.masked.store
 
-; Function Attrs: norecurse nounwind uwtable
 define void @assume_safety(ptr nocapture, ptr nocapture readonly, ptr nocapture readonly, i32) #0 {
   %5 = sext i32 %3 to i64
   br label %7
@@ -112,7 +110,6 @@ define void @assume_safety(ptr nocapture, ptr nocapture readonly, ptr nocapture 
 ;CHECK: call <8 x i32> @llvm.masked.load
 ;CHECK: call void @llvm.masked.store
 
-; Function Attrs: nofree norecurse nounwind uwtable
 define void @fold_tail_and_assume_safety(ptr noalias nocapture %p, ptr noalias nocapture readonly %q1, ptr noalias nocapture readonly %q2,
 i32 %guard) #0 {
 entry:
@@ -143,7 +140,7 @@ for.inc:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !11
 }
 
-attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
+attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

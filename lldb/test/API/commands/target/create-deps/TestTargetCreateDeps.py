@@ -74,22 +74,19 @@ class TargetDependentsTestCase(TestBase):
 
     @expectedFailureAndroid  # android will return mutiple images
     def test_dependents_implicit_default_lib(self):
-        ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
+        dylibName = self.platformContext.getFullLibName("load_a")
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
     def test_dependents_explicit_default_lib(self):
-        ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
+        dylibName = self.platformContext.getFullLibName("load_a")
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -ddefault " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
     def test_dependents_explicit_true_lib(self):
-        ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
+        dylibName = self.platformContext.getFullLibName("load_a")
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -dtrue " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
@@ -100,15 +97,13 @@ class TargetDependentsTestCase(TestBase):
         triple=no_match(".*-android"),
     )
     def test_dependents_explicit_false_lib(self):
-        ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
+        dylibName = self.platformContext.getFullLibName("load_a")
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -dfalse " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(False)
 
     def test_dependents_implicit_false_lib(self):
-        ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
+        dylibName = self.platformContext.getFullLibName("load_a")
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -d " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)

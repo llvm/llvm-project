@@ -56,8 +56,7 @@ define i32 @ctz_v16i1(<16 x i1> %a) {
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    sub w8, w9, w8
-; CHECK-NEXT:    and w0, w8, #0xff
+; CHECK-NEXT:    sub w0, w9, w8, uxtb
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1> %a, i1 0)
   ret i32 %res
@@ -79,8 +78,7 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    umaxv h0, v0.4h
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    sub w8, w9, w8
-; CHECK-NEXT:    and w0, w8, #0xff
+; CHECK-NEXT:    sub w0, w9, w8, uxth
 ; CHECK-NEXT:    ret
   %res = call i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32> %a, i1 0)
   ret i16 %res

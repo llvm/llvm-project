@@ -80,6 +80,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  siginfo_t
+  HDRS
+    siginfo_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.siginfo_t
+)
+
+add_proxy_header_library(
   struct_epoll_event
   HDRS
     struct_epoll_event.h
@@ -915,4 +923,22 @@ add_proxy_header_library(
     Elf64_Versym.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf64_Versym
+)
+
+add_proxy_header_library(
+  posix_tnode
+  HDRS
+    posix_tnode.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.posix_tnode
+    libc.include.search
+)
+
+add_proxy_header_library(
+  VISIT
+  HDRS
+    VISIT.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.VISIT
+    libc.include.search
 )

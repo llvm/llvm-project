@@ -106,6 +106,10 @@ public:
 private:
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
+  friend class Value;
+  /// Index of first metadata attachment in context, or zero.
+  unsigned MetadataIndex = 0;
+
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;

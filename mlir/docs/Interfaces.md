@@ -133,7 +133,7 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
     -   The C++ namespace that the interface class should be generated in.
 *   Methods (`methods`)
     -   The list of interface hook methods that are defined by the IR object.
-    -   The structure of these methods is defined [here](#interface-methods).
+    -   The structure of these methods is defined [here](#dialect-interface-methods).
 
 The header file can be generated via the following command:
 
@@ -150,6 +150,28 @@ mlir_tablegen(DialectInlinerInterface.h.inc -gen-dialect-interface-decls)
 
 An example of this can be found in the DialectInlinerInterface implementation 
 and the related `CMakeLists.txt` under `mlir/include/mlir/Transforms`.
+
+##### Dialect Interface Methods
+
+There are three types of methods that can be used with a dialect interface,
+`InterfaceMethod`, `InterfaceMethodDeclaration` and `PureVirtualInterfaceMethod`.
+They are all comprised of the same core components, with the distinction that
+`InterfaceMethod` also supports a default method body.
+
+Interface methods are comprised of the following components:
+
+*   Description: a string description of this method, its invariants, example usages,
+etc.
+*   ReturnType: a string corresponding to the C++ return type of the method.
+*   MethodName: a string corresponding to the C++ name of the method.
+*   Arguments (Optional): a dag of strings that correspond to a C++ type and variable name
+respectively.
+*   MethodBody (Optional, only in `InterfaceMethod`): an optional explicit implementation
+of the interface method.
+
+`InterfaceMethodDeclaration` will only declare the class method. On the other hand,
+`PureVirtualInterfaceMethod` marks the method as pure virtual, but also makes the
+constructor of the dialect calss protected.
 
 #### DialectInterfaceCollection
 
@@ -510,7 +532,7 @@ comprised of the following components:
 
 ##### Interface Methods
 
-There are two types of methods that can be used with an interface,
+There are two types of methods that can be used with an attr/op/type interface,
 `InterfaceMethod` and `StaticInterfaceMethod`. They are both comprised of the
 same core components, with the distinction that `StaticInterfaceMethod` models a
 static method on the derived IR object.

@@ -295,6 +295,25 @@ bool RecordType::getPadded() const { return getImpl()->padded; }
 cir::RecordType::RecordKind RecordType::getKind() const {
   return getImpl()->kind;
 }
+bool RecordType::isABIConvertedRecord() const {
+  return getName() && getName().getValue().starts_with(abi_conversion_prefix);
+}
+
+mlir::StringAttr RecordType::getABIConvertedName() const {
+  assert(!isABIConvertedRecord());
+
+  return StringAttr::get(getContext(),
+                         abi_conversion_prefix + getName().getValue());
+}
+
+void RecordType::removeABIConversionNamePrefix() {
+  mlir::StringAttr recordName = getName();
+
+  if (recordName && recordName.getValue().starts_with(abi_conversion_prefix))
+    getImpl()->name = mlir::StringAttr::get(
+        recordName.getValue().drop_front(sizeof(abi_conversion_prefix) - 1),
+        recordName.getType());
+}
 
 void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
@@ -774,7 +793,8 @@ MethodType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 uint64_t
 MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
                             mlir::DataLayoutEntryListRef params) const {
-  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+  return cast<cir::RecordType>(getMethodLayoutType(getContext()))
+      .getABIAlignment(dataLayout, params);
 }
 
 //===----------------------------------------------------------------------===//

@@ -17,6 +17,7 @@ static_library("Driver") {
     "//clang/lib/DependencyScanning",
     "//clang/lib/Frontend",
     "//clang/lib/Options",
+    "//clang/lib/ScalableStaticAnalysisFramework/Analyses",
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
     "//clang/lib/ScalableStaticAnalysisFramework/Frontend",
     "//llvm/include/llvm/Config:llvm-config",

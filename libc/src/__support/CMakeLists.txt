@@ -59,6 +59,7 @@ add_header_library(
     .freetrie
 )
 
+libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
 add_object_library(
   freelist_heap
   SRCS
@@ -66,7 +67,7 @@ add_object_library(
   HDRS
     freelist_heap.h
   COMPILE_OPTIONS
-    -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
+    ${libc_freelist_malloc_size}
   DEPENDS
     .block
     .freelist

@@ -445,11 +445,13 @@ def SimplifyAffineWithBounds : Pass<"affine-simplify-with-bounds"> {
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
   let summary = "Lower affine operations operating on indices into more fundamental operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsPass()";
+  let dependentDialects = ["vector::VectorDialect"];
 }
 
 def AffineExpandIndexOpsAsAffine : Pass<"affine-expand-index-ops-as-affine"> {
   let summary = "Lower affine operations operating on indices into affine.apply operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsAsAffinePass()";
+  let dependentDialects = ["vector::VectorDialect", "ub::UBDialect"];
 }
 
 def AffineFoldMemRefAliasOps : Pass<"affine-fold-memref-alias-ops"> {

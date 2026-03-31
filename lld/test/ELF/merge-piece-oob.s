@@ -12,7 +12,7 @@
 # CHECK-NEXT: [[PREFIX]]: {{.*}}:(.foo): offset 0xffffffffffffffff is outside the section
 ## .rodata.str1.1 is "abc\0" (4 bytes). offset<=size is accepted.
 # CHECK-NEXT: [[PREFIX]]: {{.*}}:(.rodata.str1.1): offset 0x5 is outside the section
-## .data.retain references .foo-1 as well.
+## .data.retain references .foo-2 as well.
 # CHECK-NEXT: [[PREFIX]]: {{.*}}:(.foo): offset 0xfffffffffffffffe is outside the section
 
 ## Test that --gc-sections with an out-of-bounds offset doesn't crash.
