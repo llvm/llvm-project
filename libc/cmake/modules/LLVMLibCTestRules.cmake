@@ -195,6 +195,16 @@ function(get_object_files_for_test result skipped_entrypoints_list)
 
 endfunction(get_object_files_for_test)
 
+function(get_link_options link_options)
+  set(link_opts "")
+  foreach(opt IN LISTS ARGN)
+    if((NOT ${opt} MATCHES "^/D") AND (NOT ${opt} MATCHES "^-D"))
+      list(APPEND link_opts ${opt})
+    endif()
+  endforeach()
+  set(${link_options} "${link_opts}" PARENT_SCOPE)
+endfunction()
+
 # Rule to add a libc unittest.
 # Usage
 #    add_libc_unittest(
@@ -238,11 +248,11 @@ function(create_libc_unittest fq_target_name)
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
   libc_add_definition(compile_options "LIBC_TEST=UNIT")
-  # TODO: Ideally we would have a separate function for link options.
-  set(link_options
-    ${compile_options}
-    ${LIBC_LINK_OPTIONS_DEFAULT}
-    ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+
+  get_link_options(link_options
+                   ${compile_options}
+                   ${LIBC_LINK_OPTIONS_DEFAULT}
+                   ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
   )
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
