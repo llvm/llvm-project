@@ -1663,7 +1663,7 @@ Value *SCEVExpander::expand(SCEVUse S) {
   }
 
   // Check to see if we already expanded this here.
-  auto I = InsertedExpressions.find(std::make_pair(S.getPointer(), &*InsertPt));
+  auto I = InsertedExpressions.find(std::make_pair(S, &*InsertPt));
   if (I != InsertedExpressions.end())
     return I->second;
 
@@ -1705,10 +1705,7 @@ Value *SCEVExpander::expand(SCEVUse S) {
   // the expression at this insertion point. If the mapped value happened to be
   // a postinc expansion, it could be reused by a non-postinc user, but only if
   // its insertion point was already at the head of the loop.
-  // Only cache canonical SCEVUses (without use-specific flags) to prevent
-  // re-use of expansions with incorrect flags.
-  if (S.isCanonical())
-    InsertedExpressions[std::make_pair(S.getPointer(), &*InsertPt)] = V;
+  InsertedExpressions[std::make_pair(S, &*InsertPt)] = V;
   return V;
 }
 
