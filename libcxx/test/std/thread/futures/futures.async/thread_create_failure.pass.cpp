@@ -32,7 +32,6 @@
 
 #if __has_include(<sys/resource.h>)
 #  include <sys/resource.h>
-// Using the macro TEST_RLIMIT to determine the type of RLIMIT based on the platform.
 #  if defined(_AIX) && defined(RLIMIT_THREADS)
 #    define TEST_RLIMIT RLIMIT_THREADS
 #  elif defined(RLIMIT_NPROC)
