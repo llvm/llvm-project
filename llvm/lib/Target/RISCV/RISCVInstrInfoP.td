@@ -1742,13 +1742,13 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
-def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
+def STD_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisVT<2, XLenVT>]>;
-def riscv_pshl : RVSDNode<"PSHL", SDT_RISCVPackedShift>;
-def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
-def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
-def riscv_psslai : RVSDNode<"PSSLAI", SDT_RISCVPackedShift>;
+def riscv_pshl : RVSDNode<"PSHL", STD_RISCVPackedShift>;
+def riscv_psrl : RVSDNode<"PSRL", STD_RISCVPackedShift>;
+def riscv_psra : RVSDNode<"PSRA", STD_RISCVPackedShift>;
+def riscv_psslai : RVSDNode<"PSSLAI", STD_RISCVPackedShift>;
 
 // The immediate for these is the number of trailing ones in the max value.
 def riscv_sati : RVSDNode<"SATI", SDTIntBinOp>;
