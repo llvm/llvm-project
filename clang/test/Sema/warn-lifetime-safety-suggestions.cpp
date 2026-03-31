@@ -436,13 +436,9 @@ struct MemberArrayReturn {
   int* getData() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
     return arr;    // expected-note {{param returned here}}
   }
-};
-
-struct MemberPointerArithmeticReturn {
-    int arr[10];
-    int* end() {         // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
-        return arr + 10; // expected-note {{param returned here}}
-    }
+  int* getLast() {   // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return arr + 10; // expected-note {{param returned here}}
+  }
 };
 
 } // namespace array
