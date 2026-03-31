@@ -153,6 +153,92 @@ static unsigned getVersionValue(unsigned MajorVersion, unsigned MinorVersion) {
   return MajorVersion * 1000000 + MinorVersion * 1000;
 }
 
+static constexpr int NumRVVBuiltins =
+    RISCVVector::FirstSiFiveBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumRVVSiFiveBuiltins =
+    RISCVVector::FirstAndesBuiltin - RISCVVector::FirstSiFiveBuiltin;
+static constexpr int NumRVVAndesBuiltins =
+    RISCVVector::FirstTSBuiltin - RISCVVector::FirstAndesBuiltin;
+static constexpr int NumRISCVBuiltins =
+    RISCV::LastTSBuiltin - RISCVVector::FirstTSBuiltin;
+static constexpr int NumBuiltins =
+    RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins == (NumRVVBuiltins + NumRVVSiFiveBuiltins +
+                              NumRVVAndesBuiltins + NumRISCVBuiltins));
+
+namespace RVV {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+static_assert(BuiltinStrings.size() < 100'000);
+
+static constexpr std::array<Builtin::Info, NumRVVBuiltins> BuiltinInfos = {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVV
+
+namespace RVVSiFive {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_sifive_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumRVVSiFiveBuiltins> BuiltinInfos =
+    {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_sifive_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVVSiFive
+
+namespace RVVAndes {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumRVVAndesBuiltins> BuiltinInfos =
+    {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVVAndes
+
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCV.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsRISCV.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumRISCVBuiltins);
+
+// Extract unique scalar extensions from RISC-V scalar builtins
+static llvm::SmallSet<std::string, 16> getUniqueScalarExtensions() {
+  llvm::SmallSet<std::string, 16> UniqueScalarExtensions;
+  for (const auto &Info : BuiltinInfos) {
+    StringRef Features = BuiltinStrings[Info.Offsets.Features];
+    if (Features.empty())
+      continue;
+
+    SmallVector<StringRef, 4> Parts;
+    Features.split(Parts, ',');
+    for (StringRef Part : Parts) {
+      SmallVector<StringRef, 2> OrParts;
+      Part.split(OrParts, '|');
+      for (StringRef Feature : OrParts) {
+        Feature = Feature.trim();
+        if (Feature != "32bit" && Feature != "64bit" && !Feature.empty())
+          UniqueScalarExtensions.insert(Feature.str());
+      }
+    }
+  }
+  return UniqueScalarExtensions;
+}
+
 void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
   Builder.defineMacro("__riscv");
@@ -250,26 +336,39 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   for (const auto *Ext : ImplicitList)
     Builder.defineMacro(Twine("__riscv_v_intrinsic_") + Ext);
 
-  // Define macros for shorthand extensions when all of intrinsics of its
-  // extensions are presented.
-  auto DefineSuperExt = [&](const char *Name, ArrayRef<const char *> Required) {
-    assert(Required.size() > 0);
+  // Define macros for scalar RISC-V extensions that have builtins.
+  // These indicate toolchain support for scalar intrinsics.
+  llvm::SmallSet<std::string, 16> UniqueScalarExtensions =
+      getUniqueScalarExtensions();
+  for (const auto &Ext : UniqueScalarExtensions)
+    Builder.defineMacro(Twine("__riscv_intrinsic_") + Ext);
+
+  // Helper to define composite extension macros when all required extensions
+  // are present. Works for both scalar and vector intrinsics.
+  auto DefineSuperExt = [&](StringRef Prefix, const char *Name,
+                            ArrayRef<const char *> Required) {
+    assert(!Required.empty());
     std::string Condition =
-        std::string("#if defined(__riscv_v_intrinsic_") + Required[0] + ")";
+        std::string("#if defined(") + Prefix.str() + Required[0] + ")";
     for (size_t i = 1; i < Required.size(); ++i)
       Condition +=
-          std::string(" && defined(__riscv_v_intrinsic_") + Required[i] + ")";
+          std::string(" && defined(") + Prefix.str() + Required[i] + ")";
     Builder.append(Condition);
-    Builder.defineMacro(Twine("__riscv_v_intrinsic_") + Name);
+    Builder.defineMacro(Twine(Prefix) + Name);
     Builder.append("#endif");
   };
 
-  DefineSuperExt("zvkn", {"zvkned", "zvknhb", "zvkb"});
-  DefineSuperExt("zvknc", {"zvkn", "zvbc"});
-  DefineSuperExt("zvkng", {"zvkn", "zvkg"});
-  DefineSuperExt("zvks", {"zvksed", "zvksh", "zvkb"});
-  DefineSuperExt("zvksc", {"zvks", "zvbc"});
-  DefineSuperExt("zvksg", {"zvks", "zvkg"});
+  // Vector crypto composite extensions
+  DefineSuperExt("__riscv_v_intrinsic_", "zvkn", {"zvkned", "zvknhb", "zvkb"});
+  DefineSuperExt("__riscv_v_intrinsic_", "zvknc", {"zvkn", "zvbc"});
+  DefineSuperExt("__riscv_v_intrinsic_", "zvkng", {"zvkn", "zvkg"});
+  DefineSuperExt("__riscv_v_intrinsic_", "zvks", {"zvksed", "zvksh", "zvkb"});
+  DefineSuperExt("__riscv_v_intrinsic_", "zvksc", {"zvks", "zvbc"});
+  DefineSuperExt("__riscv_v_intrinsic_", "zvksg", {"zvks", "zvkg"});
+
+  // Scalar crypto composite extensions
+  DefineSuperExt("__riscv_intrinsic_", "zkn", {"zbkb", "zbkc", "zbkx", "zkne", "zknd", "zknh"});
+  DefineSuperExt("__riscv_intrinsic_", "zks", {"zbkb", "zbkc", "zbkx", "zksed", "zksh"});
 
   auto VScale = getVScaleRange(Opts, ArmStreamingKind::NotStreaming);
   if (VScale && VScale->first && VScale->first == VScale->second)
@@ -310,69 +409,6 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     }
   }
 }
-
-static constexpr int NumRVVBuiltins =
-    RISCVVector::FirstSiFiveBuiltin - Builtin::FirstTSBuiltin;
-static constexpr int NumRVVSiFiveBuiltins =
-    RISCVVector::FirstAndesBuiltin - RISCVVector::FirstSiFiveBuiltin;
-static constexpr int NumRVVAndesBuiltins =
-    RISCVVector::FirstTSBuiltin - RISCVVector::FirstAndesBuiltin;
-static constexpr int NumRISCVBuiltins =
-    RISCV::LastTSBuiltin - RISCVVector::FirstTSBuiltin;
-static constexpr int NumBuiltins =
-    RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
-static_assert(NumBuiltins == (NumRVVBuiltins + NumRVVSiFiveBuiltins +
-                              NumRVVAndesBuiltins + NumRISCVBuiltins));
-
-namespace RVV {
-#define GET_RISCVV_BUILTIN_STR_TABLE
-#include "clang/Basic/riscv_vector_builtins.inc"
-#undef GET_RISCVV_BUILTIN_STR_TABLE
-static_assert(BuiltinStrings.size() < 100'000);
-
-static constexpr std::array<Builtin::Info, NumRVVBuiltins> BuiltinInfos = {
-#define GET_RISCVV_BUILTIN_INFOS
-#include "clang/Basic/riscv_vector_builtins.inc"
-#undef GET_RISCVV_BUILTIN_INFOS
-};
-} // namespace RVV
-
-namespace RVVSiFive {
-#define GET_RISCVV_BUILTIN_STR_TABLE
-#include "clang/Basic/riscv_sifive_vector_builtins.inc"
-#undef GET_RISCVV_BUILTIN_STR_TABLE
-
-static constexpr std::array<Builtin::Info, NumRVVSiFiveBuiltins> BuiltinInfos =
-    {
-#define GET_RISCVV_BUILTIN_INFOS
-#include "clang/Basic/riscv_sifive_vector_builtins.inc"
-#undef GET_RISCVV_BUILTIN_INFOS
-};
-} // namespace RVVSiFive
-
-namespace RVVAndes {
-#define GET_RISCVV_BUILTIN_STR_TABLE
-#include "clang/Basic/riscv_andes_vector_builtins.inc"
-#undef GET_RISCVV_BUILTIN_STR_TABLE
-
-static constexpr std::array<Builtin::Info, NumRVVAndesBuiltins> BuiltinInfos =
-    {
-#define GET_RISCVV_BUILTIN_INFOS
-#include "clang/Basic/riscv_andes_vector_builtins.inc"
-#undef GET_RISCVV_BUILTIN_INFOS
-};
-} // namespace RVVAndes
-
-#define GET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsRISCV.inc"
-#undef GET_BUILTIN_STR_TABLE
-
-static constexpr Builtin::Info BuiltinInfos[] = {
-#define GET_BUILTIN_INFOS
-#include "clang/Basic/BuiltinsRISCV.inc"
-#undef GET_BUILTIN_INFOS
-};
-static_assert(std::size(BuiltinInfos) == NumRISCVBuiltins);
 
 llvm::SmallVector<Builtin::InfosShard>
 RISCVTargetInfo::getTargetBuiltins() const {
