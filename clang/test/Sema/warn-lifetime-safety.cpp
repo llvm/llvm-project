@@ -2072,11 +2072,14 @@ int* static_array() {
 
 void pointer_arithmetic_use_after_scope() {
   int* p;
+  int* p2;
   {
     int a[10]{};
-    p = a + 5; // expected-warning {{object whose reference is captured does not live long enough}}
-  }            // expected-note {{destroyed here}}
-  (void)*p;    // expected-note {{later used here}}
+    p = a + 5;  // expected-warning {{object whose reference is captured does not live long enough}}
+    p2 = a - 5; // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note 2 {{destroyed here}}
+  (void)*p;     // expected-note {{later used here}}
+  (void)*p2;    // expected-note {{later used here}}
 }
 
 // FIXME: Copying a pointer value out of an array element is not tracked.

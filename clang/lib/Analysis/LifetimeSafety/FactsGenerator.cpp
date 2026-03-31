@@ -373,13 +373,13 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
 
 void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
   if (Expr *RHS = BO->getRHS(); RHS->getType()->isPointerType()) {
-    flowOrigin(*BO, *RHS);
+    killAndFlowOrigin(*BO, *RHS);
     return;
   }
   Expr *LHS = BO->getLHS();
   assert(LHS->getType()->isPointerType() &&
          "Pointer arithmetic must have a pointer operand");
-  flowOrigin(*BO, *LHS);
+  killAndFlowOrigin(*BO, *LHS);
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
