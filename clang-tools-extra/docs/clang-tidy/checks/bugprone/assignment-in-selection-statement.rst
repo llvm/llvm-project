@@ -7,13 +7,13 @@ Finds assignments within selection statements.
 Such assignments may indicate programmer error because they may have been
 intended as equality tests. The selection statements are conditions of ``if``
 and loop (``for``, ``while``, ``do``) statements, condition of conditional
-operator (``?:``) and any operand of a binary logical operator (``&&``, ``||``).
-The check finds assignments within these contexts if the single expression is an
-assignment or the assignment is contained (recursively) in last operand of a
-comma (``,``) operator or true and false expressions in a conditional operator.
-The warning is suppressed if the assignment is placed in extra parentheses, but
-only if the assignment is the single expression of a condition (of ``if`` or a
-loop statement).
+operator (``?:``) and any operand of a binary logical operator (``&&``,
+``||``). The check finds assignments within these contexts if the single
+expression is an assignment or the assignment is contained (recursively) in
+last operand of a comma (``,``) operator or true and false expressions in a
+conditional operator. The warning is suppressed if the assignment is placed in
+extra parentheses, but only if the assignment is the single expression of a
+condition (of ``if`` or a loop statement).
 
 This check corresponds to the CERT rule
 `EXP45-C. Do not perform assignments in selection statements
