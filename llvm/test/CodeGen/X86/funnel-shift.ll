@@ -155,24 +155,29 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    movl %eax, %edx
+; X86-SSE2-NEXT:    movl %ecx, %edx
 ; X86-SSE2-NEXT:    andl $262143, %edx # imm = 0x3FFFF
-; X86-SSE2-NEXT:    shrdl $18, %ecx, %eax
-; X86-SSE2-NEXT:    andl $16, %ecx
-; X86-SSE2-NEXT:    andl $262143, %eax # imm = 0x3FFFF
-; X86-SSE2-NEXT:    addl %edx, %eax
-; X86-SSE2-NEXT:    shrl $4, %ecx
-; X86-SSE2-NEXT:    leal 524290(%ecx,%eax), %ecx
-; X86-SSE2-NEXT:    movl $116080198, %edx # imm = 0x6EB3E46
+; X86-SSE2-NEXT:    shrdl $18, %eax, %ecx
+; X86-SSE2-NEXT:    andl $16, %eax
+; X86-SSE2-NEXT:    andl $262143, %ecx # imm = 0x3FFFF
+; X86-SSE2-NEXT:    subl %ecx, %edx
+; X86-SSE2-NEXT:    shrl $4, %eax
+; X86-SSE2-NEXT:    leal 524290(%edx,%eax), %ecx
+; X86-SSE2-NEXT:    movl $-1160801971, %edx # imm = 0xBACF914D
 ; X86-SSE2-NEXT:    movl %ecx, %eax
 ; X86-SSE2-NEXT:    mull %edx
-; X86-SSE2-NEXT:    leal (%edx,%edx,8), %eax
-; X86-SSE2-NEXT:    leal (%edx,%eax,4), %eax
+; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    subl %edx, %eax
+; X86-SSE2-NEXT:    shrl %eax
+; X86-SSE2-NEXT:    addl %edx, %eax
+; X86-SSE2-NEXT:    shrl $5, %eax
+; X86-SSE2-NEXT:    leal (%eax,%eax,8), %edx
+; X86-SSE2-NEXT:    leal (%eax,%edx,4), %eax
 ; X86-SSE2-NEXT:    subl %eax, %ecx
 ; X86-SSE2-NEXT:    movl %ecx, %eax
 ; X86-SSE2-NEXT:    shrl $5, %eax
@@ -330,24 +335,29 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE2-NEXT:    movl %eax, %edx
+; X86-SSE2-NEXT:    movl %ecx, %edx
 ; X86-SSE2-NEXT:    andl $262143, %edx # imm = 0x3FFFF
-; X86-SSE2-NEXT:    shrdl $18, %ecx, %eax
-; X86-SSE2-NEXT:    andl $16, %ecx
-; X86-SSE2-NEXT:    andl $262143, %eax # imm = 0x3FFFF
-; X86-SSE2-NEXT:    addl %edx, %eax
-; X86-SSE2-NEXT:    shrl $4, %ecx
-; X86-SSE2-NEXT:    leal 524290(%ecx,%eax), %ecx
-; X86-SSE2-NEXT:    movl $116080198, %edx # imm = 0x6EB3E46
+; X86-SSE2-NEXT:    shrdl $18, %eax, %ecx
+; X86-SSE2-NEXT:    andl $16, %eax
+; X86-SSE2-NEXT:    andl $262143, %ecx # imm = 0x3FFFF
+; X86-SSE2-NEXT:    subl %ecx, %edx
+; X86-SSE2-NEXT:    shrl $4, %eax
+; X86-SSE2-NEXT:    leal 524290(%edx,%eax), %ecx
+; X86-SSE2-NEXT:    movl $-1160801971, %edx # imm = 0xBACF914D
 ; X86-SSE2-NEXT:    movl %ecx, %eax
 ; X86-SSE2-NEXT:    mull %edx
-; X86-SSE2-NEXT:    leal (%edx,%edx,8), %eax
-; X86-SSE2-NEXT:    leal (%edx,%eax,4), %eax
+; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    subl %edx, %eax
+; X86-SSE2-NEXT:    shrl %eax
+; X86-SSE2-NEXT:    addl %edx, %eax
+; X86-SSE2-NEXT:    shrl $5, %eax
+; X86-SSE2-NEXT:    leal (%eax,%eax,8), %edx
+; X86-SSE2-NEXT:    leal (%eax,%edx,4), %eax
 ; X86-SSE2-NEXT:    subl %eax, %ecx
 ; X86-SSE2-NEXT:    addl $27, %ecx
 ; X86-SSE2-NEXT:    shldl $27, %ebx, %edi

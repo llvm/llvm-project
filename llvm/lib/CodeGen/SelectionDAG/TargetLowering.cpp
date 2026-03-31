@@ -8214,7 +8214,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     Divisor.lshrInPlace(TrailingZeros);
   }
 
-  // Look for the largest chunk width W such that (1 << W) % Divisor == 1.
+  // Look for the largest chunk width W such that (1 << W) % Divisor == 1 or
+  // (1 << W) % Divisor == -1.
   unsigned BestChunkWidth = 0, AltChunkWidth = 0;
   for (unsigned I = HBitWidth, E = HBitWidth / 2; I > E; --I) {
     // Skip HBitWidth-1, it doesn't have enough bits for carries.
@@ -8332,7 +8333,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         Sum = Chunk;
       } else {
         // For Alternate, we need to subtract odd chunks.
-        unsigned Opc = (Alternate && (I % 2) != 0) ? ISD::SUB : ISD::ADD;
+        unsigned ChunkNum = I / BestChunkWidth;
+        unsigned Opc = (Alternate && (ChunkNum % 2) != 0) ? ISD::SUB : ISD::ADD;
         Sum = DAG.getNode(Opc, dl, HiLoVT, Sum, Chunk);
       }
     }

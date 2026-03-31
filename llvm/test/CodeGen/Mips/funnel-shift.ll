@@ -57,36 +57,41 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-BE-NEXT:    srl $2, $2, 18
 ; CHECK-BE-NEXT:    or $2, $2, $9
 ; CHECK-BE-NEXT:    and $1, $2, $1
-; CHECK-BE-NEXT:    addu $1, $3, $1
+; CHECK-BE-NEXT:    subu $1, $3, $1
 ; CHECK-BE-NEXT:    andi $2, $8, 16
 ; CHECK-BE-NEXT:    srl $2, $2, 4
 ; CHECK-BE-NEXT:    addu $1, $1, $2
 ; CHECK-BE-NEXT:    lui $2, 8
 ; CHECK-BE-NEXT:    ori $2, $2, 2
 ; CHECK-BE-NEXT:    addu $1, $1, $2
-; CHECK-BE-NEXT:    lui $2, 1771
-; CHECK-BE-NEXT:    ori $2, $2, 15942
+; CHECK-BE-NEXT:    lui $2, 47823
+; CHECK-BE-NEXT:    ori $2, $2, 37197
 ; CHECK-BE-NEXT:    multu $1, $2
 ; CHECK-BE-NEXT:    mfhi $2
 ; CHECK-BE-NEXT:    srl $3, $7, 5
 ; CHECK-BE-NEXT:    sll $6, $6, 27
 ; CHECK-BE-NEXT:    or $3, $6, $3
-; CHECK-BE-NEXT:    sll $6, $7, 27
-; CHECK-BE-NEXT:    sll $7, $2, 2
-; CHECK-BE-NEXT:    addu $7, $7, $2
-; CHECK-BE-NEXT:    sll $2, $2, 5
-; CHECK-BE-NEXT:    addu $2, $2, $7
+; CHECK-BE-NEXT:    addiu $6, $zero, -32
+; CHECK-BE-NEXT:    sll $7, $7, 27
+; CHECK-BE-NEXT:    subu $8, $1, $2
+; CHECK-BE-NEXT:    srl $8, $8, 1
+; CHECK-BE-NEXT:    addu $2, $8, $2
+; CHECK-BE-NEXT:    srl $8, $2, 5
+; CHECK-BE-NEXT:    sll $9, $8, 2
+; CHECK-BE-NEXT:    addu $8, $9, $8
+; CHECK-BE-NEXT:    and $2, $2, $6
+; CHECK-BE-NEXT:    addu $2, $2, $8
 ; CHECK-BE-NEXT:    subu $1, $1, $2
-; CHECK-BE-NEXT:    srl $7, $1, 5
-; CHECK-BE-NEXT:    movn $4, $5, $7
+; CHECK-BE-NEXT:    srl $6, $1, 5
+; CHECK-BE-NEXT:    movn $4, $5, $6
 ; CHECK-BE-NEXT:    sllv $2, $4, $1
 ; CHECK-BE-NEXT:    not $4, $1
-; CHECK-BE-NEXT:    movn $5, $3, $7
+; CHECK-BE-NEXT:    movn $5, $3, $6
 ; CHECK-BE-NEXT:    srl $8, $5, 1
 ; CHECK-BE-NEXT:    srlv $8, $8, $4
 ; CHECK-BE-NEXT:    or $2, $2, $8
 ; CHECK-BE-NEXT:    sllv $1, $5, $1
-; CHECK-BE-NEXT:    movn $3, $6, $7
+; CHECK-BE-NEXT:    movn $3, $7, $6
 ; CHECK-BE-NEXT:    srl $3, $3, 1
 ; CHECK-BE-NEXT:    srlv $3, $3, $4
 ; CHECK-BE-NEXT:    jr $ra
@@ -103,25 +108,30 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LE-NEXT:    srl $2, $2, 18
 ; CHECK-LE-NEXT:    or $2, $2, $9
 ; CHECK-LE-NEXT:    and $1, $2, $1
-; CHECK-LE-NEXT:    addu $1, $3, $1
+; CHECK-LE-NEXT:    subu $1, $3, $1
 ; CHECK-LE-NEXT:    andi $2, $8, 16
 ; CHECK-LE-NEXT:    srl $2, $2, 4
 ; CHECK-LE-NEXT:    addu $1, $1, $2
 ; CHECK-LE-NEXT:    lui $2, 8
 ; CHECK-LE-NEXT:    ori $2, $2, 2
 ; CHECK-LE-NEXT:    addu $1, $1, $2
-; CHECK-LE-NEXT:    lui $2, 1771
-; CHECK-LE-NEXT:    ori $2, $2, 15942
+; CHECK-LE-NEXT:    lui $2, 47823
+; CHECK-LE-NEXT:    ori $2, $2, 37197
 ; CHECK-LE-NEXT:    multu $1, $2
 ; CHECK-LE-NEXT:    mfhi $2
 ; CHECK-LE-NEXT:    srl $3, $6, 5
 ; CHECK-LE-NEXT:    sll $7, $7, 27
 ; CHECK-LE-NEXT:    or $3, $7, $3
 ; CHECK-LE-NEXT:    sll $6, $6, 27
-; CHECK-LE-NEXT:    sll $7, $2, 2
-; CHECK-LE-NEXT:    addu $7, $7, $2
-; CHECK-LE-NEXT:    sll $2, $2, 5
-; CHECK-LE-NEXT:    addu $2, $2, $7
+; CHECK-LE-NEXT:    addiu $7, $zero, -32
+; CHECK-LE-NEXT:    subu $8, $1, $2
+; CHECK-LE-NEXT:    srl $8, $8, 1
+; CHECK-LE-NEXT:    addu $2, $8, $2
+; CHECK-LE-NEXT:    srl $8, $2, 5
+; CHECK-LE-NEXT:    sll $9, $8, 2
+; CHECK-LE-NEXT:    addu $8, $9, $8
+; CHECK-LE-NEXT:    and $2, $2, $7
+; CHECK-LE-NEXT:    addu $2, $2, $8
 ; CHECK-LE-NEXT:    subu $1, $1, $2
 ; CHECK-LE-NEXT:    srl $7, $1, 5
 ; CHECK-LE-NEXT:    move $8, $4
@@ -288,25 +298,30 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-BE-NEXT:    srl $2, $2, 18
 ; CHECK-BE-NEXT:    or $2, $2, $9
 ; CHECK-BE-NEXT:    and $1, $2, $1
-; CHECK-BE-NEXT:    addu $1, $3, $1
+; CHECK-BE-NEXT:    subu $1, $3, $1
 ; CHECK-BE-NEXT:    andi $2, $8, 16
 ; CHECK-BE-NEXT:    srl $2, $2, 4
 ; CHECK-BE-NEXT:    addu $1, $1, $2
 ; CHECK-BE-NEXT:    lui $2, 8
 ; CHECK-BE-NEXT:    ori $2, $2, 2
 ; CHECK-BE-NEXT:    addu $1, $1, $2
-; CHECK-BE-NEXT:    lui $2, 1771
-; CHECK-BE-NEXT:    ori $2, $2, 15942
+; CHECK-BE-NEXT:    lui $2, 47823
+; CHECK-BE-NEXT:    ori $2, $2, 37197
 ; CHECK-BE-NEXT:    multu $1, $2
 ; CHECK-BE-NEXT:    mfhi $2
 ; CHECK-BE-NEXT:    srl $3, $7, 5
 ; CHECK-BE-NEXT:    sll $6, $6, 27
 ; CHECK-BE-NEXT:    or $3, $6, $3
 ; CHECK-BE-NEXT:    sll $6, $7, 27
-; CHECK-BE-NEXT:    sll $7, $2, 2
-; CHECK-BE-NEXT:    addu $7, $7, $2
-; CHECK-BE-NEXT:    sll $2, $2, 5
-; CHECK-BE-NEXT:    addu $2, $2, $7
+; CHECK-BE-NEXT:    addiu $7, $zero, -32
+; CHECK-BE-NEXT:    subu $8, $1, $2
+; CHECK-BE-NEXT:    srl $8, $8, 1
+; CHECK-BE-NEXT:    addu $2, $8, $2
+; CHECK-BE-NEXT:    srl $8, $2, 5
+; CHECK-BE-NEXT:    sll $9, $8, 2
+; CHECK-BE-NEXT:    addu $8, $9, $8
+; CHECK-BE-NEXT:    and $2, $2, $7
+; CHECK-BE-NEXT:    addu $2, $2, $8
 ; CHECK-BE-NEXT:    subu $1, $1, $2
 ; CHECK-BE-NEXT:    addiu $1, $1, 27
 ; CHECK-BE-NEXT:    andi $7, $1, 32
@@ -335,25 +350,30 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LE-NEXT:    srl $2, $2, 18
 ; CHECK-LE-NEXT:    or $2, $2, $9
 ; CHECK-LE-NEXT:    and $1, $2, $1
-; CHECK-LE-NEXT:    addu $1, $3, $1
+; CHECK-LE-NEXT:    subu $1, $3, $1
 ; CHECK-LE-NEXT:    andi $2, $8, 16
 ; CHECK-LE-NEXT:    srl $2, $2, 4
 ; CHECK-LE-NEXT:    addu $1, $1, $2
 ; CHECK-LE-NEXT:    lui $2, 8
 ; CHECK-LE-NEXT:    ori $2, $2, 2
 ; CHECK-LE-NEXT:    addu $1, $1, $2
-; CHECK-LE-NEXT:    lui $2, 1771
-; CHECK-LE-NEXT:    ori $2, $2, 15942
+; CHECK-LE-NEXT:    lui $2, 47823
+; CHECK-LE-NEXT:    ori $2, $2, 37197
 ; CHECK-LE-NEXT:    multu $1, $2
 ; CHECK-LE-NEXT:    mfhi $2
 ; CHECK-LE-NEXT:    srl $3, $6, 5
 ; CHECK-LE-NEXT:    sll $7, $7, 27
 ; CHECK-LE-NEXT:    or $3, $7, $3
 ; CHECK-LE-NEXT:    sll $6, $6, 27
-; CHECK-LE-NEXT:    sll $7, $2, 2
-; CHECK-LE-NEXT:    addu $7, $7, $2
-; CHECK-LE-NEXT:    sll $2, $2, 5
-; CHECK-LE-NEXT:    addu $2, $2, $7
+; CHECK-LE-NEXT:    addiu $7, $zero, -32
+; CHECK-LE-NEXT:    subu $8, $1, $2
+; CHECK-LE-NEXT:    srl $8, $8, 1
+; CHECK-LE-NEXT:    addu $2, $8, $2
+; CHECK-LE-NEXT:    srl $8, $2, 5
+; CHECK-LE-NEXT:    sll $9, $8, 2
+; CHECK-LE-NEXT:    addu $8, $9, $8
+; CHECK-LE-NEXT:    and $2, $2, $7
+; CHECK-LE-NEXT:    addu $2, $2, $8
 ; CHECK-LE-NEXT:    subu $1, $1, $2
 ; CHECK-LE-NEXT:    addiu $1, $1, 27
 ; CHECK-LE-NEXT:    andi $7, $1, 32

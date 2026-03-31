@@ -273,14 +273,18 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-NEXT:    srwi 10, 8, 18
 ; CHECK32_32-NEXT:    clrlwi 8, 8, 14
 ; CHECK32_32-NEXT:    rlwimi 10, 7, 14, 14, 17
-; CHECK32_32-NEXT:    add 8, 8, 10
+; CHECK32_32-NEXT:    sub 8, 8, 10
 ; CHECK32_32-NEXT:    rlwinm 7, 7, 28, 31, 31
 ; CHECK32_32-NEXT:    add 7, 8, 7
-; CHECK32_32-NEXT:    lis 9, 1771
+; CHECK32_32-NEXT:    lis 9, -17713
 ; CHECK32_32-NEXT:    addi 7, 7, 2
-; CHECK32_32-NEXT:    ori 9, 9, 15942
+; CHECK32_32-NEXT:    ori 9, 9, 37197
 ; CHECK32_32-NEXT:    addis 7, 7, 8
 ; CHECK32_32-NEXT:    mulhwu 8, 7, 9
+; CHECK32_32-NEXT:    sub 9, 7, 8
+; CHECK32_32-NEXT:    srwi 9, 9, 1
+; CHECK32_32-NEXT:    add 8, 9, 8
+; CHECK32_32-NEXT:    srwi 8, 8, 5
 ; CHECK32_32-NEXT:    mulli 8, 8, 37
 ; CHECK32_32-NEXT:    sub 8, 7, 8
 ; CHECK32_32-NEXT:    andi. 7, 8, 32
@@ -315,13 +319,17 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_64-NEXT:    clrlwi 8, 8, 14
 ; CHECK32_64-NEXT:    rlwimi 10, 7, 14, 14, 17
 ; CHECK32_64-NEXT:    rlwinm 7, 7, 28, 31, 31
-; CHECK32_64-NEXT:    add 8, 8, 10
+; CHECK32_64-NEXT:    sub 8, 8, 10
 ; CHECK32_64-NEXT:    add 7, 8, 7
-; CHECK32_64-NEXT:    lis 9, 1771
+; CHECK32_64-NEXT:    lis 9, -17713
 ; CHECK32_64-NEXT:    addi 7, 7, 2
-; CHECK32_64-NEXT:    ori 9, 9, 15942
+; CHECK32_64-NEXT:    ori 9, 9, 37197
 ; CHECK32_64-NEXT:    addis 7, 7, 8
 ; CHECK32_64-NEXT:    mulhwu 8, 7, 9
+; CHECK32_64-NEXT:    sub 9, 7, 8
+; CHECK32_64-NEXT:    srwi 9, 9, 1
+; CHECK32_64-NEXT:    add 8, 9, 8
+; CHECK32_64-NEXT:    srwi 8, 8, 5
 ; CHECK32_64-NEXT:    mulli 8, 8, 37
 ; CHECK32_64-NEXT:    sub 8, 7, 8
 ; CHECK32_64-NEXT:    andi. 7, 8, 32
@@ -507,14 +515,18 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-NEXT:    srwi 10, 8, 18
 ; CHECK32_32-NEXT:    clrlwi 8, 8, 14
 ; CHECK32_32-NEXT:    rlwimi 10, 7, 14, 14, 17
-; CHECK32_32-NEXT:    add 8, 8, 10
+; CHECK32_32-NEXT:    sub 8, 8, 10
 ; CHECK32_32-NEXT:    rlwinm 7, 7, 28, 31, 31
 ; CHECK32_32-NEXT:    add 7, 8, 7
-; CHECK32_32-NEXT:    lis 9, 1771
+; CHECK32_32-NEXT:    lis 9, -17713
 ; CHECK32_32-NEXT:    addi 7, 7, 2
-; CHECK32_32-NEXT:    ori 9, 9, 15942
+; CHECK32_32-NEXT:    ori 9, 9, 37197
 ; CHECK32_32-NEXT:    addis 7, 7, 8
 ; CHECK32_32-NEXT:    mulhwu 8, 7, 9
+; CHECK32_32-NEXT:    sub 9, 7, 8
+; CHECK32_32-NEXT:    srwi 9, 9, 1
+; CHECK32_32-NEXT:    add 8, 9, 8
+; CHECK32_32-NEXT:    srwi 8, 8, 5
 ; CHECK32_32-NEXT:    mulli 8, 8, 37
 ; CHECK32_32-NEXT:    sub 7, 7, 8
 ; CHECK32_32-NEXT:    addi 8, 7, 27
@@ -550,13 +562,17 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_64-NEXT:    clrlwi 8, 8, 14
 ; CHECK32_64-NEXT:    rlwimi 10, 7, 14, 14, 17
 ; CHECK32_64-NEXT:    rlwinm 7, 7, 28, 31, 31
-; CHECK32_64-NEXT:    add 8, 8, 10
+; CHECK32_64-NEXT:    sub 8, 8, 10
 ; CHECK32_64-NEXT:    add 7, 8, 7
-; CHECK32_64-NEXT:    lis 9, 1771
+; CHECK32_64-NEXT:    lis 9, -17713
 ; CHECK32_64-NEXT:    addi 7, 7, 2
-; CHECK32_64-NEXT:    ori 9, 9, 15942
+; CHECK32_64-NEXT:    ori 9, 9, 37197
 ; CHECK32_64-NEXT:    addis 7, 7, 8
 ; CHECK32_64-NEXT:    mulhwu 8, 7, 9
+; CHECK32_64-NEXT:    sub 9, 7, 8
+; CHECK32_64-NEXT:    srwi 9, 9, 1
+; CHECK32_64-NEXT:    add 8, 9, 8
+; CHECK32_64-NEXT:    srwi 8, 8, 5
 ; CHECK32_64-NEXT:    mulli 8, 8, 37
 ; CHECK32_64-NEXT:    sub 7, 7, 8
 ; CHECK32_64-NEXT:    addi 8, 7, 27
