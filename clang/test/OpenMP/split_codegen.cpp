@@ -83,7 +83,7 @@ extern "C" void split_decrement(int n) {
 void split_range_for() {
   int a[] = {10, 20, 30, 40};
 #pragma omp split counts(2, omp_fill)
-  for (int &x : a)
+  for (int x : a)
     body(x);
 }
 
@@ -903,9 +903,8 @@ void split_range_for() {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0___BEGIN1:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[X:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1___BEGIN1:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[X13:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 @__const._Z15split_range_forv.a, i64 16, i1 false)
 // CHECK1-NEXT:    store ptr [[A]], ptr [[__RANGE1]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !nonnull [[META2]], !align [[META3]]
@@ -946,9 +945,9 @@ void split_range_for() {
 // CHECK1-NEXT:    [[ADD_PTR6:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 [[MUL]]
 // CHECK1-NEXT:    store ptr [[ADD_PTR6]], ptr [[__BEGIN1]], align 8
 // CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
-// CHECK1-NEXT:    store ptr [[TMP10]], ptr [[X]], align 8
-// CHECK1-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[X]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 4
+// CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK1-NEXT:    store i32 [[TMP11]], ptr [[X]], align 4
+// CHECK1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[X]], align 4
 // CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP12]])
 // CHECK1-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK1:       for.inc:
@@ -964,7 +963,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_4]], align 8
 // CHECK1-NEXT:    [[ADD8:%.*]] = add nsw i64 [[TMP15]], 1
 // CHECK1-NEXT:    [[CMP9:%.*]] = icmp slt i64 [[TMP14]], [[ADD8]]
-// CHECK1-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END16:%.*]]
+// CHECK1-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END15:%.*]]
 // CHECK1:       for.body10:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
 // CHECK1-NEXT:    store i64 [[TMP16]], ptr @_ZZ15split_range_forvE7.omp.iv, align 8
@@ -974,17 +973,17 @@ void split_range_for() {
 // CHECK1-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i64 [[MUL11]]
 // CHECK1-NEXT:    store ptr [[ADD_PTR12]], ptr [[__BEGIN1]], align 8
 // CHECK1-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
-// CHECK1-NEXT:    store ptr [[TMP19]], ptr [[X13]], align 8
-// CHECK1-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[X]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
+// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 4
+// CHECK1-NEXT:    store i32 [[TMP20]], ptr [[X]], align 4
+// CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[X]], align 4
 // CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP21]])
-// CHECK1-NEXT:    br label [[FOR_INC14:%.*]]
-// CHECK1:       for.inc14:
+// CHECK1-NEXT:    br label [[FOR_INC13:%.*]]
+// CHECK1:       for.inc13:
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i64, ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
-// CHECK1-NEXT:    [[INC15:%.*]] = add nsw i64 [[TMP22]], 1
-// CHECK1-NEXT:    store i64 [[INC15]], ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
+// CHECK1-NEXT:    [[INC14:%.*]] = add nsw i64 [[TMP22]], 1
+// CHECK1-NEXT:    store i64 [[INC14]], ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
 // CHECK1-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP30:![0-9]+]]
-// CHECK1:       for.end16:
+// CHECK1:       for.end15:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1093,9 +1092,8 @@ void split_range_for() {
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0___BEGIN1:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[X:%.*]] = alloca ptr, align 8
+// CHECK2-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1___BEGIN1:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[X13:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A]], ptr align 16 @__const._Z15split_range_forv.a, i64 16, i1 false)
 // CHECK2-NEXT:    store ptr [[A]], ptr [[__RANGE1]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !nonnull [[META2]], !align [[META3]]
@@ -1136,9 +1134,9 @@ void split_range_for() {
 // CHECK2-NEXT:    [[ADD_PTR6:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 [[MUL]]
 // CHECK2-NEXT:    store ptr [[ADD_PTR6]], ptr [[__BEGIN1]], align 8
 // CHECK2-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
-// CHECK2-NEXT:    store ptr [[TMP10]], ptr [[X]], align 8
-// CHECK2-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[X]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK2-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 4
+// CHECK2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK2-NEXT:    store i32 [[TMP11]], ptr [[X]], align 4
+// CHECK2-NEXT:    [[TMP12:%.*]] = load i32, ptr [[X]], align 4
 // CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP12]])
 // CHECK2-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK2:       for.inc:
@@ -1154,7 +1152,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[TMP15:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_4]], align 8
 // CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i64 [[TMP15]], 1
 // CHECK2-NEXT:    [[CMP9:%.*]] = icmp slt i64 [[TMP14]], [[ADD8]]
-// CHECK2-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END16:%.*]]
+// CHECK2-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END15:%.*]]
 // CHECK2:       for.body10:
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
 // CHECK2-NEXT:    store i64 [[TMP16]], ptr @_ZZ15split_range_forvE7.omp.iv, align 8
@@ -1164,17 +1162,17 @@ void split_range_for() {
 // CHECK2-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i64 [[MUL11]]
 // CHECK2-NEXT:    store ptr [[ADD_PTR12]], ptr [[__BEGIN1]], align 8
 // CHECK2-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[__BEGIN1]], align 8
-// CHECK2-NEXT:    store ptr [[TMP19]], ptr [[X13]], align 8
-// CHECK2-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[X]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
+// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 4
+// CHECK2-NEXT:    store i32 [[TMP20]], ptr [[X]], align 4
+// CHECK2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[X]], align 4
 // CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP21]])
-// CHECK2-NEXT:    br label [[FOR_INC14:%.*]]
-// CHECK2:       for.inc14:
+// CHECK2-NEXT:    br label [[FOR_INC13:%.*]]
+// CHECK2:       for.inc13:
 // CHECK2-NEXT:    [[TMP22:%.*]] = load i64, ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
-// CHECK2-NEXT:    [[INC15:%.*]] = add nsw i64 [[TMP22]], 1
-// CHECK2-NEXT:    store i64 [[INC15]], ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
+// CHECK2-NEXT:    [[INC14:%.*]] = add nsw i64 [[TMP22]], 1
+// CHECK2-NEXT:    store i64 [[INC14]], ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
 // CHECK2-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP8:![0-9]+]]
-// CHECK2:       for.end16:
+// CHECK2:       for.end15:
 // CHECK2-NEXT:    ret void
 //
 //

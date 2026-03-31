@@ -20,6 +20,6 @@ extern "C" void body(int);
 void range_fill() {
   int a[] = {10, 20, 30, 40};
 #pragma omp split counts(2, omp_fill)
-  for (int &x : a)
+  for (int x : a)
     body(x);
 }

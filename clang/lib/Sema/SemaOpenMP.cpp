@@ -16102,9 +16102,23 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
 
     SmallVector<Stmt *, 4> BodyStmts;
-    BodyStmts.push_back(UpdateExpr.get());
-    if (auto *CXXRangeFor = dyn_cast<CXXForRangeStmt>(LoopStmt))
-      BodyStmts.push_back(CXXRangeFor->getLoopVarStmt());
+    BodyStmts.push_back(IVAssign.get());
+    BodyStmts.append(LoopHelper.Updates.begin(), LoopHelper.Updates.end());
+    if (auto *CXXRangeFor = dyn_cast<CXXForRangeStmt>(LoopStmt)) {
+      if (Seg == 0) {
+        BodyStmts.push_back(CXXRangeFor->getLoopVarStmt());
+      } else {
+        VarDecl *LoopVar = CXXRangeFor->getLoopVariable();
+        DeclRefExpr *LVRef = buildDeclRefExpr(
+            SemaRef, LoopVar, LoopVar->getType().getNonReferenceType(),
+            OrigVarLoc);
+        ExprResult LVAssign = SemaRef.BuildBinOp(
+            CurScope, OrigVarLoc, BO_Assign, LVRef, LoopVar->getInit());
+        if (!LVAssign.isUsable())
+          return StmtError();
+        BodyStmts.push_back(LVAssign.get());
+      }
+    }
     BodyStmts.push_back(Body);
 
     auto *LoopBody =
