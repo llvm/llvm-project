@@ -11625,46 +11625,32 @@ SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.hasP8Vector() && !Subtarget.hasP9Vector()) {
     SDValue Input = Op.getOperand(0);
 
-    // Extract high and low 32 bits
+    auto Swap32 = [&](SDValue Val32) -> SDValue {
+      SDValue Rot = DAG.getNode(ISD::ROTL, dl, MVT::i32, Val32,
+                                DAG.getConstant(8, dl, MVT::i32));
+      SDValue Swap =
+          SDValue(DAG.getMachineNode(PPC::RLWIMI, dl, MVT::i32,
+                                     {Rot, Val32,
+                                      DAG.getTargetConstant(24, dl, MVT::i32),
+                                      DAG.getTargetConstant(0, dl, MVT::i32),
+                                      DAG.getTargetConstant(7, dl, MVT::i32)}),
+                  0);
+      return SDValue(DAG.getMachineNode(
+                         PPC::RLWIMI, dl, MVT::i32,
+                         {Swap, Val32, DAG.getTargetConstant(24, dl, MVT::i32),
+                          DAG.getTargetConstant(16, dl, MVT::i32),
+                          DAG.getTargetConstant(23, dl, MVT::i32)}),
+                     0);
+    };
+
     SDValue Hi32 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32,
                                DAG.getNode(ISD::SRL, dl, MVT::i64, Input,
                                            DAG.getConstant(32, dl, MVT::i64)));
     SDValue Lo32 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Input);
 
-    // Swap high 32 bits using: rotl + 2x rlwimi
-    SDValue HiRot = DAG.getNode(ISD::ROTL, dl, MVT::i32, Hi32,
-                                DAG.getConstant(8, dl, MVT::i32));
-    SDValue HiSwap =
-        SDValue(DAG.getMachineNode(PPC::RLWIMI, dl, MVT::i32,
-                                   {HiRot, Hi32,
-                                    DAG.getTargetConstant(24, dl, MVT::i32),
-                                    DAG.getTargetConstant(0, dl, MVT::i32),
-                                    DAG.getTargetConstant(7, dl, MVT::i32)}),
-                0);
-    HiSwap = SDValue(DAG.getMachineNode(
-                         PPC::RLWIMI, dl, MVT::i32,
-                         {HiSwap, Hi32, DAG.getTargetConstant(24, dl, MVT::i32),
-                          DAG.getTargetConstant(16, dl, MVT::i32),
-                          DAG.getTargetConstant(23, dl, MVT::i32)}),
-                     0);
+    SDValue HiSwap = Swap32(Hi32);
+    SDValue LoSwap = Swap32(Lo32);
 
-    SDValue LoRot = DAG.getNode(ISD::ROTL, dl, MVT::i32, Lo32,
-                                DAG.getConstant(8, dl, MVT::i32));
-    SDValue LoSwap =
-        SDValue(DAG.getMachineNode(PPC::RLWIMI, dl, MVT::i32,
-                                   {LoRot, Lo32,
-                                    DAG.getTargetConstant(24, dl, MVT::i32),
-                                    DAG.getTargetConstant(0, dl, MVT::i32),
-                                    DAG.getTargetConstant(7, dl, MVT::i32)}),
-                0);
-    LoSwap = SDValue(DAG.getMachineNode(
-                         PPC::RLWIMI, dl, MVT::i32,
-                         {LoSwap, Lo32, DAG.getTargetConstant(24, dl, MVT::i32),
-                          DAG.getTargetConstant(16, dl, MVT::i32),
-                          DAG.getTargetConstant(23, dl, MVT::i32)}),
-                     0);
-
-    // Combine: (LoSwap << 32) | HiSwap using rldimi
     HiSwap = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, HiSwap);
     LoSwap = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, LoSwap);
     return SDValue(DAG.getMachineNode(PPC::RLDIMI, dl, MVT::i64,
