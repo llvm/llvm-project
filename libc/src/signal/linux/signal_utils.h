@@ -24,9 +24,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// TOOD: Some architectures will have their signal trampoline functions in the
-// vdso, use those when available.
-
 extern "C" void __restore_rt();
 
 // The POSIX definition of struct sigaction and the sigaction data structure
