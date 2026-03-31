@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class TestVectorOfEnums(TestBase):
 
     SHARED_BUILD_TESTCASE = False
+
     @add_test_categories(["libc++"])
     def test_vector_of_enums(self):
         self.build(dictionary={"USE_LIBCPP": 1})
