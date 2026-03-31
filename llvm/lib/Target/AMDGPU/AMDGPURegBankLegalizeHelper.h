@@ -52,6 +52,9 @@ class RegBankLegalizeHelper {
   MachineOptimizationRemarkEmitter MORE;
   const RegBankLegalizeRules &RBLRules;
   const bool IsWave32;
+  // The original next instruction after MI, saved before applyMappingDst may
+  // insert instructions. Used by Sgpr*_WF to set the waterfall range.
+  MachineBasicBlock::iterator OldNextMI;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
   const RegisterBank *AgprRB;

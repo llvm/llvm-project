@@ -1775,7 +1775,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_s_bitreplicate}, Standard)
       .Uni(S64, {{Sgpr64}, {IntrId, Sgpr32}})
-      .Div(S64, {{Sgpr64ToVgprDst}, {IntrId, SgprB32_ReadFirstLane}});
+      .Div(S64, {{Sgpr64ToVgprDst}, {IntrId, Sgpr32_WF}});
 
   addRulesForIOpcs({amdgcn_s_getpc}).Any({{UniS64, _}, {{Sgpr64}, {}}});
 
