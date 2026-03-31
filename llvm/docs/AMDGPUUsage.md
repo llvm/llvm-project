@@ -14471,6 +14471,8 @@ Scalar operations memory model needs more elaboration as well.
   - When `nv=0` reads hit dirty `$nv=1` data in cache, the hardware will
     writeback the data to the next level in the hierarchy and then subsequently read
     it again, updating the cache line with a clean `$nv=0` copy of the data.
+  - ``nv=1`` is set on operations that are known to access read-only memory, or memory
+    that can only be modified by the current thread.
 
 - `global_inv`, `global_wb` and `global_wbinv` are cache control instructions.
   The affected cache(s) are controlled by the `SCOPE` of the instruction.
