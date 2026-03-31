@@ -5030,6 +5030,10 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
   SPIRVTypeInst SizeResTy = removeElementFromVectorType(ResType, I);
   Register SizeReg = createVirtualRegister(SizeResTy, &GR, MRI, *I.getMF());
   Register LodReg = I.getOperand(3).getReg();
+
+  assert(GR.getSPIRVTypeForVReg(NewImageReg)->getOperand(6).getImm() == 1 &&
+         "OpImageQuerySizeLod and OpImageQueryLevels require a sampled image");
+
   if (!selectImageQuerySize(SPIRV::OpImageQuerySizeLod, NewImageReg, SizeReg,
                             SizeResTy, I, LodReg)) {
     return false;
@@ -5066,6 +5070,10 @@ bool SPIRVInstructionSelector::selectGetDimensionsMSIntrinsic(
 
   SPIRVTypeInst SizeResTy = removeElementFromVectorType(ResType, I);
   Register SizeReg = createVirtualRegister(SizeResTy, &GR, MRI, *I.getMF());
+
+  assert(GR.getSPIRVTypeForVReg(NewImageReg)->getOperand(5).getImm() == 1 &&
+         "OpImageQuerySamples requires a multisampled image");
+
   if (!selectImageQuerySize(SPIRV::OpImageQuerySize, NewImageReg, SizeReg,
                             SizeResTy, I, std::nullopt)) {
     return false;
