@@ -4,7 +4,7 @@
 
 // MSVC produces similar diagnostics.
 
-__declspec(selectany) void foo() { } // expected-error{{'selectany' can only be applied to data items with external linkage}}
+__declspec(selectany) void foo() { } // expected-error{{'selectany' attribute only applies to global variables}}
 
 __declspec(selectany) int x1 = 1;
 
@@ -53,3 +53,14 @@ extern const SomeStruct some_struct;
 
 // Without selectany, this should stay an error.
 const SomeStruct some_struct2; // expected-error {{default initialization of an object of const type 'const SomeStruct' without a user-provided default constructor}}
+
+struct __declspec(selectany) S1 {}; // expected-error {{'selectany' attribute only applies to global variables}}
+__declspec(selectany) struct S1 s1;
+
+void t() {
+  __declspec(selectany) int x; // expected-error {{'selectany' attribute only applies to global variables}}
+  __declspec(selectany) extern int y;
+}
+
+struct S2 {};
+struct __declspec(selectany) S2 s2; // expected-error {{'selectany' attribute only applies to global variables}}

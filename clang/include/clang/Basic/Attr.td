@@ -4477,6 +4477,7 @@ def DLLImportStaticLocal : InheritableAttr, TargetSpecificAttr<TargetHasDLLImpor
 
 def SelectAny : InheritableAttr {
   let Spellings = [Declspec<"selectany">, GCC<"selectany">];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
   let Documentation = [SelectAnyDocs];
   let SimpleHandler = 1;
 }

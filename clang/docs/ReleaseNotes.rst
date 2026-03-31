@@ -252,6 +252,8 @@ Attribute Changes in Clang
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
 
+- Clang now disallows use of the ``selectany`` attribute on non-global-variable declarations. (#GH189141)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
