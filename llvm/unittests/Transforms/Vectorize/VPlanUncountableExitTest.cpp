@@ -151,7 +151,7 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
 
   std::optional<VPValue *> UncountableCondition =
-      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs, LatchVPBB);
+      vputils::getRecipesForUncountableExit(Recipes, GEPs, LatchVPBB);
   ASSERT_TRUE(UncountableCondition.has_value());
   ASSERT_EQ(GEPs.size(), 1ull);
   ASSERT_EQ(Recipes.size(), 4ull);
@@ -190,7 +190,7 @@ TEST_F(VPUncountableExitTest, NoUncountableExit) {
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
 
   std::optional<VPValue *> UncountableCondition =
-      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs, LatchVPBB);
+      vputils::getRecipesForUncountableExit(Recipes, GEPs, LatchVPBB);
   ASSERT_FALSE(UncountableCondition.has_value());
   ASSERT_EQ(GEPs.size(), 0ull);
   ASSERT_EQ(Recipes.size(), 0ull);

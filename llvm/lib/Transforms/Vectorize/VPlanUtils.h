@@ -79,9 +79,10 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// \p Recipes, and recipes forming an address for a load are also added to
 /// \p GEPs.
 LLVM_ABI_FOR_TEST
-std::optional<VPValue *> getRecipesForUncountableExit(
-    VPlan &Plan, SmallVectorImpl<VPInstruction *> &Recipes,
-    SmallVectorImpl<VPInstruction *> &GEPs, VPBasicBlock *LatchVPBB);
+std::optional<VPValue *>
+getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                             SmallVectorImpl<VPInstruction *> &GEPs,
+                             VPBasicBlock *LatchVPBB);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
