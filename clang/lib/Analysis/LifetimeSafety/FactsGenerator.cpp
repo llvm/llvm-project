@@ -377,14 +377,14 @@ void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
     return;
   }
   Expr *LHS = BO->getLHS();
-  assert(LHS->getType()->isPointerType() && "Unexpected operand was found");
+  assert(LHS->getType()->isPointerType() &&
+         "Pointer arithmetic must have a pointer operand");
   flowOrigin(*BO, *LHS);
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   if (BO->isCompoundAssignmentOp())
     return;
-
   if (BO->getType()->isPointerType() && BO->isAdditiveOp())
     handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
