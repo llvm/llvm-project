@@ -164,9 +164,9 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   }
 
   // Write out the string table.
-  const off_t StrtabOffset = O.tell();
+  const uint64_t StrtabOffset = O.tell();
   StrTab.write(O.get_stream());
-  const off_t StrtabSize = O.tell() - StrtabOffset;
+  const uint64_t StrtabSize = O.tell() - StrtabOffset;
   std::vector<uint32_t> AddrInfoOffsets;
 
   // Verify that the size of the string table does not exceed 32-bit max.
