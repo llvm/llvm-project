@@ -307,8 +307,6 @@ void AtomicExpandImpl::handleUnsupportedAtomicSize(
                 DiagnosticInst);
 }
 
-<<<<<<< HEAD
-=======
 /// Returns true if we can lower atomicrmw elementwise using normal atomicrmw.
 bool AtomicExpandImpl::canReuseWholeValueAtomicRMW(AtomicRMWInst *AI) {
   assert(AI->isElementwise() && "expected elementwise atomicrmw");
@@ -326,7 +324,6 @@ bool AtomicExpandImpl::canReuseWholeValueAtomicRMW(AtomicRMWInst *AI) {
   return CanReuse;
 }
 
->>>>>>> 0075944a40cd (IR)
 bool AtomicExpandImpl::tryInsertTrailingSeqCstFence(Instruction *AtomicI) {
   if (!TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(AtomicI))
     return false;
@@ -411,8 +408,6 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     bool MadeChange = false;
-<<<<<<< HEAD
-=======
 
     if (RMWI->isElementwise()) {
       if (!TLI->shouldExpandAtomicRMWElementwiseInIR(RMWI))
@@ -428,7 +423,6 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       }
     }
 
->>>>>>> 0075944a40cd (IR)
     if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       RMWI = convertAtomicXchgToIntegerType(RMWI);
