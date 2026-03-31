@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "aarch64-post-coalescer-pass"
+#define DEBUG_TYPE "aarch64-post-coalescer"
 
 namespace {
 
@@ -53,10 +53,10 @@ char AArch64PostCoalescerLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(AArch64PostCoalescerLegacy, "aarch64-post-coalescer-pass",
+INITIALIZE_PASS_BEGIN(AArch64PostCoalescerLegacy, "aarch64-post-coalescer",
                       "AArch64 Post Coalescer Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(AArch64PostCoalescerLegacy, "aarch64-post-coalescer-pass",
+INITIALIZE_PASS_END(AArch64PostCoalescerLegacy, "aarch64-post-coalescer",
                     "AArch64 Post Coalescer Pass", false, false)
 
 bool AArch64PostCoalescerImpl::run(MachineFunction &MF) {
