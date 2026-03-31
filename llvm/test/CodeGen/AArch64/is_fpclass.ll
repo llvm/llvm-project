@@ -7,11 +7,10 @@ define i1 @isfinite_h(half %x) {
 ; CHECK-SD-LABEL: isfinite_h:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mov w8, #31744 // =0x7c00
-; CHECK-SD-NEXT:    and w9, w9, #0x7fff
-; CHECK-SD-NEXT:    cmp w9, w8
-; CHECK-SD-NEXT:    cset w0, lt
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    ubfx w8, w8, #10, #5
+; CHECK-SD-NEXT:    cmp w8, #31
+; CHECK-SD-NEXT:    cset w0, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_h:
@@ -26,10 +25,9 @@ define i1 @isfinite_h(half %x) {
 ;
 ; CHECK-NOFP-LABEL: isfinite_h:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #31744 // =0x7c00
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w0, lt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #10, #5
+; CHECK-NOFP-NEXT:    cmp w8, #31
+; CHECK-NOFP-NEXT:    cset w0, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 504)  ; 0x1f8 = "finite"
@@ -40,11 +38,10 @@ define i1 @not_isfinite_h(half %x) {
 ; CHECK-SD-LABEL: not_isfinite_h:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mov w8, #31743 // =0x7bff
-; CHECK-SD-NEXT:    and w9, w9, #0x7fff
-; CHECK-SD-NEXT:    cmp w9, w8
-; CHECK-SD-NEXT:    cset w0, gt
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    ubfx w8, w8, #10, #5
+; CHECK-SD-NEXT:    cmp w8, #30
+; CHECK-SD-NEXT:    cset w0, hi
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: not_isfinite_h:
@@ -61,10 +58,9 @@ define i1 @not_isfinite_h(half %x) {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_h:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #31743 // =0x7bff
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w0, gt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #10, #5
+; CHECK-NOFP-NEXT:    cmp w8, #30
+; CHECK-NOFP-NEXT:    cset w0, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 519)  ; ~0x1f8 = "~finite"
@@ -74,11 +70,10 @@ entry:
 define i1 @isfinite_f(float %x) {
 ; CHECK-SD-LABEL: isfinite_f:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-SD-NEXT:    and w9, w9, #0x7fffffff
-; CHECK-SD-NEXT:    cmp w9, w8
-; CHECK-SD-NEXT:    cset w0, lt
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    ubfx w8, w8, #23, #8
+; CHECK-SD-NEXT:    cmp w8, #255
+; CHECK-SD-NEXT:    cset w0, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_f:
@@ -92,10 +87,9 @@ define i1 @isfinite_f(float %x) {
 ;
 ; CHECK-NOFP-LABEL: isfinite_f:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w0, lt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #23, #8
+; CHECK-NOFP-NEXT:    cmp w8, #255
+; CHECK-NOFP-NEXT:    cset w0, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; 0x1f8 = "finite"
@@ -105,11 +99,10 @@ entry:
 define i1 @not_isfinite_f(float %x) {
 ; CHECK-SD-LABEL: not_isfinite_f:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mov w8, #2139095039 // =0x7f7fffff
-; CHECK-SD-NEXT:    and w9, w9, #0x7fffffff
-; CHECK-SD-NEXT:    cmp w9, w8
-; CHECK-SD-NEXT:    cset w0, gt
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    ubfx w8, w8, #23, #8
+; CHECK-SD-NEXT:    cmp w8, #254
+; CHECK-SD-NEXT:    cset w0, hi
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: not_isfinite_f:
@@ -125,10 +118,9 @@ define i1 @not_isfinite_f(float %x) {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_f:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #2139095039 // =0x7f7fffff
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w0, gt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #23, #8
+; CHECK-NOFP-NEXT:    cmp w8, #254
+; CHECK-NOFP-NEXT:    cset w0, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ~0x1f8 = "~finite"
@@ -139,11 +131,10 @@ entry:
 define i1 @isfinite_f_strictfp(float %x) strictfp {
 ; CHECK-SD-LABEL: isfinite_f_strictfp:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-SD-NEXT:    and w9, w9, #0x7fffffff
-; CHECK-SD-NEXT:    cmp w9, w8
-; CHECK-SD-NEXT:    cset w0, lt
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    ubfx w8, w8, #23, #8
+; CHECK-SD-NEXT:    cmp w8, #255
+; CHECK-SD-NEXT:    cset w0, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_f_strictfp:
@@ -157,10 +148,9 @@ define i1 @isfinite_f_strictfp(float %x) strictfp {
 ;
 ; CHECK-NOFP-LABEL: isfinite_f_strictfp:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w0, lt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #23, #8
+; CHECK-NOFP-NEXT:    cmp w8, #255
+; CHECK-NOFP-NEXT:    cset w0, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504) strictfp ; 0x1f8 = "finite"
@@ -170,11 +160,10 @@ entry:
 define i1 @not_isfinite_f_strictfp(float %x) strictfp {
 ; CHECK-SD-LABEL: not_isfinite_f_strictfp:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mov w8, #2139095039 // =0x7f7fffff
-; CHECK-SD-NEXT:    and w9, w9, #0x7fffffff
-; CHECK-SD-NEXT:    cmp w9, w8
-; CHECK-SD-NEXT:    cset w0, gt
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    ubfx w8, w8, #23, #8
+; CHECK-SD-NEXT:    cmp w8, #254
+; CHECK-SD-NEXT:    cset w0, hi
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: not_isfinite_f_strictfp:
@@ -190,10 +179,9 @@ define i1 @not_isfinite_f_strictfp(float %x) strictfp {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_f_strictfp:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #2139095039 // =0x7f7fffff
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w0, gt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #23, #8
+; CHECK-NOFP-NEXT:    cmp w8, #254
+; CHECK-NOFP-NEXT:    cset w0, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519) strictfp ; ~0x1f8 = ~"finite"
@@ -204,11 +192,10 @@ entry:
 define i1 @isfinite_d(double %x) {
 ; CHECK-SD-LABEL: isfinite_d:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov x9, d0
-; CHECK-SD-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-SD-NEXT:    and x9, x9, #0x7fffffffffffffff
-; CHECK-SD-NEXT:    cmp x9, x8
-; CHECK-SD-NEXT:    cset w0, lt
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    ubfx x8, x8, #52, #11
+; CHECK-SD-NEXT:    cmp x8, #2047
+; CHECK-SD-NEXT:    cset w0, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_d:
@@ -222,10 +209,9 @@ define i1 @isfinite_d(double %x) {
 ;
 ; CHECK-NOFP-LABEL: isfinite_d:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NOFP-NEXT:    and x9, x0, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    cset w0, lt
+; CHECK-NOFP-NEXT:    ubfx x8, x0, #52, #11
+; CHECK-NOFP-NEXT:    cmp x8, #2047
+; CHECK-NOFP-NEXT:    cset w0, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 504)  ; 0x1f8 = "finite"
@@ -235,11 +221,10 @@ entry:
 define i1 @not_isfinite_d(double %x) {
 ; CHECK-SD-LABEL: not_isfinite_d:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov x9, d0
-; CHECK-SD-NEXT:    mov x8, #9218868437227405311 // =0x7fefffffffffffff
-; CHECK-SD-NEXT:    and x9, x9, #0x7fffffffffffffff
-; CHECK-SD-NEXT:    cmp x9, x8
-; CHECK-SD-NEXT:    cset w0, gt
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    ubfx x8, x8, #52, #11
+; CHECK-SD-NEXT:    cmp x8, #2046
+; CHECK-SD-NEXT:    cset w0, hi
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: not_isfinite_d:
@@ -255,10 +240,9 @@ define i1 @not_isfinite_d(double %x) {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_d:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov x8, #9218868437227405311 // =0x7fefffffffffffff
-; CHECK-NOFP-NEXT:    and x9, x0, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    cset w0, gt
+; CHECK-NOFP-NEXT:    ubfx x8, x0, #52, #11
+; CHECK-NOFP-NEXT:    cmp x8, #2046
+; CHECK-NOFP-NEXT:    cset w0, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 519)  ; ~0x1f8 = "~finite"
@@ -268,11 +252,10 @@ entry:
 define i1 @isfinite_d_strictfp(double %x) {
 ; CHECK-SD-LABEL: isfinite_d_strictfp:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov x9, d0
-; CHECK-SD-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-SD-NEXT:    and x9, x9, #0x7fffffffffffffff
-; CHECK-SD-NEXT:    cmp x9, x8
-; CHECK-SD-NEXT:    cset w0, lt
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    ubfx x8, x8, #52, #11
+; CHECK-SD-NEXT:    cmp x8, #2047
+; CHECK-SD-NEXT:    cset w0, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_d_strictfp:
@@ -286,10 +269,9 @@ define i1 @isfinite_d_strictfp(double %x) {
 ;
 ; CHECK-NOFP-LABEL: isfinite_d_strictfp:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NOFP-NEXT:    and x9, x0, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    cset w0, lt
+; CHECK-NOFP-NEXT:    ubfx x8, x0, #52, #11
+; CHECK-NOFP-NEXT:    cmp x8, #2047
+; CHECK-NOFP-NEXT:    cset w0, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 504) strictfp  ; 0x1f8 = "finite"
@@ -299,11 +281,10 @@ entry:
 define i1 @not_isfinite_d_strictfp(double %x) {
 ; CHECK-SD-LABEL: not_isfinite_d_strictfp:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov x9, d0
-; CHECK-SD-NEXT:    mov x8, #9218868437227405311 // =0x7fefffffffffffff
-; CHECK-SD-NEXT:    and x9, x9, #0x7fffffffffffffff
-; CHECK-SD-NEXT:    cmp x9, x8
-; CHECK-SD-NEXT:    cset w0, gt
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    ubfx x8, x8, #52, #11
+; CHECK-SD-NEXT:    cmp x8, #2046
+; CHECK-SD-NEXT:    cset w0, hi
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: not_isfinite_d_strictfp:
@@ -319,10 +300,9 @@ define i1 @not_isfinite_d_strictfp(double %x) {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_d_strictfp:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov x8, #9218868437227405311 // =0x7fefffffffffffff
-; CHECK-NOFP-NEXT:    and x9, x0, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    cset w0, gt
+; CHECK-NOFP-NEXT:    ubfx x8, x0, #52, #11
+; CHECK-NOFP-NEXT:    cmp x8, #2046
+; CHECK-NOFP-NEXT:    cset w0, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 519) strictfp  ; ~0x1f8 = "~finite"
@@ -334,12 +314,11 @@ define i1 @isfinite_f128(fp128 %x) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    str q0, [sp, #-16]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    ldr x9, [sp, #8]
-; CHECK-SD-NEXT:    mov x8, #9223090561878065152 // =0x7fff000000000000
-; CHECK-SD-NEXT:    and x9, x9, #0x7fffffffffffffff
-; CHECK-SD-NEXT:    cmp x9, x8
-; CHECK-SD-NEXT:    cset w0, lt
-; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ldp x8, x9, [sp], #16
+; CHECK-SD-NEXT:    extr x8, x9, x8, #63
+; CHECK-SD-NEXT:    mov x9, #-562949953421312 // =0xfffe000000000000
+; CHECK-SD-NEXT:    cmp x8, x9
+; CHECK-SD-NEXT:    cset w0, lo
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_f128:
@@ -354,10 +333,10 @@ define i1 @isfinite_f128(fp128 %x) {
 ;
 ; CHECK-NOFP-LABEL: isfinite_f128:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov x8, #9223090561878065152 // =0x7fff000000000000
-; CHECK-NOFP-NEXT:    and x9, x1, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    cset w0, lt
+; CHECK-NOFP-NEXT:    extr x8, x1, x0, #63
+; CHECK-NOFP-NEXT:    mov x9, #-562949953421312 // =0xfffe000000000000
+; CHECK-NOFP-NEXT:    cmp x8, x9
+; CHECK-NOFP-NEXT:    cset w0, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f128(fp128 %x, i32 504)  ; 0x1f8 = "finite"
@@ -369,12 +348,11 @@ define i1 @not_isfinite_f128(fp128 %x) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    str q0, [sp, #-16]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    ldr x9, [sp, #8]
-; CHECK-SD-NEXT:    mov x8, #9223090561878065151 // =0x7ffeffffffffffff
-; CHECK-SD-NEXT:    and x9, x9, #0x7fffffffffffffff
-; CHECK-SD-NEXT:    cmp x9, x8
-; CHECK-SD-NEXT:    cset w0, gt
-; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ldp x8, x9, [sp], #16
+; CHECK-SD-NEXT:    extr x8, x9, x8, #63
+; CHECK-SD-NEXT:    mov x9, #-562949953421313 // =0xfffdffffffffffff
+; CHECK-SD-NEXT:    cmp x8, x9
+; CHECK-SD-NEXT:    cset w0, hi
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: not_isfinite_f128:
@@ -397,10 +375,10 @@ define i1 @not_isfinite_f128(fp128 %x) {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_f128:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov x8, #9223090561878065151 // =0x7ffeffffffffffff
-; CHECK-NOFP-NEXT:    and x9, x1, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    cset w0, gt
+; CHECK-NOFP-NEXT:    extr x8, x1, x0, #63
+; CHECK-NOFP-NEXT:    mov x9, #-562949953421313 // =0xfffdffffffffffff
+; CHECK-NOFP-NEXT:    cmp x8, x9
+; CHECK-NOFP-NEXT:    cset w0, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f128(fp128 %x, i32 519)  ; ~0x1f8 = "~finite"
@@ -410,9 +388,9 @@ entry:
 define <4 x i1> @isfinite_v4h(<4 x half> %x) {
 ; CHECK-SD-LABEL: isfinite_v4h:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.4h, #124, lsl #8
-; CHECK-SD-NEXT:    bic v0.4h, #128, lsl #8
-; CHECK-SD-NEXT:    cmgt v0.4h, v1.4h, v0.4h
+; CHECK-SD-NEXT:    movi v1.4h, #248, lsl #8
+; CHECK-SD-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    cmhi v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_v4h:
@@ -430,19 +408,18 @@ define <4 x i1> @isfinite_v4h(<4 x half> %x) {
 ;
 ; CHECK-NOFP-LABEL: isfinite_v4h:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #31744 // =0x7c00
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w1, #0x7fff
-; CHECK-NOFP-NEXT:    cset w0, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w2, #0x7fff
-; CHECK-NOFP-NEXT:    cset w1, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w3, #0x7fff
-; CHECK-NOFP-NEXT:    cset w2, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w3, lt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #10, #5
+; CHECK-NOFP-NEXT:    ubfx w9, w1, #10, #5
+; CHECK-NOFP-NEXT:    cmp w8, #31
+; CHECK-NOFP-NEXT:    ubfx w8, w2, #10, #5
+; CHECK-NOFP-NEXT:    cset w0, lo
+; CHECK-NOFP-NEXT:    cmp w9, #31
+; CHECK-NOFP-NEXT:    ubfx w9, w3, #10, #5
+; CHECK-NOFP-NEXT:    cset w1, lo
+; CHECK-NOFP-NEXT:    cmp w8, #31
+; CHECK-NOFP-NEXT:    cset w2, lo
+; CHECK-NOFP-NEXT:    cmp w9, #31
+; CHECK-NOFP-NEXT:    cset w3, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call <4 x i1> @llvm.is.fpclass.v4f16(<4 x half> %x, i32 504)  ; 0x1f8 = "finite"
@@ -452,9 +429,9 @@ entry:
 define <4 x i1> @not_isfinite_v4h(<4 x half> %x) {
 ; CHECK-SD-LABEL: not_isfinite_v4h:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.4h, #124, lsl #8
-; CHECK-SD-NEXT:    bic v0.4h, #128, lsl #8
-; CHECK-SD-NEXT:    cmge v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    movi v1.4h, #248, lsl #8
+; CHECK-SD-NEXT:    add v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    cmhs v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: not_isfinite_v4h:
@@ -474,19 +451,18 @@ define <4 x i1> @not_isfinite_v4h(<4 x half> %x) {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_v4h:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #31743 // =0x7bff
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w1, #0x7fff
-; CHECK-NOFP-NEXT:    cset w0, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w2, #0x7fff
-; CHECK-NOFP-NEXT:    cset w1, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w3, #0x7fff
-; CHECK-NOFP-NEXT:    cset w2, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w3, gt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #10, #5
+; CHECK-NOFP-NEXT:    ubfx w9, w1, #10, #5
+; CHECK-NOFP-NEXT:    cmp w8, #30
+; CHECK-NOFP-NEXT:    ubfx w8, w2, #10, #5
+; CHECK-NOFP-NEXT:    cset w0, hi
+; CHECK-NOFP-NEXT:    cmp w9, #30
+; CHECK-NOFP-NEXT:    ubfx w9, w3, #10, #5
+; CHECK-NOFP-NEXT:    cset w1, hi
+; CHECK-NOFP-NEXT:    cmp w8, #30
+; CHECK-NOFP-NEXT:    cset w2, hi
+; CHECK-NOFP-NEXT:    cmp w9, #30
+; CHECK-NOFP-NEXT:    cset w3, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call <4 x i1> @llvm.is.fpclass.v4f16(<4 x half> %x, i32 519)  ; ~0x1f8 = "~finite"
@@ -522,19 +498,18 @@ define <4 x i1> @isfinite_v4f(<4 x float> %x) {
 ;
 ; CHECK-NOFP-LABEL: isfinite_v4f:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w1, #0x7fffffff
-; CHECK-NOFP-NEXT:    cset w0, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w2, #0x7fffffff
-; CHECK-NOFP-NEXT:    cset w1, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w3, #0x7fffffff
-; CHECK-NOFP-NEXT:    cset w2, lt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w3, lt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #23, #8
+; CHECK-NOFP-NEXT:    ubfx w9, w1, #23, #8
+; CHECK-NOFP-NEXT:    cmp w8, #255
+; CHECK-NOFP-NEXT:    ubfx w8, w2, #23, #8
+; CHECK-NOFP-NEXT:    cset w0, lo
+; CHECK-NOFP-NEXT:    cmp w9, #255
+; CHECK-NOFP-NEXT:    ubfx w9, w3, #23, #8
+; CHECK-NOFP-NEXT:    cset w1, lo
+; CHECK-NOFP-NEXT:    cmp w8, #255
+; CHECK-NOFP-NEXT:    cset w2, lo
+; CHECK-NOFP-NEXT:    cmp w9, #255
+; CHECK-NOFP-NEXT:    cset w3, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 504)  ; 0x1f8 = "finite"
@@ -544,10 +519,9 @@ entry:
 define <4 x i1> @not_isfinite_v4f(<4 x float> %x) {
 ; CHECK-SD-LABEL: not_isfinite_v4f:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvni v1.4s, #127, msl #16
-; CHECK-SD-NEXT:    bic v0.4s, #128, lsl #24
-; CHECK-SD-NEXT:    fneg v1.4s, v1.4s
-; CHECK-SD-NEXT:    cmge v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    movi v1.2d, #0xff000000ff000000
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    cmhs v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -571,19 +545,18 @@ define <4 x i1> @not_isfinite_v4f(<4 x float> %x) {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_v4f:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov w8, #2139095039 // =0x7f7fffff
-; CHECK-NOFP-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w1, #0x7fffffff
-; CHECK-NOFP-NEXT:    cset w0, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w2, #0x7fffffff
-; CHECK-NOFP-NEXT:    cset w1, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    and w9, w3, #0x7fffffff
-; CHECK-NOFP-NEXT:    cset w2, gt
-; CHECK-NOFP-NEXT:    cmp w9, w8
-; CHECK-NOFP-NEXT:    cset w3, gt
+; CHECK-NOFP-NEXT:    ubfx w8, w0, #23, #8
+; CHECK-NOFP-NEXT:    ubfx w9, w1, #23, #8
+; CHECK-NOFP-NEXT:    cmp w8, #254
+; CHECK-NOFP-NEXT:    ubfx w8, w2, #23, #8
+; CHECK-NOFP-NEXT:    cset w0, hi
+; CHECK-NOFP-NEXT:    cmp w9, #254
+; CHECK-NOFP-NEXT:    ubfx w9, w3, #23, #8
+; CHECK-NOFP-NEXT:    cset w1, hi
+; CHECK-NOFP-NEXT:    cmp w8, #254
+; CHECK-NOFP-NEXT:    cset w2, hi
+; CHECK-NOFP-NEXT:    cmp w9, #254
+; CHECK-NOFP-NEXT:    cset w3, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 519)  ; ~0x1f8 = "~finite"
@@ -615,13 +588,12 @@ define <2 x i1> @isfinite_v2d(<2 x double> %x) {
 ;
 ; CHECK-NOFP-LABEL: isfinite_v2d:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NOFP-NEXT:    and x9, x0, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    and x9, x1, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cset w0, lt
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    cset w1, lt
+; CHECK-NOFP-NEXT:    ubfx x8, x0, #52, #11
+; CHECK-NOFP-NEXT:    ubfx x9, x1, #52, #11
+; CHECK-NOFP-NEXT:    cmp x8, #2047
+; CHECK-NOFP-NEXT:    cset w0, lo
+; CHECK-NOFP-NEXT:    cmp x9, #2047
+; CHECK-NOFP-NEXT:    cset w1, lo
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call <2 x i1> @llvm.is.fpclass.v2f64(<2 x double> %x, i32 504)  ; 0x1f8 = "finite"
@@ -631,12 +603,10 @@ entry:
 define <2 x i1> @not_isfinite_v2d(<2 x double> %x) {
 ; CHECK-SD-LABEL: not_isfinite_v2d:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-SD-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-SD-NEXT:    fneg v1.2d, v1.2d
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    mov x8, #-9007199254740992 // =0xffe0000000000000
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
 ; CHECK-SD-NEXT:    dup v1.2d, x8
-; CHECK-SD-NEXT:    cmge v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    cmhs v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    ret
 ;
@@ -655,13 +625,12 @@ define <2 x i1> @not_isfinite_v2d(<2 x double> %x) {
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_v2d:
 ; CHECK-NOFP:       // %bb.0: // %entry
-; CHECK-NOFP-NEXT:    mov x8, #9218868437227405311 // =0x7fefffffffffffff
-; CHECK-NOFP-NEXT:    and x9, x0, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    and x9, x1, #0x7fffffffffffffff
-; CHECK-NOFP-NEXT:    cset w0, gt
-; CHECK-NOFP-NEXT:    cmp x9, x8
-; CHECK-NOFP-NEXT:    cset w1, gt
+; CHECK-NOFP-NEXT:    ubfx x8, x0, #52, #11
+; CHECK-NOFP-NEXT:    ubfx x9, x1, #52, #11
+; CHECK-NOFP-NEXT:    cmp x8, #2046
+; CHECK-NOFP-NEXT:    cset w0, hi
+; CHECK-NOFP-NEXT:    cmp x9, #2046
+; CHECK-NOFP-NEXT:    cset w1, hi
 ; CHECK-NOFP-NEXT:    ret
 entry:
   %0 = tail call <2 x i1> @llvm.is.fpclass.v2f64(<2 x double> %x, i32 519)  ; ~0x1f8 = "~finite"
