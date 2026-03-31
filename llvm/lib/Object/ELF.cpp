@@ -729,29 +729,24 @@ class ELFBBAddrMapAddressExtractor : public AddressExtractor {
   bool IsRelocatable;
   // Maps the offset of each address field in the BB addr map section to the
   // resolved function address (the relocation addend).
-  llvm::DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
-  std::function<std::string()> DescribeSection;
-  std::unique_ptr<uint8_t[]> DecompressedContent;
+  DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
 
   ELFBBAddrMapAddressExtractor(
-      DataExtractor Data, bool IsRelocatable,
-      llvm::DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations,
-      std::function<std::string()> DescribeSection,
-      std::unique_ptr<uint8_t[]> DecompressedContent)
-      : AddressExtractor(std::move(Data)), IsRelocatable(IsRelocatable),
-        FunctionOffsetTranslations(std::move(FunctionOffsetTranslations)),
-        DescribeSection(std::move(DescribeSection)),
-        DecompressedContent(std::move(DecompressedContent)) {}
+      const DataExtractor &Data, bool IsRelocatable,
+      DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations)
+      : AddressExtractor(Data), IsRelocatable(IsRelocatable),
+        FunctionOffsetTranslations(std::move(FunctionOffsetTranslations)) {}
 
 public:
   template <typename ELFT>
   static Expected<ELFBBAddrMapAddressExtractor>
-  create(const ELFFile<ELFT> &EF, const typename ELFFile<ELFT>::Elf_Shdr &Sec,
+  create(const DataExtractor &Data, const ELFFile<ELFT> &EF,
+         const typename ELFFile<ELFT>::Elf_Shdr &Sec,
          const typename ELFFile<ELFT>::Elf_Shdr *RelaSec) {
     bool IsRelocatable = EF.getHeader().e_type == ELF::ET_REL;
 
     // Build relocation offset-to-addend map.
-    llvm::DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
+    DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
     if (IsRelocatable && RelaSec) {
       assert(RelaSec &&
              "Can't read a SHT_LLVM_BB_ADDR_MAP section in a relocatable "
@@ -777,41 +772,8 @@ public:
       }
     }
 
-    // Read and optionally decompress section contents.
-    Expected<ArrayRef<uint8_t>> ContentsOrErr = EF.getSectionContents(Sec);
-    if (!ContentsOrErr)
-      return ContentsOrErr.takeError();
-    ArrayRef<uint8_t> Content = *ContentsOrErr;
-
-    std::unique_ptr<uint8_t[]> DecompressedContent;
-    if (Sec.sh_flags & llvm::ELF::SHF_COMPRESSED) {
-      Expected<StringRef> SectionNameOrErr = EF.getSectionName(Sec);
-      if (!SectionNameOrErr)
-        return SectionNameOrErr.takeError();
-      auto DecompressorOrErr =
-          Decompressor::create(*SectionNameOrErr, toStringRef(*ContentsOrErr),
-                               EF.isLE(), ELFT::Is64Bits);
-      if (!DecompressorOrErr)
-        return DecompressorOrErr.takeError();
-      size_t DecompressedSize = DecompressorOrErr->getDecompressedSize();
-      DecompressedContent = std::make_unique<uint8_t[]>(DecompressedSize);
-      MutableArrayRef<uint8_t> DecompressedContentRef(DecompressedContent.get(),
-                                                      DecompressedSize);
-      if (Error Err = DecompressorOrErr->decompress(DecompressedContentRef))
-        return std::move(Err);
-      Content = DecompressedContentRef;
-    }
-
-    DataExtractor Data(Content, EF.isLE(),
-                       sizeof(typename ELFFile<ELFT>::uintX_t));
-    return ELFBBAddrMapAddressExtractor(
-        std::move(Data), IsRelocatable, std::move(FunctionOffsetTranslations),
-        [&EF, &Sec] { return describe(EF, Sec); },
-        std::move(DecompressedContent));
-  }
-
-  std::string getSectionDescription() const override {
-    return DescribeSection ? DescribeSection() : "";
+    return ELFBBAddrMapAddressExtractor(Data, IsRelocatable,
+                                        std::move(FunctionOffsetTranslations));
   }
 
   Expected<uint64_t> extractAddress(DataExtractor::Cursor &Cur) override {
@@ -825,24 +787,57 @@ public:
     auto FOTIterator = FunctionOffsetTranslations.find(Offset);
     if (FOTIterator == FunctionOffsetTranslations.end())
       return createError("failed to get relocation data for offset: " +
-                         Twine::utohexstr(Offset) + " in section " +
-                         getSectionDescription());
+                         Twine::utohexstr(Offset));
     return FOTIterator->second;
   }
 };
+
+template <typename ELFT>
+static Expected<std::vector<BBAddrMap>>
+decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
+                    const typename ELFFile<ELFT>::Elf_Shdr &Sec,
+                    const typename ELFFile<ELFT>::Elf_Shdr *RelaSec,
+                    std::vector<PGOAnalysisMap> *PGOAnalyses) {
+  // Read and optionally decompress section contents.
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = EF.getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  ArrayRef<uint8_t> Content = *ContentsOrErr;
+
+  std::unique_ptr<uint8_t[]> DecompressedContent;
+  if (Sec.sh_flags & llvm::ELF::SHF_COMPRESSED) {
+    Expected<StringRef> SectionNameOrErr = EF.getSectionName(Sec);
+    if (!SectionNameOrErr)
+      return SectionNameOrErr.takeError();
+    auto DecompressorOrErr =
+        Decompressor::create(*SectionNameOrErr, toStringRef(*ContentsOrErr),
+                             EF.isLE(), ELFT::Is64Bits);
+    if (!DecompressorOrErr)
+      return DecompressorOrErr.takeError();
+    size_t DecompressedSize = DecompressorOrErr->getDecompressedSize();
+    DecompressedContent = std::make_unique<uint8_t[]>(DecompressedSize);
+    MutableArrayRef<uint8_t> DecompressedContentRef(DecompressedContent.get(),
+                                                    DecompressedSize);
+    if (Error Err = DecompressorOrErr->decompress(DecompressedContentRef))
+      return std::move(Err);
+    Content = DecompressedContentRef;
+  }
+
+  DataExtractor Data(Content, EF.isLE(),
+                     sizeof(typename ELFFile<ELFT>::uintX_t));
+  auto ExtractorOrErr =
+      ELFBBAddrMapAddressExtractor::create(Data, EF, Sec, RelaSec);
+  if (!ExtractorOrErr)
+    return ExtractorOrErr.takeError();
+  return decodeBBAddrMapPayload(*ExtractorOrErr, PGOAnalyses);
+}
 
 template <class ELFT>
 Expected<std::vector<BBAddrMap>>
 ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec,
                                std::vector<PGOAnalysisMap> *PGOAnalyses) const {
-  auto ExtractorOrErr =
-      ELFBBAddrMapAddressExtractor::create(*this, Sec, RelaSec);
-  if (!ExtractorOrErr)
-    return ExtractorOrErr.takeError();
-
   size_t OriginalPGOSize = PGOAnalyses ? PGOAnalyses->size() : 0;
-  auto AddrMapsOrErr =
-      llvm::object::decodeBBAddrMapPayload(*ExtractorOrErr, PGOAnalyses);
+  auto AddrMapsOrErr = decodeBBAddrMapImpl(*this, Sec, RelaSec, PGOAnalyses);
   // remove new analyses when an error occurs
   if (!AddrMapsOrErr && PGOAnalyses)
     PGOAnalyses->resize(OriginalPGOSize);

@@ -257,16 +257,13 @@ struct PGOAnalysisMap {
 /// Subclasses can override to handle format-specific details such as relocation
 /// resolution.
 class AddressExtractor {
-  DataExtractor Data;
+  const DataExtractor &Data;
 
 public:
-  AddressExtractor(DataExtractor Data) : Data(std::move(Data)) {}
+  AddressExtractor(const DataExtractor &Data) : Data(Data) {}
   virtual ~AddressExtractor() = default;
 
-  DataExtractor &getDataExtractor() { return Data; }
-
-  /// Returns a description of the underlying section.
-  virtual std::string getSectionDescription() const { return ""; }
+  const DataExtractor &getDataExtractor() const { return Data; }
 
   /// Extract and resolve an address at the current \p Cur position.
   virtual Expected<uint64_t> extractAddress(DataExtractor::Cursor &Cur) {

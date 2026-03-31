@@ -25,8 +25,8 @@ namespace {
 // Also returns zero if ULEBSizeErr is already in an error state.
 // ULEBSizeErr is an out variable if an error occurs.
 template <typename IntTy, std::enable_if_t<std::is_unsigned_v<IntTy>, int> = 0>
-static IntTy readULEB128As(DataExtractor &Data, DataExtractor::Cursor &Cur,
-                           Error &ULEBSizeErr) {
+static IntTy readULEB128As(const DataExtractor &Data,
+                           DataExtractor::Cursor &Cur, Error &ULEBSizeErr) {
   // Bail out and do not extract data if ULEBSizeErr is already set.
   if (ULEBSizeErr)
     return 0;
@@ -46,7 +46,7 @@ static IntTy readULEB128As(DataExtractor &Data, DataExtractor::Cursor &Cur,
 Expected<std::vector<BBAddrMap>>
 llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
                                      std::vector<PGOAnalysisMap> *PGOAnalyses) {
-  DataExtractor &Data = Extractor.getDataExtractor();
+  const DataExtractor &Data = Extractor.getDataExtractor();
   std::vector<BBAddrMap> FunctionEntries;
 
   DataExtractor::Cursor Cur(0);
@@ -93,12 +93,9 @@ llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
       NumBBRanges = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       if (!Cur || ULEBSizeErr)
         break;
-      if (!NumBBRanges) {
-        std::string SecDesc = Extractor.getSectionDescription();
+      if (!NumBBRanges)
         return createError("invalid zero number of BB ranges at offset " +
-                           Twine::utohexstr(Cur.tell()) +
-                           (SecDesc.empty() ? "" : " in " + SecDesc));
-      }
+                           Twine::utohexstr(Cur.tell()));
     } else {
       auto AddressOrErr = Extractor.extractAddress(Cur);
       if (!AddressOrErr)
