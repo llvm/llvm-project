@@ -29,6 +29,7 @@ DebuginfodFetcher::fetch(ArrayRef<uint8_t> BuildID) const {
   Error Err = PathOrErr.takeError();
   if (std::getenv("DEBUGINFOD_VERBOSE"))
     logAllUnhandledErrors(std::move(Err), llvm::errs(), "Debuginfod error: ");
-  consumeError(std::move(Err));
+  else
+    consumeError(std::move(Err));
   return std::nullopt;
 }
