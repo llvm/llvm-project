@@ -327,6 +327,7 @@ Improvements to Clang's diagnostics
 - Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
   made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
 
+<<<<<<< HEAD
 - Fixed the Fix-It insertion point for ``expected ';' after alias declaration``
   when parsing alias declarations involving a token-split ``>>`` sequence
   (for example, ``using A = X<int>>;``). (#GH184425)
@@ -334,6 +335,8 @@ Improvements to Clang's diagnostics
 - Fixed incorrect ``implicitly deleted`` diagnostic for explicitly deleted
   candidate function. (#GH185693)
 
+=======
+>>>>>>> 62c8a920b9c1 (Added the suggested fix)
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
@@ -377,6 +380,7 @@ Bug Fixes in This Version
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 - Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
 - Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
+<<<<<<< HEAD
 - Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
 - Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
 - Fixed a crash when substituting into a non-type template parameter that has a type containing an undeduced placeholder type.
@@ -384,6 +388,9 @@ Bug Fixes in This Version
 - Correctly diagnosing and no longer crashing when ``export module foo``
   (without a semicolon) are the final tokens in a module file. (#GH187771)
 - Fixed a crash in duplicate attribute checking caused by comparing constant arguments with different integer signedness. (#GH188259)
+=======
+- Fixed a crash when returning an initializer list from a void lambda or block. The compiler now emits a proper error message that correctly says "lambda" instead of "block" when applicable. (#GH188661)
+>>>>>>> 62c8a920b9c1 (Added the suggested fix)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -420,8 +427,6 @@ Bug Fixes to C++ Support
 
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
 - Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
-- We no longer consider conversion operators when copy-initializing from the same type. This was non
-  conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -446,9 +451,12 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
+<<<<<<< HEAD
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
 - Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
 - Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
+=======
+>>>>>>> 62c8a920b9c1 (Added the suggested fix)
 
 OpenACC Specific Changes
 ------------------------
@@ -493,7 +501,6 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
-- Intrinsics were added for the 'Zvabd` (RISC-V Integer Vector Absolute Difference) extension.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
