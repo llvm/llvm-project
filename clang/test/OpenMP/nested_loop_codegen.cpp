@@ -585,7 +585,7 @@ int inline_decl() {
 // CHECK3-NEXT:    store i32 [[TMP6]], ptr [[P_UPPERBOUND]], align 4
 // CHECK3-NEXT:    store i32 1, ptr [[P_STRIDE]], align 4
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 0)
+// CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 0)
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, ptr [[P_LOWERBOUND]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[P_UPPERBOUND]], align 4
 // CHECK3-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[TMP7]]
@@ -598,9 +598,9 @@ int inline_decl() {
 // CHECK3-NEXT:    [[OMP_LOOP_CMP:%.*]] = icmp ult i32 [[OMP_LOOP_IV]], [[TMP10]]
 // CHECK3-NEXT:    br i1 [[OMP_LOOP_CMP]], label [[OMP_LOOP_BODY:%.*]], label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp_loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 // CHECK3-NEXT:    br label [[OMP_LOOP_AFTER:%.*]]
 // CHECK3:       omp_loop.after:
 // CHECK3-NEXT:    br label [[FOR_INC:%.*]]
@@ -753,7 +753,7 @@ int inline_decl() {
 // CHECK3-NEXT:    store i32 [[TMP6]], ptr [[P_UPPERBOUND]], align 4
 // CHECK3-NEXT:    store i32 1, ptr [[P_STRIDE]], align 4
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 0)
+// CHECK3-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 0)
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, ptr [[P_LOWERBOUND]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[P_UPPERBOUND]], align 4
 // CHECK3-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[TMP7]]
@@ -766,9 +766,9 @@ int inline_decl() {
 // CHECK3-NEXT:    [[OMP_LOOP_CMP:%.*]] = icmp ult i32 [[OMP_LOOP_IV]], [[TMP10]]
 // CHECK3-NEXT:    br i1 [[OMP_LOOP_CMP]], label [[OMP_LOOP_BODY:%.*]], label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp_loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 // CHECK3-NEXT:    br label [[OMP_LOOP_AFTER:%.*]]
 // CHECK3:       omp_loop.after:
 // CHECK3-NEXT:    br label [[FOR_INC:%.*]]
@@ -923,8 +923,8 @@ int inline_decl() {
 // CHECK4-NEXT:    [[TMP6:%.*]] = sub i32 [[DOTCOUNT]], 1, !dbg [[DBG30]]
 // CHECK4-NEXT:    store i32 [[TMP6]], ptr [[P_UPPERBOUND]], align 4, !dbg [[DBG30]]
 // CHECK4-NEXT:    store i32 1, ptr [[P_STRIDE]], align 4, !dbg [[DBG30]]
-// CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3:[0-9]+]]), !dbg [[DBG30]]
-// CHECK4-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 0), !dbg [[DBG30]]
+// CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB4:[0-9]+]]), !dbg [[DBG30]]
+// CHECK4-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 0), !dbg [[DBG30]]
 // CHECK4-NEXT:    [[TMP7:%.*]] = load i32, ptr [[P_LOWERBOUND]], align 4, !dbg [[DBG30]]
 // CHECK4-NEXT:    [[TMP8:%.*]] = load i32, ptr [[P_UPPERBOUND]], align 4, !dbg [[DBG30]]
 // CHECK4-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[TMP7]], !dbg [[DBG30]]
@@ -938,8 +938,8 @@ int inline_decl() {
 // CHECK4-NEXT:    br i1 [[OMP_LOOP_CMP]], label [[OMP_LOOP_BODY:%.*]], label [[OMP_LOOP_EXIT:%.*]], !dbg [[DBG30]]
 // CHECK4:       omp_loop.exit:
 // CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[OMP_GLOBAL_THREAD_NUM]]), !dbg [[DBG30]]
-// CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]]), !dbg [[DBG35:![0-9]+]]
-// CHECK4-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM2]]), !dbg [[DBG35]]
+// CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB4]]), !dbg [[DBG35:![0-9]+]]
+// CHECK4-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB5:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM2]]), !dbg [[DBG35]]
 // CHECK4-NEXT:    br label [[OMP_LOOP_AFTER:%.*]], !dbg [[DBG30]]
 // CHECK4:       omp_loop.after:
 // CHECK4-NEXT:    br label [[FOR_INC:%.*]], !dbg [[DBG36:![0-9]+]]
@@ -1044,7 +1044,7 @@ int inline_decl() {
 // CHECK4-NEXT:    store ptr [[I]], ptr [[GEP_I]], align 8
 // CHECK4-NEXT:    [[GEP_RES:%.*]] = getelementptr { ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 1
 // CHECK4-NEXT:    store ptr [[RES]], ptr [[GEP_RES]], align 8
-// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB6:[0-9]+]], i32 1, ptr @_Z11inline_declv..omp_par, ptr [[STRUCTARG]]), !dbg [[DBG83:![0-9]+]]
+// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB7:[0-9]+]], i32 1, ptr @_Z11inline_declv..omp_par, ptr [[STRUCTARG]]), !dbg [[DBG83:![0-9]+]]
 // CHECK4-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
 // CHECK4:       omp.par.exit:
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG85:![0-9]+]]
@@ -1104,8 +1104,8 @@ int inline_decl() {
 // CHECK4-NEXT:    [[TMP6:%.*]] = sub i32 [[DOTCOUNT]], 1, !dbg [[META99]]
 // CHECK4-NEXT:    store i32 [[TMP6]], ptr [[P_UPPERBOUND]], align 4, !dbg [[META99]]
 // CHECK4-NEXT:    store i32 1, ptr [[P_STRIDE]], align 4, !dbg [[META99]]
-// CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB8:[0-9]+]]), !dbg [[META99]]
-// CHECK4-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB8]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 0), !dbg [[META99]]
+// CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB10:[0-9]+]]), !dbg [[META99]]
+// CHECK4-NEXT:    call void @__kmpc_for_static_init_4u(ptr @[[GLOB9:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i32 1, i32 0), !dbg [[META99]]
 // CHECK4-NEXT:    [[TMP7:%.*]] = load i32, ptr [[P_LOWERBOUND]], align 4, !dbg [[META99]]
 // CHECK4-NEXT:    [[TMP8:%.*]] = load i32, ptr [[P_UPPERBOUND]], align 4, !dbg [[META99]]
 // CHECK4-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[TMP7]], !dbg [[META99]]
@@ -1118,9 +1118,9 @@ int inline_decl() {
 // CHECK4-NEXT:    [[OMP_LOOP_CMP:%.*]] = icmp ult i32 [[OMP_LOOP_IV]], [[TMP10]], !dbg [[META99]]
 // CHECK4-NEXT:    br i1 [[OMP_LOOP_CMP]], label [[OMP_LOOP_BODY:%.*]], label [[OMP_LOOP_EXIT:%.*]], !dbg [[META99]]
 // CHECK4:       omp_loop.exit:
-// CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB8]], i32 [[OMP_GLOBAL_THREAD_NUM]]), !dbg [[META99]]
-// CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB8]]), !dbg [[DBG101:![0-9]+]]
-// CHECK4-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB9:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM2]]), !dbg [[DBG101]]
+// CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB9]], i32 [[OMP_GLOBAL_THREAD_NUM]]), !dbg [[META99]]
+// CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB10]]), !dbg [[DBG101:![0-9]+]]
+// CHECK4-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB11:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM2]]), !dbg [[DBG101]]
 // CHECK4-NEXT:    br label [[OMP_LOOP_AFTER:%.*]], !dbg [[META99]]
 // CHECK4:       omp_loop.after:
 // CHECK4-NEXT:    br label [[FOR_INC:%.*]], !dbg [[DBG102:![0-9]+]]
