@@ -1424,28 +1424,21 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
     return true;
   }
 
-  // We're certain that Delta > 0 and ConstCoeff > 0.
-  // Check Delta/(2*ConstCoeff) against upper loop bound
-  const Loop *CurSrcLoop = Src->getLoop();
-  if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *ConstantTwo = SE->getConstant(UpperBound->getType(), 2);
-    const SCEV *ML =
-        SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
-    LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
-      // i = i' = UB
-      Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
-      Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
-      ++WeakCrossingSIVsuccesses;
-      if (!Result.DV[Level].Direction) {
-        ++WeakCrossingSIVindependence;
-        return true;
-      }
-      Result.DV[Level].Distance = SE->getZero(Delta->getType());
-      return false;
+  ConstantRange SrcRange = SE->getSignedRange(Src);
+  ConstantRange DstRange = SE->getSignedRange(Dst);
+  LLVM_DEBUG(dbgs() << "\t    SrcRange = " << SrcRange << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstRange = " << DstRange << "\n");
+  if (SrcRange.intersectWith(DstRange).isSingleElement()) {
+    // The ranges touch at exactly one value (i = i' = BTC).
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
+    Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
+    ++WeakCrossingSIVsuccesses;
+    if (!Result.DV[Level].Direction) {
+      ++WeakCrossingSIVindependence;
+      return true;
     }
+    Result.DV[Level].Distance = SE->getZero(Delta->getType());
+    return false;
   }
 
   // check that Coeff divides Delta
