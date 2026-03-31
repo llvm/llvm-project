@@ -96,7 +96,6 @@ SPIRVTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
-
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
       builder.getStringAttr(
