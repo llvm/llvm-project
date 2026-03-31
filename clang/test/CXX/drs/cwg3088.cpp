@@ -466,12 +466,18 @@ namespace cwg3088 { // cwg3088: partial
 // carries_dependency was retroactively removed by P3475R2
 #define noreturn
 // FIXME-since-cxx11-error@-1 {{attribute is hidden by macro definition}}
+#undef noreturn
+#define noreturn()
+// FIXME-since-cxx11-error@-1 {{attribute is hidden by macro definition}}
 #endif
 
 #if __cplusplus >= 201402L
 // Attributes introduced in C++14
 
 #define deprecated
+// FIXME-since-cxx14-error@-1 {{attribute is hidden by macro definition}}
+#undef deprecated
+#define deprecated()
 // FIXME-since-cxx14-error@-1 {{attribute is hidden by macro definition}}
 #endif
 
@@ -480,9 +486,18 @@ namespace cwg3088 { // cwg3088: partial
 
 #define fallthrough
 // FIXME-since-cxx17-error@-1 {{attribute is hidden by macro definition}}
+#undef fallthrough
+#define fallthrough()
+// FIXME-since-cxx17-error@-1 {{attribute is hidden by macro definition}}
 #define maybe_unused
 // FIXME-since-cxx17-error@-1 {{attribute is hidden by macro definition}}
+#undef maybe_unused
+#define maybe_unused()
+// FIXME-since-cxx17-error@-1 {{attribute is hidden by macro definition}}
 #define nodiscard
+// FIXME-since-cxx17-error@-1 {{attribute is hidden by macro definition}}
+#undef nodiscard
+#define nodiscard()
 // FIXME-since-cxx17-error@-1 {{attribute is hidden by macro definition}}
 #endif
 
@@ -565,6 +580,9 @@ namespace cwg3088 { // cwg3088: partial
 
 #define assume
 // FIXME-since-cxx23-error@-1 {{attribute is hidden by macro definition}}
+#undef assume
+#define assume()
+// FIXME-since-cxx23-error@-1 {{attribute is hidden by macro definition}}
 #endif
 
 #if __cplusplus >= 202600L
@@ -592,6 +610,9 @@ namespace cwg3088 { // cwg3088: partial
 // Attributes introduced in C++26
 
 #define indeterminate
+// FIXME-since-cxx26-error@-1 {{attribute is hidden by macro definition}}
+#undef indeterminate
+#define indeterminate()
 // FIXME-since-cxx26-error@-1 {{attribute is hidden by macro definition}}
 #endif
 } // namespace cwg3088
