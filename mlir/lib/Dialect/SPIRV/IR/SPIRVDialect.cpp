@@ -1039,7 +1039,7 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   } else if (symbol == spirv::getTargetEnvAttrName()) {
     if (!isa<spirv::TargetEnvAttr>(attr))
       return op->emitError("'") << symbol << "' must be a spirv::TargetEnvAttr";
-  } else if (symbol == "spirv.loop_control") {
+  } else if (symbol == spirv::getLoopControlAttrName()) {
     if (!isa<spirv::LoopControlAttr>(attr))
       return op->emitError("'")
              << symbol << "' must be a spirv::LoopControlAttr";
