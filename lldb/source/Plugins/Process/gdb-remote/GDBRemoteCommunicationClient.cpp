@@ -2983,7 +2983,9 @@ lldb_private::Status GDBRemoteCommunicationClient::RunShellCommand(
     int *signo_ptr,  // Pass NULL if you don't want the signal that caused the
                      // process to exit
     std::string
-        *command_output, // Pass NULL if you don't want the command output
+        *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // command error output
     const Timeout<std::micro> &timeout) {
   lldb_private::StreamString stream;
   stream.PutCString("qPlatform_shell:");
@@ -4357,7 +4359,7 @@ bool GDBRemoteCommunicationClient::UsesNativeSignals() {
 
 llvm::Expected<int> GDBRemoteCommunicationClient::KillProcess(lldb::pid_t pid) {
   StringExtractorGDBRemote response;
-  GDBRemoteCommunication::ScopedTimeout(*this, seconds(3));
+  GDBRemoteCommunication::ScopedTimeout timeout(*this, seconds(3));
 
   // LLDB server typically sends no response for "k", so we shouldn't try
   // to sync on timeout.

@@ -331,9 +331,12 @@ class LLVM_ABI MachineFunction {
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
 
-  // MBBNumbering epoch, incremented after renumbering to detect use of old
-  // block numbers.
-  unsigned MBBNumberingEpoch = 0;
+  // Analysis number epoch, currently never changed as we don't renumber the
+  // block numbers used for analyses.
+  unsigned AnalysisNumberingEpoch = 0;
+
+  // Next MBB analysis number.
+  unsigned NextAnalysisNumber = 0;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
@@ -937,10 +940,14 @@ public:
   /// getNumBlockIDs - Return the number of MBB ID's allocated.
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
 
-  /// Return the numbering "epoch" of block numbers, incremented after each
-  /// numbering. Intended for asserting that no renumbering was performed when
-  /// used by, e.g., preserved analyses.
-  unsigned getBlockNumberEpoch() const { return MBBNumberingEpoch; }
+  /// Return the numbering "epoch" of analysis block numbers.
+  unsigned getAnalysisBlockNumberEpoch() const {
+    return AnalysisNumberingEpoch;
+  }
+
+  unsigned assignAnalysisNumber() { return NextAnalysisNumber++; }
+
+  unsigned getMaxAnalysisBlockNumber() const { return NextAnalysisNumber; }
 
   /// RenumberBlocks - This discards all of the MachineBasicBlock numbers and
   /// recomputes them.  This guarantees that the MBB numbers are sequential,
@@ -1543,10 +1550,10 @@ template <> struct GraphTraits<MachineFunction*> :
   static unsigned       size       (MachineFunction *F) { return F->size(); }
 
   static unsigned getMaxNumber(MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 template <> struct GraphTraits<const MachineFunction*> :
@@ -1569,10 +1576,10 @@ template <> struct GraphTraits<const MachineFunction*> :
   }
 
   static unsigned getMaxNumber(const MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(const MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 
@@ -1588,10 +1595,10 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
   }
 
   static unsigned getMaxNumber(MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*>> :
@@ -1601,10 +1608,10 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 
   static unsigned getMaxNumber(const MachineFunction *F) {
-    return F->getNumBlockIDs();
+    return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(const MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 

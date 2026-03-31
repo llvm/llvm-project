@@ -94,7 +94,6 @@ if( NOT LIBCLC_USE_SPIRV_BACKEND )
   else()
     find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
     set( llvm-spirv_exe "${LLVM_SPIRV}" )
-    set( llvm-spirv_target )
   endif()
 endif()
 
@@ -123,14 +122,13 @@ foreach( tool IN ITEMS opt llvm-link )
 endforeach()
 
 add_subdirectory(clc/lib/generic)
-add_subdirectory(clc/lib/amdgcn)
 add_subdirectory(clc/lib/amdgpu)
 add_subdirectory(clc/lib/ptx-nvidiacl)
 add_subdirectory(clc/lib/spirv)
 add_subdirectory(clc/lib/clspv)
 
 add_subdirectory(opencl/lib/generic)
-add_subdirectory(opencl/lib/amdgcn)
+add_subdirectory(opencl/lib/amdgpu)
 add_subdirectory(opencl/lib/clspv)
 add_subdirectory(opencl/lib/spirv)
 
@@ -138,12 +136,6 @@ add_custom_target( libclc ALL )
 
 add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
 add_dependencies( libclc libclc-opencl-builtins )
-
-configure_file( libclc.pc.in libclc.pc @ONLY )
-install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
-
-enable_testing()
 
 foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   message( STATUS "libclc target '${t}' is enabled" )
@@ -197,7 +189,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     list(APPEND target_extra_defines CLC_SPIRV)
     set(opt_flags)
   elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
-    list(APPEND target_compile_flags -Wno-unknown-assumption)
+    list(APPEND target_compile_flags -Wno-unknown-assumption
+                                     -U__opencl_c_int64)
     list(APPEND target_extra_defines CLC_CLSPV)
   elseif(ARCH STREQUAL amdgcn)
     list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
@@ -206,7 +199,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   # Collect CLC sources; target-specific sources override generic ones by basename.
   set(_clc_overrides)
   if(ARCH STREQUAL amdgcn)
-    list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES} ${CLC_AMDGCN_SOURCES})
+    list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES})
   elseif(ARCH STREQUAL nvptx64 AND (OS STREQUAL nvidiacl OR OS STREQUAL cuda))
     list(APPEND _clc_overrides ${CLC_PTX_NVIDIACL_SOURCES})
   elseif(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
@@ -280,5 +273,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     COMPILE_DEFINITIONS ${_common_defs}
     INTERNALIZE_LIBRARIES ${clc_lib}
     OPT_FLAGS ${opt_flags}
+    OUTPUT_FILENAME libclc
+    PARENT_TARGET libclc-opencl-builtins
   )
 endforeach()
+
+add_subdirectory(test)

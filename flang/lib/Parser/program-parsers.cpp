@@ -68,9 +68,18 @@ static constexpr auto programUnit{
         construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
 
+// Note, F'23 6.3.1 states that "A Fortran program unit is a sequence of one or
+// more lines, organized as Fortran statements, comments, and INCLUDE lines."
+// which could be interpreted as implying program units must exist on mutually
+// exclusive lines. Nag interprets it this way. We have an extension to allow
+// multiple program units on the same line.
 static constexpr auto normalProgramUnit{
     !consumedAllInput >> StartNewSubprogram{} >> programUnit /
-        skipMany(";"_tok) / space / recovery(endOfLine, skipToNextLineIfAny)};
+        recovery((maybe(semicolons) >> endOfLine) ||
+                (extension<LanguageFeature::MultipleProgramUnitsOnSameLine>(
+                    "nonstandard usage: end of program unit not terminated by new line"_port_en_US,
+                    semicolons >> not(endOfLine))),
+            skipToNextLineIfAny)};
 
 static constexpr auto globalCompilerDirective{
     construct<ProgramUnit>(indirect(compilerDirective))};
@@ -81,19 +90,14 @@ static constexpr auto globalOpenACCCompilerDirective{
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
-// F'2018 6.3.1 defines a program unit as a sequence of one or more lines,
-// implying that a line can't be part of two distinct program units.
-// Consequently, a program unit END statement should be the last statement
-// on its line.  We parse those END statements via unterminatedStatement()
-// and then skip over the end of the line here.
-TYPE_PARSER(
-    construct<Program>(extension<LanguageFeature::EmptySourceFile>(
-                           "nonstandard usage: empty source file"_port_en_US,
-                           skipStuffBeforeStatement >> consumedAllInput >>
-                               pure<std::list<ProgramUnit>>()) ||
-        some(globalCompilerDirective || globalOpenACCCompilerDirective ||
-            normalProgramUnit) /
-            skipStuffBeforeStatement))
+TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
+    (extension<LanguageFeature::EmptySourceFile>(
+         "nonstandard usage: empty source file"_port_en_US,
+         consumedAllInput >> pure<std::list<ProgramUnit>>()) ||
+        some(skipStuffBeforeStatement >> (globalCompilerDirective ||
+                                             globalOpenACCCompilerDirective ||
+                                             normalProgramUnit)) /
+            skipStuffBeforeStatement)))
 
 // R507 declaration-construct ->
 //        specification-construct | data-stmt | format-stmt |

@@ -145,6 +145,11 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
         offset += rel.addend;
       else
         offset += getAddend<ELFT>(ctx, sec, rel);
+      // Skip out-of-bounds offsets to avoid an assertion failure in
+      // getSectionPiece.
+      if (auto *ms = dyn_cast<MergeInputSection>(relSec);
+          ms && offset >= ms->content().size())
+        return;
     }
 
     // fromFDE being true means this is referenced by a FDE in a .eh_frame

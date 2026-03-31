@@ -4689,6 +4689,18 @@ static void TryConstructorInitialization(Sema &S,
     }
   }
 
+  // if the initialization is direct-initialization, or if it is
+  // copy-initialization where the cv-unqualified version of the source type is
+  // the same as or is derived from the class of the destination type,
+  // constructors are considered.
+  if ((Kind.getKind() == InitializationKind::IK_Direct ||
+       Kind.getKind() == InitializationKind::IK_Copy) &&
+      Args.size() == 1 &&
+      S.getASTContext().hasSameUnqualifiedType(
+          Args[0]->getType().getNonReferenceType(),
+          DestType.getNonReferenceType()))
+    RequireActualConstructor = true;
+
   // C++11 [over.match.list]p1:
   //   - If no viable initializer-list constructor is found, overload resolution
   //     is performed again, where the candidate functions are all the
@@ -9232,6 +9244,15 @@ bool InitializationSequence::Diagnose(Sema &S,
 
   case FK_ConversionFailed: {
     QualType FromType = OnlyArg->getType();
+    // __amdgpu_feature_predicate_t can be explicitly cast to the logical op
+    // type, although this is almost always an error and we advise against it.
+    if (FromType == S.Context.AMDGPUFeaturePredicateTy &&
+        DestType == S.Context.getLogicalOperationType()) {
+      S.Diag(OnlyArg->getExprLoc(),
+             diag::err_amdgcn_predicate_type_needs_explicit_bool_cast)
+          << OnlyArg << DestType;
+      break;
+    }
     PartialDiagnostic PDiag = S.PDiag(diag::err_init_conversion_failed)
       << (int)Entity.getKind()
       << DestType
@@ -10043,6 +10064,14 @@ Sema::PerformCopyInitialization(const InitializedEntity &Entity,
 
   if (EqualLoc.isInvalid())
     EqualLoc = InitE->getBeginLoc();
+
+  if (Entity.getType().getDesugaredType(Context) ==
+          Context.AMDGPUFeaturePredicateTy &&
+      Entity.getDecl()) {
+    Diag(EqualLoc, diag::err_amdgcn_predicate_type_is_not_constructible)
+        << Entity.getDecl();
+    return ExprError();
+  }
 
   InitializationKind Kind = InitializationKind::CreateCopy(
       InitE->getBeginLoc(), EqualLoc, AllowExplicit);

@@ -20,11 +20,11 @@
 source_filename = "/tmp/s.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-@out = external local_unnamed_addr global [0 x i32], align 4
-@map = external local_unnamed_addr global [0 x i32], align 4
+@out = external global [0 x i32], align 4
+@map = external global [0 x i32], align 4
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define void @f(i32 %a, i32 %n) local_unnamed_addr #0 !dbg !6 {
+define void @f(i32 %a, i32 %n) #0 !dbg !6 {
 entry:
   %cmp7 = icmp sgt i32 %n, 0, !dbg !8
   br i1 %cmp7, label %for.body.preheader, label %for.cond.cleanup, !dbg !9

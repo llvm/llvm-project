@@ -487,6 +487,31 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S, NamedDecl *BaseDecl,
   };
 }
 
+static const Type *createHostLayoutType(Sema &S, const Type *Ty) {
+  ASTContext &AST = S.getASTContext();
+  if (auto *RD = Ty->getAsCXXRecordDecl()) {
+    if (!requiresImplicitBufferLayoutStructure(RD))
+      return Ty;
+    RD = createHostLayoutStruct(S, RD);
+    if (!RD)
+      return nullptr;
+    return AST.getCanonicalTagType(RD)->getTypePtr();
+  }
+
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty)) {
+    const Type *ElementTy = createHostLayoutType(
+        S, CAT->getElementType()->getUnqualifiedDesugaredType());
+    if (!ElementTy)
+      return nullptr;
+    return AST
+        .getConstantArrayType(QualType(ElementTy, 0), CAT->getSize(), nullptr,
+                              CAT->getSizeModifier(),
+                              CAT->getIndexTypeCVRQualifiers())
+        .getTypePtr();
+  }
+  return Ty;
+}
+
 // Creates a field declaration of given name and type for HLSL buffer layout
 // struct. Returns nullptr if the type cannot be use in HLSL Buffer layout.
 static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
@@ -495,14 +520,9 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
   if (isInvalidConstantBufferLeafElementType(Ty))
     return nullptr;
 
-  if (auto *RD = Ty->getAsCXXRecordDecl()) {
-    if (requiresImplicitBufferLayoutStructure(RD)) {
-      RD = createHostLayoutStruct(S, RD);
-      if (!RD)
-        return nullptr;
-      Ty = S.Context.getCanonicalTagType(RD)->getTypePtr();
-    }
-  }
+  Ty = createHostLayoutType(S, Ty);
+  if (!Ty)
+    return nullptr;
 
   QualType QT = QualType(Ty, 0);
   ASTContext &AST = S.getASTContext();
@@ -586,7 +606,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
 // - zero-sized arrays
 // - non-variable declarations
 // The layout struct will be added to the HLSLBufferDecl declarations.
-void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
+static void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   ASTContext &AST = S.getASTContext();
   IdentifierInfo *II = getHostLayoutStructName(S, BufDecl, true);
 
@@ -603,14 +623,27 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
         VD->getType().getAddressSpace() == LangAS::hlsl_groupshared)
       continue;
     const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-    if (FieldDecl *FD =
-            createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS)) {
-      // add the field decl to the layout struct
+
+    FieldDecl *FD =
+        createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS);
+    // Declarations collected for the default $Globals constant buffer have
+    // already been checked to have non-empty cbuffer layout, so
+    // createFieldForHostLayoutStruct should always succeed. These declarations
+    // already have their address space set to hlsl_constant.
+    // For declarations in a named cbuffer block
+    // createFieldForHostLayoutStruct can still return nullptr if the type
+    // is empty (does not have a cbuffer layout).
+    assert((FD || VD->getType().getAddressSpace() != LangAS::hlsl_constant) &&
+           "host layout field for $Globals decl failed to be created");
+    if (FD) {
+      // Add the field decl to the layout struct.
       LS->addDecl(FD);
-      // update address space of the original decl to hlsl_constant
-      QualType NewTy =
-          AST.getAddrSpaceQualType(VD->getType(), LangAS::hlsl_constant);
-      VD->setType(NewTy);
+      if (VD->getType().getAddressSpace() != LangAS::hlsl_constant) {
+        // Update address space of the original decl to hlsl_constant.
+        QualType NewTy =
+            AST.getAddrSpaceQualType(VD->getType(), LangAS::hlsl_constant);
+        VD->setType(NewTy);
+      }
     }
   }
   LS->completeDefinition();
@@ -823,6 +856,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return (ST == llvm::Triple::Vertex && !IsInput) ||
            (ST == llvm::Triple::Pixel && IsInput);
   }
+  if (SemanticName == "SV_VERTEXID")
+    return true;
 
   return false;
 }
@@ -1042,6 +1077,11 @@ void SemaHLSL::checkSemanticAnnotation(
     diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
                                   {{llvm::Triple::Vertex, IOType::InOut},
                                    {llvm::Triple::Pixel, IOType::In}});
+    return;
+  }
+  if (SemanticName == "SV_VERTEXID") {
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  {{llvm::Triple::Vertex, IOType::In}});
     return;
   }
 
@@ -1802,6 +1842,14 @@ void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
                  HLSLVkExtBuiltinInputAttr(getASTContext(), AL, ID));
 }
 
+void SemaHLSL::handleVkExtBuiltinOutputAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t ID;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), ID))
+    return;
+  D->addAttr(::new (getASTContext())
+                 HLSLVkExtBuiltinOutputAttr(getASTContext(), AL, ID));
+}
+
 void SemaHLSL::handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (getASTContext())
                  HLSLVkPushConstantAttr(getASTContext(), AL));
@@ -1924,6 +1972,14 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
         (VT && VT->getNumElements() > 4))
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
           << AL << "float/float1/float2/float3/float4";
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_VERTEXID") {
+    uint64_t SizeInBits = SemaRef.Context.getTypeSize(ValueType);
+    if (!ValueType->isUnsignedIntegerType() || SizeInBits != 32)
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type) << AL << "uint";
     D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
     return;
   }
@@ -2174,6 +2230,24 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
       return false;
     }
     A = HLSLResourceClassAttr::Create(getASTContext(), RC, ACI);
+    break;
+  }
+
+  case ParsedAttr::AT_HLSLResourceDimension: {
+    StringRef Identifier;
+    SourceLocation ArgLoc;
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Identifier, &ArgLoc))
+      return false;
+
+    // Validate resource dimension value
+    llvm::dxil::ResourceDimension RD;
+    if (!HLSLResourceDimensionAttr::ConvertStrToResourceDimension(Identifier,
+                                                                  RD)) {
+      Diag(ArgLoc, diag::warn_attribute_type_not_supported)
+          << "ResourceDimension" << Identifier;
+      return false;
+    }
+    A = HLSLResourceDimensionAttr::Create(getASTContext(), RD, ACI);
     break;
   }
 
@@ -3075,6 +3149,25 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
   return false;
 }
 
+static bool CheckAnyDoubleRepresentation(Sema *S, SourceLocation Loc,
+                                         int ArgOrdinal,
+                                         clang::QualType PassedType) {
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+      : PassedType->isMatrixType()
+          ? PassedType->castAs<clang::MatrixType>()->getElementType()
+          : PassedType;
+  if (!BaseType->isDoubleType()) {
+    // FIXME: adopt standard `err_builtin_invalid_arg_type` instead of using
+    // this custom error.
+    return S->Diag(Loc, diag::err_builtin_requires_double_type)
+           << ArgOrdinal << PassedType;
+  }
+
+  return false;
+}
+
 static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
                                   unsigned ArgIndex) {
   auto *Arg = TheCall->getArg(ArgIndex);
@@ -3319,6 +3412,43 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckIndexType(Sema *S, CallExpr *TheCall, unsigned IndexArgIndex) {
+  assert(TheCall->getNumArgs() > IndexArgIndex && "Index argument missing");
+  QualType ArgType = TheCall->getArg(IndexArgIndex)->getType();
+  QualType IndexTy = ArgType;
+  unsigned int ActualDim = 1;
+  if (const auto *VTy = IndexTy->getAs<VectorType>()) {
+    ActualDim = VTy->getNumElements();
+    IndexTy = VTy->getElementType();
+  }
+  if (!IndexTy->isIntegerType()) {
+    S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
+            diag::err_typecheck_expect_int)
+        << ArgType;
+    return true;
+  }
+
+  QualType ResourceArgTy = TheCall->getArg(0)->getType();
+  const HLSLAttributedResourceType *ResTy =
+      ResourceArgTy.getTypePtr()->getAs<HLSLAttributedResourceType>();
+  assert(ResTy && "Resource argument must be a resource");
+  HLSLAttributedResourceType::Attributes ResAttrs = ResTy->getAttrs();
+
+  unsigned int ExpectedDim = 1;
+  if (ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
+    ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension);
+
+  if (ActualDim != ExpectedDim) {
+    S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
+            diag::err_hlsl_builtin_resource_coordinate_dimension_mismatch)
+        << cast<NamedDecl>(TheCall->getCalleeDecl()) << ExpectedDim
+        << ActualDim;
+    return true;
+  }
+
+  return false;
+}
+
 static bool CheckResourceHandle(
     Sema *S, CallExpr *TheCall, unsigned ArgIndex,
     llvm::function_ref<bool(const HLSLAttributedResourceType *ResType)> Check =
@@ -3476,6 +3606,50 @@ static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
 
   return false;
 }
+static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountRange(TheCall, 2, 3))
+    return true;
+
+  // Check the texture handle.
+  if (CheckResourceHandle(&S, TheCall, 0,
+                          [](const HLSLAttributedResourceType *ResType) {
+                            return ResType->getAttrs().ResourceDimension ==
+                                   llvm::dxil::ResourceDimension::Unknown;
+                          }))
+    return true;
+
+  auto *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+  // Check the location + lod (int3 for Texture2D).
+  unsigned ExpectedDim =
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  QualType CoordLODTy = TheCall->getArg(1)->getType();
+  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, ExpectedDim + 1,
+                              TheCall->getArg(1)->getBeginLoc()))
+    return true;
+
+  QualType EltTy = CoordLODTy;
+  if (const auto *VTy = EltTy->getAs<VectorType>())
+    EltTy = VTy->getElementType();
+  if (!EltTy->isIntegerType()) {
+    S.Diag(TheCall->getArg(1)->getBeginLoc(), diag::err_typecheck_expect_int)
+        << CoordLODTy;
+    return true;
+  }
+
+  // Check the offset operand.
+  if (TheCall->getNumArgs() > 2) {
+    if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
+                                S.Context.IntTy, ExpectedDim,
+                                TheCall->getArg(2)->getBeginLoc()))
+      return true;
+  }
+
+  TheCall->setType(ResourceTy->getContainedType());
+  return false;
+}
+
 static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   unsigned MinArgs, MaxArgs;
   if (Kind == SampleKind::Sample) {
@@ -3614,8 +3788,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
     if (SemaRef.checkArgCount(TheCall, 2) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().UnsignedIntTy))
+        CheckIndexType(&SemaRef, TheCall, 1))
       return true;
 
     auto *ResourceTy =
@@ -3632,8 +3805,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().UnsignedIntTy))
+        CheckIndexType(&SemaRef, TheCall, 1))
       return true;
 
     QualType ElementTy = TheCall->getArg(2)->getType();
@@ -3696,6 +3868,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_load_level:
+    return CheckLoadLevelBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_sample:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Sample);
   case Builtin::BI__builtin_hlsl_resource_sample_bias:
@@ -3965,6 +4139,41 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_elementwise_fma: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckAllArgsHaveSameType(&SemaRef, TheCall)) {
+      return true;
+    }
+
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                   CheckAnyDoubleRepresentation))
+      return true;
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as input type
+    TheCall->setType(ArgTyA);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_transpose: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
+
+    const auto *MatTy = ArgTy->getAs<ConstantMatrixType>();
+    if (!MatTy) {
+      SemaRef.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* matrix */ 3 << /* no int */ 0 << /* no fp */ 0 << ArgTy;
+      return true;
+    }
+
+    QualType RetTy = getASTContext().getConstantMatrixType(
+        MatTy->getElementType(), MatTy->getNumColumns(), MatTy->getNumRows());
+    TheCall->setType(RetTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
@@ -4014,7 +4223,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_wave_active_max:
   case Builtin::BI__builtin_hlsl_wave_active_min:
-  case Builtin::BI__builtin_hlsl_wave_active_sum: {
+  case Builtin::BI__builtin_hlsl_wave_active_sum:
+  case Builtin::BI__builtin_hlsl_wave_active_product: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
@@ -4025,6 +4235,35 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_or:
+  case Builtin::BI__builtin_hlsl_wave_active_bit_xor:
+  case Builtin::BI__builtin_hlsl_wave_active_bit_and: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    if (CheckWaveActive(&SemaRef, TheCall))
+      return true;
+
+    // Ensure the expr type is interpretable as a uint or vector<uint>
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    auto *VTy = ArgTyExpr->getAs<VectorType>();
+    if (!(ArgTyExpr->isIntegerType() ||
+          (VTy && VTy->getElementType()->isIntegerType()))) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << ArgTyExpr << SemaRef.Context.UnsignedIntTy << 1 << 0 << 0;
+      return true;
+    }
+
+    // Ensure input expr type is the same as the return type
     TheCall->setType(ArgTyExpr);
     break;
   }
@@ -4097,6 +4336,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
       return true;
     if (CheckWavePrefix(&SemaRef, TheCall))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_quad_read_across_x:
+  case Builtin::BI__builtin_hlsl_quad_read_across_y: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckNotBoolScalarOrVector(&SemaRef, TheCall, 0))
       return true;
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();
@@ -4435,8 +4688,8 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
 }
 
 // Can perform an HLSL Aggregate splat cast if the Dest is an aggregate and the
-// Src is a scalar or a vector of length 1
-// Or if Dest is a vector and Src is a vector of length 1
+// Src is a scalar, a vector of length 1, or a 1x1 matrix
+// Or if Dest is a vector and Src is a vector of length 1 or a 1x1 matrix
 bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
 
   QualType SrcTy = Src->getType();
@@ -4447,13 +4700,18 @@ bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
     return false;
 
   const VectorType *SrcVecTy = SrcTy->getAs<VectorType>();
+  const ConstantMatrixType *SrcMatTy = SrcTy->getAs<ConstantMatrixType>();
 
-  // Src isn't a scalar or a vector of length 1
-  if (!SrcTy->isScalarType() && !(SrcVecTy && SrcVecTy->getNumElements() == 1))
+  // Src isn't a scalar, a vector of length 1, or a 1x1 matrix
+  if (!SrcTy->isScalarType() &&
+      !(SrcVecTy && SrcVecTy->getNumElements() == 1) &&
+      !(SrcMatTy && SrcMatTy->getNumElementsFlattened() == 1))
     return false;
 
   if (SrcVecTy)
     SrcTy = SrcVecTy->getElementType();
+  else if (SrcMatTy)
+    SrcTy = SrcMatTy->getElementType();
 
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
@@ -4582,6 +4840,38 @@ QualType SemaHLSL::getInoutParameterType(QualType Ty) {
   return Ty;
 }
 
+// Returns true if the type has a non-empty constant buffer layout (if it is
+// scalar, vector or matrix, or if it contains any of these.
+static bool hasConstantBufferLayout(QualType QT) {
+  const Type *Ty = QT->getUnqualifiedDesugaredType();
+  if (Ty->isScalarType() || Ty->isVectorType() || Ty->isMatrixType())
+    return true;
+
+  if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
+    return false;
+
+  if (const auto *RD = Ty->getAsCXXRecordDecl()) {
+    for (const auto *FD : RD->fields()) {
+      if (hasConstantBufferLayout(FD->getType()))
+        return true;
+    }
+    assert(RD->getNumBases() <= 1 &&
+           "HLSL doesn't support multiple inheritance");
+    return RD->getNumBases()
+               ? hasConstantBufferLayout(RD->bases_begin()->getType())
+               : false;
+  }
+
+  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+      if (isZeroSizedArray(CAT))
+        return false;
+    return hasConstantBufferLayout(AT->getElementType());
+  }
+
+  return false;
+}
+
 static bool IsDefaultBufferConstantDecl(const ASTContext &Ctx, VarDecl *VD) {
   bool IsVulkan =
       Ctx.getTargetInfo().getTriple().getOS() == llvm::Triple::Vulkan;
@@ -4591,7 +4881,7 @@ static bool IsDefaultBufferConstantDecl(const ASTContext &Ctx, VarDecl *VD) {
          QT.getAddressSpace() == LangAS::Default &&
          VD->getStorageClass() != SC_Static &&
          !VD->hasAttr<HLSLVkConstantIdAttr>() && !IsVKPushConstant &&
-         !isInvalidConstantBufferLeafElementType(QT.getTypePtr());
+         hasConstantBufferLayout(QT);
 }
 
 void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
@@ -4608,6 +4898,19 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     LangAS ImplAS = LangAS::hlsl_input;
     Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
     Decl->setType(Type);
+    return;
+  }
+
+  if (Decl->hasAttr<HLSLVkExtBuiltinOutputAttr>()) {
+    LangAS ImplAS = LangAS::hlsl_output;
+    Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+    Decl->setType(Type);
+
+    // HLSL uses `static` differently than C++. For BuiltIn output, the static
+    // does not imply private to the module scope.
+    // Marking it as external to reflect the semantic this attribute brings.
+    // See https://github.com/microsoft/hlsl-specs/issues/350
+    Decl->setStorageClass(SC_Extern);
     return;
   }
 
@@ -4652,6 +4955,13 @@ class StructBindingContext {
   // register types - SRV (u), UAV (t), CBuffer (c), and Sampler (s).
   HLSLResourceBindingAttr *RegBindingsAttrs[4];
   unsigned RegBindingOffset[4];
+
+  // Make sure the RegisterType values are what we expect
+  static_assert(static_cast<unsigned>(RegisterType::SRV) == 0 &&
+                    static_cast<unsigned>(RegisterType::UAV) == 1 &&
+                    static_cast<unsigned>(RegisterType::CBuffer) == 2 &&
+                    static_cast<unsigned>(RegisterType::Sampler) == 3,
+                "unexpected register type values");
 
   // Vulkan binding attribute does not vary by register type.
   HLSLVkBindingAttr *VkBindingAttr;
@@ -4750,7 +5060,7 @@ static void createGlobalResourceDeclForStruct(
   const HLSLAttributedResourceType *ResHandleTy = nullptr;
   if (const auto *AT = dyn_cast<ArrayType>(ResTy.getTypePtr())) {
     const auto *CAT = dyn_cast<ConstantArrayType>(AT);
-    Range = CAT ? CAT->getSize().getZExtValue() : -1;
+    Range = CAT ? CAT->getSize().getZExtValue() : 0;
     ResHandleTy = getResourceArrayHandleType(ResTy);
   } else {
     ResHandleTy = HLSLAttributedResourceType::findHandleTypeOnResource(
@@ -4781,7 +5091,7 @@ static void handleArrayOfStructWithResources(
     EmbeddedResourceNameBuilder &NameBuilder, StructBindingContext &BindingCtx);
 
 // Scans base and all fields of a struct/class type to find all embedded
-// resources or resource arrays,. Creates a global variable for each resource
+// resources or resource arrays. Creates a global variable for each resource
 // found.
 static void handleStructWithResources(Sema &S, VarDecl *ParentVD,
                                       const CXXRecordDecl *RD,
@@ -4861,21 +5171,19 @@ handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
 // with the parent declaration (VD) through a HLSLAssociatedResourceDeclAttr
 // attribute.
 void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
-  StructBindingContext BindingCtx(VD);
   EmbeddedResourceNameBuilder NameBuilder(VD->getName());
+  StructBindingContext BindingCtx(VD);
 
   const Type *VDTy = VD->getType().getTypePtr();
   assert(VDTy->isHLSLIntangibleType() && !isResourceRecordTypeOrArrayOf(VD) &&
          "Expected non-resource struct or array type");
 
-  const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl();
-  if (RD) {
+  if (const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl()) {
     handleStructWithResources(SemaRef, VD, RD, NameBuilder, BindingCtx);
     return;
   }
 
-  const auto *CAT = dyn_cast<ConstantArrayType>(VDTy);
-  if (CAT) {
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(VDTy)) {
     handleArrayOfStructWithResources(SemaRef, VD, CAT, NameBuilder, BindingCtx);
     return;
   }
@@ -5356,9 +5664,10 @@ class InitListTransformer {
     }
 
     // If this is a scalar type, just enqueue the expression.
-    QualType Ty = E->getType();
+    QualType Ty = E->getType().getDesugaredType(Ctx);
 
-    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
+        Ty->isHLSLAttributedResourceType())
       return castInitializer(E);
 
     if (auto *VecTy = Ty->getAs<VectorType>()) {
@@ -5426,6 +5735,11 @@ class InitListTransformer {
     if (auto *RD = Ty->getAsCXXRecordDecl()) {
       llvm::SmallVector<CXXRecordDecl *> RecordDecls;
       RecordDecls.push_back(RD);
+      // If this is a prvalue create an xvalue so the member accesses
+      // will be xvalues.
+      if (E->isPRValue())
+        E = new (Ctx)
+            MaterializeTemporaryExpr(Ty, E, /*BoundToLvalueReference=*/false);
       while (RecordDecls.back()->getNumBases()) {
         CXXRecordDecl *D = RecordDecls.back();
         assert(D->getNumBases() == 1 &&
@@ -5453,12 +5767,13 @@ class InitListTransformer {
   }
 
   Expr *generateInitListsImpl(QualType Ty) {
+    Ty = Ty.getDesugaredType(Ctx);
     assert(ArgIt != ArgExprs.end() && "Something is off in iteration!");
-    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
+        Ty->isHLSLAttributedResourceType())
       return *(ArgIt++);
 
     llvm::SmallVector<Expr *> Inits;
-    Ty = Ty.getDesugaredType(Ctx);
     if (Ty->isVectorType() || Ty->isConstantArrayType() ||
         Ty->isConstantMatrixType()) {
       QualType ElTy;

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_log.h>
+#include "clc/math/clc_log.h"
 
 #define __CLC_FUNCTION log
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

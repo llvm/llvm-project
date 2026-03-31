@@ -489,3 +489,135 @@ loop:
 exit:
   ret void
 }
+
+define void @diff_check_via_i32_ptrarith(ptr %origin, ptr %dst, ptr %base, i32 %d, i32 %n) {
+; CHECK-LABEL: define void @diff_check_via_i32_ptrarith(
+; CHECK-SAME: ptr [[ORIGIN:%.*]], ptr [[DST:%.*]], ptr [[BASE:%.*]], i32 [[D:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[BASE1:%.*]] = ptrtoaddr ptr [[BASE]] to i64
+; CHECK-NEXT:    [[RHS:%.*]] = ptrtoint ptr [[ORIGIN]] to i64
+; CHECK-NEXT:    [[LHS:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[DIFF_I32:%.*]] = trunc i64 [[DIFF]] to i32
+; CHECK-NEXT:    [[OP:%.*]] = sub nuw nsw i32 [[D]], [[DIFF_I32]]
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[OP]] to i64
+; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OP]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PH:.*]], [[EXIT:label %.*]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[RHS]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[D]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[LHS]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[RHS]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[D]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[LHS]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[BASE1]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[LHS]], [[TMP12]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP13]], 4
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  %rhs = ptrtoint ptr %origin to i64
+  %lhs = ptrtoint ptr %dst to i64
+  %diff = sub i64 %lhs, %rhs
+  %diff.i32 = trunc i64 %diff to i32
+  %op = sub nuw nsw i32 %d, %diff.i32
+  %idx.ext = zext i32 %op to i64
+  %src = getelementptr inbounds nuw i8, ptr %base, i64 %idx.ext
+  %cmp = icmp ult i32 %op, %n
+  br i1 %cmp, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %dst.phi = phi ptr [ %dst.next, %loop ], [ %dst, %loop.ph ]
+  %src.phi = phi ptr [ %src.next, %loop ], [ %src, %loop.ph ]
+  %iv = phi i32 [ %iv.dec, %loop ], [ %op, %loop.ph ]
+  %src.next = getelementptr inbounds nuw i8, ptr %src.phi, i64 1
+  %val = load i8, ptr %src.phi, align 1
+  %dst.next = getelementptr inbounds nuw i8, ptr %dst.phi, i64 1
+  store i8 %val, ptr %dst.phi, align 1
+  %iv.dec = add i32 %iv, -1
+  %done = icmp eq i32 %iv.dec, 0
+  br i1 %done, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+define void @phi_of_ptrtoint_diff_check(ptr %base, ptr %end, i64 %n, i1 %cond) {
+; CHECK-LABEL: define void @phi_of_ptrtoint_diff_check(
+; CHECK-SAME: ptr [[BASE:%.*]], ptr [[END:%.*]], i64 [[N:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[END_INT:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[EXT:%.*]] = getelementptr inbounds nuw i8, ptr [[END]], i64 [[N]]
+; CHECK-NEXT:    [[EXT_INT:%.*]] = ptrtoint ptr [[EXT]] to i64
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[MERGE:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[DST_INT:%.*]] = phi i64 [ [[EXT_INT]], %[[IF_THEN]] ], [ [[END_INT]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[DST_PTR:%.*]] = phi ptr [ [[EXT]], %[[IF_THEN]] ], [ [[END]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[DST_PTR1:%.*]] = ptrtoaddr ptr [[DST_PTR]] to i64
+; CHECK-NEXT:    [[END2:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 [[N]]
+; CHECK-NEXT:    [[END2_INT:%.*]] = ptrtoint ptr [[END2]] to i64
+; CHECK-NEXT:    [[OFFSET:%.*]] = sub i64 [[DST_INT]], [[END2_INT]]
+; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[OFFSET]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[SRC]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], [[END_INT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[DST_INT]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[N]], [[DST_PTR1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[DST_INT]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  %end.int = ptrtoint ptr %end to i64
+  %ext = getelementptr inbounds nuw i8, ptr %end, i64 %n
+  %ext.int = ptrtoint ptr %ext to i64
+  br i1 %cond, label %if.then, label %loop.ph
+
+if.then:
+  br label %loop.ph
+
+loop.ph:
+  %dst.int = phi i64 [ %ext.int, %if.then ], [ %end.int, %entry ]
+  %dst.ptr = phi ptr [ %ext, %if.then ], [ %end, %entry ]
+  %end2 = getelementptr inbounds nuw i8, ptr %base, i64 %n
+  %end2.int = ptrtoint ptr %end2 to i64
+  %offset = sub i64 %dst.int, %end2.int
+  %src = getelementptr inbounds i8, ptr %base, i64 %offset
+  %cmp = icmp ult ptr %src, %end
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %iv.src = phi ptr [ %src, %loop.ph ], [ %next.src, %loop ]
+  %iv.dst = phi ptr [ %dst.ptr, %loop.ph ], [ %next.dst, %loop ]
+  %val = load i8, ptr %iv.src, align 1
+  store i8 %val, ptr %iv.dst, align 1
+  %next.src = getelementptr inbounds nuw i8, ptr %iv.src, i64 1
+  %next.dst = getelementptr inbounds nuw i8, ptr %iv.dst, i64 1
+  %done = icmp eq ptr %next.src, %end
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.mustprogress"}

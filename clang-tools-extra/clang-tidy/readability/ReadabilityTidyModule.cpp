@@ -49,6 +49,7 @@
 #include "RedundantMemberInitCheck.h"
 #include "RedundantParenthesesCheck.h"
 #include "RedundantPreprocessorCheck.h"
+#include "RedundantQualifiedAliasCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
@@ -148,6 +149,8 @@ public:
         "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
         "readability-redundant-preprocessor");
+    CheckFactories.registerCheck<RedundantQualifiedAliasCheck>(
+        "readability-redundant-qualified-alias");
     CheckFactories.registerCheck<RedundantTypenameCheck>(
         "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
