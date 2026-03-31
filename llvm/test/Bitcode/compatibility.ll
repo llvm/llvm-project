@@ -1026,6 +1026,16 @@ define void @pointer_atomics(ptr %word) {
   ret void
 }
 
+define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) {
+; CHECK: %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+  %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+
+; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+  %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+
+  ret void
+}
+
 ;; Fast Math Flags
 define void @fastmathflags_unop(float %op1) {
   %f.nnan = fneg nnan float %op1

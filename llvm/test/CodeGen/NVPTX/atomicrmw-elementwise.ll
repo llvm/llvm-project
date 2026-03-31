@@ -2,8 +2,6 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx84 | FileCheck %s
 ; RUN: %if ptxas-sm_90 && ptxas-isa-8.4 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx84 | %ptxas-verify -arch=sm_90 %}
 
-target triple = "nvptx64-nvidia-cuda"
-
 define <2 x float> @fadd_v2f32_elementwise(ptr %addr, <2 x float> %val) {
 ; CHECK-LABEL: fadd_v2f32_elementwise(
 ; CHECK:       {
