@@ -4341,11 +4341,11 @@ TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
 
 TEST_F(TokenAnnotatorTest, EnumColon) {
   auto Tokens = annotate("enum A : int {};");
-  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_EnumUnderlyingTypeColon);
 
   Tokens = annotate("enum class B : int {};");
-  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_EnumUnderlyingTypeColon);
 
   Tokens = annotate("enum : int { E1 };");
