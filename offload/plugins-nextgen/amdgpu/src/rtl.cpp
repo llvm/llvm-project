@@ -1684,7 +1684,8 @@ public:
   const AMDGPUQueueTy *getQueue() const { return Queue; }
 
   /// Record an event by enqueuing a barrier marker packet on the stream.
-  Error recordEvent(AMDGPUEventTy &Event);
+  Error recordEvent(AMDGPUEventTy &Event,
+                    AMDGPUSignalTy *ReusedSignal = nullptr);
 
   /// Make the stream wait on an event.
   Error waitEvent(const AMDGPUEventTy &Event);
@@ -1704,29 +1705,28 @@ struct AMDGPUEventTy {
   Error init() { return resetState(); }
   Error deinit() { return resetState(); }
 
-  /// Clear the current recording and retained timing state.
-  Error resetState() {
+  /// Clear the current recording and retained timing state, optionally
+  /// returning a reusable timing signal.
+  Error resetState(AMDGPUSignalTy **ReusableSignalPtr = nullptr) {
     RecordedStream = nullptr;
     RecordedSlot = -1;
     RecordedSyncCycle = -1;
-
-    if (auto Err = releaseTimingSignal())
-      return Err;
-
-    return Plugin::success();
+    return releaseTimingSignal(ReusableSignalPtr);
   }
 
   /// Record the current stream point on the event.
   Error record(AMDGPUStreamTy &Stream) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
-    // Discard the previous recording and retained timing state.
-    if (auto Err = resetState())
+    // Discard the previous recording and retained timing state, reusing the
+    // retained timing signal if it becomes available.
+    AMDGPUSignalTy *Signal = nullptr;
+    if (auto Err = resetState(&Signal))
       return Err;
 
     RecordedStream = &Stream;
 
-    if (auto Err = Stream.recordEvent(*this)) {
+    if (auto Err = Stream.recordEvent(*this, Signal)) {
       if (auto ResetErr = resetState())
         return joinErrors(std::move(Err), std::move(ResetErr));
       return Err;
@@ -1774,8 +1774,9 @@ struct AMDGPUEventTy {
   Expected<float> getElapsedTime(AMDGPUEventTy &EndEvent);
 
 protected:
-  /// Release the retained timing signal, if any, back to the signal manager.
-  Error releaseTimingSignal();
+  /// Release the retained timing signal, if any, either back to the signal
+  /// manager or through \p ReusableSignalPtr when provided.
+  Error releaseTimingSignal(AMDGPUSignalTy **ReusableSignalPtr = nullptr);
 
   /// The device that owns this event.
   AMDGPUDeviceTy &Device;
@@ -1799,7 +1800,8 @@ protected:
   friend struct AMDGPUStreamTy;
 };
 
-Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
+Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
+                                  AMDGPUSignalTy *ReusedSignal) {
   if (Queue == nullptr)
     return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
                          "target queue was nullptr");
@@ -1807,10 +1809,13 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
   const bool RetainTimingSignal = Queue->isProfilingEnabled();
   const uint32_t SignalUses = 1 + RetainTimingSignal;
 
-  // Retrieve an available signal for the operation's output.
-  AMDGPUSignalTy *OutputSignal = nullptr;
-  if (auto Err = SignalManager.getResource(OutputSignal))
-    return Err;
+  // Reuse the provided signal or retrieve one for the operation's output.
+  AMDGPUSignalTy *OutputSignal = ReusedSignal;
+  if (!OutputSignal) {
+    if (auto Err = SignalManager.getResource(OutputSignal))
+      return Err;
+  }
+
   OutputSignal->reset();
   OutputSignal->increaseUseCount(SignalUses);
 
@@ -1824,9 +1829,10 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
   if (auto Err = Queue->pushBarrier(OutputSignal, InputSignal, nullptr)) {
     rollbackConsumedSlot(Curr);
 
-    if (OutputSignal->decreaseUseCount(SignalUses))
+    if (OutputSignal->decreaseUseCount(SignalUses)) {
       if (auto ReturnErr = SignalManager.returnResource(OutputSignal))
         return joinErrors(std::move(Err), std::move(ReturnErr));
+    }
 
     return Err;
   }
@@ -3586,17 +3592,22 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
       UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()) {}
 
-Error AMDGPUEventTy::releaseTimingSignal() {
-  if (!TimingSignal)
-    return Plugin::success();
-
+Error AMDGPUEventTy::releaseTimingSignal(AMDGPUSignalTy **ReusableSignalPtr) {
   AMDGPUSignalTy *Signal = TimingSignal;
   TimingSignal = nullptr;
 
-  if (Signal->decreaseUseCount())
-    return Device.getSignalManager().returnResource(Signal);
+  if (!Signal)
+    return Plugin::success();
 
-  return Plugin::success();
+  if (!Signal->decreaseUseCount())
+    return Plugin::success();
+
+  if (ReusableSignalPtr && !(*ReusableSignalPtr)) {
+    *ReusableSignalPtr = Signal;
+    return Plugin::success();
+  }
+
+  return Device.getSignalManager().returnResource(Signal);
 }
 
 Expected<float> AMDGPUEventTy::getElapsedTime(AMDGPUEventTy &EndEvent) {
