@@ -1860,18 +1860,22 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   // null dtor). In CIR, we forward this info and allow for
   // Lowering pass to skip passing the trivial function.
   //
-  if (const RecordType *recordTy = clangThrowType->getAs<RecordType>()) {
-    auto *rec = cast<CXXRecordDecl>(recordTy->getDecl()->getDefinition());
-    assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
-    if (!rec->hasTrivialDestructor()) {
-      cgm.errorNYI("emitThrow: non-trivial destructor");
-      return;
-    }
+  const auto *cxxrd = clangThrowType->getAsCXXRecordDecl();
+  mlir::FlatSymbolRefAttr dtor{};
+  if (cxxrd && !cxxrd->hasTrivialDestructor()) {
+    // __cxa_throw is declared to take its destructor as void (*)(void *). We
+    // must match that if function pointers can be authenticated with a
+    // discriminator based on their type.
+    assert(!cir::MissingFeatures::pointerAuthentication());
+    CXXDestructorDecl *dtorD = cxxrd->getDestructor();
+    dtor = mlir::FlatSymbolRefAttr::get(
+        cgm.getAddrOfCXXStructor(GlobalDecl(dtorD, Dtor_Complete))
+            .getSymNameAttr());
   }
 
   // Now throw the exception.
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
-  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo.getSymbol());
+  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo.getSymbol(), dtor);
 }
 
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
