@@ -463,8 +463,8 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
     // operation. Emit the remark only once to avoid noise.
     if (!HasEmittedLoadThresholdRemark) {
       HasEmittedLoadThresholdRemark = true;
-      Context.getDiagnostics().Report(Loc,
-                                      diag::remark_ctu_import_threshold_reached);
+      Context.getDiagnostics().Report(
+          Loc, diag::remark_ctu_import_threshold_reached);
     }
     return;
 
