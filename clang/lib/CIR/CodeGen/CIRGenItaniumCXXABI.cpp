@@ -2553,9 +2553,26 @@ static void initCatchParam(CIRGenFunction &cgf, mlir::Value ehToken,
     // We have no way to tell the personality function that we're
     // catching by reference, so if we're catching a pointer,
     // __cxa_begin_catch will actually return that pointer by value.
-    if (isa<PointerType>(caughtType)) {
-      cgf.cgm.errorNYI(loc, "initCatchParam: catching a pointer");
-      return;
+    if (const PointerType *pt = dyn_cast<PointerType>(caughtType)) {
+      QualType pointeeType = pt->getPointeeType();
+      // When catching by reference, generally we should just ignore
+      // this by-value pointer and use the exception object instead.
+      if (!pointeeType->isRecordType()) {
+        cgf.cgm.errorNYI(loc,
+                         "initCatchParam: catching a pointer of non-record");
+      } else {
+        // Pull the pointer for the reference type off.
+        mlir::Type ptrTy = cgf.convertTypeForMem(caughtType);
+
+        // Create the temporary and write the adjusted pointer into it.
+        Address exnPtrTmp = cgf.createTempAlloca(
+            ptrTy, cgf.getPointerAlign(), cgf.getLoc(loc), "exn.byref.tmp");
+        mlir::Value casted = cgf.getBuilder().createBitcast(adjustedExn, ptrTy);
+        cgf.getBuilder().createStore(cgf.getLoc(loc), casted, exnPtrTmp);
+
+        // Bind the reference to the temporary.
+        adjustedExn = exnPtrTmp.emitRawPointer();
+      }
     }
 
     mlir::Value exnCast =
