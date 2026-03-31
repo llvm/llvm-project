@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCAsmStreamer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmBaseStreamer.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
