@@ -82,25 +82,24 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("0-0 rwzp 00000000 00:00 0", MemoryRegionInfos{},
                         "unexpected /proc/{pid}/maps exec permission char"),
         // Stops at first parsing error
-        std::make_tuple(
-            "0-1 rw-p 00000000 00:00 0 [abc]\n"
-            "0-0 rwzp 00000000 00:00 0\n"
-            "2-3 r-xp 00000000 00:00 0 [def]\n",
-            MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0, 1), eLazyBoolYes,
-                                 eLazyBoolYes, eLazyBoolNo,
-                                 eLazyBoolNo, eLazyBoolYes,
-                                 ConstString("[abc]")),
-            },
-            "unexpected /proc/{pid}/maps exec permission char"),
+        std::make_tuple("0-1 rw-p 00000000 00:00 0 [abc]\n"
+                        "0-0 rwzp 00000000 00:00 0\n"
+                        "2-3 r-xp 00000000 00:00 0 [def]\n",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 1), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString("[abc]")),
+                        },
+                        "unexpected /proc/{pid}/maps exec permission char"),
         // Single entry
         std::make_tuple(
             "55a4512f7000-55a451b68000 rw-p 00000000 00:00 0    [heap]",
             MemoryRegionInfos{
                 MemoryRegionInfo(make_range(0x55a4512f7000, 0x55a451b68000),
-                                 eLazyBoolYes, eLazyBoolYes,
-                                 eLazyBoolNo, eLazyBoolNo,
-                                 eLazyBoolYes, ConstString("[heap]")),
+                                 eLazyBoolYes, eLazyBoolYes, eLazyBoolNo,
+                                 eLazyBoolNo, eLazyBoolYes,
+                                 ConstString("[heap]")),
             },
             ""),
         // Multiple entries
@@ -111,17 +110,16 @@ INSTANTIATE_TEST_SUITE_P(
             "[vsyscall]",
             MemoryRegionInfos{
                 MemoryRegionInfo(make_range(0x7fc090021000, 0x7fc094000000),
-                                 eLazyBoolNo, eLazyBoolNo,
-                                 eLazyBoolNo, eLazyBoolNo,
-                                 eLazyBoolYes, ConstString(nullptr)),
-                MemoryRegionInfo(make_range(0x7fc094000000, 0x7fc094a00000),
-                                 eLazyBoolNo, eLazyBoolNo,
+                                 eLazyBoolNo, eLazyBoolNo, eLazyBoolNo,
                                  eLazyBoolNo, eLazyBoolYes,
-                                 eLazyBoolYes, ConstString(nullptr)),
+                                 ConstString(nullptr)),
+                MemoryRegionInfo(make_range(0x7fc094000000, 0x7fc094a00000),
+                                 eLazyBoolNo, eLazyBoolNo, eLazyBoolNo,
+                                 eLazyBoolYes, eLazyBoolYes,
+                                 ConstString(nullptr)),
                 MemoryRegionInfo(
                     make_range(0xffffffffff600000, 0xffffffffff601000),
-                    eLazyBoolYes, eLazyBoolNo,
-                    eLazyBoolYes, eLazyBoolNo,
+                    eLazyBoolYes, eLazyBoolNo, eLazyBoolYes, eLazyBoolNo,
                     eLazyBoolYes, ConstString("[vsyscall]")),
             },
             "")));
@@ -143,9 +141,8 @@ INSTANTIATE_TEST_SUITE_P(
             "1111-2222 rw-p 00000000 00:00 0 [foo]\n"
             "0/0 rw-p 00000000 00:00 0",
             MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0x1111, 0x2222),
-                                 eLazyBoolYes, eLazyBoolYes,
-                                 eLazyBoolNo, eLazyBoolNo,
+                MemoryRegionInfo(make_range(0x1111, 0x2222), eLazyBoolYes,
+                                 eLazyBoolYes, eLazyBoolNo, eLazyBoolNo,
                                  eLazyBoolYes, ConstString("[foo]")),
             },
             "malformed /proc/{pid}/smaps entry, missing dash between address "
@@ -161,9 +158,8 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(
             "1111-2222 rw-p 00000000 00:00 0    [foo]",
             MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0x1111, 0x2222),
-                                 eLazyBoolYes, eLazyBoolYes,
-                                 eLazyBoolNo, eLazyBoolNo,
+                MemoryRegionInfo(make_range(0x1111, 0x2222), eLazyBoolYes,
+                                 eLazyBoolYes, eLazyBoolNo, eLazyBoolNo,
                                  eLazyBoolYes, ConstString("[foo]")),
             },
             ""),
@@ -171,53 +167,49 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(
             "1111-2222 rw-s 00000000 00:00 0    [foo]",
             MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0x1111, 0x2222),
-                                 eLazyBoolYes, eLazyBoolYes,
-                                 eLazyBoolNo, eLazyBoolYes,
+                MemoryRegionInfo(make_range(0x1111, 0x2222), eLazyBoolYes,
+                                 eLazyBoolYes, eLazyBoolNo, eLazyBoolYes,
                                  eLazyBoolYes, ConstString("[foo]")),
             },
             ""),
         // Single region with flags, other lines ignored
-        std::make_tuple(
-            "1111-2222 rw-p 00000000 00:00 0    [foo]\n"
-            "Referenced:         2188 kB\n"
-            "AnonHugePages:         0 kB\n"
-            "VmFlags: mt",
-            MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0x1111, 0x2222),
-                                 eLazyBoolYes, eLazyBoolYes,
-                                 eLazyBoolNo, eLazyBoolNo,
-                                 eLazyBoolYes, ConstString("[foo]"))
-                    .SetIsShadowStack(eLazyBoolNo)
-                    .SetMemoryTagged(eLazyBoolYes),
-            },
-            ""),
+        std::make_tuple("1111-2222 rw-p 00000000 00:00 0    [foo]\n"
+                        "Referenced:         2188 kB\n"
+                        "AnonHugePages:         0 kB\n"
+                        "VmFlags: mt",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0x1111, 0x2222),
+                                             eLazyBoolYes, eLazyBoolYes,
+                                             eLazyBoolNo, eLazyBoolNo,
+                                             eLazyBoolYes, ConstString("[foo]"))
+                                .SetIsShadowStack(eLazyBoolNo)
+                                .SetMemoryTagged(eLazyBoolYes),
+                        },
+                        ""),
         // Whitespace ignored
-        std::make_tuple(
-            "0-0 rw-p 00000000 00:00 0\n"
-            "VmFlags:      mt      ",
-            MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
-                                 eLazyBoolYes, eLazyBoolNo,
-                                 eLazyBoolNo, eLazyBoolYes,
-                                 ConstString(nullptr))
-                    .SetIsShadowStack(eLazyBoolNo)
-                    .SetMemoryTagged(eLazyBoolYes),
-            },
-            ""),
+        std::make_tuple("0-0 rw-p 00000000 00:00 0\n"
+                        "VmFlags:      mt      ",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString(nullptr))
+                                .SetIsShadowStack(eLazyBoolNo)
+                                .SetMemoryTagged(eLazyBoolYes),
+                        },
+                        ""),
         // VmFlags line means it has flag info, but nothing is set
-        std::make_tuple(
-            "0-0 rw-p 00000000 00:00 0\n"
-            "VmFlags:         ",
-            MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
-                                 eLazyBoolYes, eLazyBoolNo,
-                                 eLazyBoolNo, eLazyBoolYes,
-                                 ConstString(nullptr))
-                    .SetIsShadowStack(eLazyBoolNo)
-                    .SetMemoryTagged(eLazyBoolNo),
-            },
-            ""),
+        std::make_tuple("0-0 rw-p 00000000 00:00 0\n"
+                        "VmFlags:         ",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString(nullptr))
+                                .SetIsShadowStack(eLazyBoolNo)
+                                .SetMemoryTagged(eLazyBoolNo),
+                        },
+                        ""),
         // Handle some pages not having a flags line
         std::make_tuple(
             "1111-2222 rw-p 00000000 00:00 0    [foo]\n"
@@ -226,13 +218,11 @@ INSTANTIATE_TEST_SUITE_P(
             "3333-4444 r-xp 00000000 00:00 0    [bar]\n"
             "VmFlags: mt",
             MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0x1111, 0x2222),
-                                 eLazyBoolYes, eLazyBoolYes,
-                                 eLazyBoolNo, eLazyBoolNo,
+                MemoryRegionInfo(make_range(0x1111, 0x2222), eLazyBoolYes,
+                                 eLazyBoolYes, eLazyBoolNo, eLazyBoolNo,
                                  eLazyBoolYes, ConstString("[foo]")),
-                MemoryRegionInfo(make_range(0x3333, 0x4444),
-                                 eLazyBoolYes, eLazyBoolNo,
-                                 eLazyBoolYes, eLazyBoolNo,
+                MemoryRegionInfo(make_range(0x3333, 0x4444), eLazyBoolYes,
+                                 eLazyBoolNo, eLazyBoolYes, eLazyBoolNo,
                                  eLazyBoolYes, ConstString("[bar]"))
                     .SetIsShadowStack(eLazyBoolNo)
                     .SetMemoryTagged(eLazyBoolYes),
@@ -247,43 +237,39 @@ INSTANTIATE_TEST_SUITE_P(
             "KernelPageSize:        4 kB\n"
             "MMUPageSize:           4 kB\n",
             MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0x1111, 0x2222),
-                                 eLazyBoolYes, eLazyBoolYes,
-                                 eLazyBoolNo, eLazyBoolNo,
+                MemoryRegionInfo(make_range(0x1111, 0x2222), eLazyBoolYes,
+                                 eLazyBoolYes, eLazyBoolNo, eLazyBoolNo,
                                  eLazyBoolYes, ConstString(nullptr)),
-                MemoryRegionInfo(make_range(0x3333, 0x4444),
-                                 eLazyBoolYes, eLazyBoolNo,
-                                 eLazyBoolYes, eLazyBoolNo,
+                MemoryRegionInfo(make_range(0x3333, 0x4444), eLazyBoolYes,
+                                 eLazyBoolNo, eLazyBoolYes, eLazyBoolNo,
                                  eLazyBoolYes, ConstString(nullptr)),
             },
             ""),
         // We must look for exact flag strings, ignoring substrings of longer
         // flag names.
-        std::make_tuple(
-            "0-0 rw-p 00000000 00:00 0\n"
-            "VmFlags: amt mtb amtb",
-            MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
-                                 eLazyBoolYes, eLazyBoolNo,
-                                 eLazyBoolNo, eLazyBoolYes,
-                                 ConstString(nullptr))
-                    .SetIsShadowStack(eLazyBoolNo)
-                    .SetMemoryTagged(eLazyBoolNo),
-            },
-            ""),
+        std::make_tuple("0-0 rw-p 00000000 00:00 0\n"
+                        "VmFlags: amt mtb amtb",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString(nullptr))
+                                .SetIsShadowStack(eLazyBoolNo)
+                                .SetMemoryTagged(eLazyBoolNo),
+                        },
+                        ""),
         // "ss" means shadow stack.
-        std::make_tuple(
-            "0-0 rw-p 00000000 00:00 0\n"
-            "VmFlags: ss",
-            MemoryRegionInfos{
-                MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
-                                 eLazyBoolYes, eLazyBoolNo,
-                                 eLazyBoolNo, eLazyBoolYes,
-                                 ConstString(nullptr))
-                    .SetIsShadowStack(eLazyBoolYes)
-                    .SetMemoryTagged(eLazyBoolNo),
-            },
-            "")));
+        std::make_tuple("0-0 rw-p 00000000 00:00 0\n"
+                        "VmFlags: ss",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString(nullptr))
+                                .SetIsShadowStack(eLazyBoolYes)
+                                .SetMemoryTagged(eLazyBoolNo),
+                        },
+                        "")));
 
 TEST_P(LinuxProcSMapsTestFixture, ParseSMapRegions) {
   auto params = GetParam();

@@ -2873,10 +2873,8 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     }
 
     // Flags
-    LazyBool memory_tagged =
-        region_info.GetMemoryTagged();
-    LazyBool is_shadow_stack =
-        region_info.IsShadowStack();
+    LazyBool memory_tagged = region_info.GetMemoryTagged();
+    LazyBool is_shadow_stack = region_info.IsShadowStack();
 
     if (memory_tagged != eLazyBoolDontKnow ||
         is_shadow_stack != eLazyBoolDontKnow) {

@@ -442,8 +442,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     const bool executable = IsPageExecutable(mem_info.Protect);
     const bool writable = IsPageWritable(mem_info.Protect);
     info.SetReadable(readable ? eLazyBoolYes : eLazyBoolNo);
-    info.SetExecutable(executable ? eLazyBoolYes
-                                  : eLazyBoolNo);
+    info.SetExecutable(executable ? eLazyBoolYes : eLazyBoolNo);
     info.SetWritable(writable ? eLazyBoolYes : eLazyBoolNo);
   } else {
     info.SetReadable(eLazyBoolNo);

@@ -32,10 +32,8 @@ SBMemoryRegionInfo::SBMemoryRegionInfo(const char *name, lldb::addr_t begin,
   m_opaque_up->GetRange().SetRangeBase(begin);
   m_opaque_up->GetRange().SetRangeEnd(end);
   m_opaque_up->SetLLDBPermissions(permissions);
-  m_opaque_up->SetMapped(mapped ? eLazyBoolYes
-                                : eLazyBoolNo);
-  m_opaque_up->SetIsStackMemory(stack_memory ? eLazyBoolYes
-                                             : eLazyBoolNo);
+  m_opaque_up->SetMapped(mapped ? eLazyBoolYes : eLazyBoolNo);
+  m_opaque_up->SetIsStackMemory(stack_memory ? eLazyBoolYes : eLazyBoolNo);
 }
 
 SBMemoryRegionInfo::SBMemoryRegionInfo(const MemoryRegionInfo *lldb_object_ptr)

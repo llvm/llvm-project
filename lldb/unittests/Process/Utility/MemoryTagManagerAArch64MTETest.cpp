@@ -230,10 +230,9 @@ TEST(MemoryTagManagerAArch64MTETest, ExpandToGranule) {
 
 static MemoryRegionInfo MakeRegionInfo(lldb::addr_t base, lldb::addr_t size,
                                        bool tagged) {
-  return MemoryRegionInfo(MemoryRegionInfo::RangeType(base, size),
-                          eLazyBoolYes, eLazyBoolYes,
-                          eLazyBoolYes, eLazyBoolNo,
-                          eLazyBoolYes, ConstString())
+  return MemoryRegionInfo(MemoryRegionInfo::RangeType(base, size), eLazyBoolYes,
+                          eLazyBoolYes, eLazyBoolYes, eLazyBoolNo, eLazyBoolYes,
+                          ConstString())
       .SetMemoryTagged(tagged ? eLazyBoolYes : eLazyBoolNo);
 }
 

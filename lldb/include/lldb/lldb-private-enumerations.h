@@ -124,7 +124,12 @@ enum SortOrder {
 // eLazyBoolDontKnow is the same value as eLazyBoolCalculate but is used in
 // contexts where the calculation is always attempted, but may turn out to not
 // be possible.
-enum LazyBool { eLazyBoolCalculate = -1, eLazyBoolDontKnow = eLazyBoolCalculate, eLazyBoolNo = 0, eLazyBoolYes = 1 };
+enum LazyBool {
+  eLazyBoolCalculate = -1,
+  eLazyBoolDontKnow = eLazyBoolCalculate,
+  eLazyBoolNo = 0,
+  eLazyBoolYes = 1
+};
 
 /// Instruction types
 enum InstructionType {

@@ -22,9 +22,8 @@ llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
                              Info.IsStackMemory(), Info.IsShadowStack());
 }
 
-void llvm::format_provider<LazyBool>::format(
-    const LazyBool &B, raw_ostream &OS,
-    StringRef Options) {
+void llvm::format_provider<LazyBool>::format(const LazyBool &B, raw_ostream &OS,
+                                             StringRef Options) {
   assert(Options.size() <= 1);
   bool Empty = Options.empty();
   switch (B) {

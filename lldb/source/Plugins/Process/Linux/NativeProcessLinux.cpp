@@ -1326,7 +1326,7 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   PopulateMemoryRegionCache();
   auto region_it = llvm::find_if(m_mem_region_cache, [](const auto &pair) {
     return pair.first.GetExecutable() == eLazyBoolYes &&
-        pair.first.GetShared() != eLazyBoolYes;
+           pair.first.GetShared() != eLazyBoolYes;
   });
   if (region_it == m_mem_region_cache.end())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

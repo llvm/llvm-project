@@ -780,12 +780,10 @@ Status ProcessMachCore::DoGetMemoryRegionInfo(addr_t load_addr,
       region_info.GetRange().SetRangeBase(permission_entry->GetRangeBase());
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
       const Flags permissions(permission_entry->data);
-      region_info.SetReadable(permissions.Test(ePermissionsReadable)
-                                  ? eLazyBoolYes
-                                  : eLazyBoolNo);
-      region_info.SetWritable(permissions.Test(ePermissionsWritable)
-                                  ? eLazyBoolYes
-                                  : eLazyBoolNo);
+      region_info.SetReadable(
+          permissions.Test(ePermissionsReadable) ? eLazyBoolYes : eLazyBoolNo);
+      region_info.SetWritable(
+          permissions.Test(ePermissionsWritable) ? eLazyBoolYes : eLazyBoolNo);
       region_info.SetExecutable(permissions.Test(ePermissionsExecutable)
                                     ? eLazyBoolYes
                                     : eLazyBoolNo);

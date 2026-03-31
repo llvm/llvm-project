@@ -395,12 +395,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.GetWritable());
   EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.GetExecutable());
   EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
-  EXPECT_EQ(lldb_private::eLazyBoolDontKnow,
-            region_info.GetMemoryTagged());
-  EXPECT_EQ(lldb_private::eLazyBoolDontKnow,
-            region_info.IsStackMemory());
-  EXPECT_EQ(lldb_private::eLazyBoolDontKnow,
-            region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -420,8 +417,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;flags: mt  zz mt ss  ;type:ha,ha,stack;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(lldb_private::eLazyBoolYes,
-            region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.GetMemoryTagged());
   EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.IsStackMemory());
   EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.IsShadowStack());
 

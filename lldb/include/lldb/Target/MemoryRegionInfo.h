@@ -24,8 +24,8 @@ public:
 
   MemoryRegionInfo() = default;
   MemoryRegionInfo(RangeType range, LazyBool read, LazyBool write,
-                   LazyBool execute, LazyBool shared,
-                   LazyBool mapped, ConstString name)
+                   LazyBool execute, LazyBool shared, LazyBool mapped,
+                   ConstString name)
       : m_range(range), m_read(read), m_write(write), m_execute(execute),
         m_shared(shared), m_mapped(mapped), m_name(name) {}
 
@@ -97,9 +97,12 @@ public:
   // Set permissions from a uint32_t that contains one or more bits from the
   // lldb::Permissions
   void SetLLDBPermissions(uint32_t permissions) {
-    m_read = (permissions & lldb::ePermissionsReadable) ? eLazyBoolYes : eLazyBoolNo;
-    m_write = (permissions & lldb::ePermissionsWritable) ? eLazyBoolYes : eLazyBoolNo;
-    m_execute = (permissions & lldb::ePermissionsExecutable) ? eLazyBoolYes : eLazyBoolNo;
+    m_read =
+        (permissions & lldb::ePermissionsReadable) ? eLazyBoolYes : eLazyBoolNo;
+    m_write =
+        (permissions & lldb::ePermissionsWritable) ? eLazyBoolYes : eLazyBoolNo;
+    m_execute = (permissions & lldb::ePermissionsExecutable) ? eLazyBoolYes
+                                                             : eLazyBoolNo;
   }
 
   bool operator==(const MemoryRegionInfo &rhs) const {
@@ -189,8 +192,8 @@ template <>
 /// while "no" is printed as "-", and "don't know" as "?". This can be used to
 /// print the permissions in the traditional "rwx" form.
 struct format_provider<lldb_private::LazyBool> {
-  static void format(const lldb_private::LazyBool &B,
-                     raw_ostream &OS, StringRef Options);
+  static void format(const lldb_private::LazyBool &B, raw_ostream &OS,
+                     StringRef Options);
 };
 } // namespace llvm
 
