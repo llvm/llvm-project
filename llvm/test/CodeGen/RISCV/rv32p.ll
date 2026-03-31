@@ -750,10 +750,7 @@ define i32 @usub_i32(i32 %x, i32 %y) {
 define i32 @aadd_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: aadd_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a2, a0, a1
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    srai a0, a0, 1
-; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    aadd a0, a0, a1
 ; CHECK-NEXT:    ret
   %ext.a = sext i32 %a to i64
   %ext.b = sext i32 %b to i64
@@ -766,10 +763,7 @@ define i32 @aadd_i32(i32 %a, i32 %b) {
 define i32 @aadd2_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: aadd2_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a2, a0, a1
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    srai a0, a0, 1
-; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    aadd a0, a0, a1
 ; CHECK-NEXT:    ret
   %and = and i32 %a, %b
   %xor = xor i32 %a, %b
@@ -781,10 +775,7 @@ define i32 @aadd2_i32(i32 %a, i32 %b) {
 define i32 @aaddu_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: aaddu_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a2, a0, a1
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    srli a0, a0, 1
-; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    aaddu a0, a0, a1
 ; CHECK-NEXT:    ret
   %ext.a = zext i32 %a to i64
   %ext.b = zext i32 %b to i64
@@ -797,10 +788,7 @@ define i32 @aaddu_i32(i32 %a, i32 %b) {
 define i32 @aaddu2_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: aaddu2_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a2, a0, a1
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    srli a0, a0, 1
-; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    aaddu a0, a0, a1
 ; CHECK-NEXT:    ret
   %and = and i32 %a, %b
   %xor = xor i32 %a, %b
