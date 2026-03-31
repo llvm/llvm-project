@@ -31,6 +31,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__memory/is_sufficiently_aligned.h>
+#include <__type_traits/copy_cv.h>
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <cstring>
@@ -113,6 +114,9 @@ private:
 
 public:
   using value_type = _Tp;
+#  if _LIBCPP_STD_VER >= 26
+  using __address_return_t = __copy_cv_t<_Tp, void>*;
+#  endif
 
   static constexpr size_t required_alignment = alignof(_Tp) > __min_alignment ? alignof(_Tp) : __min_alignment;
 
@@ -224,7 +228,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__atomic_notify_one(*this); }
   _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__atomic_notify_all(*this); }
 #  if _LIBCPP_STD_VER >= 26
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* address() const noexcept { return __ptr_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __address_return_t address() const noexcept { return __ptr_; }
 #  endif
 
 protected:
