@@ -20,7 +20,9 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -387,37 +389,92 @@ private:
 
   unsigned Flags = 0;
 
-  template <unsigned Flag> void setFlag(bool B) {
-    Flags = (Flags & ~Flag) | (B ? Flag : 0);
-  }
+  /// DenormalMode::DenormalModeKind without the Invalid field, which is only
+  /// used when parsing.
+  enum DenormalModeKind : uint8_t {
+    /// IEEE-754 denormal numbers preserved.
+    IEEE = DenormalMode::DenormalModeKind::IEEE,
+
+    /// The sign of a flushed-to-zero number is preserved in the sign of 0
+    PreserveSign = DenormalMode::DenormalModeKind::PreserveSign,
+
+    /// Denormals are flushed to positive zero.
+    PositiveZero = DenormalMode::DenormalModeKind::PositiveZero,
+
+    /// Denormals have unknown treatment.
+    Dynamic = DenormalMode::DenormalModeKind::Dynamic
+  };
+
+  // Define bitfield elements for each flag
+  using NoUnsignedWrapField = Bitfield::Element<bool, 0, 1>;
+  using NoSignedWrapField = Bitfield::Element<bool, NoUnsignedWrapField::NextBit, 1>;
+  using ExactField = Bitfield::Element<bool, NoSignedWrapField::NextBit, 1>;
+  using DisjointField = Bitfield::Element<bool, ExactField::NextBit, 1>;
+  using NonNegField = Bitfield::Element<bool, DisjointField::NextBit, 1>;
+  using NoNaNsField = Bitfield::Element<bool, NonNegField::NextBit, 1>;
+  using NoInfsField = Bitfield::Element<bool, NoNaNsField::NextBit, 1>;
+  using NoSignedZerosField = Bitfield::Element<bool, NoInfsField::NextBit, 1>;
+  using AllowReciprocalField = Bitfield::Element<bool, NoSignedZerosField::NextBit, 1>;
+  using AllowContractField = Bitfield::Element<bool, AllowReciprocalField::NextBit, 1>;
+  using ApproximateFuncsField = Bitfield::Element<bool, AllowContractField::NextBit, 1>;
+  using AllowReassociationField = Bitfield::Element<bool, ApproximateFuncsField::NextBit, 1>;
+  using NoFPExceptField = Bitfield::Element<bool, AllowReassociationField::NextBit, 1>;
+  using UnpredictableField = Bitfield::Element<bool, NoFPExceptField::NextBit, 1>;
+  using SameSignField = Bitfield::Element<bool, UnpredictableField::NextBit, 1>;
+  using InputDenormModeField =
+      Bitfield::Element<DenormalModeKind, SameSignField::NextBit, 2,
+                        DenormalModeKind::Dynamic>;
+  using OutputDenormModeField =
+      Bitfield::Element<DenormalModeKind, InputDenormModeField::NextBit, 2,
+                        DenormalModeKind::Dynamic>;
+  using InBoundsField = Bitfield::Element<bool, OutputDenormModeField::NextBit, 1>;
+  using NoConvergentField = Bitfield::Element<bool, InBoundsField::NextBit, 1>;
+  // Explicit rounding mode from operand bundle (e.g. "fp.control").
+  // 0 = not explicitly set; stored value is RoundingMode enum value + 1.
+  using RoundingModeField =
+      Bitfield::Element<unsigned, NoConvergentField::NextBit, 3>;
+  // F32 denorm mode: the effective f32 denormal mode for this instruction,
+  // from a denorm.f32/denorm operand bundle if present, or the function-level
+  // f32 denorm attribute otherwise. Carried on non-f32 nodes so that
+  // PromoteBinOpIfF32FTZ can decide whether to promote to f32 with FTZ.
+  // Default (bits=0) is IEEE — conservative, no promotion.
+  using F32InputDenormModeField =
+      Bitfield::Element<DenormalModeKind, RoundingModeField::NextBit, 2, DenormalModeKind::Dynamic>;
+  using F32OutputDenormModeField =
+      Bitfield::Element<DenormalModeKind, F32InputDenormModeField::NextBit, 2,
+                        DenormalModeKind::Dynamic>;
+
+  using LastField = F32OutputDenormModeField;
+  static_assert(LastField::LastBit <= sizeof(Flags) * CHAR_BIT,
+                "too many bits used!");
 
 public:
   enum : unsigned {
     None = 0,
-    NoUnsignedWrap = 1 << 0,
-    NoSignedWrap = 1 << 1,
+    NoUnsignedWrap = 1u << NoUnsignedWrapField::Shift,
+    NoSignedWrap = 1u << NoSignedWrapField::Shift,
     NoWrap = NoUnsignedWrap | NoSignedWrap,
-    Exact = 1 << 2,
-    Disjoint = 1 << 3,
-    NonNeg = 1 << 4,
-    NoNaNs = 1 << 5,
-    NoInfs = 1 << 6,
-    NoSignedZeros = 1 << 7,
-    AllowReciprocal = 1 << 8,
-    AllowContract = 1 << 9,
-    ApproximateFuncs = 1 << 10,
-    AllowReassociation = 1 << 11,
+    Exact = 1u << ExactField::Shift,
+    Disjoint = 1u << DisjointField::Shift,
+    NonNeg = 1u << NonNegField::Shift,
+    NoNaNs = 1u << NoNaNsField::Shift,
+    NoInfs = 1u << NoInfsField::Shift,
+    NoSignedZeros = 1u << NoSignedZerosField::Shift,
+    AllowReciprocal = 1u << AllowReciprocalField::Shift,
+    AllowContract = 1u << AllowContractField::Shift,
+    ApproximateFuncs = 1u << ApproximateFuncsField::Shift,
+    AllowReassociation = 1u << AllowReassociationField::Shift,
 
     // We assume instructions do not raise floating-point exceptions by default,
     // and only those marked explicitly may do so.  We could choose to represent
     // this via a positive "FPExcept" flags like on the MI level, but having a
     // negative "NoFPExcept" flag here makes the flag intersection logic more
     // straightforward.
-    NoFPExcept = 1 << 12,
+    NoFPExcept = 1u << NoFPExceptField::Shift,
     // Instructions with attached 'unpredictable' metadata on IR level.
-    Unpredictable = 1 << 13,
+    Unpredictable = 1u << UnpredictableField::Shift,
     // Compare instructions which may carry the samesign flag.
-    SameSign = 1 << 14,
+    SameSign = 1u << SameSignField::Shift,
     // ISD::PTRADD operations that remain in bounds, i.e., the left operand is
     // an address in a memory object in which the result of the operation also
     // lies. WARNING: Since SDAG generally uses integers instead of pointer
@@ -426,10 +483,10 @@ public:
     // pointer P, transformations cannot assume that P has the provenance
     // implied by its producer as, e.g, operations between producer and PTRADD
     // that affect the provenance may have been optimized away.
-    InBounds = 1 << 15,
+    InBounds = 1u << InBoundsField::Shift,
 
     // Call does not require convergence guarantees.
-    NoConvergent = 1 << 16,
+    NoConvergent = 1u << NoConvergentField::Shift,
 
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
@@ -455,42 +512,107 @@ public:
   }
 
   // These are mutators for each flag.
-  void setNoUnsignedWrap(bool b) { setFlag<NoUnsignedWrap>(b); }
-  void setNoSignedWrap(bool b) { setFlag<NoSignedWrap>(b); }
-  void setExact(bool b) { setFlag<Exact>(b); }
-  void setDisjoint(bool b) { setFlag<Disjoint>(b); }
-  void setSameSign(bool b) { setFlag<SameSign>(b); }
-  void setNonNeg(bool b) { setFlag<NonNeg>(b); }
-  void setNoNaNs(bool b) { setFlag<NoNaNs>(b); }
-  void setNoInfs(bool b) { setFlag<NoInfs>(b); }
-  void setNoSignedZeros(bool b) { setFlag<NoSignedZeros>(b); }
-  void setAllowReciprocal(bool b) { setFlag<AllowReciprocal>(b); }
-  void setAllowContract(bool b) { setFlag<AllowContract>(b); }
-  void setApproximateFuncs(bool b) { setFlag<ApproximateFuncs>(b); }
-  void setAllowReassociation(bool b) { setFlag<AllowReassociation>(b); }
-  void setNoFPExcept(bool b) { setFlag<NoFPExcept>(b); }
-  void setUnpredictable(bool b) { setFlag<Unpredictable>(b); }
-  void setInBounds(bool b) { setFlag<InBounds>(b); }
-  void setNoConvergent(bool b) { setFlag<NoConvergent>(b); }
+  void setNoUnsignedWrap(bool b) { Bitfield::set<NoUnsignedWrapField>(Flags, b); }
+  void setNoSignedWrap(bool b) { Bitfield::set<NoSignedWrapField>(Flags, b); }
+  void setExact(bool b) { Bitfield::set<ExactField>(Flags, b); }
+  void setDisjoint(bool b) { Bitfield::set<DisjointField>(Flags, b); }
+  void setSameSign(bool b) { Bitfield::set<SameSignField>(Flags, b); }
+  void setNonNeg(bool b) { Bitfield::set<NonNegField>(Flags, b); }
+  void setNoNaNs(bool b) { Bitfield::set<NoNaNsField>(Flags, b); }
+  void setNoInfs(bool b) { Bitfield::set<NoInfsField>(Flags, b); }
+  void setNoSignedZeros(bool b) { Bitfield::set<NoSignedZerosField>(Flags, b); }
+  void setAllowReciprocal(bool b) { Bitfield::set<AllowReciprocalField>(Flags, b); }
+  void setAllowContract(bool b) { Bitfield::set<AllowContractField>(Flags, b); }
+  void setApproximateFuncs(bool b) { Bitfield::set<ApproximateFuncsField>(Flags, b); }
+  void setAllowReassociation(bool b) { Bitfield::set<AllowReassociationField>(Flags, b); }
+  void setNoFPExcept(bool b) { Bitfield::set<NoFPExceptField>(Flags, b); }
+  void setUnpredictable(bool b) { Bitfield::set<UnpredictableField>(Flags, b); }
+  void setInBounds(bool b) { Bitfield::set<InBoundsField>(Flags, b); }
+  void setNoConvergent(bool b) { Bitfield::set<NoConvergentField>(Flags, b); }
+  void setRoundingMode(RoundingMode RM) {
+    if (RM == RoundingMode::Dynamic)
+      Bitfield::set<RoundingModeField>(Flags, 0);
+    else
+      Bitfield::set<RoundingModeField>(Flags, static_cast<unsigned>(RM) + 1);
+  }
+  void setInputDenormMode(DenormalMode::DenormalModeKind Mode) {
+    assert(Mode != DenormalMode::DenormalModeKind::Invalid);
+    Bitfield::set<InputDenormModeField>(Flags,
+                                        static_cast<DenormalModeKind>(Mode));
+  }
+  void setOutputDenormMode(DenormalMode::DenormalModeKind Mode) {
+    assert(Mode != DenormalMode::DenormalModeKind::Invalid);
+    Bitfield::set<OutputDenormModeField>(Flags,
+                                         static_cast<DenormalModeKind>(Mode));
+  }
+  void setF32InputDenormMode(DenormalMode::DenormalModeKind Mode) {
+    assert(Mode != DenormalMode::DenormalModeKind::Invalid);
+    Bitfield::set<F32InputDenormModeField>(Flags,
+                                           static_cast<DenormalModeKind>(Mode));
+  }
+  void setF32OutputDenormMode(DenormalMode::DenormalModeKind Mode) {
+    assert(Mode != DenormalMode::DenormalModeKind::Invalid);
+    Bitfield::set<F32OutputDenormModeField>(Flags,
+                                            static_cast<DenormalModeKind>(Mode));
+  }
 
   // These are accessors for each flag.
-  bool hasNoUnsignedWrap() const { return Flags & NoUnsignedWrap; }
-  bool hasNoSignedWrap() const { return Flags & NoSignedWrap; }
-  bool hasExact() const { return Flags & Exact; }
-  bool hasDisjoint() const { return Flags & Disjoint; }
-  bool hasSameSign() const { return Flags & SameSign; }
-  bool hasNonNeg() const { return Flags & NonNeg; }
-  bool hasNoNaNs() const { return Flags & NoNaNs; }
-  bool hasNoInfs() const { return Flags & NoInfs; }
-  bool hasNoSignedZeros() const { return Flags & NoSignedZeros; }
-  bool hasAllowReciprocal() const { return Flags & AllowReciprocal; }
-  bool hasAllowContract() const { return Flags & AllowContract; }
-  bool hasApproximateFuncs() const { return Flags & ApproximateFuncs; }
-  bool hasAllowReassociation() const { return Flags & AllowReassociation; }
-  bool hasNoFPExcept() const { return Flags & NoFPExcept; }
-  bool hasUnpredictable() const { return Flags & Unpredictable; }
-  bool hasInBounds() const { return Flags & InBounds; }
-  bool hasNoConvergent() const { return Flags & NoConvergent; }
+  bool hasNoUnsignedWrap() const { return Bitfield::get<NoUnsignedWrapField>(Flags); }
+  bool hasNoSignedWrap() const { return Bitfield::get<NoSignedWrapField>(Flags); }
+  bool hasExact() const { return Bitfield::get<ExactField>(Flags); }
+  bool hasDisjoint() const { return Bitfield::get<DisjointField>(Flags); }
+  bool hasSameSign() const { return Bitfield::get<SameSignField>(Flags); }
+  bool hasNonNeg() const { return Bitfield::get<NonNegField>(Flags); }
+  bool hasNoNaNs() const { return Bitfield::get<NoNaNsField>(Flags); }
+  bool hasNoInfs() const { return Bitfield::get<NoInfsField>(Flags); }
+  bool hasNoSignedZeros() const { return Bitfield::get<NoSignedZerosField>(Flags); }
+  bool hasAllowReciprocal() const { return Bitfield::get<AllowReciprocalField>(Flags); }
+  bool hasAllowContract() const { return Bitfield::get<AllowContractField>(Flags); }
+  bool hasApproximateFuncs() const { return Bitfield::get<ApproximateFuncsField>(Flags); }
+  bool hasAllowReassociation() const { return Bitfield::get<AllowReassociationField>(Flags); }
+  bool hasNoFPExcept() const { return Bitfield::get<NoFPExceptField>(Flags); }
+  bool hasUnpredictable() const { return Bitfield::get<UnpredictableField>(Flags); }
+  bool hasInBounds() const { return Bitfield::get<InBoundsField>(Flags); }
+  bool hasNoConvergent() const { return Bitfield::get<NoConvergentField>(Flags); }
+  bool hasExplicitRM() const {
+    return Bitfield::get<RoundingModeField>(Flags) != 0;
+  }
+  RoundingMode getRoundingMode() const {
+    if (!hasExplicitRM())
+      return RoundingMode::Dynamic;
+    return static_cast<RoundingMode>(Bitfield::get<RoundingModeField>(Flags) -
+                                     1);
+  }
+  DenormalMode::DenormalModeKind getInputDenormMode() const {
+    return static_cast<DenormalMode::DenormalModeKind>(
+        Bitfield::get<InputDenormModeField>(Flags));
+  }
+  DenormalMode::DenormalModeKind getOutputDenormMode() const {
+    return static_cast<DenormalMode::DenormalModeKind>(
+        Bitfield::get<OutputDenormModeField>(Flags));
+  }
+  DenormalMode::DenormalModeKind getF32InputDenormMode() const {
+    return static_cast<DenormalMode::DenormalModeKind>(
+        Bitfield::get<F32InputDenormModeField>(Flags));
+  }
+  DenormalMode::DenormalModeKind getF32OutputDenormMode() const {
+    return static_cast<DenormalMode::DenormalModeKind>(
+        Bitfield::get<F32OutputDenormModeField>(Flags));
+  }
+
+  /// Get subset of flags defining the floating point environment for the
+  /// current instruction.
+  SDNodeFlags getFPEnv() const {
+    SDNodeFlags F;
+    F.setInputDenormMode(getInputDenormMode());
+    F.setOutputDenormMode(getOutputDenormMode());
+    F.setF32InputDenormMode(getF32InputDenormMode());
+    F.setF32OutputDenormMode(getF32OutputDenormMode());
+    F.setRoundingMode(getRoundingMode());
+    return F;
+  }
+
+  auto data() const { return Flags; }
 
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
@@ -737,9 +859,54 @@ public:
       case ISD::STRICT_FP_TO_FP16:
       case ISD::STRICT_BF16_TO_FP:
       case ISD::STRICT_FP_TO_BF16:
-#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-      case ISD::STRICT_##DAGN:
-#include "llvm/IR/ConstrainedOps.def"
+      case ISD::STRICT_FADD:
+      case ISD::STRICT_FSUB:
+      case ISD::STRICT_FMUL:
+      case ISD::STRICT_FDIV:
+      case ISD::STRICT_FREM:
+      case ISD::STRICT_FP_EXTEND:
+      case ISD::STRICT_SINT_TO_FP:
+      case ISD::STRICT_UINT_TO_FP:
+      case ISD::STRICT_FP_TO_SINT:
+      case ISD::STRICT_FP_TO_UINT:
+      case ISD::STRICT_FP_ROUND:
+      case ISD::STRICT_FSETCC:
+      case ISD::STRICT_FSETCCS:
+      case ISD::STRICT_FACOS:
+      case ISD::STRICT_FASIN:
+      case ISD::STRICT_FATAN:
+      case ISD::STRICT_FATAN2:
+      case ISD::STRICT_FCEIL:
+      case ISD::STRICT_FCOS:
+      case ISD::STRICT_FCOSH:
+      case ISD::STRICT_FEXP:
+      case ISD::STRICT_FEXP2:
+      case ISD::STRICT_FFLOOR:
+      case ISD::STRICT_FMA:
+      case ISD::STRICT_FLOG:
+      case ISD::STRICT_FLOG10:
+      case ISD::STRICT_FLOG2:
+      case ISD::STRICT_LRINT:
+      case ISD::STRICT_LLRINT:
+      case ISD::STRICT_LROUND:
+      case ISD::STRICT_LLROUND:
+      case ISD::STRICT_FMAXNUM:
+      case ISD::STRICT_FMINNUM:
+      case ISD::STRICT_FMAXIMUM:
+      case ISD::STRICT_FMINIMUM:
+      case ISD::STRICT_FNEARBYINT:
+      case ISD::STRICT_FPOW:
+      case ISD::STRICT_FPOWI:
+      case ISD::STRICT_FLDEXP:
+      case ISD::STRICT_FRINT:
+      case ISD::STRICT_FROUND:
+      case ISD::STRICT_FROUNDEVEN:
+      case ISD::STRICT_FSIN:
+      case ISD::STRICT_FSINH:
+      case ISD::STRICT_FSQRT:
+      case ISD::STRICT_FTAN:
+      case ISD::STRICT_FTANH:
+      case ISD::STRICT_FTRUNC:
         return true;
     }
   }

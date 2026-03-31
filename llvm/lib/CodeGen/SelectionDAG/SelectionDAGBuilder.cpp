@@ -3680,6 +3680,16 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
 /// Set F32InputDenormMode/F32OutputDenormMode on \p Flags from the
 /// function-level f32 denorm attribute (denormal-fp-math-f32 or
 /// denormal-fp-math). Used for plain IR ops that cannot carry operand bundles.
+static void setF32DenormFlagsFromMF(SDNodeFlags &Flags,
+                                    const MachineFunction &MF) {
+  auto F32Denorm = MF.getDenormalMode(APFloat::IEEEsingle());
+  Flags.setF32InputDenormMode(F32Denorm.Input);
+  Flags.setF32OutputDenormMode(F32Denorm.Output);
+}
+
+/// Set F32InputDenormMode/F32OutputDenormMode on \p Flags from the operand
+/// bundle (denorm.f32 or denorm) if present, otherwise from the function attr.
+/// Used for call/intrinsic sites that may carry operand bundles.
 /// Return true if \p CB has a non-default fp.control or fp.except bundle,
 /// i.e., explicit bundles are present and specify something other than the
 /// constrained-FP default (round.dynamic + fpexcept.strict).
@@ -3706,10 +3716,66 @@ static bool hasNonDefaultFPBundles(const CallBase &CB) {
   return false;
 }
 
+static void setF32DenormFlagsFromCallBase(SDNodeFlags &Flags,
+                                          const CallBase &CB) {
+  auto F32In = CB.getInputDenormMode(&APFloat::IEEEsingle());
+  auto F32Out = CB.getOutputDenormMode(&APFloat::IEEEsingle());
+  assert(F32In && F32Out && "call not inside a function?");
+  Flags.setF32InputDenormMode(*F32In);
+  Flags.setF32OutputDenormMode(*F32Out);
+}
+
+/// Apply the rounding mode from an fp.control operand bundle to \p Flags.
+/// If the mode is not supported by the target, emits a
+/// DiagnosticInfoUnsupported error and still sets the mode (the subsequent
+/// llvm_unreachable in target-specific code will not be reached on the
+/// error path, which terminates compilation).
+static void applyRoundingModeBundle(SDNodeFlags &Flags, const CallBase &I,
+                                    const TargetLowering &TLI,
+                                    SelectionDAG &DAG) {
+  auto ControlBundle = I.getOperandBundle(LLVMContext::OB_fp_control);
+  if (!ControlBundle)
+    return;
+  for (auto &U : ControlBundle->Inputs) {
+    auto *MDV = dyn_cast<MetadataAsValue>(U.get());
+    if (!MDV)
+      continue;
+    auto *MDS = dyn_cast<MDString>(MDV->getMetadata());
+    if (!MDS)
+      continue;
+    auto RM = convertBundleToRoundingMode(MDS->getString());
+    if (!RM)
+      continue;
+    if (!TLI.isSupportedRoundingMode(*RM)) {
+      const Function &Fn = DAG.getMachineFunction().getFunction();
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          Fn,
+          Twine("unsupported rounding mode '") + MDS->getString() +
+              "' in fp.control bundle for target '" +
+              DAG.getTarget().getTargetTriple().getArchName() + "'",
+          I.getDebugLoc()));
+      break; // leave Flags without an explicit RM so codegen stays safe
+    }
+    Flags.setRoundingMode(*RM);
+    break;
+  }
+}
+
 void SelectionDAGBuilder::visitUnary(const User &I, unsigned Opcode) {
   SDNodeFlags Flags;
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPOp);
+
+    // Add per-instruction FP env flags
+    const fltSemantics &FltSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    // Denormal FP mode is inherited from function attributes
+    auto Denorm = DAG.getMachineFunction().getDenormalMode(FltSem);
+    Flags.setInputDenormMode(Denorm.Input);
+    Flags.setOutputDenormMode(Denorm.Output);
+    setF32DenormFlagsFromMF(Flags, DAG.getMachineFunction());
+  }
 
   SDValue Op = getValue(I.getOperand(0));
   SDValue UnNodeValue = DAG.getNode(Opcode, getCurSDLoc(), Op.getValueType(),
@@ -3727,8 +3793,19 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
     Flags.setExact(ExactOp->isExact());
   if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
     Flags.setDisjoint(DisjointOp->isDisjoint());
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPOp);
+
+    // Add per-instruction FP env flags
+    const fltSemantics &FltSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    // Denormal FP mode is inherited from function attributes
+    auto Denorm = DAG.getMachineFunction().getDenormalMode(FltSem);
+    Flags.setInputDenormMode(Denorm.Input);
+    Flags.setOutputDenormMode(Denorm.Output);
+    setF32DenormFlagsFromMF(Flags, DAG.getMachineFunction());
+  }
 
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
@@ -3828,6 +3905,16 @@ void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
   SDNodeFlags Flags;
   Flags.copyFMF(*FPMO);
 
+  // Add per-instruction FP env flags
+  const fltSemantics &FltSem =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  // Denormal FP mode is inherited from function attributes
+  auto Denorm = DAG.getMachineFunction().getDenormalMode(FltSem);
+  Flags.setInputDenormMode(Denorm.Input);
+  Flags.setOutputDenormMode(Denorm.Output);
+  setF32DenormFlagsFromMF(Flags, DAG.getMachineFunction());
+
   SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
@@ -3863,8 +3950,19 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
   bool Negate = false;
 
   SDNodeFlags Flags;
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPOp);
+
+    // Add per-instruction FP env flags
+    const fltSemantics &FltSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    // Denormal FP mode is inherited from function attributes
+    auto Denorm = DAG.getMachineFunction().getDenormalMode(FltSem);
+    Flags.setInputDenormMode(Denorm.Input);
+    Flags.setOutputDenormMode(Denorm.Output);
+    setF32DenormFlagsFromMF(Flags, DAG.getMachineFunction());
+  }
 
   Flags.setUnpredictable(
       cast<SelectInst>(I).getMetadata(LLVMContext::MD_unpredictable));
@@ -4041,8 +4139,22 @@ void SelectionDAGBuilder::visitFPTrunc(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   SDLoc dl = getCurSDLoc();
   SDNodeFlags Flags;
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPOp);
+
+    // Add per-instruction FP env flags
+    const fltSemantics &InputFltSem =
+        I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+    const fltSemantics &OutputFltSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    // Denormal FP mode is inherited from function attributes
+    Flags.setInputDenormMode(
+        DAG.getMachineFunction().getDenormalMode(InputFltSem).Input);
+    Flags.setOutputDenormMode(
+        DAG.getMachineFunction().getDenormalMode(OutputFltSem).Output);
+    setF32DenormFlagsFromMF(Flags, DAG.getMachineFunction());
+  }
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   setValue(&I, DAG.getNode(ISD::FP_ROUND, dl, DestVT, N,
@@ -4057,8 +4169,22 @@ void SelectionDAGBuilder::visitFPExt(const User &I) {
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
   SDNodeFlags Flags;
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPOp);
+
+    // Add per-instruction FP env flags
+    const fltSemantics &InputFltSem =
+        I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+    const fltSemantics &OutputFltSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    // Denormal FP mode is inherited from function attributes
+    Flags.setInputDenormMode(
+        DAG.getMachineFunction().getDenormalMode(InputFltSem).Input);
+    Flags.setOutputDenormMode(
+        DAG.getMachineFunction().getDenormalMode(OutputFltSem).Output);
+    setF32DenormFlagsFromMF(Flags, DAG.getMachineFunction());
+  }
   setValue(&I, DAG.getNode(ISD::FP_EXTEND, getCurSDLoc(), DestVT, N, Flags));
 }
 
@@ -4067,7 +4193,13 @@ void SelectionDAGBuilder::visitFPToUI(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::FP_TO_UINT, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  const fltSemantics &InputFltSem =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+  Flags.setInputDenormMode(
+      DAG.getMachineFunction().getDenormalMode(InputFltSem).Input);
+  setF32DenormFlagsFromMF(Flags, DAG.getMachineFunction());
+  setValue(&I, DAG.getNode(ISD::FP_TO_UINT, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitFPToSI(const User &I) {
@@ -4075,7 +4207,13 @@ void SelectionDAGBuilder::visitFPToSI(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::FP_TO_SINT, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  const fltSemantics &InputFltSem =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+  Flags.setInputDenormMode(
+      DAG.getMachineFunction().getDenormalMode(InputFltSem).Input);
+  setF32DenormFlagsFromMF(Flags, DAG.getMachineFunction());
+  setValue(&I, DAG.getNode(ISD::FP_TO_SINT, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitUIToFP(const User &I) {
@@ -5559,8 +5697,27 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 
   // Propagate fast-math-flags from IR to node(s).
   SDNodeFlags Flags;
-  if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
+  if (auto *FPMO = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPMO);
+
+    // Add per-instruction FP env flags
+    const fltSemantics *FltSemOut = I.getType()->getScalarType()->hasFltSemantics();
+    const fltSemantics *FltSemIn = nullptr;
+    for (auto &Op : I.operands())
+      if ((FltSemIn = Op->getType()->getScalarType()->hasFltSemantics()))
+        break;
+
+    // Denormal FP mode is inherited from operand bundles or function attributes
+    auto InputDenorm = I.getInputDenormMode(FltSemIn);
+    auto OutputDenorm = I.getOutputDenormMode(FltSemOut);
+    assert(InputDenorm && OutputDenorm &&
+           "target intrinsic not inside a function?");
+    Flags.setInputDenormMode(*InputDenorm);
+    Flags.setOutputDenormMode(*OutputDenorm);
+    setF32DenormFlagsFromCallBase(Flags, I);
+
+    applyRoundingModeBundle(Flags, I, TLI, DAG);
+  }
   SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
   // Create the node.
@@ -6664,11 +6821,30 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   SDValue Res;
 
   SDNodeFlags Flags;
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPOp);
 
-  // Route new-form FP intrinsics with non-default bundles to STRICT_* SDNodes.
-  if (hasNonDefaultFPBundles(I)) {
+    // Add per-instruction FP env flags
+    const fltSemantics *FltSemOut = I.getType()->getScalarType()->hasFltSemantics();
+    const fltSemantics *FltSemIn = nullptr;
+    for (auto &Op : I.operands())
+      if ((FltSemIn = Op->getType()->getScalarType()->hasFltSemantics()))
+        break;
+
+    // Denormal FP mode is inherited from operand bundles or function attributes
+    auto InputDenorm = I.getInputDenormMode(FltSemIn);
+    auto OutputDenorm = I.getOutputDenormMode(FltSemOut);
+    assert(InputDenorm && OutputDenorm && "intrinsic not inside a function?");
+    Flags.setInputDenormMode(*InputDenorm);
+    Flags.setOutputDenormMode(*OutputDenorm);
+    setF32DenormFlagsFromCallBase(Flags, I);
+
+    applyRoundingModeBundle(Flags, I, TLI, DAG);
+  }
+
+  // If the target requires STRICT_* SDNodes for non-default FP bundles, redirect
+  // new-form FP intrinsics with non-default bundles to the strict lowering path.
+  if (TLI.requiresStrictFPForBundledFPOps() && hasNonDefaultFPBundles(I)) {
     switch (Intrinsic) {
     case Intrinsic::fadd: case Intrinsic::fsub:  case Intrinsic::fmul:
     case Intrinsic::fdiv: case Intrinsic::frem:  case Intrinsic::fma:
@@ -7205,14 +7381,26 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::fptosi: {
     EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    SDNodeFlags IntFlags;
+    const fltSemantics &FPToSIFltSem =
+        I.getArgOperand(0)->getType()->getScalarType()->getFltSemantics();
+    IntFlags.setInputDenormMode(
+        DAG.getMachineFunction().getDenormalMode(FPToSIFltSem).Input);
+    setF32DenormFlagsFromCallBase(IntFlags, I);
     setValue(&I, DAG.getNode(ISD::FP_TO_SINT, sdl, DestVT,
-                             getValue(I.getArgOperand(0))));
+                             getValue(I.getArgOperand(0)), IntFlags));
     return;
   }
   case Intrinsic::fptoui: {
     EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    SDNodeFlags IntFlags;
+    const fltSemantics &FPToUIFltSem =
+        I.getArgOperand(0)->getType()->getScalarType()->getFltSemantics();
+    IntFlags.setInputDenormMode(
+        DAG.getMachineFunction().getDenormalMode(FPToUIFltSem).Input);
+    setF32DenormFlagsFromCallBase(IntFlags, I);
     setValue(&I, DAG.getNode(ISD::FP_TO_UINT, sdl, DestVT,
-                             getValue(I.getArgOperand(0))));
+                             getValue(I.getArgOperand(0)), IntFlags));
     return;
   }
   case Intrinsic::fcmp: {
@@ -7238,11 +7426,25 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(Pred != FCmpInst::BAD_FCMP_PREDICATE &&
            "invalid predicate in llvm.fcmp");
     ISD::CondCode Condition = getFCmpCondCode(Pred);
+    // int_fcmp returns i1, not a float, so FPMathOperator detection above
+    // fails.  Build FP env flags from the operand's type and bundles.
+    SDNodeFlags FcmpFlags;
+    const fltSemantics *FltSemIn =
+        I.getArgOperand(0)->getType()->getScalarType()->hasFltSemantics();
+    auto InputDenorm = I.getInputDenormMode(FltSemIn);
+    // For the output denorm, pass nullptr — fcmp output is i1 so we fall back
+    // to a generic "denorm.out=..." bundle key (or function attribute).
+    auto OutputDenorm = I.getOutputDenormMode(nullptr);
+    assert(InputDenorm && OutputDenorm && "intrinsic not inside a function?");
+    FcmpFlags.setInputDenormMode(*InputDenorm);
+    FcmpFlags.setOutputDenormMode(*OutputDenorm);
+    setF32DenormFlagsFromCallBase(FcmpFlags, I);
+    applyRoundingModeBundle(FcmpFlags, I, TLI, DAG);
     EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     setValue(&I, DAG.getSetCC(sdl, DestVT,
                               getValue(I.getArgOperand(0)),
                               getValue(I.getArgOperand(1)),
-                              Condition));
+                              Condition, {}, /*IsSignaling=*/false, FcmpFlags));
     return;
   }
   case Intrinsic::fma:
@@ -7263,13 +7465,35 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         convertStrToRoundingMode(cast<MDString>(MD)->getString());
 
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    SDNodeFlags TruncFlags;
-    TruncFlags.copyFMF(*cast<FPMathOperator>(&I));
-    SelectionDAG::FlagInserter FlagsInserter(DAG, TruncFlags);
-    setValue(&I, DAG.getNode(ISD::FPTRUNC_ROUND, sdl, VT,
-                             getValue(I.getArgOperand(0)),
-                             DAG.getTargetConstant((int)*RoundMode, sdl,
-                                                   MVT::i32)));
+
+    // Propagate fast-math-flags from IR to node(s).
+    SDNodeFlags Flags;
+    Flags.copyFMF(*cast<FPMathOperator>(&I));
+
+    // Add per-instruction FP env flags
+    const fltSemantics *FltSemOut = I.getType()->getScalarType()->hasFltSemantics();
+    const fltSemantics *FltSemIn = nullptr;
+    for (auto &Op : I.operands())
+      if ((FltSemIn = Op->getType()->getScalarType()->hasFltSemantics()))
+        break;
+
+    // Denormal FP mode is inherited from operand bundles or function attributes
+    auto InputDenorm = I.getInputDenormMode(FltSemIn);
+    auto OutputDenorm = I.getOutputDenormMode(FltSemOut);
+    assert(InputDenorm && OutputDenorm && "intrinsic not inside a function?");
+    Flags.setInputDenormMode(*InputDenorm);
+    Flags.setOutputDenormMode(*OutputDenorm);
+    setF32DenormFlagsFromCallBase(Flags, I);
+
+    applyRoundingModeBundle(Flags, I, TLI, DAG);
+
+    SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
+
+    SDValue Result;
+    Result = DAG.getNode(
+        ISD::FPTRUNC_ROUND, sdl, VT, getValue(I.getArgOperand(0)),
+        DAG.getTargetConstant((int)*RoundMode, sdl, MVT::i32));
+    setValue(&I, Result);
 
     return;
   }
@@ -8698,8 +8922,8 @@ void SelectionDAGBuilder::pushFPOpOutChain(SDValue Result,
 
 void SelectionDAGBuilder::visitBundledFPIntrinsicAsStrict(
     const IntrinsicInst &I) {
-  // Lower a new-style FP intrinsic (llvm.fadd etc.) with non-default
-  // fp.control/fp.except bundles to a STRICT_* SDNode.
+  // Called when requiresStrictFPForBundledFPOps() is true and the new FP
+  // intrinsic (llvm.fadd etc.) has non-default fp.control/fp.except bundles.
   // Mirrors visitConstrainedFPIntrinsic but reads from operand bundles.
   SDLoc sdl = getCurSDLoc();
 
@@ -8725,6 +8949,21 @@ void SelectionDAGBuilder::visitBundledFPIntrinsicAsStrict(
     Flags.setNoFPExcept(true);
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
+
+  // Denorm modes from operand bundles or function attributes.
+  const fltSemantics *FltSemOut = I.getType()->getScalarType()->hasFltSemantics();
+  const fltSemantics *FltSemIn = nullptr;
+  for (auto &Op : I.operands())
+    if ((FltSemIn = Op->getType()->getScalarType()->hasFltSemantics()))
+      break;
+  if (FltSemIn || FltSemOut) {
+    auto InputDenorm = I.getInputDenormMode(FltSemIn);
+    auto OutputDenorm = I.getOutputDenormMode(FltSemOut);
+    assert(InputDenorm && OutputDenorm && "bundled FP op not inside a function?");
+    Flags.setInputDenormMode(*InputDenorm);
+    Flags.setOutputDenormMode(*OutputDenorm);
+  }
+  setF32DenormFlagsFromCallBase(Flags, I);
 
   unsigned Opcode;
   switch (IID) {
@@ -9112,8 +9351,26 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   switch (Opcode) {
   default: {
     SDNodeFlags SDFlags;
-    if (auto *FPMO = dyn_cast<FPMathOperator>(&VPIntrin))
+    if (auto *FPMO = dyn_cast<FPMathOperator>(&VPIntrin)) {
       SDFlags.copyFMF(*FPMO);
+
+      // Add per-instruction FP env flags
+      const fltSemantics *FltSemOut = VPIntrin.getType()->getScalarType()->hasFltSemantics();
+      const fltSemantics *FltSemIn = nullptr;
+      for (auto &Op : VPIntrin.operands())
+        if ((FltSemIn = Op->getType()->getScalarType()->hasFltSemantics()))
+          break;
+
+      // Denormal FP mode is inherited from operand bundles or function
+      // attributes
+      auto InputDenorm = VPIntrin.getInputDenormMode(FltSemIn);
+      auto OutputDenorm = VPIntrin.getOutputDenormMode(FltSemOut);
+      assert(InputDenorm && OutputDenorm &&
+             "VP intrinsic not inside a function?");
+      SDFlags.setInputDenormMode(*InputDenorm);
+      SDFlags.setOutputDenormMode(*OutputDenorm);
+      setF32DenormFlagsFromCallBase(SDFlags, VPIntrin);
+    }
     SDValue Result = DAG.getNode(Opcode, DL, VTs, OpValues, SDFlags);
     setValue(&VPIntrin, Result);
     break;
@@ -9142,8 +9399,26 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   case ISD::VP_FMULADD: {
     assert(OpValues.size() == 5 && "Unexpected number of operands");
     SDNodeFlags SDFlags;
-    if (auto *FPMO = dyn_cast<FPMathOperator>(&VPIntrin))
+    if (auto *FPMO = dyn_cast<FPMathOperator>(&VPIntrin)) {
       SDFlags.copyFMF(*FPMO);
+
+      // Add per-instruction FP env flags
+      const fltSemantics *FltSemOut = VPIntrin.getType()->getScalarType()->hasFltSemantics();
+      const fltSemantics *FltSemIn = nullptr;
+      for (auto &Op : VPIntrin.operands())
+        if ((FltSemIn = Op->getType()->getScalarType()->hasFltSemantics()))
+          break;
+
+      // Denormal FP mode is inherited from operand bundles or function
+      // attributes
+      auto InputDenorm = VPIntrin.getInputDenormMode(FltSemIn);
+      auto OutputDenorm = VPIntrin.getOutputDenormMode(FltSemOut);
+      assert(InputDenorm && OutputDenorm &&
+             "VP intrinsic not inside a function?");
+      SDFlags.setInputDenormMode(*InputDenorm);
+      SDFlags.setOutputDenormMode(*OutputDenorm);
+      setF32DenormFlagsFromCallBase(SDFlags, VPIntrin);
+    }
     if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
         TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), ValueVTs[0])) {
       setValue(&VPIntrin, DAG.getNode(ISD::VP_FMA, DL, VTs, OpValues, SDFlags));
@@ -9787,6 +10062,19 @@ bool SelectionDAGBuilder::visitUnaryFloatCall(const CallInst &I,
 
   SDNodeFlags Flags;
   Flags.copyFMF(cast<FPMathOperator>(I));
+
+  // Add per-instruction FP env flags
+  const fltSemantics &FltSem = I.getType()->getScalarType()->getFltSemantics();
+
+  // Denormal FP mode is inherited from operand bundles or function attributes
+  auto InputDenorm = I.getInputDenormMode(&FltSem);
+  auto OutputDenorm = I.getOutputDenormMode(&FltSem);
+  assert(InputDenorm && OutputDenorm &&
+         "unary float call not inside a function?");
+  Flags.setInputDenormMode(*InputDenorm);
+  Flags.setOutputDenormMode(*OutputDenorm);
+  setF32DenormFlagsFromCallBase(Flags, I);
+
   SDValue Tmp = getValue(I.getArgOperand(0));
   setValue(&I,
            DAG.getNode(Opcode, getCurSDLoc(), Tmp.getValueType(), Tmp, Flags));
@@ -9808,6 +10096,19 @@ bool SelectionDAGBuilder::visitBinaryFloatCall(const CallInst &I,
 
   SDNodeFlags Flags;
   Flags.copyFMF(cast<FPMathOperator>(I));
+
+  // Add per-instruction FP env flags
+  const fltSemantics &FltSem = I.getType()->getScalarType()->getFltSemantics();
+
+  // Denormal FP mode is inherited from operand bundles or function attributes
+  auto InputDenorm = I.getInputDenormMode(&FltSem);
+  auto OutputDenorm = I.getOutputDenormMode(&FltSem);
+  assert(InputDenorm && OutputDenorm &&
+         "unary float call not inside a function?");
+  Flags.setInputDenormMode(*InputDenorm);
+  Flags.setOutputDenormMode(*OutputDenorm);
+  setF32DenormFlagsFromCallBase(Flags, I);
+
   SDValue Tmp0 = getValue(I.getArgOperand(0));
   SDValue Tmp1 = getValue(I.getArgOperand(1));
   EVT VT = Tmp0.getValueType();
@@ -11315,8 +11616,24 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDValue Res;
   SDNodeFlags SDFlags;
-  if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
+  if (auto *FPMO = dyn_cast<FPMathOperator>(&I)) {
     SDFlags.copyFMF(*FPMO);
+
+    // Add per-instruction FP env flags
+    const fltSemantics &FltSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    // Denormal FP mode is inherited from operand bundles or function attributes
+    auto InputDenorm = I.getInputDenormMode(&FltSem);
+    auto OutputDenorm = I.getOutputDenormMode(&FltSem);
+    assert(InputDenorm && OutputDenorm &&
+           "vector reduce not inside a function?");
+    SDFlags.setInputDenormMode(*InputDenorm);
+    SDFlags.setOutputDenormMode(*OutputDenorm);
+    setF32DenormFlagsFromCallBase(SDFlags, I);
+
+    applyRoundingModeBundle(SDFlags, I, TLI, DAG);
+  }
 
   switch (Intrinsic) {
   case Intrinsic::vector_reduce_fadd:

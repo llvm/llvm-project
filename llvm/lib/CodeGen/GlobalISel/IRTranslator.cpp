@@ -2195,8 +2195,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   if (translateSimpleIntrinsic(CI, ID, MIRBuilder))
     return true;
 
-  // Redirect new-form FP intrinsics with non-default bundles to G_STRICT_*.
-  {
+  // If the target requires G_STRICT_* opcodes for non-default FP bundles,
+  // redirect new-form FP intrinsics with non-default bundles accordingly.
+  if (TLI->requiresStrictFPForBundledFPOps()) {
     fp::ExceptionBehavior EB = CI.getExceptionBehavior();
     RoundingMode RM = CI.getRoundingMode();
     if (EB != fp::ebStrict || RM != RoundingMode::Dynamic) {

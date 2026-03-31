@@ -59,6 +59,10 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   const NVPTXSubtarget *Subtarget = nullptr;
 
+  // Set to the node currently being selected in Select(). Used by SDNodeXForms
+  // (getFTZFlag, getRNDFlag) to read per-instruction SDNodeFlags.
+  SDNode *CurrentSelectNode = nullptr;
+
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;

@@ -202,6 +202,7 @@ public:
                                     unsigned CostThreshold = 4);
   bool isFAbsFree(EVT VT) const override;
   bool isFNegFree(EVT VT) const override;
+  bool requiresStrictFPForBundledFPOps() const override { return true; }
   bool isTruncateFree(EVT Src, EVT Dest) const override;
   bool isTruncateFree(Type *Src, Type *Dest) const override;
 

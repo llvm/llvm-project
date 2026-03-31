@@ -176,6 +176,11 @@ public:
   unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
                                      EVT ToVT) const override;
 
+  DenormalMode getDenormalModeForTargetNode(const SDNode *N,
+                                            const SelectionDAG &DAG) const override;
+
+  bool isSupportedRoundingMode(RoundingMode RM) const override;
+
   void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,

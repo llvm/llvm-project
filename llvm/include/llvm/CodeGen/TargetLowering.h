@@ -375,6 +375,23 @@ public:
 
   virtual bool useSoftFloat() const { return false; }
 
+  /// Return true if this target needs STRICT_* SDNodes (SelectionDAG) or
+  /// G_STRICT_* opcodes (GlobalISel) to implement FP operations that carry
+  /// non-default fp.control or fp.except operand bundles (non-Dynamic rounding
+  /// or non-ebStrict exception behavior).
+  ///
+  /// When true, new FP intrinsics (llvm.fadd, llvm.fcmp, etc.) with non-default
+  /// bundles are lowered to STRICT_FADD / STRICT_FSETCC / etc., reusing the
+  /// existing chain infrastructure from the constrained intrinsic path.
+  virtual bool requiresStrictFPForBundledFPOps() const { return false; }
+
+  /// Return true if the target supports the given rounding mode in an
+  /// fp.control operand bundle.  SelectionDAGBuilder calls this when lowering
+  /// FP intrinsics that carry an fp.control bundle; an unsupported mode causes
+  /// a DiagnosticInfoUnsupported error to be emitted.  The default returns
+  /// true for all modes.
+  virtual bool isSupportedRoundingMode(RoundingMode RM) const { return true; }
+
   /// Return the pointer type for the given address space, defaults to
   /// the pointer type from the data layout.
   /// FIXME: The default needs to be removed once all the code is updated.
@@ -4410,6 +4427,16 @@ public:
   shouldSimplifyDemandedVectorElts(SDValue Op,
                                    const TargetLoweringOpt &TLO) const {
     return true;
+  }
+
+  /// Return the effective denormal mode for a target-specific SDNode (opcode
+  /// >= ISD::BUILTIN_OP_END).  Called by SelectionDAG::getDenormalMode() when
+  /// it encounters an unrecognised target opcode.  Targets that expose FP
+  /// target-specific nodes as CurrentSelectNode during XForm execution must
+  /// override this.
+  virtual DenormalMode getDenormalModeForTargetNode(const SDNode *N,
+                                                    const SelectionDAG &DAG) const {
+    llvm_unreachable("unhandled target-specific node");
   }
 
   /// Determine which of the bits specified in Mask are known to be either zero

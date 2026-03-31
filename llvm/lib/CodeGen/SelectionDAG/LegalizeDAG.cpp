@@ -1004,6 +1004,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
             "Unexpected illegal type!");
 #endif
 
+  SelectionDAG::FlagInserter PreserveFPEnvFlags(DAG,
+                                                Node->getFlags().getFPEnv());
+
   // Figure out the correct action; the way to query this varies by opcode
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
   bool SimpleFinishLegalizing = true;
@@ -5690,6 +5693,7 @@ static MVT getPromotedVectorElementType(const TargetLowering &TLI,
 
 void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "Trying to promote node\n");
+
   SmallVector<SDValue, 8> Results;
   MVT OVT = Node->getSimpleValueType(0);
   if (Node->getOpcode() == ISD::UINT_TO_FP ||
@@ -5723,9 +5727,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   if (Node->getOpcode() == ISD::BR_CC ||
       Node->getOpcode() == ISD::SELECT_CC)
     OVT = Node->getOperand(2).getSimpleValueType();
-  // Preserve fast math flags
-  SDNodeFlags FastMathFlags = Node->getFlags() & SDNodeFlags::FastMathFlags;
-  SelectionDAG::FlagInserter FlagsInserter(DAG, FastMathFlags);
+  // Preserve fast math flags and floating point environment
+  SDNodeFlags Flags = Node->getFlags() & SDNodeFlags::FastMathFlags |
+                      Node->getFlags().getFPEnv();
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
   MVT NVT = TLI.getTypeToPromoteTo(Node->getOpcode(), OVT);
   SDLoc dl(Node);
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;

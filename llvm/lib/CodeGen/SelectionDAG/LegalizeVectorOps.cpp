@@ -275,6 +275,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   DenseMap<SDValue, SDValue>::iterator I = LegalizedNodes.find(Op);
   if (I != LegalizedNodes.end()) return I->second;
 
+  SelectionDAG::FlagInserter PreserveFPEnvFlags(DAG, Op->getFlags().getFPEnv());
+
   // Legalize the operands
   SmallVector<SDValue, 8> Ops;
   for (const SDValue &Oper : Op->op_values())
@@ -319,9 +321,54 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     if (Action == TargetLowering::Legal)
       Action = TargetLowering::Expand;
     break;
-#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-  case ISD::STRICT_##DAGN:
-#include "llvm/IR/ConstrainedOps.def"
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FREM:
+  case ISD::STRICT_FP_EXTEND:
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+  case ISD::STRICT_FACOS:
+  case ISD::STRICT_FASIN:
+  case ISD::STRICT_FATAN:
+  case ISD::STRICT_FATAN2:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FCOSH:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
+  case ISD::STRICT_FLDEXP:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FSINH:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FTAN:
+  case ISD::STRICT_FTANH:
+  case ISD::STRICT_FTRUNC:
     ValVT = Node->getValueType(0);
     if (Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
         Op.getOpcode() == ISD::STRICT_UINT_TO_FP)
@@ -1284,9 +1331,54 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::SDIVFIXSAT:
   case ISD::UDIVFIXSAT:
     break;
-#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-  case ISD::STRICT_##DAGN:
-#include "llvm/IR/ConstrainedOps.def"
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FREM:
+  case ISD::STRICT_FP_EXTEND:
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+  case ISD::STRICT_FP_ROUND:
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+  case ISD::STRICT_FACOS:
+  case ISD::STRICT_FASIN:
+  case ISD::STRICT_FATAN:
+  case ISD::STRICT_FATAN2:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FCOSH:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
+  case ISD::STRICT_FLDEXP:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FSINH:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FTAN:
+  case ISD::STRICT_FTANH:
+  case ISD::STRICT_FTRUNC:
     ExpandStrictFPOp(Node, Results);
     return;
   case ISD::VECREDUCE_ADD:

@@ -14,6 +14,7 @@
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -97,6 +98,9 @@ bool NVPTXDAGToDAGISel::doMADWideOpt() const { return EnableMADWide; }
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
 void NVPTXDAGToDAGISel::Select(SDNode *N) {
+  // Expose N to SDNodeXForms (getFTZFlag, getRNDFlag) that run inside SelectCode.
+  CurrentSelectNode = N;
+  scope_exit ResetCSN([&] { CurrentSelectNode = nullptr; });
 
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);
@@ -416,7 +420,9 @@ bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
   SDNode *SetP = CurDAG->getMachineNode(
       NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1,
       {N->getOperand(0), N->getOperand(1), PTXCmpMode,
-       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
+       CurDAG->getTargetConstant(CurDAG->getDenormalMode(N).Input ==
+                                     DenormalMode::PreserveSign,
+                                 DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }
@@ -427,7 +433,9 @@ bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
   SDNode *SetP = CurDAG->getMachineNode(
       NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1,
       {N->getOperand(0), N->getOperand(1), PTXCmpMode,
-       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
+       CurDAG->getTargetConstant(CurDAG->getDenormalMode(N).Input ==
+                                     DenormalMode::PreserveSign,
+                                 DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }

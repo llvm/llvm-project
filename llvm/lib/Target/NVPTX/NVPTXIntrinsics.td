@@ -1641,7 +1641,6 @@ let Predicates = [hasPTX<78>, hasSM<90>] in {
   def : Pat<(bf16 (int_nvvm_ex2_approx_ftz bf16:$a)), (EX2_APPROX_bf16 $a)>;
   def : Pat<(v2bf16 (int_nvvm_ex2_approx_ftz v2bf16:$a)), (EX2_APPROX_bf16x2 $a)>;
 }
-
 def LG2_APPROX_f32 :
   BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
     "lg2.approx$ftz.f32",

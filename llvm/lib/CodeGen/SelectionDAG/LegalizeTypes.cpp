@@ -233,8 +233,9 @@ bool DAGTypeLegalizer::run() {
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 
-    // Preserve fast math flags
-    SDNodeFlags FastMathFlags = N->getFlags() & SDNodeFlags::FastMathFlags;
+    // Preserve fast math flags and FP environment
+    SDNodeFlags FastMathFlags =
+        N->getFlags() & SDNodeFlags::FastMathFlags | N->getFlags().getFPEnv();
     SelectionDAG::FlagInserter FlagsInserter(DAG, FastMathFlags);
 
     LLVM_DEBUG(dbgs() << "\nLegalizing node: "; N->dump(&DAG));
@@ -299,61 +300,61 @@ ScanOperands:
     // Scan the operand list for the node, handling any nodes with operands that
     // are illegal.
     {
-    unsigned NumOperands = N->getNumOperands();
-    bool NeedsReanalyzing = false;
-    unsigned i;
-    for (i = 0; i != NumOperands; ++i) {
-      if (IgnoreNodeResults(N->getOperand(i).getNode()))
-        continue;
+      unsigned NumOperands = N->getNumOperands();
+      bool NeedsReanalyzing = false;
+      unsigned i;
+      for (i = 0; i != NumOperands; ++i) {
+        if (IgnoreNodeResults(N->getOperand(i).getNode()))
+          continue;
 
-      const auto &Op = N->getOperand(i);
-      LLVM_DEBUG(dbgs() << "Analyzing operand: "; Op.dump(&DAG));
-      EVT OpVT = Op.getValueType();
-      switch (getTypeAction(OpVT)) {
-      case TargetLowering::TypeLegal:
-        LLVM_DEBUG(dbgs() << "Legal operand\n");
-        continue;
-      case TargetLowering::TypeScalarizeScalableVector:
-        report_fatal_error(
-            "Scalarization of scalable vectors is not supported.");
-      // The following calls must either replace all of the node's results
-      // using ReplaceValueWith, and return "false"; or update the node's
-      // operands in place, and return "true".
-      case TargetLowering::TypePromoteInteger:
-        NeedsReanalyzing = PromoteIntegerOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypeExpandInteger:
-        NeedsReanalyzing = ExpandIntegerOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypeSoftenFloat:
-        NeedsReanalyzing = SoftenFloatOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypeExpandFloat:
-        NeedsReanalyzing = ExpandFloatOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypeScalarizeVector:
-        NeedsReanalyzing = ScalarizeVectorOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypeSplitVector:
-        NeedsReanalyzing = SplitVectorOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypeWidenVector:
-        NeedsReanalyzing = WidenVectorOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypeSoftPromoteHalf:
-        NeedsReanalyzing = SoftPromoteHalfOperand(N, i);
-        Changed = true;
+        const auto &Op = N->getOperand(i);
+        LLVM_DEBUG(dbgs() << "Analyzing operand: "; Op.dump(&DAG));
+        EVT OpVT = Op.getValueType();
+        switch (getTypeAction(OpVT)) {
+        case TargetLowering::TypeLegal:
+          LLVM_DEBUG(dbgs() << "Legal operand\n");
+          continue;
+        case TargetLowering::TypeScalarizeScalableVector:
+          report_fatal_error(
+              "Scalarization of scalable vectors is not supported.");
+        // The following calls must either replace all of the node's results
+        // using ReplaceValueWith, and return "false"; or update the node's
+        // operands in place, and return "true".
+        case TargetLowering::TypePromoteInteger:
+          NeedsReanalyzing = PromoteIntegerOperand(N, i);
+          Changed = true;
+          break;
+        case TargetLowering::TypeExpandInteger:
+          NeedsReanalyzing = ExpandIntegerOperand(N, i);
+          Changed = true;
+          break;
+        case TargetLowering::TypeSoftenFloat:
+          NeedsReanalyzing = SoftenFloatOperand(N, i);
+          Changed = true;
+          break;
+        case TargetLowering::TypeExpandFloat:
+          NeedsReanalyzing = ExpandFloatOperand(N, i);
+          Changed = true;
+          break;
+        case TargetLowering::TypeScalarizeVector:
+          NeedsReanalyzing = ScalarizeVectorOperand(N, i);
+          Changed = true;
+          break;
+        case TargetLowering::TypeSplitVector:
+          NeedsReanalyzing = SplitVectorOperand(N, i);
+          Changed = true;
+          break;
+        case TargetLowering::TypeWidenVector:
+          NeedsReanalyzing = WidenVectorOperand(N, i);
+          Changed = true;
+          break;
+        case TargetLowering::TypeSoftPromoteHalf:
+          NeedsReanalyzing = SoftPromoteHalfOperand(N, i);
+          Changed = true;
+          break;
+        }
         break;
       }
-      break;
-    }
 
     // The sub-method updated N in place.  Check to see if any operands are new,
     // and if so, mark them.  If the node needs revisiting, don't add all users
