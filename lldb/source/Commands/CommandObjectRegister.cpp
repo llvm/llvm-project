@@ -149,6 +149,12 @@ public:
   }
 
 protected:
+  uint32_t GetNameSize(const RegisterInfo * reg_info, bool use_primary_name) {
+      const char *raw = use_primary_name ? reg_info->name : reg_info->alt_name;
+      std::string str = raw ? std::string(raw) : std::string();
+      return static_cast<uint32_t>(str.size());
+  }
+
   uint32_t ComputeMatchingAlignment(RegisterContext *reg_ctx,
                                     const RegisterSet *const reg_set,
                                     bool primitive_only) {
@@ -157,26 +163,43 @@ protected:
     const size_t num_registers = reg_set->num_registers;
     uint32_t reg_name_align_at = 0;
 
-    auto getNameSize = [&](auto reg_info) {
-      auto raw = use_primary_name ? reg_info->name : reg_info->alt_name;
-      auto str = raw ? std::string(raw) : std::string();
-      return static_cast<uint32_t>(str.size());
-    };
-
     // Loop through all the registers to find the longest register name for the
     // matching alignment
     for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
       const uint32_t reg = reg_set->registers[reg_idx];
-      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
+      if (const RegisterInfo *reg_info = 
+              reg_ctx->GetRegisterInfoAtIndex(reg)) {
+        // Derived registers are skipped if primitive_only is true.
+        if (primitive_only && reg_info->value_regs)
+          continue;
 
-      // Derived registers are skipped if primitive_only is true.
-      if (primitive_only && reg_info && reg_info->value_regs)
-        continue;
+        reg_name_align_at = std::max(reg_name_align_at, GetNameSize(reg_info, use_primary_name));
+      }
+    }
 
-      if (!reg_info)
-        continue;
+    return reg_name_align_at;
+  }
 
-      reg_name_align_at = std::max(reg_name_align_at, getNameSize(reg_info));
+  // Here, command is basically a list of registers to be printed by DumpRegister() method
+  uint32_t ComputeMatchingAlignment(Args &command, RegisterContext *reg_ctx, bool primitive_only) {
+    bool use_primary_name =
+        !static_cast<bool>(m_command_options.alternate_name);
+    uint32_t reg_name_align_at = 0;
+
+    // Loop through all the arguments to find the longest register name for the
+    // matching alignment
+    for (auto &entry : command) {
+      auto arg_str = entry.ref();
+      arg_str.consume_front("$");
+    
+      if (const RegisterInfo *reg_info =
+              reg_ctx->GetRegisterInfoByName(arg_str)) {
+        // Derived registers are skipped if primitive_only is true.
+        if (primitive_only && reg_info->value_regs)
+          continue;
+
+        reg_name_align_at = std::max(reg_name_align_at, GetNameSize(reg_info, use_primary_name));
+      }
     }
 
     return reg_name_align_at;
@@ -230,6 +253,7 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
+        int alignment = ComputeMatchingAlignment(command, reg_ctx, !m_command_options.dump_all_sets.GetCurrentValue());
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
@@ -246,7 +270,7 @@ protected:
             bool print_flags =
                 !m_format_options.GetFormatValue().OptionWasSet();
             if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info,
-                              print_flags))
+                              print_flags, alignment))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {
             result.AppendErrorWithFormat("Invalid register name '%s'",
