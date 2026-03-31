@@ -177,10 +177,8 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     const char *Triple =
         C.getArgs().MakeArgString("-triple=spirv64-amd-amdhsa");
 
-    CmdArgs.append({"-cc1", Triple, "-emit-obj", "-mllvm",
-                    "-vectorize-loops=false", "-mllvm", "-vectorize-slp=false",
-                    "-fno-unroll-loops", "-mllvm", "-interleave-loops=false",
-                    LinkedBCFile.getFilename(), "-o", Output.getFilename()});
+    CmdArgs.append({"-cc1", Triple, "-emit-obj", LinkedBCFile.getFilename(),
+                    "-o", Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
     const char *Exec = Driver.getClangProgramPath();
