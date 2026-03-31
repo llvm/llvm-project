@@ -1929,6 +1929,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprGpr<sshlsat, SSHA>;
   def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
 
+  // 32-bit averaging patterns
+  def : PatGprGpr<avgfloors, AADD, i32>;
+  def : PatGprGpr<avgflooru, AADDU, i32>;
+
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
   def : Pat<(riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt),
