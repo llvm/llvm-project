@@ -652,7 +652,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
         TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
     if (!Target) {
       WithColor::error(errs(), argv[0])
-          << "Could not allocate target machine!\n";
+          << "could not allocate target machine\n";
       exit(1);
     }
 
