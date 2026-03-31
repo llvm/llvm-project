@@ -1957,7 +1957,9 @@ bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
   if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
     return false;
 
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
