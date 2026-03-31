@@ -2855,7 +2855,6 @@ static bool handleDiffFailure(const FileCheckString &CheckStr,
   }
 
   // Identify the line that failed to match.
-  CheckRegion = CheckRegion.ltrim("\n\r");
   size_t EOL = CheckRegion.find('\n');
   SMLoc CurrentLoc = SMLoc::getFromPointer(CheckRegion.data());
 
@@ -2961,20 +2960,17 @@ bool FileCheck::checkInput(SourceMgr &SM, StringRef Buffer,
       // treated as a stray line. Even if a match is found later, we report
       // the gap as a mismatch.
       if (IsDiffMode && IsStrict && MatchPos > 0) {
-        StringRef Skipped = CheckRegion.slice(0, MatchPos);
-        if (!Skipped.trim().empty()) {
-          // Create a temporary view that starts with next new line.
-          size_t CurrentLineEnd = CheckRegion.find_first_of("\n\r");
-          StringRef NextLineRegion =
-              (CurrentLineEnd != StringRef::npos)
-                  ? CheckRegion.drop_front(CurrentLineEnd + 1).ltrim(" \t\n\r")
-                  : CheckRegion.ltrim(" \t\n\r");
-          handleDiffFailure(CheckStr, NextLineRegion, SM, Diags, OS,
-                            HeaderPrinted, TotalMismatches);
-          ChecksFailed = true;
-          i = j;
-          break;
-        }
+        // Create a temporary view that starts with next new line.
+        size_t CurrentLineEnd = CheckRegion.find_first_of("\n\r");
+        StringRef NextLineRegion =
+            (CurrentLineEnd != StringRef::npos)
+                ? CheckRegion.drop_front(CurrentLineEnd + 1)
+                : CheckRegion;
+        handleDiffFailure(CheckStr, NextLineRegion, SM, Diags, OS,
+                          HeaderPrinted, TotalMismatches);
+        ChecksFailed = true;
+        i = j;
+        break;
       }
       CheckRegion = CheckRegion.substr(MatchPos + MatchLen);
     }
