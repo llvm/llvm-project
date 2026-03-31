@@ -980,7 +980,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     // constant value (0) for now.
     unsigned AMDGPUGlobalAddrSpace = 1;
     unsigned AMDGPUConstantAddrSpace = 4;
-    if ((AP.TM.getTargetTriple().getArch() == Triple::amdgcn) &&
+    if ((AP.TM.getTargetTriple().isAMDGCN()) &&
         (GV->getAddressSpace() != AMDGPUGlobalAddrSpace &&
          GV->getAddressSpace() != AMDGPUConstantAddrSpace)) {
       emitConstu(0);

@@ -285,7 +285,7 @@ void DwarfCompileUnit::addLocationAttribute(
     // address spaces, e.g. LDS. Generate a 'DW_OP_constu' with a dummy
     // constant value (0) for now.
     unsigned AMDGPUGlobalAddrSpace = 1;
-    if ((Asm->TM.getTargetTriple().getArch() == Triple::amdgcn) &&
+    if ((Asm->TM.getTargetTriple().isAMDGCN()) &&
         (Global->getAddressSpace() != AMDGPUGlobalAddrSpace)) {
       addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
       addUInt(*Loc, dwarf::DW_FORM_udata, 0);
