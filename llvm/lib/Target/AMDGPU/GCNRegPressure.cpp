@@ -499,11 +499,11 @@ bool GCNRPTracker::isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const {
   return !LR || LR->liveAt(SI);
 }
 
-bool GCNRPTracker::allRegUnitsLive(MCRegister Reg) const {
+bool GCNRPTracker::isAnyRegUnitNotLive(MCRegister Reg) const {
   assert(SRI && "SRI not initialized");
   const BitVector &Units = PhysLiveRegs.getBitVector();
-  return llvm::all_of(SRI->regunits(Reg), [&](MCRegUnit Unit) {
-    return Units.test(static_cast<unsigned>(Unit));
+  return llvm::any_of(SRI->regunits(Reg), [&](MCRegUnit Unit) {
+    return !Units.test(static_cast<unsigned>(Unit));
   });
 }
 
@@ -889,7 +889,7 @@ void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
 
       // Check if any unit of this register is not live before and if so,
       // insert all of the regunits into PhysLiveRegs.
-      bool WasNotLive = !allRegUnitsLive(Reg.asMCReg());
+      bool WasNotLive = isAnyRegUnitNotLive(Reg.asMCReg());
       if (WasNotLive && !MO.isDead())
         PhysLiveRegs.addReg(Reg);
 
@@ -1029,7 +1029,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
         continue;
 
       // Check if any unit of this register is not currently live.
-      bool WasNotLive = !allRegUnitsLive(Reg.asMCReg());
+      bool WasNotLive = isAnyRegUnitNotLive(Reg.asMCReg());
 
       // Update pressure once per register if any unit of this register is not
       // live before.

@@ -379,8 +379,8 @@ protected:
   // Helper to check if a register unit is live at a given slot index.
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 
-  // Check if all register units of Reg are currently live in PhysLiveRegs.
-  bool allRegUnitsLive(MCRegister Reg) const;
+  // Check if any register unit of Reg is not currently live in PhysLiveRegs.
+  bool isAnyRegUnitNotLive(MCRegister Reg) const;
 
   // Check if Reg has any killed units at the given slot index.
   bool checkRegKilled(MCRegister Reg, SlotIndex SI) const;
