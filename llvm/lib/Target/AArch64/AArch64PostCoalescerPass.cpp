@@ -21,13 +21,49 @@ using namespace llvm;
 
 namespace {
 
-struct AArch64PostCoalescerImpl {
-  LiveIntervals &LIS;
-  MachineRegisterInfo *MRI;
+bool runAArch64PostCoalescer(MachineFunction &MF, LiveIntervals &LIS) {
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  if (!FuncInfo->hasStreamingModeChanges())
+    return false;
 
-  explicit AArch64PostCoalescerImpl(LiveIntervals &LIS) : LIS(LIS) {}
-  bool run(MachineFunction &MF);
-};
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      switch (MI.getOpcode()) {
+      default:
+        break;
+      case AArch64::COALESCER_BARRIER_FPR16:
+      case AArch64::COALESCER_BARRIER_FPR32:
+      case AArch64::COALESCER_BARRIER_FPR64:
+      case AArch64::COALESCER_BARRIER_FPR128: {
+        Register Src = MI.getOperand(1).getReg();
+        Register Dst = MI.getOperand(0).getReg();
+        if (Src != Dst)
+          MRI.replaceRegWith(Dst, Src);
+
+        if (MI.getOperand(1).isUndef())
+          for (MachineOperand &MO : MRI.use_operands(Dst))
+            MO.setIsUndef();
+
+        // MI must be erased from the basic block before recalculating the live
+        // interval.
+        LIS.RemoveMachineInstrFromMaps(MI);
+        MI.eraseFromParent();
+
+        LIS.removeInterval(Src);
+        LIS.createAndComputeVirtRegInterval(Src);
+
+        Changed = true;
+        break;
+      }
+      }
+    }
+  }
+
+  return Changed;
+}
 
 struct AArch64PostCoalescerLegacy : public MachineFunctionPass {
   static char ID;
@@ -59,63 +95,19 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(AArch64PostCoalescerLegacy, "aarch64-post-coalescer",
                     "AArch64 Post Coalescer Pass", false, false)
 
-bool AArch64PostCoalescerImpl::run(MachineFunction &MF) {
-  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
-  if (!FuncInfo->hasStreamingModeChanges())
-    return false;
-
-  MRI = &MF.getRegInfo();
-  bool Changed = false;
-
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : make_early_inc_range(MBB)) {
-      switch (MI.getOpcode()) {
-      default:
-        break;
-      case AArch64::COALESCER_BARRIER_FPR16:
-      case AArch64::COALESCER_BARRIER_FPR32:
-      case AArch64::COALESCER_BARRIER_FPR64:
-      case AArch64::COALESCER_BARRIER_FPR128: {
-        Register Src = MI.getOperand(1).getReg();
-        Register Dst = MI.getOperand(0).getReg();
-        if (Src != Dst)
-          MRI->replaceRegWith(Dst, Src);
-
-        if (MI.getOperand(1).isUndef())
-          for (MachineOperand &MO : MRI->use_operands(Dst))
-            MO.setIsUndef();
-
-        // MI must be erased from the basic block before recalculating the live
-        // interval.
-        LIS.RemoveMachineInstrFromMaps(MI);
-        MI.eraseFromParent();
-
-        LIS.removeInterval(Src);
-        LIS.createAndComputeVirtRegInterval(Src);
-
-        Changed = true;
-        break;
-      }
-      }
-    }
-  }
-
-  return Changed;
-}
-
 bool AArch64PostCoalescerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  return AArch64PostCoalescerImpl(LIS).run(MF);
+  return runAArch64PostCoalescer(MF, LIS);
 }
 
 PreservedAnalyses
 AArch64PostCoalescerPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  const bool Changed = AArch64PostCoalescerImpl(LIS).run(MF);
+  const bool Changed = runAArch64PostCoalescer(MF, LIS);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
