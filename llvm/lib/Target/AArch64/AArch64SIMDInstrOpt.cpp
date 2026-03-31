@@ -56,7 +56,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "aarch64-simdinstr-opt"
+#define DEBUG_TYPE "aarch64-simd-instr-opt"
 
 STATISTIC(NumModifiedInstr,
           "Number of SIMD instructions modified");
@@ -228,7 +228,7 @@ const std::vector<AArch64SIMDInstrOptImpl::InstReplInfo>
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64SIMDInstrOptLegacy, "aarch64-simdinstr-opt",
+INITIALIZE_PASS(AArch64SIMDInstrOptLegacy, "aarch64-simd-instr-opt",
                 AARCH64_VECTOR_BY_ELEMENT_OPT_NAME, false, false)
 
 /// Based only on latency of instructions, determine if it is cost efficient
