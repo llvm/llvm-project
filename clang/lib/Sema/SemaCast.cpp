@@ -401,7 +401,7 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
         return ExprError();
       DiscardMisalignedMemberAddress(DestType.getTypePtr(), E);
       checkProfileViolation("test::type_cast", "", OpLoc,
-                            diag::warn_profile_type_cast_reinterpret);
+                            diag::err_profile_type_cast_reinterpret);
     }
     return Op.complete(CXXReinterpretCastExpr::Create(Context, Op.ResultType,
                                     Op.ValueKind, Op.Kind, Op.SrcExpr.get(),

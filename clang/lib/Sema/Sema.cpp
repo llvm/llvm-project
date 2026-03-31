@@ -3044,6 +3044,17 @@ bool Sema::checkProfileViolation(StringRef ProfileName, StringRef RuleName,
     return false;
   if (isProfileSuppressed(ProfileName, RuleName))
     return false;
+  // P3589R2 Section 1.1: "its static semantic effects are as-if applied only
+  // after translation phase 7. It is not possible for a profile to change the
+  // outcome of overload resolution or template instantiation, nor is it
+  // possible to 'SFINAE out' failure of a program to satisfy a profile
+  // requirement."
+  if (isSFINAEContext())
+    return false;
+  if (isUnevaluatedContext())
+    return false;
+  if (currentEvaluationContext().isDiscardedStatementContext())
+    return false;
   Diag(Loc, DiagID) << ProfileName;
   return true;
 }

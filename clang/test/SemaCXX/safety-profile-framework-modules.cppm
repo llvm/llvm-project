@@ -54,5 +54,5 @@ import TestMod [[profiles::require(test::type_cast)]];
 module TestMod;
 
 void impl_func() {
-  int *p = reinterpret_cast<int*>(0); // expected-warning {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }

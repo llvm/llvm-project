@@ -74,6 +74,6 @@ void test_block_scope() {
 // ===================================================================
 // Diagnostic fires when profile IS enforced
 // ===================================================================
-void test_enforced_profile_warns() {
-  int *p = reinterpret_cast<int*>(0); // expected-warning {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+void test_enforced_profile_errors() {
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }

@@ -14130,7 +14130,6 @@ def err_profiles_require_not_enforced : Error<
   "required profile '%0' is not enforced by imported module">;
 def err_profiles_suppress_justification_not_string : Error<
   "'justification' argument of 'profiles::suppress' must be a string literal">;
-def warn_profile_type_cast_reinterpret : Warning<
-  "'reinterpret_cast' is unsafe under profile '%0'">,
-  InGroup<DiagGroup<"profile-type-cast">>;
+def err_profile_type_cast_reinterpret : Error<
+  "'reinterpret_cast' is unsafe under profile '%0'">;
 } // end of sema component.
