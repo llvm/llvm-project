@@ -561,9 +561,10 @@ public:
   /// for each VF.
   VPlan &getPlanFor(ElementCount VF) const;
 
-  /// Compute and return the most profitable vectorization factor. Also collect
-  /// all profitable VFs in ProfitableVFs.
-  VectorizationFactor computeBestVF();
+  /// Compute and return the most profitable vectorization factor and the
+  /// corresponding best VPlan. Also collect all profitable VFs in
+  /// ProfitableVFs.
+  std::pair<VectorizationFactor, VPlan *> computeBestVF();
 
   /// \return The desired interleave count.
   /// If interleave count has been specified by metadata it will be returned.
@@ -613,7 +614,8 @@ public:
   /// \return The most profitable vectorization factor and the cost of that VF
   /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
   /// epilogue vectorization is not supported for the loop.
-  VectorizationFactor selectEpilogueVectorizationFactor(ElementCount MainLoopVF,
+  VectorizationFactor selectEpilogueVectorizationFactor(VPlan &MainPlan,
+                                                        ElementCount MainLoopVF,
                                                         unsigned IC);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
@@ -703,8 +705,8 @@ private:
                         bool IsEpilogue = false) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
-  /// epilogue, assuming the main loop is vectorized by \p VF.
-  bool isCandidateForEpilogueVectorization(const ElementCount VF) const;
+  /// epilogue, assuming the main loop is vectorized by \p MainPlan.
+  bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;
 };
 
 } // namespace llvm
