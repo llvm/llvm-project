@@ -19,12 +19,12 @@ define dso_local void @foo(ptr noundef %A, ptr noundef %B, ptr noundef %C) #0 {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i32 [[I_0]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i32 [[I_0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <32 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i32 [[I_0]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i32 [[I_0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <32 x float>, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[RIPPLEBINOP:%.*]] = fadd <32 x float> [[TMP4]], [[TMP9]]
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i32 [[I_0]]
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i32 [[I_0]]
 ; CHECK-NEXT:    store <32 x float> [[RIPPLEBINOP]], ptr [[ARRAYIDX10]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
@@ -76,7 +76,7 @@ for.body:                                         ; preds = %for.cond
   %add = add i32 %5, %mul
   %8 = load i32, ptr %v0, align 4, !tbaa !6
   %add1 = add i32 %add, %8
-  %arrayidx = getelementptr inbounds float, ptr %4, i32 %add1
+  %arrayidx = getelementptr inbounds [4 x i8], ptr %4, i32 %add1
   %9 = load float, ptr %arrayidx, align 4, !tbaa !8
   %10 = load ptr, ptr %C.addr, align 4, !tbaa !2
   %11 = load i32, ptr %i, align 4, !tbaa !6
@@ -86,7 +86,7 @@ for.body:                                         ; preds = %for.cond
   %add3 = add i32 %11, %mul2
   %14 = load i32, ptr %v0, align 4, !tbaa !6
   %add4 = add i32 %add3, %14
-  %arrayidx5 = getelementptr inbounds float, ptr %10, i32 %add4
+  %arrayidx5 = getelementptr inbounds [4 x i8], ptr %10, i32 %add4
   %15 = load float, ptr %arrayidx5, align 4, !tbaa !8
   %add6 = fadd float %9, %15
   %16 = load ptr, ptr %A.addr, align 4, !tbaa !2
@@ -97,7 +97,7 @@ for.body:                                         ; preds = %for.cond
   %add8 = add i32 %17, %mul7
   %20 = load i32, ptr %v0, align 4, !tbaa !6
   %add9 = add i32 %add8, %20
-  %arrayidx10 = getelementptr inbounds float, ptr %16, i32 %add9
+  %arrayidx10 = getelementptr inbounds [4 x i8], ptr %16, i32 %add9
   store float %add6, ptr %arrayidx10, align 4, !tbaa !8
   br label %for.inc
 

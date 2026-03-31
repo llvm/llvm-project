@@ -17,7 +17,7 @@ define dso_local void @vadd_red(i32 noundef %N, ptr noalias nocapture noundef re
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[RES_023_RIPPLE_VECTORIZED:%.*]] = phi <32 x float> [ [[ADD3_RIPPLE_VECTORIZED]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY]] ]
 ; CHECK-NEXT:    [[I_022:%.*]] = phi i32 [ [[ADD4:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr float, ptr [[A:%.*]], i32 [[I_022]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], i32 [[I_022]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD3_RIPPLE_VECTORIZED]] = fadd <32 x float> [[RES_023_RIPPLE_VECTORIZED]], [[TMP1]]
 ; CHECK-NEXT:    [[ADD4]] = add i32 [[I_022]], 32
@@ -26,7 +26,7 @@ define dso_local void @vadd_red(i32 noundef %N, ptr noalias nocapture noundef re
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[DIV7:%.*]] = lshr i32 [[N]], 5
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr float, ptr [[A]], i32 [[DIV7]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr [4 x i8], ptr [[A]], i32 [[DIV7]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <32 x float>, ptr [[ARRAYIDX8]], align 4
 ; CHECK-NEXT:    [[ADD9_RIPPLE_VECTORIZED:%.*]] = fadd <32 x float> [[RES_0_LCSSA_RIPPLE_VECTORIZED]], [[TMP3]]
 ; CHECK-NEXT:    br label [[IF_THEN]]

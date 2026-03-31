@@ -15,7 +15,7 @@ define dso_local void @avg(i32 noundef %n, ptr noalias nocapture noundef readonl
 ; CHECK-NEXT:    br i1 [[CMP2_NOT33]], label [[FOR_COND_CLEANUP3:%.*]], label [[FOR_BODY4_LR_PH:%.*]]
 ; CHECK:       for.body4.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i32 [[I_036]], [[N]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[IN:%.*]], i32 [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[IN:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
@@ -28,7 +28,7 @@ define dso_local void @avg(i32 noundef %n, ptr noalias nocapture noundef readonl
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_035:%.*]] = phi i32 [ 0, [[FOR_BODY4_LR_PH]] ], [ [[ADD8:%.*]], [[FOR_BODY4]] ]
 ; CHECK-NEXT:    [[AVG_VAL_034_RIPPLE_VECTORIZED:%.*]] = phi <32 x float> [ zeroinitializer, [[FOR_BODY4_LR_PH]] ], [ [[ADD7_RIPPLE_VECTORIZED]], [[FOR_BODY4]] ]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr float, ptr [[ARRAYIDX]], i32 [[J_035]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr [4 x i8], ptr [[ARRAYIDX]], i32 [[J_035]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x float>, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[ADD7_RIPPLE_VECTORIZED]] = fadd <32 x float> [[AVG_VAL_034_RIPPLE_VECTORIZED]], [[TMP2]]
 ; CHECK-NEXT:    [[ADD8]] = add i32 [[J_035]], 32
@@ -37,8 +37,8 @@ define dso_local void @avg(i32 noundef %n, ptr noalias nocapture noundef readonl
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw i32 [[I_036]], [[N]]
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds float, ptr [[IN]], i32 [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr float, ptr [[ARRAYIDX11]], i32 [[MUL]]
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [4 x i8], ptr [[IN]], i32 [[TMP3]]
+; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr [4 x i8], ptr [[ARRAYIDX11]], i32 [[MUL]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <32 x float>, ptr [[ARRAYIDX13]], align 4
 ; CHECK-NEXT:    [[ADD14_RIPPLE_VECTORIZED:%.*]] = fadd <32 x float> [[AVG_VAL_0_LCSSA_RIPPLE_VECTORIZED]], [[TMP5]]
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -46,7 +46,7 @@ define dso_local void @avg(i32 noundef %n, ptr noalias nocapture noundef readonl
 ; CHECK-NEXT:    [[AVG_VAL_1_RIPPLE_VECTORIZED:%.*]] = phi <32 x float> [ [[ADD14_RIPPLE_VECTORIZED]], [[IF_THEN]] ], [ [[AVG_VAL_0_LCSSA_RIPPLE_VECTORIZED]], [[FOR_COND_CLEANUP3]] ]
 ; CHECK-NEXT:    [[AVG_VAL_1_RIPPLE_VECTORIZED_RIPPLE_REDUCTION:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v32f32(float -0.000000e+00, <32 x float> [[AVG_VAL_1_RIPPLE_VECTORIZED]])
 ; CHECK-NEXT:    [[DIV15:%.*]] = fdiv float [[AVG_VAL_1_RIPPLE_VECTORIZED_RIPPLE_REDUCTION]], [[CONV]]
-; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw float, ptr [[OUT:%.*]], i32 [[I_036]]
+; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[OUT:%.*]], i32 [[I_036]]
 ; CHECK-NEXT:    store float [[DIV15]], ptr [[ARRAYIDX16]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_036]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], 32

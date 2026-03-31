@@ -19,7 +19,7 @@ void memory_to_memory_scatter(float *In[32], float *Out[32][32]) {
   #pragma clang loop unroll(disable)
   for (unsigned i = 0; i < 32; ++i) {
     // CHECK: [[IndVar:%.*]] = phi i{{[0-9]+}} [ 0, {{.*}} ], [ %{{.*}}, %{{.*}} ]
-    // CHECK: [[GEP:%.*]] = getelementptr{{.*}}[32 x ptr], ptr %Out, i{{[0-9]+}} [[IndVar]]
+    // CHECK: [[GEP:%.*]] = getelementptr{{.*}}[{{128|256}} x i8], ptr %Out, i{{[0-9]+}} [[IndVar]]
     // CHECK: [[ScatterAddrs:%.*]] = load <32 x ptr>, ptr [[GEP]]
     // CHECK: tail call void @llvm.masked.scatter.v32f32.v32p0(<32 x float> [[InGather]], <32 x ptr> align 4 [[ScatterAddrs]], <32 x i1> splat (i1 true))
     *(Out[i][BlockIdx]) = *(In[BlockIdx]);

@@ -31,16 +31,16 @@ entry:
   store i32 %0, ptr %v, align 4, !tbaa !6
   %1 = load ptr, ptr %B.addr, align 4, !tbaa !2
   %2 = load i32, ptr %v, align 4, !tbaa !6
-  %arrayidx = getelementptr inbounds float, ptr %1, i32 %2
+  %arrayidx = getelementptr inbounds [4 x i8], ptr %1, i32 %2
   %3 = load float, ptr %arrayidx, align 4, !tbaa !8
   %4 = load ptr, ptr %C.addr, align 4, !tbaa !2
   %5 = load i32, ptr %v, align 4, !tbaa !6
-  %arrayidx1 = getelementptr inbounds float, ptr %4, i32 %5
+  %arrayidx1 = getelementptr inbounds [4 x i8], ptr %4, i32 %5
   %6 = load float, ptr %arrayidx1, align 4, !tbaa !8
   %add = fadd float %3, %6
   %7 = load ptr, ptr %A.addr, align 4, !tbaa !2
   %8 = load i32, ptr %v, align 4, !tbaa !6
-  %arrayidx2 = getelementptr inbounds float, ptr %7, i32 %8
+  %arrayidx2 = getelementptr inbounds [4 x i8], ptr %7, i32 %8
   store float %add, ptr %arrayidx2, align 4, !tbaa !8
   call void @llvm.lifetime.end.p0(i64 4, ptr %v) #4
   ret void

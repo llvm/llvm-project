@@ -19,12 +19,12 @@ define dso_local void @foo(ptr noundef %A, ptr noundef %B, ptr noundef %C) #0 {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i32 [[I_0]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i32 [[I_0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i32 [[I_0]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i32 [[I_0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[RIPPLEBINOP:%.*]] = fadd <32 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i32 [[I_0]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i32 [[I_0]]
 ; CHECK-NEXT:    store <32 x float> [[RIPPLEBINOP]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
@@ -64,20 +64,20 @@ for.body:                                         ; preds = %for.cond
   %3 = load i32, ptr %i, align 4, !tbaa !6
   %4 = load i32, ptr %v, align 4, !tbaa !6
   %add = add i32 %3, %4
-  %arrayidx = getelementptr inbounds float, ptr %2, i32 %add
+  %arrayidx = getelementptr inbounds [4 x i8], ptr %2, i32 %add
   %5 = load float, ptr %arrayidx, align 4, !tbaa !8
   %6 = load ptr, ptr %C.addr, align 4, !tbaa !2
   %7 = load i32, ptr %i, align 4, !tbaa !6
   %8 = load i32, ptr %v, align 4, !tbaa !6
   %add1 = add i32 %7, %8
-  %arrayidx2 = getelementptr inbounds float, ptr %6, i32 %add1
+  %arrayidx2 = getelementptr inbounds [4 x i8], ptr %6, i32 %add1
   %9 = load float, ptr %arrayidx2, align 4, !tbaa !8
   %add3 = fadd float %5, %9
   %10 = load ptr, ptr %A.addr, align 4, !tbaa !2
   %11 = load i32, ptr %i, align 4, !tbaa !6
   %12 = load i32, ptr %v, align 4, !tbaa !6
   %add4 = add i32 %11, %12
-  %arrayidx5 = getelementptr inbounds float, ptr %10, i32 %add4
+  %arrayidx5 = getelementptr inbounds [4 x i8], ptr %10, i32 %add4
   store float %add3, ptr %arrayidx5, align 4, !tbaa !8
   br label %for.inc
 

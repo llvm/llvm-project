@@ -16,14 +16,14 @@ define dso_local void @foo(ptr noundef %A, ptr noundef %B, ptr noundef %C) #0 {
 ; CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4, !tbaa [[ANYPTR_TBAA2:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[V_RIPPLE_LS_INSTANCE]])
 ; CHECK-NEXT:    store <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>, ptr [[V_RIPPLE_LS_INSTANCE]], align 128
-; CHECK-NEXT:    [[ARRAYIDX_RIPPLE_LS_INSTANCE5:%.*]] = getelementptr inbounds float, ptr [[B]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[ARRAYIDX_RIPPLE_LS_INSTANCE5:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <32 x float> @llvm.masked.gather.v32f32.v32p0(<32 x ptr> align 4 [[ARRAYIDX_RIPPLE_LS_INSTANCE5]], <32 x i1> splat (i1 true), <32 x float> poison)
-; CHECK-NEXT:    [[ARRAYIDX1_RIPPLE_LS_INSTANCE6:%.*]] = getelementptr inbounds float, ptr [[C]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[ARRAYIDX1_RIPPLE_LS_INSTANCE6:%.*]] = getelementptr inbounds [4 x i8], ptr [[C]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x float> @llvm.masked.gather.v32f32.v32p0(<32 x ptr> align 4 [[ARRAYIDX1_RIPPLE_LS_INSTANCE6]], <32 x i1> splat (i1 true), <32 x float> poison)
 ; CHECK-NEXT:    [[ADD_RIPPLE_VECTORIZED:%.*]] = fadd <32 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[DOTRIPPLE_LS_INSTANCE4:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !tbaa [[ANYPTR_TBAA2]]
 ; CHECK-NEXT:    [[DOTRIPPLE3:%.*]] = load <32 x i32>, ptr [[V_RIPPLE_LS_INSTANCE]], align 128
-; CHECK-NEXT:    [[ARRAYIDX2_RIPPLE_LS_INSTANCE7:%.*]] = getelementptr inbounds float, ptr [[DOTRIPPLE_LS_INSTANCE4]], <32 x i32> [[DOTRIPPLE3]]
+; CHECK-NEXT:    [[ARRAYIDX2_RIPPLE_LS_INSTANCE7:%.*]] = getelementptr inbounds [4 x i8], ptr [[DOTRIPPLE_LS_INSTANCE4]], <32 x i32> [[DOTRIPPLE3]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v32f32.v32p0(<32 x float> [[ADD_RIPPLE_VECTORIZED]], <32 x ptr> align 4 [[ARRAYIDX2_RIPPLE_LS_INSTANCE7]], <32 x i1> splat (i1 true))
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[V_RIPPLE_LS_INSTANCE]])
 ; CHECK-NEXT:    ret void
