@@ -19,43 +19,47 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
-
 LIBC_INLINE ErrorOr<int> raise(int sig) {
-  sigset_t full_set = sigset_t{{-1UL}};
-#ifdef LIBC_COMPILER_IS_CLANG
-  [[clang::uninitialized]] sigset_t old_set;
-#else
-  sigset_t old_set;
-#endif
-  auto restore_signals = [&old_set]() {
-    return syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK, &old_set, nullptr,
-                             sizeof(sigset_t));
+  class SigMaskGuard {
+    [[maybe_unused]] sigset_t old_set;
+    [[maybe_unused]] ErrorOr<int> &status;
+
+  public:
+    LIBC_INLINE SigMaskGuard(ErrorOr<int> &status) : old_set{}, status(status) {
+      sigset_t full_set = sigset_t{{-1UL}};
+      status = syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full_set,
+                                 &old_set, sizeof(sigset_t));
+    }
+    LIBC_INLINE ~SigMaskGuard() {
+      if (status.has_value()) {
+        int restore_result =
+            syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK, &old_set,
+                              nullptr, sizeof(sigset_t));
+        if (restore_result < 0)
+          status = Error(-restore_result);
+      }
+    }
   };
+  ErrorOr<int> status = 0;
+  {
+    SigMaskGuard sig_mask(status);
 
-  int mask_result = syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full_set,
-                                      &old_set, sizeof(sigset_t));
-  if (mask_result < 0)
-    return Error(-mask_result);
+    if (!status.has_value())
+      return status;
 
-  long pid = syscall_impl<long>(SYS_getpid);
-  if (pid < 0) {
-    restore_signals();
-    return Error(-static_cast<int>(pid));
+    long pid = syscall_impl<long>(SYS_getpid);
+    if (pid < 0)
+      return Error(-static_cast<int>(pid));
+
+    long tid = syscall_impl<long>(SYS_gettid);
+    if (tid < 0)
+      return Error(-static_cast<int>(tid));
+
+    int result = syscall_impl<int>(SYS_tgkill, pid, tid, sig);
+    if (result < 0)
+      return Error(-result);
   }
-
-  long tid = syscall_impl<long>(SYS_gettid);
-  if (tid < 0) {
-    restore_signals();
-    return Error(-static_cast<int>(tid));
-  }
-
-  int result = syscall_impl<int>(SYS_tgkill, pid, tid, sig);
-  int restore_result = restore_signals();
-  if (result < 0)
-    return Error(-result);
-  if (restore_result < 0)
-    return Error(-restore_result);
-  return result;
+  return status;
 }
 
 } // namespace linux_syscalls
