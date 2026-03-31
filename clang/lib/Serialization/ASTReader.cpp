@@ -11856,7 +11856,9 @@ void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
 }
 
 void OMPClauseReader::VisitOMPCountsClause(OMPCountsClause *C) {
-  C->setOmpFillIndex(Record.readInt());
+  bool HasFill = Record.readBool();
+  if (HasFill)
+    C->setOmpFillIndex(Record.readInt());
   C->setOmpFillLoc(Record.readSourceLocation());
   for (Expr *&E : C->getCountsRefs())
     E = Record.readSubExpr();

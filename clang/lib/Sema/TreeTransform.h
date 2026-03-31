@@ -1772,9 +1772,10 @@ public:
   OMPClause *RebuildOMPCountsClause(ArrayRef<Expr *> Counts,
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
-                                    SourceLocation EndLoc, unsigned FillIdx,
+                                    SourceLocation EndLoc,
+                                    std::optional<unsigned> FillIdx,
                                     SourceLocation FillLoc) {
-    unsigned FillCount = (FillIdx != UINT_MAX) ? 1 : 0;
+    unsigned FillCount = FillIdx ? 1 : 0;
     return getSema().OpenMP().ActOnOpenMPCountsClause(
         Counts, StartLoc, LParenLoc, EndLoc, FillIdx, FillLoc, FillCount);
   }

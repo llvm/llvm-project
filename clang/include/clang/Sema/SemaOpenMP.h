@@ -918,12 +918,11 @@ public:
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc);
   /// Called on well-formed 'counts' clause after parsing its arguments.
-  OMPClause *ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
-                                     SourceLocation StartLoc,
-                                     SourceLocation LParenLoc,
-                                     SourceLocation EndLoc, unsigned FillIdx,
-                                     SourceLocation FillLoc,
-                                     unsigned FillCount);
+  OMPClause *
+  ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs, SourceLocation StartLoc,
+                          SourceLocation LParenLoc, SourceLocation EndLoc,
+                          std::optional<unsigned> FillIdx,
+                          SourceLocation FillLoc, unsigned FillCount);
   /// Called on well-form 'permutation' clause after parsing its arguments.
   OMPClause *ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
                                           SourceLocation StartLoc,

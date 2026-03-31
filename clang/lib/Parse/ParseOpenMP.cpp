@@ -2994,7 +2994,7 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
 OMPClause *Parser::ParseOpenMPCountsClause() {
   SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
   SmallVector<Expr *, 4> ValExprs;
-  unsigned FillIdx = UINT_MAX;
+  std::optional<unsigned> FillIdx;
   unsigned FillCount = 0;
   SourceLocation FillLoc;
 

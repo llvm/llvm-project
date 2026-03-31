@@ -3161,7 +3161,7 @@ void f() {
   ASSERT_TRUE(Counts);
   ASSERT_EQ(Counts->getNumCounts(), 2u);
   EXPECT_TRUE(Counts->hasOmpFill());
-  EXPECT_EQ(Counts->getOmpFillIndex(), 1u);
+  EXPECT_EQ(*Counts->getOmpFillIndex(), 1u);
   EXPECT_FALSE(Counts->getCountsRefs()[1]);
 }
 

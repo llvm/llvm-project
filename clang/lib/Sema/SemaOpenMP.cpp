@@ -15980,16 +15980,15 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   // Internal variable names.
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
 
-  unsigned FillIdx = CountsClause->getOmpFillIndex();
-  if (!CountsClause->hasOmpFill()) {
+  std::optional<unsigned> FillIdx = CountsClause->getOmpFillIndex();
+  if (!FillIdx)
     return StmtError();
-  }
 
   unsigned NumItems = CountsClause->getNumCounts();
   SmallVector<uint64_t, 4> CountValues(NumItems, 0);
   ArrayRef<Expr *> Refs = CountsClause->getCountsRefs();
   for (unsigned I = 0; I < NumItems; ++I) {
-    if (I == FillIdx)
+    if (I == *FillIdx)
       continue;
     Expr *CountExpr = Refs[I];
     if (!CountExpr)
@@ -16006,7 +16005,7 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   Expr *NumIterExpr = LoopHelper.NumIterations;
 
   uint64_t RightSum = 0;
-  for (unsigned I = FillIdx + 1; I < NumItems; ++I)
+  for (unsigned I = *FillIdx + 1; I < NumItems; ++I)
     RightSum += CountValues[I];
 
   auto MakeIntLit = [&](uint64_t Val) {
@@ -16024,11 +16023,11 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     Expr *StartExpr = nullptr;
     Expr *EndExpr = nullptr;
 
-    if (Seg < FillIdx) {
+    if (Seg < *FillIdx) {
       StartExpr = MakeIntLit(LeftAccum);
       LeftAccum += CountValues[Seg];
       EndExpr = MakeIntLit(LeftAccum);
-    } else if (Seg == FillIdx) {
+    } else if (Seg == *FillIdx) {
       StartExpr = MakeIntLit(LeftAccum);
       if (RightRemaining == 0) {
         EndExpr = NumIterExpr;
@@ -18089,15 +18088,18 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
                                 SanitizedSizeExprs);
 }
 
-OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(
-    ArrayRef<Expr *> CountExprs, SourceLocation StartLoc,
-    SourceLocation LParenLoc, SourceLocation EndLoc, unsigned FillIdx,
-    SourceLocation FillLoc, unsigned FillCount) {
+OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
+                                               SourceLocation StartLoc,
+                                               SourceLocation LParenLoc,
+                                               SourceLocation EndLoc,
+                                               std::optional<unsigned> FillIdx,
+                                               SourceLocation FillLoc,
+                                               unsigned FillCount) {
   SmallVector<Expr *> SanitizedCountExprs(CountExprs);
 
   for (unsigned I = 0; I < SanitizedCountExprs.size(); ++I) {
     Expr *&CountExpr = SanitizedCountExprs[I];
-    if (I == FillIdx)
+    if (FillIdx && I == *FillIdx)
       continue;
     if (!CountExpr)
       continue;

@@ -20,6 +20,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -987,11 +988,10 @@ OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPSizesClause(NumSizes);
 }
 
-OMPCountsClause *
-OMPCountsClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                        SourceLocation LParenLoc, SourceLocation EndLoc,
-                        ArrayRef<Expr *> Counts, unsigned FillIdx,
-                        SourceLocation FillLoc) {
+OMPCountsClause *OMPCountsClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation EndLoc, ArrayRef<Expr *> Counts,
+    std::optional<unsigned> FillIdx, SourceLocation FillLoc) {
   OMPCountsClause *Clause = CreateEmpty(C, Counts.size());
   Clause->setLocStart(StartLoc);
   Clause->setLParenLoc(LParenLoc);
@@ -2008,16 +2008,15 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
 
 void OMPClausePrinter::VisitOMPCountsClause(OMPCountsClause *Node) {
   OS << "counts(";
-  unsigned FillIdx = Node->getOmpFillIndex();
+  std::optional<unsigned> FillIdx = Node->getOmpFillIndex();
   ArrayRef<Expr *> Refs = Node->getCountsRefs();
-  for (unsigned I = 0, N = Refs.size(); I < N; ++I) {
+  for (auto I : llvm::seq<unsigned>(Refs.size())) {
     if (I)
       OS << ", ";
-    if (I == FillIdx) {
+    if (FillIdx && I == *FillIdx)
       OS << "omp_fill";
-    } else {
+    else
       Refs[I]->printPretty(OS, nullptr, Policy, 0);
-    }
   }
   OS << ")";
 }

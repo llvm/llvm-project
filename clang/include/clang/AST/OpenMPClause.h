@@ -1042,8 +1042,8 @@ class OMPCountsClause final
   /// Number of count expressions in the clause.
   unsigned NumCounts;
 
-  /// 0-based index of the omp_fill list item, or UINT_MAX if absent.
-  unsigned OmpFillIndex;
+  /// 0-based index of the omp_fill list item.
+  std::optional<unsigned> OmpFillIndex;
 
   /// Source location of the omp_fill keyword.
   SourceLocation OmpFillLoc;
@@ -1051,7 +1051,7 @@ class OMPCountsClause final
   /// Build an empty clause.
   explicit OMPCountsClause(int NumCounts)
       : OMPClause(llvm::omp::OMPC_counts, SourceLocation(), SourceLocation()),
-        NumCounts(NumCounts), OmpFillIndex(UINT_MAX) {}
+        NumCounts(NumCounts) {}
 
 public:
   /// Build a 'counts' AST node.
@@ -1064,7 +1064,8 @@ public:
   static OMPCountsClause *Create(const ASTContext &C, SourceLocation StartLoc,
                                  SourceLocation LParenLoc,
                                  SourceLocation EndLoc, ArrayRef<Expr *> Counts,
-                                 unsigned FillIdx, SourceLocation FillLoc);
+                                 std::optional<unsigned> FillIdx,
+                                 SourceLocation FillLoc);
 
   /// Build an empty 'counts' AST node for deserialization.
   ///
@@ -1081,10 +1082,10 @@ public:
   /// Returns the number of list items.
   unsigned getNumCounts() const { return NumCounts; }
 
-  unsigned getOmpFillIndex() const { return OmpFillIndex; }
+  std::optional<unsigned> getOmpFillIndex() const { return OmpFillIndex; }
   SourceLocation getOmpFillLoc() const { return OmpFillLoc; }
-  bool hasOmpFill() const { return OmpFillIndex != UINT_MAX; }
-  void setOmpFillIndex(unsigned Idx) { OmpFillIndex = Idx; }
+  bool hasOmpFill() const { return OmpFillIndex.has_value(); }
+  void setOmpFillIndex(std::optional<unsigned> Idx) { OmpFillIndex = Idx; }
   void setOmpFillLoc(SourceLocation Loc) { OmpFillLoc = Loc; }
 
   /// Returns the count expressions.
