@@ -2292,7 +2292,9 @@ public:
     // If the size is a negative constant, we can't fold it because the
     // resulting memref type would be invalid. In that case, we keep the
     // original size.
-    for (auto [srcSizeOfr, sizeOfr] : llvm::zip(op.getMixedSizes(), sizes)) {
+    for (auto it : llvm::zip(op.getMixedSizes(), sizes)) {
+      auto &srcSizeOfr = std::get<0>(it);
+      auto &sizeOfr = std::get<1>(it);
       if (auto cst = getConstantIntValue(sizeOfr))
         if (*cst < 0)
           sizeOfr = srcSizeOfr;
