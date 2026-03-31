@@ -108,12 +108,14 @@ entry:
 ; CHECK-SEC-MACHO-MC-LABEL: Sections [
 ; CHECK-SEC-MACHO-MC:       Name: __probe_descs
 ; CHECK-SEC-MACHO-MC-NEXT:  Segment: __PSEUDO_PROBE
-; CHECK-SEC-MACHO-MC:       Attributes [ (0x20000)
+; CHECK-SEC-MACHO-MC:       Attributes [ (0x120000)
 ; CHECK-SEC-MACHO-MC-NEXT:    Debug (0x20000)
+; CHECK-SEC-MACHO-MC-NEXT:    NoDeadStrip (0x100000)
 ; CHECK-SEC-MACHO-MC:       Name: __probes
 ; CHECK-SEC-MACHO-MC-NEXT:  Segment: __PSEUDO_PROBE
-; CHECK-SEC-MACHO-MC:       Attributes [ (0x20000)
+; CHECK-SEC-MACHO-MC:       Attributes [ (0x120000)
 ; CHECK-SEC-MACHO-MC-NEXT:    Debug (0x20000)
+; CHECK-SEC-MACHO-MC-NEXT:    NoDeadStrip (0x100000)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
