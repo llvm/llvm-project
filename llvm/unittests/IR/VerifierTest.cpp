@@ -430,7 +430,7 @@ TEST(VerifierTest, AtomicRMWElementwiseIntOpOnFPVector) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(
-      StringRef(Error).starts_with("atomicrmw add operand must have integer"))
+      StringRef(Error).starts_with("atomicrmw elementwise add operand must have integer"))
       << Error;
 }
 
@@ -455,7 +455,7 @@ TEST(VerifierTest, AtomicRMWElementwiseFPOpOnIntVector) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(StringRef(Error).starts_with(
-      "atomicrmw fadd operand must have floating-point or "
+      "atomicrmw elementwise fadd operand must have floating-point or "
       "fixed vector of floating-point type!"))
       << Error;
 }

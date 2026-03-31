@@ -5,4 +5,4 @@ define <4 x float> @bad_add(ptr %p, <4 x float> %v) {
   ret <4 x float> %old
 }
 
-; CHECK: atomicrmw add operand must be an integer
+; CHECK: atomicrmw elementwise add operand must be an integer

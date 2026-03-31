@@ -9068,25 +9068,25 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     ScalarTy = VecTy->getElementType();
   }
 
+  std::string OpName =
+      (Twine("atomicrmw ") + (IsElementwise ? "elementwise " : "") +
+       AtomicRMWInst::getOperationName(Operation))
+          .str();
   if (Operation == AtomicRMWInst::Xchg) {
     if (!ScalarTy->isIntegerTy() && !ScalarTy->isFloatingPointTy() &&
         !ScalarTy->isPointerTy()) {
       return error(
           ValLoc,
-          "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
-              " operand must be an integer, floating point, or pointer type");
+          OpName + " operand must be an integer, floating point, or pointer type");
     }
   } else if (IsFP) {
     if (!ScalarTy->isFPOrFPVectorTy()) {
-      return error(ValLoc, "atomicrmw " +
-                               AtomicRMWInst::getOperationName(Operation) +
-                               " operand must be a floating point type");
+      return error(ValLoc,
+                   OpName + " operand must be a floating point type");
     }
   } else {
     if (!ScalarTy->isIntegerTy()) {
-      return error(ValLoc, "atomicrmw " +
-                               AtomicRMWInst::getOperationName(Operation) +
-                               " operand must be an integer");
+      return error(ValLoc, OpName + " operand must be an integer");
     }
   }
 
