@@ -6038,14 +6038,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   // f16 -> f32 is natively supported for fdot
   if (Opcode == Instruction::FAdd && !IsUSDot && !IsSub &&
-      (ST->hasF16F32DOT() || (ST->isSVEorStreamingSVEAvailable() &&
-                              (ST->hasSME2() || ST->hasSVE2p1()))) &&
+      IsSupported(ST->hasSME2() || ST->hasSVE2p1(), ST->hasF16F32DOT()) &&
       AccumLT.second.getScalarType() == MVT::f32 &&
-      InputLT.second.getScalarType() == MVT::f16 &&
-      ((AccumLT.second.getVectorMinNumElements() == 4 &&
-        InputLT.second.getVectorMinNumElements() == 8) ||
-       (AccumLT.second.getVectorMinNumElements() == 2 &&
-        InputLT.second.getVectorMinNumElements() == 4)))
+      InputLT.second.getScalarType() == MVT::f16)
     return Cost;
 
   // For a ratio of 2, we can use *mlal top/bottom instructions.
