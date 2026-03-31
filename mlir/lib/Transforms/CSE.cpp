@@ -148,7 +148,8 @@ static bool isBlockCrossIsIsolatedFromAbove(DominanceInfo *dominate, Block *a,
     std::swap(b, a);
   while (b && b->getParentOp()) {
     Operation *parnetOp = b->getParentOp();
-    if (parnetOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>())
+    Operation *parentOp = b->getParentOp();
+    if (parentOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>())
       return true;
     b = parnetOp->getBlock();
     if (b == a)
