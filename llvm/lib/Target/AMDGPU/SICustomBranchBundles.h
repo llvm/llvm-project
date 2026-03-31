@@ -42,7 +42,7 @@ static inline void moveInsBeforePhis(MachineInstr &MI) {
   if (!PhiSeen) {
     MI.removeFromParent();
     MBB.insert(MBB.begin(), &MI);
-  } else {
+  } else if (MI.getOperand(0).getReg().isVirtual()) {
     auto Phi = BuildMI(MBB, FirstPhi, MI.getDebugLoc(), TII.get(AMDGPU::PHI),
                        MI.getOperand(0).getReg());
     for (auto *PredMBB : MBB.predecessors()) {
@@ -55,7 +55,13 @@ static inline void moveInsBeforePhis(MachineInstr &MI) {
       ClonedMI->bundleWithPred();
     }
     MI.eraseFromParent();
-  }
+  } else
+    for (auto *PredMBB : MBB.predecessors()) {
+      MachineInstr &BranchMI = getBranchWithDest(*PredMBB, MBB);
+      MachineInstr *ClonedMI = MF.CloneMachineInstr(&MI);
+      PredMBB->insertAfterBundle(BranchMI.getIterator(), ClonedMI);
+      ClonedMI->bundleWithPred();
+    }
 }
 
 struct EpilogIterator {
