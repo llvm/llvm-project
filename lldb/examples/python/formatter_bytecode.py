@@ -1163,6 +1163,9 @@ def _main():
         help="output file (required for --assemble)",
     )
     parser.add_argument(
+        "--append", action="store_true", help="append to existing output file"
+    )
+    parser.add_argument(
         "-f",
         "--format",
         choices=("binary", "c", "swift"),
@@ -1172,6 +1175,10 @@ def _main():
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
+
+    if args.append and not args.compile:
+        parser.error("--append is valid only with --compile")
+
     if args.compile:
         if not args.type_name:
             parser.error("--type-name is required with --compile")
@@ -1189,7 +1196,8 @@ def _main():
             with open(args.output, "wb") as output:
                 section.write_binary(output)
         else:
-            with open(args.output, "w") as output:
+            mode = "a" if args.append else "w"
+            with open(args.output, mode) as output:
                 if not args.skip_invocation_comment:
                     print("// Generated with:", file=output)
                     print("//  ", shlex.join(sys.argv), file=output)
