@@ -71,6 +71,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
@@ -446,8 +447,7 @@ static SmallSet<unsigned, 8> SrcAddrSpaces;
 static cl::list<unsigned> ClAddrSpaces(
     "asan-instrument-address-spaces",
     cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated, cl::ZeroOrMore,
-    cl::callback([](const unsigned &AddrSpace) {
+    cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
       SrcAddrSpaces.insert(AddrSpace);
     }));
 
@@ -634,7 +634,7 @@ void llvm::getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
 }
 
 void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
-  // Sanitizer checks read from shadow, which invalidates memory(argmem: *).
+  // Adding sanitizer checks invalidates previously inferred memory attributes.
   //
   // This is not only true for sanitized functions, because AttrInfer can
   // infer those attributes on libc functions, which is not true if those
@@ -645,19 +645,28 @@ void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
   // intrinsic, essentially like in the AArch64StackTagging pass. But that's
   // for another day.
 
-  // The API is weird. `onlyReadsMemory` actually means "does not write", and
-  // `onlyWritesMemory` actually means "does not read". So we reconstruct
-  // "accesses memory" && "does not read" <=> "writes".
   bool Changed = false;
-  if (!F.doesNotAccessMemory()) {
-    bool WritesMemory = !F.onlyReadsMemory();
-    bool ReadsMemory = !F.onlyWritesMemory();
-    if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
-      F.removeFnAttr(Attribute::Memory);
+  // We add memory(readwrite) to functions that don't already have that set and
+  // can access any non-inaccessible memory. Sanitizer instrumentation can
+  // read/write shadow memory, which is IRMemLocation::Other. Sanitizer
+  // instrumentation can instrument any memory accesses to non-inaccessible
+  // memory.
+  if (!F.getMemoryEffects()
+           .getWithoutLoc(IRMemLocation::InaccessibleMem)
+           .doesNotAccessMemory() &&
+      !isModAndRefSet(F.getMemoryEffects().getModRef(IRMemLocation::Other))) {
+    F.setMemoryEffects(F.getMemoryEffects() |
+                       MemoryEffects::otherMemOnly(ModRefInfo::ModRef));
+    Changed = true;
+  }
+  // HWASan reads from argument memory even for previously write-only accesses.
+  if (ReadsArgMem) {
+    if (F.getMemoryEffects().getModRef(IRMemLocation::ArgMem) ==
+        ModRefInfo::Mod) {
+      F.setMemoryEffects(F.getMemoryEffects() |
+                         MemoryEffects::argMemOnly(ModRefInfo::Ref));
       Changed = true;
     }
-  }
-  if (ReadsArgMem) {
     for (Argument &A : F.args()) {
       if (A.hasAttribute(Attribute::WriteOnly)) {
         A.removeAttr(Attribute::WriteOnly);
@@ -1998,8 +2007,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
         Cmp, InsertBefore, false, MDBuilder(*C).createUnlikelyBranchWeights());
-    assert(cast<BranchInst>(CheckTerm)->isUnconditional());
-    BasicBlock *NextBB = CheckTerm->getSuccessor(0);
+    BasicBlock *NextBB = cast<UncondBrInst>(CheckTerm)->getSuccessor();
     IRB.SetInsertPoint(CheckTerm);
     Value *Cmp2 = createSlowPathCmp(IRB, AddrLong, ShadowValue, TypeStoreSize);
     if (Recover) {
@@ -2008,7 +2016,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
       BasicBlock *CrashBlock =
         BasicBlock::Create(*C, "", NextBB->getParent(), NextBB);
       CrashTerm = new UnreachableInst(*C, CrashBlock);
-      BranchInst *NewTerm = BranchInst::Create(CrashBlock, NextBB, Cmp2);
+      CondBrInst *NewTerm = CondBrInst::Create(Cmp2, CrashBlock, NextBB);
       ReplaceInstWithInst(CheckTerm, NewTerm);
     }
   } else {

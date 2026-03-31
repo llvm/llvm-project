@@ -2261,18 +2261,9 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   return false;
 }
 
-// Get current OffloadArch and ignore any unknown values
-static OffloadArch getOffloadArch(CodeGenModule &CGM) {
-  if (!CGM.getTarget().hasFeature("ptx"))
-    return OffloadArch::UNKNOWN;
-  for (const auto &Feature : CGM.getTarget().getTargetOpts().FeatureMap) {
-    if (Feature.getValue()) {
-      OffloadArch Arch = StringToOffloadArch(Feature.getKey());
-      if (Arch != OffloadArch::UNKNOWN)
-        return Arch;
-    }
-  }
-  return OffloadArch::UNKNOWN;
+static OffloadArch getOffloadArch(const CodeGenModule &CGM) {
+  // FIXME: This should not require parsing
+  return StringToOffloadArch(CGM.getTarget().getTargetOpts().CPU);
 }
 
 /// Check to see if target architecture supports unified addressing which is
@@ -2383,8 +2374,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:
       case OffloadArch::BMG_G21:
-      case OffloadArch::UNUSED:
-      case OffloadArch::UNKNOWN:
+      case OffloadArch::Unused:
+      case OffloadArch::Unknown:
         break;
       case OffloadArch::LAST:
         llvm_unreachable("Unexpected GPU arch.");

@@ -2080,11 +2080,19 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
     defm vaesz   : RVVOutBuiltinSetZvk<HasVV=0>;
   }
 
-  // zvknha and zvknhb has duplicated intrinsic but they don't imply each other,
-  // so we need to handle it manually in SemaRISCV.cpp.
-  defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
-  defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
-  defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;
+  // zvknha
+  let RequiredFeatures = ["zvknha"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"i">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"i">;
+  }
+
+  // zvknhb
+  let RequiredFeatures = ["zvknhb"] in {
+    defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"l">;
+    defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"l">;
+    defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"l">;
+  }
 
   // zvksed
   let RequiredFeatures = ["zvksed"] in {

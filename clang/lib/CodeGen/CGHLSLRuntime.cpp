@@ -116,12 +116,12 @@ static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
   return getArrayDecl(E);
 }
 
-// Get the total size of the array, or -1 if the array is unbounded.
+// Get the total size of the array, or 0 if the array is unbounded.
 static int getTotalArraySize(ASTContext &AST, const clang::Type *Ty) {
   Ty = Ty->getUnqualifiedDesugaredType();
   assert(Ty->isArrayType() && "expected array type");
   if (Ty->isIncompleteArrayType())
-    return -1;
+    return 0;
   return AST.getConstantArrayElementCount(cast<ConstantArrayType>(Ty));
 }
 
@@ -762,6 +762,17 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     }
   }
 
+  if (SemanticName == "SV_VERTEXID") {
+    if (ST == Triple::EnvironmentType::Vertex) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                      Semantic->getAttrName()->getName(),
+                                      /* BuiltIn::VertexIndex */ 42);
+      else
+        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+    }
+  }
+
   llvm_unreachable(
       "Load hasn't been implemented yet for this system semantic. FIXME");
 }
@@ -1151,6 +1162,8 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
+    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
+  if (auto Attr = VD->getAttr<HLSLVkExtBuiltinOutputAttr>())
     addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
 }
 

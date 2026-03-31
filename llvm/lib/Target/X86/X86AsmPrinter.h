@@ -224,6 +224,8 @@ public:
 
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  // AsmPrinter needs to run regardless of optimization level.
+  static bool isRequired() { return true; }
 
 private:
   TargetMachine &TM;

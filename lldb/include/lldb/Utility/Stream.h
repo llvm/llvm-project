@@ -225,6 +225,16 @@ public:
   ///     in one statement.
   Stream &operator<<(char ch);
 
+  /// Output the result of a formatv expression to the stream.
+  ///
+  /// \param[in] obj
+  ///     A formatv_object_base produced by llvm::formatv().
+  ///
+  /// \return
+  ///     A reference to this class so multiple things can be streamed
+  ///     in one statement.
+  Stream &operator<<(const llvm::formatv_object_base &obj);
+
   Stream &operator<<(uint8_t uval) = delete;
   Stream &operator<<(uint16_t uval) = delete;
   Stream &operator<<(uint32_t uval) = delete;
@@ -361,8 +371,10 @@ public:
 
   size_t PrintfVarArg(const char *format, va_list args);
 
+  /// Forwards the arguments to llvm::formatv and writes to the stream.
+  /// FIXME: instead of this API, consider using llvm::formatv directly.
   template <typename... Args> void Format(const char *format, Args &&... args) {
-    PutCString(llvm::formatv(format, std::forward<Args>(args)...).str());
+    *this << llvm::formatv(format, std::forward<Args>(args)...);
   }
 
   /// Output a quoted C string value to the stream.

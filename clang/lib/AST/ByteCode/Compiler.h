@@ -230,6 +230,8 @@ public:
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
+  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
+  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -597,7 +599,7 @@ public:
         typename Emitter::LabelTy EndLabel = this->Ctx->getLabel();
         if (!this->Ctx->emitGetLocalEnabled(Local.Offset, E))
           return false;
-        if (!this->Ctx->jumpFalse(EndLabel))
+        if (!this->Ctx->jumpFalse(EndLabel, E))
           return false;
 
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))

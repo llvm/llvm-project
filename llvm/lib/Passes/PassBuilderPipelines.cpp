@@ -640,16 +640,13 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
   FPM.addPass(AggressiveInstCombinePass());
-
-  if (!Level.isOptimizingForSize())
-    FPM.addPass(LibCallsShrinkWrapPass());
+  FPM.addPass(LibCallsShrinkWrapPass());
 
   invokePeepholeEPCallbacks(FPM, Level);
 
   // For PGO use pipeline, try to optimize memory intrinsics such as memcpy
   // using the size value profile. Don't perform this when optimizing for size.
-  if (PGOOpt && PGOOpt->Action == PGOOptions::IRUse &&
-      !Level.isOptimizingForSize())
+  if (PGOOpt && PGOOpt->Action == PGOOptions::IRUse)
     FPM.addPass(PGOMemOPSizeOpt());
 
   FPM.addPass(TailCallElimPass(/*UpdateFunctionEntryCount=*/
@@ -1579,7 +1576,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Disable header duplication at -Oz.
   LPM.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
                                  Level != OptimizationLevel::Oz,
-                             LTOPreLink));
+                             LTOPreLink, /*CheckExitCount=*/true));
   // Some loops may have become dead by now. Try to delete them.
   // FIXME: see discussion in https://reviews.llvm.org/D112851,
   //        this may need to be revisited once we run GVN before loop deletion

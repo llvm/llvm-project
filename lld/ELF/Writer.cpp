@@ -492,9 +492,11 @@ bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
 // - copy eligible symbols to .symTab
 static void demoteAndCopyLocalSymbols(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Add local symbols");
-  for (ELFFileBase *file : ctx.objectFiles) {
+  auto symsVec =
+      std::make_unique<SmallVector<Symbol *, 0>[]>(ctx.objectFiles.size());
+  parallelFor(0, ctx.objectFiles.size(), [&](size_t i) {
     DenseMap<SectionBase *, size_t> sectionIndexMap;
-    for (Symbol *b : file->getLocalSymbols()) {
+    for (Symbol *b : ctx.objectFiles[i]->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
       if (!dr)
@@ -504,9 +506,12 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
         demoteDefined(*dr, sectionIndexMap);
       else if (ctx.in.symTab && includeInSymtab(ctx, *b) &&
                shouldKeepInSymtab(ctx, *dr))
-        ctx.in.symTab->addSymbol(b);
+        symsVec[i].push_back(b);
     }
-  }
+  });
+  for (auto &syms : ArrayRef(symsVec.get(), ctx.objectFiles.size()))
+    for (Symbol *sym : syms)
+      ctx.in.symTab->addSymbol(sym);
 }
 
 // Create a section symbol for each output section so that we can represent
@@ -1533,10 +1538,6 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   };
   finalizeOrderDependentContent();
 
-  // Converts call x@GDPLT to call __tls_get_addr
-  if (ctx.arg.emachine == EM_HEXAGON)
-    hexagonTLSSymbolUpdate(ctx);
-
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
@@ -2035,17 +2036,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     auto i = ctx.arg.sectionStartMap.find(sec->name);
     if (i != ctx.arg.sectionStartMap.end())
       sec->addrExpr = [=] { return i->second; };
-  }
-
-  // With the ctx.outputSections available check for GDPLT relocations
-  // and add __tls_get_addr symbol if needed.
-  if (ctx.arg.emachine == EM_HEXAGON &&
-      hexagonNeedsTLSSymbol(ctx.outputSections)) {
-    Symbol *sym =
-        ctx.symtab->addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
-                                        STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
-    sym->isPreemptible = true;
-    ctx.partitions[0].dynSymTab->addSymbol(sym);
   }
 
   // This is a bit of a hack. A value of 0 means undef, so we set it

@@ -73,6 +73,16 @@ struct Memcpy {
 namespace LIBC_NAMESPACE_DECL {
 namespace generic {
 
+template <typename T> LIBC_INLINE void stream(Ptr dst, T value) {
+#if __has_builtin(__builtin_nontemporal_store)
+  __builtin_nontemporal_store(value, reinterpret_cast<T *>(dst));
+#else
+  // Falling back to regular stores is always safe
+  store<T>(dst, value);
+#endif
+}
+template <typename T> LIBC_INLINE void fence() { _mm_sfence(); }
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
 template <> struct cmp_is_expensive<uint16_t> : public cpp::false_type {};

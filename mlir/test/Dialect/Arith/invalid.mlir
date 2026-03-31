@@ -535,6 +535,54 @@ func.func @fptrunc_vec_f32_to_i32(%arg0 : vector<2xf32>) {
 
 // -----
 
+func.func @convertf_same_type(%arg0 : f16) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : f16 to f16
+  return
+}
+
+// -----
+
+func.func @convertf_different_bitwidth(%arg0 : f16) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : f16 to f32
+  return
+}
+
+// -----
+
+func.func @convertf_different_bitwidth_trunc(%arg0 : f32) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : f32 to f16
+  return
+}
+
+// -----
+
+func.func @convertf_vec_same_type(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xf16>
+  return
+}
+
+// -----
+
+func.func @convertf_vec_different_bitwidth(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xf32>
+  return
+}
+
+// -----
+
+func.func @convertf_shape_mismatch(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{op requires the same shape for all operands and results}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<3xbf16>
+  return
+}
+
+// -----
+
 func.func @sexti_index_as_operand(%arg0 : index) {
   // expected-error@+1 {{op operand #0 must be signless-fixed-width-integer-like, but got 'index'}}
   %0 = arith.extsi %arg0 : index to i128
@@ -1015,4 +1063,44 @@ func.func @index_castui_i0(%a: i0) -> index {
   // expected-error @+1 {{'arith.index_castui' op operand #0 must be signless-non-zero-bitwidth-integer-like or memref of signless-integer, but got 'i0'}}
   %0 = arith.index_castui %a : i0 to index
   return %0 : index
+}
+
+// -----
+
+func.func @convertf_same_type(%arg0 : f32) {
+  // expected-error @+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : f32 to f32
+  return
+}
+
+// -----
+
+func.func @convertf_same_type_vec(%arg0 : vector<2xf16>) {
+  // expected-error @+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xf16>
+  return
+}
+
+// -----
+
+func.func @convertf_shape_mismatch(%arg0 : vector<2xf16>) {
+  // expected-error @+1 {{op requires the same shape for all operands and results}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @convertf_int_input(%arg0 : i32) {
+  // expected-error @+1 {{op operand #0 must be floating-point-like, but got 'i32'}}
+  %0 = arith.convertf %arg0 : i32 to f32
+  return
+}
+
+// -----
+
+func.func @convertf_int_output(%arg0 : f32) {
+  // expected-error @+1 {{op result #0 must be floating-point-like, but got 'i32'}}
+  %0 = arith.convertf %arg0 : f32 to i32
+  return
 }

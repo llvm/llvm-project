@@ -256,8 +256,8 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  <x1> vector loop: {
 ; CHECK-TF-NEXT:    vector.body:
 ; CHECK-TF-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP15:%[0-9]+]]>
-; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP14:%[0-9]+]]>, vector.body ]
+; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP14:%[0-9]+]]>
+; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP13:%[0-9]+]]>, vector.body ]
 ; CHECK-TF-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
@@ -269,10 +269,9 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:      CLONE ir<%b.addr> = getelementptr ir<%b>, vp<[[VP6]]>
 ; CHECK-TF-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer ir<%b.addr>
 ; CHECK-TF-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP11]]>, vp<[[VP10]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP8]]>, vp<[[VP10]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = any-of vp<[[VP12]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP13]]>, vp<[[VP12]]>, vp<[[VP5]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP15]]> = select vp<[[VP13]]>, ir<%ld.b>, ir<%data.phi>
+; CHECK-TF-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = any-of vp<[[VP10]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP13]]> = select vp<[[VP12]]>, vp<[[VP10]]>, vp<[[VP5]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP12]]>, ir<%ld.b>, ir<%data.phi>
 ; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-TF-NEXT:    No successors
@@ -280,11 +279,11 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP15]]>, vp<[[VP14]]>
+; CHECK-TF-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP14]]>, vp<[[VP13]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
-; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %latch ] (extra operand: vp<[[VP17]]> from middle.block)
+; CHECK-TF-NEXT:    IR   %select.data.lcssa = phi i32 [ %select.data, %latch ] (extra operand: vp<[[VP16]]> from middle.block)
 ; CHECK-TF-NEXT:  No successors
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  scalar.ph:

@@ -1507,7 +1507,7 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
   if (CurrentDim < DimSize) {
     for (unsigned int I = 0; I < NonContig[CurrentDim].Count; ++I) {
       uint64_t CurOffset =
-          (NonContig[CurrentDim].Offset + I) * NonContig[CurrentDim].Stride;
+          NonContig[CurrentDim].Offset + I * NonContig[CurrentDim].Stride;
       // we only need to transfer the first element for the last dimension
       // since we've already got a contiguous piece.
       if (CurrentDim != DimSize - 1 || I == 0) {
@@ -1578,9 +1578,18 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_NON_CONTIG) {
       __tgt_target_non_contig *NonContig = (__tgt_target_non_contig *)Args[I];
       int32_t DimSize = ArgSizes[I];
-      uint64_t Size =
-          NonContig[DimSize - 1].Count * NonContig[DimSize - 1].Stride;
+      ODBG(ODT_DataTransfer) << "Non contig descriptor:";
+      for (int I = 0; I < DimSize; I++)
+        ODBG(ODT_DataTransfer)
+            << "  Dim " << I << ": Offset " << NonContig[I].Offset << " Count "
+            << NonContig[I].Count << " Stride " << NonContig[I].Stride;
       int32_t MergedDim = getNonContigMergedDimension(NonContig, DimSize);
+      ODBG(ODT_DataTransfer) << "Merged " << MergedDim << " dimensions";
+      __tgt_target_non_contig &FirstMergedDim =
+          NonContig[DimSize - MergedDim - 1];
+      uint64_t Size = FirstMergedDim.Count * FirstMergedDim.Stride;
+      ODBG(ODT_DataTransfer) << "Transfer size " << Size;
+      ODBG(ODT_DataTransfer) << "Base Ptr " << ArgsBase[I];
       Ret = targetDataNonContiguous(
           Loc, Device, ArgsBase[I], NonContig, Size, ArgTypes[I],
           /*current_dim=*/0, DimSize - MergedDim, /*offset=*/0, AsyncInfo);

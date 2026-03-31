@@ -11,7 +11,7 @@ void test_1_variable_stride_one() {
 
   // Initialize data on host
   for (int i = 0; i < 10; i++) {
-    data1[i] = i;
+    data1[i] = i + 1;
   }
 
 #pragma omp target data map(to : stride_one, data1[0 : 10])
@@ -19,7 +19,7 @@ void test_1_variable_stride_one() {
 #pragma omp target
     {
       for (int i = 0; i < 10; i++) {
-        data1[i] += i;
+        data1[i] += i + 1;
       }
     }
 
@@ -37,7 +37,7 @@ void test_2_variable_stride_large() {
 
   // Initialize data on host
   for (int i = 0; i < 10; i++) {
-    data2[i] = i;
+    data2[i] = i + 1;
   }
 
 #pragma omp target data map(to : stride_large, data2[0 : 10])
@@ -45,7 +45,7 @@ void test_2_variable_stride_large() {
 #pragma omp target
     {
       for (int i = 0; i < 10; i++) {
-        data2[i] += i;
+        data2[i] += i + 1;
       }
     }
 
@@ -64,25 +64,25 @@ int main() {
 }
 
 // CHECK: Test 1: Variable stride = 1
-// CHECK-NEXT: 0.000000
-// CHECK-NEXT: 1.000000
+// CHECK-NEXT: 2.000000
+// CHECK-NEXT: 4.000000
+// CHECK-NEXT: 6.000000
+// CHECK-NEXT: 8.000000
+// CHECK-NEXT: 10.000000
+// CHECK-NEXT: 12.000000
+// CHECK-NEXT: 14.000000
+// CHECK-NEXT: 16.000000
+// CHECK-NEXT: 18.000000
+// CHECK-NEXT: 20.000000
+
+// CHECK: Test 2: Variable stride = 5
+// CHECK-NEXT: 2.000000
 // CHECK-NEXT: 2.000000
 // CHECK-NEXT: 3.000000
 // CHECK-NEXT: 4.000000
 // CHECK-NEXT: 5.000000
-// CHECK-NEXT: 6.000000
+// CHECK-NEXT: 12.000000
 // CHECK-NEXT: 7.000000
 // CHECK-NEXT: 8.000000
 // CHECK-NEXT: 9.000000
-
-// CHECK: Test 2: Variable stride = 5
-// CHECK-NEXT: 0.000000
-// CHECK-NEXT: 1.000000
-// CHECK-NEXT: 2.000000
-// CHECK-NEXT: 3.000000
-// CHECK-NEXT: 4.000000
 // CHECK-NEXT: 10.000000
-// CHECK-NEXT: 6.000000
-// CHECK-NEXT: 7.000000
-// CHECK-NEXT: 8.000000
-// CHECK-NEXT: 9.000000

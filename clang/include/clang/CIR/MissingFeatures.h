@@ -81,7 +81,6 @@ struct MissingFeatures {
   static bool opFuncMultipleReturnVals() { return false; }
   static bool opFuncNakedAttr() { return false; }
   static bool opFuncNoDuplicateAttr() { return false; }
-  static bool opFuncNoUnwind() { return false; }
   static bool opFuncOpenCLKernelMetadata() { return false; }
   static bool opFuncOperandBundles() { return false; }
   static bool opFuncOptNoneAttr() { return false; }
@@ -150,7 +149,6 @@ struct MissingFeatures {
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
-  static bool deferredVtables() { return false; }
   static bool deferredFuncDecls() { return false; }
 
   // CXXABI
@@ -207,7 +205,6 @@ struct MissingFeatures {
   static bool aggValueSlotGC() { return false; }
   static bool aggValueSlotMayOverlap() { return false; }
   static bool aggValueSlotVolatile() { return false; }
-  static bool alignCXXRecordDecl() { return false; }
   static bool allocToken() { return false; }
   static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
@@ -220,7 +217,6 @@ struct MissingFeatures {
   static bool asmVectorType() { return false; }
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
-  static bool attributeBuiltin() { return false; }
   static bool attributeNoBuiltin() { return false; }
   static bool bitfields() { return false; }
   static bool builtinCall() { return false; }
@@ -258,7 +254,6 @@ struct MissingFeatures {
   static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool ehCleanupActiveFlag() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehScopeFilter() { return false; }
@@ -331,7 +326,6 @@ struct MissingFeatures {
   static bool setDLLStorageClass() { return false; }
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
-  static bool setTargetAttributes() { return false; }
   static bool shouldSplitConstantStore() { return false; }
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }

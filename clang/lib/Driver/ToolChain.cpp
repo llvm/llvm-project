@@ -1245,12 +1245,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
                                          types::ID InputType) const {
   switch (getTriple().getArch()) {
   default:
-    return getTripleString();
+    return getTripleString().str();
 
   case llvm::Triple::x86_64: {
     llvm::Triple Triple = getTriple();
     if (!Triple.isOSBinFormatMachO())
-      return getTripleString();
+      return getTripleString().str();
 
     if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
       // x86_64h goes in the triple. Other -march options just use the
@@ -1276,7 +1276,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     return Triple.getTriple();
   }
   case llvm::Triple::aarch64_32:
-    return getTripleString();
+    return getTripleString().str();
   case llvm::Triple::amdgcn: {
     llvm::Triple Triple = getTriple();
     if (Args.getLastArgValue(options::OPT_mcpu_EQ) == "amdgcnspirv")
@@ -1762,10 +1762,15 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     // matches the current toolchain triple. If it is not present
     // at all, target and host share a toolchain.
     if (A->getOption().matches(options::OPT_m_Group)) {
-      // Pass code object version to device toolchain
-      // to correctly set metadata in intermediate files.
+      // Pass certain options to the device toolchain even when the triple
+      // differs from the host: code object version must be passed to correctly
+      // set metadata in intermediate files; linker version must be passed
+      // because the Darwin toolchain requires the host and device linker
+      // versions to match (the host version is cached in
+      // MachO::getLinkerVersion).
       if (SameTripleAsHost ||
-          A->getOption().matches(options::OPT_mcode_object_version_EQ))
+          A->getOption().matches(options::OPT_mcode_object_version_EQ) ||
+          A->getOption().matches(options::OPT_mlinker_version_EQ))
         DAL->append(A);
       else
         Modified = true;
@@ -1778,7 +1783,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
         A->getOption().matches(options::OPT_Xopenmp_target);
 
     if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
-      llvm::Triple TT(getOpenMPTriple(A->getValue(0)));
+      llvm::Triple TT = normalizeOffloadTriple(A->getValue(0));
 
       // Passing device args: -Xopenmp-target=<triple> -opt=val.
       if (TT.getTriple() == getTripleString())

@@ -22,7 +22,7 @@ entry:
   ret i32 %load
 }
 
-define ptx_kernel i32 @test_align1(ptr noundef readonly byval(%struct.S1) align 1 captures(none) %params) {
+define ptx_kernel i32 @test_align1(ptr noundef readonly byval(%struct.S1) align 4 captures(none) %params) {
 ; CHECK-LABEL: define ptx_kernel i32 @test_align1(
 ; CHECK-SAME: ptr noundef readonly byval([[STRUCT_S1:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[PARAMS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

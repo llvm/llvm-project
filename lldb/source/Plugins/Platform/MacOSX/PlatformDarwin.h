@@ -67,9 +67,9 @@ public:
   Status ResolveSymbolFile(Target &target, const ModuleSpec &sym_spec,
                            FileSpec &sym_file) override;
 
-  FileSpecList
-  LocateExecutableScriptingResources(Target *target, Module &module,
-                                     Stream &feedback_stream) override;
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesForPlatform(
+      Target *target, Module &module_spec, Stream &feedback_stream) override;
 
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
@@ -151,9 +151,11 @@ public:
   /// Resources directory in the same dSYM.
   /// E.g., \c /path/to/.dSYM/Contents/Resources/DWARF/a.out
   ///
-  static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
-      Stream &feedback_stream, FileSpec module_spec, const Target &target,
-      const FileSpec &symfile_spec);
+  static llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesFromDSYM(Stream &feedback_stream,
+                                             FileSpec module_spec,
+                                             const Target &target,
+                                             const FileSpec &symfile_spec);
 
 protected:
   static const char *GetCompatibleArch(ArchSpec::Core core, size_t idx);

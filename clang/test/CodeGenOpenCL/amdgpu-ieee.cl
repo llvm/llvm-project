@@ -45,8 +45,8 @@ void fun() {
 }
 
 // ON-NOT: attributes [[ATTRS1]] = {{.*}} "amdgpu-ieee"
-// OFF: attributes [[ATTRS1]] = {{.*}} "amdgpu-ieee"="false"{{.*}}"no-nans-fp-math"="true"{{.*}}"no-trapping-math"="true"
+// OFF: attributes [[ATTRS1]] = {{.*}} "amdgpu-ieee"="false"{{.*}}"no-trapping-math"="true"
 // ON-NOT: attributes [[ATTRS2]] = {{.*}} "amdgpu-ieee"
-// OFF: attributes [[ATTRS2]] = {{.*}} "amdgpu-ieee"="false"{{.*}}"no-nans-fp-math"="true"{{.*}}"no-trapping-math"="true"
+// OFF: attributes [[ATTRS2]] = {{.*}} "amdgpu-ieee"="false"{{.*}}"no-trapping-math"="true"
 
 // DIAG: invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling
