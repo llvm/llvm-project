@@ -925,10 +925,11 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
 
   if (auto Err = Queue->Device->Device->recordEvent(Event->EventInfo,
                                                     Queue->AsyncInfo)) {
-    if (Event->EventInfo)
+    if (Event->EventInfo) {
       if (auto DestroyErr =
               Queue->Device->Device->destroyEvent(Event->EventInfo))
         return joinErrors(std::move(Err), std::move(DestroyErr));
+    }
 
     return Err;
   }
