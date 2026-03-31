@@ -18,6 +18,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -219,11 +220,10 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("TestModule.py", module_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  ASSERT_EQ(file_specs.GetSize(), 0u);
+  ASSERT_EQ(file_specs.size(), 0u);
 }
 
 TEST_F(PlatformLocateSafePathTest,
@@ -246,11 +246,10 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("TestModule1.py", module_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  ASSERT_EQ(file_specs.GetSize(), 0u);
+  ASSERT_EQ(file_specs.size(), 0u);
 }
 
 TEST_F(PlatformLocateSafePathTest,
@@ -275,12 +274,14 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("not_a_script.txt", module_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 1u);
-  EXPECT_EQ(file_specs.GetFileSpecAtIndex(0).GetFilename(), "TestModule.py");
+  EXPECT_EQ(file_specs.size(), 1u);
+
+  auto [fspec, load_style] = *file_specs.begin();
+  EXPECT_EQ(fspec.GetFilename(), "TestModule.py");
+  EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
 }
 
 TEST_F(PlatformLocateSafePathTest,
@@ -307,11 +308,10 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("TestModule.py", nested_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 0u);
+  EXPECT_EQ(file_specs.size(), 0u);
 }
 
 TEST_F(PlatformLocateSafePathTest,
@@ -367,15 +367,14 @@ TEST_F(PlatformLocateSafePathTest,
       FileSpec(path2));
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
   // path1 was the last appended path with a matching directory.
-  EXPECT_EQ(file_specs.GetSize(), 1u);
-  EXPECT_TRUE(llvm::StringRef(file_specs.GetFileSpecAtIndex(0).GetPath())
-                  .contains("AnotherSafePath"));
-  EXPECT_EQ(file_specs.GetFileSpecAtIndex(0).GetFilename(), "TestModule.py");
+  auto [fspec, load_style] = *file_specs.begin();
+  EXPECT_TRUE(llvm::StringRef(fspec.GetPath()).contains("AnotherSafePath"));
+  EXPECT_EQ(fspec.GetFilename(), "TestModule.py");
+  EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
 
   // Now add another safe path with a valid module directory but no
   // TestModule.py inside. LLDB shouldn't fall back to other matching safe
@@ -387,7 +386,7 @@ TEST_F(PlatformLocateSafePathTest,
   file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
       ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 0u);
+  EXPECT_EQ(file_specs.size(), 0u);
 
   // Now place the correctly named script in path3.
   CreateFile("TestModule.py", path3_module_dir);
@@ -395,10 +394,12 @@ TEST_F(PlatformLocateSafePathTest,
   file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
       ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 1u);
-  EXPECT_TRUE(llvm::StringRef(file_specs.GetFileSpecAtIndex(0).GetPath())
-                  .contains("EmptySafePath"));
-  EXPECT_EQ(file_specs.GetFileSpecAtIndex(0).GetFilename(), "TestModule.py");
+  EXPECT_EQ(file_specs.size(), 1u);
+
+  auto [fspec1, load_style1] = *file_specs.begin();
+  EXPECT_TRUE(llvm::StringRef(fspec1.GetPath()).contains("EmptySafePath"));
+  EXPECT_EQ(fspec1.GetFilename(), "TestModule.py");
+  EXPECT_EQ(load_style1, m_target_sp->GetLoadScriptFromSymbolFile());
 }
 
 TEST_F(PlatformLocateSafePathTest,
@@ -422,11 +423,10 @@ TEST_F(PlatformLocateSafePathTest,
   ASSERT_TRUE(orig_fspec);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 0u);
+  EXPECT_EQ(file_specs.size(), 0u);
 
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because"
@@ -459,13 +459,14 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("TestModule_1_1_1.py", module_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 1u);
-  EXPECT_EQ(file_specs.GetFileSpecAtIndex(0).GetFilename(),
-            "TestModule_1_1_1.py");
+  EXPECT_EQ(file_specs.size(), 1u);
+
+  auto [fspec, load_style] = *file_specs.begin();
+  EXPECT_EQ(fspec.GetFilename(), "TestModule_1_1_1.py");
+  EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
 
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because"
@@ -494,13 +495,14 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("TestModule_1_1_1.py", module_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 1u);
-  EXPECT_EQ(file_specs.GetFileSpecAtIndex(0).GetFilename(),
-            "TestModule_1_1_1.py");
+  EXPECT_EQ(file_specs.size(), 1u);
+
+  auto [fspec, load_style] = *file_specs.begin();
+  EXPECT_EQ(fspec.GetFilename(), "TestModule_1_1_1.py");
+  EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
   EXPECT_TRUE(ss.GetString().empty());
 }
 
@@ -524,11 +526,10 @@ TEST_F(PlatformLocateSafePathTest,
   ASSERT_TRUE(orig_fspec);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 0u);
+  EXPECT_EQ(file_specs.size(), 0u);
 
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'import.py' "
@@ -560,12 +561,14 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("_import.py", module_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 1u);
-  EXPECT_EQ(file_specs.GetFileSpecAtIndex(0).GetFilename(), "_import.py");
+  EXPECT_EQ(file_specs.size(), 1u);
+
+  auto [fspec, load_style] = *file_specs.begin();
+  EXPECT_EQ(fspec.GetFilename(), "_import.py");
+  EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
 
   std::string expected =
       llvm::formatv("debug script '{0}' cannot be loaded because 'import.py' "
@@ -594,12 +597,14 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("_import.py", module_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 1u);
-  EXPECT_EQ(file_specs.GetFileSpecAtIndex(0).GetFilename(), "_import.py");
+  EXPECT_EQ(file_specs.size(), 1u);
+
+  auto [fspec, load_style] = *file_specs.begin();
+  EXPECT_EQ(fspec.GetFilename(), "_import.py");
+  EXPECT_EQ(load_style, m_target_sp->GetLoadScriptFromSymbolFile());
   EXPECT_TRUE(ss.GetString().empty());
 }
 
@@ -623,11 +628,10 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("TestModule.py", inner_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 0u);
+  EXPECT_EQ(file_specs.size(), 0u);
   EXPECT_TRUE(ss.GetString().empty());
 }
 
@@ -656,11 +660,10 @@ TEST_F(PlatformLocateSafePathTest,
   CreateFile("TestModule.py", module_dir);
 
   StreamString ss;
-  FileSpecList file_specs =
-      Platform::LocateExecutableScriptingResourcesFromSafePaths(
-          ss, module_fspec, *m_target_sp);
+  auto file_specs = Platform::LocateExecutableScriptingResourcesFromSafePaths(
+      ss, module_fspec, *m_target_sp);
 
-  EXPECT_EQ(file_specs.GetSize(), 1u);
+  EXPECT_EQ(file_specs.size(), 1u);
   EXPECT_TRUE(ss.GetString().empty());
 }
 #endif // NDEBUG
