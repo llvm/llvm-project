@@ -1288,4 +1288,19 @@ gpu.func
     "some_user_op"(%r#0, %r#1) : (vector<1xf32>, vector<1xf32>) -> ()
     gpu.return
   }
+
+  // CHECK-NOT: xegpu.convert_layout
+  // CHECK: gpu.yield %{{.*}} : f32
+  gpu.func @convert_layout_scalar(%laneid: index){
+    %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (f32) {
+      %0 = "some_op"() : () -> f32
+      %1 = xegpu.convert_layout %0
+        <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>,
+        target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>}> 
+        : f32
+      gpu.yield %1 : f32
+    }
+    "some_user_op"(%r) : (f32) -> ()
+    gpu.return
+  }
 }

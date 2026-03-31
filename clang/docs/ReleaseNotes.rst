@@ -46,6 +46,9 @@ C++ Specific Potentially Breaking Changes
 - Clang now more aggressively optimizes away stores to objects after they are
   dead. This behavior can be disabled with ``-fno-lifetime-dse``.
 
+- Clang now correctly rejects ``export`` declarations in module implementation
+  partitions. (#GH107602)
+
 ABI Changes in This Version
 ---------------------------
 
@@ -199,6 +202,14 @@ New Compiler Flags
 - New ``-cl`` option ``/d2guardnochecks`` added to match MSVC. When Windows
   Control Flow Guard (CFG) is enabled by other options, it will instruct Clang
   to emit the CFG metadata, but disable adding checks.
+
+- New option ``-fdiagnostics-show-inlining-chain`` added to show inlining chain
+  notes for ``[[gnu::warning]]`` and ``[[gnu::error]]`` diagnostics. When a
+  function with these attributes is called from an inlined context, Clang can
+  now show which functions were inlined to reach the call. When debug info is
+  available (``-gline-directives-only`` (implicitly enabled at ``-g1``) or
+  higher), accurate source locations are used; otherwise, a heuristic fallback
+  is used with a note suggesting how to enable debug info for better accuracy.
 
 Deprecated Compiler Flags
 -------------------------
@@ -447,7 +458,10 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
-
+- Introduced a new target specific builtin ``__builtin_amdgcn_processor_is``,
+  a late / deferred query for the current target processor.
+- Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
+  a late / deferred query for the availability of target specific builtins.
 - Initial support for gfx1310
 
 NVPTX Support

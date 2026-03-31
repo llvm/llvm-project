@@ -1344,12 +1344,11 @@ define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
 define i8 @pow2_trunc(i32 %x, i32 %a){
 ; CHECK-LABEL: pow2_trunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    negl %ecx
-; CHECK-NEXT:    andl %esi, %ecx
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    decb %al
+; CHECK-NEXT:    andb %dil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %neg_a = sub i32 0, %a
@@ -1382,11 +1381,10 @@ define i8 @pow2_trunc_vec(<4 x i32> %x, <4 x i32> %a) {
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    psubd %xmm1, %xmm2
 ; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    paddb %xmm2, %xmm1
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %a.splat = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
