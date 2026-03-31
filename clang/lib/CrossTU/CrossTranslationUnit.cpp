@@ -745,7 +745,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
   auto GetLine = [&SM](const llvm::yaml::Node *N) -> int {
     return N ? SM.FindLineNumber(N->getSourceRange().Start) : 0;
   };
-  auto WrongFormat = [&](const llvm::yaml::Node *N) {
+  auto WrongFormatError = [&](const llvm::yaml::Node *N) {
     return llvm::make_error<IndexError>(
         index_error_code::invocation_list_wrong_format, FilePath.str(),
         GetLine(N));
@@ -769,13 +769,13 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
   /// parts.
   auto *Mappings = dyn_cast<llvm::yaml::MappingNode>(DocumentRoot);
   if (!Mappings)
-    return WrongFormat(DocumentRoot);
+    return WrongFormatError(DocumentRoot);
 
   for (auto &NextMapping : *Mappings) {
     /// The keys should be strings, which represent a source-file path.
     auto *Key = dyn_cast<llvm::yaml::ScalarNode>(NextMapping.getKey());
     if (!Key)
-      return WrongFormat(NextMapping.getKey());
+      return WrongFormatError(NextMapping.getKey());
 
     SmallString<32> ValueStorage;
     StringRef SourcePath = Key->getValue(ValueStorage);
@@ -794,12 +794,12 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
     /// the invocation.
     auto *Args = dyn_cast<llvm::yaml::SequenceNode>(NextMapping.getValue());
     if (!Args)
-      return WrongFormat(NextMapping.getValue());
+      return WrongFormatError(NextMapping.getValue());
 
     for (auto &Arg : *Args) {
       auto *CmdString = dyn_cast<llvm::yaml::ScalarNode>(&Arg);
       if (!CmdString)
-        return WrongFormat(&Arg);
+        return WrongFormatError(&Arg);
       /// Every conversion starts with an empty working storage, as it is not
       /// clear if this is a requirement of the YAML parser.
       ValueStorage.clear();
@@ -808,7 +808,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle,
     }
 
     if (InvocationList[InvocationKey].empty())
-      return WrongFormat(Key);
+      return WrongFormatError(Key);
   }
 
   return InvocationList;
