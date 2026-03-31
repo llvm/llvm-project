@@ -201,23 +201,16 @@ void testCastUpcastMultipleInheritance(F& value) {
 
 struct G : D, C {};
 
-// FIXME: applying both changes results in ambiguous conversion
 void testCastUpcastDiamondExplicit(G& value) {
   A& a21 = llvm::cast<A>(llvm::cast<C>(value));
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
   // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'C', which is a subtype of 'A'
-  // CHECK-MESSAGES: :[[@LINE-3]]:26: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-4]]:40: note: source expression has type 'G', which is a subtype of 'C'
   // CHECK-FIXES: A& a21 = llvm::cast<C>(value);
   (void)a21;
 }
 
-// FIXME: the end result is ambiguous
-void testCastUpcastDiamondImplicit(G& value) {
-  A& a22 = llvm::cast<C>(value);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
-  // CHECK-MESSAGES: :[[@LINE-2]]:26: note: source expression has type 'G', which is a subtype of 'C'
-  // CHECK-FIXES: A& a22 = value;
+void testCastUpcastDiamondImplicit(G& asdf) {
+  A& a22 = llvm::cast<C>(asdf);
   (void)a22;
 }
 

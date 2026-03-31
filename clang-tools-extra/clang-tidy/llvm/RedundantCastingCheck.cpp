@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantCastingCheck.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -52,7 +55,11 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
             callee(expr(ignoringImpCasts(
                 unresolvedLookupExpr(hasAnyUnresolvedName(FunctionNames))
                     .bind("callee")))));
-  Finder->addMatcher(callExpr(AnyCalleeName).bind("call"), this);
+  Finder->addMatcher(
+      callExpr(AnyCalleeName, optionally(hasParent(
+                                  callExpr(AnyCalleeName).bind("parent_cast"))))
+          .bind("call"),
+      this);
   Finder->addMatcher(
       callExpr(
           AnyCalleeNameInUninstantiatedTemplate,
@@ -123,6 +130,39 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
       FromDecl && RetDecl && FromDecl->isDerivedFrom(RetDecl);
   if (FromTy != RetTy && !IsDerived)
     return;
+
+  QualType ParentTy;
+  if (const auto *ParentCast = Nodes.getNodeAs<Expr>("parent_cast")) {
+    ParentTy = ParentCast->getType();
+  } else {
+    // IgnoreUnlessSpelledInSource prevents matching implicit casts
+    TraversalKindScope TmpTraversalKind(*Result.Context, TK_AsIs);
+    for (const auto Parent : Result.Context->getParents(*Call)) {
+      if (const auto *ParentCastExpr = Parent.get<CastExpr>()) {
+        ParentTy = ParentCastExpr->getType();
+        break;
+      }
+    }
+  }
+  if (!ParentTy.isNull()) {
+    const CXXRecordDecl *ParentDecl = ParentTy->getAsCXXRecordDecl();
+    if (FromDecl && ParentDecl) {
+      CXXBasePaths Paths(/*FindAmbiguities=*/true,
+                         /*RecordPaths=*/false,
+                         /*DetectVirtual=*/false);
+      const bool IsDerivedFromParent =
+          FromDecl && ParentDecl && FromDecl->isDerivedFrom(ParentDecl, Paths);
+      // For the following case a direct `cast<A>(d)` would be ambiguous:
+      //   struct A {};
+      //   struct B : A {};
+      //   struct C : A {};
+      //   struct D : B, C {};
+      // So we should not warn for `A *a = cast<C>(d))`.
+      if (IsDerivedFromParent &&
+          Paths.isAmbiguous(ParentTy->getCanonicalTypeUnqualified()))
+        return;
+    }
+  }
 
   auto GetText = [&](SourceRange R) {
     return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
