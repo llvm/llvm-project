@@ -382,10 +382,11 @@ void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
-  if (BO->getType()->isPointerType() && BO->isAdditiveOp())
-    handlePointerArithmetic(BO);
   if (BO->isCompoundAssignmentOp())
     return;
+
+  if (BO->getType()->isPointerType() && BO->isAdditiveOp())
+    handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
