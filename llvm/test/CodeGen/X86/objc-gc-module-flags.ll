@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 
 ; CHECK:        .section  __DATA,__objc_imageinfo,regular,no_dead_strip
 ; CHECK-NEXT: L_OBJC_IMAGE_INFO:

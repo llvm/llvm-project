@@ -2,18 +2,18 @@
 
 ; Combined ABI tests for fp128 and i128
 
-; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-X64-F128
-; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-X64-I128
-; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=x86_64-pc-windows-msvc -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-MSVC64-F128
-; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=x86_64-pc-windows-msvc -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-MSVC64-I128
-; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=x86_64-pc-windows-gnu -verify-machineinstrs    | FileCheck %s --check-prefix=CHECK-MINGW-F128
-; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=x86_64-pc-windows-gnu -verify-machineinstrs    | FileCheck %s --check-prefix=CHECK-MINGW-I128
+; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-X64-F128
+; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-X64-I128
+; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-MSVC64-F128
+; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-MSVC64-I128
+; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-gnu -verify-machineinstrs    | FileCheck %s --check-prefix=CHECK-MINGW-F128
+; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-gnu -verify-machineinstrs    | FileCheck %s --check-prefix=CHECK-MINGW-I128
 ;
 ; Use the same directive for i128 and fp128 on x86-32 since both are passed and returned on the stack.
-; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=i686-unknown-linux-gnu -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-X86
-; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=i686-unknown-linux-gnu -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-X86
-; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=i686-pc-windows-msvc -verify-machineinstrs     | FileCheck %s --check-prefix=CHECK-MSVC32
-; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=i686-pc-windows-msvc -verify-machineinstrs     | FileCheck %s --check-prefix=CHECK-MSVC32
+; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -combiner-topological-sorting -mtriple=i686-unknown-linux-gnu -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-X86
+; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -combiner-topological-sorting -mtriple=i686-unknown-linux-gnu -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-X86
+; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -combiner-topological-sorting -mtriple=i686-pc-windows-msvc -verify-machineinstrs     | FileCheck %s --check-prefix=CHECK-MSVC32
+; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -combiner-topological-sorting -mtriple=i686-pc-windows-msvc -verify-machineinstrs     | FileCheck %s --check-prefix=CHECK-MSVC32
 
 define void @store(PrimTy %x, ptr %p) nounwind {
 ; CHECK-X64-F128-LABEL: store:

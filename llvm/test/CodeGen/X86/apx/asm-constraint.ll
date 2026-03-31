@@ -1,7 +1,7 @@
 ; Check r16-r31 can not be used with 'q','r','l' constraint for backward compatibility.
-; RUN: not llc -mtriple=x86_64 < %s 2>&1 | FileCheck %s --check-prefix=ERR
-; RUN: not llc -mtriple=x86_64 -mattr=+egpr < %s 2>&1 | FileCheck %s --check-prefix=ERR
-; RUN: llc -mtriple=x86_64 -mattr=+egpr,+inline-asm-use-gpr32 < %s | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64 < %s 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64 -mattr=+egpr < %s 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -mattr=+egpr,+inline-asm-use-gpr32 < %s | FileCheck %s
 
 define void @q() {
 ; ERR: error: inline assembly requires more registers than available

@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; Check that we come up with appropriate section names that link.exe sorts
 ; well.

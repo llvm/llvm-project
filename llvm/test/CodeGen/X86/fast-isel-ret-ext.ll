@@ -1,5 +1,5 @@
-; RUN: llc < %s  -O0 -fast-isel-abort=1 -mtriple i686-apple-darwin10 | FileCheck %s
-; RUN: llc < %s  -O0 -fast-isel-abort=1 -mtriple x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s  -O0 -fast-isel-abort=1 -mtriple i686-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s  -O0 -fast-isel-abort=1 -mtriple x86_64-apple-darwin10 | FileCheck %s
 
 define zeroext i8 @test1(i32 %y) nounwind {
   %conv = trunc i32 %y to i8

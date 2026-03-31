@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu | FileCheck %s
 
 ; PR43155, we used to emit dead stack adjustments for noreturn calls with stack
 ; arguments.

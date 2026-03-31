@@ -21,7 +21,7 @@
 ;     $ clang -cc1 -triple=x86_64-unknown-linux-gnu -debug-info-kind=standalone \
 ;       -mllvm -generate-arange-section -std=c++17 foo.cpp
 
-; RUN: llc --generate-arange-section < %s
+; RUN: llc -combiner-topological-sorting --generate-arange-section < %s
 
 ; ModuleID = 'reduced2.cpp'
 source_filename = "reduced2.cpp"

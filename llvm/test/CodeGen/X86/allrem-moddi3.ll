@@ -1,9 +1,9 @@
 ; Test that, for a 64 bit signed rem, a libcall to allrem is made on Windows
 ; unless we have libgcc.
 
-; RUN: llc < %s -mtriple i386-pc-win32 | FileCheck %s
-; RUN: llc < %s -mtriple i386-pc-cygwin | FileCheck %s -check-prefix USEMODDI
-; RUN: llc < %s -mtriple i386-pc-mingw32 | FileCheck %s -check-prefix USEMODDI
+; RUN: llc -combiner-topological-sorting < %s -mtriple i386-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple i386-pc-cygwin | FileCheck %s -check-prefix USEMODDI
+; RUN: llc -combiner-topological-sorting < %s -mtriple i386-pc-mingw32 | FileCheck %s -check-prefix USEMODDI
 ; PR10305
 ; END.
 

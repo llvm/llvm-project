@@ -1,5 +1,5 @@
 ;;; MFS with sample profile fails when no -enable-fs-discriminator=true.
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -fs-profile-file=%S/Inputs/fsloader-mfs.afdo -split-machine-functions -enable-fs-discriminator=false 2>&1 | FileCheck %s --check-prefix=NODISCRIMINATOR
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -fs-profile-file=%S/Inputs/fsloader-mfs.afdo -split-machine-functions -enable-fs-discriminator=false 2>&1 | FileCheck %s --check-prefix=NODISCRIMINATOR
 ; NODISCRIMINATOR: warning: Using AutoFDO without FSDiscriminator for MFS may regress performance.
 
 define void @foo4(i1 zeroext %0, i1 zeroext %1) nounwind {

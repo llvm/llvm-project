@@ -1,11 +1,11 @@
-; RUN: llc < %s -mtriple=x86_64-darwin -remarks-section -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN -DPATH=%/t.yaml %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-darwin -remarks-section -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN -DPATH=%/t.yaml %s
 
-; RUN: llc < %s -mtriple=x86_64-darwin -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-DEFAULT %s
-; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=bitstream -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-DEFAULT-BITSTREAM %s
-; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=bitstream -remarks-section=false -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-OVERRIDE-BITSTREAM %s
-; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=yaml -remarks-section=true -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-OVERRIDE-YAML %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-darwin -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-DEFAULT %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-darwin --pass-remarks-format=bitstream -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-DEFAULT-BITSTREAM %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-darwin --pass-remarks-format=bitstream -remarks-section=false -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-OVERRIDE-BITSTREAM %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-darwin --pass-remarks-format=yaml -remarks-section=true -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-OVERRIDE-YAML %s
 
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu --pass-remarks-format=bitstream -remarks-section -pass-remarks-output=%/t.yaml 2>&1 | FileCheck --check-prefix=CHECK-LINUX-DEFAULT-BITSTREAM %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu --pass-remarks-format=bitstream -remarks-section -pass-remarks-output=%/t.yaml 2>&1 | FileCheck --check-prefix=CHECK-LINUX-DEFAULT-BITSTREAM %s
 
 ; CHECK-DARWIN: .section __LLVM,__remarks,regular,debug
 ; CHECK-DARWIN-NEXT: .byte

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-w64-mingw32 %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-w64-mingw32 %s -o - | FileCheck %s
 
 @glob = common dso_local local_unnamed_addr global x86_fp80 0xK00000000000000000000, align 16
 

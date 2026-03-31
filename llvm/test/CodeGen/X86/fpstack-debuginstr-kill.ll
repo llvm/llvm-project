@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -mtriple=i386-apple-darwin -no-integrated-as
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i386-apple-darwin -no-integrated-as
 
 source_filename = "test/CodeGen/X86/fpstack-debuginstr-kill.ll"
 

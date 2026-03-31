@@ -1,4 +1,4 @@
-; RUN: llc -simplify-mir -stop-after=machine-sink < %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -simplify-mir -stop-after=machine-sink < %s -o - | FileCheck %s
 
 ; ModuleID = 'test-sink-debug.cpp'
 source_filename = "test-sink-debug.cpp"

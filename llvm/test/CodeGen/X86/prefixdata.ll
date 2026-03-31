@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=MACHO %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck --check-prefix=ELF %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=MACHO %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux | FileCheck --check-prefix=ELF %s
 
 @i = linkonce_odr global i32 1
 

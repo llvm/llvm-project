@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -stack-symbol-ordering=0 | FileCheck %s -check-prefix=X64
-; RUN: llc < %s -mtriple=i686-apple-darwin -stack-symbol-ordering=0 | FileCheck %s -check-prefix=X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -stack-symbol-ordering=0 | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -stack-symbol-ordering=0 | FileCheck %s -check-prefix=X86
 
 %struct.Baz = type { [17 x i8] }
 %struct.__va_list_tag = type { i32, i32, ptr, ptr }

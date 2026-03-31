@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i386-linux-gnu -mcpu=i386 %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-linux-gnu -mcpu=i386 %s -o - | FileCheck %s
 
 define i64 @test_add(ptr %addr, i64 %inc) {
 ; CHECK-LABEL: test_add:

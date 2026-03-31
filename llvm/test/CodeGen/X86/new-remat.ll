@@ -1,4 +1,4 @@
-; RUN: llc -verify-regalloc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-regalloc < %s | FileCheck %s
 ; Check all spills are rematerialized.
 ; CHECK-NOT: Spill
 

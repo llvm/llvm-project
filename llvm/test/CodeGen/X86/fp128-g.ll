@@ -1,4 +1,4 @@
-; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx \
+; RUN: llc -combiner-topological-sorting < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx \
 ; RUN:    -enable-legalize-types-checking | FileCheck %s --check-prefix=X64
 ;
 ; These cases check if x86_64-linux-android works with -O2 -g,

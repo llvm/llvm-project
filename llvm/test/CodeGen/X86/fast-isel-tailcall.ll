@@ -1,4 +1,4 @@
-; RUN: llc < %s -fast-isel -tailcallopt -mtriple=i686-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -fast-isel -tailcallopt -mtriple=i686-- | FileCheck %s
 ; CHECK-NOT: add
 ; PR4154
 

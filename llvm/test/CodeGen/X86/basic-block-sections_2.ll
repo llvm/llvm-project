@@ -11,7 +11,7 @@
 ;; $ clang -O1 -emit-llvm -S
 ;;
 ; __cxx_global_var_init has multiple basic blocks which will produce many sections.
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s
 
 ; CHECK-LABEL: __cxx_global_var_init:
 ; CHECK-LABEL: __cxx_global_var_init.__part.1:

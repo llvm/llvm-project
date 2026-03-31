@@ -1,11 +1,11 @@
-; RUN: llc -verify-machineinstrs -O3 -mtriple=x86_64-apple-macosx -enable-implicit-null-checks < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -O3 -mtriple=x86_64-apple-macosx -enable-implicit-null-checks < %s | FileCheck %s
 
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -enable-implicit-null-checks \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx -enable-implicit-null-checks \
 ; RUN:    | llvm-mc -triple x86_64-apple-macosx -filetype=obj -o - \
 ; RUN:    | llvm-objdump --triple=x86_64-apple-macosx --fault-map-section - \
 ; RUN:    | FileCheck %s -check-prefix OBJDUMP
 
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -enable-implicit-null-checks \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -enable-implicit-null-checks \
 ; RUN:    | llvm-mc -triple x86_64-unknown-linux-gnu -filetype=obj -o - \
 ; RUN:    | llvm-objdump --triple=x86_64-unknown-linux-gnu --fault-map-section - \
 ; RUN:    | FileCheck %s -check-prefix OBJDUMP

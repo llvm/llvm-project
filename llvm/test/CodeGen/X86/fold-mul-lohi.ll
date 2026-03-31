@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686--            | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--            | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux | FileCheck %s
 ; CHECK-NOT: lea
 
 @B = external dso_local global [1000 x i8], align 32

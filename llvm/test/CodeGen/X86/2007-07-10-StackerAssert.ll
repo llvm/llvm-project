@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-linux-gnu -mcpu=athlon -relocation-model=pic
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux-gnu -mcpu=athlon -relocation-model=pic
 ; PR1545
 
 @.str97 = external constant [56 x i8]		; <ptr> [#uses=1]

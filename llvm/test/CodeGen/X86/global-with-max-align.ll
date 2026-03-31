@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 < %s | FileCheck %s
 
 ; Make sure alignment of 2^32 isn't truncated to zero.
 

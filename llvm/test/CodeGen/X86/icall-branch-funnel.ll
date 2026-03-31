@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux < %s | FileCheck %s
 
 @g = external global i8
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s | FileCheck %s
 
 ; We should treat non-Function personalities as the unknown personality, which
 ; is usually Itanium.

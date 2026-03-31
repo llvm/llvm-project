@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -no-integrated-as < %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -no-integrated-as < %s 2>&1 | FileCheck %s
 
 @x = global i32 0, align 4
 

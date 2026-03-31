@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -o - | FileCheck --check-prefix=x86_64 %s
-; RUN: llc < %s -mtriple=i386-linux-gnu -o -   | FileCheck --check-prefix=i386   %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -o - | FileCheck --check-prefix=x86_64 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-gnu -o -   | FileCheck --check-prefix=i386   %s
 
 declare ptr @llvm.stackaddress.p0()
 

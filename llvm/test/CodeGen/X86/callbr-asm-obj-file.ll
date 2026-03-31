@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -filetype=obj -o - \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -filetype=obj -o - \
 ; RUN:  | llvm-objdump --no-print-imm-hex --triple=x86_64-linux-gnu -d - \
 ; RUN:  | FileCheck %s
 

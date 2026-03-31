@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=generic -mtriple=i686-linux -verify-machineinstrs | FileCheck %s -check-prefix=X32-Linux
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -verify-machineinstrs | FileCheck %s -check-prefix=X64-Linux
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i686-linux -verify-machineinstrs | FileCheck %s -check-prefix=X32-Linux
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -verify-machineinstrs | FileCheck %s -check-prefix=X64-Linux
 
 ; The HiPE compiler (i.e., the native code compiler of the Erlang/OTP system)
 ; adds a custom assembly prologue in order to efficiently manipulate the stack

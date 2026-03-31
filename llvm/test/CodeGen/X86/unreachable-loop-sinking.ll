@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; PR6777
 
 ; MachineSink shouldn't try to sink code in unreachable blocks, as it's

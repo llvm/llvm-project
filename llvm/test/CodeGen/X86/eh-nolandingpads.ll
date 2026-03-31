@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux | FileCheck %s
 ; Test that we emit functions with explicitly specified personality,
 ; even if no landing pads are left.
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 ; PR3486
 
 define i32 @foo(i8 signext %p_26) nounwind {

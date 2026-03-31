@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-unknown-linux-gnu < %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu < %s 2>&1 | FileCheck %s
 
 ; CHECK: LLVM ERROR: cannot lower invokes with arbitrary operand bundles: foo
 

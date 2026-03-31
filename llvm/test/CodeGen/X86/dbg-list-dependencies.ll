@@ -1,4 +1,4 @@
-; RUN: llc --stop-after=finalize-isel < %s
+; RUN: llc -combiner-topological-sorting --stop-after=finalize-isel < %s
 
 ; Tests that files with multiple SDNode dependencies are correctly handled by
 ; SelectionDAG; dependencies that are incorrectly updated for an SDDbgValue

@@ -1,8 +1,8 @@
-; RUN: llc < %s -emulated-tls -mtriple=i686-linux-android -relocation-model=pic | FileCheck  %s
-; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck  %s
+; RUN: llc -combiner-topological-sorting < %s -emulated-tls -mtriple=i686-linux-android -relocation-model=pic | FileCheck  %s
+; RUN: llc -combiner-topological-sorting < %s -emulated-tls -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck  %s
 
-; RUN: llc < %s -mtriple=i686-linux-android -relocation-model=pic | FileCheck  %s
-; RUN: llc < %s -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck  %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-linux-android -relocation-model=pic | FileCheck  %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck  %s
 
 ; Make sure that some symboles are not emitted in emulated TLS model.
 

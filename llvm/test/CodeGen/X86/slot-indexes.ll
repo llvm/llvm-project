@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux -stop-after=slotindexes %s -o - | llc -passes='print<slot-indexes>' -x mir 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -stop-after=slotindexes %s -o - | llc -combiner-topological-sorting -passes='print<slot-indexes>' -x mir 2>&1 | FileCheck %s
 
 define void @foo(){
   ret void

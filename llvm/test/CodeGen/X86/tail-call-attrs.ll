@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -o - %s | FileCheck %s
 
 ; Simple case: completely identical returns, even with extensions, shouldn't be
 ; a barrier to tail calls.

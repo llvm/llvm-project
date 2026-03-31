@@ -1,4 +1,4 @@
-; RUN: llc < %s -x86-early-ifcvt -stress-early-ifcvt | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -x86-early-ifcvt -stress-early-ifcvt | FileCheck %s
 target triple = "x86_64-apple-macosx10.8.0"
 
 ; CHECK: mm2

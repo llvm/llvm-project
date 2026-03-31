@@ -1,6 +1,6 @@
-; RUN: llc %s -o - -filetype=obj --mcpu=znver2 | llvm-objdump -dr  - | FileCheck %s
-; RUN: llc %s -o - -filetype=asm --mcpu=znver2 | llvm-mc - -o - --mcpu=znver2 -filetype=obj -triple x86_64-unknown-linux-gnu | llvm-objdump -dr  - | FileCheck %s
-; RUN: llc %s -o - -filetype=asm --mcpu=znver2 | FileCheck %s --check-prefix=ASM
+; RUN: llc -combiner-topological-sorting %s -o - -filetype=obj --mcpu=znver2 | llvm-objdump -dr  - | FileCheck %s
+; RUN: llc -combiner-topological-sorting %s -o - -filetype=asm --mcpu=znver2 | llvm-mc - -o - --mcpu=znver2 -filetype=obj -triple x86_64-unknown-linux-gnu | llvm-objdump -dr  - | FileCheck %s
+; RUN: llc -combiner-topological-sorting %s -o - -filetype=asm --mcpu=znver2 | FileCheck %s --check-prefix=ASM
 
 ;; Check that we produce a push, then an align-to-16-bytes p2align.
 ;

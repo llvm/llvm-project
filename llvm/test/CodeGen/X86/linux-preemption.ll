@@ -1,13 +1,13 @@
-; RUN: llc -mtriple x86_64-pc-linux -relocation-model=static < %s | \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-linux -relocation-model=static < %s | \
 ; RUN:   FileCheck --check-prefixes=COMMON,STATIC %s
-; RUN: llc -mtriple x86_64-pc-linux -relocation-model=pic < %s | \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-linux -relocation-model=pic < %s | \
 ; RUN:   FileCheck --check-prefixes=COMMON,CHECK %s
-; RUN: llc -mtriple x86_64-pc-linux -relocation-model=dynamic-no-pic < %s | \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-linux -relocation-model=dynamic-no-pic < %s | \
 ; RUN:   FileCheck --check-prefixes=COMMON,CHECK %s
 
 ; 32 bits
 
-; RUN: llc -mtriple i386-pc-linux \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-linux \
 ; RUN:     -relocation-model=pic     < %s | FileCheck --check-prefix=CHECK32 %s
 
 ; globals

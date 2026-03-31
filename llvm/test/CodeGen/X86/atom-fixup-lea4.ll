@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=atom -mtriple=x86_64-linux
+; RUN: llc -combiner-topological-sorting < %s -mcpu=atom -mtriple=x86_64-linux
 
 %struct.ValueWrapper = type { double }
 %struct.ValueWrapper.6 = type { %struct.ValueWrapper.7 }

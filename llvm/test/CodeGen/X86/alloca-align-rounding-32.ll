@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin | FileCheck %s
 
 declare void @bar(ptr %n)
 

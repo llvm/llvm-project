@@ -1,7 +1,7 @@
 ; Test that global values with explicit sections are placed into unique sections.
 
-; RUN: llc < %s | FileCheck %s
-; RUN: llc -separate-named-sections < %s | FileCheck %s --check-prefix=SEPARATE
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -separate-named-sections < %s | FileCheck %s --check-prefix=SEPARATE
 target triple="x86_64-unknown-unknown-elf"
 
 define i32 @f() section "custom_text" {

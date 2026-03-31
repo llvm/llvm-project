@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 
 define <4 x float> @foo(<4 x float> %val, <4 x float> %test) nounwind {
 ; CHECK-LABEL: LCPI0_0:

@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
 
 ; Checks that fake uses of the FP stack do not cause a crash.
 ;

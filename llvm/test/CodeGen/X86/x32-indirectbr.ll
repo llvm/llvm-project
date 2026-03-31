@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-none-none-gnux32 -mcpu=generic | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-none-none-gnux32 -mcpu=generic -fast-isel | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-none-none-gnux32 -mcpu=generic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-none-none-gnux32 -mcpu=generic -fast-isel | FileCheck %s
 ; Bug 22859
 ;
 ; x32 pointers are 32-bits wide. x86-64 indirect branches use the full 64-bit

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s --check-prefix=CHECK
 
 define dso_local void @normal_call(ptr noundef readonly %func_ptr) local_unnamed_addr section "nc_sect" {
 entry:

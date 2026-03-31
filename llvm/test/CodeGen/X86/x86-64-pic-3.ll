@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -relocation-model=pic | FileCheck %s
 
 
 ; CHECK-NOT: {{callq	f@PLT}}

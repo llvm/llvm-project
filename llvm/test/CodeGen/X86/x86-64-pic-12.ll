@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting -o - %s -relocation-model=pic | FileCheck %s
 ; Check that we do not get GOT relocations with the x86_64-pc-windows-macho
 ; triple.
 target triple = "x86_64-pc-windows-macho"

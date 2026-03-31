@@ -1,7 +1,7 @@
-; RUN: llc < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-windows-itanium | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
-; RUN: llc < %s -O0 -mattr=sse2 -mtriple=x86_64-uefi | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
-; RUN: llc < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-mingw32 | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
-; RUN: llc < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-mingw32 -mcpu=atom | FileCheck %s -check-prefix=WIN64 -check-prefix=ATOM
+; RUN: llc -combiner-topological-sorting < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-windows-itanium | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
+; RUN: llc -combiner-topological-sorting < %s -O0 -mattr=sse2 -mtriple=x86_64-uefi | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
+; RUN: llc -combiner-topological-sorting < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-mingw32 | FileCheck %s -check-prefix=WIN64 -check-prefix=NORM
+; RUN: llc -combiner-topological-sorting < %s -O0 -mattr=sse2 -mtriple=x86_64-pc-mingw32 -mcpu=atom | FileCheck %s -check-prefix=WIN64 -check-prefix=ATOM
 
 ; Check function without prolog
 define void @foo0() uwtable {

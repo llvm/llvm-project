@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin
 ; PR2808
 
 @g_3 = external global i32		; <ptr> [#uses=1]

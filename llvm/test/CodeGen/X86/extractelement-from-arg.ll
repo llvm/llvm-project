@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mattr=+sse2
 
 define void @test(ptr %R, <4 x float> %X) nounwind {
 	%tmp = extractelement <4 x float> %X, i32 3

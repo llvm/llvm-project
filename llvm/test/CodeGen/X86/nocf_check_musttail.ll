@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=x86_64-unknown-unknown -x86-indirect-branch-tracking < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -x86-indirect-branch-tracking < %s 2>&1 | FileCheck %s
 
 ; NOTRACK tail call is not implemented, so nocf_check just disables tail call.
 define void @NoCfCheckTail(ptr %p) #1 {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-windows-msvc | FileCheck %s
 
 define dso_local x86_regcallcc void @ensure_align() local_unnamed_addr #0 {
 entry:

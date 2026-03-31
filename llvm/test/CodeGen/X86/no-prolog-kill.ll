@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -o - %s | FileCheck %s
 target triple = "x86_64--"
 
 ; This function gets a AL live-in and at same time saves+restores RAX. We must

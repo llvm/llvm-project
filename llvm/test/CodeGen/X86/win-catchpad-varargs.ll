@@ -1,5 +1,5 @@
-; RUN: llc -stack-symbol-ordering=0 -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -stack-symbol-ordering=0 -mtriple=i686-windows-msvc < %s | FileCheck %s --check-prefix=X86
+; RUN: llc -combiner-topological-sorting -stack-symbol-ordering=0 -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -stack-symbol-ordering=0 -mtriple=i686-windows-msvc < %s | FileCheck %s --check-prefix=X86
 
 declare void @llvm.va_start(ptr)
 declare void @llvm.va_end(ptr)

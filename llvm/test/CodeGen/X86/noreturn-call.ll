@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 | FileCheck %s
 
 define void @test1(i32 %c) {
 ; CHECK-LABEL: test1:

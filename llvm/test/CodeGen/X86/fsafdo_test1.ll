@@ -1,5 +1,5 @@
-; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck %s --check-prefixes=V0,V01
-; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s --check-prefixes=V1,V01
+; RUN: llc -combiner-topological-sorting -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck %s --check-prefixes=V0,V01
+; RUN: llc -combiner-topological-sorting -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s --check-prefixes=V1,V01
 ;
 ; Check that fs-afdo discriminators are generated.
 ; V01: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3

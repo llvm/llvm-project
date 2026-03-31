@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; Generated with this C source:
 ; static __forceinline void __cpuid() { __asm__(""); }

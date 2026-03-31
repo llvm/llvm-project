@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux | FileCheck %s
 
 
 ; Function Attrs: optsize

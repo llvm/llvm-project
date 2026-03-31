@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK
 
 ; Regression test for function patching asserting in some cases when debug info activated.
 ; The code below reproduces this crash.

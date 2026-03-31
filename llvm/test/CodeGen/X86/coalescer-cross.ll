@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin10 | FileCheck %s
-; RUN: llc < %s -mtriple=i386-apple-darwin10 -regalloc=basic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin10 -regalloc=basic | FileCheck %s
 ; rdar://6509240
 
 ; CHECK: os_clock

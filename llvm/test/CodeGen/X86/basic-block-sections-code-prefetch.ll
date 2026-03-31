@@ -16,7 +16,7 @@
 ; RUN: echo 't 0,0' >> %t
 ; RUN: echo 't 0,1' >> %t
 ;;
-; RUN: llc < %s -mtriple=x86_64-pc-linux -asm-verbose=false -function-sections -basic-block-sections=%t -O0 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -asm-verbose=false -function-sections -basic-block-sections=%t -O0 | FileCheck %s
 
 define void @foo(i1 %arg) nounwind {
   br i1 %arg, label %cond.true, label %cond.false

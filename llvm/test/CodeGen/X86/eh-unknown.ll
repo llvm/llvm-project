@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-msvc < %s | FileCheck %s
 
 ; An unknown personality forces us to emit an Itanium LSDA. Make sure that the
 ; Itanium call site table actually tells the personality to keep unwinding,

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin11 -no-integrated-as | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin11 -no-integrated-as | FileCheck %s
 ; Any register is OK for %0, but it must be a register, not memory.
 
 define i32 @foo() nounwind ssp {

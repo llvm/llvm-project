@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mattr=+sse2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=+sse2
 	%struct.foo = type opaque
 
 define fastcc i32 @test(ptr %v, ptr %vi) {

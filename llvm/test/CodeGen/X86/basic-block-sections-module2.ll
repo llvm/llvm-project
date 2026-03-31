@@ -10,7 +10,7 @@
 ; RUN: echo '!!0' >> %t1
 ; RUN: echo '!test5' >> %t1
 ; RUN: echo '!!0' >> %t1
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1  | FileCheck %s -check-prefix=RIGHT-MODULE
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1  | FileCheck %s -check-prefix=RIGHT-MODULE
 ;; Specifying wrong filenames.
 ; RUN: echo '!test1 M=/test_dirname/test_filename1' > %t2
 ; RUN: echo '!!0' >> %t2
@@ -22,7 +22,7 @@
 ; RUN: echo '!!0' >> %t2
 ; RUN: echo '!test5 M=any_filename' >> %t1
 ; RUN: echo '!!0' >> %t1
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t2  | FileCheck %s -check-prefix=WRONG-MODULE
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t2  | FileCheck %s -check-prefix=WRONG-MODULE
 
 define dso_local i32 @test1(i32 noundef %0) #0 !dbg !10 {
   %2 = alloca i32, align 4

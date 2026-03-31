@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mtriple=i686-pc-windows-msvc < %s \
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=i686-pc-windows-msvc < %s \
 ; RUN:     | FileCheck --check-prefix=CHECK --check-prefix=X86 %s
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-pc-windows-msvc < %s \
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-pc-windows-msvc < %s \
 ; RUN:     | FileCheck --check-prefix=CHECK --check-prefix=X64 %s
 
 ; Loosely based on IR for this C++ source code:

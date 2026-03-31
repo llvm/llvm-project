@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=core-avx-i -mtriple=i386-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=core-avx-i -mtriple=i386-pc-win32 | FileCheck %s
 
 %struct_type = type { [64 x <8 x float>], <8 x float> }
 

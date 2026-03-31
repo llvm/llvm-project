@@ -2,9 +2,9 @@
 
 ; avx10.x-512 is just avx10.x -- 512 is kept for compatibility purposes.
 
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.1-512 2>&1 | FileCheck --check-prefixes=CHECK-AVX10_1 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.1-512 2>&1 | FileCheck --check-prefixes=CHECK-AVX10_1 %s
 
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.2-512 2>&1 | FileCheck --check-prefixes=CHECK-AVX10_2 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.2-512 2>&1 | FileCheck --check-prefixes=CHECK-AVX10_2 %s
 
 ; CHECK-AVX10_1-NOT: is not recognizable
 ; CHECK-AVX10_2-NOT: is not recognizable

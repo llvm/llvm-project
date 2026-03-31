@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux | FileCheck %s
 
 @a = external dso_local global i96, align 4
 @b = external dso_local global i64, align 8

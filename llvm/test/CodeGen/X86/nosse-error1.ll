@@ -1,5 +1,5 @@
-; RUN: not  llc < %s -mattr=-sse 2>&1 | FileCheck --check-prefix NOSSE %s
-; RUN: llc < %s | FileCheck %s
+; RUN: not  llc -combiner-topological-sorting < %s -mattr=-sse 2>&1 | FileCheck --check-prefix NOSSE %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; NOSSE: {{SSE register return with SSE disabled}}
 

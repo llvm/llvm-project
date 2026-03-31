@@ -1,6 +1,6 @@
-; RUN: llc < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck %s
-; RUN: llc -O0 < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -no-x86-call-frame-opt | FileCheck %s
-; RUN: llc < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=atom -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -no-x86-call-frame-opt | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=atom -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck %s
 
 @.str = private constant [12 x i8] c"x + y = %i\0A\00", align 1 ; <ptr> [#uses=1]
 

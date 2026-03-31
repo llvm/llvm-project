@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -mtriple=x86_64-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple=x86_64-linux-gnu | FileCheck %s
 
 ; This cannot get rounded up to the preferred alignment (16) if they have an
 ; explicit alignment specified.

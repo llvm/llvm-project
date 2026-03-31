@@ -1,5 +1,5 @@
-; RUN: llc -mtriple x86_64-unknown-windows-msvc %s -o - | FileCheck %s -check-prefix CHECK64
-; RUN: llc -mtriple i686-windows-msvc %s -o - | FileCheck %s -check-prefix CHECK32
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-unknown-windows-msvc %s -o - | FileCheck %s -check-prefix CHECK64
+; RUN: llc -combiner-topological-sorting -mtriple i686-windows-msvc %s -o - | FileCheck %s -check-prefix CHECK32
 
 define void @simple(ptr swiftasync %context) "frame-pointer"="all" {
   ret void

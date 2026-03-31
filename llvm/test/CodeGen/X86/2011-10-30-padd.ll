@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mcpu=corei7 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mcpu=corei7 | FileCheck %s
 
 ;CHECK-LABEL: addXX_test:
 ;CHECK: padd

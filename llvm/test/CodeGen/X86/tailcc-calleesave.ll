@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=core < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=core < %s | FileCheck %s
 
 target triple = "i686-apple-darwin"
 

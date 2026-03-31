@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux-gnu
 ; PR3706
 
 define void @__mulxc3(x86_fp80 %b) nounwind {

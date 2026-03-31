@@ -1,4 +1,4 @@
-; RUN: llc --start-before loop-reduce --stop-after loop-reduce %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting --start-before loop-reduce --stop-after loop-reduce %s -o - | FileCheck %s
 target datalayout = "e-m:e-p:32:32-i64:64-n32-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

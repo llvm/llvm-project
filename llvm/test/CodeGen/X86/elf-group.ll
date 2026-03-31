@@ -1,6 +1,6 @@
 ; Checks that comdat with nodeduplicate kind is lowered to a zero-flag ELF
 ; section group.
-; RUN: llc < %s -mtriple=x86_64-unknown-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux | FileCheck %s
 
 ; CHECK: .section .text.f1,"axG",@progbits,f1{{$}}
 ; CHECK: .section .text.f2,"axG",@progbits,f1{{$}}

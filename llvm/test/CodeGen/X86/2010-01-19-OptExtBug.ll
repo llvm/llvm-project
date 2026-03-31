@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=x86_64-apple-darwin11 -relocation-model=pic -frame-pointer=all -stats 2>&1 | not grep ext-opt
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin11 -relocation-model=pic -frame-pointer=all -stats 2>&1 | not grep ext-opt
 
 define fastcc ptr @S_scan_str(ptr %start, i32 %keep_quoted, i32 %keep_delims) nounwind ssp {
 entry:

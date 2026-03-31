@@ -1,4 +1,4 @@
-; RUN: llc < %s -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic | FileCheck %s
 
 ; CHECK:        calll L0$pb
 ; CHECK-NEXT: .cfi_adjust_cfa_offset 4

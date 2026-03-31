@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; PR6372
 ;
 ; This test produces a move instruction with an implicitly defined super-register:

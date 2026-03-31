@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-tile,+amx-fp16 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-tile,+amx-fp16 | FileCheck %s
 
 ; CHECK-LABEL: test_amx:
 ; CHECK:       # %bb.0:

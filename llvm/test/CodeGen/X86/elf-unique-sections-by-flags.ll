@@ -2,8 +2,8 @@
 ; sections with different sets of flags, depending on the properties (mutable,
 ; executable) of the global value.
 
-; RUN: llc < %s | FileCheck %s
-; RUN: llc -function-sections < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FNSECTIONS
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -function-sections < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FNSECTIONS
 target triple="x86_64-unknown-unknown-elf"
 
 ; Normal function goes in .text, or in it's own named section with -function-sections.

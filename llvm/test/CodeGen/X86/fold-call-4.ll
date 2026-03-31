@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=LIN
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s --check-prefix=WIN
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=LIN
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s --check-prefix=WIN
 
 ; The callee address computation should get folded into the call.
 ; CHECK-LABEL: f:

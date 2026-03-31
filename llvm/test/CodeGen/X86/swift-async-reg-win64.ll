@@ -1,5 +1,5 @@
-; RUN: llc -mtriple x86_64-unknown-windows-msvc %s -o - | FileCheck %s
-; RUN: llc -mtriple x86_64-unknown-windows-msvc %s -o - -fast-isel | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-unknown-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-unknown-windows-msvc %s -o - -fast-isel | FileCheck %s
 
 define ptr @argument(ptr swiftasync %in) {
   ret ptr %in

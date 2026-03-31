@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin                  -frame-pointer=all | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7     -frame-pointer=all | FileCheck --check-prefix=SSE %s
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7-avx -frame-pointer=all | FileCheck --check-prefix=AVX %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin                  -frame-pointer=all | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mcpu=corei7     -frame-pointer=all | FileCheck --check-prefix=SSE %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mcpu=corei7-avx -frame-pointer=all | FileCheck --check-prefix=AVX %s
 
 
 ; Stackmap Header: no constants - 6 callsites

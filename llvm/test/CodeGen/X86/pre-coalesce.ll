@@ -1,4 +1,4 @@
-; RUN: llc -regalloc=greedy -mtriple=x86_64-unknown-linux-gnu  < %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -regalloc=greedy -mtriple=x86_64-unknown-linux-gnu  < %s -o - | FileCheck %s
 ;
 ; The test is to check no redundent mov as follows will be generated in %while.body loop.
 ;  .LBB0_2:

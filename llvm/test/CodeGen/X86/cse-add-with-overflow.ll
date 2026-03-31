@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-darwin -mcpu=generic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-darwin -mcpu=generic | FileCheck %s
 ; XFAIL: *
 ; rdar:15661073 simple example of redundant adds
 ;

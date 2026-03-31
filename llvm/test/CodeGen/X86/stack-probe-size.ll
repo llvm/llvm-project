@@ -6,7 +6,7 @@
 ; stack probe size equals the page size (4096 bytes for all x86 targets), and
 ; this is unlikely to change in the future.
 ;
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-windows-msvc < %s | FileCheck %s
 
 target datalayout = "e-m:w-p:32:32-i64:64-f80:32-n8:16:32-S32"
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-win32 | FileCheck %s
 
 %struct.A = type { i8 }
 %struct.B = type { i32 }

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin < %s| FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin < %s| FileCheck %s
 
 ; A bug in DAGCombiner prevented it forming a zextload in this simple case
 ; because it counted both the chain user and the real user against the

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Checks that interrupt handler code calls cld before calling an external

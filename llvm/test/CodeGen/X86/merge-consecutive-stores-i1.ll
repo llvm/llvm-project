@@ -1,4 +1,4 @@
-; RUN: llc  -mtriple=x86_64-- < %s
+; RUN: llc -combiner-topological-sorting  -mtriple=x86_64-- < %s
 
 ; Ensure that MergeConsecutiveStores doesn't crash when dealing with
 ; i1 operands.

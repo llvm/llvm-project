@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=generic -mtriple=i686--            | FileCheck %s
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i686--            | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-linux | FileCheck %s
 ; CHECK-NOT:     lea
 
 @B = external dso_local global [1000 x float], align 32

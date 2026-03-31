@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 
 @bsBuff = internal global i32 0		; <ptr> [#uses=1]
 @llvm.used = appending global [1 x ptr] [ptr @bsGetUInt32], section "llvm.metadata"		; <ptr> [#uses=0]

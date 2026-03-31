@@ -1,12 +1,12 @@
-; RUN: llc < %s -emulated-tls -mtriple=i386-linux-gnu | FileCheck -check-prefix=X86 %s
-; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -emulated-tls -mtriple=i386-linux-android | FileCheck -check-prefix=X86 %s
-; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android | FileCheck -check-prefix=X64 %s
+; RUN: llc -combiner-topological-sorting < %s -emulated-tls -mtriple=i386-linux-gnu | FileCheck -check-prefix=X86 %s
+; RUN: llc -combiner-topological-sorting < %s -emulated-tls -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64 %s
+; RUN: llc -combiner-topological-sorting < %s -emulated-tls -mtriple=i386-linux-android | FileCheck -check-prefix=X86 %s
+; RUN: llc -combiner-topological-sorting < %s -emulated-tls -mtriple=x86_64-linux-android | FileCheck -check-prefix=X64 %s
 
-; RUN: llc < %s -mtriple=i386-linux-gnu | FileCheck -check-prefix=NoEMU %s
-; RUN: llc < %s -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=NoEMU %s
-; RUN: llc < %s -mtriple=i386-linux-android | FileCheck -check-prefix=X86 %s
-; RUN: llc < %s -mtriple=x86_64-linux-android | FileCheck -check-prefix=X64 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-gnu | FileCheck -check-prefix=NoEMU %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=NoEMU %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-android | FileCheck -check-prefix=X86 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-android | FileCheck -check-prefix=X64 %s
 
 ; Copied from tls.ll; emulated TLS model is not implemented
 ; for *-pc-win32 and *-pc-windows targets yet.

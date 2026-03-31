@@ -1,7 +1,7 @@
 ; This test is attempting to detect that the compiler disables stack
 ; probe calls when the corresponding option is specified.
 ;
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-windows-msvc < %s | FileCheck %s
 
 target datalayout = "e-m:w-p:32:32-i64:64-f80:32-n8:16:32-S32"
 

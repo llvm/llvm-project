@@ -5,7 +5,7 @@
 ; RUN: echo 'g 0:1000,1:800,2:200 1:800,3:800 2:200,3:200 3:1000' >> %t
 ; RUN: echo 'c 0 1 2' >> %t
 ;
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -basic-block-address-map -pgo-analysis-map=all -pgo-analysis-map-emit-bb-sections-cfg | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -basic-block-address-map -pgo-analysis-map=all -pgo-analysis-map-emit-bb-sections-cfg | FileCheck %s
 
 define void @foo(i1 %cond) nounwind !prof !0 {
 entry:

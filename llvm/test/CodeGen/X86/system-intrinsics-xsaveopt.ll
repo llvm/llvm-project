@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+xsave,+xsaveopt | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-unknown -mattr=+xsave,+xsaveopt | FileCheck %s
 
 define void @test_xsaveopt(ptr %ptr, i32 %hi, i32 %lo) {
 ; CHECK-LABEL: test_xsaveopt

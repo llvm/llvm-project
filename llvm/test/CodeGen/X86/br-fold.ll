@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=x86_64-apple-darwin < %s | FileCheck  -check-prefix=X64_DARWIN %s
-; RUN: llc -mtriple=x86_64-pc-linux < %s | FileCheck  -check-prefix=X64_LINUX %s
-; RUN: llc -mtriple=x86_64-pc-windows < %s | FileCheck  -check-prefix=X64_WINDOWS %s
-; RUN: llc -mtriple=x86_64-pc-windows-gnu < %s | FileCheck  -check-prefix=X64_WINDOWS_GNU %s
-; RUN: llc -mtriple=x86_64-scei-ps4 < %s | FileCheck -check-prefix=PS4 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin < %s | FileCheck  -check-prefix=X64_DARWIN %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux < %s | FileCheck  -check-prefix=X64_LINUX %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows < %s | FileCheck  -check-prefix=X64_WINDOWS %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-gnu < %s | FileCheck  -check-prefix=X64_WINDOWS_GNU %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-scei-ps4 < %s | FileCheck -check-prefix=PS4 %s
 
 ; X64_DARWIN: orq
 ; X64_DARWIN-NEXT: ud2

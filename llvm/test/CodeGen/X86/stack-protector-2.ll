@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=stack-protector \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -start-before=stack-protector \
 ; RUN:   -stop-after=stack-protector -o - < %s | FileCheck %s
 ; Bugs 42238/43308: Test some additional situations not caught previously.
 

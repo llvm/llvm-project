@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -o /dev/null -debug-only=isel 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -o /dev/null -debug-only=isel 2>&1 | FileCheck %s
 
 ; Make sure we emit the basic block exports and the TokenFactor before the
 ; inlineasm_br. Not sure how to get a MachineIR change so this reads the debug

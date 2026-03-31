@@ -1,4 +1,4 @@
-; RUN: not llc -o /dev/null -mattr=avx %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -o /dev/null -mattr=avx %s 2>&1 | FileCheck %s
 target triple = "x86_64--"
 
 ; CHECK: error: register 'XMM15' allocated for constraint '{xmm15}' does not match required type

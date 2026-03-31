@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=avx512f -debug-only=isel < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -mattr=avx512f -debug-only=isel < %s -o /dev/null 2>&1 | FileCheck %s
 
 ; This tests the propagation of fast-math-flags from IR instructions to SDNodeFlags.
 

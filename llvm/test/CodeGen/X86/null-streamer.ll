@@ -1,7 +1,7 @@
 ; Check the MCNullStreamer operates correctly, at least on a minimal test case.
 ;
 ; RUN: rm -f %t
-; RUN: llc -filetype=null -o %t -mtriple=i686-- %s
+; RUN: llc -combiner-topological-sorting -filetype=null -o %t -mtriple=i686-- %s
 ; RUN: ls %t
 
 source_filename = "test/CodeGen/X86/null-streamer.ll"

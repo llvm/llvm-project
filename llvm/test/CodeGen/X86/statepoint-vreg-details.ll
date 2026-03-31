@@ -3,9 +3,9 @@
 ; the main file is easy to update with update_llc_test_checks.py
 
 ; This run is to demonstrate what MIR SSA looks like.
-; RUN: llc -max-registers-for-gc-values=4 -stop-after finalize-isel < %s | FileCheck --check-prefix=CHECK-VREG %s
+; RUN: llc -combiner-topological-sorting -max-registers-for-gc-values=4 -stop-after finalize-isel < %s | FileCheck --check-prefix=CHECK-VREG %s
 ; This run is to demonstrate register allocator work.
-; RUN: llc -max-registers-for-gc-values=4 -stop-after virtregrewriter < %s | FileCheck --check-prefix=CHECK-PREG %s
+; RUN: llc -combiner-topological-sorting -max-registers-for-gc-values=4 -stop-after virtregrewriter < %s | FileCheck --check-prefix=CHECK-PREG %s
 
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"

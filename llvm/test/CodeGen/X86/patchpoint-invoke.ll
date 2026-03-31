@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux -mcpu=corei7                             < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux -mcpu=corei7                             < %s | FileCheck %s
 
 ; Test invoking of patchpoints
 ;

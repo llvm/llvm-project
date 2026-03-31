@@ -1,6 +1,6 @@
 ; Check that debug intrinsics do not affect code generation.
 
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck --check-prefix=X86-CHECK %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck --check-prefix=X86-CHECK %s
 
 define i64 @simulate(<2 x i32> %a) {
 entry:

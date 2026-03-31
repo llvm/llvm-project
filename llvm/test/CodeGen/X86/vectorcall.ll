@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-win32 -mattr=+sse2 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=X86
-; RUN: llc -mtriple=x86_64-pc-win32 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-win32 -mattr=+sse2 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=X86
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-win32 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=X64
 
 ; Test integer arguments.
 

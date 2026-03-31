@@ -2,8 +2,8 @@
 ;; sequence. It uses prefixes to allow linker relaxation. We need to disable
 ;; prefix or nop padding for it. For simplicity and consistency, disable for
 ;; Local Dynamic and 32-bit as well.
-; RUN: llc -mtriple=i386 -relocation-model=pic -x86-branches-within-32B-boundaries < %s | FileCheck --check-prefixes=CHECK,X86 %s
-; RUN: llc -mtriple=x86_64 -relocation-model=pic -x86-branches-within-32B-boundaries < %s | FileCheck --check-prefixes=CHECK,X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386 -relocation-model=pic -x86-branches-within-32B-boundaries < %s | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -relocation-model=pic -x86-branches-within-32B-boundaries < %s | FileCheck --check-prefixes=CHECK,X64 %s
 
 @gd = external thread_local global i32
 @ld = internal thread_local global i32 0

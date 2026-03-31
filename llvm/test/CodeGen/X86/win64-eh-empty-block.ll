@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-windows-gnu %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-gnu %s -o - | FileCheck %s
 
 ; Based on this C++ code:
 ; struct as {

@@ -1,7 +1,7 @@
-; RUN: not llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f -stop-after=finalize-isel > %t 2> %t.err
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f -stop-after=finalize-isel > %t 2> %t.err
 ; RUN: FileCheck < %t %s
 ; RUN: FileCheck --check-prefix=CHECK-STDERR < %t.err %s
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512bf16,avx512fp16 -stop-after=finalize-isel | FileCheck --check-prefixes=CHECK,FP16 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=avx512bf16,avx512fp16 -stop-after=finalize-isel | FileCheck --check-prefixes=CHECK,FP16 %s
 
 ; CHECK-LABEL: name: mask_Yk_i8
 ; CHECK: %[[REG1:.*]]:vr512_0_15 = COPY %1

@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; This testcase used to hit an assert during ISel.  For details, see the big
 ; comment inside the function.

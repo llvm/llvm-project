@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-windows-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-gnu < %s | FileCheck %s
 
 declare void @throwit()
 declare void @__gxx_personality_seh0(...)

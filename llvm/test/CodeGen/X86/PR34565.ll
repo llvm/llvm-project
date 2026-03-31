@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux -x86-cmov-converter=true -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -x86-cmov-converter=true -verify-machineinstrs < %s | FileCheck %s
 
 ; Test for PR34565, check that DBG instructions are ignored while optimizing
 ; X86 CMOV instructions.

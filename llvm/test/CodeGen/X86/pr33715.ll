@@ -1,5 +1,5 @@
 ; Make sure we don't crash with a build vector of integer constants.
-; RUN: llc %s -o /dev/null
+; RUN: llc -combiner-topological-sorting %s -o /dev/null
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin9 -mattr=+sse2  | FileCheck %s --check-prefix=X32
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+sse2 | FileCheck %s --check-prefix=X64
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=-sse3 | FileCheck %s --check-prefix=X64_BAD
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9 -mattr=+sse2  | FileCheck %s --check-prefix=X32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mattr=+sse2 | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mattr=-sse3 | FileCheck %s --check-prefix=X64_BAD
 
 ; Sibcall optimization of expanded libcalls.
 ; rdar://8707777

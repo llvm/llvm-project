@@ -1,6 +1,6 @@
-; RUN: not llc -o /dev/null %s -mtriple=i386-unknown-unknown 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -o /dev/null %s -mtriple=i386-unknown-unknown 2>&1 | FileCheck %s
 ; Make sure X32 still works.
-; RUN: llc -o /dev/null %s -mtriple=x86_64-linux-gnux32
+; RUN: llc -combiner-topological-sorting -o /dev/null %s -mtriple=x86_64-linux-gnux32
 
 ; CHECK: error: couldn't allocate output register for constraint '{xmm8}'
 define i64 @blup() {

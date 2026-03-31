@@ -1,5 +1,5 @@
-; RUN: llc -O0 < %s -verify-machineinstrs
-; RUN: llc < %s -verify-machineinstrs
+; RUN: llc -combiner-topological-sorting -O0 < %s -verify-machineinstrs
+; RUN: llc -combiner-topological-sorting < %s -verify-machineinstrs
 target triple = "x86_64-apple-macosx10.7"
 
 ; This test case extracts a sub_8bit_hi sub-register:

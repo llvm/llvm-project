@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--
 
 define fastcc void @S_next_symbol(ptr %P) nounwind ssp {
 entry:

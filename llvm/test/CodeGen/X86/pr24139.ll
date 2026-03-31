@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s
 
 ; Check that we do not get excessive spilling from splitting of constant live ranges.
 

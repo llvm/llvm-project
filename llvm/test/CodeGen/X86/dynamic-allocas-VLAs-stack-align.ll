@@ -1,4 +1,4 @@
-; RUN: llc < %s -stack-symbol-ordering=0 -mcpu=generic -stackrealign -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -stack-symbol-ordering=0 -mcpu=generic -stackrealign -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
 ; rdar://11496434
 declare void @t1_helper(ptr)
 declare void @t3_helper(ptr, ptr)

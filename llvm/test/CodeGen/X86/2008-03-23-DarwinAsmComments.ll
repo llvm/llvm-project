@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -asm-verbose | grep "#" | not grep -v "##"
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -asm-verbose | grep "#" | not grep -v "##"
 
 	%struct.AGenericCall = type { ptr, ptr, ptr }
 	%struct.AGenericManager = type <{ i8 }>

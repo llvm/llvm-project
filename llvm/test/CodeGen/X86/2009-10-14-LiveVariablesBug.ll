@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin
 ; rdar://7299435
 
 @i = internal global i32 0                        ; <ptr> [#uses=1]

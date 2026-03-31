@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -no-integrated-as | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -no-integrated-as | FileCheck %s
 ; This tests makes sure that we not mistake the bitcast inside the asm statement
 ; as an opaque constant. If we do, then the compilation will simply fail.
 

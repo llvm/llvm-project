@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=corei7-avx
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -mcpu=corei7-avx
 
 ; No check in a crash test
 

@@ -1,8 +1,8 @@
-; RUN: llc -mtriple x86_64-pc-win32   < %s | FileCheck -check-prefix=CHECK -check-prefix=WIN32 %s
-; RUN: llc -mtriple x86_64-pc-uefi   < %s | FileCheck -check-prefix=CHECK -check-prefix=WIN32 %s
-; RUN: llc -mtriple x86_64-pc-mingw32 < %s | FileCheck -check-prefix=CHECK -check-prefix=MINGW %s
-; RUN: llc -mtriple x86_64-pc-win32   < %s | FileCheck -check-prefix=NOTEXPORTED %s
-; RUN: llc -mtriple x86_64-pc-mingw32 < %s | FileCheck -check-prefix=NOTEXPORTED %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-win32   < %s | FileCheck -check-prefix=CHECK -check-prefix=WIN32 %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-uefi   < %s | FileCheck -check-prefix=CHECK -check-prefix=WIN32 %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-mingw32 < %s | FileCheck -check-prefix=CHECK -check-prefix=MINGW %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-win32   < %s | FileCheck -check-prefix=NOTEXPORTED %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-mingw32 < %s | FileCheck -check-prefix=NOTEXPORTED %s
 
 ; CHECK: .text
 

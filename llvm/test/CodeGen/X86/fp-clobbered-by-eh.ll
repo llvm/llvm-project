@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-unknown-unknown -stackrealign -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -stackrealign -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 
 declare ghccc void @may_throw_or_crash()
 declare i32 @_except_handler3(...)

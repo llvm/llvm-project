@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -stats 2>&1 | not grep "instructions sunk"
+; RUN: llc -combiner-topological-sorting < %s -stats 2>&1 | not grep "instructions sunk"
 ; PR3522
 
 target triple = "i386-pc-linux-gnu"

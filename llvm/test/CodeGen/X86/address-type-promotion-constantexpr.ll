@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux
 
 ; PR20314 is a crashing bug. This program does nothing with the load, so just check that the return is 0.
 

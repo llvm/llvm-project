@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -relocation-model=pic    | FileCheck %s -check-prefix=CHECK-PIC-32
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -relocation-model=static | FileCheck %s -check-prefix=CHECK-STATIC-32
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=static | FileCheck %s -check-prefix=CHECK-STATIC-64
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic    | FileCheck %s -check-prefix=CHECK-PIC-64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux-gnu -relocation-model=pic    | FileCheck %s -check-prefix=CHECK-PIC-32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux-gnu -relocation-model=static | FileCheck %s -check-prefix=CHECK-STATIC-32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=static | FileCheck %s -check-prefix=CHECK-STATIC-64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic    | FileCheck %s -check-prefix=CHECK-PIC-64
 ; PR3379
 ; XFAIL: *
 

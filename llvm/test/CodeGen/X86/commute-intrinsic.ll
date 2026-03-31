@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -mattr=+sse2 -relocation-model=static | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -mattr=+sse2 -relocation-model=static | FileCheck %s
 
 ; CHECK-NOT: movaps
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple i686-windows-itanium -filetype asm -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple i686-windows-itanium -filetype asm -o - %s | FileCheck %s
 
 define i64 @f(i64 %i, i64 %j) {
   %1 = sdiv i64 %i, %j

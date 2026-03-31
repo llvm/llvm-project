@@ -2,7 +2,7 @@
 ;; function prolog/epilog, as per GCC behavior, and that REP MOVS/STOS are not
 ;; selected when EDI is reserved on x86-32.
 
-; RUN: llc < %s -mtriple=i386-unknown-linux-gnu -verify-machineinstrs | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux-gnu -verify-machineinstrs | FileCheck %s
 
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1 immarg)
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)

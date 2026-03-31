@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin
 ; rdar://8154265
 
 declare <4 x float> @llvm.x86.sse.max.ss(<4 x float>, <4 x float>) nounwind readnone

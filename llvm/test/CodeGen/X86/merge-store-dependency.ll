@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-unknown-linux-android24 -verify-machineinstrs \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux-android24 -verify-machineinstrs \
 ; RUN:   -debug-only=machine-scheduler -o - 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 

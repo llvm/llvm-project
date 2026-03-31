@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | FileCheck %s
 
 define void @ccosl(ptr noalias sret({ x86_fp80, x86_fp80 }) %agg.result, { x86_fp80, x86_fp80 } %z) nounwind {
 entry:

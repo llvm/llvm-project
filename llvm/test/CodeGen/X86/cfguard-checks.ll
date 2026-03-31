@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC,X64_SELDAG
-; RUN: llc < %s --fast-isel -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC,X64_FISEL
-; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefixes=X86,X86_MINGW
-; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW,X64_SELDAG
-; RUN: llc < %s --fast-isel -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW,X64_FISEL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC,X64_SELDAG
+; RUN: llc -combiner-topological-sorting < %s --fast-isel -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC,X64_FISEL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefixes=X86,X86_MINGW
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW,X64_SELDAG
+; RUN: llc -combiner-topological-sorting < %s --fast-isel -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW,X64_FISEL
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are correctly added when required.

@@ -1,5 +1,5 @@
 ; Check ah is not allocatable for register class gr8_norex2
-; RUN: not llc < %s -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s
 
 define void @gr8_norex2() {
 ; CHECK: error: inline assembly requires more registers than available

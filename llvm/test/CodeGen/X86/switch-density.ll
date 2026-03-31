@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -jump-table-density=25 | FileCheck %s --check-prefix=DENSE --check-prefix=CHECK
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -jump-table-density=10 | FileCheck %s --check-prefix=SPARSE --check-prefix=CHECK
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu %s -o - -jump-table-density=25 | FileCheck %s --check-prefix=DENSE --check-prefix=CHECK
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu %s -o - -jump-table-density=10 | FileCheck %s --check-prefix=SPARSE --check-prefix=CHECK
 
 declare void @g(i32)
 

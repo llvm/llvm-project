@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=asm -function-sections < %s | \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -filetype=asm -function-sections < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,DWARF32 --implicit-check-not=loclists_table_base %s
-; RUN: llc -dwarf64 -mtriple=x86_64-pc-linux -filetype=asm -function-sections < %s | \
+; RUN: llc -combiner-topological-sorting -dwarf64 -mtriple=x86_64-pc-linux -filetype=asm -function-sections < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,DWARF64 --implicit-check-not=loclists_table_base %s
 
 ; CHECK:        {{^}}.Lloclists_table_base0:

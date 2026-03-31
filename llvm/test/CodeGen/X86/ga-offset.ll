@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux -relocation-model=static | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -relocation-model=static | FileCheck %s
 
 @ptr = dso_local global ptr null
 @dst = dso_local global [131072 x i32] zeroinitializer

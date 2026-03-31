@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-pc-linux < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnux32 < %s | FileCheck -check-prefix=X32ABI %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnux32 < %s | FileCheck -check-prefix=X32ABI %s
 
 ; %in is kept in %esi for both ABIs. But the pointer will be passed in %edi
 ; for x32, not %rdi

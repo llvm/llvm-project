@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-- -verify-machineinstrs -mcpu=corei7 -mattr=-cx16 | FileCheck %s
-; RUN: llc < %s -mtriple=i386-linux-gnu -verify-machineinstrs -mattr=cx16 | FileCheck -check-prefix=CHECK32 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -verify-machineinstrs -mcpu=corei7 -mattr=-cx16 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-gnu -verify-machineinstrs -mattr=cx16 | FileCheck -check-prefix=CHECK32 %s
 
 ;; Verify that 128-bit atomics emit a libcall without cx16
 ;; available.

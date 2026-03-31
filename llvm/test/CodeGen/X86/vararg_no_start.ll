@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-msvc < %s | FileCheck %s
 
 define void @foo(ptr, ...) {
   ret void

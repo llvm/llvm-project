@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- -O0 -relocation-model pic < %s -o /dev/null
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O0 -relocation-model pic < %s -o /dev/null
 ; PR7545
 
 @.str = private constant [4 x i8] c"one\00", align 1 ; <ptr> [#uses=1]

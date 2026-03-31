@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=i686 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=i686 2>&1 | FileCheck %s
 ; PR26625
 
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"

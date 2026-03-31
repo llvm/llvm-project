@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-linux-gnu -asm-verbose=false \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux-gnu -asm-verbose=false \
 ; RUN: -relocation-model=pic | FileCheck %s
 
 @thread_var = thread_local global i32 42, align 4

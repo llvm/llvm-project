@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; PR6489
 ;
 ; This test case produces a MUL8 instruction and then tries to read the result

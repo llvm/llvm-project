@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -mtriple=x86_64-apple-macosx12.0.0 -O0 %s -o - | FileCheck %s --implicit-check-not=prologue_end
+; RUN: llc -combiner-topological-sorting -filetype=asm -mtriple=x86_64-apple-macosx12.0.0 -O0 %s -o - | FileCheck %s --implicit-check-not=prologue_end
 ; CHECK: Lfunc_begin0:
 ; CHECK-NEXT: .file{{.+}}
 ; CHECK-NEXT: .loc 1 1 0 ## test-small.c:1:0{{$}}

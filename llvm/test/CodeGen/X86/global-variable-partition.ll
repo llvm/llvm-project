@@ -11,20 +11,20 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; This RUN command sets `-data-sections=true -unique-section-names=true` so data
 ; sections are uniqufied by numbers.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -data-sections=true -unique-section-names=true \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=SYM,COMMON --dump-input=always
 
 ; This RUN command sets `-data-sections=true -unique-section-names=false` so
 ; data sections are uniqufied by variable names.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -data-sections=true  -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=UNIQ,COMMON --dump-input=always
 
 ; This RUN command sets `-data-sections=false -unique-section-names=false`.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -data-sections=false -unique-section-names=false  \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=AGG,COMMON --dump-input=always

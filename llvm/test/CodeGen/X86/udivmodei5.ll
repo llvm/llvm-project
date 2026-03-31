@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
 ; On i686, this is expanded into a loop. On x86_64, this calls __udivti3.
 define i65 @udiv65(i65 %a, i65 %b) nounwind {

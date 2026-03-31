@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu
 ; PR3124
 
         %struct.cpuinfo_x86 = type { i8, i8, i8, i8, i32, i8, i8, i8, i32, i32, [9 x i32], [16 x i8], [64 x i8], i32, i32, i32, i64, %struct.cpumask_t, i16, i16, i16, i16, i16, i16, i16, i16, i32 }

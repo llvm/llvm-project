@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-unknown-unknown %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown %s -o - 2>&1 | FileCheck %s
 
 ; CHECK: <unknown>:0: error: symbol 'fn' is already defined
 define void @fn() section "fn" {

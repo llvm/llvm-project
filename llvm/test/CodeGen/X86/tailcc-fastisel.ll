@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -fast-isel -fast-isel-abort=1 | FileCheck %s  -check-prefix=DARWIN64
-; RUN: llc < %s -mtriple=x86_64-uefi -fast-isel -fast-isel-abort=1 | FileCheck %s -check-prefix=UEFI64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -fast-isel -fast-isel-abort=1 | FileCheck %s  -check-prefix=DARWIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-uefi -fast-isel -fast-isel-abort=1 | FileCheck %s -check-prefix=UEFI64
 
 %0 = type { i64, i32, ptr }
 

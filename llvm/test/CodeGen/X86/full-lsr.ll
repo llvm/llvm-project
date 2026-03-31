@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | FileCheck %s
 
 define void @foo(ptr nocapture %A, ptr nocapture %B, ptr nocapture %C, i32 %N) nounwind {
 ; CHECK: foo

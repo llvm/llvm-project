@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux < %s | FileCheck -check-prefix X8664 %s
-; RUN: llc -mtriple=i686-unknown-linux < %s | FileCheck -check-prefix X8632 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux < %s | FileCheck -check-prefix X8664 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-linux < %s | FileCheck -check-prefix X8632 %s
 ; Check that all callee-saved registers are saved and restored in functions
 ; that call __builtin_unwind_init(). This is its undocumented behavior in gcc,
 ; and it is used in compiling libgcc_eh.

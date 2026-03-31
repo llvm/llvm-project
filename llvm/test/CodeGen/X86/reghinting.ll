@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-apple-macosx | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-apple-macosx | FileCheck %s
 ; PR10221
 
 ;; The registers %x and %y must both spill across the finit call.

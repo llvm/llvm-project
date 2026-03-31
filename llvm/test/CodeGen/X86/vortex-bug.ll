@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--
 
 	%struct.blktkntype = type { i32, i32 }
 	%struct.fieldstruc = type { [128 x i8], ptr, i32, i32 }

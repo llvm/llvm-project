@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=x86_64-apple-darwin11 -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-apple-darwin10 -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-apple-darwin9 -O0 < %s | FileCheck --check-prefix=CHECK-D89 %s
-; RUN: llc -mtriple=i686-apple-darwin9 -O0 < %s | FileCheck --check-prefix=CHECK-D89 %s
-; RUN: llc -mtriple=i686-apple-darwin8 -O0 < %s | FileCheck --check-prefix=CHECK-D89 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin11 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin10 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin9 -O0 < %s | FileCheck --check-prefix=CHECK-D89 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-apple-darwin9 -O0 < %s | FileCheck --check-prefix=CHECK-D89 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-apple-darwin8 -O0 < %s | FileCheck --check-prefix=CHECK-D89 %s
 
 @v1 = linkonce_odr local_unnamed_addr constant i32 32
 ; CHECK: .globl  _v1

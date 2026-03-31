@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
 ; RUN: sed -e 's/__C_specific_handler/_except_handler3/' %s | \
-; RUN:        llc -mtriple=i686-windows-msvc | FileCheck %s --check-prefix=X86
+; RUN:        llc -combiner-topological-sorting -mtriple=i686-windows-msvc | FileCheck %s --check-prefix=X86
 
 @str_recovered = internal unnamed_addr constant [10 x i8] c"recovered\00", align 1
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; PR6374
 ;
 ; This test produces a DIV8r instruction and uses %AX instead of %AH and %AL.

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -o - %s | FileCheck %s
 
 @var = global [30 x i64] zeroinitializer
 

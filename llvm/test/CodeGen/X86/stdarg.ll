@@ -1,4 +1,4 @@
-; RUN: llc -stack-symbol-ordering=0 < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting -stack-symbol-ordering=0 < %s -mtriple=x86_64-linux | FileCheck %s
 
 %struct.__va_list_tag = type { i32, i32, ptr, ptr }
 

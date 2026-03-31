@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 
 declare dso_local swifttailcc i32 @tailcallee(i32 %a1, i32 %a2, i32 %a3, i32 %a4)
 

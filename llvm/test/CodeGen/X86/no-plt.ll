@@ -1,6 +1,6 @@
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X64 --check-prefix=PIC %s
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu \
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-linux-gnu \
 ; RUN:   | FileCheck -check-prefix=X64 --check-prefix=STATIC %s
 
 define i32 @fp_weakfunc() {

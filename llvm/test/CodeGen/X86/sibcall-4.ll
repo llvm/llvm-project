@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux-gnu | FileCheck %s
 ; pr7610
 
 define ghccc void @t(ptr %Base_Arg, ptr %Sp_Arg, ptr %Hp_Arg, i32 %R1_Arg) nounwind {

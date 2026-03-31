@@ -1,4 +1,4 @@
-; RUN: llc < %s -relocation-model=pic -mattr=+sse2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -mattr=+sse2 | FileCheck %s
 
 ; We used to do tail calls through the GOT for these symbols, but it was
 ; disabled due to PR15086.

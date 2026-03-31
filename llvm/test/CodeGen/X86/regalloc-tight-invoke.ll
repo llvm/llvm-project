@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s
 declare void @foo(i32, ...)
 
 declare i32 @__gxx_personality_v0(...)

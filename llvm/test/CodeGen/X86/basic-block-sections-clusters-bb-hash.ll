@@ -8,7 +8,7 @@
 ; In Test 1 and Test 2, the weights of basic blocks and edges in the profiles are different, which
 ; will ultimately result in distinct cluster partitioning outcomes.
 ;
-; RUN: llc %s -O0 -mtriple=x86_64-pc-linux -function-sections -filetype=obj -basic-block-address-map -emit-bb-hash -o %t.o
+; RUN: llc -combiner-topological-sorting %s -O0 -mtriple=x86_64-pc-linux -function-sections -filetype=obj -basic-block-address-map -emit-bb-hash -o %t.o
 ;
 ; Test1: Basic blocks #0 (entry), #1 and #3 will be placed in the same section.
 ; The rest will be placed in the cold section.
@@ -26,7 +26,7 @@
 ; RUN:     END {print ""}' \
 ; RUN: >> %t1
 ;
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 -basic-block-section-match-infer | \
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 -basic-block-section-match-infer | \
 ; RUN: FileCheck %s -check-prefixes=CHECK,LINUX-SECTIONS1
 ;
 ; Test2: Basic #0 (entry), #2 and #3 will be placed in the same section.
@@ -45,7 +45,7 @@
 ; RUN:     END {print ""}' \
 ; RUN: >> %t2
 ;
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 -basic-block-section-match-infer | \
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 -basic-block-section-match-infer | \
 ; RUN: FileCheck %s -check-prefixes=CHECK,LINUX-SECTIONS2
 
 define void @foo(i1 zeroext) nounwind {

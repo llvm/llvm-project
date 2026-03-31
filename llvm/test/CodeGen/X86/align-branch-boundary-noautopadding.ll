@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O3 -mcpu=skylake -x86-align-branch-boundary=32 -x86-align-branch=call -filetype=obj < %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -O3 -mcpu=skylake -x86-align-branch-boundary=32 -x86-align-branch=call -filetype=obj < %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
 ;; This file is a companion to align-branch-boundary-suppressions.ll.
 ;; It exists to demonstrate that suppressions are actually wired into the

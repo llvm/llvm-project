@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i386-apple-darwin11 -O2 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-apple-darwin11 -O2 < %s | FileCheck %s
 
 %struct.I = type { ptr }
 define x86_stdcallcc void @bar(ptr nocapture %this) ssp align 2 {

@@ -1,5 +1,5 @@
-; RUN: llc -o - %s -mtriple=x86_64-linux-gnu -trap-unreachable | FileCheck %s
-; RUN: llc -o - %s -mtriple=x86_64-linux-gnu -trap-unreachable -fast-isel | FileCheck %s
+; RUN: llc -combiner-topological-sorting -o - %s -mtriple=x86_64-linux-gnu -trap-unreachable | FileCheck %s
+; RUN: llc -combiner-topological-sorting -o - %s -mtriple=x86_64-linux-gnu -trap-unreachable -fast-isel | FileCheck %s
 
 define dso_local void @foo() #0 {
 entry:

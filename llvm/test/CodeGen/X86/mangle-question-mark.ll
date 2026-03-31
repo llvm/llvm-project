@@ -1,10 +1,10 @@
 ; Test that symbols starting with '?' are not affected by IR mangling.
 
-; RUN: llc -mtriple i686-pc-win32 < %s | FileCheck %s --check-prefix=COFF
-; RUN: llc -mtriple x86_64-pc-win32 < %s | FileCheck %s --check-prefix=COFF64
-; RUN: llc -mtriple x86_64-uefi < %s | FileCheck %s --check-prefix=COFF64
-; RUN: llc -mtriple i686-linux-gnu < %s | FileCheck %s --check-prefix=ELF
-; RUN: llc -mtriple i686-apple-darwin < %s | FileCheck %s --check-prefix=MACHO
+; RUN: llc -combiner-topological-sorting -mtriple i686-pc-win32 < %s | FileCheck %s --check-prefix=COFF
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-win32 < %s | FileCheck %s --check-prefix=COFF64
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-uefi < %s | FileCheck %s --check-prefix=COFF64
+; RUN: llc -combiner-topological-sorting -mtriple i686-linux-gnu < %s | FileCheck %s --check-prefix=ELF
+; RUN: llc -combiner-topological-sorting -mtriple i686-apple-darwin < %s | FileCheck %s --check-prefix=MACHO
 
 ; Currently all object files allow escaping private symbols, but eventually we
 ; might want to reject that.

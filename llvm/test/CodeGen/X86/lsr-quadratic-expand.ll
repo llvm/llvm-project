@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- < %s
 
 define void @dw2102_i2c_transfer() nounwind {
 entry:

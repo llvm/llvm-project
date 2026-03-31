@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 < %s
 
 	%Env = type ptr
 

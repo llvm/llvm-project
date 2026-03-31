@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -O0 %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu -O0 %s -o - | FileCheck %s
 ; CHECK: patatino:
 ; CHECK:         .cfi_startproc
 ; CHECK:         movzwl  (%rax), [[REG0:%e[abcd]x]]

@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-windows-msvc -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s
-; RUN: llc -mtriple=i686-windows-msvc -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-msvc -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-windows-msvc -O0 < %s | FileCheck %s
 
 ; Source to regenerate:
 ; $ clang --target=x86_64-windows-msvc -S annotation.c  -g -gcodeview -o t.ll \

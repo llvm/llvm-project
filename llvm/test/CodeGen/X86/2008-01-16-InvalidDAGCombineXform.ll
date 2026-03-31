@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- | not grep IMPLICIT_DEF
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | not grep IMPLICIT_DEF
 
 	%struct.node_t = type { ptr, ptr, ptr, ptr, ptr, i32, i32 }
 

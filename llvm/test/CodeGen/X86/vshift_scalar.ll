@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; REQUIRES: default_triple
 
 ; Legalization test that requires scalarizing a vector.

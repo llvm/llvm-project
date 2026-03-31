@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=sse2 -mcpu=corei7 -o /dev/null
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mattr=sse2 -mcpu=corei7 -o /dev/null
 
 ; Revision 199135 introduced a wrong check in method
 ; DAGCombiner::SimplifyVBinOp in an attempt to refactor some code

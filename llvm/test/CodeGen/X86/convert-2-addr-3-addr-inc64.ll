@@ -1,10 +1,10 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=x86_64-linux -o /dev/null -stats 2>&1 | FileCheck %s -check-prefix=STATS
-; RUN: llc < %s -mtriple=x86_64-win32 -o /dev/null -stats 2>&1 | FileCheck %s -check-prefix=STATS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -o /dev/null -stats 2>&1 | FileCheck %s -check-prefix=STATS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-win32 -o /dev/null -stats 2>&1 | FileCheck %s -check-prefix=STATS
 ; STATS: 9 asm-printer
 
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-win32 | FileCheck %s
 ; CHECK: leal 1({{%rsi|%rdx}}),
 
 define fastcc zeroext i8 @fullGtU(i32 %i1, i32 %i2, ptr %ptr) nounwind optsize {

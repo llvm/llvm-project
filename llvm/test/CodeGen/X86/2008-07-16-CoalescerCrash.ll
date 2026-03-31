@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin
 
 	%struct.SV = type { ptr, i64, i64 }
 @"\01LC25" = external constant [8 x i8]		; <ptr> [#uses=1]

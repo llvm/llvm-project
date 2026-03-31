@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK:          .p2align 4
 ; CHECK-LABEL:    __cfi_f1:

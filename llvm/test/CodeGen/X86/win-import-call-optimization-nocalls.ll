@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
 
 define dso_local void @normal_call() local_unnamed_addr {
 entry:

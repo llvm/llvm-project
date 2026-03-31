@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 
 ; rdar://7983260
 

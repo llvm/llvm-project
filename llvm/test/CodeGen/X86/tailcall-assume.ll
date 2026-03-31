@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s | FileCheck %s
 
 ; Intrinsic call to @llvm.assume should not prevent tail call optimization.
 ; CHECK-LABEL: foo:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mcpu=atom | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mcpu=atom | FileCheck %s
 ; CHECK:        movl
 ; CHECK:        movzbl
 ; CHECK:        movzbl

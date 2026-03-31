@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- < %s | FileCheck %s
 
 ; LSR would like to use a single IV for both of these, however it's
 ; not safe due to wraparound.

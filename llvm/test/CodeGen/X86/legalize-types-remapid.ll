@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i386 -mcpu=generic -O0 -o /dev/null %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386 -mcpu=generic -O0 -o /dev/null %s
 
 @c = global i32 0
 @d = global <2 x i64> zeroinitializer

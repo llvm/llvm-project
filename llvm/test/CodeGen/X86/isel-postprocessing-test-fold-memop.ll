@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple=x86_64-- -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O2 -mtriple=x86_64-- -stop-after=finalize-isel < %s | FileCheck %s
 
 define i1 @fold_test(ptr %x, i64 %l) {
 entry:

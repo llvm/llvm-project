@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE2
-; RUN: llc < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX
 
 ; Assertions have been enhanced from utils/update_llc_test_checks.py to show the constant pool values.
 ; Use a macosx triple to make sure the format of those constant strings is exact.

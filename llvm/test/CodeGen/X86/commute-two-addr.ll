@@ -2,8 +2,8 @@
 ; insertion of register-register copies.
 
 ; Make sure there are only 3 mov's for each testcase
-; RUN: llc < %s -mtriple=i686-pc-linux-gnu   -mcpu=corei7 | FileCheck %s -check-prefix=LINUX
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s -check-prefix=DARWIN
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux-gnu   -mcpu=corei7 | FileCheck %s -check-prefix=LINUX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s -check-prefix=DARWIN
 
 
 @G = external dso_local global i32                ; <ptr> [#uses=2]

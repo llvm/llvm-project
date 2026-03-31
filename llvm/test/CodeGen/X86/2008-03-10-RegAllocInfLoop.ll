@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-linux-gnu -relocation-model=pic -frame-pointer=all
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux-gnu -relocation-model=pic -frame-pointer=all
 ; PR2134
 
 declare fastcc ptr @w_addchar(ptr, ptr, ptr, i8 signext ) nounwind 

@@ -1,4 +1,4 @@
-; RUN: llc < %s  -mtriple=i686-pc-linux-gnu -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s  -mtriple=i686-pc-linux-gnu -relocation-model=pic | FileCheck %s
 
 ; This test uses guaranteed TCO so these will be tail calls, despite the early
 ; binding issues.

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--
 
 	%struct.XDesc = type <{ i32, ptr }>
 	%struct.OpaqueXDataStorageType = type opaque

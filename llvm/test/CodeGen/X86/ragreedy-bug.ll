@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -regalloc=greedy | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx -regalloc=greedy | FileCheck %s
 
 ; This testing case is reduced from 197.parser prune_match function.
 ; We make sure register copies are not generated on isupper.exit blocks.

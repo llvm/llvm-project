@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown-eabi-elf | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown-eabi-elf | FileCheck %s
 
 ; CHECK-LABEL: conv2d
 define dso_local void @conv2d() {

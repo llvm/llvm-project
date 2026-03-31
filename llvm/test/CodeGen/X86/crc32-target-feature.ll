@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 
 define i32 @test1(i32 %a, i8 %b) nounwind #0 {
 ; CHECK-LABEL: test1:

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-windows-msvc   < %s | FileCheck %s --check-prefix=X86
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-windows-msvc   < %s | FileCheck %s --check-prefix=X86
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s --check-prefix=X64
 
 ; Based on this source:
 ; extern "C" void may_throw(int);

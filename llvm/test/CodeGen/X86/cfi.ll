@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck --check-prefix=STATIC %s
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic | FileCheck --check-prefix=PIC %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck --check-prefix=STATIC %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic | FileCheck --check-prefix=PIC %s
 
 ; STATIC: .cfi_personality 3, __gxx_personality_v0
 ; STATIC: .cfi_lsda 3, .Lexception0

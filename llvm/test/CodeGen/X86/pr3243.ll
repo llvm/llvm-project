@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 ; PR3243
 
 declare signext i16 @safe_mul_func_int16_t_s_s(i16 signext, i32) nounwind readnone optsize

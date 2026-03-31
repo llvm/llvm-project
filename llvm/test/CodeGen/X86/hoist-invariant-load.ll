@@ -2,10 +2,10 @@
 
 ; Verify the call site info. If the call site info is not
 ; in the valid state, an assert should be triggered.
-; RUN: llc < %s -debug-entry-values -stop-after=machineverifier
+; RUN: llc -combiner-topological-sorting < %s -debug-entry-values -stop-after=machineverifier
 
 ; REQUIRES: asserts
-; RUN: llc -mcpu=haswell < %s -O2 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=haswell < %s -O2 2>&1 | FileCheck %s
 ; For test:
 ; 2 invariant loads, 1 for OBJC_SELECTOR_REFERENCES_
 ; and 1 for objc_msgSend from the GOT

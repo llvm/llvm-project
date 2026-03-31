@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin < %s | FileCheck %s
 
 @test1 = global [2 x i24] [i24 -1, i24 -1]
 ; CHECK-LABEL: test1:

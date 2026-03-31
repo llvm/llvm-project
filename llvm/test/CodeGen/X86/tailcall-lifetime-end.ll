@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
 
 ; A lifetime end intrinsic should not prevent a call from being tail call
 ; optimized.

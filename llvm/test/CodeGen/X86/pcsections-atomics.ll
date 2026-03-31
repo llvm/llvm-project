@@ -5,11 +5,11 @@
 ; access, and end with another non-atomic access; this is to test that the
 ; !pcsections propagation doesn't accidentally touch adjacent instructions.
 ;
-; RUN: llc -O0 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O0
-; RUN: llc -O1 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O1
-; RUN: llc -O2 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O2
-; RUN: llc -O3 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O3
-; RUN: llc -O3 -mcpu=haswell -mattr=cx16 < %s | FileCheck %s --check-prefixes=HASWELL-O3
+; RUN: llc -combiner-topological-sorting -O0 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O0
+; RUN: llc -combiner-topological-sorting -O1 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O1
+; RUN: llc -combiner-topological-sorting -O2 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O2
+; RUN: llc -combiner-topological-sorting -O3 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O3
+; RUN: llc -combiner-topological-sorting -O3 -mcpu=haswell -mattr=cx16 < %s | FileCheck %s --check-prefixes=HASWELL-O3
 
 target triple = "x86_64-unknown-linux-gnu"
 

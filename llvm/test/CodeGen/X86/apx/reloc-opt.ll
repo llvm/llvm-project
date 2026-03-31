@@ -1,7 +1,7 @@
-; RUN: llc -mcpu=diamondrapids %s -mtriple=x86_64 -filetype=obj -o %t.o
+; RUN: llc -combiner-topological-sorting -mcpu=diamondrapids %s -mtriple=x86_64 -filetype=obj -o %t.o
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefixes=NOAPXREL,CHECK
 
-; RUN: llc -mcpu=diamondrapids %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-enable-apx-for-relocation=true
+; RUN: llc -combiner-topological-sorting -mcpu=diamondrapids %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-enable-apx-for-relocation=true
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefixes=APXREL,CHECK
 
 

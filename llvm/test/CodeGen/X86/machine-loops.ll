@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=x86-isel %s -o - | llc --passes='print<machine-loops>' -x mir -o - 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu -stop-after=x86-isel %s -o - | llc -combiner-topological-sorting --passes='print<machine-loops>' -x mir -o - 2>&1 | FileCheck %s
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
 define i32 @foo(i32 noundef %0) #0 {

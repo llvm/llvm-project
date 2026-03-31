@@ -1,7 +1,7 @@
 ; Tests that InstrEmitter::EmitMachineNode correctly sets predecessors and
 ; successors.
 
-; RUN: llc -stop-after=finalize-isel -print-after=finalize-isel -mtriple=i686-- < %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -stop-after=finalize-isel -print-after=finalize-isel -mtriple=i686-- < %s 2>&1 | FileCheck %s
 
 ; The block containting the INLINEASM_BR should have a fallthrough and its
 ; indirect targets as its successors. Fallthrough should have 100% branch weight,

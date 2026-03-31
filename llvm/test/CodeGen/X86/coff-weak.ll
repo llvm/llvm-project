@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-windows-msvc -o - %s | FileCheck -check-prefix=X86 %s
-; RUN: llc -mtriple=x86_64-windows-msvc -o - %s | FileCheck -check-prefix=X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-windows-msvc -o - %s | FileCheck -check-prefix=X86 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-msvc -o - %s | FileCheck -check-prefix=X64 %s
 
 ; X86: .weak _foo
 ; X64: .weak foo

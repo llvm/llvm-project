@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s
 
 ; We should store -2 into UnwindHelp in a slot immediately after the last XMM
 ; CSR save.

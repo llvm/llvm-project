@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-linux-gnu -mattr=+sse2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux-gnu -mattr=+sse2
 ; PR2076
 
 define void @h264_h_loop_filter_luma_mmx2(ptr %pix, i32 %stride, i32 %alpha, i32 %beta, ptr %tc0) nounwind  {

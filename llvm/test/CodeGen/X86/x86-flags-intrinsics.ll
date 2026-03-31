@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s | FileCheck %s
 target triple = "i686-pc-win32"
 
 ; Check that pushf/popf intrinsics on win32 don't need a frame pointer.

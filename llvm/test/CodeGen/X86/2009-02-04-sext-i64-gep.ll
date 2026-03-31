@@ -1,4 +1,4 @@
-; RUN: llc < %s | grep p-92
+; RUN: llc -combiner-topological-sorting < %s | grep p-92
 ; PR3481
 ; The offset should print as -92, not +17179869092
 

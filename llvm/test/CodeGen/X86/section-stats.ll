@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -o /dev/null -filetype=obj -stats %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -o /dev/null -filetype=obj -stats %s 2>&1 | FileCheck %s
 
 ; CHECK-DAG: 1 elf-object-writer - Total size of SHF_ALLOC text sections
 ; CHECK-DAG: 1 elf-object-writer - Total size of SHF_ALLOC read-write sections

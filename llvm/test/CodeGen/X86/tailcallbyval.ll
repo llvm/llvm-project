@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-unknown-linux -tailcallopt | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux -tailcallopt | FileCheck %s
 %struct.s = type {i32, i32, i32, i32, i32, i32, i32, i32,
                   i32, i32, i32, i32, i32, i32, i32, i32,
                   i32, i32, i32, i32, i32, i32, i32, i32 }

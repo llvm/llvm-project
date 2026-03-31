@@ -1,4 +1,4 @@
-; RUN: llc -O3 -disable-peephole -mcpu=corei7-avx -mattr=+avx < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O3 -disable-peephole -mcpu=corei7-avx -mattr=+avx < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

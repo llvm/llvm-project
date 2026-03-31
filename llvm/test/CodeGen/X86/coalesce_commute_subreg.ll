@@ -1,4 +1,4 @@
-; RUN: llc -mtriple="x86_64-apple-darwin" -o - -verify-machineinstrs %s
+; RUN: llc -combiner-topological-sorting -mtriple="x86_64-apple-darwin" -o - -verify-machineinstrs %s
 
 define void @make_wanted() #0 {
 entry:

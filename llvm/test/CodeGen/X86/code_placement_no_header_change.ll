@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-linux < %s | FileCheck %s
 
 
 define i32 @bar(i32 %count) {

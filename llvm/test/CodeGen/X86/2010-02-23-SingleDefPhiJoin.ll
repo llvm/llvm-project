@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; PR6363
 ;
 ; This test case creates a phi join register with a single definition. The other

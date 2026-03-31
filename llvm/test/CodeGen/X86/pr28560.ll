@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-pc-linux -print-after=postrapseudos < %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-linux -print-after=postrapseudos < %s 2>&1 | FileCheck %s
 
 ; CHECK: MOV8rr ${{[a-d]}}l, implicit $e[[R:[a-d]]]x, implicit-def $e[[R]]x
 define i32 @foo(i32 %i, i32 %k, ptr %p) {

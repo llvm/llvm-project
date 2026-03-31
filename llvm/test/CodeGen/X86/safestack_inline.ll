@@ -1,5 +1,5 @@
-; RUN: sed -e "s/ATTR//" %s | llc -mtriple=x86_64-linux -safestack-use-pointer-address | FileCheck --check-prefix=INLINE %s
-; RUN: sed -e "s/ATTR/noinline/" %s | llc -mtriple=x86_64-linux -safestack-use-pointer-address | FileCheck --check-prefix=CALL %s
+; RUN: sed -e "s/ATTR//" %s | llc -combiner-topological-sorting -mtriple=x86_64-linux -safestack-use-pointer-address | FileCheck --check-prefix=INLINE %s
+; RUN: sed -e "s/ATTR/noinline/" %s | llc -combiner-topological-sorting -mtriple=x86_64-linux -safestack-use-pointer-address | FileCheck --check-prefix=CALL %s
 
 @p = external thread_local global ptr, align 8
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux-gnu
 ; PR6027
 
 %class.OlsonTimeZone = type { i16, ptr, ptr, i16 }

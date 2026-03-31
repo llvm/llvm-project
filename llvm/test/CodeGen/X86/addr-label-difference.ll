@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 ; PR5929
 
 ; CHECK: .section        __TEXT,__const

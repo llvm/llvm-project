@@ -1,8 +1,8 @@
-; RUN: llc -mtriple x86_64-apple-ios-simulator -filetype=obj -o - %s | \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-ios-simulator -filetype=obj -o - %s | \
 ; RUN: llvm-objdump --macho --unwind-info - | \
 ; RUN: FileCheck %s
 
-; RUN: llc -mtriple x86_64-apple-ios -filetype=obj -o - %s | \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-ios -filetype=obj -o - %s | \
 ; RUN: llvm-objdump --macho --unwind-info - | \
 ; RUN: FileCheck %s
 

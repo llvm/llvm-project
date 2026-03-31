@@ -1,4 +1,4 @@
-; RUN: llc -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -relocation-model=pic < %s | FileCheck %s
 ; PR5723
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"

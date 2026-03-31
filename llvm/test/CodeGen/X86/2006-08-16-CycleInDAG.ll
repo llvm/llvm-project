@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 	%struct.expr = type { ptr, i32, ptr, ptr, ptr, ptr }
 	%struct.hash_table = type { ptr, i32, i32, i32 }
 	%struct.occr = type { ptr, ptr, i8, i8 }

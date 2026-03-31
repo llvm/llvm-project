@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=i386-apple-darwin   -frame-pointer=all | FileCheck %s -check-prefix=X86
-; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-apple-darwin -frame-pointer=all | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -mtriple=i386-apple-darwin   -frame-pointer=all | FileCheck %s -check-prefix=X86
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -mtriple=x86_64-apple-darwin -frame-pointer=all | FileCheck %s -check-prefix=X64
 
 ; Tail call should not use ebp / rbp after it's popped. Use esp / rsp.
 

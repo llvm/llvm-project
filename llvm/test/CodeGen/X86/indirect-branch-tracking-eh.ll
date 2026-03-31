@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefix=X86_64
-; RUN: llc -mtriple=i386-unknown-unknown < %s | FileCheck %s --check-prefix=X86
-; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj -verify-machineinstrs=0 < %s | FileCheck %s --check-prefix=SJLJ
-; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj -verify-machineinstrs=0 < %s | FileCheck %s --check-prefix=NUM
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefix=X86_64
+; RUN: llc -combiner-topological-sorting -mtriple=i386-unknown-unknown < %s | FileCheck %s --check-prefix=X86
+; RUN: llc -combiner-topological-sorting -mtriple i386-windows-gnu -exception-model sjlj -verify-machineinstrs=0 < %s | FileCheck %s --check-prefix=SJLJ
+; RUN: llc -combiner-topological-sorting -mtriple i386-windows-gnu -exception-model sjlj -verify-machineinstrs=0 < %s | FileCheck %s --check-prefix=NUM
 
 ; X86_64:       test_eh:                                # @test_eh
 ; X86_64-NEXT:  .Lfunc_begin0:

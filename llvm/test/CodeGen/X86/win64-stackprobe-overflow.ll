@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-windows-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-windows-gnu | FileCheck %s
 
 define void @foo() unnamed_addr #0 {
 start:

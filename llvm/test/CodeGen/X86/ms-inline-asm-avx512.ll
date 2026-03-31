@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; Generated from clang/test/CodeGen/ms-inline-asm-avx512.c
 

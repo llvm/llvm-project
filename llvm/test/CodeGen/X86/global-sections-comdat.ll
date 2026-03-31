@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=i386-unknown-linux | FileCheck %s -check-prefix=LINUX
-; RUN: llc < %s -mtriple=i386-unknown-linux -data-sections -function-sections | FileCheck %s -check-prefix=LINUX-SECTIONS
-; RUN: llc < %s -mtriple=i386-unknown-linux -data-sections -function-sections -unique-section-names=false | FileCheck %s -check-prefix=LINUX-SECTIONS-SHORT
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux | FileCheck %s -check-prefix=LINUX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux -data-sections -function-sections | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux -data-sections -function-sections -unique-section-names=false | FileCheck %s -check-prefix=LINUX-SECTIONS-SHORT
 
 $F1 = comdat any
 define void @F1(i32 %y) comdat {

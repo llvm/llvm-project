@@ -1,5 +1,5 @@
-; RUN: llc --mtriple="x86_64-" -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=X86
-; RUN: llc --mtriple="x86_64-" -O0 -fast-isel -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=X86
+; RUN: llc -combiner-topological-sorting --mtriple="x86_64-" -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=X86
+; RUN: llc -combiner-topological-sorting --mtriple="x86_64-" -O0 -fast-isel -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=X86
 
 ; X86-NOT:  DBG_VALUE
 ; X86:      DBG_VALUE $r14, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)

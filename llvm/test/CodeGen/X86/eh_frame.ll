@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple x86_64-unknown-linux-gnu | FileCheck -check-prefix=STATIC %s
-; RUN: llc < %s -mtriple x86_64-unknown-linux-gnu -relocation-model=pic | FileCheck -check-prefix=PIC %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-unknown-linux-gnu | FileCheck -check-prefix=STATIC %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-unknown-linux-gnu -relocation-model=pic | FileCheck -check-prefix=PIC %s
 
 @__FRAME_END__ = constant [1 x i32] zeroinitializer, section ".eh_frame"
 

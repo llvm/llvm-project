@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -relocation-model=static | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -relocation-model=static | FileCheck %s
 
 ; CHECK: align
 ; CHECK: movl  $4, -4(%ecx)

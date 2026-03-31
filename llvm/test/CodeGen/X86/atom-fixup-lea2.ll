@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=atom -mtriple=i686-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=atom -mtriple=i686-linux | FileCheck %s
 
 ; CHECK:%bb.5
 ; CHECK-NEXT:leal

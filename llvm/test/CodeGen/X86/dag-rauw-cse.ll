@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | FileCheck %s
 ; PR3018
 
 define i32 @test(i32 %A) nounwind {

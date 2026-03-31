@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=finalize-isel < %s  | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu -stop-after=finalize-isel < %s  | FileCheck %s
 
 define i32 @foo(i32 %n) !prof !1 {
 entry:

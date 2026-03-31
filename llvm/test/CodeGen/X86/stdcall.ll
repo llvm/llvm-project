@@ -1,4 +1,4 @@
-; RUN: llc -mtriple="i386-pc-mingw32" < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple="i386-pc-mingw32" < %s | FileCheck %s
 ; PR5851
 
 %0 = type { ptr }

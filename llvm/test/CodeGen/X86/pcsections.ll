@@ -2,11 +2,11 @@
 ; by the AsmPrinter. For tests to check that metadata is propagated to
 ; assembly, see pcsections-*.ll tests.
 
-; RUN: llc -O0 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
-; RUN: llc -O1 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
-; RUN: llc -O2 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
-; RUN: llc -O3 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
-; RUN: llc -O1 -code-model=large < %s | FileCheck %s --check-prefixes=CHECK,LARGE
+; RUN: llc -combiner-topological-sorting -O0 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
+; RUN: llc -combiner-topological-sorting -O1 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
+; RUN: llc -combiner-topological-sorting -O2 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
+; RUN: llc -combiner-topological-sorting -O3 < %s | FileCheck %s --check-prefixes=CHECK,DEFCM
+; RUN: llc -combiner-topological-sorting -O1 -code-model=large < %s | FileCheck %s --check-prefixes=CHECK,LARGE
 
 target triple = "x86_64-unknown-linux-gnu"
 

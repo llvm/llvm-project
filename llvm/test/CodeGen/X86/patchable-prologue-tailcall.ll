@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=CHECK
 
 ; CHECK: f1:
 ; CHECK-NEXT: # %bb.0:

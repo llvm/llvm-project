@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- | FileCheck %s
 
 define void @test(i1 %cnd) !prof !{!"function_entry_count", i64 1024} {
 ; CHECK-LABEL: @test

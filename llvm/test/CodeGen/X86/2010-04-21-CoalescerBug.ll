@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin
 ; rdar://7886733
 
 %struct.CMTime = type <{ i64, i32, i32, i64 }>

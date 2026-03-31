@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f,+egpr -show-mc-encoding | FileCheck --check-prefix=EGPR %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown -mattr=+avx512f,+egpr -show-mc-encoding | FileCheck --check-prefix=EGPR %s
 
 define <16 x i32> @kmovkk(ptr %base, <16 x i32> %ind, i16 %mask) {
 ; EGPR: kmovq   %k1, %k2                        # EVEX TO VEX Compression encoding: [0xc4,0xe1,0xf8,0x90,0xd1]

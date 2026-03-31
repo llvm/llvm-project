@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown
 ; PR38038
 
 define i8 @crash(half)  {

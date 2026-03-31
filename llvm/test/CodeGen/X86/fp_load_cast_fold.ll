@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | FileCheck %s
 
 define double @short(ptr %P) {
         %V = load i16, ptr %P               ; <i16> [#uses=1]

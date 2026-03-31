@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=i686-unknown-linux -relocation-model=static -stats 2>&1 | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux -relocation-model=static -stats 2>&1 | \
 ; RUN:   grep asm-printer | grep 14
 ;
 ; It's possible to schedule this in 14 instructions by avoiding

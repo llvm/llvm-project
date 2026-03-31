@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin10 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin10 -O0 < %s | FileCheck %s
 
 ; test that we print a label that we use. We had a bug where
 ; we would print the jump, but not the label because it was considered
@@ -7,7 +7,7 @@
 ; CHECK:        jmp     LBB0_9
 ; CHECK: LBB0_9:                                 ## %cleanup
 
-; RUN: llc -filetype=obj -mtriple=x86_64 -O0 -save-temp-labels < %s | llvm-objdump -d - | FileCheck %s --check-prefix=SAVETEMP
+; RUN: llc -combiner-topological-sorting -filetype=obj -mtriple=x86_64 -O0 -save-temp-labels < %s | llvm-objdump -d - | FileCheck %s --check-prefix=SAVETEMP
 
 ; SAVETEMP:         jne {{.*}} <.LBB0_1>
 ; SAVETEMP-LABEL: <.LBB0_1>:

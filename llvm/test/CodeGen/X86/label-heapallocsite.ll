@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck --check-prefixes=CHECK %s
-; RUN: llc -O0 < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: llc -combiner-topological-sorting -O0 < %s | FileCheck --check-prefixes=CHECK %s
 
 
 ; Source to regenerate:

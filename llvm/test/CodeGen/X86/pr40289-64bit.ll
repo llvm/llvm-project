@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
 
 define cc 92 < 9 x i64 > @clobber() {
   %1 = alloca i64

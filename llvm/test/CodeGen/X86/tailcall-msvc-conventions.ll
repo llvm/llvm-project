@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-unknown-linux-gnu -O1 < %s | FileCheck %s
-; RUN: llc -mtriple=i686-unknown-linux-gnu -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-linux-gnu -O1 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-linux-gnu -O0 < %s | FileCheck %s
 
 ; The MSVC family of x86 calling conventions makes tail calls really tricky.
 ; Tests of all the various combinations should live here.

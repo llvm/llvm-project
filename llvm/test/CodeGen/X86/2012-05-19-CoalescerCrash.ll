@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-coalescing
+; RUN: llc -combiner-topological-sorting < %s -verify-coalescing
 ; PR12892
 ;
 ; Dead code elimination during coalesing causes a live range to split into two

@@ -1,5 +1,5 @@
 ; Test hot or unlikely section postfix based on profile and user annotation.
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: inlinehint norecurse nounwind readnone uwtable

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 < %s | FileCheck %s
 
 ; Quick test to ensure that atomics which are not naturally-aligned
 ; emit unsized libcalls, and aren't emitted as native instructions or

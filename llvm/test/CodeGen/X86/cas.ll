@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu %s -o - -no-integrated-as | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu %s -o - -no-integrated-as | FileCheck %s
 
 ; C code this came from
 ;bool cas(float volatile *p, ptr expected, float desired) {

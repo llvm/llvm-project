@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-freebsd7.2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-freebsd7.2
 ; PR4478
 
 	%struct.sockaddr = type <{ i8, i8, [14 x i8] }>

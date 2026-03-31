@@ -1,4 +1,4 @@
-; RUN: llc -O0 < %s -mtriple=x86_64-unknown | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 < %s -mtriple=x86_64-unknown | FileCheck %s
 ; This was extracted from a swift debugger stepping testcase and checks that the
 ;   fold (zext (load x)) -> (zext (truncate (zextload x)))
 ; rule propagates the SDLoc of the load to the zextload.

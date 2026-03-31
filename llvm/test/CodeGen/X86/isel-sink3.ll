@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 ; this should not sink %1 into bb1, that would increase reg pressure.
 
 ; rdar://6399178

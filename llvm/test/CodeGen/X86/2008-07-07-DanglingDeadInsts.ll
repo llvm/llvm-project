@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin9
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9
 
 	%struct.ogg_stream_state = type { ptr, i32, i32, i32, ptr, ptr, i32, i32, i32, i32, [282 x i8], i32, i32, i32, i32, i32, i64, i64 }
 	%struct.res_state = type { i32, i32, i32, i32, ptr, ptr, i32, i32 }

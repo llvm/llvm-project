@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- -print-after=finalize-isel %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -print-after=finalize-isel %s -o /dev/null 2>&1 | FileCheck %s
 
 declare void @foo(i32)
 

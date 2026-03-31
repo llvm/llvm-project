@@ -1,5 +1,5 @@
-; RUN: not llc -o /dev/null %s -mtriple=x86_64-unknown-unknown -mattr=avx512f 2>&1 | FileCheck %s
-; RUN: not llc -o /dev/null %s -mtriple=i386-unknown-unknown -mattr=avx512f 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -o /dev/null %s -mtriple=x86_64-unknown-unknown -mattr=avx512f 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -o /dev/null %s -mtriple=i386-unknown-unknown -mattr=avx512f 2>&1 | FileCheck %s
 
 ; CHECK: error: couldn't allocate input reg for constraint 'Yk'
 define <8 x i64> @mask_Yk_i32(i32 %msk, <8 x i64> %x, <8 x i64> %y) {

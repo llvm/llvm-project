@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -mtriple=i386-unknown-unknown < %s | FileCheck %s   --check-prefix=X86
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=i386-unknown-unknown < %s | FileCheck %s   --check-prefix=X86
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; foo

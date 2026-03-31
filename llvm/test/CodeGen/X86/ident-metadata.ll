@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s | FileCheck %s
 ; Verify that llvm.ident metadata is emitted as .ident
 ; directives in assembly files, and in the .comment section in ELF object files.
 

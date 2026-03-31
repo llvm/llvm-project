@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: "?fin$0@0@main@@"
 ; CHECK:      .seh_handlerdata

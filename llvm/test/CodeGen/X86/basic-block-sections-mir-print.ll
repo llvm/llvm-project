@@ -1,9 +1,9 @@
 ; Stop after bbsections-prepare and check MIR output for section type.
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-address-map -stop-after=bbsections-prepare | FileCheck %s -check-prefix=BBADDRMAP
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-address-map -stop-after=bbsections-prepare | FileCheck %s -check-prefix=BBADDRMAP
 ; RUN: echo '!_Z3foob' > %t
 ; RUN: echo '!!1' >> %t
 ; RUN: echo '!!2' >> %t
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -stop-after=bbsections-prepare | FileCheck %s -check-prefix=BBSECTIONS
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -stop-after=bbsections-prepare | FileCheck %s -check-prefix=BBSECTIONS
 
 @_ZTIb = external constant ptr
 define dso_local i32 @_Z3foob(i1 zeroext %0) {

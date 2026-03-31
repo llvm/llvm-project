@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -O0 -regalloc=fast | FileCheck %s
+; RUN: llc -combiner-topological-sorting %s -o - -O0 -regalloc=fast | FileCheck %s
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 target triple = "i386-apple-macosx10.10"
 

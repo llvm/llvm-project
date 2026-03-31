@@ -1,5 +1,5 @@
-; RUN: not llc < %s -mtriple=i686-pc-linux -o - -mattr=+sse2 2>&1 | FileCheck %s --check-prefix=ERR
-; RUN: llc < %s -mtriple=x86_64-pc-linux -o - -mattr=+mmx | FileCheck %s
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux -o - -mattr=+sse2 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -o - -mattr=+mmx | FileCheck %s
 
 ; ERR: error: couldn't allocate input reg for constraint 'x'
 define void @foo(fp128 %x) {

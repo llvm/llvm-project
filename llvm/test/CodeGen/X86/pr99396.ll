@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-unknown-freebsd -enable-misched -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-freebsd -enable-misched -relocation-model=pic | FileCheck %s
 
 @c = external local_unnamed_addr global ptr
 

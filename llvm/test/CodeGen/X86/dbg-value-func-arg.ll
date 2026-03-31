@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple i386-unknown-unknown -O1 -stop-before=finalize-isel | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple i386-unknown-unknown -O1 -stop-before=finalize-isel | FileCheck %s
 
 ; Test case is designed to show the differences related to how implicit values
 ; are handled by SelectionDAGBuilder::EmitFuncArgumentDbgValue.

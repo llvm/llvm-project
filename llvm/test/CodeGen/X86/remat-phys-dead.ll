@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-apple-darwin -debug -o /dev/null < %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-apple-darwin -debug -o /dev/null < %s 2>&1 | FileCheck %s
 
 ; We need to make sure that rematerialization into a physical register marks the
 ; super- or sub-register as dead after this rematerialization since only the

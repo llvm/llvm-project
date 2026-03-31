@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64 -unique-section-names=0 -data-sections 2>&1 \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -unique-section-names=0 -data-sections 2>&1 \
 ; RUN:     | FileCheck %s
 
 ;; Several sections are created via inline assembly. We add checks
@@ -282,7 +282,7 @@ module asm ".section .asm_nonmergeable2,\22a\22,@progbits"
 ;; --no-integrated-as avoids the use of ",unique," for compatibility with older binutils.
 
 ;; Error if an incompatible symbol is explicitly placed into a mergeable section.
-; RUN: not llc < %s -mtriple=x86_64 --no-integrated-as -binutils-version=2.34 2>&1 \
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=x86_64 --no-integrated-as -binutils-version=2.34 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=NO-I-AS-ERR
 ; NO-I-AS-ERR: error: Symbol 'explicit_default_1' from module '<stdin>' required a section with entry-size=0 but was placed in section '.rodata.cst16' with entry-size=16: Explicit assignment by pragma or attribute of an incompatible symbol to this section?
 ; NO-I-AS-ERR: error: Symbol 'explicit_default_4' from module '<stdin>' required a section with entry-size=0 but was placed in section '.debug_str' with entry-size=1: Explicit assignment by pragma or attribute of an incompatible symbol to this section?
@@ -292,11 +292,11 @@ module asm ".section .asm_nonmergeable2,\22a\22,@progbits"
 ;; For GNU as before 2.35,
 ;; Don't create mergeable sections for globals with an explicit section name.
 ; RUN: echo '@explicit = unnamed_addr constant [2 x i16] [i16 1, i16 1], section ".explicit"' > %t.no_i_as.ll
-; RUN: llc < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=2.34 2>&1 \
+; RUN: llc -combiner-topological-sorting < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=2.34 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=NO-I-AS-OLD
 ; NO-I-AS-OLD: .section .explicit,"a",@progbits{{$}}
-; RUN: llc < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=2.35 2>&1 \
+; RUN: llc -combiner-topological-sorting < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=2.35 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=NO-I-AS-NEW
-; RUN: llc < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=none 2>&1 \
+; RUN: llc -combiner-topological-sorting < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=none 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=NO-I-AS-NEW
 ; NO-I-AS-NEW: .section .explicit,"aM",@progbits,4,unique,1

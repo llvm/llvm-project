@@ -1,4 +1,4 @@
-; RUN: llc -mtriple i386-unknown-freebsd10.0 --relocation-model=pic %s -o -
+; RUN: llc -combiner-topological-sorting -mtriple i386-unknown-freebsd10.0 --relocation-model=pic %s -o -
 
 ; PR16979
 

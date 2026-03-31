@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -frame-pointer=all
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10 -frame-pointer=all
 ; rdar://7291624
 
 %union.RtreeCoord = type { float }

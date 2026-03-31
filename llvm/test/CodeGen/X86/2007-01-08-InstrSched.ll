@@ -1,5 +1,5 @@
 ; PR1075
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-apple-darwin -O3 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-apple-darwin -O3 | FileCheck %s
 
 define float @foo(float %x) nounwind {
     %tmp1 = fmul float %x, 3.000000e+00

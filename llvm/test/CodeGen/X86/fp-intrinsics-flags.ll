@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mtriple=i686-pc-linux -mattr=sse2 -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O3 -mtriple=i686-pc-linux -mattr=sse2 -stop-after=finalize-isel < %s | FileCheck %s
 
 define double @sifdb(i8 %x) #0 {
 entry:

@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=haswell | FileCheck %s --check-prefix=HSW
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skylake | FileCheck %s --check-prefix=SKL
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skx | FileCheck %s --check-prefix=SKL
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=alderlake | FileCheck %s --check-prefix=ADL
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=silvermont -mattr=+lzcnt,+bmi | FileCheck %s --check-prefix=SKL
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=goldmont -mattr=+lzcnt,+bmi | FileCheck %s --check-prefix=SKL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=haswell | FileCheck %s --check-prefix=HSW
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skylake | FileCheck %s --check-prefix=SKL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skx | FileCheck %s --check-prefix=SKL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=alderlake | FileCheck %s --check-prefix=ADL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=silvermont -mattr=+lzcnt,+bmi | FileCheck %s --check-prefix=SKL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=goldmont -mattr=+lzcnt,+bmi | FileCheck %s --check-prefix=SKL
 
 ; This tests a fix for bugzilla 33869 https://bugs.llvm.org/show_bug.cgi?id=33869
 

@@ -3,7 +3,7 @@
 ;; This test also makes sure that callback functions which meet the above constraint
 ;; are handled correctly.
 
-; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
 declare !type !0 void @_Z6doWorkPFviE(ptr)
 

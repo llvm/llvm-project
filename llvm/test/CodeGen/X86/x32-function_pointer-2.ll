@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-linux-gnux32 -fast-isel | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnux32 -fast-isel | FileCheck %s
 
 ; Test call function pointer with function argument
 ;

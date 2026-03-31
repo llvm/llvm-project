@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-win32 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-win32 < %s | FileCheck %s
 
 define i8 @foobar(double %d, ptr %x) {
 entry:

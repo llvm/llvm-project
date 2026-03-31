@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
 
 ; CHECK-LABEL:  uses_rax:
 ; CHECK:        .Limpcall0:

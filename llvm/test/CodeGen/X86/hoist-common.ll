@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx  | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx  | FileCheck %s
 ; This is supposed to be testing BranchFolding's common
 ; code hoisting logic, but has been erroneously passing due
 ; to there being a redundant xorl in the entry block

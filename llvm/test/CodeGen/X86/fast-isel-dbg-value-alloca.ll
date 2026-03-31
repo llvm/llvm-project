@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel -fast-isel-abort=1 -mtriple=x86_64-unknown-unknown -stop-after=finalize-isel %s -o - | \
+; RUN: llc -combiner-topological-sorting -fast-isel -fast-isel-abort=1 -mtriple=x86_64-unknown-unknown -stop-after=finalize-isel %s -o - | \
 ; RUN:    FileCheck %s
 
 

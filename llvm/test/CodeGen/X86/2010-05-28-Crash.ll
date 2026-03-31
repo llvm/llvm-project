@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-apple-darwin < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-apple-darwin -regalloc=basic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -regalloc=basic < %s | FileCheck %s
 ; Test to check separate label for inlined function argument.
 
 define i32 @foo(i32 %y) nounwind optsize ssp !dbg !1 {

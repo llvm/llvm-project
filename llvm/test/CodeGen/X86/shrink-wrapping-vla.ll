@@ -13,7 +13,7 @@
 ;    x[i] = a[i] + 1;
 ; }
 ;
-; RUN: llc -mtriple x86_64-linux %s -o - | FileCheck %s --check-prefix=CHECK
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-linux %s -o - | FileCheck %s --check-prefix=CHECK
 
 define dso_local void @f(i32 %n, ptr nocapture %x) {
 entry:

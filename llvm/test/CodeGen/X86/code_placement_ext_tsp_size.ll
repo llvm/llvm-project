@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -apply-ext-tsp-for-size < %s | FileCheck %s -check-prefix=CHECK-SIZE
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs < %s | FileCheck %s -check-prefix=CHECK-PERF
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -apply-ext-tsp-for-size < %s | FileCheck %s -check-prefix=CHECK-SIZE
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs < %s | FileCheck %s -check-prefix=CHECK-PERF
 
 define void @func1() minsize {
 ;

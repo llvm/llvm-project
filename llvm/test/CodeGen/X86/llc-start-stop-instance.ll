@@ -1,18 +1,18 @@
-; RUN: llc -mtriple=x86_64-- -debug-pass=Structure -stop-after=dead-mi-elimination,1 %s -o /dev/null 2>&1 \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -debug-pass=Structure -stop-after=dead-mi-elimination,1 %s -o /dev/null 2>&1 \
 ; RUN:   | FileCheck -check-prefix=STOP-AFTER-DEAD1 %s
 
-; RUN: llc -mtriple=x86_64-- -debug-pass=Structure -stop-after=dead-mi-elimination,0 %s -o /dev/null 2>&1 \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -debug-pass=Structure -stop-after=dead-mi-elimination,0 %s -o /dev/null 2>&1 \
 ; RUN:   | FileCheck -check-prefix=STOP-AFTER-DEAD0 %s
 
 
-; RUN: llc -mtriple=x86_64-- -debug-pass=Structure -stop-before=dead-mi-elimination,1 %s -o /dev/null 2>&1 \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -debug-pass=Structure -stop-before=dead-mi-elimination,1 %s -o /dev/null 2>&1 \
 ; RUN:   | FileCheck -check-prefix=STOP-BEFORE-DEAD1 %s
 
 
-; RUN: llc -mtriple=x86_64-- -debug-pass=Structure -start-before=dead-mi-elimination,1 %s -o /dev/null 2>&1 \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -debug-pass=Structure -start-before=dead-mi-elimination,1 %s -o /dev/null 2>&1 \
 ; RUN:   | FileCheck -check-prefix=START-BEFORE-DEAD1 %s
 
-; RUN: llc -mtriple=x86_64-- -debug-pass=Structure -start-after=dead-mi-elimination,1 %s -o /dev/null 2>&1 \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -debug-pass=Structure -start-after=dead-mi-elimination,1 %s -o /dev/null 2>&1 \
 ; RUN:   | FileCheck -check-prefix=START-AFTER-DEAD1 %s
 
 

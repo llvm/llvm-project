@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 
 define void @test2(<2 x i32> %A, <2 x i32> %B, ptr %C) nounwind {
        %D = icmp sgt <2 x i32> %A, %B

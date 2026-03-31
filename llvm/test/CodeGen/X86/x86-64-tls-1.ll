@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 @tm_nest_level = internal thread_local global i32 0
 define i64 @z() nounwind {
 ; CHECK:      movq    $tm_nest_level@TPOFF, %r[[R0:[abcd]]]x

@@ -1,5 +1,5 @@
 ; Test that vectors are scalarized/lowered correctly.
-; RUN: llc -mtriple=i686--  < %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686--  < %s
 
 ; A simple test to check copyToParts and copyFromParts.
 

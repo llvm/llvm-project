@@ -1,21 +1,21 @@
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=small -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=small -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=medium -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=LARGE
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=79 -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=79 -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=LARGE
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=80 -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=80 -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=large -large-data-threshold=79 -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=large -large-data-threshold=79 -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=LARGE
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=large -large-data-threshold=80 -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=large -large-data-threshold=80 -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL
 
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=small -data-sections -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=small -data-sections -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL-DS
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -data-sections -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=medium -data-sections -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=LARGE-DS
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=large -data-sections -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=large -data-sections -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=LARGE-DS
 
 ; SMALL: .data {{.*}} WA {{.*}}

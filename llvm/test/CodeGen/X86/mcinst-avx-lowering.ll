@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx10 -mattr=avx -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-macosx10 -mattr=avx -show-mc-encoding < %s | FileCheck %s
 
 define i64 @t1(double %d_ivar) nounwind uwtable ssp {
 entry:

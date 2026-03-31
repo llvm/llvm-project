@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 
 target triple = "x86_64-pc-win"
 

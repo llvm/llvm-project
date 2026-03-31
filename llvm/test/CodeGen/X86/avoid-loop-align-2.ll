@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- | grep align | count 4
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | grep align | count 4
 
 ; TODO: Is it a good idea to align inner loops? It's hard to know without
 ; knowing what their trip counts are, or other dynamic information. For

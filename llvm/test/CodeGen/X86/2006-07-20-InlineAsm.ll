@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -no-integrated-as
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -no-integrated-as
 ; PR833
 
 @G = weak global i32 0		; <ptr> [#uses=3]

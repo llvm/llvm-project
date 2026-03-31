@@ -1,4 +1,4 @@
-; RUN: llc -no-integrated-as < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -no-integrated-as < %s | FileCheck %s
 ; ModuleID = '4964.c'
 ; PR 4964
 ; Registers other than RAX, RCX are OK, but they must be different.

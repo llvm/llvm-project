@@ -1,5 +1,5 @@
 ;; This test verifies that basic-block-sections works with address-taken basic blocks.
-; RUN: llc < %s -mtriple=x86_64 -basic-block-sections=all | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -basic-block-sections=all | FileCheck %s
 
 define void @foo(i1 zeroext %0) nounwind {
 entry:

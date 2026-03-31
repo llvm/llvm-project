@@ -1,4 +1,4 @@
-; RUN: not llc -o /dev/null %s -mtriple=i386-unknown-unknown 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -o /dev/null %s -mtriple=i386-unknown-unknown 2>&1 | FileCheck %s
 
 ; This test was derived from this C code. The frontend sees that the constraint
 ; doesn't accept memory, but the argument is a strict. So it tries to bitcast

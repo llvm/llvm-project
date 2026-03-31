@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-apple-darwin < %s -o -
-; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=IGNORE_INTRIN %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin < %s -o -
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=IGNORE_INTRIN %s
 
 ; PR16954
 ;

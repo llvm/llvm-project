@@ -1,14 +1,14 @@
-; RUN: llc %s -o - -mtriple x86_64-sie-ps5 -emit-jump-table-sizes-section -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=PS5-CHECK %s
-; RUN: llc %s -o - -mtriple x86_64-sie-ps5 -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOFLAG %s
-; RUN: llc %s -o - -mtriple x86_64-sie-ps5 -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOTABLE %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-sie-ps5 -emit-jump-table-sizes-section -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=PS5-CHECK %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-sie-ps5 -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOFLAG %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-sie-ps5 -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOTABLE %s
 
-; RUN: llc %s -o - -mtriple x86_64-unknown-linux-gnu -emit-jump-table-sizes-section -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=ELF-CHECK %s
-; RUN: llc %s -o - -mtriple x86_64-unknown-linux-gnu -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOFLAG %s
-; RUN: llc %s -o - -mtriple x86_64-unknown-linux-gnu -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOTABLE %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-unknown-linux-gnu -emit-jump-table-sizes-section -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=ELF-CHECK %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-unknown-linux-gnu -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOFLAG %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-unknown-linux-gnu -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOTABLE %s
 
-; RUN: llc %s -o - -mtriple x86_64-pc-windows-msvc -emit-jump-table-sizes-section -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=COFF-CHECK %s
-; RUN: llc %s -o - -mtriple x86_64-pc-windows-msvc -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOFLAG %s
-; RUN: llc %s -o - -mtriple x86_64-pc-windows-msvc -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOTABLE %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-pc-windows-msvc -emit-jump-table-sizes-section -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=COFF-CHECK %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-pc-windows-msvc -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOFLAG %s
+; RUN: llc -combiner-topological-sorting %s -o - -mtriple x86_64-pc-windows-msvc -verify-machineinstrs --relocation-model=pic | FileCheck --check-prefix=NOTABLE %s
 
 ; This test verifies the jump table size section. Currently only enabled by default on the PS5 target.
 

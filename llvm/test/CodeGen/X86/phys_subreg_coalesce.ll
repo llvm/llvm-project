@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin9 -mattr=+sse2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin9 -mattr=+sse2 | FileCheck %s
 
 ; CHECK-NOT: movl
 

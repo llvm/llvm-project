@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 
 define void @Hubba(ptr %saveunder, i32 %firstBlob, i32 %select) nounwind  {
 entry:

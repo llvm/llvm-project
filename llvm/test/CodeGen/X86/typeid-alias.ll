@@ -1,7 +1,7 @@
 ; Test that we don't crash in the case where the type info object is an
 ; alias pointing to a non-zero offset within a global.
 
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

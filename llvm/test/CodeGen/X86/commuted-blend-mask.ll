@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse4.1 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-unknown -mattr=+sse4.1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s
 
 ; When commuting the operands of a SSE blend, make sure that the resulting blend
 ; mask can be encoded as a imm8.

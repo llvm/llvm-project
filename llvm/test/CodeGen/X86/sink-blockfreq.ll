@@ -1,6 +1,6 @@
-; RUN: llc -disable-preheader-prot=true -disable-machine-licm -machine-sink-bfi=true -mtriple=x86_64-apple-darwin < %s | FileCheck %s -check-prefix=MSINK_BFI
-; RUN: llc -disable-preheader-prot=true -disable-machine-licm -machine-sink-bfi=false -mtriple=x86_64-apple-darwin < %s | FileCheck %s -check-prefix=MSINK_NOBFI
-; RUN: llc -disable-preheader-prot=true -disable-machine-licm -machine-sink-bfi=true -force-pgso -mtriple=x86_64-apple-darwin < %s | FileCheck %s -check-prefix=MSINK_NOBFI
+; RUN: llc -combiner-topological-sorting -disable-preheader-prot=true -disable-machine-licm -machine-sink-bfi=true -mtriple=x86_64-apple-darwin < %s | FileCheck %s -check-prefix=MSINK_BFI
+; RUN: llc -combiner-topological-sorting -disable-preheader-prot=true -disable-machine-licm -machine-sink-bfi=false -mtriple=x86_64-apple-darwin < %s | FileCheck %s -check-prefix=MSINK_NOBFI
+; RUN: llc -combiner-topological-sorting -disable-preheader-prot=true -disable-machine-licm -machine-sink-bfi=true -force-pgso -mtriple=x86_64-apple-darwin < %s | FileCheck %s -check-prefix=MSINK_NOBFI
 
 ; Test that by changing BlockFrequencyInfo we change the order in which
 ; machine-sink looks for successor blocks. By not using BFI, both G and B

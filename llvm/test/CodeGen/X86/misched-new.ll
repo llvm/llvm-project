@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -x86-early-ifcvt -enable-misched \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=core2 -x86-early-ifcvt -enable-misched \
 ; RUN:          -misched=shuffle -misched-prera-direction=bottomup -verify-machineinstrs \
 ; RUN:     | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 -x86-early-ifcvt -enable-misched \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=core2 -x86-early-ifcvt -enable-misched \
 ; RUN:          -misched=shuffle -misched-prera-direction=topdown -verify-machineinstrs \
 ; RUN:     | FileCheck %s --check-prefix TOPDOWN
 ; REQUIRES: asserts

@@ -1,4 +1,4 @@
-; RUN: llc < %s -enable-shrink-wrap=true | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -enable-shrink-wrap=true | FileCheck %s
 
 ; TODO: add preallocated versions of tests
 ; we don't yet support conditionally called preallocated calls after the setup

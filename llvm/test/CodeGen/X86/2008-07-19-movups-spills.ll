@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-linux -mattr=sse2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux -mattr=sse2 | FileCheck %s
 ; PR2539
 ; PR8969 - make 32-bit linux have a 16-byte aligned stack
 ; Verify that movups is still generated with an aligned stack for the globals

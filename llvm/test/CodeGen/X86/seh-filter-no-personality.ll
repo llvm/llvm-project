@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-windows-msvc < %s | FileCheck %s
 
 ; Mostly make sure that llvm.eh.recoverfp doesn't crash if the parent
 ; function lacks a personality.

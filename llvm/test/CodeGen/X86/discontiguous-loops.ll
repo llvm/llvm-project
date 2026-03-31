@@ -1,4 +1,4 @@
-; RUN: llc -verify-loop-info -verify-dom-info -mtriple=x86_64-- < %s
+; RUN: llc -combiner-topological-sorting -verify-loop-info -verify-dom-info -mtriple=x86_64-- < %s
 ; PR5243
 
 @.str96 = external constant [37 x i8], align 8    ; <ptr> [#uses=1]

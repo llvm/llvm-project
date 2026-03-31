@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s -check-prefix=X64
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s -check-prefix=X32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s -check-prefix=X32
 
 ; CHECK-LABEL: foo
 

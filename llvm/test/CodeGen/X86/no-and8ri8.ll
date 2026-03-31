@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux -mattr=+avx512f --show-mc-encoding < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -mattr=+avx512f --show-mc-encoding < %s | FileCheck %s
 
 declare i1 @bar() 
 

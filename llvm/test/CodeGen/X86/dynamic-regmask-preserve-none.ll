@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin -stop-after finalize-isel <%s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -stop-after finalize-isel <%s | FileCheck %s
 
 ; Check that the callee doesn't have calleeSavedRegisters.
 define preserve_nonecc i64 @callee1(i64 %a0, i64 %b0, i64 %c0, i64 %d0, i64 %e0) nounwind {

@@ -1,7 +1,7 @@
 ;; Test that we keep SHF_LINK_ORDER but reset sh_link to 0 if the associated
 ;; symbol is not defined.
-; RUN: llc -mtriple=x86_64 -data-sections=1 < %s | FileCheck %s
-; RUN: llc -filetype=obj -mtriple=x86_64 -data-sections=1 < %s | llvm-readelf -S - | FileCheck --check-prefix=SEC %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -data-sections=1 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -filetype=obj -mtriple=x86_64 -data-sections=1 < %s | llvm-readelf -S - | FileCheck --check-prefix=SEC %s
 
 ;; FIXME The assembly output cannot be assembled because foo is not defined.
 ;; This is difficult to fix because we allow loops (see elf-associated.ll

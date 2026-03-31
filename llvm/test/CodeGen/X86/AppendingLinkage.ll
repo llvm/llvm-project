@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=i686-- 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=i686-- 2>&1 | FileCheck %s
 
 ; CHECK: error: unknown special variable with appending linkage: foo
 @foo = appending constant [1 x i32 ] zeroinitializer

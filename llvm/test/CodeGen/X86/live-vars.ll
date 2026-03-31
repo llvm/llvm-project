@@ -1,4 +1,4 @@
-; RUN: llc -enable-new-pm -mtriple=x86_64-unknown -stop-after=x86-isel %s -o - | llc -passes='print<live-vars>' -x mir 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -enable-new-pm -mtriple=x86_64-unknown -stop-after=x86-isel %s -o - | llc -combiner-topological-sorting -passes='print<live-vars>' -x mir 2>&1 | FileCheck %s
 
 define i32 @foo(i32 noundef %0) local_unnamed_addr {
   %2 = icmp eq i32 %0, 0

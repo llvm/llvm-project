@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+sse2 -post-RA-scheduler=false | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -mattr=+sse2 -post-RA-scheduler=false | FileCheck %s
 ; CHECK: movsd %xmm{{[0-9]}}, 8(%esp)
 ; CHECK: xorl %eax, %eax
 

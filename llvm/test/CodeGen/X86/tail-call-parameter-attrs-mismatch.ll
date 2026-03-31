@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-unknown-linux-gnu -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-linux-gnu -o - %s | FileCheck %s
 
 declare void @f(i16 signext)
 declare void @g(i32 signext)

@@ -1,4 +1,4 @@
-; RUN: llc -regalloc=greedy -mtriple=x86_64-pc-windows-msvc  < %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -regalloc=greedy -mtriple=x86_64-pc-windows-msvc  < %s -o - | FileCheck %s
 
 ; This test checks for proper handling of a condition where the greedy register
 ; allocator encounters a very short interval that contains no uses but does

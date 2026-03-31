@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 ; CHECK-NOT: .cfi_startproc
 ; CHECK:     .cfi_sections .debug_frame
 ; CHECK:     .cfi_startproc

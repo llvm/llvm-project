@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin9 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9 | FileCheck %s
 
 @X = internal global i8 4
 @Y = internal global i32 123

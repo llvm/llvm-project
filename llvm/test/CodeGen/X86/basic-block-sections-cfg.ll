@@ -6,7 +6,7 @@
 ; RUN: echo 'g 0:10,1:9,2:1 1:8,3:8 2:2,3:2 3:11' >> %t
 ; RUN: echo 'c 0 2 3' >> %t
 ;
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t | FileCheck %s
 ;
 define void @foo(i1 zeroext) nounwind {
   %2 = alloca i8, align 1

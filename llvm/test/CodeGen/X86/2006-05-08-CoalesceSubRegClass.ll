@@ -2,7 +2,7 @@
 ; Coalescing from R32 to a subset R32_. Once another register coalescer bug is
 ; fixed, the movb should go away as well.
 
-; RUN: llc < %s -mtriple=i686-- -relocation-model=static | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -relocation-model=static | FileCheck %s
 
 @B = external dso_local global i32		; <ptr> [#uses=2]
 @C = external dso_local global ptr		; <ptr> [#uses=2]

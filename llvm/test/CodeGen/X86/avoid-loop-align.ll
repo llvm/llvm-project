@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin | FileCheck %s
 
 ; CodeGen should align the top of the loop, which differs from the loop
 ; header in this case.

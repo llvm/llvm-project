@@ -1,12 +1,12 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=static | FileCheck -check-prefix X86STA %s
-; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic | FileCheck -check-prefix X86PIC %s
-; RUN: llc < %s -mtriple=i386-pc-linux -relocation-model=dynamic-no-pic | FileCheck -check-prefix X86DYN %s
-; RUN: llc < %s -mtriple=i386-pc-win32 -relocation-model=static | FileCheck -check-prefix X86WINSTA %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -relocation-model=static | FileCheck -check-prefix X86STA %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -relocation-model=pic | FileCheck -check-prefix X86PIC %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux -relocation-model=dynamic-no-pic | FileCheck -check-prefix X86DYN %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-win32 -relocation-model=static | FileCheck -check-prefix X86WINSTA %s
 
 ; Call to immediate is not safe on x86-64 unless we *know* that the
 ; call will be within 32-bits pcrel from the dest immediate.
 
-; RUN: llc < %s -mtriple=x86_64-- | FileCheck -check-prefix X64 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- | FileCheck -check-prefix X64 %s
 
 ; PR3666
 ; PR3773

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc -mattr=+avx < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc -mattr=+avx < %s | FileCheck %s
 
 ; void bar(int a, int b, int c, int d, int e);
 ; void baz(int x);

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple i386-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple i386-apple-darwin10 | FileCheck %s
 ; <rdar://problem/10058036>
 
 %struct._psqlSettings = type { ptr, i32, ptr, i8, %struct.printQueryOpt, ptr, i8, i32, ptr, i8, i32, ptr, ptr, ptr, i64, i8, ptr, ptr, i8, i8, i8, i8, i8, i32, i32, i32, i32, i32, ptr, ptr, ptr, i32 }

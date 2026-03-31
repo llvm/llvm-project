@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux | FileCheck %s
 ; Test that we don't crashe if the .Lfunc_end0 name is taken.
 
 declare void @g()

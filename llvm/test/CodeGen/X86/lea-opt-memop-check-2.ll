@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=corei7 -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -mcpu=corei7 -relocation-model=pic | FileCheck %s
 
 ; PR27502
 ; UNREACHABLE: "Invalid address displacement operand"

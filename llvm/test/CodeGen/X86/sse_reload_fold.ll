@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux -mattr=+64bit,+sse3 -print-failed-fuse-candidates -regalloc=basic 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -mattr=+64bit,+sse3 -print-failed-fuse-candidates -regalloc=basic 2>&1 | FileCheck %s
 ; CHECK: fail
 ; CHECK-NOT: fail
 

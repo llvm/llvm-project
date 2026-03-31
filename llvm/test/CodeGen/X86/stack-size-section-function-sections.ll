@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=x86_64-linux -stack-size-section -function-sections | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -stack-size-section -function-sections | \
 ; RUN:   FileCheck %s --check-prefix=UNIQ
-; RUN: llc < %s -mtriple=x86_64-linux -stack-size-section -function-sections -unique-section-names=0 | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -stack-size-section -function-sections -unique-section-names=0 | \
 ; RUN:   FileCheck %s --check-prefix=NOUNIQ
 
 ; Check we add SHF_LINK_ORDER for .stack_sizes and link it with the corresponding .text sections.

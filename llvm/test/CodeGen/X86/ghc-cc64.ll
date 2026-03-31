@@ -1,4 +1,4 @@
-; RUN: llc < %s -tailcallopt -mtriple=x86_64-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -tailcallopt -mtriple=x86_64-linux-gnu | FileCheck %s
 
 ; Check the GHC call convention works (x86-64)
 

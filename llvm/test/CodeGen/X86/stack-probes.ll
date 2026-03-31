@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck --check-prefix=X86-LINUX %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=X64-LINUX %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -code-model=large < %s -o - | FileCheck --check-prefix=X64-LINUX-LARGE %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck --check-prefix=X86-LINUX %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=X64-LINUX %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -code-model=large < %s -o - | FileCheck --check-prefix=X64-LINUX-LARGE %s
 
 declare void @use(ptr)
 

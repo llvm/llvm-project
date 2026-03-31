@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -O0 < %s | FileCheck %s
 
 ; Check that we don't crash on this input.
 ; CHECK-LABEL: @foo

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-linux-gnu -relocation-model=pic | FileCheck %s --check-prefix=X86
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-gnu -relocation-model=pic | FileCheck %s --check-prefix=X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck %s --check-prefix=X64
 
 @i = thread_local global i32 15
 @j = internal thread_local global i32 42

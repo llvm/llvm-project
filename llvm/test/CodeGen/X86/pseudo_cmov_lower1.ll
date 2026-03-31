@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-linux-gnu -mattr=+sse2 -o - | FileCheck %s 
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -o - | FileCheck %s 
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-gnu -mattr=+sse2 -o - | FileCheck %s 
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -o - | FileCheck %s 
 
 ; This test checks that only a single jae gets generated in the final code
 ; for lowering the CMOV pseudos that get created for this IR.

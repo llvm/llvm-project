@@ -1,7 +1,7 @@
 ;; Verify that @LPStart is omitted when there are no landing pads. This test
 ;; uses an unkown personality to force emitting the exception table.
 
-; RUN: llc -basic-block-sections=all -mtriple=x86_64 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple=x86_64 < %s | FileCheck %s
 
 declare void @throwit()
 declare i32 @__unknown_ehpersonality(...)

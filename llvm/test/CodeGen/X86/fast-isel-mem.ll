@@ -1,6 +1,6 @@
-; RUN: llc < %s -fast-isel -mtriple=i386-apple-darwin -mcpu=generic | FileCheck %s
-; RUN: llc < %s -fast-isel -mtriple=i386-apple-darwin -mcpu=atom | FileCheck -check-prefix=ATOM %s
-; RUN: llc < %s -fast-isel -fast-isel-abort=3 -mtriple=x86_64 | FileCheck -check-prefix=ELF64 %s
+; RUN: llc -combiner-topological-sorting < %s -fast-isel -mtriple=i386-apple-darwin -mcpu=generic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -fast-isel -mtriple=i386-apple-darwin -mcpu=atom | FileCheck -check-prefix=ATOM %s
+; RUN: llc -combiner-topological-sorting < %s -fast-isel -fast-isel-abort=3 -mtriple=x86_64 | FileCheck -check-prefix=ELF64 %s
 
 @src = external dso_preemptable global i32
 

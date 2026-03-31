@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -verify-machineinstrs -mtriple=i686-- -mcpu=core2 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -verify-machineinstrs -mtriple=i686-- -mcpu=core2 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ;
 ; Test scheduling of copy instructions.
 ;

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 ; PR2977
 define ptr @ap_php_conv_p2(){
 entry:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -frame-pointer=all -asm-verbose=0 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -frame-pointer=all -asm-verbose=0 | FileCheck %s
 
 define void @f() {
   ret void

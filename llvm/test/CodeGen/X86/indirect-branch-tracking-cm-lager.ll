@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -code-model=large < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -code-model=large < %s | FileCheck %s
 
 ; In large code model indirect branches are needed when branching to addresses
 ; whose offset from the current instruction pointer is unknown.

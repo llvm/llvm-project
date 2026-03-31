@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 
 ; CHECK-LABEL:	.section	__LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT: __LLVM_StackMaps:

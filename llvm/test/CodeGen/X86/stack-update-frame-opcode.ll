@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=x86_64-pc-linux -mcpu=corei7 < %s | FileCheck -check-prefix=CORE_LP64 %s
-; RUN: llc -mtriple=x86_64-pc-linux -mcpu=atom < %s | FileCheck -check-prefix=ATOM_LP64 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -mcpu=corei7 < %s | FileCheck -check-prefix=CORE_ILP32 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -mcpu=atom < %s | FileCheck -check-prefix=ATOM_ILP32 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -mcpu=corei7 < %s | FileCheck -check-prefix=CORE_LP64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -mcpu=atom < %s | FileCheck -check-prefix=ATOM_LP64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnux32 -mcpu=corei7 < %s | FileCheck -check-prefix=CORE_ILP32 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnux32 -mcpu=atom < %s | FileCheck -check-prefix=ATOM_ILP32 %s
 
 define i32 @bar(i32 %a) nounwind {
 entry:

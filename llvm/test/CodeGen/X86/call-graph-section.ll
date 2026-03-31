@@ -3,7 +3,7 @@
 ; REQUIRES: x86-registered-target
 ; REQUIRES: arm-registered-target
 
-; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .llvm.callgraph - | FileCheck %s
 
 declare !type !0 void @foo()

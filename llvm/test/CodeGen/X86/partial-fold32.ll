@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-unknown-linux-gnu -enable-misched=false < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-linux-gnu -enable-misched=false < %s | FileCheck %s
 
 define fastcc i8 @fold32to8(i32 %add, i8 %spill) {
 ; CHECK-LABEL: fold32to8:

@@ -1,4 +1,4 @@
-; RUN: llc -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 < %s | FileCheck %s
 target triple = "i686--"
 
 ; Function Attrs: noinline nounwind

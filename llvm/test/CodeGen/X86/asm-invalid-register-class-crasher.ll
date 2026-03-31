@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=i386-apple-darwin 2>&1 %t
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin 2>&1 %t
 
 ; Previously, this would assert in an assert build, but crash in a release build.
 ; No FileCheck, just make sure we handle this gracefully.

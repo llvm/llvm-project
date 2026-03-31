@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-linux -mattr=+rtm -verify-machineinstrs -stop-after=finalize-isel | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux -mattr=+rtm -verify-machineinstrs -stop-after=finalize-isel | FileCheck %s
 
 ; CHECK: body:             |
 ; CHECK:   bb.0.bb107:

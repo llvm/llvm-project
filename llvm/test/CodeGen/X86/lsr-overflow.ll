@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-win32 | FileCheck %s
 
 ; The comparison uses the pre-inc value, which could lead LSR to
 ; try to compute -INT64_MIN.

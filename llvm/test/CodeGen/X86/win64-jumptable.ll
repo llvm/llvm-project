@@ -1,6 +1,6 @@
-; RUN: llc < %s -relocation-model=static | FileCheck %s
-; RUN: llc < %s -relocation-model=pic | FileCheck %s --check-prefix=PIC
-; RUN: llc < %s -relocation-model=pic -code-model=large | FileCheck %s --check-prefix=PIC
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=static | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic | FileCheck %s --check-prefix=PIC
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -code-model=large | FileCheck %s --check-prefix=PIC
 
 ; FIXME: Remove '-relocation-model=static' when it is no longer necessary to
 ; trigger the separate .rdata section.

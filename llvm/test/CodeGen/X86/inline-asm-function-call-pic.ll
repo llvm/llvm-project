@@ -1,4 +1,4 @@
-; RUN: llc -O2 --relocation-model=pic -mtriple=i386-unknown-linux-gnu < %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O2 --relocation-model=pic -mtriple=i386-unknown-linux-gnu < %s 2>&1 | FileCheck %s
 
 ; List the source code:
 ; // clang  -m32 -fasm-blocks -S t.c -O2  -fpic -emit-llvm

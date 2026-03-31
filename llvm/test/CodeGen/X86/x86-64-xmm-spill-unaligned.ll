@@ -2,7 +2,7 @@
 ; elements (here: XMM spills) are accessed using instructions that tolerate
 ; unaligned access.
 ;
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64 -mattr=+sse,+sse-unaligned-mem --frame-pointer=all < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64 -mattr=+sse,+sse-unaligned-mem --frame-pointer=all < %s | FileCheck %s
 
 define dso_local preserve_allcc void @func() #0 {
 ; CHECK-LABEL: func:

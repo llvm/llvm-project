@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 
         %"struct.K::JL" = type <{ i8 }>
         %struct.jv = type { i64 }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -stackrealign -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -stackrealign -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
 ; PR11468
 
 define void @f(i64 %sz) uwtable {

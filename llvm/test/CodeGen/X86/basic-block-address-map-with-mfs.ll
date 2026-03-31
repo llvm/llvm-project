@@ -1,8 +1,8 @@
 ; COM: Emitting basic-block-address-map when machine function splitting is enabled.
-; RUN: llc < %s -mtriple=x86_64 -function-sections -split-machine-functions -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,BASIC
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -function-sections -split-machine-functions -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,BASIC
 
 ; COM: Emitting basic-block-address-map with PGO analysis with machine function splitting enabled.
-; RUN: llc < %s -mtriple=x86_64 -function-sections -split-machine-functions -basic-block-address-map -pgo-analysis-map=func-entry-count,bb-freq,br-prob | FileCheck %s --check-prefixes=CHECK,PGO
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -function-sections -split-machine-functions -basic-block-address-map -pgo-analysis-map=func-entry-count,bb-freq,br-prob | FileCheck %s --check-prefixes=CHECK,PGO
 
 define void @foo(i1 zeroext %0) nounwind !prof !14 {
   br i1 %0, label %2, label %4, !prof !15

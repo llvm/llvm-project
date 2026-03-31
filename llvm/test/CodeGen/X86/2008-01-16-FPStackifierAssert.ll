@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -regalloc=fast -optimize-regalloc=0
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=+sse2 -regalloc=fast -optimize-regalloc=0
 
 define void @SolveCubic(double %a, double %b, double %c, double %d, ptr %solutions, ptr %x) {
 entry:

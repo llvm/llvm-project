@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-coalescing
+; RUN: llc -combiner-topological-sorting < %s -verify-coalescing
 ; PR12927
 target triple = "x86_64-apple-macosx10.8.0"
 

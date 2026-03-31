@@ -1,4 +1,4 @@
-; RUN: llc < %s -stackrealign -mtriple i386-apple-darwin -mcpu=i486 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -stackrealign -mtriple i386-apple-darwin -mcpu=i486 | FileCheck %s
 
 %struct.foo = type { [88 x i8] }
 

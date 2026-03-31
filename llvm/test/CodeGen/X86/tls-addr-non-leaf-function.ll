@@ -1,5 +1,5 @@
-; RUN: llc < %s -relocation-model=pic -O2 -frame-pointer=all -o - | FileCheck %s
-; RUN: llc < %s -relocation-model=pic -O2 -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -O2 -frame-pointer=all -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -O2 -o - | FileCheck %s
 
 ; This test runs twice with different options regarding the frame pointer:
 ; first the elimination is disabled, then it is enabled. The disabled case is

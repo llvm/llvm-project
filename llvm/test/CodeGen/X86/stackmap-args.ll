@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-apple-darwin -mcpu=corei7 < %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mcpu=corei7 < %s 2>&1 | FileCheck %s
 ; Tests error when we pass non-immediate parameters to @llvm.experiment.stackmap
 
 define void @first_arg() {

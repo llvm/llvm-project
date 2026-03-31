@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 target triple = "i686-pc-linux-gnu"
 @str = internal constant [9 x i8] c"%f+%f*i\0A\00"              ; <ptr> [#uses=1]

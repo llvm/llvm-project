@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s | FileCheck %s
 define i32 @A(i32 %Size) {
 ; CHECK:  subq    %rcx, %rax
 ; CHECK:  andq    $-128, %rax

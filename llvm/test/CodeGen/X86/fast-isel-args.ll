@@ -1,4 +1,4 @@
-; RUN: llc < %s -fast-isel -fast-isel-abort=2 -verify-machineinstrs -mtriple=x86_64-apple-darwin10
+; RUN: llc -combiner-topological-sorting < %s -fast-isel -fast-isel-abort=2 -verify-machineinstrs -mtriple=x86_64-apple-darwin10
 
 ; Just make sure these don't abort when lowering the arguments.
 define i32 @t1(i32 %a, i32 %b, i32 %c) {

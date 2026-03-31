@@ -1,8 +1,8 @@
-; RUN: llc -mtriple x86_64-pc-win32 < %s | FileCheck %s
-; RUN: llc -mtriple x86_64-pc-mingw32 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-win32 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-mingw32 < %s | FileCheck %s
 ;
-; RUN: llc -mtriple x86_64-pc-mingw32 -O0 < %s | FileCheck %s
-; RUN: llc -mtriple x86_64-pc-windows-msvc -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-mingw32 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-windows-msvc -O0 < %s | FileCheck %s
 ; PR6275
 ;
 ; RUN: opt -mtriple x86_64-pc-win32 -O3 -S < %s | FileCheck %s -check-prefix=OPT

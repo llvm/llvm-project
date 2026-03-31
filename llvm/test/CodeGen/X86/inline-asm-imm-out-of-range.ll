@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=i686-- -no-integrated-as < %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=i686-- -no-integrated-as < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: value out of range for constraint 'I'
 define void @foo() {

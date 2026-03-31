@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 | FileCheck %s
 
 declare token @llvm.call.preallocated.setup(i32)
 declare ptr @llvm.call.preallocated.arg(token, i32)

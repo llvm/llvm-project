@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 | FileCheck %s
 
 ; CHECK-LABEL: bad_int:
 ; CHECK-NEXT: .long 1

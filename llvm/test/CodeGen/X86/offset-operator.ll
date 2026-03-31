@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -x86-asm-syntax=intel -relocation-model=static < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -x86-asm-syntax=intel -relocation-model=static < %s | FileCheck %s
 
 ; Test we are emitting the 'offset' operator upon an immediate reference of a label:
 ; The emitted 'att-equivalent' of this one is "movl $.L.str, %eax"

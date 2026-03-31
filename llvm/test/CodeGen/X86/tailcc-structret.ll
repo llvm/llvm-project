@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-unknown-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux | FileCheck %s
 define tailcc { ptr, ptr} @init({ ptr, ptr}, i32) {
 entry:
       %2 = tail call tailcc { ptr, ptr } @init({ ptr, ptr} %0, i32 %1)

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 	%struct.function = type opaque
 	%struct.lang_decl = type opaque
 	%struct.location_t = type { ptr, i32 }

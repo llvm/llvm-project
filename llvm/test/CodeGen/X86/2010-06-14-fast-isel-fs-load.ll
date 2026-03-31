@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel -mtriple=i686-- < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -fast-isel -mtriple=i686-- < %s | FileCheck %s
 ; CHECK: %fs:
 
 define i32 @test1(ptr addrspace(257) %arg) nounwind {

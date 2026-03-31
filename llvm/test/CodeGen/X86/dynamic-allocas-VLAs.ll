@@ -1,4 +1,4 @@
-; RUN: llc < %s -stack-symbol-ordering=0 -mcpu=generic -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -stack-symbol-ordering=0 -mcpu=generic -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
 ; rdar://11496434
 
 ; no VLAs or dynamic alignment

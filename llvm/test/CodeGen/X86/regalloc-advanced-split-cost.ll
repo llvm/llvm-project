@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686 -regalloc=greedy --debug-only=regalloc 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686 -regalloc=greedy --debug-only=regalloc 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 

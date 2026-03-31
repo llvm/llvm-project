@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx10.8.0 -mcpu=core2 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-macosx10.8.0 -mcpu=core2 < %s | FileCheck %s
 ; Test that we do not introduce vector operations with noimplicitfloat.
 ; rdar://12879313
 

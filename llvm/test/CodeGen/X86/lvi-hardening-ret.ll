@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s
 
 define dso_local void @one_instruction() #0 {
 ; CHECK-LABEL: one_instruction:

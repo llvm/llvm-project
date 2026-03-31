@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx | FileCheck %s
 ; rdar://11729134
 
 ; EmitZerofill was incorrectly expecting a 32-bit "size" so 26214400000

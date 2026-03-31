@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-windows < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-windows < %s | FileCheck %s
 
 declare double @llvm.powi.f64.i32(double, i32)
 declare float @llvm.powi.f32.i32(float, i32)

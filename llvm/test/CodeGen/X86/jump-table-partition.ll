@@ -3,8 +3,8 @@
 
 ; Stop after 'finalize-isel' for simpler MIR, and lower the minimum number of
 ; jump table entries so 'switch' needs fewer cases to generate a jump table.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
  ; @foo has 2 hot and 2 cold jump tables.
  ; The two jump tables with unknown hotness come from @func_without_profile and
@@ -13,17 +13,17 @@
 ; STAT: 2 static-data-splitter - Number of hot jump tables seen
 ; STAT: 2 static-data-splitter - Number of jump tables with unknown hotness
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
 ; RUN:     -function-sections -unique-section-names=false \
 ; RUN:     -min-jump-table-entries=2 \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NUM,JT
 
 ; Section names will optionally have `.<func>` if -function-sections is enabled.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
 ; RUN:     -function-sections -min-jump-table-entries=2 \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
 ; RUN:     -function-sections=false -min-jump-table-entries=2 \
 ; RUN:      %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 

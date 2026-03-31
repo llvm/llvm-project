@@ -1,16 +1,16 @@
 ; Test remark output for stack-frame-layout
 
 ; ensure basic output works
-; RUN: llc -mcpu=corei7 -O1 -pass-remarks-analysis=stack-frame-layout < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -O1 -pass-remarks-analysis=stack-frame-layout < %s 2>&1 >/dev/null | FileCheck %s
 
 ; check additional slots are displayed when stack is not optimized
-; RUN: llc -mcpu=corei7 -O0 -pass-remarks-analysis=stack-frame-layout < %s 2>&1 >/dev/null | FileCheck %s --check-prefix=NO_COLORING
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -O0 -pass-remarks-analysis=stack-frame-layout < %s 2>&1 >/dev/null | FileCheck %s --check-prefix=NO_COLORING
 
 ; check more complex cases
-; RUN: llc %s -pass-remarks-analysis=stack-frame-layout -o /dev/null -mtriple=i686-unknown-linux 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=DEBUG
+; RUN: llc -combiner-topological-sorting %s -pass-remarks-analysis=stack-frame-layout -o /dev/null -mtriple=i686-unknown-linux 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=DEBUG
 
 ; check output without debug info
-; RUN: opt %s -passes=strip -S | llc  -pass-remarks-analysis=stack-frame-layout -o /dev/null -mtriple=i686-unknown-linux 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=STRIPPED
+; RUN: opt %s -passes=strip -S | llc -combiner-topological-sorting  -pass-remarks-analysis=stack-frame-layout -o /dev/null -mtriple=i686-unknown-linux 2>&1 | FileCheck %s --check-prefix=BOTH --check-prefix=STRIPPED
 
 target triple = "x86_64-unknown-linux-gnu"
 

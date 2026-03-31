@@ -1,4 +1,4 @@
-; RUN: llc -regalloc=greedy -verify-coalescing -mtriple=x86_64-unknown-linux-gnu < %s
+; RUN: llc -combiner-topological-sorting -regalloc=greedy -verify-coalescing -mtriple=x86_64-unknown-linux-gnu < %s
 ; Check the live range is updated properly after register coalescing.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

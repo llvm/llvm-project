@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s
-; RUN: llc -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -relocation-model=pic < %s | FileCheck %s
 
 ; Regression test for PR38200
 

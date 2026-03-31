@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %s \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-windows-msvc -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-windows-msvc -o - %s \
 ; RUN:    -x86-wineh-unwindv2-unwind-codes-threshold=8 | FileCheck %s \
 ; RUN:    -check-prefixes=ALLOWLESS,CHECK
 

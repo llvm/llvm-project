@@ -1,4 +1,4 @@
-; RUN: llc -stack-symbol-ordering=0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -stack-symbol-ordering=0 < %s | FileCheck %s
 
 ; The aligned alloca means that we have to realign the stack, which forces the
 ; use of ESI to address local variables.

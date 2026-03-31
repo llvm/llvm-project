@@ -1,4 +1,4 @@
-; RUN: llc < %s -regalloc=fast -optimize-regalloc=0 -verify-machineinstrs -mtriple=x86_64-apple-darwin10
+; RUN: llc -combiner-topological-sorting < %s -regalloc=fast -optimize-regalloc=0 -verify-machineinstrs -mtriple=x86_64-apple-darwin10
 ; <rdar://problem/7755473>
 ; PR12821
 

@@ -1,16 +1,16 @@
-; RUN: llc -mtriple=x86_64-linux-gnu < %s | FileCheck -check-prefix=LINUX %s
-; RUN: not llc -mtriple=x86_64-apple-macos10.9 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-ios9.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-tvos9.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-watchos9.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-xros9.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-ios8.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-tvos8.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-xros8.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-driverkit < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=x86_64-apple-driverkit24.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=GISEL-X86
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=GISEL-X64
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu < %s | FileCheck -check-prefix=LINUX %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-macos10.9 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-ios9.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-tvos9.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-watchos9.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-xros9.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-ios8.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-tvos8.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-xros8.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-driverkit < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-apple-driverkit24.0 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=GISEL-X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=GISEL-X64
 
 ; ERR: no libcall available for fexp10
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10
 
 define i32 @main(i32 %argc, ptr nocapture %argv) nounwind ssp {
 entry:

@@ -1,4 +1,4 @@
-; RUN: llc  -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting  -verify-machineinstrs < %s | FileCheck %s
 
 ; Without removal of duplicate entries, the size is 62 lines
 ;      CHECK:	.section	.llvm_stackmaps,{{.*$}}

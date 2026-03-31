@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-apple-darwin | FileCheck %s
 ; PR17964
 
 ; CHECK: __DATA,__thread_data,thread_local_regular

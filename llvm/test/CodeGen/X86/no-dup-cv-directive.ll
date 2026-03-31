@@ -1,4 +1,4 @@
-; RUN: llc -O3 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O3 < %s | FileCheck %s
 
 ; Regression test for https://github.com/llvm/llvm-project/pull/110889#issuecomment-2393405613
 ; Marking x64 SEH instructions as meta led to cv directives being duplicated, which caused

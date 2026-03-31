@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-win32-macho -relocation-model=static -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-win32-macho -relocation-model=static -O0 < %s | FileCheck %s
 
 ; Ensure that we don't generate a movl and not a lea for a static relocation
 ; when compiling for 64 bit.

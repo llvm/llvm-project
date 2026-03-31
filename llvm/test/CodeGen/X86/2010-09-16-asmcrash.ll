@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-freebsd8.1 -o /dev/null
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-freebsd8.1 -o /dev/null
 ; This formerly crashed, PR 8154.
 
 module asm ".weak sem_close"

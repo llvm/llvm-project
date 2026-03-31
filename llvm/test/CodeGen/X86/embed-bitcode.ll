@@ -1,6 +1,6 @@
-; RUN: llc -filetype=obj -mtriple=x86_64 %s -o %t
+; RUN: llc -combiner-topological-sorting -filetype=obj -mtriple=x86_64 %s -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s
-; RUN: llc -filetype=obj -mtriple=x86_64-pc-windows-msvc %s -o %t
+; RUN: llc -combiner-topological-sorting -filetype=obj -mtriple=x86_64-pc-windows-msvc %s -o %t
 ; RUN: llvm-readobj -S %t | FileCheck %s --check-prefix=COFF
 
 ; CHECK:      .text    PROGBITS 0000000000000000 [[#%x,OFF:]] 000000 00 AX 0

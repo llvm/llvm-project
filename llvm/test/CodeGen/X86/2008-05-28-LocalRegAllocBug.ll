@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -regalloc=fast -optimize-regalloc=0
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -regalloc=fast -optimize-regalloc=0
 
 @_ZTVN10Evaluation10GridOutputILi3EEE = external constant [5 x ptr]		; <ptr> [#uses=1]
 

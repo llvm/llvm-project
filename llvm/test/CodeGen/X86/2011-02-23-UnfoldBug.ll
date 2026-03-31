@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10
 ; rdar://9045024
 ; PR9305
 

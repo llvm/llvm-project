@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s
 
 declare swifttailcc void @callee([6 x i64], i64, i64)
 

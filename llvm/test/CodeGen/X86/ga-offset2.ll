@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -relocation-model=dynamic-no-pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -relocation-model=dynamic-no-pic | FileCheck %s
 
 @var = external hidden global i32
 @p = external hidden global ptr

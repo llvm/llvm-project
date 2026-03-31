@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=i386-linux < %s -o - | FileCheck --check-prefix=LINUX-I386 %s
-; RUN: llc -mtriple=x86_64-linux < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
-; RUN: llc -mtriple=i386-linux-android < %s -o - | FileCheck --check-prefix=ANDROID-I386 %s
-; RUN: llc -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefix=ANDROID-X64 %s
-; RUN: llc -mtriple=x86_64-fuchsia < %s -o - | FileCheck --check-prefix=FUCHSIA-X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-linux < %s -o - | FileCheck --check-prefix=LINUX-I386 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-linux-android < %s -o - | FileCheck --check-prefix=ANDROID-I386 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefix=ANDROID-X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-fuchsia < %s -o - | FileCheck --check-prefix=FUCHSIA-X64 %s
 
-; RUN: llc -mtriple=i386-linux -safestack-use-pointer-address < %s -o - | FileCheck --check-prefix=LINUX-I386-PA %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-linux -safestack-use-pointer-address < %s -o - | FileCheck --check-prefix=LINUX-I386-PA %s
 
 define void @_Z1fv() safestack {
 entry:

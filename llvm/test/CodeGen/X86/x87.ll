@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=i686-- | FileCheck %s -check-prefixes=X8732,X87
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-sse | FileCheck %s -check-prefixes=X8732,X87
-; RUN: llc < %s -mtriple=i686-- -mattr=-x87 | FileCheck %s -check-prefixes=NOX8732,NOX87
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse | FileCheck %s -check-prefixes=NOX8732,NOX87
-; RUN: llc < %s -mtriple=i686-- -mattr=-x87,+sse | FileCheck %s -check-prefixes=NOX8732,NOX87
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse2 | FileCheck %s -check-prefixes=NOX87
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | FileCheck %s -check-prefixes=X8732,X87
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mattr=-sse | FileCheck %s -check-prefixes=X8732,X87
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=-x87 | FileCheck %s -check-prefixes=NOX8732,NOX87
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mattr=-x87,-sse | FileCheck %s -check-prefixes=NOX8732,NOX87
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=-x87,+sse | FileCheck %s -check-prefixes=NOX8732,NOX87
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mattr=-x87,-sse2 | FileCheck %s -check-prefixes=NOX87
 
 define void @test(i32 %i, i64 %l, ptr %pf, ptr %pd, ptr %pld) nounwind readnone {
 ; X87-LABEL: test:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin11
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin11
 ; rdar://7604000
 
 %struct.a_t = type { ptr, ptr, ptr, i32, i32, ptr, ptr, ptr }

@@ -1,4 +1,4 @@
-; RUN:  llc < %s -mtriple=x86_64-unknown-linux-gnu
+; RUN:  llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu
 ; PR9601
 ; Previously we'd crash trying to put a 32-bit float into a constraint
 ; for a normal 'r' register.

@@ -1,4 +1,4 @@
-; RUN: llc -O2 %s -o %t -filetype=obj
+; RUN: llc -combiner-topological-sorting -O2 %s -o %t -filetype=obj
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 
 ; Check that Machine CSE correctly handles during the transformation, the

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-- -relocation-model=static | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-linux               | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -relocation-model=static | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux               | FileCheck %s
 ; CHECK-NOT:     lea
 
 ; P should be sunk into the loop and folded into the address mode. There

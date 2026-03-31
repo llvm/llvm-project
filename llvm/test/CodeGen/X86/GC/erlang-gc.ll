@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux-gnu < %s | FileCheck %s --check-prefix=CHECK64
-; RUN: llc -mtriple=i686-linux-gnu < %s | FileCheck %s --check-prefix=CHECK32
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu < %s | FileCheck %s --check-prefix=CHECK64
+; RUN: llc -combiner-topological-sorting -mtriple=i686-linux-gnu < %s | FileCheck %s --check-prefix=CHECK32
 
 define i32 @main(i32 %x) nounwind gc "erlang" {
   %puts = tail call i32 @foo(i32 %x)

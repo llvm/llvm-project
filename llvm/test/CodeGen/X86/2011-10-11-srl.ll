@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7-avx -mattr=-sse4.1
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mcpu=corei7-avx -mattr=-sse4.1
 
 target triple = "x86_64-unknown-linux-gnu"
 

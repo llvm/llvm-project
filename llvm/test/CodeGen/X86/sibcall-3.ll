@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-unknown-unknown | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-unknown | FileCheck %s
 ; PR7193
 
 define void @t1(ptr inreg %dst, ptr inreg %src, ptr inreg %len) nounwind {

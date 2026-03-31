@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
 
 define float @test_powi(ptr %p) nounwind {
 ; CHECK-LABEL: test_powi:

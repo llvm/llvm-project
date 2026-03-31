@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=AMD64
-; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s -check-prefix=WIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=AMD64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-win32 | FileCheck %s -check-prefix=WIN64
 ; PR8743
 ; TAILJMPri64 should not receive "callee-saved" registers beyond epilogue.
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=x86-64 -enable-misched -misched-prera-direction=bidirectional -misched=shuffle -enable-aa-sched-mi | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=x86-64 -enable-misched -misched-prera-direction=bidirectional -misched=shuffle -enable-aa-sched-mi | FileCheck %s
 ; REQUIRES: asserts
 ; -misched=shuffle is NDEBUG only!
 

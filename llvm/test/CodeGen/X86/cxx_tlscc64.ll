@@ -1,10 +1,10 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 ; TLS function were wrongly model and after fixing that, shrink-wrapping
 ; cannot help here. To achieve the expected lowering, we need to playing
 ; tricks similar to AArch64 fast TLS calling convention (r255821).
 ; Applying tricks on x86-64 similar to r255821.
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -enable-shrink-wrap=true | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -O0 | FileCheck %s --check-prefix=CHECK-O0
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -enable-shrink-wrap=true | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -O0 | FileCheck %s --check-prefix=CHECK-O0
 %struct.S = type { i8 }
 
 @sg = internal thread_local global %struct.S zeroinitializer, align 1

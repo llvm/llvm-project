@@ -1,6 +1,6 @@
-; RUN: llc -mtriple x86_64-apple-darwin %s -o -   | FileCheck %s   --check-prefix=APPLE
-; RUN: llc -mtriple x86_64-pc-windows-gnu %s -o - | FileCheck %s   --check-prefix=MINGW64
-; RUN: llc -mtriple i686-pc-windows-gnu %s -o -   | FileCheck %s   --check-prefix=MINGW32
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-darwin %s -o -   | FileCheck %s   --check-prefix=APPLE
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-windows-gnu %s -o - | FileCheck %s   --check-prefix=MINGW64
+; RUN: llc -combiner-topological-sorting -mtriple i686-pc-windows-gnu %s -o -   | FileCheck %s   --check-prefix=MINGW32
 @_ZTIi = external constant ptr
 
 define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {

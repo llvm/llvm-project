@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=i386-pc-linux -mcpu=corei7 -relocation-model=static | FileCheck --check-prefix=X86 %s
-; RUN: llc < %s -mtriple=i386-pc-linux -mcpu=corei7 -relocation-model=pic | FileCheck --check-prefix=PIC86 %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=corei7 -relocation-model=static | FileCheck --check-prefix=X64 %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=corei7 -relocation-model=pic | FileCheck --check-prefix=PIC64 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux -mcpu=corei7 -relocation-model=static | FileCheck --check-prefix=X86 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux -mcpu=corei7 -relocation-model=pic | FileCheck --check-prefix=PIC86 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -mcpu=corei7 -relocation-model=static | FileCheck --check-prefix=X64 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -mcpu=corei7 -relocation-model=pic | FileCheck --check-prefix=PIC64 %s
 
 @buf = internal global [5 x ptr] zeroinitializer
 

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -function-sections < %s | FileCheck %s
-; RUN: llc -filetype=obj -o %t -mtriple=x86_64-unknown-linux-gnu -function-sections < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -function-sections < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -filetype=obj -o %t -mtriple=x86_64-unknown-linux-gnu -function-sections < %s
 ; RUN: llvm-objdump --disassemble-all %t | FileCheck %s --check-prefix=CHECK-OBJ
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {

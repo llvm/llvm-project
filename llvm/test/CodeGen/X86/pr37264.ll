@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--
 
 define void @a() local_unnamed_addr #0 {
   ret void

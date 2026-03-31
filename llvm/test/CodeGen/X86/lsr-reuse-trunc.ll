@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-linux -mcpu=nehalem | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-win32 -mcpu=nehalem | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -mcpu=nehalem | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-win32 -mcpu=nehalem | FileCheck %s
 
 ; Full strength reduction wouldn't reduce register pressure, so LSR should
 ; stick with indexing here.

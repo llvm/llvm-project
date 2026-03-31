@@ -2,7 +2,7 @@
 ; one without, the one without locations doesn't have a DW_AT_stmt_list
 ; attribute, but the other one does and the .debug_line.dwo section is present.
 
-; RUN: llc -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
+; RUN: llc -combiner-topological-sorting -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
 ; RUN:     -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s
 ; RUN: llvm-dwarfdump -v %t.dwo | FileCheck %s

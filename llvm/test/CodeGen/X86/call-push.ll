@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -frame-pointer=all -no-x86-call-frame-opt | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -frame-pointer=all -no-x86-call-frame-opt | FileCheck %s
 
         %struct.decode_t = type { i8, i8, i8, i8, i16, i8, i8, ptr }
         %struct.range_t = type { float, float, i32, i32, i32, [0 x i8] }

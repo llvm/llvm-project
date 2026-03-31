@@ -1,6 +1,6 @@
 ; RUN: opt -S -x86-winehstate < %s | FileCheck %s --check-prefix=IR
 ; RUN: opt -S -passes=x86-winehstate < %s | FileCheck %s --check-prefix=IR
-; RUN: llc < %s | FileCheck %s --check-prefix=ASM
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s --check-prefix=ASM
 
 ; IR-NOT: define.*__ehhandler
 ; IR: define available_externally void @foo(ptr %0)

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx10.5.0 < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-macosx10.5.0 < %s
 
 ; rdar://12968664
 

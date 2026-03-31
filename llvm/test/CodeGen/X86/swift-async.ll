@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-apple-macosx12.0 %s -o - | FileCheck %s
-; RUN: llc -mtriple=i686-apple-darwin %s -o - | FileCheck %s --check-prefix=CHECK-32
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-macosx12.0 %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-apple-darwin %s -o - | FileCheck %s --check-prefix=CHECK-32
 
 
 define void @simple(ptr swiftasync %ctx) "frame-pointer"="all" {

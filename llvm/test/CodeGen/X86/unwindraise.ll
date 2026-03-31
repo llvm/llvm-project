@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs
+; RUN: llc -combiner-topological-sorting < %s -verify-machineinstrs
 ; PR13188
 ;
 ; The _Unwind_RaiseException function can return normally and via eh.return.

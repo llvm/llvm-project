@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; <rdar://problem/7499313>
 target triple = "x86_64-apple-darwin8"
 

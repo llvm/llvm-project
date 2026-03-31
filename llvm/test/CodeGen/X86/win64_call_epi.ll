@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-mingw32 | FileCheck %s -check-prefix=WIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-mingw32 | FileCheck %s -check-prefix=WIN64
 
 declare void @bar()
 declare void @baz()

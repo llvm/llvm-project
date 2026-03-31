@@ -1,14 +1,14 @@
 ;; Tests for basic block sections applied on a function in a custom section.
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=all | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -basic-block-sections=all | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all | FileCheck %s
 ; RUN: echo "!_Z3fooi" > %t1.list.txt
 ; RUN: echo "!!2" >> %t1.list.txt
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t1.list.txt | FileCheck %s --check-prefix=LIST1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1.list.txt | FileCheck %s --check-prefix=LIST1
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t1.list.txt | FileCheck %s --check-prefix=LIST1
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1.list.txt | FileCheck %s --check-prefix=LIST1
 ; RUN: echo "!_Z3fooi" > %t2.list.txt
 ; RUN: echo "!!0" >> %t2.list.txt
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t2.list.txt | FileCheck %s --check-prefix=LIST2
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2.list.txt | FileCheck %s --check-prefix=LIST2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t2.list.txt | FileCheck %s --check-prefix=LIST2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2.list.txt | FileCheck %s --check-prefix=LIST2
 
 
 ; CHECK: .section	foo_section,"ax",@progbits,unique,1

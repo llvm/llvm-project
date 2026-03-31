@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mcpu=i386 -mattr=+sse
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mcpu=i386 -mattr=+sse
 ; PR1371
 
 @str = external dso_local global [18 x i8]		; <ptr> [#uses=1]

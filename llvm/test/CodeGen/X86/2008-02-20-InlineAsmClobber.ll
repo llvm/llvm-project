@@ -1,4 +1,4 @@
-; RUN: llc -no-integrated-as < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -no-integrated-as < %s | FileCheck %s
 ; PR2078
 ; The clobber list says that "ax" is clobbered.  Make sure that eax isn't 
 ; allocated to the input/output register.

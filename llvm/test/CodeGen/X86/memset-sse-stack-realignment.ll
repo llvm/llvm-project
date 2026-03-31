@@ -2,11 +2,11 @@
 ; Make sure that we realign the stack. Mingw32 uses 4 byte stack alignment, we
 ; need 16 bytes for SSE and 32 bytes for AVX.
 
-; RUN: llc < %s -mtriple=i386-pc-mingw32 -mcpu=pentium2 | FileCheck %s --check-prefix=NOSSE
-; RUN: llc < %s -stackrealign -mtriple=i386-pc-mingw32 -mcpu=pentium3 | FileCheck %s --check-prefix=SSE
-; RUN: llc < %s -stackrealign -mtriple=i386-pc-mingw32 -mcpu=yonah | FileCheck %s --check-prefix=SSE
-; RUN: llc < %s -stackrealign -mtriple=i386-pc-mingw32 -mcpu=corei7-avx | FileCheck %s --check-prefix=AVX
-; RUN: llc < %s -stackrealign -mtriple=i386-pc-mingw32 -mcpu=core-avx2 | FileCheck %s --check-prefix=AVX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-mingw32 -mcpu=pentium2 | FileCheck %s --check-prefix=NOSSE
+; RUN: llc -combiner-topological-sorting < %s -stackrealign -mtriple=i386-pc-mingw32 -mcpu=pentium3 | FileCheck %s --check-prefix=SSE
+; RUN: llc -combiner-topological-sorting < %s -stackrealign -mtriple=i386-pc-mingw32 -mcpu=yonah | FileCheck %s --check-prefix=SSE
+; RUN: llc -combiner-topological-sorting < %s -stackrealign -mtriple=i386-pc-mingw32 -mcpu=corei7-avx | FileCheck %s --check-prefix=AVX
+; RUN: llc -combiner-topological-sorting < %s -stackrealign -mtriple=i386-pc-mingw32 -mcpu=core-avx2 | FileCheck %s --check-prefix=AVX
 
 define void @test1(i32 %t) nounwind {
 ; NOSSE-LABEL: test1:

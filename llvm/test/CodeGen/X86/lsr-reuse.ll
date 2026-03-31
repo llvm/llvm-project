@@ -1,6 +1,6 @@
 ; XFAIL: *
 ; ...should pass. See PR12324: misched bringup
-; RUN: llc < %s -O3 -asm-verbose=false | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O3 -asm-verbose=false | FileCheck %s
 target datalayout = "e-p:64:64:64"
 target triple = "x86_64-unknown-unknown"
 

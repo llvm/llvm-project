@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-pc-linux -O2 < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-pc-linux -O2 -regalloc=basic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -O2 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -O2 -regalloc=basic < %s | FileCheck %s
 ; Test to check .debug_loc support. This test case emits many debug_loc entries.
 
 ; CHECK: .short 1 # Loc expr size

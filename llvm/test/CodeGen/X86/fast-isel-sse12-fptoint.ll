@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=-avx,+sse2 -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefix=SSE
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=-avx2,+avx -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefix=AVX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mattr=-avx,+sse2 -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefix=SSE
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mattr=-avx2,+avx -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefix=AVX
 
 define i32 @cvt_test1(float %a) {
 ; SSE-LABEL: cvt_test1

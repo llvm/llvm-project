@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -mtriple=i686-- -mattr=+sse | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i686-- -mattr=+sse | FileCheck %s
 
 define float @chainfail1(ptr nocapture %a, ptr nocapture %b, i32 %x, i32 %y, ptr nocapture %f) nounwind uwtable noinline ssp {
 entry:

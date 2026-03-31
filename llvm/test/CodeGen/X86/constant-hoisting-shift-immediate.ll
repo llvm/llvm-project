@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -mtriple=x86_64-- |FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O3 -mtriple=x86_64-- |FileCheck %s
 define i64 @foo(i1 %z, ptr %p, ptr %q)
 {
 ; If const 128 is hoisted to a variable, then in basic block L_val2 we would

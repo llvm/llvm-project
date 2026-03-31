@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- -no-integrated-as < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -no-integrated-as < %s | FileCheck %s
 ; PR3701
 
 define i64 @t(ptr %arg) nounwind {

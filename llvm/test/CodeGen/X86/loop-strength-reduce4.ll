@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -relocation-model=static | FileCheck %s -check-prefix=STATIC
-; RUN: llc < %s -mtriple=i686-apple-darwin -relocation-model=pic | FileCheck %s -check-prefix=PIC
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -relocation-model=static | FileCheck %s -check-prefix=STATIC
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -relocation-model=pic | FileCheck %s -check-prefix=PIC
 
 ; By starting the IV at -64 instead of 0, a cmp is eliminated,
 ; as the flags from the add can be used directly.

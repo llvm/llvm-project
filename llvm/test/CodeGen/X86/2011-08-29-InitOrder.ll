@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-linux-gnu -use-ctors | FileCheck %s --check-prefix=CHECK-DEFAULT
-; RUN: llc < %s -mtriple=i386-apple-darwin | FileCheck %s --check-prefix=CHECK-DARWIN
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-gnu -use-ctors | FileCheck %s --check-prefix=CHECK-DEFAULT
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin | FileCheck %s --check-prefix=CHECK-DARWIN
 ; PR5329
 
 @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 2000, ptr @construct_2, ptr null }, { i32, ptr, ptr } { i32 3000, ptr @construct_3, ptr null }, { i32, ptr, ptr } { i32 1000, ptr @construct_1, ptr null }]

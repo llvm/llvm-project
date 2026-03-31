@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=machine-sink < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -stop-after=machine-sink < %s | FileCheck %s
 ;
 ; test code:
 ;  1 extern int bar(int x);

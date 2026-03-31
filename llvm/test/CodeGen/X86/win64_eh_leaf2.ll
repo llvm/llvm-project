@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mtriple=x86_64-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O1 -mtriple=x86_64-pc-win32 | FileCheck %s
 
 ; Neither of these functions need .seh_ directives. We used to crash.
 

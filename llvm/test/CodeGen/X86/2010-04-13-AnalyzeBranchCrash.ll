@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -mcpu=core2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -mcpu=core2
 ; rdar://7857830
 
 %0 = type opaque

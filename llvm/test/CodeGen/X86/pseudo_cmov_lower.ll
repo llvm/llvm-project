@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-linux-gnu -o - | FileCheck %s 
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-gnu -o - | FileCheck %s 
 
 ; This test checks that only a single js gets generated in the final code
 ; for lowering the CMOV pseudos that get created for this IR.

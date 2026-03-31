@@ -1,6 +1,6 @@
 ; Test ensuring debug intrinsics do not affect generated function prologue.
 ;
-; RUN: llc -O1 -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O1 -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
 
 define i64 @fn1NoDebug(i64 %a) {
   %call = call i64 @fn(i64 %a, i64 0)

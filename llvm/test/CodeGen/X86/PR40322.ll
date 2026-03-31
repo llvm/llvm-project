@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-windows-gnu | FileCheck %s --check-prefix=CHECK-MINGW-X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-windows-gnu | FileCheck %s --check-prefix=CHECK-MINGW-X86
 
 %struct.as = type { ptr }
 

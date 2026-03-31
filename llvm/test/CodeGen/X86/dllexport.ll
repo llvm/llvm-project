@@ -1,14 +1,14 @@
-; RUN: llc -mtriple i386-pc-win32 < %s \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-win32 < %s \
 ; RUN:    | FileCheck -check-prefix CHECK -check-prefix CHECK-CL %s
-; RUN: llc -mtriple i386-pc-mingw32 < %s \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-mingw32 < %s \
 ; RUN:    | FileCheck -check-prefix CHECK -check-prefix CHECK-GCC %s
-; RUN: llc -mtriple i686-pc-cygwin %s -o - \
+; RUN: llc -combiner-topological-sorting -mtriple i686-pc-cygwin %s -o - \
 ; RUN:    | FileCheck -check-prefix CHECK -check-prefix CHECK-GCC %s
-; RUN: llc -mtriple i386-pc-win32 < %s \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-win32 < %s \
 ; RUN:    | FileCheck -check-prefix NOTEXPORTED %s
-; RUN: llc -mtriple i386-pc-mingw32 < %s \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-mingw32 < %s \
 ; RUN:    | FileCheck -check-prefix NOTEXPORTED %s
-; RUN: llc -mtriple i686-pc-cygwin %s -o - \
+; RUN: llc -combiner-topological-sorting -mtriple i686-pc-cygwin %s -o - \
 ; RUN:    | FileCheck -check-prefix NOTEXPORTED %s
 
 ; CHECK: .text

@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=generic -mtriple=x86_64-linux -code-model=large < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=generic -mtriple=x86_64-linux -code-model=large < %s | FileCheck %s
 
 ; Check what happens if we have an existing declaration of __morestack_addr
 

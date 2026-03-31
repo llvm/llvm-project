@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i386-apple-darwin %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-apple-darwin %s -o - | FileCheck %s
 
 declare void @clobber()
 

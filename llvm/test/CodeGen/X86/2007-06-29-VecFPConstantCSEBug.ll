@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mattr=+sse2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=+sse2
 
 define void @test(ptr %arg) {
 	%tmp89 = getelementptr <4 x float>, ptr %arg, i64 3

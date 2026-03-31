@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=all | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -basic-block-sections=all | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all | FileCheck %s
 ; RUN: echo "!_Z3fooi" > %t.order.txt
 ; RUN: echo "!!2" >> %t.order.txt
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t.order.txt | FileCheck %s --check-prefix=LIST
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.order.txt | FileCheck %s --check-prefix=LIST
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t.order.txt | FileCheck %s --check-prefix=LIST
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.order.txt | FileCheck %s --check-prefix=LIST
 
 ; CHECK: .section	foo_section,"ax",@progbits,unique,1
 ; CHECK-LABEL: _Z3fooi:

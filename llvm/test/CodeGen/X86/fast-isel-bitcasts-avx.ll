@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx -fast-isel -fast-isel-abort=1 -asm-verbose=0 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+avx -fast-isel -fast-isel-abort=1 -asm-verbose=0 | FileCheck %s
 ;
 ; Bitcasts between 256-bit vector types are no-ops since no instruction is
 ; needed for the conversion.

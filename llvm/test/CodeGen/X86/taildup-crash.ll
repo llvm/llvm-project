@@ -1,4 +1,4 @@
-; RUN: llc -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -o - %s | FileCheck %s
 target triple = "x86_64--"
 
 ; Make sure we do not crash in tail duplication when finding no successor of a

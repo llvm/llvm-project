@@ -1,7 +1,7 @@
-; RUN: llc  -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting  -verify-machineinstrs < %s | FileCheck %s
 
 ; Used to crash with assertions when emitting object files.
-; RUN: llc -filetype=obj %s -o /dev/null
+; RUN: llc -combiner-topological-sorting -filetype=obj %s -o /dev/null
 
 ; Check stack map section is emitted before debug info.
 ; CHECK: .section __LLVM_STACKMAPS

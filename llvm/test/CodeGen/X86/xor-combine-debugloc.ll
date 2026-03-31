@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -stop-after=finalize-isel < %s | FileCheck %s
 ;
 ; Make sure that when the entry block of IR below is lowered, an instruction
 ; that implictly defines $eflags has a same debug location with the icmp

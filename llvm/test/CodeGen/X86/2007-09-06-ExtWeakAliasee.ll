@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux-gnu | FileCheck %s
 
 @__gthrw_pthread_once = weak alias i32 (ptr, ptr), ptr @pthread_once		; <ptr> [#uses=0]
 

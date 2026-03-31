@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
 
 %rtti.TypeDescriptor2 = type { ptr, ptr, [3 x i8] }
 %eh.CatchableType = type { i32, ptr, i32, i32, i32, i32, ptr }

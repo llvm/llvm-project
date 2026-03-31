@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+mmx,+fma,+f16c,+avx512f -stop-after finalize-isel -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -mattr=+mmx,+fma,+f16c,+avx512f -stop-after finalize-isel -o - %s | FileCheck %s
 ; This test ensures that the MXCSR is implicitly used by MMX FP instructions.
 
 define <1 x i64> @mxcsr_mmx(<4 x float> %a0) {

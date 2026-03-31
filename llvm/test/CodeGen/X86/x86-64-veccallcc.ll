@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
 
 ; Test 1st and 2nd arguments passed in XMM0 and XMM1.
 ; Test 7nd argument passed by reference in stack: 56(%rsp).

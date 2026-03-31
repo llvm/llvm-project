@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -mattr=+sse2 | not grep ".space"
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -mattr=+sse2 | not grep ".space"
 ; rdar://6668548
 
 declare double @llvm.sqrt.f64(double) nounwind readonly

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-uefi | FileCheck %s -check-prefix=UEFIFAST64
-; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s -check-prefix=UEFIFAST64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-uefi | FileCheck %s -check-prefix=UEFIFAST64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-windows-msvc | FileCheck %s -check-prefix=UEFIFAST64
 
 declare fastcc i32 @fastcallee1(i32 %a1, i32 %a2, i32 %a3, i32 %a4)
 

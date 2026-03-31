@@ -2,12 +2,12 @@
 ; RUN: echo 'v1' > %t1
 ; RUN: echo 'f foo' >> %t1
 ; RUN: echo 'c2 0' >> %t1
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 -O0 | FileCheck %s -check-prefix=LINUX-SECTIONS1
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 -O0 | FileCheck %s -check-prefix=LINUX-SECTIONS1
 
 ; RUN: echo 'v1' > %t2
 ; RUN: echo 'f foo' >> %t2
 ; RUN: echo 'c2' >> %t2
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 -O0 | FileCheck %s -check-prefix=LINUX-SECTIONS2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 -O0 | FileCheck %s -check-prefix=LINUX-SECTIONS2
 
 
 define void @foo(i1 %a, i1 %b) {

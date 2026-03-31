@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; PR12599
 ;
 ; This bitcode causes the X86 target to make changes to the DAG during

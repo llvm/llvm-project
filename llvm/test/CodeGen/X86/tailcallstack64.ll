@@ -1,5 +1,5 @@
-; RUN: llc < %s -tailcallopt -mcpu=generic -mtriple=x86_64-linux -post-RA-scheduler=true | FileCheck %s
-; RUN: llc < %s -tailcallopt -mcpu=generic -mtriple=x86_64-win32 -post-RA-scheduler=true | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -tailcallopt -mcpu=generic -mtriple=x86_64-linux -post-RA-scheduler=true | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -tailcallopt -mcpu=generic -mtriple=x86_64-win32 -post-RA-scheduler=true | FileCheck %s
 
 ; FIXME: Redundant unused stack allocation could be eliminated.
 ; CHECK: subq  ${{24|72|80}}, %rsp

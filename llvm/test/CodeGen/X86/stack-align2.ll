@@ -1,15 +1,15 @@
-; RUN: llc < %s -mcpu=generic -mtriple=i386-linux | FileCheck %s -check-prefix=LINUX-I386
-; RUN: llc < %s -mcpu=generic -mtriple=i386-kfreebsd | FileCheck %s -check-prefix=KFREEBSD-I386
-; RUN: llc < %s -mcpu=generic -mtriple=i386-hurd | FileCheck %s -check-prefix=HURD-I386
-; RUN: llc < %s -mcpu=generic -mtriple=i386-netbsd | FileCheck %s -check-prefix=NETBSD-I386
-; RUN: llc < %s -mcpu=generic -mtriple=i686-apple-darwin8 | FileCheck %s -check-prefix=DARWIN-I386
-; RUN: llc < %s -mcpu=generic -mtriple=i386-pc-solaris2.11 | FileCheck %s -check-prefix=SOLARIS-I386
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux | FileCheck %s -check-prefix=LINUX-X86_64
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-kfreebsd | FileCheck %s -check-prefix=KFREEBSD-X86_64
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-hurd | FileCheck %s -check-prefix=HURD-X86_64
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-netbsd | FileCheck %s -check-prefix=NETBSD-X86_64
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-apple-darwin8 | FileCheck %s -check-prefix=DARWIN-X86_64
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-solaris2.11 | FileCheck %s -check-prefix=SOLARIS-X86_64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i386-linux | FileCheck %s -check-prefix=LINUX-I386
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i386-kfreebsd | FileCheck %s -check-prefix=KFREEBSD-I386
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i386-hurd | FileCheck %s -check-prefix=HURD-I386
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i386-netbsd | FileCheck %s -check-prefix=NETBSD-I386
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i686-apple-darwin8 | FileCheck %s -check-prefix=DARWIN-I386
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i386-pc-solaris2.11 | FileCheck %s -check-prefix=SOLARIS-I386
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-linux | FileCheck %s -check-prefix=LINUX-X86_64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-kfreebsd | FileCheck %s -check-prefix=KFREEBSD-X86_64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-hurd | FileCheck %s -check-prefix=HURD-X86_64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-netbsd | FileCheck %s -check-prefix=NETBSD-X86_64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-apple-darwin8 | FileCheck %s -check-prefix=DARWIN-X86_64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-pc-solaris2.11 | FileCheck %s -check-prefix=SOLARIS-X86_64
 
 define i32 @test() nounwind {
 entry:

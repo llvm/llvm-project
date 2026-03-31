@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=skx -mtriple x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mcpu=skx -mtriple=x86_64-linux-gnux32 -verify-machineinstrs | FileCheck %s --check-prefix=X32
+; RUN: llc -combiner-topological-sorting < %s -mcpu=skx -mtriple x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=skx -mtriple=x86_64-linux-gnux32 -verify-machineinstrs | FileCheck %s --check-prefix=X32
 
 define i32 @A() {
 ; CHECK: movq %rsp, %rdi

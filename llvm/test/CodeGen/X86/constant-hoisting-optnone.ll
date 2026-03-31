@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=generic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mcpu=generic | FileCheck %s
 ;
 ; Verify that pass 'Constant Hoisting' is not run on optnone functions.
 ; Without optnone, Pass 'Constant Hoisting' would firstly hoist

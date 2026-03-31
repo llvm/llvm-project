@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s
 
 ; Make sure XMM0 (return register) and R11 are saved before the call
 declare preserve_mostcc double @foo_double(i64, i64)

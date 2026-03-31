@@ -9,16 +9,16 @@
 ; RUN: cat %t/main.ll %t/h.ll > %t/h2.ll
 ; RUN: cat %t/existedGV.ll %t/main.ll %t/h.ll > %t/h3.ll
 ; RUN: cat %t/main.ll %t/i.ll > %t/i2.ll
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/a2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/b2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/c2.ll | FileCheck --check-prefix=CHECK-GLOBAL %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/d2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/e2.ll | FileCheck --check-prefix=CHECK-GS %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/f2.ll | FileCheck --check-prefix=CHECK-OFFSET %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/g2.ll | FileCheck --check-prefix=CHECK-NEGATIVE-OFFSET %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/h2.ll | FileCheck --check-prefix=CHECK-SYM %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/h3.ll | FileCheck --check-prefix=CHECK-SYMGV %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/i2.ll | FileCheck --check-prefix=CHECK-SYM2 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/a2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/b2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/c2.ll | FileCheck --check-prefix=CHECK-GLOBAL %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/d2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/e2.ll | FileCheck --check-prefix=CHECK-GS %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/f2.ll | FileCheck --check-prefix=CHECK-OFFSET %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/g2.ll | FileCheck --check-prefix=CHECK-NEGATIVE-OFFSET %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/h2.ll | FileCheck --check-prefix=CHECK-SYM %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/h3.ll | FileCheck --check-prefix=CHECK-SYMGV %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -o - < %t/i2.ll | FileCheck --check-prefix=CHECK-SYM2 %s
 
 ; CHECK-TLS-FS-40:       movq    %fs:40, %rax
 ; CHECK-TLS-FS-40:       movq    %fs:40, %rax

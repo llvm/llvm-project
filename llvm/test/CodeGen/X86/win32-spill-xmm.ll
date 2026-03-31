@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=generic -mtriple=i686-pc-windows-msvc -mattr=+sse < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=generic -mtriple=i686-pc-windows-msvc -mattr=+sse < %s | FileCheck %s
 
 ; Check proper alignment of spilled vector
 

@@ -1,5 +1,5 @@
-; RUN: llc -data-sections=1 -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
-; RUN: llc -data-sections=0 -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -data-sections=1 -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -data-sections=0 -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
 
 @a = global i32 1
 @b = global i32 2, !associated !0

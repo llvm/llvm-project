@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s
 
 define i32 @foo(i32 %i) nounwind noinline uwtable "xray-instruction-threshold"="10" "xray-ignore-loops" {
 entry:

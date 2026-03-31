@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-apple-macosx -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-apple-macosx -o - %s | FileCheck %s
 
 ; x86 doesn't normally use indirect symbols, particularly hidden ones, but it
 ; can be tricked into it for exception-handling typeids.

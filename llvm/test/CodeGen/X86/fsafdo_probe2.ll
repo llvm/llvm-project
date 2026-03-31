@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llvm-profdata merge --sample -profile-isfs --extbinary -o %t.afdo %S/Inputs/fsloader-probe.afdo
-; RUN: llc -enable-fs-discriminator -fs-profile-file=%t.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefix=LOADER
+; RUN: llc -combiner-topological-sorting -enable-fs-discriminator -fs-profile-file=%t.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefix=LOADER
 ;
 ;;
 ;; C source code for the test.

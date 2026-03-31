@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -o - | FileCheck %s
 
 declare void @llvm.va_start(ptr) nounwind
 

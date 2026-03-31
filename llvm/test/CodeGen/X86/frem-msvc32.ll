@@ -2,7 +2,7 @@
 
 ; MSVC does not have a 32-bit fmodf function, so it must be promoted to
 ; a 64-bit fmod rtlib call.
-; RUN: llc -mtriple=i686-pc-windows-msvc -O0 < %s  | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-windows-msvc -O0 < %s  | FileCheck %s
 
 ; CHECK: @do_frem32
 ; CHECK: {{_fmod$}}

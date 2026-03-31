@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=x86_64-linux -asm-verbose=false -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -O0 -mtriple=x86_64-windows-itanium -asm-verbose=false -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=x86_64-linux -asm-verbose=false -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=x86_64-windows-itanium -asm-verbose=false -verify-machineinstrs < %s | FileCheck %s
 
 ; Fast-isel mustn't add a block to the MBB successor/predecessor list twice.
 ; The machine verifier will catch and complain about this case.

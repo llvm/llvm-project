@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-gnu-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-gnu-linux | FileCheck %s
 
 ; @foo is a 2d array of i32s, ex.
 ; i32 foo [2][2]

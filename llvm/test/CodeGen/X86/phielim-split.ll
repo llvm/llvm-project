@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -no-phi-elim-live-out-early-exit | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -verify-machineinstrs -no-phi-elim-live-out-early-exit | FileCheck %s
 target triple = "x86_64-apple-macosx10.8.0"
 
 ; The critical edge from for.cond to if.end2 should be split to avoid injecting

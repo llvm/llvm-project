@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=atom | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=atom | FileCheck %s
 
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target triple = "x86_64-apple-darwin12.5.0"

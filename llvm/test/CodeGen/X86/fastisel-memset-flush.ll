@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -O0 < %s | FileCheck %s
 
 define dso_local void @foo() !dbg !7 {
 entry:

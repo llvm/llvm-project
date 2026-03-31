@@ -1,4 +1,4 @@
-; RUN: llc < %s -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic | FileCheck %s
 ; PR2137
 
 ; ModuleID = '1.c'

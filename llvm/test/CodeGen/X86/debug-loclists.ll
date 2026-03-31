@@ -1,24 +1,24 @@
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF32
 
-; RUN: llc -mtriple=x86_64-pc-mingw -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-mingw -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF32
 
-; RUN: llc -dwarf64 -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
+; RUN: llc -combiner-topological-sorting -dwarf64 -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF64
 
-; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
+; RUN: llc -combiner-topological-sorting -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=DWO,DWO32
 
-; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-mingw -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
+; RUN: llc -combiner-topological-sorting -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-mingw -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=DWO,DWO32
 
-; RUN: llc -dwarf64 -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
+; RUN: llc -combiner-topological-sorting -dwarf64 -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=DWO,DWO64
 

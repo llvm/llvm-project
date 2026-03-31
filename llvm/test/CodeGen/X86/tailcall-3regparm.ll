@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
 
 ; Tail call should not make register allocation fail (x86-32)
 

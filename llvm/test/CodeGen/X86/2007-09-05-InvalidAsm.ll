@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -x86-asm-syntax=intel | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -x86-asm-syntax=intel | FileCheck %s
 ; CHECK-NOT: lea R
 
 	%struct.AGenericCall = type { ptr, ptr, ptr }

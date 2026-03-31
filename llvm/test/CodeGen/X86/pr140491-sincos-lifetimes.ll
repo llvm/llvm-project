@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; This test is reduced from https://github.com/llvm/llvm-project/issues/140491.
 ; It checks that when `@llvm.sincos.f32` is expanded to a call to

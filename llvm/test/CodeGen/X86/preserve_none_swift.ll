@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64 %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64 %s -o - 2>&1 | FileCheck %s
 
 ; Swift attributes should not be used with preserve_none.
 

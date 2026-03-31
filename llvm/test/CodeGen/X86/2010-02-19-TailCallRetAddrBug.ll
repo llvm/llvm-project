@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=generic -mtriple=i386-apple-darwin -tailcallopt -enable-misched=false < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=generic -mtriple=i386-apple-darwin -tailcallopt -enable-misched=false < %s | FileCheck %s
 ; Check that lowered arguments do not overwrite the return address before it is moved.
 ; Bug 6225
 ;

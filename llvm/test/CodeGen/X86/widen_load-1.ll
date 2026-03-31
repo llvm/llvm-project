@@ -1,5 +1,5 @@
-; RUN: llc -stack-symbol-ordering=0 %s -o - -mattr=-avx -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=SSE
-; RUN: llc -stack-symbol-ordering=0 %s -o - -mattr=+avx -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=AVX
+; RUN: llc -combiner-topological-sorting -stack-symbol-ordering=0 %s -o - -mattr=-avx -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=SSE
+; RUN: llc -combiner-topological-sorting -stack-symbol-ordering=0 %s -o - -mattr=+avx -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=AVX
 ; PR4891
 ; PR5626
 

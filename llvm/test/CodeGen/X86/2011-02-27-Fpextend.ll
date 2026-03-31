@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux < %s
 ; PR9309
 
 define <4 x double> @f_fu(<4 x float>) nounwind {

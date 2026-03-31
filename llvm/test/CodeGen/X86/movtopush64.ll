@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s -check-prefix=NORMAL -check-prefix=NORMALFP
-; RUN: llc < %s -mtriple=x86_64-windows | FileCheck %s -check-prefix=NOPUSH
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s -check-prefix=NOPUSH -check-prefix=NORMALFP
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -no-x86-call-frame-opt | FileCheck %s -check-prefix=NOPUSH
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s -check-prefix=NORMAL -check-prefix=NORMALFP
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-windows | FileCheck %s -check-prefix=NOPUSH
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s -check-prefix=NOPUSH -check-prefix=NORMALFP
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -no-x86-call-frame-opt | FileCheck %s -check-prefix=NOPUSH
 
 declare void @seven_params(i32 %a, i64 %b, i32 %c, i64 %d, i32 %e, i64 %f, i32 %g)
 declare void @eightparams(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)

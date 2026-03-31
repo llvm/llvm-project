@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=x86_64-apple-darwin 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin 2>&1 | FileCheck %s
 ;
 ; Check that misuse of anyregcc results in a compile time error.
 

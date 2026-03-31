@@ -1,4 +1,4 @@
-; RUN: llc -code-model=large -relocation-model=pic %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -code-model=large -relocation-model=pic %s -o - | FileCheck %s
 
 target triple = "x86_64-linux-gnu"
 

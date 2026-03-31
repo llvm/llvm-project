@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mtriple=i386-apple-darwin -x86-asm-syntax=intel | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O1 -mtriple=i386-apple-darwin -x86-asm-syntax=intel | FileCheck %s
 ;
 ; Interesting test case where %tmp1220 = xor i32 %tmp862, %tmp592 and
 ; %tmp1676 = xor i32 %tmp1634, %tmp1530 have zero demanded bits after

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 | FileCheck %s
 
 ; Allocas with unknown size in the entry block are dynamic.
 define void @foo(i32 %n) {

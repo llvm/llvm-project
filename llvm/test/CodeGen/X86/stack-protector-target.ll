@@ -1,12 +1,12 @@
 ; Test target-specific stack cookie location.
-; RUN: llc -mtriple=i386-linux < %s -o - | FileCheck --check-prefix=I386-TLS %s
-; RUN: llc -mtriple=x86_64-linux < %s -o - | FileCheck --check-prefix=X64-TLS %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-linux < %s -o - | FileCheck --check-prefix=I386-TLS %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s -o - | FileCheck --check-prefix=X64-TLS %s
 
-; RUN: llc -mtriple=i386-linux-android < %s -o - | FileCheck --check-prefix=I386-TLS %s
-; RUN: llc -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefix=X64-TLS %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-linux-android < %s -o - | FileCheck --check-prefix=I386-TLS %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefix=X64-TLS %s
 
-; RUN: llc -mtriple=i386-kfreebsd < %s -o - | FileCheck --check-prefix=I386-TLS %s
-; RUN: llc -mtriple=x86_64-kfreebsd < %s -o - | FileCheck --check-prefix=X64-TLS %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-kfreebsd < %s -o - | FileCheck --check-prefix=I386-TLS %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-kfreebsd < %s -o - | FileCheck --check-prefix=X64-TLS %s
 
 define void @_Z1fv() sspreq {
 entry:

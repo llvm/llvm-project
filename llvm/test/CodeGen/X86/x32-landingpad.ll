@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-none-none-gnux32 -mcpu=generic | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-none-none-gnux32 -mcpu=generic -fast-isel | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-none-none-gnux32 -mcpu=generic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-none-none-gnux32 -mcpu=generic -fast-isel | FileCheck %s
 ;
 ; Ensures that landingpad instructions in x32 use the right Exception Pointer
 ; and Exception Selector registers.

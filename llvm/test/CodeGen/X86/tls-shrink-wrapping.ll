@@ -11,7 +11,7 @@
 ; We want to make sure that TLS variables are not accessed before
 ; the stack frame is set up.
 
-; RUN: llc < %s -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-freebsd11.0"

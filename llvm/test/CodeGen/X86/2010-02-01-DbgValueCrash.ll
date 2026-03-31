@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 -O1 < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -O1 < %s
 
 ; ModuleID = 'pr6157.bc'
 ; formerly crashed in SelectionDAGBuilder

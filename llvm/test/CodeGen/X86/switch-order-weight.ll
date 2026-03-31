@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin11 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin11 < %s | FileCheck %s
 
 ; Check that the cases which lead to unreachable are checked after "10"
 

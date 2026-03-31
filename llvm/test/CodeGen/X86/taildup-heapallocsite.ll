@@ -1,4 +1,4 @@
-; RUN: llc < %s -tail-dup-placement-threshold=4 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -tail-dup-placement-threshold=4 | FileCheck %s
 
 ; Based on test case from PR43695:
 ; __declspec(allocator) ptr alloc(unsigned int size);

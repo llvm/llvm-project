@@ -1,7 +1,7 @@
 ; Check that when all exception handling blocks are cold, they get grouped with the cold bbs.
 ; RUN: echo '!main' > %t
 ; RUN: echo '!!0' >> %t
-; RUN: llc -function-sections -basic-block-sections=%t -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -function-sections -basic-block-sections=%t -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
 @_ZTIi = external constant ptr
 
 define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {

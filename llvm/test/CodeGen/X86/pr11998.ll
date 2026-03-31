@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=corei7-avx -mtriple=x86_64-- -mattr=+avx
+; RUN: llc -combiner-topological-sorting < %s -mcpu=corei7-avx -mtriple=x86_64-- -mattr=+avx
 
 define void @autogen_51367_5000(i8, i1 %arg) {
 BB:

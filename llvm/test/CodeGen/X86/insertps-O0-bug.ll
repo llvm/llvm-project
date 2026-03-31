@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 -O0 < %s | FileCheck %s
 
 ; Check that at -O0, the backend doesn't attempt to canonicalize a vector load
 ; used by an INSERTPS into a scalar load plus scalar_to_vector.

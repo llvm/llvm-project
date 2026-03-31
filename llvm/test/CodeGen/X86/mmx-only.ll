@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-- -mattr=+mmx | FileCheck %s
-; RUN: llc < %s -mtriple=i686-- -mattr=+mmx,-sse | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=+mmx | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=+mmx,-sse | FileCheck %s
 
 ; Test that turning off sse doesn't turn off mmx.
 

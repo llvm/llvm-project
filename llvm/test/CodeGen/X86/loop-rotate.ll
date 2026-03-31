@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-linux < %s | FileCheck %s
 
 ; Don't rotate the loop if the number of fall through to exit is not larger
 ; than the number of fall through to header.

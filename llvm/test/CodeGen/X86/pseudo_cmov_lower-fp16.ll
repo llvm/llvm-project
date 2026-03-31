@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-linux-gnu -mattr=+avx512fp16 -mattr=+avx512vl -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux-gnu -mattr=+avx512fp16 -mattr=+avx512vl -o - | FileCheck %s
 
 ; This test checks that only a single je gets generated in the final code
 ; for lowering the CMOV pseudos that get created for this IR.

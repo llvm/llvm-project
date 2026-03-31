@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- -enable-legalize-types-checking < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -enable-legalize-types-checking < %s
 ; PR5092
 
 define <4 x float> @bug(float %a) nounwind {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 
 define void @foo(ptr %x, ptr %y, ptr %p) nounwind {
   %a = load i2011, ptr %x

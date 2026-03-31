@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin10.0 -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin10.0 -relocation-model=pic | FileCheck %s
 
 define void @dot(ptr nocapture %A, i32 %As, ptr nocapture %B, i32 %Bs, ptr nocapture %C, i32 %N) nounwind ssp {
 ; CHECK-LABEL: dot:

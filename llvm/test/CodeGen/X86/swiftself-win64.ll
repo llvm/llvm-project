@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown-windows-msvc -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
-; RUN: llc -O0 -verify-machineinstrs -mtriple=x86_64-unknown-windows-msvc -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-unknown-windows-msvc -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
+; RUN: llc -combiner-topological-sorting -O0 -verify-machineinstrs -mtriple=x86_64-unknown-windows-msvc -o - %s | FileCheck %s
 
 ; Parameter with swiftself should be allocated to r13.
 ; CHECK-LABEL: swiftself_param:

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-linux | FileCheck %s -check-prefix=X86-32
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=X86-64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-linux | FileCheck %s -check-prefix=X86-32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=X86-64
 
 declare i32 @get_val()
 declare void @use_val(i32)

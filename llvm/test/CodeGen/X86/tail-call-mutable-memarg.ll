@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; Make sure we check that forwarded memory arguments are not modified when tail
 ; calling. inalloca and copy arg elimination make argument slots mutable.

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=corei7-avx -mattr=+avx | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=corei7-avx -mattr=+avx | FileCheck %s
 target triple = "x86_64-pc-win32"
 
 declare <8 x float> @foo(<8 x float>, i32)

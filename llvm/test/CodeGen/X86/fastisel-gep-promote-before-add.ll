@@ -1,6 +1,6 @@
 ; fastisel should not fold add with non-pointer bitwidth
 ; sext(a) + sext(b) != sext(a + b)
-; RUN: llc -mtriple=x86_64-apple-darwin %s -O0 -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin %s -O0 -o - | FileCheck %s
 
 define zeroext i8 @gep_promotion(ptr %ptr) nounwind uwtable ssp {
 entry:

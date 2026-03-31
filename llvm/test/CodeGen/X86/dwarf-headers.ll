@@ -1,18 +1,18 @@
-; RUN: llc -dwarf-version=4 -generate-type-units \
+; RUN: llc -combiner-topological-sorting -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-4
 
-; RUN: llc -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
+; RUN: llc -combiner-topological-sorting -split-dwarf-file=foo.dwo -split-dwarf-output=%t.dwo \
 ; RUN:     -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=O-4
 ; RUN: llvm-dwarfdump -v %t.dwo | FileCheck %s --check-prefix=DWO-4
 
-; RUN: llc -dwarf-version=5 -generate-type-units \
+; RUN: llc -combiner-topological-sorting -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-5
 
-; RUN: llc -split-dwarf-file=foo.dwo \
+; RUN: llc -combiner-topological-sorting -split-dwarf-file=foo.dwo \
 ; RUN:     -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
 ; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=O-5

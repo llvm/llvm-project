@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -mcpu=core2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -mcpu=core2 | FileCheck %s
 ; See PR19530
 declare double    @llvm.powi.f64.i32(double %Val, i32 %power)
 define <3 x double> @julia_foo17589(i32 %arg) {

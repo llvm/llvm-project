@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 target triple = "x86_64-apple-macosx10.4.0"
 
 ; __stack_chk_guard must be loaded for twice, once for setting up the canary,

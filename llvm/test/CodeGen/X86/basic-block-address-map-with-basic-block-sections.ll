@@ -2,7 +2,7 @@
 ;; Let a function with 4 basic blocks get split into 2 sections.
 ; RUN: echo '!_Z3bazb' > %t
 ; RUN: echo '!!0 2' >> %t
-; RUN: llc < %s -mtriple=x86_64 -basic-block-address-map -basic-block-sections=%t | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -basic-block-address-map -basic-block-sections=%t | FileCheck %s
 
 define void @_Z3bazb(i1 zeroext) personality ptr @__gxx_personality_v0 {
   br i1 %0, label %2, label %7

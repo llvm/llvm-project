@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin | FileCheck %s
 
 ; FIXME: The first two instructions, movl and addl, should have been combined to
 ; "leal 16(%eax), %edx" by the backend (PR20776).

@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=i386 -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting %s -mtriple=i386 -o - | FileCheck %s
 
 define i1 @no__mulodi4(i32 %a, i64 %b, ptr %c) {
 ; CHECK-LABEL: no__mulodi4:

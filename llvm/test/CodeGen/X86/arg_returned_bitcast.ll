@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
 
 ; Test that the "returned" attribute "works" even if there is a bitcast between
 ; the argument and return value.

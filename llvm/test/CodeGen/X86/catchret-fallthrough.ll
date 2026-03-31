@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s | FileCheck %s
 
 ; We used to have an issue where we inserted an MBB between invoke.cont.3 and
 ; its fallthrough target of ret void.

@@ -1,4 +1,4 @@
-; RUN: llc < %s -frame-pointer=all -verify-coalescing
+; RUN: llc -combiner-topological-sorting < %s -frame-pointer=all -verify-coalescing
 ; PR13414
 ;
 ; During coalescing, remat triggers DCE which deletes the penultimate use of a

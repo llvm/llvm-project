@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -precise-rotation-cost < %s | FileCheck %s -check-prefix=CHECK-PROFILE
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -mtriple=x86_64-linux -precise-rotation-cost < %s | FileCheck %s -check-prefix=CHECK-PROFILE
 
 define void @foo() {
 ; Test that not all edges in the loop chain are fall through without profile

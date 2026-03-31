@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-unknown-unknown -no-integrated-as < %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -no-integrated-as < %s 2>&1 | FileCheck %s
 
 %struct.s = type { i32, i32 }
 

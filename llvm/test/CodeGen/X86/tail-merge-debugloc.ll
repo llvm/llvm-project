@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=branch-folder < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -stop-after=branch-folder < %s | FileCheck %s
 ;
 ; bb2 and bb3 in the IR below will be tail-merged into a single basic block.
 ; As br instructions in bb2 and bb3 have the same debug location, make sure that

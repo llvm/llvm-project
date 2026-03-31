@@ -1,4 +1,4 @@
-; RUN: llc --stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting --stop-after=finalize-isel < %s | FileCheck %s
 ;
 ; Verify that we can correctly salvage truncate expressions during SelectionDAG.
 ; Fixes LLVM issue #63076.

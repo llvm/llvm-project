@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 ; rdar://6647639
 
 	%struct.FetchPlanHeader = type { ptr, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, %struct.__attributeDescriptionFlags }

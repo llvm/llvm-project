@@ -1,11 +1,11 @@
-; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-NON-PIC,CHECK-NON-PIC-SMALL,CHECK-NON-PIC-X64
-; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnux32 -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-NON-PIC,CHECK-NON-PIC-SMALL,CHECK-NON-PIC-X32
-; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -code-model=medium < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MEDIUM,CHECK-NON-PIC,CHECK-NON-PIC-MEDIUM,CHECK-NON-PIC-X64
-; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -code-model=large < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NON-PIC,CHECK-NON-PIC-LARGE,CHECK-NON-PIC-X64
-; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -relocation-model=pic -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-PIC,CHECK-PIC-SMALL,CHECK-PIC-X64
-; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnux32 -relocation-model=pic -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-PIC,CHECK-PIC-SMALL,CHECK-PIC-X32
-; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -relocation-model=pic -code-model=medium < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MEDIUM,CHECK-PIC,CHECK-PIC-MEDIUM,CHECK-PIC-X64
-; RUN: llc -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -relocation-model=pic -code-model=large < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PIC,CHECK-PIC-LARGE,CHECK-PIC-X64
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-NON-PIC,CHECK-NON-PIC-SMALL,CHECK-NON-PIC-X64
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple x86_64-pc-linux-gnux32 -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-NON-PIC,CHECK-NON-PIC-SMALL,CHECK-NON-PIC-X32
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -code-model=medium < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MEDIUM,CHECK-NON-PIC,CHECK-NON-PIC-MEDIUM,CHECK-NON-PIC-X64
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -code-model=large < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NON-PIC,CHECK-NON-PIC-LARGE,CHECK-NON-PIC-X64
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -relocation-model=pic -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-PIC,CHECK-PIC-SMALL,CHECK-PIC-X64
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple x86_64-pc-linux-gnux32 -relocation-model=pic -code-model=small < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL,CHECK-PIC,CHECK-PIC-SMALL,CHECK-PIC-X32
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -relocation-model=pic -code-model=medium < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MEDIUM,CHECK-PIC,CHECK-PIC-MEDIUM,CHECK-PIC-X64
+; RUN: llc -combiner-topological-sorting -basic-block-sections=all -mtriple x86_64-pc-linux-gnu -relocation-model=pic -code-model=large < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PIC,CHECK-PIC-LARGE,CHECK-PIC-X64
 @_ZTIi = external constant ptr
 
 define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu
 ; PR2289
 
 define void @_ada_ca11001() {

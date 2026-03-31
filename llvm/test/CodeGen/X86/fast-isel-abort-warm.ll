@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel -o - %s -fast-isel-report-on-fallback -pass-remarks-missed=isel 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -fast-isel -o - %s -fast-isel-report-on-fallback -pass-remarks-missed=isel 2>&1 | FileCheck %s
 ; Make sure FastISel report a warming when we asked it to do so.
 ; Note: This test needs to use whatever is not supported by FastISel.
 ;       Thus, this test may fail because inline asm gets supported in FastISel.

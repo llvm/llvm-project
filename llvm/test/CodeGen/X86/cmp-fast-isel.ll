@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux -fast-isel -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux -fast-isel -show-mc-encoding < %s | FileCheck %s
 
 ; pr22854
 

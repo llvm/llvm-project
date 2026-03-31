@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -mcpu=atom  | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -mcpu=atom  | \
 ; RUN:    FileCheck --check-prefix=ATOM %s
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -mcpu=core2 | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -mcpu=core2 | \
 ; RUN:    FileCheck --check-prefix=CORE2 %s
 ; ATOM: callq *{{%[a-z]+[0-9]*}}
 ; CORE2: callq *funcp

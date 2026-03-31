@@ -1,7 +1,7 @@
-; RUN: llc -mtriple x86_64-linux-gnu -data-sections %s -o - | FileCheck %s --check-prefix=ELF
-; RUN: llc -mtriple x86_64-linux-gnu -unique-section-names=0 -data-sections %s -o - | FileCheck %s --check-prefix=ELF-NOUNIQ
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-linux-gnu -data-sections %s -o - | FileCheck %s --check-prefix=ELF
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-linux-gnu -unique-section-names=0 -data-sections %s -o - | FileCheck %s --check-prefix=ELF-NOUNIQ
 
-; RUN: llc -mtriple x86_64-windows-msvc -data-sections %s -o - | FileCheck %s --check-prefix=COFF-MSVC
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-windows-msvc -data-sections %s -o - | FileCheck %s --check-prefix=COFF-MSVC
 
 ; ELF: .section .data.hot.foo,
 ; ELF: .section .data.bar,

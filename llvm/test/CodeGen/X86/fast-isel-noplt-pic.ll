@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-unknown-linux-gnu -O0 -fast-isel=true -relocation-model=pic -filetype asm -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-unknown-linux-gnu -O0 -fast-isel=true -relocation-model=pic -filetype asm -o - %s | FileCheck %s
 
 declare void @f() local_unnamed_addr #0
 

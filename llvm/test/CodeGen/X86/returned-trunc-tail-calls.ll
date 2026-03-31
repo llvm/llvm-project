@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-win32 | FileCheck %s
 
 declare i32 @ret32(i32 returned)
 declare i64 @ret64(i64 returned)

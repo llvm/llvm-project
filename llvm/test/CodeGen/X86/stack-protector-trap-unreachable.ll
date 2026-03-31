@@ -1,25 +1,25 @@
 ;; Make sure we emit trap instructions after stack protector checks iff NoTrapAfterNoReturn is false.
 
-; RUN: llc -enable-selectiondag-sp -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -enable-selectiondag-sp -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable=false -o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,NO_TRAP_UNREACHABLE %s
-; RUN: llc -enable-selectiondag-sp -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -enable-selectiondag-sp -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable -no-trap-after-noreturn -o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,NO_TRAP_UNREACHABLE %s
-; RUN: llc -enable-selectiondag-sp -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -enable-selectiondag-sp -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable -no-trap-after-noreturn=false -o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,TRAP_UNREACHABLE %s
 
-; RUN: llc -enable-selectiondag-sp=false -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -enable-selectiondag-sp=false -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable=false -o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,NO_TRAP_UNREACHABLE %s
-; RUN: llc -enable-selectiondag-sp=false -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -enable-selectiondag-sp=false -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable -no-trap-after-noreturn -o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,NO_TRAP_UNREACHABLE %s
-; RUN: llc -enable-selectiondag-sp=false -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -enable-selectiondag-sp=false -mtriple=x86_64 -fast-isel=false -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable -no-trap-after-noreturn=false -o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,TRAP_UNREACHABLE %s
 
 ;; Make sure FastISel doesn't break anything.
-; RUN: llc -mtriple=x86_64 -fast-isel -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -fast-isel -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable=false --o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,NO_TRAP_UNREACHABLE %s
-; RUN: llc -mtriple=x86_64 -fast-isel -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -fast-isel -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable -no-trap-after-noreturn -o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,NO_TRAP_UNREACHABLE %s
-; RUN: llc -mtriple=x86_64 -fast-isel -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -fast-isel -global-isel=false -verify-machineinstrs -print-after=finalize-isel \
 ; RUN:     -trap-unreachable -no-trap-after-noreturn=false -o /dev/null 2>&1 %s | FileCheck --check-prefixes=CHECK,TRAP_UNREACHABLE %s
 
 ; CHECK-LABEL: Machine code for function test

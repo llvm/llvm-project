@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=core2
+; RUN: llc -combiner-topological-sorting < %s -mcpu=core2
 ; PR7375
 ;
 ; This function contains a block (while.cond) with a lonely RFP use that is

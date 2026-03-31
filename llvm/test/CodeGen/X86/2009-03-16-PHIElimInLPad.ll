@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-linux -asm-verbose | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-linux -asm-verbose | FileCheck %s
 ; Check that register copies in the landing pad come after the EH_LABEL
 
 declare i32 @f()

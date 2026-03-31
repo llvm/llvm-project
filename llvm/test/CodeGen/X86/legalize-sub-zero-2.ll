@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin
 
 define fastcc void @foo(i32 %type, i1 %arg) nounwind optsize {
 entry:

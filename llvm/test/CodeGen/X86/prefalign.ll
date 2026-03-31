@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck --check-prefixes=CHECK,NOFS %s
-; RUN: llc -function-sections < %s | FileCheck --check-prefixes=CHECK,FS %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck --check-prefixes=CHECK,NOFS %s
+; RUN: llc -combiner-topological-sorting -function-sections < %s | FileCheck --check-prefixes=CHECK,FS %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

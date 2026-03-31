@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -frame-pointer=all -relocation-model=pic
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10 -frame-pointer=all -relocation-model=pic
 ; PR4099
 
 	%0 = type { [62 x ptr] }		; type %0

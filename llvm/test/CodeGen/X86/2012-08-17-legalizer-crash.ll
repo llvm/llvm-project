@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 ; Check that an overly large immediate created by SROA doesn't crash the
 ; legalizer.
 

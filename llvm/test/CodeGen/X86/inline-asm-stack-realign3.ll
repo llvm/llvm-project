@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-- -no-integrated-as < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-- -no-integrated-as < %s | FileCheck %s
 
 declare void @bar(ptr %junk)
 

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=i386 %s -o - | FileCheck --check-prefixes=CHECK,X86 %s
-; RUN: llc -mtriple=x86_64 %s -o - | FileCheck --check-prefixes=CHECK,X64 %s
-; RUN: llc -mtriple=x86_64 -function-sections %s -o - | FileCheck --check-prefixes=CHECK,X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386 %s -o - | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 %s -o - | FileCheck --check-prefixes=CHECK,X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -function-sections %s -o - | FileCheck --check-prefixes=CHECK,X64 %s
 
 define void @f0() "patchable-function-entry"="0" {
 ; CHECK-LABEL: f0:

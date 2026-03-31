@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; CHECK:                   DW_TAG_subprogram
 ; CHECK-NOT:               DW_TAG

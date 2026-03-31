@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=-x87 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mattr=-x87 2>&1 | FileCheck %s
 
 ; Verify that returning an x86_fp80 value with x87 disabled on x86_64 produces
 ; a clear, user-friendly diagnostic instead of crashing with

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-mingw64 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-mingw64 | FileCheck %s
 
 ; CHECK: movabsq
 

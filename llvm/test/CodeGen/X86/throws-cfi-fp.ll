@@ -1,5 +1,5 @@
-; RUN: llc %s -o - | FileCheck %s
-; RUN: llc < %s -stop-after=prologepilog | FileCheck %s --check-prefix=PEI
+; RUN: llc -combiner-topological-sorting %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -stop-after=prologepilog | FileCheck %s --check-prefix=PEI
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

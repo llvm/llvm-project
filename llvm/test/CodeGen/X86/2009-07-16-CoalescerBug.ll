@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10
 ; rdar://7059496
 
 	%struct.brinfo = type <{ ptr, ptr, ptr, i32, i32, i32, i8, i8, i8, i8 }>

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-msvc < %s | FileCheck %s
 
 @str = linkonce_odr unnamed_addr constant [27 x i8] c"GetExceptionCode(): 0x%lx\0A\00", align 1
 

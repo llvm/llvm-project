@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 < %s
 
 declare ptr @llvm_gc_allocate(i32)
 declare void @llvm_gc_initialize(i32)

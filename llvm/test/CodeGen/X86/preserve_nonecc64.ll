@@ -1,10 +1,10 @@
-; RUN: sed -e "s/RETTYPE/void/;s/RETVAL//" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck --check-prefixes=ALL %s
-; RUN: sed -e "s/RETTYPE/i32/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck --check-prefixes=ALL %s
-; RUN: sed -e "s/RETTYPE/\{i64\,i64\}/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck --check-prefixes=ALL %s
+; RUN: sed -e "s/RETTYPE/void/;s/RETVAL//" %s | llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck --check-prefixes=ALL %s
+; RUN: sed -e "s/RETTYPE/i32/;s/RETVAL/undef/" %s | llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck --check-prefixes=ALL %s
+; RUN: sed -e "s/RETTYPE/\{i64\,i64\}/;s/RETVAL/undef/" %s | llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck --check-prefixes=ALL %s
 ;
-; RUN: sed -e "s/RETTYPE/void/;s/RETVAL//" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7-avx | FileCheck --check-prefixes=ALL %s
-; RUN: sed -e "s/RETTYPE/i32/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7-avx | FileCheck --check-prefixes=ALL %s
-; RUN: sed -e "s/RETTYPE/\{i64\,i64\}/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7-avx | FileCheck --check-prefixes=ALL %s
+; RUN: sed -e "s/RETTYPE/void/;s/RETVAL//" %s | llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mcpu=corei7-avx | FileCheck --check-prefixes=ALL %s
+; RUN: sed -e "s/RETTYPE/i32/;s/RETVAL/undef/" %s | llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mcpu=corei7-avx | FileCheck --check-prefixes=ALL %s
+; RUN: sed -e "s/RETTYPE/\{i64\,i64\}/;s/RETVAL/undef/" %s | llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mcpu=corei7-avx | FileCheck --check-prefixes=ALL %s
 
 ; We don't need to save registers before using them inside preserve_none function.
 define preserve_nonecc RETTYPE @preserve_nonecc1(i64, i64, double, double) nounwind {

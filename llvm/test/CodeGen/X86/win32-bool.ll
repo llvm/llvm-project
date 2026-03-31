@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-windows-msvc | FileCheck %s
-; RUN: llc < %s -mtriple=i686-windows-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-windows-msvc | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-windows-gnu | FileCheck %s
 
 define x86_fastcallcc i32 @pass_fast_bool(i1 inreg zeroext %b) {
 entry:

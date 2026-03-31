@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-pc-win32-coreclr -verify-machineinstrs | FileCheck %s -check-prefix=WIN_X64
-; RUN: llc < %s -mtriple=x86_64-pc-linux         | FileCheck %s -check-prefix=LINUX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-win32-coreclr -verify-machineinstrs | FileCheck %s -check-prefix=WIN_X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux         | FileCheck %s -check-prefix=LINUX
 
 ; By default, windows CoreCLR requires an inline prologue stack expansion check
 ; if more than 4096 bytes are allocated on the stack.

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-apple-darwin -mcpu=core2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-apple-darwin -mcpu=core2 | FileCheck %s
 
 %struct.A = type { [48 x i8], i32, i32, i32 }
 

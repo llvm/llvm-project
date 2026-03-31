@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux | FileCheck %s
 ; CHECK-NOT:     {{(min|max|mov)}}
 ; CHECK:     mov
 ; CHECK-NOT:     {{(min|max|mov)}}

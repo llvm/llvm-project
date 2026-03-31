@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -verify-machineinstrs
+; RUN: llc -combiner-topological-sorting -o - %s -verify-machineinstrs
 ; This used to crash when coalescing a regclass like GR16 which did not support
 ; the sub_8bit_hi subregister with a class like GR16_ABCD that did.
 target triple = "x86_64-apple-macosx10.10.0"

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc -filetype=obj -o - | llvm-readobj -S - | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-windows-msvc -filetype=obj -o - | llvm-readobj -S - | FileCheck %s
 
 @covmap = private global i32 0, section ".lcovmap$M"
 @covfun = private global i32 0, section ".lcovfun$M"

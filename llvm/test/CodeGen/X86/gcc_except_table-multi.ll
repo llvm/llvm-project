@@ -1,10 +1,10 @@
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -binutils-version=2.35 | FileCheck %s --check-prefixes=CHECK,NORMAL
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -binutils-version=2.36 | FileCheck %s --check-prefixes=CHECK,NORMAL
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -binutils-version=2.35 | FileCheck %s --check-prefixes=CHECK,SEP_BFD
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -binutils-version=2.36 | FileCheck %s --check-prefixes=CHECK,SEP
+; RUN: llc -combiner-topological-sorting -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -binutils-version=2.35 | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: llc -combiner-topological-sorting -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -binutils-version=2.36 | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: llc -combiner-topological-sorting -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -binutils-version=2.35 | FileCheck %s --check-prefixes=CHECK,SEP_BFD
+; RUN: llc -combiner-topological-sorting -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -binutils-version=2.36 | FileCheck %s --check-prefixes=CHECK,SEP
 
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,NOUNIQUE
+; RUN: llc -combiner-topological-sorting -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE
+; RUN: llc -combiner-topological-sorting -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,NOUNIQUE
 
 @_ZTIi = external constant ptr
 

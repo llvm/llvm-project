@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-coreclr -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-coreclr -verify-machineinstrs < %s | FileCheck %s
 
 declare void @ProcessCLRException()
 declare void @f(i32)

@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; In PR44697, the register allocator inserted loads into the __except block
 ; before the instructions that restore EBP and ESP back to what they should be.

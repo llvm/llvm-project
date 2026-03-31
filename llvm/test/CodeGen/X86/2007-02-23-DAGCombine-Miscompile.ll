@@ -1,5 +1,5 @@
 ; PR1219
-; RUN: llc < %s -mtriple=i686-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | FileCheck %s
 
 define i32 @test(i1 %X) {
 ; CHECK-LABEL: test:

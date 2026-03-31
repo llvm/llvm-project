@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux | FileCheck %s
 
 ; Check that the CodeGenPrepare Pass
 ; does not wrongly rewrite the address computed by Instruction %4

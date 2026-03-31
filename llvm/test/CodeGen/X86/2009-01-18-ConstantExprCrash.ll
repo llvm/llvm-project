@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; rdar://6505632
 ; reduced from 483.xalancbmk
 

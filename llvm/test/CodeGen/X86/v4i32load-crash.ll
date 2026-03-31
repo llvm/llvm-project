@@ -1,5 +1,5 @@
-; RUN: llc --mtriple=i686-- --mcpu=x86-64 --mattr=ssse3 < %s
-; RUN: llc --mtriple=x86_64-- --mcpu=x86-64 --mattr=ssse3 < %s
+; RUN: llc -combiner-topological-sorting --mtriple=i686-- --mcpu=x86-64 --mattr=ssse3 < %s
+; RUN: llc -combiner-topological-sorting --mtriple=x86_64-- --mcpu=x86-64 --mattr=ssse3 < %s
 
 ;PR18045:
 ;Issue of selection for 'v4i32 load'.

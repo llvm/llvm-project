@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=x86_64-apple-darwin8 < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -mtriple=x86_64-pc-linux < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -mtriple=i686-pc-linux < %s | FileCheck %s --check-prefix=X86
-; RUN: llc -mtriple=x86_64-apple-darwin8 -terminal-rule < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -mtriple=x86_64-pc-linux -terminal-rule < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin8 < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-linux < %s | FileCheck %s --check-prefix=X86
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin8 -terminal-rule < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -terminal-rule < %s | FileCheck %s --check-prefix=X64
 
 define void @sret_void(ptr sret(i32) %p) {
   store i32 0, ptr %p

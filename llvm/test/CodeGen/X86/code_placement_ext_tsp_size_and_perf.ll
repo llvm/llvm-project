@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -enable-ext-tsp-block-placement -apply-ext-tsp-for-size < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -mtriple=x86_64-linux -verify-machineinstrs -enable-ext-tsp-block-placement -apply-ext-tsp-for-size < %s | FileCheck %s
 
 ;; Cold function with optsize: should use ext-tsp for size.
 ;; The size-optimized layout keeps the original order (b0, b1, b2) since it

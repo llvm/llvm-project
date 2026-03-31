@@ -1,6 +1,6 @@
 ;; Tests that callee_type metadata attached to direct call sites are safely ignored.
 
-; RUN: llc --call-graph-section -mtriple x86_64-linux-gnu < %s -stop-after=finalize-isel -o - | FileCheck --match-full-lines %s
+; RUN: llc -combiner-topological-sorting --call-graph-section -mtriple x86_64-linux-gnu < %s -stop-after=finalize-isel -o - | FileCheck --match-full-lines %s
 
 ;; Test that `calleeTypeIds` field is not present in `callSites`
 ; CHECK-LABEL: callSites:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s
 
 ; When a function does a dynamic stack allocation, the function's stack size is
 ; reported as UINT64_MAX.

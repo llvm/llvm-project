@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin11 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin11 | FileCheck %s
 ; rdar://7362871
 
 define void @bar(i32 %b, i32 %a) nounwind optsize ssp {

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=avx < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -mattr=avx < %s | FileCheck %s
 
 define float @test1(float %a) #0 {
 ; CHECK-LABEL: test1:

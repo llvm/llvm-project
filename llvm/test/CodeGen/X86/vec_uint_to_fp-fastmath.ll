@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=x86_64 | FileCheck %s --check-prefix=CST --check-prefix=SSE2
-; RUN: llc < %s -mtriple=x86_64 -mattr=+sse4.1 | FileCheck %s --check-prefix=CST --check-prefix=SSE41
-; RUN: llc < %s -mtriple=x86_64 -mattr=+avx | FileCheck %s --check-prefix=CST --check-prefix=AVX
-; RUN: llc < %s -mtriple=x86_64 -mattr=+avx2 | FileCheck %s --check-prefix=AVX2
-; RUN: llc < %s -mtriple=x86_64 -mattr=+avx512f | FileCheck %s --check-prefix=AVX512F
-; RUN: llc < %s -mtriple=x86_64 -mattr=+avx512vl | FileCheck %s --check-prefix=AVX512VL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 | FileCheck %s --check-prefix=CST --check-prefix=SSE2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -mattr=+sse4.1 | FileCheck %s --check-prefix=CST --check-prefix=SSE41
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -mattr=+avx | FileCheck %s --check-prefix=CST --check-prefix=AVX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -mattr=+avx2 | FileCheck %s --check-prefix=AVX2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -mattr=+avx512f | FileCheck %s --check-prefix=AVX512F
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -mattr=+avx512vl | FileCheck %s --check-prefix=AVX512VL
 
 ; Check that the constant used in the vectors are the right ones.
 ; SSE2: [[MASKCSTADDR:.LCPI[0-9_]+]]:

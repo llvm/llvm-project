@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-win32 -O0 -mattr=+avx | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-win32 -O0 -mattr=+avx | FileCheck %s
 
 ; Background:
 ; If fast-isel bails out to normal selection, then the DAG combiner will run,

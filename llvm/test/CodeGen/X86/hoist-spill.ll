@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; Check no spills to the same stack slot after hoisting.
 ; CHECK: mov{{.}} %{{.*}}, [[SPOFFSET1:-?[0-9]*]](%rsp)

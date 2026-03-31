@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin9
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9
 ; PR4051
 
 define void @int163(i32 %p_4, i32 %p_5) nounwind {

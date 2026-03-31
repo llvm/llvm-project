@@ -1,25 +1,25 @@
-; RUN: llc -mtriple x86_64-pc-win32 \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-win32 \
 ; RUN:     -relocation-model=static  < %s | FileCheck --check-prefix=COFF_S %s
-; RUN: llc -mtriple x86_64-pc-win32 \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-win32 \
 ; RUN:     -relocation-model=pic     < %s | FileCheck --check-prefix=COFF %s
-; RUN: llc -mtriple x86_64-pc-win32 \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-win32 \
 ; RUN:  -relocation-model=dynamic-no-pic < %s | FileCheck --check-prefix=COFF %s
 
-; RUN: llc -mtriple x86_64-uefi \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-uefi \
 ; RUN:     -relocation-model=static  < %s | FileCheck --check-prefix=COFF_S %s
-; RUN: llc -mtriple x86_64-uefi \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-uefi \
 ; RUN:     -relocation-model=pic     < %s | FileCheck --check-prefix=COFF %s
-; RUN: llc -mtriple x86_64-uefi \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-uefi \
 ; RUN:  -relocation-model=dynamic-no-pic < %s | FileCheck --check-prefix=COFF %s
 
 
 ; 32 bits
 
-; RUN: llc -mtriple i386-pc-win32 \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-win32 \
 ; RUN:    -relocation-model=static  < %s | FileCheck --check-prefix=COFF32 %s
-; RUN: llc -mtriple i386-pc-win32 \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-win32 \
 ; RUN:     -relocation-model=pic     < %s | FileCheck --check-prefix=COFF32 %s
-; RUN: llc -mtriple i386-pc-win32 \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-win32 \
 ; RUN:   -relocation-model=dynamic-no-pic < %s | \
 ; RUN:   FileCheck --check-prefix=COFF32 %s
 

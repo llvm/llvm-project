@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-pc-linux -stackrealign -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-pc-linux -stackrealign -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 
 declare cc 11 i64 @hipe2(i64, i64, i64, i64, i64, i64, i64)
 

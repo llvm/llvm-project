@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686--
-; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--
 
 	%struct.FRAME.gnat__perfect_hash_generators__select_char_position__build_identical_keys_sets = type { i32, i32, ptr, ptr }
 

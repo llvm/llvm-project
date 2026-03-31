@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-misched=false < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -enable-misched=false < %s | FileCheck %s
 
 define i32 @fold64to32(i64 %add, i32 %spill) {
 ; CHECK-LABEL: fold64to32:

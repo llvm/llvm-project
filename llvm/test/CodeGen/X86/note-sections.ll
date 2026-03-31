@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-pc-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-linux < %s | FileCheck %s
 
 %struct.note = type { %struct.Elf32_Nhdr, [7 x i8], %struct.payload }
 %struct.Elf32_Nhdr = type { i32, i32, i32 }

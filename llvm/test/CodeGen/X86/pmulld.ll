@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-linux -mattr=+sse4.1 -asm-verbose=0 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+sse4.1 -asm-verbose=0 | FileCheck %s -check-prefix=WIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -mattr=+sse4.1 -asm-verbose=0 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-win32 -mattr=+sse4.1 -asm-verbose=0 | FileCheck %s -check-prefix=WIN64
 
 define <4 x i32> @test1(<4 x i32> %A, <4 x i32> %B) nounwind {
 ; CHECK-LABEL: test1:

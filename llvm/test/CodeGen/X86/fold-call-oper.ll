@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 ;
 ; PR18396: Assertion: MO->isDead "Cannot fold physreg def".
 ; InlineSpiller::foldMemoryOperand needs to handle undef call operands.

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=false | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=false | FileCheck %s
 ; Make sure shrink-wrapping does not break the lowering of exception handling.
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=true -pass-remarks-output=%t | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=true -pass-remarks-output=%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=REMARKS
 
 ; Repro cases from PR25168

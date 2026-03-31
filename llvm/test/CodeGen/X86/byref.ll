@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 | FileCheck %s
 
 %Foo = type { i32, i32 }
 

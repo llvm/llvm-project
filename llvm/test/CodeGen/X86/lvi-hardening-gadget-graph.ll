@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown -x86-lvi-load-dot-verify -o %t < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-unknown -x86-lvi-load-dot-verify -o %t < %s | FileCheck %s
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @test(ptr %untrusted_user_ptr, ptr %secret, i32 %secret_size) #0 {

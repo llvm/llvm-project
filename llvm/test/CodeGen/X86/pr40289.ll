@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-windows-msvc | FileCheck %s
 
 define < 3 x i32 > @clobber() {
   %1 = alloca i32

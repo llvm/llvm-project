@@ -1,6 +1,6 @@
-; RUN: llc < %s -O0 -fast-isel-abort=1 -mtriple=i686-apple-darwin8 2>/dev/null | FileCheck %s
-; RUN: llc < %s -O0 -fast-isel-abort=1 -mtriple=i686-apple-darwin8 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
-; RUN: llc < %s -O0 -fast-isel-abort=1 -mtriple=i686 2>/dev/null | FileCheck %s --check-prefix=ELF
+; RUN: llc -combiner-topological-sorting < %s -O0 -fast-isel-abort=1 -mtriple=i686-apple-darwin8 2>/dev/null | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O0 -fast-isel-abort=1 -mtriple=i686-apple-darwin8 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
+; RUN: llc -combiner-topological-sorting < %s -O0 -fast-isel-abort=1 -mtriple=i686 2>/dev/null | FileCheck %s --check-prefix=ELF
 
 %struct.s = type {i32, i32, i32}
 

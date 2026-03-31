@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 < %s -O0
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 < %s -O0
 
 define i32 @main() {
 entry:

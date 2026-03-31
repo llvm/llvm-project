@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64 < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64 -relocation-model=pic < %s | FileCheck %s --check-prefix=PIC
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -relocation-model=pic < %s | FileCheck %s --check-prefix=PIC
 
 define i32 @customevent() nounwind "function-instrument"="xray-always" !dbg !1 {
     %eventptr = alloca i8

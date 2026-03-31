@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-linux | FileCheck %s
 ; Check the register copy comes after the call to f and before the call to g
 ; PR3784
 

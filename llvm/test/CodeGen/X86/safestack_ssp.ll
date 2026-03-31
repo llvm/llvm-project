@@ -1,7 +1,7 @@
 ; Test codegen pipeline for SafeStack + StackProtector combination.
-; RUN: llc -mtriple=i386-linux < %s -o - | FileCheck --check-prefix=LINUX-I386 %s
-; RUN: llc -mtriple=x86_64-linux < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
-; RUN: llc -mtriple=x86_64-fuchsia < %s -o - | FileCheck --check-prefix=FUCHSIA-X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-linux < %s -o - | FileCheck --check-prefix=LINUX-I386 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-fuchsia < %s -o - | FileCheck --check-prefix=FUCHSIA-X64 %s
 
 define void @_Z1fv() safestack sspreq {
 entry:

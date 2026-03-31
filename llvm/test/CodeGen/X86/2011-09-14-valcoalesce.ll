@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -disable-block-placement | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -disable-block-placement | FileCheck %s
 ;
 ; Test RegistersDefinedFromSameValue. We have multiple copies of the same vreg:
 ; while.body85.i:

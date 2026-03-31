@@ -1,4 +1,4 @@
-; RUN: llc < %s  -tailcallopt -mtriple=i686-pc-linux-gnu -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s  -tailcallopt -mtriple=i686-pc-linux-gnu -relocation-model=pic | FileCheck %s
 
 ; While many of these could be tail called, we don't do it because it forces
 ; early binding.

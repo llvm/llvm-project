@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -asm-verbose | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -asm-verbose | FileCheck %s
 
 @str = internal constant [14 x i8] c"Hello world!\0A\00"		; <ptr> [#uses=1]
 @str.upgrd.1 = internal constant [13 x i8] c"Blah world!\0A\00"		; <ptr> [#uses=1]

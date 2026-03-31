@@ -2,8 +2,8 @@
 ; Without list-burr scheduling we may not see the difference in codegen here.
 ; Use a subtarget that has post-RA scheduling enabled because the anti-dependency
 ; breaker requires liveness information to be kept.
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=atom -enable-misched=false -post-RA-scheduler -pre-RA-sched=list-burr -break-anti-dependencies=none | FileCheck %s --check-prefix=none
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=atom -post-RA-scheduler -break-anti-dependencies=critical | FileCheck %s --check-prefix=critical
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=atom -enable-misched=false -post-RA-scheduler -pre-RA-sched=list-burr -break-anti-dependencies=none | FileCheck %s --check-prefix=none
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=atom -post-RA-scheduler -break-anti-dependencies=critical | FileCheck %s --check-prefix=critical
 
 define void @goo(ptr %r, ptr %p, ptr %q) nounwind {
 ; none-LABEL: goo:

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -stats 2>&1 | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10 -stats 2>&1 | \
 ; RUN:   not grep "Number of machine instructions hoisted out of loops post regalloc"
 
 ; rdar://11095580

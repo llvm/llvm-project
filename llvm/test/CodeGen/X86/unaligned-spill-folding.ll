@@ -1,9 +1,9 @@
 ; RUN: split-file %s %t
 ; RUN: cat %t/main.ll %t/align4.ll > %t/a2.ll
 ; RUN: cat %t/main.ll %t/align16.ll > %t/b2.ll
-; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -relocation-model=pic < %t/a2.ll | FileCheck %s -check-prefix=UNALIGNED
-; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -relocation-model=pic < %t/b2.ll | FileCheck %s -check-prefix=ALIGNED
-; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -stackrealign -relocation-model=pic < %t/a2.ll | FileCheck %s -check-prefix=FORCEALIGNED
+; RUN: llc -combiner-topological-sorting -mtriple=i386-unknown-freebsd -mcpu=core2 -relocation-model=pic < %t/a2.ll | FileCheck %s -check-prefix=UNALIGNED
+; RUN: llc -combiner-topological-sorting -mtriple=i386-unknown-freebsd -mcpu=core2 -relocation-model=pic < %t/b2.ll | FileCheck %s -check-prefix=ALIGNED
+; RUN: llc -combiner-topological-sorting -mtriple=i386-unknown-freebsd -mcpu=core2 -stackrealign -relocation-model=pic < %t/a2.ll | FileCheck %s -check-prefix=FORCEALIGNED
 
 ;--- main.ll
 @arr = internal unnamed_addr global [32 x i32] zeroinitializer, align 16

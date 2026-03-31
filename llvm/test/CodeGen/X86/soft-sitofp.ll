@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i386-pc-linux < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-pc-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-pc-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 ; CHECK-LABEL: s64_to_d:

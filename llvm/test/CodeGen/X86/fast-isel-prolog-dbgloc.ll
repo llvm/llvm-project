@@ -9,7 +9,7 @@
 ;;   c5 = 's'; c6 = 'f'; s = 77;
 ;; }
 
-; RUN: llc -mtriple x86_64-- -fast-isel < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-- -fast-isel < %s | FileCheck %s
 
 define dso_local void @call_7i_1f(i8 signext %c1, float %f1, i8 signext %c2, i8 signext %c3, i8 signext %c4, i8 signext %c5, i8 signext %c6, i16 signext %s) !dbg !7 {
 entry:

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-unknown-linux-gnu -mattr +avx512f | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-unknown-linux-gnu -mattr +avx512f | FileCheck %s
 
 define <16 x float> @testzmm_1(<16 x float> %_zmm0, <16 x float> %_zmm1) {
 entry:

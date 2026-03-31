@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -unique-section-names=false | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -function-sections -unique-section-names=false | FileCheck %s
 
 ; CHECK:   .section                      .text,"ax",@progbits,unique
 ; CHECK-NOT: section

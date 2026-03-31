@@ -2,24 +2,24 @@
 ; Run with --no_x86_scrub_rip because we care a lot about how globals are
 ; accessed in the code model.
 
-; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=small  | FileCheck %s --check-prefix=CHECK --check-prefix=SMALL-STATIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-STATIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-STATIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=small  | FileCheck %s --check-prefix=CHECK --check-prefix=SMALL-PIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -large-data-threshold=1000 | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-SMALL-DATA-PIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-PIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -large-data-threshold=1000 | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-SMALL-DATA-PIC
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=static -code-model=small  | FileCheck %s --check-prefix=CHECK --check-prefix=SMALL-STATIC
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=static -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-STATIC
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=static -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-STATIC
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=small  | FileCheck %s --check-prefix=CHECK --check-prefix=SMALL-PIC
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -large-data-threshold=1000 | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-SMALL-DATA-PIC
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-PIC
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -large-data-threshold=1000 | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-SMALL-DATA-PIC
 
 ; Check that the relocations we emit are valid.
-; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=small  -filetype=obj -o /dev/null
-; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=medium -filetype=obj -o /dev/null
-; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=large  -filetype=obj -o /dev/null
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=small  -filetype=obj -o /dev/null
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -large-data-threshold=1000 -filetype=obj -o /dev/null
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -filetype=obj -o /dev/null
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -filetype=obj -o /dev/null
-; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -large-data-threshold=1000 -filetype=obj -o /dev/null
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=static -code-model=small  -filetype=obj -o /dev/null
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=static -code-model=medium -filetype=obj -o /dev/null
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=static -code-model=large  -filetype=obj -o /dev/null
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=small  -filetype=obj -o /dev/null
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -large-data-threshold=1000 -filetype=obj -o /dev/null
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -filetype=obj -o /dev/null
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -filetype=obj -o /dev/null
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -large-data-threshold=1000 -filetype=obj -o /dev/null
 
 ; Generated from this C source:
 ;

@@ -1,5 +1,5 @@
 ; Test that the code generation works correctly on Linux
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 ; Regression test for SelectionDAG::resolveDanglingDebugInfo crash when
 ; handling aggregate types with nested empty structs.

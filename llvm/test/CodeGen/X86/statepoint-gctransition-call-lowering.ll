@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s | FileCheck %s
 ; This file contains a collection of basic tests to ensure we didn't
 ; screw up normal call lowering when a statepoint is a GC transition.
 

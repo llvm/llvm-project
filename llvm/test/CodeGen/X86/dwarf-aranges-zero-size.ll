@@ -8,7 +8,7 @@
 ;
 ;     $ rustc --crate-type=lib --target=x86_64-unknown-linux-gnu --emit=llvm-ir -g dwarf-aranges-zero-size.rs
 
-; RUN: llc --generate-arange-section < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting --generate-arange-section < %s | FileCheck %s
 ; CHECK: .section .debug_aranges
 ; CHECK: .quad _ZN23dwarf_aranges_zero_size7EXAMPLE17h8ab19f2b0c3b238dE
 ; CHECK-NEXT: .quad 1

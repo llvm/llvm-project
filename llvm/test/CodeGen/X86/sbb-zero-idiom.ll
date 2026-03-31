@@ -2,18 +2,18 @@
 
 ; Check the attribute.
 
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-sbb-dep-breaking | FileCheck %s --check-prefixes=ZERO
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+sbb-dep-breaking | FileCheck %s --check-prefixes=IDIOM
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mattr=-sbb-dep-breaking | FileCheck %s --check-prefixes=ZERO
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mattr=+sbb-dep-breaking | FileCheck %s --check-prefixes=IDIOM
 
 ; And check that CPUs have included the attribute as expected.
 
-; RUN: llc < %s -mtriple=x86_64--                   | FileCheck %s --check-prefixes=ZERO
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=sandybridge | FileCheck %s --check-prefixes=ZERO
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=skylake     | FileCheck %s --check-prefixes=ZERO
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=k8          | FileCheck %s --check-prefixes=IDIOM
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=btver1      | FileCheck %s --check-prefixes=IDIOM
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver2      | FileCheck %s --check-prefixes=IDIOM
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3      | FileCheck %s --check-prefixes=IDIOM
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--                   | FileCheck %s --check-prefixes=ZERO
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=sandybridge | FileCheck %s --check-prefixes=ZERO
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=skylake     | FileCheck %s --check-prefixes=ZERO
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=k8          | FileCheck %s --check-prefixes=IDIOM
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=btver1      | FileCheck %s --check-prefixes=IDIOM
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=bdver2      | FileCheck %s --check-prefixes=IDIOM
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=znver3      | FileCheck %s --check-prefixes=IDIOM
 
 define i32 @i32_select_0_or_neg1(i32 %x) {
 ; ZERO-LABEL: i32_select_0_or_neg1:

@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown -O0 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown -O0 | FileCheck %s
 
 define swifttailcc [4 x i64] @return_int() {
 ; CHECK-LABEL: return_int:

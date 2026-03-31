@@ -1,4 +1,4 @@
-; RUN: llc -mtriple i686-windows-itanium -filetype asm -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple i686-windows-itanium -filetype asm -o - %s | FileCheck %s
 
 declare float @llvm.ceil.f32(float)
 declare float @llvm.cos.f32(float)

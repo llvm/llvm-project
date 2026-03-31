@@ -3,7 +3,7 @@
 
 ;; Verify the exact calleeTypeIds value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type metadata.
-; RUN: llc --call-graph-section -mtriple=x86_64-unknown-linux < %s -stop-after=finalize-isel -o - | FileCheck --match-full-lines %s
+; RUN: llc -combiner-topological-sorting --call-graph-section -mtriple=x86_64-unknown-linux < %s -stop-after=finalize-isel -o - | FileCheck --match-full-lines %s
 
 define i32 @check_tailcall(ptr %func, i8 %x) !type !0 {
 entry:

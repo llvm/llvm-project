@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=CHECK-ELF
-; RUN: llc < %s -mtriple=x86_64-win32-gnu | FileCheck %s --check-prefix=CHECK-COFF
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=CHECK-ELF
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-win32-gnu | FileCheck %s --check-prefix=CHECK-COFF
 
 @llvm.embedded.object = private constant [1 x i8] c"\00", section ".llvm.offloading", align 8, !exclude !0
 @llvm.compiler.used = appending global [1 x ptr] [ptr @llvm.embedded.object], section "llvm.metadata"

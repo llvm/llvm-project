@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--
 
 	%struct.DrawHelper = type { ptr, ptr, ptr, ptr, ptr }
 	%struct.QBasicAtomic = type { i32 }

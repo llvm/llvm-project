@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-windows-gnu -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows-gnu -o - %s | FileCheck %s
 
 %struct.MyStruct = type { i8 }
 

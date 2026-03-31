@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mcpu=corei7 -mattr=+avx | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mcpu=corei7 -mattr=+avx | FileCheck %s
 
 ; CHECK: ocl
 define void @ocl() {

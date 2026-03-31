@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -disable-cgp-select2branch < %s
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -disable-cgp-select2branch < %s
 
 ; We should not crash on this test.
 

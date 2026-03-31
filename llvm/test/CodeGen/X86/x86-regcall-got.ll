@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=i386-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=i386-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s
 
 ; Unbind the ebx with GOT address in regcall calling convention, or the following
 ; case will failed in register allocation by no register can be used.

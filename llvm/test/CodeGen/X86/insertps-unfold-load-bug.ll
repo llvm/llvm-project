@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-unknown-unknown -mattr=+sse4.1 < %s | FileCheck %s -check-prefix=X32
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 < %s | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-unknown -mattr=+sse4.1 < %s | FileCheck %s -check-prefix=X32
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 < %s | FileCheck %s -check-prefix=X64
 
 ; Test for case where insertps was folding the load of the insertion element, but a later optimization
 ; was then manipulating the load.

@@ -1,4 +1,4 @@
-; RUN: llc -O0 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 -relocation-model=pic < %s | FileCheck %s
 ; CHECK-NOT: call
 ; rdar://8396318
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+fxsr  | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-unknown -mattr=+fxsr  | FileCheck %s
 
 define void @test_fxsave(ptr %ptr) {
 ; CHECK-LABEL: test_fxsave

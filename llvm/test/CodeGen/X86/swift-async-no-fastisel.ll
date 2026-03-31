@@ -1,4 +1,4 @@
-; RUN: llc %s --fast-isel=true --stop-after=finalize-isel -o %t \
+; RUN: llc -combiner-topological-sorting %s --fast-isel=true --stop-after=finalize-isel -o %t \
 ; RUN:   -experimental-debug-variable-locations=false --global-isel=false
 ; RUN:   FileCheck %s < %t
 ; RUN:   FileCheck %s --check-prefix=INTRINSICS < %t

@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=skylake-avx512 -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s
 
 ; Check that the X86 Domain Reassignment pass doesn't drop IMPLICIT_DEF nodes,
 ; which would later cause crashes (e.g. in LiveVariables) - see PR37430

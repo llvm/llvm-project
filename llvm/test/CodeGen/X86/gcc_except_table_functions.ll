@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
 
 ; This test demonstrates that it is possible to use functions for typeinfo
 ; instead of global variables. While __gxx_personality_v0 would never know what

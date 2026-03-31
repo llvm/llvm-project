@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -O1 -mtriple=x86_64-unknown-unknown -o /dev/null -debug-only=selectiondag 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O1 -mtriple=x86_64-unknown-unknown -o /dev/null -debug-only=selectiondag 2>&1 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"

@@ -1,9 +1,9 @@
 ; RUN: split-file %s %t
 ; RUN: cat %t/main.ll %t/_align32.ll > %t/align32.ll
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -mattr=+mwaitx -x86-use-base-pointer=true -stackrealign %t/align32.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE_64 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -mattr=+mwaitx -x86-use-base-pointer=true -stackrealign %t/align32.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE_32 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -mattr=+mwaitx -x86-use-base-pointer=true %t/main.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=NO_BASE_64 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -mattr=+mwaitx -x86-use-base-pointer=true %t/main.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=NO_BASE_32 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -mattr=+mwaitx -x86-use-base-pointer=true -stackrealign %t/align32.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE_64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnux32 -mattr=+mwaitx -x86-use-base-pointer=true -stackrealign %t/align32.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE_32 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -mattr=+mwaitx -x86-use-base-pointer=true %t/main.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=NO_BASE_64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnux32 -mattr=+mwaitx -x86-use-base-pointer=true %t/main.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=NO_BASE_32 %s
 
 ;--- main.ll
 

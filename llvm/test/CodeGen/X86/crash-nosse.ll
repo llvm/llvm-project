@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=corei7 -mattr=-sse2,-sse4.1 -verify-machineinstrs
+; RUN: llc -combiner-topological-sorting < %s -mcpu=corei7 -mattr=-sse2,-sse4.1 -verify-machineinstrs
 target triple = "x86_64-unknown-linux-gnu"
 
 ; PR10503

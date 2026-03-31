@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-apple-darwin8 < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-pc-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin8 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux < %s | FileCheck %s
 
 ; FIXME: x32 doesn't know how to select this.  This isn't a regression, it never
 ; worked.

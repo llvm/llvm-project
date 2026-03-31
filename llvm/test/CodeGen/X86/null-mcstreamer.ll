@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i386-pc-windows-msvc -filetype=null %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-pc-windows-msvc -filetype=null %s
 
 define void @foo() !dbg !6 {
 entry:

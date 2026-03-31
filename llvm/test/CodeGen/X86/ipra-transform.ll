@@ -1,6 +1,6 @@
 
-; RUN: llc < %s | FileCheck %s -check-prefix=NOIPRA
-; RUN: llc -enable-ipra < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s -check-prefix=NOIPRA
+; RUN: llc -combiner-topological-sorting -enable-ipra < %s | FileCheck %s
 
 
 target triple = "x86_64-unknown-unknown"

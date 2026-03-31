@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s -check-prefix=ASM
-; RUN: llc < %s -O0 -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after livedebugvalues -o - | FileCheck %s -check-prefix=MIR
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s -check-prefix=ASM
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after livedebugvalues -o - | FileCheck %s -check-prefix=MIR
 
 
 ; PR9055

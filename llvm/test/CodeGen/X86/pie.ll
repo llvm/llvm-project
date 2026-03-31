@@ -1,7 +1,7 @@
-; RUN: llc < %s -O0 -mcpu=generic -mtriple=i686-linux-gnu -relocation-model=pic | FileCheck %s 
-; RUN: llc < %s -O0 -mcpu=generic -mtriple=i686-linux-gnu -fast-isel -relocation-model=pic | FileCheck %s 
-; RUN: llc < %s -O0 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck %s 
-; RUN: llc < %s -O0 -mcpu=generic -mtriple=x86_64-linux-gnu -fast-isel -relocation-model=pic | FileCheck %s 
+; RUN: llc -combiner-topological-sorting < %s -O0 -mcpu=generic -mtriple=i686-linux-gnu -relocation-model=pic | FileCheck %s 
+; RUN: llc -combiner-topological-sorting < %s -O0 -mcpu=generic -mtriple=i686-linux-gnu -fast-isel -relocation-model=pic | FileCheck %s 
+; RUN: llc -combiner-topological-sorting < %s -O0 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck %s 
+; RUN: llc -combiner-topological-sorting < %s -O0 -mcpu=generic -mtriple=x86_64-linux-gnu -fast-isel -relocation-model=pic | FileCheck %s 
 
 ; CHECK-LABEL:  bar:
 ; CHECK:  call{{l|q}}  foo{{$}}

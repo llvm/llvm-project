@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-windows --ms-secure-hotpatch-functions-file=%S/this-file-is-intentionally-missing-do-not-create-it.txt < %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-windows --ms-secure-hotpatch-functions-file=%S/this-file-is-intentionally-missing-do-not-create-it.txt < %s 2>&1 | FileCheck %s
 ; CHECK: failed to open hotpatch functions file
 
 source_filename = ".\\ms-secure-hotpatch.ll"

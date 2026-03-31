@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; PR4297
 ; RUN: opt -S < %s -codegenprepare | FileCheck %s
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux | FileCheck %s
 
 ; CHECK-LABEL: pr13209:
 ; CHECK-NOT: mov

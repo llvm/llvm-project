@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O0 --frame-pointer=non-leaf %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -O0 --frame-pointer=non-leaf %s -o - | FileCheck %s
 
 %block = type { %blockheader, [0 x ptr] }
 %blockheader = type { i64 }

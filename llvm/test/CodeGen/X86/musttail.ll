@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=i686-- < %s | FileCheck %s
-; RUN: llc -mtriple=i686-- -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=i686-- -disable-tail-calls < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-- < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-- -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-- -disable-tail-calls < %s | FileCheck %s
 
 declare void @t1_callee(ptr)
 define void @t1(ptr %a) {

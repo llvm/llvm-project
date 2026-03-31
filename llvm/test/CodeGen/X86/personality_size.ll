@@ -1,5 +1,5 @@
-; RUN: llc < %s -relocation-model=pic -mtriple=x86_64-pc-solaris2.11 | FileCheck %s -check-prefix=X64
-; RUN: llc < %s -relocation-model=pic -mtriple=i386-pc-solaris2.11 | FileCheck %s -check-prefix=X32
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -mtriple=x86_64-pc-solaris2.11 | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -mtriple=i386-pc-solaris2.11 | FileCheck %s -check-prefix=X32
 ; PR1632
 
 define void @_Z1fv() personality ptr @__gxx_personality_v0 {

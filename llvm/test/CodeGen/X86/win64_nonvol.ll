@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux | FileCheck %s
 
 ; Check that, if a Win64 ABI function calls a SysV ABI function, all the
 ; Win64 nonvolatile registers get saved.

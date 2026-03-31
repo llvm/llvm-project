@@ -1,4 +1,4 @@
-; RUN: llc -mtriple i386-unknown-linux-gnu -relocation-model=pic -verify-machineinstrs < %s
+; RUN: llc -combiner-topological-sorting -mtriple i386-unknown-linux-gnu -relocation-model=pic -verify-machineinstrs < %s
 ; We used to crash on this.
 
 declare void @foo()

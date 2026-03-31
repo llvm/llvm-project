@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+vaes,+avx512f -show-mc-encoding | FileCheck %s --check-prefix=VAES_AVX512
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+vaes,+avx512f -show-mc-encoding | FileCheck %s --check-prefix=VAES_AVX512
 
 define <8 x i64> @test_x86_aesni_aesenc_512(<8 x i64> %a0, <8 x i64> %a1) {
 ; VAES_AVX512-LABEL: test_x86_aesni_aesenc_512:

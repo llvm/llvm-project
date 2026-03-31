@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-win32 | FileCheck %s
 
 ; Previously we would forget to align to stack slot alignment after placing a
 ; byval argument.  Subsequent arguments would align themselves, but if it was

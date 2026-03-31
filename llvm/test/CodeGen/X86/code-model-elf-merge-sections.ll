@@ -1,6 +1,6 @@
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=0 -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=0 -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=LARGE
-; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=99 -o %t
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=99 -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL
 
 ; LARGE: .lrodata.str4.4 {{.*}} AMSl

@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 ; PR1049
 target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"

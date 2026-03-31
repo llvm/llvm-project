@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-unknown-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux-gnu | FileCheck %s
 
 declare i32 @foo()
 

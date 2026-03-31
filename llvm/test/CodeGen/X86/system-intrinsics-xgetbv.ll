@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+xsave | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xsave | FileCheck %s --check-prefix=CHECK64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-unknown -mattr=+xsave | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+xsave | FileCheck %s --check-prefix=CHECK64
 
 define i64 @test_xgetbv(i32 %in) {
 ; CHECK-LABEL: test_xgetbv

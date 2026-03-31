@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux | FileCheck %s
 
 ; Test that we can handle .Lexception0 being defined. We used to crash.
 

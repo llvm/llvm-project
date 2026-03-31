@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-unknown-unknown -relocation-model=pic %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -relocation-model=pic %s -o /dev/null 2>&1 | FileCheck %s
 
 ; Tests come from "clang/test/CodeGen/ms-inline-asm-variables.c"
 ;

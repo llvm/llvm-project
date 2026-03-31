@@ -1,4 +1,4 @@
-; RUN: llc -enable-misched -enable-aa-sched-mi < %s
+; RUN: llc -combiner-topological-sorting -enable-misched -enable-aa-sched-mi < %s
 
 ; This generates a decw instruction, which has two MMOs, and an alias SU edge
 ; query involving that instruction. Make sure this does not crash.

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-none-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-none-linux < %s | FileCheck %s
 
 ; Check that all current floating-point types are correctly emitted to assembly
 ; on a little-endian target.

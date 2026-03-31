@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu
 ; PR4034
 
 	%struct.BiContextType = type { i16, i8 }

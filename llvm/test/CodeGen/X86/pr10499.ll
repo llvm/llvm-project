@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=corei7-avx -mattr=-sse2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -mcpu=corei7-avx -mattr=-sse2
 
 ; No check as PR10499 is a crashing bug.
 

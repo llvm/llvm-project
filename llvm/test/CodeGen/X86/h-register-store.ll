@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=X64
 ; X64:      mov
 ; X64-NEXT: movb %ah, (%rsi)
 ; X64:      mov
@@ -7,7 +7,7 @@
 ; X64-NEXT: movb %ah, (%rsi)
 ; X64-NOT:      mov
 
-; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s -check-prefix=X32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s -check-prefix=X32
 ; X32:      mov
 ; X32-NEXT: movb %ah, (%esi)
 ; X32:      mov
@@ -16,7 +16,7 @@
 ; X32-NEXT: movb %ah, (%esi)
 ; X32-NOT:      mov
 
-; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s -check-prefix=W64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-win32 | FileCheck %s -check-prefix=W64
 ; W64-NOT:      mov
 ; W64:      movb %ch, (%rdx)
 ; W64-NOT:      mov
@@ -25,7 +25,7 @@
 ; W64:      movb %ch, (%rdx)
 ; W64-NOT:      mov
 
-; RUN: llc < %s -mtriple=i686-- | FileCheck %s -check-prefix=X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- | FileCheck %s -check-prefix=X86
 ; X86-NOT:      mov
 ; X86:      movb %ah, (%e
 ; X86-NOT:      mov

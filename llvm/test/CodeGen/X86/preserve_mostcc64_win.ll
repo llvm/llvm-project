@@ -1,6 +1,6 @@
-; RUN: sed -e "s/RETTYPE/void/;s/RETVAL//" %s | llc -mtriple=x86_64-win32 -mcpu=corei7 | FileCheck --check-prefixes=ALL,VOID %s
-; RUN: sed -e "s/RETTYPE/i32/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-win32 -mcpu=corei7 | FileCheck --check-prefixes=ALL,INT %s
-; RUN: sed -e "s/RETTYPE/\{i64\,i64\}/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-win32 -mcpu=corei7 | FileCheck --check-prefixes=ALL,INT128 %s
+; RUN: sed -e "s/RETTYPE/void/;s/RETVAL//" %s | llc -combiner-topological-sorting -mtriple=x86_64-win32 -mcpu=corei7 | FileCheck --check-prefixes=ALL,VOID %s
+; RUN: sed -e "s/RETTYPE/i32/;s/RETVAL/undef/" %s | llc -combiner-topological-sorting -mtriple=x86_64-win32 -mcpu=corei7 | FileCheck --check-prefixes=ALL,INT %s
+; RUN: sed -e "s/RETTYPE/\{i64\,i64\}/;s/RETVAL/undef/" %s | llc -combiner-topological-sorting -mtriple=x86_64-win32 -mcpu=corei7 | FileCheck --check-prefixes=ALL,INT128 %s
 
 ; Every GPR should be saved, except r11 and return registers.
 ; XMM registers 6-15 should also be saved.

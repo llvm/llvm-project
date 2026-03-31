@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-pc-linux-gnu -mattr=+sse2
-; RUN: llc < %s -mtriple=i386-pc-linux-gnu -mattr=+sse2 -relocation-model=pic -frame-pointer=all
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux-gnu -mattr=+sse2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux-gnu -mattr=+sse2 -relocation-model=pic -frame-pointer=all
 ; PR3154
 
 define void @ff_flac_compute_autocorr_sse2(ptr %data, i32 %len, i32 %lag, ptr %autoc) nounwind {

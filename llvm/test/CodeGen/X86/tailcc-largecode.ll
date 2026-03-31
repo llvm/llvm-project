@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false | FileCheck %s --check-prefixes=CHECK,JMP
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -mattr=jmpabs | FileCheck %s --check-prefixes=CHECK,JMPABS
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -relocation-model=pic | FileCheck %s --check-prefixes=CHECK,PIC
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -mattr=jmpabs -relocation-model=pic | FileCheck %s --check-prefixes=CHECK,PIC
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false | FileCheck %s --check-prefixes=CHECK,JMP
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -mattr=jmpabs | FileCheck %s --check-prefixes=CHECK,JMPABS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -relocation-model=pic | FileCheck %s --check-prefixes=CHECK,PIC
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -mattr=jmpabs -relocation-model=pic | FileCheck %s --check-prefixes=CHECK,PIC
 
 declare tailcc i32 @callee(i32 %arg)
 define tailcc i32 @directcall(i32 %arg) {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -o - | FileCheck %s
 
 ; CHECK: sinl
 

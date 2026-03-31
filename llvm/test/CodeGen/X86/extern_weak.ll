@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin | FileCheck %s --check-prefix=DARWIN
-; RUN: llc < %s -mtriple=i686-windows-msvc | FileCheck %s --check-prefix=WIN32
-; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefix=WIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin | FileCheck %s --check-prefix=DARWIN
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-windows-msvc | FileCheck %s --check-prefix=WIN32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefix=WIN64
 
 declare extern_weak void @foo(...)
 

@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs -mtriple x86_64-pc-linux-gnu -filetype=asm < %s | \
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple x86_64-pc-linux-gnu -filetype=asm < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ULEB128 %s
-; RUN: llc -verify-machineinstrs -mtriple x86_64-pc-linux-gnu -use-leb128-directives=true -filetype=asm < %s | \
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple x86_64-pc-linux-gnu -use-leb128-directives=true -filetype=asm < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ULEB128 %s
-; RUN: llc -verify-machineinstrs -mtriple x86_64-pc-linux-gnu -use-leb128-directives=false -filetype=asm < %s | \
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple x86_64-pc-linux-gnu -use-leb128-directives=false -filetype=asm < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,NO128 %s
 
 @_ZTIi = external dso_local constant ptr

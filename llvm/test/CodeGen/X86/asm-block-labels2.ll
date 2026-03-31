@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64-linux-gnu -o - %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu -o - %s 2>&1 | FileCheck %s
 
 ; Test that the blockaddress with X, i, or s constraint is printed as an
 ; immediate (.Ltmp0).

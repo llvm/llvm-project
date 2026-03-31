@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- -O2 -enable-machine-outliner -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O2 -enable-machine-outliner -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 

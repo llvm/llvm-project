@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr="-sse,-mmx,+soft-float" | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mattr="-sse,-mmx,+soft-float" | FileCheck %s
 
 ; CHECK: peach:
 ; CHECK: pushq %rsi

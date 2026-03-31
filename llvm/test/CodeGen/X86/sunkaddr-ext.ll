@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 ; Test to make sure that if math that can roll over has been used we don't
 ; use the potential overflow as the basis for an address calculation later by

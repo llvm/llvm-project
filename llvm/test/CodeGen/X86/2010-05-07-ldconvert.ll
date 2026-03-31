@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin11
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin11
 ; PR 7087 - used to crash
 
 define i32 @main() ssp {

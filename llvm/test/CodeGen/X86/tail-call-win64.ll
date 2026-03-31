@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-windows -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-windows -show-mc-encoding < %s | FileCheck %s
 
 ; The Win64 ABI wants tail jmps to use a REX_W prefix so it can distinguish
 ; in-function jumps from function exiting jumps.

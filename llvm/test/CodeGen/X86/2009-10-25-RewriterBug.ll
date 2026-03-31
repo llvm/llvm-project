@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -relocation-model=pic -frame-pointer=all
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -relocation-model=pic -frame-pointer=all
 
 %struct.DecRefPicMarking_t = type { i32, i32, i32, i32, i32, ptr }
 %struct.FrameStore = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, ptr, ptr }

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-unknown-linux -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-linux -o - %s | FileCheck %s
 
 @vtable = constant [4 x i32] [i32 0,
     i32 sub (i32 ptrtoint (ptr @fn1 to i32), i32 ptrtoint (ptr getelementptr ([4 x i32], ptr @vtable, i32 0, i32 1) to i32)),

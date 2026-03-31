@@ -1,4 +1,4 @@
-; RUN: llc %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting %s -o - | FileCheck %s
 ; This file checks some weird corner case in LiveRangeEdit.
 ; We used to do crash when we eliminate the definition
 ; of the product of splitting when the original live-range

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux-unknown -verify-machineinstrs -o %t.s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-unknown -verify-machineinstrs -o %t.s
 ; RUN: FileCheck --input-file=%t.s %s
 
 ; Double-check that we are able to assemble the generated '.s'. A symptom of the

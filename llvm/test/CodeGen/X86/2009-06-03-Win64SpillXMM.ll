@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=generic -mtriple=x86_64-mingw32 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=generic -mtriple=x86_64-mingw32 < %s | FileCheck %s
 ; CHECK: subq    $40, %rsp
 ; CHECK: movaps  %xmm8, 16(%rsp)
 ; CHECK: movaps  %xmm7, (%rsp)

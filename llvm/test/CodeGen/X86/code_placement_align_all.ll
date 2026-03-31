@@ -1,4 +1,4 @@
-; RUN: llc  -mcpu=corei7 -mtriple=x86_64-linux -align-all-blocks=16 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting  -mcpu=corei7 -mtriple=x86_64-linux -align-all-blocks=16 < %s | FileCheck %s
 
 ;CHECK-LABEL: foo:
 ;CHECK: .p2align  16

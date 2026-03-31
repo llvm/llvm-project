@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -relocation-model=pic --frame-pointer=all
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -relocation-model=pic --frame-pointer=all
 
 	%struct.FILE = type { ptr, i32, i32, i16, i16, %struct.__sbuf, i32, ptr, ptr, ptr, ptr, ptr, %struct.__sbuf, ptr, i32, [3 x i8], [1 x i8], %struct.__sbuf, i32, i64 }
 	%struct.__sFILEX = type opaque

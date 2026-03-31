@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefixes=CHECK,X86
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefixes=CHECK,X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefixes=CHECK,X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefixes=CHECK,X64
 
 define i129 @fptosi_float(float %a) nounwind {
 ; CHECK-LABEL: fptosi_float:

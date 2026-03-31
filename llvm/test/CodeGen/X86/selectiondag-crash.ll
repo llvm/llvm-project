@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=corei7 < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -mcpu=corei7 < %s
 
 ; Check that llc doesn't crash in the attempt to fold a shuffle with
 ; a splat mask into a constant build_vector.

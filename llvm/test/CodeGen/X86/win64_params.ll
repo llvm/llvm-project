@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s -check-prefix=LINUX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux | FileCheck %s -check-prefix=LINUX
 
 ; Verify that the 5th and 6th parameters are coming from the correct location
 ; on the stack.

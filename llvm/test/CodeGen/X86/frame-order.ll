@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux-gnueabi < %s | FileCheck %s
-; RUN: opt -passes=strip -S < %s | llc -mtriple=x86_64-linux-gnueabi | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux-gnueabi < %s | FileCheck %s
+; RUN: opt -passes=strip -S < %s | llc -combiner-topological-sorting -mtriple=x86_64-linux-gnueabi | FileCheck %s
 
 ; This test checks if the code is generated correctly with and without debug info.
 

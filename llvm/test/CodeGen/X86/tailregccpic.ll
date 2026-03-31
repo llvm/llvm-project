@@ -1,4 +1,4 @@
-; RUN: llc < %s  -mtriple=i386-pc-unknown-linux-gnu -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s  -mtriple=i386-pc-unknown-linux-gnu -relocation-model=pic | FileCheck %s
 
 @a0 = global i32 0, align 4
 

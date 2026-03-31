@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-linux-gnu | FileCheck %s
 
 ; These static initializers are too big to hand off to assemblers
 ; as monolithic blobs.

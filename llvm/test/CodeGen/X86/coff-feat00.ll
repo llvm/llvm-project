@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=i386-pc-win32 -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=i386-pc-win32 -filetype=asm -o - %s | FileCheck %s
 
 define i32 @foo() {
   ret i32 0

@@ -1,4 +1,4 @@
-; RUN: llc < %s -O2 --code-model=kernel | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O2 --code-model=kernel | FileCheck %s
 ; The intent of the test is that we do not generate conditional
 ; tail calls to the thunk.
 

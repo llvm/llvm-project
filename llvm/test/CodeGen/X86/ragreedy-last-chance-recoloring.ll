@@ -1,4 +1,4 @@
-; RUN: llc -regalloc=greedy -relocation-model=pic  < %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -regalloc=greedy -relocation-model=pic  < %s 2>&1 | FileCheck %s
 ; Without the last chance recoloring, this test fails with:
 ; "ran out of registers".
 
@@ -10,7 +10,7 @@
 ; XXX: not llc -regalloc=greedy -relocation-model=pic -lcr-max-interf=1  < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTERF
 ; Test whether failure due to cutoff for interference is reported
 
-; RUN: llc -regalloc=greedy -relocation-model=pic -lcr-max-interf=1 -lcr-max-depth=0 -exhaustive-register-search < %s > %t 2>&1
+; RUN: llc -combiner-topological-sorting -regalloc=greedy -relocation-model=pic -lcr-max-interf=1 -lcr-max-depth=0 -exhaustive-register-search < %s > %t 2>&1
 ; RUN: FileCheck --input-file=%t %s --check-prefix=CHECK-EXHAUSTIVE
 ; Test whether exhaustive-register-search can bypass the depth and interference cutoffs of last chance recoloring 
 

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64
 ; Control Flow Guard is currently only available on Windows
 
 ; funclets only supported in MSVC env.

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux -fast-isel -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux -fast-isel -show-mc-encoding < %s | FileCheck %s
 
 ; CHECK-LABEL: f:
 ; CHECK:       addl $-2, %eax         # encoding: [0x83,0xc0,0xfe]

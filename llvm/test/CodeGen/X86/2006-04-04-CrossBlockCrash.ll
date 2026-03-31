@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=yonah
+; RUN: llc -combiner-topological-sorting < %s -mcpu=yonah
 ; END.
 
 target datalayout = "e-p:32:32"

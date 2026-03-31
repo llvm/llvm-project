@@ -1,5 +1,5 @@
-; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck --implicit-check-not=.loc %s
-; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck --implicit-check-not=.loc %s
+; RUN: llc -combiner-topological-sorting -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck --implicit-check-not=.loc %s
+; RUN: llc -combiner-topological-sorting -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck --implicit-check-not=.loc %s
 ;
 ; Check that fs-afdo discriminators are NOT generated, as debugInfoForProfiling is false (not set).
 ; CHECK: .loc    1 7 15 prologue_end discriminator 2 # foo.c:7:15

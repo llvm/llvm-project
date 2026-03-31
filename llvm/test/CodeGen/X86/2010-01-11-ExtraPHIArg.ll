@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s
 ;
 ; The lowering of a switch combined with constant folding would leave spurious extra arguments on a PHI instruction.
 ;

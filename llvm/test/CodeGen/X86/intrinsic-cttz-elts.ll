@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
 
 define i8 @ctz_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: .LCPI0_0:

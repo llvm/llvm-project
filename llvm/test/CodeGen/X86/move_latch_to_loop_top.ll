@@ -1,4 +1,4 @@
-; RUN: llc  -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting  -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
 
 ; The block latch should be moved before header.
 ;CHECK-LABEL: test1:

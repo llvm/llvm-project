@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mattr=-sse | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=-sse | FileCheck %s
 
 define i32 @test(float %f) {
 ; CHECK-LABEL: test:

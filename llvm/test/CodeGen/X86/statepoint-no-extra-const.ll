@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown | FileCheck %s
 
 define ptr addrspace(1) @no_extra_const(ptr addrspace(1) %obj) gc "statepoint-example" {
 ; CHECK-LABEL:   no_extra_const:

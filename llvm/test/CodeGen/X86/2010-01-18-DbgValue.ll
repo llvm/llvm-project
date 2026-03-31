@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-- -O0 < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-- -O0 < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
 
 ; CHECK-LABEL: .debug_info contents:
 

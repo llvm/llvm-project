@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=sse4.1 -o /dev/null
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown -mattr=sse4.1 -o /dev/null
 
 ; Testcase for PR31593.
 ; Revision r291120 introduced a regression and this test started failing

@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: $ip2state$main:
 ; CHECK-NEXT:	.long	.Lfunc_begin4@IMGREL

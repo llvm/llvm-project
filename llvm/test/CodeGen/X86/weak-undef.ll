@@ -1,5 +1,5 @@
-; RUN: llc < %s -relocation-model=pic -mtriple=x86_64-pc-linux | FileCheck %s
-; RUN: llc < %s -relocation-model=pic -mtriple=i386-pc-linux | FileCheck --check-prefix=I386 %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -mtriple=x86_64-pc-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -mtriple=i386-pc-linux | FileCheck --check-prefix=I386 %s
 
 @foo1 = extern_weak hidden global i32, align 4
 define ptr @bar1() {

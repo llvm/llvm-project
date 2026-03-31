@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-apple-darwin -O0 < %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-darwin -O0 < %s -o - | FileCheck %s
 ;
 ; During X86 fastisel, the address of indirect call was resolved
 ; through bitcast, ptrtoint, and inttoptr instructions. This is valid

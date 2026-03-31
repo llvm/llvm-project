@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-undermydesk-freebsd8.0 -relocation-model=pic -frame-pointer=all
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-undermydesk-freebsd8.0 -relocation-model=pic -frame-pointer=all
 ; PR4225
 
 define void @sha256_block1(ptr nocapture %arr, ptr nocapture %in, i64 %num) nounwind {

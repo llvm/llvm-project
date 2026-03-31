@@ -1,5 +1,5 @@
 ; Suppress redundant loads feeding into fake uses.
-; RUN: llc -filetype=asm -o - %s --mtriple=x86_64-unknown-unknown | FileCheck %s
+; RUN: llc -combiner-topological-sorting -filetype=asm -o - %s --mtriple=x86_64-unknown-unknown | FileCheck %s
 ; Windows ABI works differently, there's no offset.
 ;
 ; Look for the spill

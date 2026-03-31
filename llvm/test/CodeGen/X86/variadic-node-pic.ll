@@ -1,4 +1,4 @@
-; RUN: llc < %s -relocation-model=pic -code-model=large | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=pic -code-model=large | FileCheck %s
 
 ; CHECK-LABEL: foo:
 ; CHECK: movabsq $_xscanf, %[[REG:[^ ]*]]

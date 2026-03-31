@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7-avx -mattr=+avx
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mcpu=corei7-avx -mattr=+avx
 target triple = "x86_64-unknown-linux-gnu"
 ; Make sure we are not crashing on this one
 define void @autogen_28112_5000() {

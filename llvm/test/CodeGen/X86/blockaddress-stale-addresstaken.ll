@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+retpoline | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+retpoline | FileCheck %s
 ;
 ; verify that blocks are NOT marked as "Block address taken" when the
 ; BlockAddress constant has no users (was optimized away).

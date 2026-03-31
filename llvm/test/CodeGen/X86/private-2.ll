@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10 | FileCheck %s
 ; Quote should be outside of private prefix.
 ; rdar://6855766x
 

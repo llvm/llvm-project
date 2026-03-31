@@ -3,7 +3,7 @@
 ; PR30298: Check if the target doesn't have SSE2, compiler will not crash
 ; or generate incorrect code because of vector mul width shrinking optimization.
 ;
-; RUN: llc -mtriple=i386-pc-linux-gnu -mattr=+sse < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-pc-linux-gnu -mattr=+sse < %s | FileCheck %s
 
 @c = external dso_local global ptr, align 8
 

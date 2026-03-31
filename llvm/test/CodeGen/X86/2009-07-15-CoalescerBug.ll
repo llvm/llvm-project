@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10
 
 	%struct.ANY = type { ptr }
 	%struct.AV = type { ptr, i32, i32 }

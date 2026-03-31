@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64 -stack-usage-file=%t.su
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -stack-usage-file=%t.su
 ; RUN: FileCheck --input-file=%t.su %s
 
 declare void @g(ptr)

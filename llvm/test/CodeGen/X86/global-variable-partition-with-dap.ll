@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -debug-only=static-data-profile-info \
 ; RUN:     -data-sections=true  -unique-section-names=false \
@@ -14,14 +14,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ;; Repeat command above, but with string literals handled in the codegen pass,
 ;; with -memprof-annotate-string-literal-section-prefix=true.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -debug-only=static-data-profile-info \
 ; RUN:     -data-sections=true  -unique-section-names=false \
 ; RUN:     -memprof-annotate-string-literal-section-prefix=true \
 ; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,LOGSTR,IRCOMMON,IRSTR
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -debug-only=static-data-profile-info \
 ; RUN:     -data-sections=true  -unique-section-names=false \

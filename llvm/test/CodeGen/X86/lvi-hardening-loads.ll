@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s --check-prefix=X64 --check-prefix=X64-ALL
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown --x86-lvi-load-no-cbranch < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -O0 -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s --check-prefix=X64-NOOPT
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s --check-prefix=X64 --check-prefix=X64-ALL
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-unknown --x86-lvi-load-no-cbranch < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -O0 -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s --check-prefix=X64-NOOPT
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @test(ptr %secret, i32 %secret_size) #0 {

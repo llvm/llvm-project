@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--
 
 define<4 x i8> @func_8_64() {
   %F = load <4 x i64>, ptr undef

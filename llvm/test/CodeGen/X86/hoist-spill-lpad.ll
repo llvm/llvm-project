@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 ;
 ; PR27612. The following spill is hoisted from two locations: the fall
 ; through succ block and the landingpad block of a call which may throw

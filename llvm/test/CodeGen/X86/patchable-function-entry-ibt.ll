@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686 %s -o - | FileCheck --check-prefixes=CHECK,X86 %s
-; RUN: llc -mtriple=x86_64 %s -o - | FileCheck --check-prefixes=CHECK,X64 %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686 %s -o - | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 %s -o - | FileCheck --check-prefixes=CHECK,X64 %s
 
 ;; -fpatchable-function-entry=0 -fcf-protection=branch
 define void @f0() "patchable-function-entry"="0" {

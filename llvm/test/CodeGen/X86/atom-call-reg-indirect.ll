@@ -1,11 +1,11 @@
-; RUN: llc < %s -mcpu=atom -mtriple=i686-linux  | FileCheck -check-prefix=ATOM32 %s
-; RUN: llc < %s -mcpu=core2 -mtriple=i686-linux | FileCheck -check-prefix=ATOM-NOT32 %s
-; RUN: llc < %s -mcpu=atom -mtriple=x86_64-linux  | FileCheck -check-prefix=ATOM64 %s
-; RUN: llc < %s -mcpu=core2 -mtriple=x86_64-linux | FileCheck -check-prefix=ATOM-NOT64 %s
-; RUN: llc < %s -mcpu=slm -mtriple=i686-linux  | FileCheck -check-prefix=SLM32 %s
-; RUN: llc < %s -mcpu=slm -mtriple=x86_64-linux  | FileCheck -check-prefix=SLM64 %s
-; RUN: llc < %s -mcpu=goldmont -mtriple=i686-linux  | FileCheck -check-prefix=SLM32 %s
-; RUN: llc < %s -mcpu=goldmont -mtriple=x86_64-linux  | FileCheck -check-prefix=SLM64 %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=atom -mtriple=i686-linux  | FileCheck -check-prefix=ATOM32 %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=core2 -mtriple=i686-linux | FileCheck -check-prefix=ATOM-NOT32 %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=atom -mtriple=x86_64-linux  | FileCheck -check-prefix=ATOM64 %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=core2 -mtriple=x86_64-linux | FileCheck -check-prefix=ATOM-NOT64 %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=slm -mtriple=i686-linux  | FileCheck -check-prefix=SLM32 %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=slm -mtriple=x86_64-linux  | FileCheck -check-prefix=SLM64 %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=goldmont -mtriple=i686-linux  | FileCheck -check-prefix=SLM32 %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=goldmont -mtriple=x86_64-linux  | FileCheck -check-prefix=SLM64 %s
 
 
 ; fn_ptr.ll

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
 
 @a = global i32 1
 @b = global i32 1, !exclude !0

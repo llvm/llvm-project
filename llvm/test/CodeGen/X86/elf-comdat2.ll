@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-linux-gnu < %s | FileCheck %s
 
 $foo = comdat any
 @bar = global i32 42, comdat($foo)

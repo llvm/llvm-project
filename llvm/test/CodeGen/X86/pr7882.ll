@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -pre-RA-sched=fast \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -pre-RA-sched=fast \
 ; RUN: | FileCheck %s
 ; make sure scheduler honors the flags clobber.  PR 7882.
 

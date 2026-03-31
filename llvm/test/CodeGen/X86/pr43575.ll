@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx10.14.0 -O0 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx10.14.0 -O0 | FileCheck %s
 
 define void @exit(i32 %status)
 ; CHECK-LABEL: exit:

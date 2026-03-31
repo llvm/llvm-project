@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple=i686-- < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O2 -mtriple=i686-- < %s | FileCheck %s
 
 define ptr @fooOptnone(ptr %p, ptr %q, ptr %z) #0 {
 entry:

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
 
 @i = thread_local global i32 0, align 4
 

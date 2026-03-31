@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mattr=+sse2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=+sse2
 
 define fastcc void @glgVectorFloatConversion() nounwind  {
 	%tmp12745 = load <4 x float>, ptr null, align 16		; <<4 x float>> [#uses=1]

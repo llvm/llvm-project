@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 ; rdar://5671654
 ; The loads should fold into the testl instructions, no matter how
 ; the inputs are commuted.

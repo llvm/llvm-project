@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-windows-msvc | FileCheck %s
 
 %struct.MakeCleanup = type { i8 }
 %eh.ThrowInfo = type { i32, i32, i32, i32 }

@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -no-integrated-as | FileCheck %s
+; RUN: llc -combiner-topological-sorting -o - %s -no-integrated-as | FileCheck %s
 target triple = "x86_64--"
 
 ; Allow to specify any of the 8/16/32/64 register names interchangeably in

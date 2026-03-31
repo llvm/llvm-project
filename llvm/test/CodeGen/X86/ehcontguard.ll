@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
 ; EHCont Guard is currently only available on Windows
 
 ; CHECK: @feat.00 = 16384

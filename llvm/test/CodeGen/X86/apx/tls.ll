@@ -1,12 +1,12 @@
-; RUN: llc -mattr=+egpr %s -mtriple=x86_64 --relocation-model=pic -enable-tlsdesc -filetype=obj -o %t.o
+; RUN: llc -combiner-topological-sorting -mattr=+egpr %s -mtriple=x86_64 --relocation-model=pic -enable-tlsdesc -filetype=obj -o %t.o
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=TLSDESC
 ; RUN: echo '.tbss; .globl b,c,d,e,f,g,h,i,j; b: .zero 4;c: .zero 4;d: .zero 4;e: .zero 4;f: .zero 4;g: .zero 4;h: .zero 4;i: .zero 4;j: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
 
-; RUN: llc -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-enable-apx-for-relocation=true
+; RUN: llc -combiner-topological-sorting -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-enable-apx-for-relocation=true
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=GOTTPOFF_APXRELAX
 ; RUN: echo '.tbss; .globl b,c,d,e,f,g,h,i,j; b: .zero 4;c: .zero 4;d: .zero 4;e: .zero 4;f: .zero 4;g: .zero 4;h: .zero 4;i: .zero 4;j: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
 
-; RUN: llc -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o
+; RUN: llc -combiner-topological-sorting -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=GOTTPOFF_NOAPXRELAX
 ; RUN: echo '.tbss; .globl b,c,d,e,f,g,h,i,j; b: .zero 4;c: .zero 4;d: .zero 4;e: .zero 4;f: .zero 4;g: .zero 4;h: .zero 4;i: .zero 4;j: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
 

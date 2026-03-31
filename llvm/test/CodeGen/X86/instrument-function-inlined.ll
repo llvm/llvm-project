@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=x86_64-- -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-- -O1 < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-- -O2 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O1 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O2 < %s | FileCheck %s
 
 ; The codegen should insert post-inlining instrumentation calls and should not
 ; insert pre-inlining instrumentation.

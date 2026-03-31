@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o %t.out 2> %t.err
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o %t.out 2> %t.err
 ; RUN: FileCheck %s --check-prefix=FALLBACK-WITH-REPORT-OUT < %t.out
 ; RUN: FileCheck %s --check-prefix=FALLBACK-WITH-REPORT-ERR < %t.err
 ; This file checks that the fallback path to selection dag works.

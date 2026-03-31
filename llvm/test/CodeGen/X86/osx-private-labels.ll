@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 ; Test all the cases where a L label is safe. Removing any entry from
 ; isSectionAtomizableBySymbols should cause this to fail.
 ; We also test some noteworthy cases that require an l label.

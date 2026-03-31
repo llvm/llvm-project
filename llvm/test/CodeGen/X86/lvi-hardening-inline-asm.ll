@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown -mattr=+lvi-load-hardening -mattr=+lvi-cfi -x86-experimental-lvi-inline-asm-hardening < %s -o %t.out 2> %t.err
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-unknown -mattr=+lvi-load-hardening -mattr=+lvi-cfi -x86-experimental-lvi-inline-asm-hardening < %s -o %t.out 2> %t.err
 ; RUN: FileCheck %s --check-prefix=X86 < %t.out
 ; RUN: FileCheck %s --check-prefix=WARN < %t.err
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-apple-darwin11 -O0 -fast-isel-abort=1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-apple-darwin11 -O0 -fast-isel-abort=1 | FileCheck %s
 
 %struct.x = type { i64, i64 }
 declare %struct.x @f()

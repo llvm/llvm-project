@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx -O3 -enable-implicit-null-checks -o - < %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-macosx -O3 -enable-implicit-null-checks -o - < %s 2>&1 | FileCheck %s
 
 declare void @throw0()
 declare void @throw1()

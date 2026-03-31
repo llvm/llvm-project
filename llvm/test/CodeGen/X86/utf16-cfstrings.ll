@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-apple-macosx10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-apple-macosx10 | FileCheck %s
 ; <rdar://problem/10655949>
 
 %0 = type opaque

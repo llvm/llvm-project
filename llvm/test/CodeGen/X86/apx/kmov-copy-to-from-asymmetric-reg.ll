@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f -show-mc-encoding | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f,+egpr -show-mc-encoding | FileCheck --check-prefix=EGPR %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown -mattr=+avx512f -show-mc-encoding | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown -mattr=+avx512f,+egpr -show-mc-encoding | FileCheck --check-prefix=EGPR %s
 
 define void @kmov(i1 %cmp23.not) {
 ; CHECK-LABEL: kmov:

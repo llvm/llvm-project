@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -mcpu=core-avx-i | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -mcpu=core-avx-i | FileCheck %s
 
 define <16 x i16> @f_fu(<16 x i16> %bf) {
 allocas:

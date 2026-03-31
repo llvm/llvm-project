@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64 -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -o - %s | FileCheck %s
 
 define i1 @try_cmpxchg(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK-LABEL: try_cmpxchg:

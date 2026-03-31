@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=haswell %s -o - > /dev/null
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -mcpu=haswell %s -o - > /dev/null
 
 ; Fix PR34397
 

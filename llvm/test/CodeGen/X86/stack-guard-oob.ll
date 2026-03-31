@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686 -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64 -O0 < %s | FileCheck %s
 
 ; CHECK-LABEL: in_bounds:
 ; CHECK-NOT: __stack_chk_guard

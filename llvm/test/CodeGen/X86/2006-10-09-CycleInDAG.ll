@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 
 define void @_ZN13QFSFileEngine4readEPcx() {
 	%tmp201 = load i32, ptr null		; <i32> [#uses=1]

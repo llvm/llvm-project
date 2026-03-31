@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -O2 -o - \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -O2 -o - \
 ; RUN:   | FileCheck %s --implicit-check-not=TAILCALL
 ; Generated with: clang -emit-llvm -O2 -S -fextend-variable-liveness test.cpp -o -
 ; =========== test.cpp ===============

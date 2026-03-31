@@ -1,4 +1,4 @@
-; RUN: not llc -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -o /dev/null %s 2>&1 | FileCheck %s
 target triple = "x86_64--"
 
 @a = global i32 0, align 4

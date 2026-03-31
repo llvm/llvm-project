@@ -1,6 +1,6 @@
 ;; Ensure that the .llvm.lto section has SHT_EXCLUDE set.
 ; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode<thinlto;emit-summary>" -S \
-; RUN:   | llc --mtriple x86_64-unknown-linux-gnu -filetype=obj \
+; RUN:   | llc -combiner-topological-sorting --mtriple x86_64-unknown-linux-gnu -filetype=obj \
 ; RUN:   | llvm-readelf - --sections \
 ; RUN:   | FileCheck %s --check-prefix=EXCLUDE
 

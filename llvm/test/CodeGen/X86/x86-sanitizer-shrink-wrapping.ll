@@ -1,4 +1,4 @@
-; RUN: llc -o - < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -o - < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "x86_64-apple-macosx"

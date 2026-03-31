@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- | FileCheck %s
 
 define void @test(ptr nocapture %arr, i64 %arrsize, i64 %factor) nounwind uwtable {
   %1 = icmp sgt i64 %arrsize, 0

@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-coalescing | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -verify-coalescing | FileCheck %s
 target triple = "x86_64-pc-win32"
 
 @fnptr = external global ptr

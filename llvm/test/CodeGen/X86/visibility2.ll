@@ -2,7 +2,7 @@
 ; emitted they are not treated as definitions.  Test case for r132825.
 ; Fixes <rdar://problem/9429892>.
 ;
-; RUN: llc -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s
 
 @foo_private_extern_str = external hidden global ptr
 

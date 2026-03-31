@@ -1,13 +1,13 @@
-; RUN: llc < %s -mtriple=i386-unknown-mingw32 | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-mingw32 | \
 ; RUN: FileCheck --check-prefix=CHECK32 %s
 
-; RUN: llc < %s -mtriple=i386-unknown-win32 | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-win32 | \
 ; RUN: FileCheck --check-prefix=CHECK32 %s
 
-; RUN: llc < %s -mtriple=x86_64-unknown-mingw32 | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-mingw32 | \
 ; RUN: FileCheck --check-prefix=CHECK64 %s
 
-; RUN: llc < %s -mtriple=x86_64-unknown-mingw32 | \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-mingw32 | \
 ; RUN: FileCheck --check-prefix=CHECK64 %s
 
 ; Check that a fastcall function gets correct mangling

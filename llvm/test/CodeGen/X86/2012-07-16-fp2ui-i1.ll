@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=corei7
 
 define void @autogen_SD3100() {
 BB:

@@ -1,7 +1,7 @@
 ; Test to ensure that a global value that was dropped to a declaration
 ; (e.g. ThinLTO will drop non-prevailing weak to declarations) does not
 ; provoke creation of a comdat when it had an initializer.
-; RUN: llc -mtriple x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-unknown-linux-gnu < %s | FileCheck %s
 ; CHECK-NOT: comdat
 
 ; ModuleID = 'dropped_constructor.o'

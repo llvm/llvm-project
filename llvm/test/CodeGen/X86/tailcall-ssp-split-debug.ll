@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-macosx %s -o - | FileCheck %s
 
 define void @foo(i1 %arg) ssp {
 ; CHECK-LABEL: foo:

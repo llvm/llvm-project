@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefixes=ELF
-; RUN: llc -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s --check-prefixes=MACHO
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefixes=ELF
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s --check-prefixes=MACHO
 
 define internal ptr @foo_resolver() {
 entry:

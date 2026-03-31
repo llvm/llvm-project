@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu -stop-before="regallocfast" -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=x86_64-unknown-linux-gnu -stop-before="regallocfast" -o - %s | FileCheck %s
 ;
 ; We check that all the instructions in bb4 now have a debug-location
 ; annotation, and that the annotation is identical to the one on e.g.,

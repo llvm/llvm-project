@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -relocation-model=pic | FileCheck %s
 ;
 ; Make sure the PIC label flags2-"L1$pb" is not moved up to the preheader.
 ; CHECK: mov{{.}} {{.*}}$pb

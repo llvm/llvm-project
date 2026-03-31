@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=i686-linux-gnu   | FileCheck %s --check-prefix=CHECK --check-prefix=LIN32
-; RUN: llc < %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK --check-prefix=LIN64
-; RUN: llc < %s -mtriple=x86_64-pc-win32  | FileCheck %s --check-prefix=CHECK --check-prefix=WIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-linux-gnu   | FileCheck %s --check-prefix=CHECK --check-prefix=LIN32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK --check-prefix=LIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-win32  | FileCheck %s --check-prefix=CHECK --check-prefix=WIN64
 
 ; Check that we only fold the address computation (load) into a tail call
 ; when we're sure there is enough volatile registers available.

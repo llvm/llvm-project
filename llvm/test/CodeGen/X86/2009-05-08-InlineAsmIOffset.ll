@@ -1,4 +1,4 @@
-; RUN: llc < %s -relocation-model=static -no-integrated-as | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -relocation-model=static -no-integrated-as | FileCheck %s
 ; PR4152
 
 ; CHECK: {{1: ._pv_cpu_ops[+]8}}

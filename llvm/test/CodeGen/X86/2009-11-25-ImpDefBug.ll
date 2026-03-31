@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu
 ; pr5600
 
 %struct..0__pthread_mutex_s = type { i32, i32, i32, i32, i32, i32, %struct.__pthread_list_t }

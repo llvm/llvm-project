@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-unknown-unknown -O0 < %s | FileCheck %s -check-prefix=CHECK0
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -O0 < %s | FileCheck %s -check-prefix=CHECK0
 
 %struct.interrupt_frame = type { i64, i64, i64, i64, i64 }
 

@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s
 
 ; CHECK: error: invalid operand in inline asm: 'mov %ah, ${0:h}'
 define void @test1() {

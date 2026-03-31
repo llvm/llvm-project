@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc -relocation-model=pic | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-windows-msvc -relocation-model=pic | FileCheck %s
 ; MOVPC32r should not generate CFI under windows
 
 ; CHECK-LABEL: _foo:

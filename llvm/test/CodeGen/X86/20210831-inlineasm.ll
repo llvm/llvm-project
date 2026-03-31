@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -mtriple=x86_64-unknown-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-unknown-linux-gnu
 ; https://bugs.llvm.org/show_bug.cgi?id=51699
 
 %"[]u8" = type { ptr, i64 }

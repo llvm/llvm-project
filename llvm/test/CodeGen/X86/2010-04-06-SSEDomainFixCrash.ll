@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -relocation-model=pic -frame-pointer=all -mcpu=nocona
+; RUN: llc -combiner-topological-sorting < %s -O3 -relocation-model=pic -frame-pointer=all -mcpu=nocona
 ;
 ; This test case is reduced from Bullet. It crashes SSEDomainFix.
 ;

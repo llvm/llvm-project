@@ -1,6 +1,6 @@
 ; Test ensuring debug intrinsics do not affect generated function prologue.
 ;
-; RUN: llc -O1 -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O1 -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
 
 @a = local_unnamed_addr global i64 0, align 8
 

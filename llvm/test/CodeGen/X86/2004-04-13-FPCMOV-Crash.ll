@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 
 define double @test(double %d) {
         %X = select i1 false, double %d, double %d              ; <double> [#uses=1]

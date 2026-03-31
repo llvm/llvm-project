@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 target triple = "x86_64-mingw"
 
 ; ModuleID = 'mm.bc'

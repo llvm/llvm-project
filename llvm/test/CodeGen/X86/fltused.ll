@@ -1,10 +1,10 @@
 ; The purpose of this test to verify that the fltused symbol is
 ; emitted when a floating point call is made on Windows.
 
-; RUN: llc < %s -mtriple i686-pc-win32 | FileCheck %s --check-prefix WIN32
-; RUN: llc < %s -mtriple x86_64-pc-win32 | FileCheck %s --check-prefix WIN64
-; RUN: llc < %s -O0 -mtriple i686-pc-win32 | FileCheck %s --check-prefix WIN32
-; RUN: llc < %s -O0 -mtriple x86_64-pc-win32 | FileCheck %s --check-prefix WIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple i686-pc-win32 | FileCheck %s --check-prefix WIN32
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-pc-win32 | FileCheck %s --check-prefix WIN64
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple i686-pc-win32 | FileCheck %s --check-prefix WIN32
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple x86_64-pc-win32 | FileCheck %s --check-prefix WIN64
 
 @.str = private constant [4 x i8] c"%f\0A\00"
 

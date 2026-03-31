@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mcpu=yonah | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mcpu=yonah | FileCheck %s
 ; rdar://5752025
 
 ; We want:

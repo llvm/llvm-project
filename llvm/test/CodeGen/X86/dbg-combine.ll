@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-pc-linux -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-pc-linux -O0 < %s | FileCheck %s
 
 ; Make sure that the sequence of debug locations for function foo is correctly
 ; generated. More specifically, .loc entries for lines 4,5,6,7 must appear in

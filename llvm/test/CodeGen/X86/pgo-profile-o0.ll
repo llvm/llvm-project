@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=x86_64-- -O0 -pgo-kind=pgo-sample-use-pipeline -debug-pass=Structure %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=PASSES
-; RUN: llc -mtriple=x86_64-- -O0 -pgo-kind=pgo-sample-use-pipeline -debug-only=branch-prob %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=BRANCH_PROB
-; RUN: llc -mtriple=x86_64-- -O0 -pgo-kind=pgo-sample-use-pipeline -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=MIR
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O0 -pgo-kind=pgo-sample-use-pipeline -debug-pass=Structure %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=PASSES
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O0 -pgo-kind=pgo-sample-use-pipeline -debug-only=branch-prob %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=BRANCH_PROB
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O0 -pgo-kind=pgo-sample-use-pipeline -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=MIR
 
 ; REQUIRES: asserts
 

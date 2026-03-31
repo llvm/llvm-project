@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-linux | FileCheck %s
 ; CHECK-LABEL: f0:
 ; CHECK: subq
 ; CHECK: addq

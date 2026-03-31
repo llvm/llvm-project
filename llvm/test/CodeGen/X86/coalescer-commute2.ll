@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux -mcpu=nehalem | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -mcpu=nehalem | FileCheck %s
 ; CHECK-NOT:     mov
 ; CHECK:     paddw
 ; CHECK-NOT:     mov

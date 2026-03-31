@@ -5,7 +5,7 @@
 ; RUN: echo 'f foo' >> %t
 ; RUN: echo 't 0,1' >> %t
 ;;
-; RUN: llc < %s -mtriple=x86_64-pc-linux -asm-verbose=false -function-sections -basic-block-sections=%t -O1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -asm-verbose=false -function-sections -basic-block-sections=%t -O1 | FileCheck %s
 
 define i32 @foo() personality ptr @__gxx_personality_v0 {
 entry:

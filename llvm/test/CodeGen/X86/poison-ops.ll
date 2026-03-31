@@ -1,5 +1,5 @@
 ; NOTE: This test case is borrowed from undef-ops.ll
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 
 define i32 @add_poison_rhs(i32 %x) {
 ; CHECK-LABEL: add_poison_rhs:

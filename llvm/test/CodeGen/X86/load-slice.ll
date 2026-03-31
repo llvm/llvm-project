@@ -1,5 +1,5 @@
-; RUN: llc -mtriple x86_64-apple-macosx -mcpu=corei7-avx -combiner-stress-load-slicing < %s -o - | FileCheck %s --check-prefix=STRESS
-; RUN: llc -mtriple x86_64-apple-macosx -mcpu=corei7-avx < %s -o - | FileCheck %s --check-prefix=REGULAR
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-macosx -mcpu=corei7-avx -combiner-stress-load-slicing < %s -o - | FileCheck %s --check-prefix=STRESS
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-macosx -mcpu=corei7-avx < %s -o - | FileCheck %s --check-prefix=REGULAR
 ;
 ; <rdar://problem/14477220>
 

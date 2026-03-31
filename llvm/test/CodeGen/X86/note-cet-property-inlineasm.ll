@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-unknown-linux-gnu %s -o %t.o -filetype=obj
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-unknown-linux-gnu %s -o %t.o -filetype=obj
 ; RUN: llvm-readobj -n %t.o | FileCheck %s
 
 module asm ".pushsection \22.note.gnu.property\22,\22a\22,@note"

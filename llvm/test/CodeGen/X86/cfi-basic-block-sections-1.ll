@@ -1,6 +1,6 @@
-; RUN: llc -O0 %s --basic-block-sections=all -mtriple=x86_64 -filetype=asm --frame-pointer=all -o - | FileCheck --check-prefix=SECTIONS_CFI %s
-; RUN: llc -O0 %s --basic-block-sections=all -mtriple=x86_64 -filetype=asm --frame-pointer=none -o - | FileCheck --check-prefix=SECTIONS_NOFP_CFI %s
-; RUN: llc -O0 %s --basic-block-sections=all -mtriple=x86_64 -filetype=obj --frame-pointer=all -o - | llvm-dwarfdump --eh-frame  - | FileCheck --check-prefix=EH_FRAME %s
+; RUN: llc -combiner-topological-sorting -O0 %s --basic-block-sections=all -mtriple=x86_64 -filetype=asm --frame-pointer=all -o - | FileCheck --check-prefix=SECTIONS_CFI %s
+; RUN: llc -combiner-topological-sorting -O0 %s --basic-block-sections=all -mtriple=x86_64 -filetype=asm --frame-pointer=none -o - | FileCheck --check-prefix=SECTIONS_NOFP_CFI %s
+; RUN: llc -combiner-topological-sorting -O0 %s --basic-block-sections=all -mtriple=x86_64 -filetype=obj --frame-pointer=all -o - | llvm-dwarfdump --eh-frame  - | FileCheck --check-prefix=EH_FRAME %s
 
 ;; void f1();
 ;; void f3(bool b) {

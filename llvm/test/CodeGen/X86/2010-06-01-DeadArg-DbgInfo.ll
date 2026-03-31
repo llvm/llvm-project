@@ -1,5 +1,5 @@
-; RUN: llc -O2 < %s | FileCheck %s
-; RUN: llc -O2 -regalloc=basic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O2 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O2 -regalloc=basic < %s | FileCheck %s
 ; Test to check that unused argument 'this' is not undefined in debug info.
 
 target triple = "x86_64-apple-darwin10.2"

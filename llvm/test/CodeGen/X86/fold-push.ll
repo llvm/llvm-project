@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-windows | FileCheck %s -check-prefix=CHECK -check-prefix=NORMAL
-; RUN: llc < %s -mtriple=i686-windows -mattr=slow-two-mem-ops | FileCheck %s -check-prefix=CHECK -check-prefix=SLM
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-windows | FileCheck %s -check-prefix=CHECK -check-prefix=NORMAL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-windows -mattr=slow-two-mem-ops | FileCheck %s -check-prefix=CHECK -check-prefix=SLM
 
 declare void @foo(i32 %r)
 

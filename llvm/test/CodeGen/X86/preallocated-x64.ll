@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=x86_64-windows-msvc -o /dev/null 2>&1
+; RUN: llc -combiner-topological-sorting %s -mtriple=x86_64-windows-msvc -o /dev/null 2>&1
 ; REQUIRES: asserts
 ; XFAIL: *
 

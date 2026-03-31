@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-gnu-linux < %s | FileCheck %s
-; RUN: llc -mtriple=i686-pc-gnu-linux -print-after=finalize-isel %s -o /dev/null 2>&1 | FileCheck %s -check-prefix=CHECK-JT-PROB
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-gnu-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-gnu-linux -print-after=finalize-isel %s -o /dev/null 2>&1 | FileCheck %s -check-prefix=CHECK-JT-PROB
 
 
 ; An unreachable default destination is ignored and no compare and branch

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple x86_64-- -filetype asm -o - %s | FileCheck %s
-; RUN: llc -mtriple x86_64-unknown-windows-msvc -filetype asm -o - %s | FileCheck %s --check-prefix=MSVC
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-- -filetype asm -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-unknown-windows-msvc -filetype asm -o - %s | FileCheck %s --check-prefix=MSVC
 
 define swiftcc void @f() {
   %1 = alloca i8

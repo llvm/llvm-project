@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx -o - %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-macosx -o - %s | FileCheck %s
 
 ; The issue here was a conflict between forming a %rip-relative lea and a
 ; FrameIndex lea. The %rip sanity-checks didn't consider that a base register

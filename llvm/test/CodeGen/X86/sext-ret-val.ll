@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
 ; rdar://6699246
 
 define signext i8 @t1(ptr %A) nounwind readnone ssp {

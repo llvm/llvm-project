@@ -1,6 +1,6 @@
 ;; Check that the generated memory references do not contain the `offset`
 ;; operator. Use `-no-integrated-as` to disable AsmParser formatting.
-; RUN: llc -no-integrated-as -x86-asm-syntax=intel < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -no-integrated-as -x86-asm-syntax=intel < %s | FileCheck %s
 
 ;; This file was compiled from clang/test/CodeGen/ms-inline-asm-functions.c,
 ;; using the following command line:

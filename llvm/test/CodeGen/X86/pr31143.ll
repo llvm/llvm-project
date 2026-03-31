@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -mattr=+sse4.2 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu -mattr=+sse4.2 < %s | FileCheck %s
 
 ; CHECK-LABEL: testss:
 ; CHECK: movss {{.*}}, %[[XMM0:xmm[0-9]+]]

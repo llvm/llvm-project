@@ -1,4 +1,4 @@
-; RUN: llc < %s > %t
+; RUN: llc -combiner-topological-sorting < %s > %t
 ; PR6283
 
 ; Tricky coalescer bug:

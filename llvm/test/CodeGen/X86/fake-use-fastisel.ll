@@ -1,4 +1,4 @@
-; RUN: llc < %s -fast-isel -stop-after=finalize-isel -mtriple=x86_64-unknown-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -fast-isel -stop-after=finalize-isel -mtriple=x86_64-unknown-linux | FileCheck %s
 ;
 ; Verify that llvm.fake.use is lowered to FAKE_USE by FastISel.
 ; This is relevant for compilers (e.g. Flang) that use llvm.fake.use at O0

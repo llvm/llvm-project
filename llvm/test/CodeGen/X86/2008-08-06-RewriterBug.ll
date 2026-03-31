@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 ; PR2596
 
 @data = external global [400 x i64]		; <ptr> [#uses=5]

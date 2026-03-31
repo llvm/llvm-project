@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin9 | FileCheck %s -check-prefix=X64
-; RUN: llc < %s -mtriple=i386-apple-darwin9 | FileCheck %s -check-prefix=X32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin9 | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9 | FileCheck %s -check-prefix=X32
 ; PR1632
 
 define void @_Z1fv() personality ptr @__gxx_personality_v0 {

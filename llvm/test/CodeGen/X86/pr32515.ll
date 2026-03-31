@@ -1,7 +1,7 @@
-; RUN: llc -O0 -mtriple=x86_64-unknown -mcpu=skx -o - %s
-; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -o - %s
-; RUN: llc -O0 -mtriple=i686-unknown   -mcpu=skx -o - %s
-; RUN: llc     -mtriple=i686-unknown   -mcpu=skx -o - %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=x86_64-unknown -mcpu=skx -o - %s
+; RUN: llc -combiner-topological-sorting     -mtriple=x86_64-unknown -mcpu=skx -o - %s
+; RUN: llc -combiner-topological-sorting -O0 -mtriple=i686-unknown   -mcpu=skx -o - %s
+; RUN: llc -combiner-topological-sorting     -mtriple=i686-unknown   -mcpu=skx -o - %s
 ; REQUIRES: asserts
 
 @var_26 = external dso_local global i16, align 2

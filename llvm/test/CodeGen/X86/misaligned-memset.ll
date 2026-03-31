@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin -mcpu=nehalem < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mcpu=nehalem < %s | FileCheck %s
 
 @a = common global [3 x i64] zeroinitializer, align 16
 

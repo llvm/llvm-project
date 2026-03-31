@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mattr=+cmov | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=+cmov | FileCheck %s
 ; Both values were being zero extended.
 @u = external dso_local global i8
 @s = external dso_local global i8

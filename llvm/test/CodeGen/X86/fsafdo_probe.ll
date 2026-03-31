@@ -1,7 +1,7 @@
 ; REQUIRES: x86_64-linux
 ; REQUIRES: asserts
-; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false --debug-only=mirfs-discriminators  < %s  -o - 2>&1 | FileCheck %s --check-prefixes=V0
-; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true --debug-only=mirfs-discriminators  < %s  -o - 2>&1 | FileCheck %s --check-prefixes=V1
+; RUN: llc -combiner-topological-sorting -enable-fs-discriminator -improved-fs-discriminator=false --debug-only=mirfs-discriminators  < %s  -o - 2>&1 | FileCheck %s --check-prefixes=V0
+; RUN: llc -combiner-topological-sorting -enable-fs-discriminator -improved-fs-discriminator=true --debug-only=mirfs-discriminators  < %s  -o - 2>&1 | FileCheck %s --check-prefixes=V1
 
 ; Check that fs-afdo discriminators are generated.
 ; V0: foo.c:7:3: add FS discriminator, from 0 -> 11264

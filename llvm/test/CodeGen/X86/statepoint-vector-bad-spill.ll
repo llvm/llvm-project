@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O3 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -O3 < %s | FileCheck %s
 
 ; This is checking for a crash.
 

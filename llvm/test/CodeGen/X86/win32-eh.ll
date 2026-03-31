@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-windows-msvc < %s | FileCheck %s
-; RUN: llc -mtriple=i686-pc-windows-msvc -filetype=obj < %s -o %t
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-pc-windows-msvc -filetype=obj < %s -o %t
 
 declare void @may_throw_or_crash()
 declare i32 @_except_handler3(...)

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-- -debug 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -debug 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 declare float @llvm.pow.f32(float, float)

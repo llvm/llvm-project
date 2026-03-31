@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs
+; RUN: llc -combiner-topological-sorting < %s -verify-machineinstrs
 ;
 ; This test case is transformed into a single basic block by the machine
 ; branch folding pass. That makes a complete mess of the %eflags liveness, but

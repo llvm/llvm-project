@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686--
 ; rdar://6559995
 
 @a = external dso_local global [255 x ptr], align 32

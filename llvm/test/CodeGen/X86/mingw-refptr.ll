@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-w64-mingw32 | FileCheck %s -check-prefix=CHECK-X64
-; RUN: llc < %s -mtriple=x86_64-pc-cygwin | FileCheck %s -check-prefix=CHECK-X64
-; RUN: llc < %s -mtriple=i686-w64-mingw32 | FileCheck %s -check-prefix=CHECK-X86
-; RUN: llc < %s -mtriple=i686-w64-mingw32-none-elf | FileCheck %s -check-prefix=CHECK-X86-ELF
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-w64-mingw32 | FileCheck %s -check-prefix=CHECK-X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-cygwin | FileCheck %s -check-prefix=CHECK-X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-w64-mingw32 | FileCheck %s -check-prefix=CHECK-X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-w64-mingw32-none-elf | FileCheck %s -check-prefix=CHECK-X86-ELF
 
 @var = external local_unnamed_addr global i32, align 4
 @dsolocalvar = external dso_local local_unnamed_addr global i32, align 4

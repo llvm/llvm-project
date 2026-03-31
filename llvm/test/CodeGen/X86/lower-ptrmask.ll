@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx -stop-after=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-macosx -stop-after=finalize-isel %s -o - | FileCheck %s
 
 declare ptr @llvm.ptrmask.p0.i64(ptr , i64)
 

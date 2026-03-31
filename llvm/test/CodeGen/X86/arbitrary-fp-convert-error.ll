@@ -1,10 +1,10 @@
 ; RUN: split-file %s %t
-; RUN: not llc < %t/float8e4m3.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E4M3
-; RUN: not llc < %t/float8e3m4.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E3M4
-; RUN: not llc < %t/float8e5m2fnuz.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E5M2FNUZ
-; RUN: not llc < %t/float8e4m3fnuz.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E4M3FNUZ
-; RUN: not llc < %t/float8e4m3b11fnuz.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E4M3B11FNUZ
-; RUN: not llc < %t/float8e8m0fnu.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E8M0FNU
+; RUN: not llc -combiner-topological-sorting < %t/float8e4m3.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E4M3
+; RUN: not llc -combiner-topological-sorting < %t/float8e3m4.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E3M4
+; RUN: not llc -combiner-topological-sorting < %t/float8e5m2fnuz.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E5M2FNUZ
+; RUN: not llc -combiner-topological-sorting < %t/float8e4m3fnuz.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E4M3FNUZ
+; RUN: not llc -combiner-topological-sorting < %t/float8e4m3b11fnuz.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E4M3B11FNUZ
+; RUN: not llc -combiner-topological-sorting < %t/float8e8m0fnu.ll -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=E8M0FNU
 
 ; Test that llvm.convert.from.arbitrary.fp emits an error for formats that pass
 ; verifier validation but are not yet implemented in SelectionDAGBuilder.

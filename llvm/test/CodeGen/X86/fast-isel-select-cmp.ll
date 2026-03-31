@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -mtriple=x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O0 -mtriple=x86_64-apple-darwin10 | FileCheck %s
 
 ; Test if we do not fold the cmp into select if the instructions are in
 ; different basic blocks.

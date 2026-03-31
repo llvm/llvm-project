@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin9 -O0 -optimize-regalloc -regalloc=basic -no-integrated-as | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9 -O0 -optimize-regalloc -regalloc=basic -no-integrated-as | FileCheck %s
 ; rdar://6992609
 
 target triple = "i386-apple-darwin9.0"

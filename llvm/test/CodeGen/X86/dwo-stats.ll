@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc %s -mtriple=x86_64-linux --split-dwarf-file=%t.dwo --split-dwarf-output=%t.dwo --filetype=obj -o /dev/null -stats 2>&1 | FileCheck %s --check-prefixes=SPLIT,CHECK
-; RUN: llc %s -mtriple=x86_64-linux --filetype=obj -o /dev/null -stats 2>&1 | FileCheck %s --check-prefixes=NOTSPLIT,CHECK
+; RUN: llc -combiner-topological-sorting %s -mtriple=x86_64-linux --split-dwarf-file=%t.dwo --split-dwarf-output=%t.dwo --filetype=obj -o /dev/null -stats 2>&1 | FileCheck %s --check-prefixes=SPLIT,CHECK
+; RUN: llc -combiner-topological-sorting %s -mtriple=x86_64-linux --filetype=obj -o /dev/null -stats 2>&1 | FileCheck %s --check-prefixes=NOTSPLIT,CHECK
 
 ; NOTSPLIT-NOT: {{[0-9]+}} elf-object-writer - Total size of sections written to .dwo file
 ; CHECK-DAG: {{[0-9]+}} elf-object-writer - Total size of debug info sections

@@ -1,5 +1,5 @@
 ; Check if landing pads are kept in a separate eh section
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=i386-unknown-linux-gnu  -function-sections -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc -combiner-topological-sorting -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=i386-unknown-linux-gnu  -function-sections -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 
 @_ZTIb = external dso_local constant ptr
 define i32 @_Z3foob(i1 zeroext %0) #0 personality ptr @__gxx_personality_v0 {

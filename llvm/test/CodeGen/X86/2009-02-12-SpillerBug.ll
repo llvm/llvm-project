@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin8
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin8
 ; PR3561
 
 define hidden void @__mulxc3(ptr noalias nocapture sret({ x86_fp80, x86_fp80 }) %agg.result, x86_fp80 %a, x86_fp80 %b, x86_fp80 %c, x86_fp80 %d) nounwind {

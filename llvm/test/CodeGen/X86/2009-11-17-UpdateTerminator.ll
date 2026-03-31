@@ -1,4 +1,4 @@
-; RUN: llc -O3 < %s
+; RUN: llc -combiner-topological-sorting -O3 < %s
 ; This test fails with:
 ; Assertion failed: (!B && "UpdateTerminators requires analyzable predecessors!"), function updateTerminator, MachineBasicBlock.cpp, line 255.
 

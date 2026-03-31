@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown -mattr=+lvi-cfi < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown -mattr=+lvi-cfi -O0 < %s | FileCheck %s --check-prefix=X64FAST
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-unknown -mattr=+lvi-cfi < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -combiner-topological-sorting -verify-machineinstrs -mtriple=x86_64-unknown -mattr=+lvi-cfi -O0 < %s | FileCheck %s --check-prefix=X64FAST
 ;
 ; Note that a lot of this code was lifted from retpoline.ll.
 

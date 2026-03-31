@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- -O2 < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -O2 < %s
 
 define void @test(i64 %add127.tr.i2686) {
 entry:

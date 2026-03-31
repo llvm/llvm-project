@@ -1,4 +1,4 @@
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=i386-pc-mingw32
+; RUN: llc -combiner-topological-sorting -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=i386-pc-mingw32
 
 define void @func() nounwind personality ptr @__gxx_personality_v0 {
 invoke.cont:

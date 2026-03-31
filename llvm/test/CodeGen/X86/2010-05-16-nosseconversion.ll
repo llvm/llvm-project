@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin -mattr=-sse < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -mattr=-sse < %s
 ; PR 7135
 
 @x = common global i64 0                          ; <ptr> [#uses=1]

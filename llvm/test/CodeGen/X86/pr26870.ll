@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc18.0.0 -mcpu=pentium4
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-windows-msvc18.0.0 -mcpu=pentium4
 
 define x86_thiscallcc ptr @fn4(ptr %this, ptr dereferenceable(1) %p1) {
 entry:

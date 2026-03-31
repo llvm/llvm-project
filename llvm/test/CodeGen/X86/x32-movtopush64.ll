@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s
 
 declare void @bar(ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i32)
 

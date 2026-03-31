@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=corei7
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown -mcpu=corei7
 
 define void @autogen_SD13708(i32, i1 %arg) {
 BB:

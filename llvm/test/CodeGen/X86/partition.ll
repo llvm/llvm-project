@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux | FileCheck %s
 
 ; CHECK: .section .llvm_sympart,"",@llvm_sympart,unique,1
 ; CHECK-NEXT: .ascii "part1"

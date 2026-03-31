@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin9 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9 | FileCheck %s
 
 @x = common hidden global i32 0		; <ptr> [#uses=1]
 

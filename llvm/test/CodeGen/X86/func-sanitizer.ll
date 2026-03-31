@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-apple-darwin < %s | FileCheck %s --check-prefix=MACHO
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin < %s | FileCheck %s --check-prefix=MACHO
 
 ; CHECK:      .type _Z3funv,@function
 ; CHECK-NEXT:   .long   3238382334  # 0xc105cafe

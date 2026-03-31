@@ -1,6 +1,6 @@
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mcpu=generic -mtriple=i686-pc-linux -verify-machineinstrs | FileCheck %s -check-prefix=IA32
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-pc-linux -verify-machineinstrs | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -verify-machineinstrs | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=i686-pc-linux -verify-machineinstrs | FileCheck %s -check-prefix=IA32
 
 ; trivial test for correct call suffix
 

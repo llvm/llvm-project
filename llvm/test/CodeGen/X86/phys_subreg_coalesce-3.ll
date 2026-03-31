@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=i386-apple-darwin -mcpu=corei7 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -verify-machineinstrs -mtriple=i386-apple-darwin -mcpu=corei7 | FileCheck %s
 ; rdar://5571034
 
 ; This requires physreg joining, %13 is live everywhere:

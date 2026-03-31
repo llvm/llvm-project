@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-unknown-unknown -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=i686-unknown-unknown -mattr=+sse2 < %s | FileCheck %s
-; RUN: llc -mtriple=i686-unknown-unknown -mattr=+sse2 -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-unknown -mattr=+sse2 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-unknown-unknown -mattr=+sse2 -O0 < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; In functions with 'no_caller_saved_registers' attribute, all registers should

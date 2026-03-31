@@ -1,6 +1,6 @@
 ; XFAIL: *
 ; ...should pass. See PR12324: misched bringup
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu > %t
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu > %t
 ; RUN: not grep xor %t
 ; RUN: not grep movap %t
 ; RUN: grep "\.quad.*0" %t

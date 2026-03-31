@@ -1,4 +1,4 @@
-; RUN: llc -mtriple x86_64-apple-macosx10.8.0 < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-macosx10.8.0 < %s 2>&1 >/dev/null | FileCheck %s
 ; Check the internal option that warns when the stack frame size exceeds the
 ; given amount.
 ; <rdar://13987214>

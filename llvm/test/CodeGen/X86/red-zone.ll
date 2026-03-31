@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-linux | FileCheck %s
 
 @flags_gv = global i64 0
 

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-pc-mingw32      | FileCheck %s -check-prefix=COFF
-; RUN: llc < %s -mtriple=i386-pc-mingw32-elf  | FileCheck %s -check-prefix=ELF
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-mingw32      | FileCheck %s -check-prefix=COFF
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-mingw32-elf  | FileCheck %s -check-prefix=ELF
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
 

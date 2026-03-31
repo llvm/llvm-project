@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-unknown -mattr=+avx
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown -mattr=+avx
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown -mattr=+avx
 
 ;
 ; llvm-stress generated crash case due to build_vector implicit

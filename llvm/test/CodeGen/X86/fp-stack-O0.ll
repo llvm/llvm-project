@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O0 | FileCheck %s
 target triple = "x86_64-apple-macosx"
 
 declare x86_fp80 @x1(i32) nounwind

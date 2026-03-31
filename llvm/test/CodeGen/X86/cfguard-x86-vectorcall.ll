@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
-; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X86
 ; Control Flow Guard is currently only available on Windows
 
 %struct.HVA = type { double, double, double, double }

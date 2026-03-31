@@ -10,9 +10,9 @@
 ; RUN: echo 'f _Z3bazb' >> %t2
 ; RUN: echo 'c 0' >> %t2
 ;;
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t2 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names -bbsections-cold-text-prefix=".text.unlikely." | FileCheck %s -check-prefix=LINUX-SPLIT
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t2 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names -bbsections-cold-text-prefix=".text.unlikely." | FileCheck %s -check-prefix=LINUX-SPLIT
 
 define void @_Z3bazb(i1 zeroext %0) nounwind {
   br i1 %0, label %2, label %4

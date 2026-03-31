@@ -8,8 +8,8 @@ declare void @effect(i32 zeroext)
 ; RUN: echo 'p 1 3 4 5' >> %t
 ; RUN: echo 'c 0 3.1 5.1' >> %t
 ; RUN: echo 'c 1 3.2 4.1 5.2 2 3 4 5' >> %t
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t -stop-after=bb-path-cloning | FileCheck %s --check-prefix=MIR
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -O0 -function-sections -basic-block-sections=%t -stop-after=bb-path-cloning | FileCheck %s --check-prefix=MIR
 
 define void @foo(i1 %a, i1 %b, i1 %c, i1 %d) {
 b0:

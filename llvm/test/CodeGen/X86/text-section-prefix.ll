@@ -1,7 +1,7 @@
-; RUN: llc -mtriple x86_64-linux-gnu -function-sections %s -o - | FileCheck %s --check-prefix=ELF
-; RUN: llc -mtriple x86_64-linux-gnu -unique-section-names=0 -function-sections %s -o - | FileCheck %s --check-prefix=ELF-NOUNIQ
-; RUN: llc -mtriple x86_64-windows-msvc -function-sections %s -o - | FileCheck %s --check-prefix=COFF-MSVC
-; RUN: llc -mtriple x86_64-windows-gnu -function-sections %s -o - | FileCheck %s --check-prefix=COFF-GNU
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-linux-gnu -function-sections %s -o - | FileCheck %s --check-prefix=ELF
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-linux-gnu -unique-section-names=0 -function-sections %s -o - | FileCheck %s --check-prefix=ELF-NOUNIQ
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-windows-msvc -function-sections %s -o - | FileCheck %s --check-prefix=COFF-MSVC
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-windows-gnu -function-sections %s -o - | FileCheck %s --check-prefix=COFF-GNU
 
 define void @foo1(i1 zeroext %0) nounwind !section_prefix !0 {
 ;; Check hot section name

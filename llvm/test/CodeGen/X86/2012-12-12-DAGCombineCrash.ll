@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-apple-ios -mcpu=yonah < %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-apple-ios -mcpu=yonah < %s
 ; rdar://12868039
 
 define void @t() nounwind ssp {

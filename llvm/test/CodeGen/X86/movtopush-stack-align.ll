@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-windows -stackrealign | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-windows -stackrealign | FileCheck %s
 
 declare void @good(i32 %a, i32 %b, i32 %c, i32 %d)
 declare void @oneparam(i32 %a)

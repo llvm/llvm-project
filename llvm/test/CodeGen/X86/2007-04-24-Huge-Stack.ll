@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- | FileCheck %s
 ; PR1348
 
 ; CHECK-NOT: 4294967112

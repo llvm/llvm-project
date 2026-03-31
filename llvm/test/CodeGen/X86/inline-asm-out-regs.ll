@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-unknown-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux-gnu
 ; PR3391
 
 @pci_indirect = external dso_local global { }             ; <ptr> [#uses=1]

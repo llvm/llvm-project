@@ -1,5 +1,5 @@
-; RUN: llc %s -filetype=obj -o - | llvm-readobj -r - | FileCheck %s --check-prefix=RELOC
-; RUN: llc %s -o - | FileCheck %s --check-prefix=ASM
+; RUN: llc -combiner-topological-sorting %s -filetype=obj -o - | llvm-readobj -r - | FileCheck %s --check-prefix=RELOC
+; RUN: llc -combiner-topological-sorting %s -o - | FileCheck %s --check-prefix=ASM
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx"

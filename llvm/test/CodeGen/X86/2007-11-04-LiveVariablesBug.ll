@@ -1,4 +1,4 @@
-; RUN: llc -no-integrated-as < %s -mtriple=x86_64-unknown-linux-gnu
+; RUN: llc -combiner-topological-sorting -no-integrated-as < %s -mtriple=x86_64-unknown-linux-gnu
 ; PR1767
 
 define void @xor_sse_2(i64 %bytes, ptr %p1, ptr %p2) {

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-linux < %s | FileCheck %s
 ; Verify that llvm.commandline metadata is emitted to a section named
 ; .GCC.command.line with each line separated with null bytes.
 

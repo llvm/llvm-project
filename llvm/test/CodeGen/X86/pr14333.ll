@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown < %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-unknown < %s
 %foo = type { i64, i64 }
 define void @bar(ptr %zed) {
   store i64 0, ptr %zed, align 8

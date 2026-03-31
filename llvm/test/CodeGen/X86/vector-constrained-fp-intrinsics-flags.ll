@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mtriple=x86_64-pc-linux -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O3 -mtriple=x86_64-pc-linux -stop-after=finalize-isel < %s | FileCheck %s
 
 define <1 x float> @constrained_vector_fadd_v1f32() #0 {
 ; CHECK-LABEL: name: constrained_vector_fadd_v1f32

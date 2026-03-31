@@ -1,4 +1,4 @@
-; RUN: llc < %s > /dev/null
+; RUN: llc -combiner-topological-sorting < %s > /dev/null
 
 ; ScalarEvolution misses an opportunity to fold ((trunc x) + (trunc -x) + y),
 ; but LSR should tolerate this.

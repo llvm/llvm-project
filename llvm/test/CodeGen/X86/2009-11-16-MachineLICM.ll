@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 ; rdar://7395200
 
 @g = common global [4 x float] zeroinitializer, align 16 ; <ptr> [#uses=4]

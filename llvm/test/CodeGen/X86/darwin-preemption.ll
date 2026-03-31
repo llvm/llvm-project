@@ -1,17 +1,17 @@
-; RUN: llc -mtriple x86_64-apple-darwin \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-darwin \
 ; RUN:     -relocation-model=static          < %s | FileCheck %s
-; RUN: llc -mtriple x86_64-apple-darwin \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-darwin \
 ; RUN:     -relocation-model=pic             < %s | FileCheck %s
-; RUN: llc -mtriple x86_64-apple-darwin \
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-apple-darwin \
 ; RUN:     -relocation-model=dynamic-no-pic  < %s | FileCheck %s
 
 ; 32 bits
 
-; RUN: llc -mtriple i386-apple-darwin \
+; RUN: llc -combiner-topological-sorting -mtriple i386-apple-darwin \
 ; RUN:    -relocation-model=static < %s | FileCheck --check-prefix=DARWIN32_S %s
-; RUN: llc -mtriple i386-apple-darwin \
+; RUN: llc -combiner-topological-sorting -mtriple i386-apple-darwin \
 ; RUN:     -relocation-model=pic     < %s | FileCheck --check-prefix=DARWIN32 %s
-; RUN: llc -mtriple i386-apple-darwin \
+; RUN: llc -combiner-topological-sorting -mtriple i386-apple-darwin \
 ; RUN:   -relocation-model=dynamic-no-pic < %s | \
 ; RUN:   FileCheck --check-prefix=DARWIN32_DNP %s
 

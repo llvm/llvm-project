@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 | FileCheck %s -check-prefix=X64
-; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck %s -check-prefix=WIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10 | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-win32 | FileCheck %s -check-prefix=WIN64
 
 @.str = private unnamed_addr constant [5 x i8] c"%ld\0A\00"
 @sel = external global ptr

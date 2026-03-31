@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 ; Ensure that red zone usage occurs.
 define signext i8 @testStackProbesOff() {

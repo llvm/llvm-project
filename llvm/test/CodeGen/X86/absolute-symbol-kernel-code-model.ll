@@ -1,4 +1,4 @@
-; RUN: llc --code-model=kernel < %s -asm-verbose=0 | FileCheck %s
+; RUN: llc -combiner-topological-sorting --code-model=kernel < %s -asm-verbose=0 | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple i686-windows-msvc -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ULP
-; RUN: llc -mtriple x86_64-windows-msvc -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-NOULP
+; RUN: llc -combiner-topological-sorting -mtriple i686-windows-msvc -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ULP
+; RUN: llc -combiner-topological-sorting -mtriple x86_64-windows-msvc -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-NOULP
 
 @i = global i32 0
 @j = weak global i32 0

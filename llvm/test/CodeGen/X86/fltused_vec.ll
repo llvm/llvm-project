@@ -1,8 +1,8 @@
 ; The purpose of this test to verify that the fltused symbol is
 ; not emitted when purely vector floating point operations are used on Windows.
 
-; RUN: llc < %s -mtriple i686-pc-win32 | FileCheck %s
-; RUN: llc < %s -mtriple x86_64-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple i686-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-pc-win32 | FileCheck %s
 
 @foo = external dso_local global [4 x float], align 16
 

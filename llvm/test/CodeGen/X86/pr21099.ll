@@ -1,4 +1,4 @@
-; RUN: llc < %s -O2 -mtriple=x86_64-- -verify-machineinstrs | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -O2 -mtriple=x86_64-- -verify-machineinstrs | FileCheck %s
 
 define void @pr21099(ptr %p) {
 ; CHECK-LABEL: pr21099

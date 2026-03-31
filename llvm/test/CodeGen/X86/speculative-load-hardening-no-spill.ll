@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening | FileCheck %s
 
 define i32 @foo(ptr %0) {
 ; CHECK-LABEL: foo:

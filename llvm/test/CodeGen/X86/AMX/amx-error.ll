@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-tile -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-tile -o /dev/null 2>&1 | FileCheck %s
 
 @row = dso_local global i16 8, align 2
 @col = dso_local global i16 8, align 2

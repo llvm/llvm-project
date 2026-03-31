@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -combiner-topological-sorting < %s
 
 ; CodePlacementOpt shouldn't try to modify this loop because
 ; it involves EH edges.

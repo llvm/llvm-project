@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin -stop-after finalize-isel <%s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin -stop-after finalize-isel <%s | FileCheck %s
 
 ; Check that the callee excludes the return register (%rax) from the list of
 ; callee-saved-registers.

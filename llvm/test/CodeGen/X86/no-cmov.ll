@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-- -mcpu=i486 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i686-- -mcpu=i486 < %s | FileCheck %s
 
 define i32 @test1(i32 %g, ptr %j) {
   %tobool = icmp eq i32 %g, 0

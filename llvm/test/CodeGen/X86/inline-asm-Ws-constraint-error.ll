@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=x86_64 < %s 2>&1 | FileCheck %s
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64 < %s 2>&1 | FileCheck %s
 
 @a = external global [4 x i32], align 16
 

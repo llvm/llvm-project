@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i386-apple-macosx < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-apple-macosx < %s | FileCheck %s
 ; rdar://12396696
 
 @JT = global [4 x i32] [i32 sub (i32 ptrtoint (ptr blockaddress(@h, %bb16) to i32), i32 ptrtoint (ptr blockaddress(@h, %bb9) to i32)), i32 sub (i32 ptrtoint (ptr blockaddress(@h, %bb15) to i32), i32 ptrtoint (ptr blockaddress(@h, %bb9) to i32)), i32 sub (i32 ptrtoint (ptr blockaddress(@h, %bb20) to i32), i32 ptrtoint (ptr blockaddress(@h, %bb16) to i32)), i32 sub (i32 ptrtoint (ptr blockaddress(@h, %bb20) to i32), i32 ptrtoint (ptr blockaddress(@h, %bb15) to i32))]

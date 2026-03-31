@@ -1,5 +1,5 @@
-; RUN: llc -mattr=harden-sls-ret -mtriple=x86_64-unknown-unknown < %s | FileCheck %s -check-prefixes=CHECK,RET
-; RUN: llc -mattr=harden-sls-ijmp -mtriple=x86_64-unknown-unknown < %s | FileCheck %s -check-prefixes=CHECK,IJMP
+; RUN: llc -combiner-topological-sorting -mattr=harden-sls-ret -mtriple=x86_64-unknown-unknown < %s | FileCheck %s -check-prefixes=CHECK,RET
+; RUN: llc -combiner-topological-sorting -mattr=harden-sls-ijmp -mtriple=x86_64-unknown-unknown < %s | FileCheck %s -check-prefixes=CHECK,IJMP
 
 define dso_local i32 @double_return(i32 %a, i32 %b) local_unnamed_addr {
 ; CHECK-LABEL: double_return:

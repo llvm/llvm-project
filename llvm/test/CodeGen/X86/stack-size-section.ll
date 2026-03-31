@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-linux -stack-size-section | FileCheck %s --check-prefix=CHECK --check-prefix=GROUPS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux -stack-size-section | FileCheck %s --check-prefix=CHECK --check-prefix=GROUPS
 
 ; PS4 'as' does not recognize the section attribute "o".  So we have a simple .stack_sizes section on PS4.
-; RUN: llc < %s -mtriple=x86_64-scei-ps4 -stack-size-section | FileCheck %s --check-prefix=CHECK --check-prefix=NOGROUPS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-scei-ps4 -stack-size-section | FileCheck %s --check-prefix=CHECK --check-prefix=NOGROUPS
 
 ; CHECK-LABEL: func1:
 ; CHECK-NEXT: .Lfunc_begin0:

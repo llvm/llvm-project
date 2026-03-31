@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -disable-lsr -post-RA-scheduler=1 -break-anti-dependencies=critical  | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx -disable-lsr -post-RA-scheduler=1 -break-anti-dependencies=critical  | FileCheck %s
 
 ; In PR20020, the critical anti-dependency breaker algorithm mistakenly
 ; changes the register operands of an 'xorl %eax, %eax' to 'xorl %ecx, %ecx'

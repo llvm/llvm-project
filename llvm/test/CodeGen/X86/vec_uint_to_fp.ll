@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx | FileCheck --check-prefix=CHECK --check-prefix=SSE --check-prefix=CST %s
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -mattr=+sse4.1 | FileCheck --check-prefix=CHECK --check-prefix=SSE41 --check-prefix=CST  %s
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -mattr=+avx | FileCheck --check-prefix=CHECK --check-prefix=AVX --check-prefix=CST %s
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -mattr=+avx2 | FileCheck --check-prefix=CHECK --check-prefix=AVX2 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx | FileCheck --check-prefix=CHECK --check-prefix=SSE --check-prefix=CST %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx -mattr=+sse4.1 | FileCheck --check-prefix=CHECK --check-prefix=SSE41 --check-prefix=CST  %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx -mattr=+avx | FileCheck --check-prefix=CHECK --check-prefix=AVX --check-prefix=CST %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx -mattr=+avx2 | FileCheck --check-prefix=CHECK --check-prefix=AVX2 %s
 
 ; Check that the constant used in the vectors are the right ones.
 ; SSE: [[MASKCSTADDR:LCPI0_[0-9]+]]:

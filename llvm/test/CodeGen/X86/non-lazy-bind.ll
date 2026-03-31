@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-apple-darwin < %s | FileCheck %s
 
 declare void @lazy() nonlazybind
 declare void @not()

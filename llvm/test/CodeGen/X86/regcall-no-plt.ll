@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-freebsd -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-freebsd -relocation-model=pic < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; According to x86-64 psABI, xmm0-xmm7 can be used to pass function parameters.  

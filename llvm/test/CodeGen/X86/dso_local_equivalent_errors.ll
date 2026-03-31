@@ -1,6 +1,6 @@
 ; RUN: split-file %s %t
-; RUN: not llc -mtriple=x86_64-linux-gnu -o - %t/undefined_func.ll 2>&1 | FileCheck %s -check-prefix=UNDEFINED
-; RUN: not llc -mtriple=x86_64-linux-gnu -o - %t/invalid_arg.ll 2>&1 | FileCheck %s -check-prefix=INVALID
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu -o - %t/undefined_func.ll 2>&1 | FileCheck %s -check-prefix=UNDEFINED
+; RUN: not llc -combiner-topological-sorting -mtriple=x86_64-linux-gnu -o - %t/invalid_arg.ll 2>&1 | FileCheck %s -check-prefix=INVALID
 
 ;--- undefined_func.ll
 ; UNDEFINED: error: unknown function 'undefined_func' referenced by dso_local_equivalent

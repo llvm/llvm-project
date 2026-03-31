@@ -1,10 +1,10 @@
 ; Check that we can enable/disable UnsafeFPMath via function attributes.  An
 ; attribute on one function should not magically apply to the next one.
 
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown \
 ; RUN:   | FileCheck %s --check-prefix=CHECK --check-prefix=SAFE
 
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown \
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown \
 ; RUN:   | FileCheck %s --check-prefix=CHECK --check-prefix=UNSAFE
 
 ; The div in these functions should be converted to a mul when unsafe-fp-math

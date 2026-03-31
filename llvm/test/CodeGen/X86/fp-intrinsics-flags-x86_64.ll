@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mtriple=x86_64-pc-linux < %s -stop-after=finalize-isel | FileCheck %s
+; RUN: llc -combiner-topological-sorting -O3 -mtriple=x86_64-pc-linux < %s -stop-after=finalize-isel | FileCheck %s
 
 define i32 @f20u(double %x) #0 {
 ; CHECK-LABEL: name: f20u

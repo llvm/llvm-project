@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin | FileCheck %s
 ; rdar://6479858
 
 ; CHECK-NOT: comm

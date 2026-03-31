@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -use-unknown-locations=Enable -mtriple=x86_64-unknown-linux %s -o %t
+; RUN: llc -combiner-topological-sorting -filetype=obj -use-unknown-locations=Enable -mtriple=x86_64-unknown-linux %s -o %t
 ; RUN: llvm-dwarfdump -debug-line %t | FileCheck %s
 
 define void @_Z3bazv() !dbg !6 {

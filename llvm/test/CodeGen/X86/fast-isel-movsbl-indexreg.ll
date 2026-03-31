@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -verify-machineinstrs -fast-isel=true | FileCheck %s
+; RUN: llc -combiner-topological-sorting %s -o - -verify-machineinstrs -fast-isel=true | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

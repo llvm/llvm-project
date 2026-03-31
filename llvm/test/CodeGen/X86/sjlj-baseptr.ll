@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-pc-linux -mcpu=corei7 -relocation-model=static | FileCheck --check-prefix=X86 %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=corei7 -relocation-model=static | FileCheck --check-prefix=X64 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux -mcpu=corei7 -relocation-model=static | FileCheck --check-prefix=X86 %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -mcpu=corei7 -relocation-model=static | FileCheck --check-prefix=X64 %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

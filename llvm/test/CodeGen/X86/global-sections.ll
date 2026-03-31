@@ -1,12 +1,12 @@
-; RUN: llc < %s -mtriple=i386-unknown-linux-gnu | FileCheck %s -check-prefix=LINUX
-; RUN: llc < %s -mtriple=i386-apple-darwin9.7 | FileCheck %s -check-prefix=DARWIN
-; RUN: llc < %s -mtriple=i386-apple-darwin10 -relocation-model=static | FileCheck %s -check-prefix=DARWIN-STATIC
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 | FileCheck %s -check-prefix=DARWIN64
-; RUN: llc < %s -mtriple=i386-unknown-linux-gnu -data-sections -function-sections | FileCheck %s -check-prefix=LINUX-SECTIONS
-; RUN: llc < %s -mtriple=i386-unknown-linux-gnu -function-sections | FileCheck %s -check-prefix=LINUX-FUNC-SECTIONS
-; RUN: llc < %s -mtriple=x86_64-pc-linux -data-sections -function-sections -relocation-model=pic | FileCheck %s -check-prefix=LINUX-SECTIONS-PIC
-; RUN: llc < %s -mtriple=i686-pc-win32 -data-sections -function-sections | FileCheck %s -check-prefix=WIN32-SECTIONS
-; RUN: llc < %s -mtriple=i686-pc-win32 -function-sections | FileCheck %s -check-prefix=WIN32-FUNC-SECTIONS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux-gnu | FileCheck %s -check-prefix=LINUX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9.7 | FileCheck %s -check-prefix=DARWIN
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin10 -relocation-model=static | FileCheck %s -check-prefix=DARWIN-STATIC
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10 | FileCheck %s -check-prefix=DARWIN64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux-gnu -data-sections -function-sections | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-unknown-linux-gnu -function-sections | FileCheck %s -check-prefix=LINUX-FUNC-SECTIONS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-pc-linux -data-sections -function-sections -relocation-model=pic | FileCheck %s -check-prefix=LINUX-SECTIONS-PIC
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 -data-sections -function-sections | FileCheck %s -check-prefix=WIN32-SECTIONS
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 -function-sections | FileCheck %s -check-prefix=WIN32-FUNC-SECTIONS
 
 define void @F1() {
   ret void

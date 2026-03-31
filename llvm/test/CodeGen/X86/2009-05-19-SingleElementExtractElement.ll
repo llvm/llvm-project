@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64--
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64--
 ; PR3886
 
 define i32 @main(i32 %argc, ptr nocapture %argv) nounwind {

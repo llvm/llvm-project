@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm < %s
+; RUN: llc -combiner-topological-sorting -filetype=asm < %s
 ;
 ; We check that we don't crash when printing assembly comments that include
 ; a DW_OP_bit_piece

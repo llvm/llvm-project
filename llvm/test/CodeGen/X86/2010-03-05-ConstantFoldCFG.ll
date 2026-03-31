@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs
+; RUN: llc -combiner-topological-sorting < %s -verify-machineinstrs
 ;
 ; When BRCOND is constant-folded to BR, make sure that PHI nodes don't get
 ; spurious operands when the CFG is trimmed.

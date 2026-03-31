@@ -1,30 +1,30 @@
 ; Check that 64-bit division is bypassed correctly.
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-idivq-to-divl | FileCheck %s --check-prefixes=CHECK,FAST-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+idivq-to-divl | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v2       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mattr=-idivq-to-divl | FileCheck %s --check-prefixes=CHECK,FAST-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mattr=+idivq-to-divl | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=x86-64          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=x86-64-v2       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=x86-64-v3       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=x86-64-v4       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; Intel
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=nehalem         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=sandybridge     | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=haswell         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=skylake         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=alderlake       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=nehalem         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=sandybridge     | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=haswell         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=skylake         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=alderlake       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; AMD
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=barcelona       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=btver1          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=btver2          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver1          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver2          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver3          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver4          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver6          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=barcelona       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=btver1          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=btver2          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=bdver1          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=bdver2          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=bdver3          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=bdver4          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=znver1          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=znver2          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=znver3          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=znver4          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=znver5          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=znver6          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 
 ; Additional tests for 64-bit divide bypass
 

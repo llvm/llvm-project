@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin5
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin5
 
 ; rdar://7761790
 

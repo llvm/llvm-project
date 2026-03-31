@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s
 
 define void @test(ptr %a, ptr %b, i64 %c, i64 %d) nounwind {
 entry:

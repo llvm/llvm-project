@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 
 ; When the extractelement is converted to a load the store can be re-used.
 ; This will, however, introduce a cycle into the selection DAG (the load

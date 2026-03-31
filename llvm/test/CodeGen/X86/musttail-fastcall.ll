@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=i686-pc-win32 -mattr=+sse2 | FileCheck %s --check-prefix=CHECK --check-prefix=SSE2
-; RUN: llc < %s -mtriple=i686-pc-win32 -mattr=+sse2,+avx | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
-; RUN: llc < %s -mtriple=i686-pc-win32 -mattr=+sse2,+avx,+avx512f | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512F
-; RUN: llc < %s -mtriple=i686-pc-win32 -mattr=+sse2,+avx,+avx512vl | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512VL
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 -mattr=+sse2 | FileCheck %s --check-prefix=CHECK --check-prefix=SSE2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 -mattr=+sse2,+avx | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 -mattr=+sse2,+avx,+avx512f | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512F
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-pc-win32 -mattr=+sse2,+avx,+avx512vl | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512VL
 
 ; While we don't support varargs with fastcall, we do support forwarding.
 

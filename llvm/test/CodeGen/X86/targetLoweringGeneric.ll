@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i386-apple-darwin9 -mcpu=corei7 -fast-isel=false -O0 < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=i386-apple-darwin9 -mcpu=corei7 -fast-isel=false -O0 < %s | FileCheck %s
 
 ; Gather non-machine specific tests for the transformations in
 ; CodeGen/SelectionDAG/TargetLowering.  Currently, these

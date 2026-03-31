@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-pc-linux-gnu
 ; PR2138
 
 	%struct.__locale_struct = type { [13 x ptr], ptr, ptr, ptr, [13 x ptr] }

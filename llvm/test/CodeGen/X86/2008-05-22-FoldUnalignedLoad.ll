@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mcpu=penryn | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mcpu=penryn | FileCheck %s
 
 define void @a(ptr %x) nounwind  {
 entry:

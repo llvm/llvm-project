@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+sse2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-apple-darwin -mattr=+sse2 | FileCheck %s
 ; CHECK: movsd
 ; CHECK-NOT: mov
 

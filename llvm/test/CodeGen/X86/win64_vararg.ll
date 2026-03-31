@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-win32 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -mtriple=x86_64-pc-win32 | FileCheck %s
 
 ; Verify that the var arg parameters which are passed in registers are stored
 ; in home stack slots allocated by the caller and that AP is correctly

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=core2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin -mcpu=core2 | FileCheck %s
 ; Reduced from JavaScriptCore
 
 %"class.JSC::CodeLocationCall" = type { [8 x i8] }

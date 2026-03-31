@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 target triple = "x86_64-apple-darwin"
 
 ; CHECK: .zerofill __DATA,__bss,_vals,8000000,2 ## @vals

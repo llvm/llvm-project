@@ -1,8 +1,8 @@
 ; Test the basic functionality of integer element promotions of different types.
 ; This tests checks passing of arguments, loading and storing to memory and
 ; basic arithmetic.
-; RUN: llc -mtriple=i686-- < %s > /dev/null
-; RUN: llc -mtriple=x86_64-- < %s > /dev/null
+; RUN: llc -combiner-topological-sorting -mtriple=i686-- < %s > /dev/null
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- < %s > /dev/null
 
 define <1 x i8> @test_1xi8(<1 x i8> %x, ptr %b) {
   %bb = load <1 x i8>, ptr %b

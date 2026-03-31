@@ -1,7 +1,7 @@
-; RUN: llc < %s -mcpu=generic -enable-misched=false -mtriple=x86_64-mingw32     | FileCheck %s -check-prefix=M64
-; RUN: llc < %s -mcpu=generic -enable-misched=false -mtriple=x86_64-win32       | FileCheck %s -check-prefix=W64
-; RUN: llc < %s -mcpu=generic -enable-misched=false -mtriple=x86_64-win32 -code-model=large | FileCheck %s -check-prefix=L64
-; RUN: llc < %s -mcpu=generic -enable-misched=false -mtriple=x86_64-win32-macho | FileCheck %s -check-prefix=EFI
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -enable-misched=false -mtriple=x86_64-mingw32     | FileCheck %s -check-prefix=M64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -enable-misched=false -mtriple=x86_64-win32       | FileCheck %s -check-prefix=W64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -enable-misched=false -mtriple=x86_64-win32 -code-model=large | FileCheck %s -check-prefix=L64
+; RUN: llc -combiner-topological-sorting < %s -mcpu=generic -enable-misched=false -mtriple=x86_64-win32-macho | FileCheck %s -check-prefix=EFI
 ; PR8777
 ; PR8778
 

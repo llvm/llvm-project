@@ -1,4 +1,4 @@
-; RUN: llc < %s  -mtriple=x86_64-apple-osx10.14 -mattr=+avx2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s  -mtriple=x86_64-apple-osx10.14 -mattr=+avx2 | FileCheck %s
 
 ; Check that we don't crash due creating invalid extract_subvector indices in store merging.
 ; CHECK-LABEL: testfn

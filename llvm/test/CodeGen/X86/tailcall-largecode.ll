@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -tailcallopt -code-model=large -enable-misched=false | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux-gnu -tailcallopt -code-model=large -enable-misched=false | FileCheck %s
 
 declare fastcc i32 @callee(i32 %arg)
 define fastcc i32 @directcall(i32 %arg) {

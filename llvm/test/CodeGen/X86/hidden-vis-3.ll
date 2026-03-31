@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin9   | FileCheck %s -check-prefix=X32
-; RUN: llc < %s -mtriple=x86_64-apple-darwin9 | FileCheck %s -check-prefix=X64
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin9   | FileCheck %s -check-prefix=X32
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin9 | FileCheck %s -check-prefix=X64
 
 @x = external hidden global i32		; <ptr> [#uses=1]
 @y = extern_weak hidden global i32	; <ptr> [#uses=1]

@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s | FileCheck %s
 
 target datalayout = "e-p:32:32"
 target triple = "i686-apple-darwin8.7.2"

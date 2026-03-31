@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -pre-RA-sched=source | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-macosx -pre-RA-sched=source | FileCheck %s
 
 ; Teach two-address pass to update the "source" map so it doesn't perform a
 ; non-profitable commute using outdated info. The test case would still fail

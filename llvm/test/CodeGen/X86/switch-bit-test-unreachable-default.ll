@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=x86_64-- -global-isel=0 -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -global-isel=0 -print-after=finalize-isel \
 ; RUN:   -stop-after=finalize-isel %s -o /dev/null 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-SDISEL
-; RUN: llc -mtriple=x86_64-- -global-isel=1 -print-after=finalize-isel \
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- -global-isel=1 -print-after=finalize-isel \
 ; RUN:   -stop-after=finalize-isel %s -o /dev/null 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-GISEL
 

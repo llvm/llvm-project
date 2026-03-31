@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple x86_64-apple-darwin < %s 2> %t
+; RUN: not --crash llc -combiner-topological-sorting -mtriple x86_64-apple-darwin < %s 2> %t
 ; RUN: FileCheck < %t %s
 
 $f = comdat any

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu  -O3 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu  -O3 | FileCheck %s
 
 ; Function Attrs: uwtable
 ; When tail-duplicating during placement, we work backward from blocks with

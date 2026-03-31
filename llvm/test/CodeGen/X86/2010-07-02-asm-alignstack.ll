@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -no-integrated-as | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10 -no-integrated-as | FileCheck %s
 
 define void @foo() nounwind ssp {
 entry:

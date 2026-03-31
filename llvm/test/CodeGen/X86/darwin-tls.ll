@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-apple-darwin | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple x86_64-apple-darwin | FileCheck %s
 
 @a = thread_local global i32 4, align 4
 

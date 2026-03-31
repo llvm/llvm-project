@@ -1,8 +1,8 @@
-; RUN: llc -mtriple i386-pc-win32 < %s \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-win32 < %s \
 ; RUN:    | FileCheck --check-prefixes=CHECK,CHECK-MSVC %s
-; RUN: llc -mtriple i386-pc-mingw32 < %s \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-mingw32 < %s \
 ; RUN:    | FileCheck --check-prefixes=CHECK,CHECK-MINGW %s
-; RUN: llc -mtriple i386-pc-mingw32 < %s \
+; RUN: llc -combiner-topological-sorting -mtriple i386-pc-mingw32 < %s \
 ; RUN:    | FileCheck --check-prefix=NOTEXPORTED %s
 
 ; CHECK: .text

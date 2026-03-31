@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=atom -mtriple=i686-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mcpu=atom -mtriple=i686-linux | FileCheck %s
 ; CHECK: addl ({{%[a-z]+}},[[reg:%[a-z]+]],4)
 ; CHECK-NEXT: movl
 ; CHECK-NEXT: addl 4({{%[a-z]+}},[[reg:%[a-z]+]],4)

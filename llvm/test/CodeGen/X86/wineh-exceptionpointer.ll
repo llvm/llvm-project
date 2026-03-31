@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-coreclr < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-pc-windows-coreclr < %s | FileCheck %s
 
 declare void @ProcessCLRException()
 declare ptr addrspace(1) @llvm.eh.exceptionpointer.p1(token)

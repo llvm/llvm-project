@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-linux | FileCheck %s
 %struct.S = type { i32}
 
 @.str = private constant [10 x i8] c"ptr = %p\0A\00", align 1 ; <ptr> [#uses=1]

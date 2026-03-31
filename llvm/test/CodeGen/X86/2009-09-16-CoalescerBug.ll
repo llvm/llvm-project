@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin10
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin10
 ; PR4910
 
 %0 = type { i32, i32, i32, i32 }

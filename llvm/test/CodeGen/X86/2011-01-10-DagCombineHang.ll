@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-apple-darwin10
 ; This formerly got DagCombine into a loop, PR 8916.
 
 define i32 @foo(i64 %x, i64 %y, i64 %z, i32 %a, i32 %b) {

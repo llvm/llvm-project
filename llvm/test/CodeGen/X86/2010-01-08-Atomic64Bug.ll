@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -mcpu=corei7 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386-apple-darwin -mcpu=corei7 | FileCheck %s
 ; rdar://r7512579
 
 ; PHI defs in the atomic loop should be used by the add / adc

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-- < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple=x86_64-- < %s | FileCheck %s
 
 ; Codegen should be able to use a 32-bit shift instead of a 64-bit shift.
 ; CHECK: shll $16

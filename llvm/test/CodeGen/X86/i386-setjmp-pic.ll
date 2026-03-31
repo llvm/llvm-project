@@ -1,4 +1,4 @@
-; RUN: llc  -verify-machineinstrs -relocation-model=pic %s -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting  -verify-machineinstrs -relocation-model=pic %s -o - | FileCheck %s
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 target triple = "i386-apple-macosx"
 

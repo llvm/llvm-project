@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=i386 -mcpu=pentium4 | FileCheck %s
-; RUN: llc < %s -mtriple=i386 -mcpu=pentium4m | FileCheck %s
-; RUN: llc < %s -mtriple=i386 -mcpu=pentium-m | FileCheck %s
-; RUN: llc < %s -mtriple=i386 -mcpu=prescott | FileCheck %s
-; RUN: llc < %s -mtriple=i386 -mcpu=nocona | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386 -mcpu=pentium4 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386 -mcpu=pentium4m | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386 -mcpu=pentium-m | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386 -mcpu=prescott | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i386 -mcpu=nocona | FileCheck %s
 ;
 ; Verify that scheduling puts some distance between a load feeding into
 ; the address of another load, and that second load.  This currently

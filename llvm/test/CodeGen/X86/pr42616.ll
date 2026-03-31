@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=sse2 | FileCheck %s
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-unknown-unknown -mattr=sse2 | FileCheck %s
 
 define <2 x double> @pr42616(<2 x double> %a0, <2 x double> %a1, ptr %p) {
   ;CHECK-LABEL: pr42616

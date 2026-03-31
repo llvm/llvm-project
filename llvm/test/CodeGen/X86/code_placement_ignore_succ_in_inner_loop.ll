@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
 
 define void @foo() {
 ; After moving the latch to the top of loop, there is no fall through from the

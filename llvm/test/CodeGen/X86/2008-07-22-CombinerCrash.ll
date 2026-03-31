@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mattr=+sse2
+; RUN: llc -combiner-topological-sorting < %s -mtriple=i686-- -mattr=+sse2
 ; PR2566
 
 @0 = external dso_local global i16		; <ptr>:0 [#uses=1]

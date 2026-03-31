@@ -1,4 +1,4 @@
-; RUN: llc -mtriple i686-gnu -filetype asm -o - %s 2>&1 | FileCheck %s
+; RUN: llc -combiner-topological-sorting -mtriple i686-gnu -filetype asm -o - %s 2>&1 | FileCheck %s
 
 define void @test_L_ff() {
 entry:

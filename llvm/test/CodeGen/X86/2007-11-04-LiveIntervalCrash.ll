@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu
+; RUN: llc -combiner-topological-sorting < %s -mtriple=x86_64-unknown-linux-gnu
 ; PR1766
 
         %struct.dentry = type { ptr }

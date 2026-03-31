@@ -1,4 +1,4 @@
-; RUN: llc %s -O0 -o /dev/null -mtriple=x86_64-apple-darwin
+; RUN: llc -combiner-topological-sorting %s -O0 -o /dev/null -mtriple=x86_64-apple-darwin
 ; PR 5197
 ; There is not any llvm instruction assocated with !5. The code generator
 ; should be able to handle this.

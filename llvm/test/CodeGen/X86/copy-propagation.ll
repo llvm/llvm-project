@@ -1,4 +1,4 @@
-; RUN: llc %s -mattr=+avx -o - | FileCheck %s
+; RUN: llc -combiner-topological-sorting %s -mattr=+avx -o - | FileCheck %s
 ; Originally from http://llvm.org/PR21743.
 
 target triple = "x86_64-pc-win32-elf"
