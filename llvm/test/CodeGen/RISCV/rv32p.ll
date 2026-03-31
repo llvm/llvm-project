@@ -1411,8 +1411,7 @@ define i32 @mm_usati_32_knownbits_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mm_usati_32_knownbits_i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    usati a0, a0, 16
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:
   %0 = call i32 @llvm.smax.i32(i32 %x, i32 0)

@@ -1006,8 +1006,7 @@ define signext i32 @mm_sati_32_numsignbits_i64(i64 %x, i32 %y) {
 ; CHECK-LABEL: mm_sati_32_numsignbits_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sati a0, a0, 32
-; CHECK-NEXT:    sext.w a1, a1
-; CHECK-NEXT:    rem a0, a0, a1
+; CHECK-NEXT:    remw a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:
   %0 = call i64 @llvm.smax.i64(i64 %x, i64 -2147483648)
@@ -1023,8 +1022,7 @@ define i64 @mm_usati_32_knownbits_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mm_usati_32_knownbits_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    usati a0, a0, 32
-; CHECK-NEXT:    slli a1, a1, 32
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    pack a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:
   %0 = call i64 @llvm.smax.i64(i64 %x, i64 0)
