@@ -9102,7 +9102,8 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
           Val->getType()));
   AtomicRMWInst *RMWI = new AtomicRMWInst(Operation, Ptr, Val,
                                           Alignment.value_or(DefaultAlignment),
-                                          Ordering, SSID, IsElementwise);
+                                          Ordering, SSID, nullptr,
+                                          IsElementwise);
   RMWI->setVolatile(IsVolatile);
   Inst = RMWI;
   return AteExtraComma ? InstExtraComma : InstNormal;

@@ -1458,8 +1458,8 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
 
 AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                              Align Alignment, AtomicOrdering Ordering,
-                             SyncScope::ID SSID, bool Elementwise,
-                             InsertPosition InsertBefore)
+                             SyncScope::ID SSID, InsertPosition InsertBefore,
+                             bool Elementwise)
     : Instruction(Val->getType(), AtomicRMW, AllocMarker, InsertBefore) {
   Init(Operation, Ptr, Val, Alignment, Ordering, SSID, Elementwise);
 }
@@ -4401,7 +4401,7 @@ AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
 AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
   AtomicRMWInst *Result = new AtomicRMWInst(
       getOperation(), getOperand(0), getOperand(1), getAlign(), getOrdering(),
-      getSyncScopeID(), isElementwise());
+      getSyncScopeID(), nullptr, isElementwise());
   Result->setVolatile(isVolatile());
   return Result;
 }
