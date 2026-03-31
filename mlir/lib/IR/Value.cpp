@@ -214,7 +214,7 @@ IRObjectWithUseList<BlockOperand> *BlockOperand::getUseList(Block *value) {
 }
 
 /// Return which operand this is in the operand list.
-unsigned BlockOperand::getOperandNumber() {
+unsigned BlockOperand::getOperandNumber() const {
   return this - &getOwner()->getBlockOperands()[0];
 }
 
@@ -223,6 +223,6 @@ unsigned BlockOperand::getOperandNumber() {
 //===----------------------------------------------------------------------===//
 
 /// Return which operand this is in the operand list.
-unsigned OpOperand::getOperandNumber() {
+unsigned OpOperand::getOperandNumber() const {
   return this - &getOwner()->getOpOperands()[0];
 }

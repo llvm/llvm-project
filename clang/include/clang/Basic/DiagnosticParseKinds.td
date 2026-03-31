@@ -1213,6 +1213,8 @@ def err_avail_query_expected_platform_name : Error<
 
 def err_avail_query_unrecognized_platform_name : Error<
   "unrecognized platform name %0">;
+def err_avail_query_anyappleos_min_version : Error<
+  "invalid anyAppleOS version '%0' in availability check">;
 def err_availability_query_wildcard_required: Error<
   "must handle potential future platforms with '*'">;
 def err_availability_query_repeated_platform: Error<
@@ -1558,18 +1560,21 @@ def note_omp_assumption_clause_continue_here
     : Note<"the ignored tokens spans until here">;
 def err_omp_declare_target_unexpected_clause: Error<
   "unexpected '%0' clause, only %select{'device_type'|'to' or 'link'|'to', 'link' or 'device_type'|'device_type', 'indirect'|'to', 'link', 'device_type' or 'indirect'}1 clauses expected">;
-def err_omp_declare_target_unexpected_clause_52: Error<
-  "unexpected '%0' clause, only %select{'device_type'|'enter' or 'link'|'enter', 'link' or 'device_type'|'device_type', 'indirect'|'enter', 'link', 'device_type' or 'indirect'}1 clauses expected">;
+def err_omp_declare_target_unexpected_clause_52
+    : Error<"unexpected '%0' clause, only %select{'device_type'|'enter' or "
+            "'link'|'enter', 'link' or 'device_type'|'device_type', "
+            "'indirect'|'enter', 'link', 'device_type' or 'indirect'|'enter', "
+            "'link', 'device_type', 'indirect' or 'local'}1 clauses expected">;
 def err_omp_begin_declare_target_unexpected_implicit_to_clause: Error<
   "unexpected '(', only 'to', 'link' or 'device_type' clauses expected for 'begin declare target' directive">;
 def err_omp_declare_target_wrong_clause_after_implicit_to: Error<
   "unexpected clause after an implicit 'to' clause">;
 def err_omp_declare_target_wrong_clause_after_implicit_enter: Error<
   "unexpected clause after an implicit 'enter' clause">;
-def err_omp_declare_target_missing_to_or_link_clause: Error<
-  "expected at least one %select{'to' or 'link'|'to', 'link' or 'indirect'}0 clause">;
-def err_omp_declare_target_missing_enter_or_link_clause: Error<
-  "expected at least one %select{'enter' or 'link'|'enter', 'link' or 'indirect'}0 clause">;
+def err_omp_declare_target_missing_required_clause
+    : Error<"expected at least one %select{'to' or 'link'|'to', 'link' or "
+            "'indirect'|'enter', 'link' or 'indirect'|'enter', 'link', "
+            "'indirect' or 'local'}0 clause">;
 def err_omp_declare_target_unexpected_to_clause: Error<
   "unexpected 'to' clause, use 'enter' instead">;
 def err_omp_declare_target_unexpected_enter_clause: Error<

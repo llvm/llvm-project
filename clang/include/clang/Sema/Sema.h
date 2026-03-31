@@ -737,6 +737,11 @@ enum class AssignConvertType {
   /// like address spaces.
   IncompatiblePointerDiscardsQualifiers,
 
+  /// IncompatiblePointerDiscardsOverflowBehavior - The assignment
+  /// discards overflow behavior annotations between otherwise compatible
+  /// pointer types.
+  IncompatiblePointerDiscardsOverflowBehavior,
+
   /// IncompatibleNestedPointerAddressSpaceMismatch - The assignment
   /// changes address spaces in nested pointer types which is not allowed.
   /// For instance, converting __private int ** to __generic int ** is
@@ -769,6 +774,13 @@ enum class AssignConvertType {
   /// IncompatibleObjCWeakRef - Assigning a weak-unavailable object to an
   /// object with __weak qualifier.
   IncompatibleObjCWeakRef,
+
+  /// IncompatibleOBTKinds - Assigning between incompatible OverflowBehaviorType
+  /// kinds, e.g., from __ob_trap to __ob_wrap or vice versa.
+  IncompatibleOBTKinds,
+
+  /// CompatibleOBTDiscards - Assignment discards overflow behavior
+  CompatibleOBTDiscards,
 
   /// Incompatible - We reject this conversion outright, it is invalid to
   /// represent it in the AST.
@@ -956,10 +968,18 @@ public:
   /// Load weak undeclared identifiers from the external source.
   void LoadExternalWeakUndeclaredIdentifiers();
 
+  /// Load #pragma redefine_extname'd undeclared identifiers from the external
+  /// source.
+  void LoadExternalExtnameUndeclaredIdentifiers();
+
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
   /// unit because its type has no linkage and it's not extern "C".
   bool isExternalWithNoLinkageType(const ValueDecl *VD) const;
+
+  /// Determines whether the given source location is in the main file
+  /// and we're in a context where we should warn about unused entities.
+  bool isMainFileLoc(SourceLocation Loc) const;
 
   /// Obtain a sorted list of functions that are undefined but ODR-used.
   void getUndefinedButUsed(
@@ -1348,6 +1368,10 @@ public:
   /// whether the next info diagnostic should be immediate.
   bool IsLastErrorImmediate = true;
 
+  /// Track if we're currently analyzing overflow behavior types in assignment
+  /// context.
+  bool InOverflowBehaviorAssignmentContext = false;
+
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {
@@ -1414,7 +1438,8 @@ public:
 
   /// Diagnostics that are emitted only if we discover that the given function
   /// must be codegen'ed.  Because handling these correctly adds overhead to
-  /// compilation, this is currently only enabled for CUDA compilations.
+  /// compilation, this is currently only used for offload languages like CUDA,
+  /// OpenMP, and SYCL.
   SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
 
   /// CurContext - This is the current declaration context of parsing.
@@ -2898,6 +2923,11 @@ public:
                                bool *ICContext = nullptr,
                                bool IsListInit = false);
 
+  /// Check for overflow behavior type related implicit conversion diagnostics.
+  /// Returns true if OBT-related diagnostic was issued, false otherwise.
+  bool CheckOverflowBehaviorTypeConversion(Expr *E, QualType T,
+                                           SourceLocation CC);
+
   bool
   BuiltinElementwiseTernaryMath(CallExpr *TheCall,
                                 EltwiseBuiltinArgTyRestriction ArgTyRestr =
@@ -3070,6 +3100,8 @@ private:
   void CheckMemaccessArguments(const CallExpr *Call, unsigned BId,
                                IdentifierInfo *FnName);
 
+  bool CheckSizeofMemaccessArgument(const Expr *SizeOfArg, const Expr *Dest,
+                                    IdentifierInfo *FnName);
   // Warn if the user has made the 'size' argument to strlcpy or strlcat
   // be the size of the source, instead of the destination.
   void CheckStrlcpycatArguments(const CallExpr *Call, IdentifierInfo *FnName);
@@ -4834,7 +4866,16 @@ public:
 
     /// The availability attribute for a specific platform was inferred from
     /// an availability attribute for another platform.
-    AP_InferredFromOtherPlatform = 2
+    AP_InferredFromOtherPlatform = 2,
+
+    /// The availability attribute was inferred from an 'anyAppleOS'
+    /// availability attribute.
+    AP_InferredFromAnyAppleOS = 3,
+
+    /// The availability attribute was inferred from an 'anyAppleOS'
+    /// availability attribute that was applied using '#pragma clang attribute'.
+    /// This has the lowest priority.
+    AP_PragmaClangAttribute_InferredFromAnyAppleOS = 4
   };
 
   /// Describes the reason a calling convention specification was ignored, used
@@ -4954,7 +4995,8 @@ public:
                         VersionTuple Obsoleted, bool IsUnavailable,
                         StringRef Message, bool IsStrict, StringRef Replacement,
                         AvailabilityMergeKind AMK, int Priority,
-                        const IdentifierInfo *IIEnvironment);
+                        const IdentifierInfo *IIEnvironment,
+                        VersionTuple OrigAnyAppleOSVersion = {});
 
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -4999,6 +5041,9 @@ public:
                                             const IdentifierInfo *ModularImplFn,
                                             StringRef ImplName,
                                             MutableArrayRef<StringRef> Aspects);
+
+  PersonalityAttr *mergePersonalityAttr(Decl *D, FunctionDecl *Routine,
+                                        const AttributeCommonInfo &CI);
 
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
@@ -5186,8 +5231,9 @@ public:
       return false;
     }
 
-    unsigned IdxSource = IdxInt->getLimitedValue(UINT_MAX);
-    if (IdxSource < 1 ||
+    constexpr unsigned Limit = 1 << ParamIdx::IdxBitWidth;
+    unsigned IdxSource = IdxInt->getLimitedValue(Limit);
+    if (IdxSource < 1 || IdxSource == Limit ||
         ((!IV || !CanIndexVariadicArguments) && IdxSource > NumParams)) {
       Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
           << &AI << AttrArgNum << IdxExpr->getSourceRange();
@@ -6981,6 +7027,9 @@ public:
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
   /// assignment.
+  ///
+  /// Uses canonical VarDecl as key so in-class decls and out-of-class defs of
+  /// static data members get tracked as a single entry.
   llvm::DenseMap<const VarDecl *, int> RefsMinusAssignments;
 
   /// Used to control the generation of ExprWithCleanups.
@@ -9886,9 +9935,10 @@ public:
 
   /// Is the module scope we are an implementation unit?
   bool currentModuleIsImplementation() const {
-    return ModuleScopes.empty()
-               ? false
-               : ModuleScopes.back().Module->isModuleImplementation();
+    if (ModuleScopes.empty())
+      return false;
+    const Module *M = ModuleScopes.back().Module;
+    return M->isModuleImplementation() || M->isModulePartitionImplementation();
   }
 
   // When loading a non-modular PCH files, this is used to restore module
@@ -10170,6 +10220,18 @@ public:
   /// where the conversion between the underlying real types is a
   /// floating-point or integral promotion.
   bool IsComplexPromotion(QualType FromType, QualType ToType);
+
+  /// IsOverflowBehaviorTypePromotion - Determines whether the conversion from
+  /// FromType to ToType involves an OverflowBehaviorType FromType being
+  /// promoted to an OverflowBehaviorType ToType which has a larger bitwidth.
+  /// If so, returns true and sets FromType to ToType.
+  bool IsOverflowBehaviorTypePromotion(QualType FromType, QualType ToType);
+
+  /// IsOverflowBehaviorTypeConversion - Determines whether the conversion from
+  /// FromType to ToType necessarily involves both an OverflowBehaviorType and
+  /// a non-OverflowBehaviorType. If so, returns true and sets FromType to
+  /// ToType.
+  bool IsOverflowBehaviorTypeConversion(QualType FromType, QualType ToType);
 
   /// IsPointerConversion - Determines whether the conversion of the
   /// expression From, which has the (possibly adjusted) type FromType,
@@ -13239,6 +13301,14 @@ public:
 
       /// We are performing partial ordering for template template parameters.
       PartialOrderingTTP,
+
+      /// We are performing name lookup for a function template or variable
+      /// template named 'sycl_kernel_launch'.
+      SYCLKernelLaunchLookup,
+
+      /// We are performing overload resolution for a call to a function
+      /// template or variable template named 'sycl_kernel_launch'.
+      SYCLKernelLaunchOverloadResolution,
     } Kind;
 
     /// Whether we're substituting into constraints.
@@ -13592,6 +13662,20 @@ public:
     SynthesizedFunctionScope(const SynthesizedFunctionScope &) = delete;
     SynthesizedFunctionScope &
     operator=(const SynthesizedFunctionScope &) = delete;
+  };
+
+  /// RAII object to ensure that a code synthesis context is popped on scope
+  /// exit.
+  class ScopedCodeSynthesisContext {
+    Sema &S;
+
+  public:
+    ScopedCodeSynthesisContext(Sema &S, const CodeSynthesisContext &Ctx)
+        : S(S) {
+      S.pushCodeSynthesisContext(Ctx);
+    }
+
+    ~ScopedCodeSynthesisContext() { S.popCodeSynthesisContext(); }
   };
 
   /// List of active code synthesis contexts.
@@ -15577,6 +15661,7 @@ public:
   ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
 
   void ActOnCleanupAttr(Decl *D, const Attr *A);
+  void ActOnInitPriorityAttr(Decl *D, const Attr *A);
 
 private:
   /// The implementation of RequireCompleteType

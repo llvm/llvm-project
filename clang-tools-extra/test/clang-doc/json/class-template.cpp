@@ -18,8 +18,8 @@ template<typename T> struct MyClass {
 // CHECK:         "Name": "method",
 // CHECK:         "Params": [
 // CHECK-NEXT:      {
-// CHECK-NEXT:        "End": true,
 // CHECK-NEXT:        "Name": "Param",
+// CHECK-NEXT:        "ParamEnd": true,
 // CHECK-NEXT:        "Type": {
 // CHECK-NEXT:          "Name": "T",
 // CHECK-NEXT:          "QualName": "T",
@@ -39,4 +39,6 @@ template<typename T> struct MyClass {
 // CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Param": "typename T"
 // CHECK-NEXT:        }
-// CHECK-NEXT:      ] 
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "VerticalDisplay": false
+// CHECK-NEXT:    } 

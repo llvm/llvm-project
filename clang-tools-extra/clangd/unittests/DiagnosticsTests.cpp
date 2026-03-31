@@ -2170,6 +2170,27 @@ TEST(DiagnosticsTest, UnusedInHeader) {
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
 }
 
+TEST(DiagnosticsTest, DontSuppressSubcategories) {
+  Annotations Source(R"cpp(
+  /*error-ok*/
+    void bar(int x) {
+      switch(x) {
+      default:
+        break;
+        break;
+      }
+    })cpp");
+  TestTU TU;
+  TU.ExtraArgs.push_back("-Wunreachable-code-aggressive");
+  TU.Code = Source.code().str();
+  Config Cfg;
+  // This shouldn't suppress subcategory unreachable-break.
+  Cfg.Diagnostics.Suppress = {"unreachable-code"};
+  WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(diagName("-Wunreachable-code-break")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

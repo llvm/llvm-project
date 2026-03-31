@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
@@ -455,8 +456,9 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   // xcrun can take surprisingly long to build up its database.
   auto timeout = std::chrono::seconds(60);
   bool run_in_shell = false;
-  lldb_private::Status error = Host::RunShellCommand(
-      args, FileSpec(), &status, &signo, &output_str, timeout, run_in_shell);
+  lldb_private::Status error =
+      Host::RunShellCommand(args, FileSpec(), &status, &signo, &output_str,
+                            nullptr, timeout, run_in_shell);
 
   // Check that xcrun returned something useful.
   if (error.Fail()) {
@@ -686,7 +688,7 @@ namespace {
 class SharedCacheInfo {
 public:
   SharedCacheImageInfo GetByFilename(UUID sc_uuid, ConstString filename) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    llvm::sys::ScopedReader guard(m_mutex);
     if (!sc_uuid)
       sc_uuid = m_host_uuid;
     if (!m_filename_map.contains(sc_uuid))
@@ -698,7 +700,7 @@ public:
   }
 
   SharedCacheImageInfo GetByUUID(UUID sc_uuid, UUID file_uuid) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    llvm::sys::ScopedReader guard(m_mutex);
     if (!sc_uuid)
       sc_uuid = m_host_uuid;
     if (!m_uuid_map.contains(sc_uuid))
@@ -729,7 +731,7 @@ private:
 
   UUID m_host_uuid;
 
-  std::recursive_mutex m_mutex;
+  llvm::sys::RWMutex m_mutex;
 
   // macOS 26.4 and newer
   void (*m_dyld_image_retain_4HWTrace)(void *image);
@@ -817,7 +819,8 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
             g_dyld_image_segment_data_4HWTrace(image_copy, segmentName);
         (void)dispatch_data_create_map(data_from_libdyld, &seg.data, &seg.size);
 
-        segments.push_back(seg);
+        if (seg.size > 0 && seg.data != 0)
+          segments.push_back(seg);
       });
 
   if (!segments.size())
@@ -828,13 +831,10 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
             "map_shared_cache_binary_segments() mapping segments of "
             "dyld_image_t %p into lldb address space",
             image);
-  bool log_verbosely = log && log->GetVerbose();
   for (const segment &seg : segments) {
-    if (log_verbosely)
-      LLDB_LOGF(
-          log,
-          "image %p %s vmaddr 0x%llx vmsize 0x%zx mapped to lldb vm addr %p",
-          image, seg.name.c_str(), seg.vmaddr, seg.vmsize, seg.data);
+    LLDB_LOGF_VERBOSE(
+        log, "image %p %s vmaddr 0x%llx vmsize 0x%zx mapped to lldb vm addr %p",
+        image, seg.name.c_str(), seg.vmaddr, seg.vmsize, seg.data);
   }
 
   // Calculate the virtual address range in lldb's
@@ -869,7 +869,7 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
 // create a new entry in m_caches.
 bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
                                                  std::string filepath) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  llvm::sys::ScopedWriter guard(m_mutex);
   if (!m_dyld_image_retain_4HWTrace || !m_dyld_image_release_4HWTrace ||
       !m_dyld_image_segment_data_4HWTrace)
     return false;
@@ -912,9 +912,8 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
       // ensure lifetime.
       ConstString installname(dyld_image_get_installname(image));
       Log *log = GetLog(LLDBLog::Modules);
-      if (log && log->GetVerbose())
-        LLDB_LOGF(log, "sc file %s image %p", installname.GetCString(),
-                  (void *)image);
+      LLDB_LOGF_VERBOSE(log, "sc file %s image %p", installname.GetCString(),
+                        (void *)image);
 
       m_dyld_image_retain_4HWTrace(image);
       m_file_infos[sc_uuid].push_back(SharedCacheImageInfo(
@@ -939,7 +938,6 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
 // Get the filename and uuid of lldb's own shared cache, scan
 // the files in it using the macOS 26.4 and newer libdyld SPI.
 bool SharedCacheInfo::CreateHostSharedCacheImageList() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   std::string host_shared_cache_file = dyld_shared_cache_file_path();
   __block UUID host_sc_uuid;
   dyld_shared_cache_for_file(host_shared_cache_file.c_str(),
@@ -959,7 +957,7 @@ bool SharedCacheInfo::CreateHostSharedCacheImageList() {
 // libdyld SPI present on macOS 12 and newer, when building against
 // the internal SDK, and add an entry to the m_caches map.
 bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  llvm::sys::ScopedWriter guard(m_mutex);
 #if defined(SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS)
   dyld_process_t dyld_process = dyld_process_create_for_current_task();
   if (!dyld_process)
@@ -1026,7 +1024,7 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
 // libdyld SPI available on macOS 10.13 or newer, add an entry to
 // m_caches.
 void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  llvm::sys::ScopedWriter guard(m_mutex);
   size_t shared_cache_size;
   uint8_t *shared_cache_start =
       _dyld_get_shared_cache_range(&shared_cache_size);

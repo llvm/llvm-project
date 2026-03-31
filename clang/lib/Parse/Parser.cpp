@@ -1853,7 +1853,7 @@ bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
 }
 
 bool Parser::TryAnnotateTypeOrScopeToken(
-    ImplicitTypenameContext AllowImplicitTypename) {
+    ImplicitTypenameContext AllowImplicitTypename, bool IsAddressOfOperand) {
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
@@ -1969,9 +1969,11 @@ bool Parser::TryAnnotateTypeOrScopeToken(
 
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
-    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHasErrors=*/false,
-                                       /*EnteringContext*/ false))
+    if (ParseOptionalCXXScopeSpecifier(
+            SS, /*ObjectType=*/nullptr,
+            /*ObjectHasErrors=*/false,
+            /*EnteringContext=*/false,
+            /*IsAddressOfOperand=*/IsAddressOfOperand))
       return true;
 
   return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation,

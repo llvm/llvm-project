@@ -310,6 +310,22 @@ if(LLVM_CCACHE_BUILD)
         set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
       endif()
       set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
+
+      if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # ccache with PCH can lead to false-positives when only a macro
+        # definition changes with non-Clang compilers, because macro definitions
+        # are not compared in preprocessed mode.
+        # See: https://github.com/ccache/ccache/issues/1668
+        if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+          message(NOTICE "Using ccache with precompiled headers with non-Clang "
+            "compilers is not supported. CMAKE_DISABLE_PRECOMPILE_HEADERS will be set to ON. "
+            "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override this.")
+          set(CMAKE_DISABLE_PRECOMPILE_HEADERS "ON")
+        elseif(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+          message(WARNING "Using ccache with precompiled headers with non-Clang "
+            "compilers is not supported.")
+        endif()
+      endif()
     else()
       # Until a way to reliably configure ccache on Windows is found,
       # disable precompiled headers for Windows + ccache builds
@@ -365,7 +381,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # Generate a CompilationDatabase (compile_commands.json file) for our build,
 # for use by clang_complete, YouCompleteMe, etc.
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(LLVM_INSTALL_BINUTILS_SYMLINKS
   "Install symlinks from the binutils tool names to the corresponding LLVM tools." OFF)
@@ -598,6 +614,11 @@ option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
 set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 
+# After Windows 10 1903, icu.lib is available.
+if(WIN32 AND CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL "10.0.18362")
+  cmake_dependent_option(LLVM_ENABLE_WINDOWS_ICU "Use Windows vendored ICU if possible" OFF LLVM_ENABLE_ICU OFF)
+endif()
+
 set(LLVM_ENABLE_ICONV "OFF" CACHE STRING "Use iconv for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
@@ -684,7 +705,7 @@ else()
   option(LLVM_ENABLE_ASSERTIONS "Enable assertions" ON)
 endif()
 
-option(LLVM_ENABLE_IO_SANDBOX "Enable IO sandboxing in supported tools" OFF)
+option(LLVM_ENABLE_IO_SANDBOX "Enable IO sandboxing in supported tools" ${LLVM_ENABLE_ASSERTIONS})
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING

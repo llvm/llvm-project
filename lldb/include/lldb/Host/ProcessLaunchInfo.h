@@ -64,6 +64,14 @@ public:
   // but stderr doesn't, then only stderr will be redirected to a pty.)
   llvm::Error SetUpPtyRedirection();
 
+#ifdef _WIN32
+  // Redirect stdin/stdout/stderr to anonymous pipes instead of a ConPTY.
+  // Used when terminal emulation is not needed (e.g. lldb-dap internalConsole).
+  llvm::Error SetUpPipeRedirection();
+#endif
+
+  bool HasPTY() const { return m_pty != nullptr; }
+
   size_t GetNumFileActions() const { return m_file_actions.size(); }
 
   const FileAction *GetFileActionAtIndex(size_t idx) const;
@@ -136,7 +144,9 @@ public:
   /// always true on non Windows.
   bool ShouldUsePTY() const {
 #ifdef _WIN32
-    return GetPTY().GetPseudoTerminalHandle() != ((HANDLE)(long long)-1) &&
+    if (!m_pty)
+      return false;
+    return GetPTY().GetMode() != PseudoConsole::Mode::None &&
            GetNumFileActions() == 0;
 #else
     return true;

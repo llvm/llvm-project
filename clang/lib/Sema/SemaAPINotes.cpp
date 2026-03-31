@@ -271,7 +271,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
               /*Strict=*/false,
               /*Replacement=*/StringRef(),
               /*Priority=*/Sema::AP_Explicit,
-              /*Environment=*/nullptr);
+              /*Environment=*/nullptr,
+              /*OrigAnyAppleOSVersion=*/VersionTuple());
         },
         [](const Decl *D) {
           return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {
@@ -408,6 +409,12 @@ void Sema::ApplyAPINotesType(Decl *D, StringRef TypeString) {
         if (!checkAPINotesReplacementType(*this, property->getLocation(),
                                           property->getType(), Type)) {
           property->setType(Type, TypeInfo);
+        }
+      } else if (auto field = dyn_cast<FieldDecl>(D)) {
+        if (!checkAPINotesReplacementType(*this, field->getLocation(),
+                                          field->getType(), Type)) {
+          field->setType(Type);
+          field->setTypeSourceInfo(TypeInfo);
         }
       } else {
         llvm_unreachable("API notes allowed a type on an unknown declaration");
@@ -905,8 +912,8 @@ static void ProcessVersionedAPINotes(
     auto Active = (i == Selected) ? IsActive_t::Active : IsActive_t::Inactive;
     auto Replacement = IsSubstitution_t::Original;
 
-    // When collection all APINotes as version-independent,
-    // capture all as inactive and defer to the client select the
+    // When collecting all APINotes as version-independent,
+    // capture all as inactive and defer to the client to select the
     // right one.
     if (S.captureSwiftVersionIndependentAPINotes()) {
       Active = IsActive_t::Inactive;

@@ -561,7 +561,7 @@ SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
 void AMDGPUAsmPrinter::emitCommonFunctionComments(
     const MCExpr *NumVGPR, const MCExpr *NumAGPR, const MCExpr *TotalNumVGPR,
     const MCExpr *NumSGPR, const MCExpr *ScratchSize, uint64_t CodeSize,
-    const AMDGPUMachineFunction *MFI) {
+    const AMDGPUMachineFunctionInfo *MFI) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
   OutStreamer->emitRawComment(" TotalNumSgprs: " + getMCExprStr(NumSGPR),
                               false);
@@ -654,14 +654,14 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2(Ctx);
   KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
 
-  int64_t PGRM_Rsrc3 = 1;
+  int64_t PGM_Rsrc3 = 1;
   bool EvaluatableRsrc3 =
-      CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGRM_Rsrc3);
-  (void)PGRM_Rsrc3;
+      CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGM_Rsrc3);
+  (void)PGM_Rsrc3;
   (void)EvaluatableRsrc3;
   assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
          STM.hasGFX90AInsts() || STM.hasGFX1250Insts() || !EvaluatableRsrc3 ||
-         static_cast<uint64_t>(PGRM_Rsrc3) == 0);
+         static_cast<uint64_t>(PGM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
   KernelDescriptor.kernarg_preload = MCConstantExpr::create(
@@ -681,12 +681,13 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<AMDGPUResourceUsageAnalysisWrapperPass>().getResourceInfo();
   CurrentProgramInfo.reset(MF);
 
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  const AMDGPUMachineFunctionInfo *MFI =
+      MF.getInfo<AMDGPUMachineFunctionInfo>();
   MCContext &Ctx = MF.getContext();
 
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
-  MF.setAlignment(MFI->isEntryFunction() ? Align(256) : Align(4));
+  MF.ensureAlignment(MFI->isEntryFunction() ? Align(256) : Align(4));
 
   SetupMachineFunction(MF);
 
@@ -1233,7 +1234,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
     ProgInfo.MemOrdered = 1;
-    ProgInfo.FwdProgress = 1;
+    ProgInfo.FwdProgress = !F.hasFnAttribute("amdgpu-no-fwd-progress");
   }
 
   // 0 = X, 1 = XY, 2 = XYZ
@@ -1448,7 +1449,7 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                                   const SIProgramInfo &CurrentProgramInfo,
                                   CallingConv::ID CC, const GCNSubtarget &ST,
                                   unsigned DynamicVGPRBlockSize) {
-  if (ST.hasIEEEMode())
+  if (ST.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
     MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
 
   MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);

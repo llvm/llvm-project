@@ -1,7 +1,6 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
 
-; FIXME(138268): Alignment decoration is emitted.
-; FIXME: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG:        OpDecorate %[[#WorkgroupId:]] BuiltIn WorkgroupId
 
@@ -16,7 +15,7 @@
 define i32 @foo() {
 entry:
 ; CHECK: %[[#ptr:]] = OpAccessChain %[[#ptr_Input_uint]] %[[#WorkgroupId]] %[[#uint_0]]
-; CHECK: %[[#res:]] = OpLoad %[[#uint]] %[[#ptr]] Aligned 16
+; CHECK: %[[#res:]] = OpLoad %[[#uint]] %[[#ptr]]
 ; CHECK:              OpReturnValue %[[#res]]
   %0 = load i32, ptr addrspace(7) @var, align 16
   ret i32 %0

@@ -307,7 +307,7 @@ let Defs = [CR0] in {
 }
 
 // Instructions to support atomic operations
-let mayLoad = 1, hasSideEffects = 0 in {
+let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
 def LDARX : XForm_1_memOp<31,  84, (outs g8rc:$RST), (ins (memrr $RA, $RB):$addr),
                           "ldarx $RST, $addr", IIC_LdStLDARX, []>;
 // TODO: Add scheduling info.
@@ -338,15 +338,17 @@ def LDAT_PSEUDO : PPCCustomInserterPseudo<
     (outs g8rc:$dst),
     (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
     "#LDAT_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, timm:$fc))]>;
+    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val,
+                                      u5imm_timm:$fc))]>;
 
 def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
     (outs g8rc:$dst),
     (ins ptr_rc_nor0:$ptr, u5imm:$fc),
     "#LDAT_COND_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr, timm:$fc))]>;
+    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
+                                            u5imm_timm:$fc))]>;
 
-let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
+let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stdcx. $RST, $addr", IIC_LdStSTDCX, []>, isRecordForm;
 // TODO: Add scheduling info.
@@ -412,9 +414,11 @@ def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                            g8rc:$new_hi))>;
 
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STDAT : XForm_base_r3xo_memOp<31, 742, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
+def STDAT : XForm_base_r3xo_memOp<31, 742, (outs),
+                                  (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                                   "stdat $RST, $RA, $RB", IIC_LdStStore,
-                                  [(PPCstat i64:$RST, ptr_rc_nor0:$RA, timm:$RB)]>, isPPC64,
+                                  [(PPCstat i64:$RST, ptr_rc_nor0:$RA,
+                                            u5imm_timm:$RB)]>, isPPC64,
             Requires<[IsISA3_0]>;
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
@@ -1615,6 +1619,7 @@ def ADDIdtprelL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm
                          [(set i64:$rD,
                            (PPCaddiDtprelL i64:$reg, tglobaltlsaddr:$disp))]>,
                   isPPC64;
+let Size = 8 in
 def PADDIdtprel : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
                           "#PADDIdtprel",
                           [(set i64:$rD,
@@ -1823,7 +1828,7 @@ def ADDEX8 : Z23Form_RTAB5_CY2<31, 170, (outs g8rc:$RT),
                               (ins g8rc:$RA, g8rc:$RB, u2imm:$CY),
                               "addex $RT, $RA, $RB, $CY", IIC_IntGeneral,
                               [(set i64:$RT, (int_ppc_addex i64:$RA, i64:$RB,
-                                                            timm:$CY))]>;
+                                                            u2imm_timm:$CY))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Patterns

@@ -91,7 +91,6 @@ static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
 static std::vector<std::string> ModuleDepTargets;
 static std::string TranslationUnitFile;
-static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool AsyncScanModules;
@@ -215,8 +214,6 @@ static void ParseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_tu_buffer_path_EQ))
     TranslationUnitFile = A->getValue();
-
-  DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_resource_dir_recipe_EQ)) {
     auto Kind =
@@ -1071,9 +1068,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                  LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
-          if (llvm::Error Err =
-                  WorkerTool.initializeCompilerInstanceWithContextOrError(
-                      CWD, Input->CommandLine)) {
+          auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
+              WorkerTool, CWD, Input->CommandLine, LookupOutput);
+          if (llvm::Error Err = CIWithCtx.takeError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
                 DependencyOS, Errs);
@@ -1083,20 +1080,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
           for (auto N : Names) {
             auto MaybeModuleDepsGraph =
-                WorkerTool.computeDependenciesByNameWithContextOrError(
+                CIWithCtx->computeDependenciesByNameOrError(
                     N, AlreadySeenModules, LookupOutput);
             if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
                                    DependencyOS, Errs)) {
               HadErrors = true;
             }
-          }
-
-          if (llvm::Error Err =
-                  WorkerTool.finalizeCompilerInstanceWithContextOrError()) {
-            handleErrorWithInfoString(
-                "Compiler instance with context finialization error",
-                std::move(Err), DependencyOS, Errs);
-            HadErrors = true;
           }
         }
       } else {
@@ -1142,6 +1131,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.Mode = ScanMode;
   Opts.Format = Format;
   Opts.OptimizeArgs = OptimizeArgs;
+  // Within P1689 format, we don't want all the paths to be absolute path
+  // since it may violate the traditional make style dependencies info.
+  Opts.ReportAbsolutePaths = Format != ScanningOutputFormat::P1689;
   Opts.EagerLoadModules = EagerLoadModules;
   Opts.TraceVFS = Verbose;
   Opts.AsyncScanModules = AsyncScanModules;

@@ -45,8 +45,10 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -75,8 +77,7 @@ static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
 
 CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     : CodeGenTypeCache(cgm), CGM(cgm), Target(cgm.getTarget()),
-      Builder(cgm, cgm.getModule().getContext(), llvm::ConstantFolder(),
-              CGBuilderInserterTy(this)),
+      Builder(cgm, cgm.getModule().getContext(), CGBuilderInserterTy(this)),
       SanOpts(CGM.getLangOpts().Sanitize), CurFPFeatures(CGM.getLangOpts()),
       DebugInfo(CGM.getModuleDebugInfo()),
       PGO(std::make_unique<CodeGenPGO>(cgm)),
@@ -178,7 +179,6 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
     if (OldValue != NewValue)
       CGF.CurFn->addFnAttr(Name, llvm::toStringRef(NewValue));
   };
-  mergeFnAttrValue("no-nans-fp-math", FPFeatures.getNoHonorNaNs());
   mergeFnAttrValue("no-signed-zeros-fp-math", FPFeatures.getNoSignedZero());
 }
 
@@ -277,6 +277,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::BitInt:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
+    case Type::OverflowBehavior:
       return TEK_Scalar;
 
     // Complexes.
@@ -308,7 +309,7 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
   llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 
   if (CurBB) {
-    assert(!CurBB->getTerminator() && "Unexpected terminated block.");
+    assert(!CurBB->hasTerminator() && "Unexpected terminated block.");
 
     // We have a valid insert point, reuse it if it is empty or there are no
     // explicit jumps to the return block.
@@ -325,10 +326,9 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
   // branch then we can just put the code in that block instead. This
   // cleans up functions which started with a unified return block.
   if (ReturnBlock.getBlock()->hasOneUse()) {
-    llvm::BranchInst *BI =
-      dyn_cast<llvm::BranchInst>(*ReturnBlock.getBlock()->user_begin());
-    if (BI && BI->isUnconditional() &&
-        BI->getSuccessor(0) == ReturnBlock.getBlock()) {
+    auto *BI =
+        dyn_cast<llvm::UncondBrInst>(*ReturnBlock.getBlock()->user_begin());
+    if (BI && BI->getSuccessor(0) == ReturnBlock.getBlock()) {
       // Record/return the DebugLoc of the simple 'return' expression to be used
       // later by the actual 'ret' instruction.
       llvm::DebugLoc Loc = BI->getDebugLoc();
@@ -462,7 +462,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
       EscapeArgs[Pair.second] = Pair.first;
     llvm::Function *FrameEscapeFn = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::localescape);
-    CGBuilderTy(*this, AllocaInsertPt).CreateCall(FrameEscapeFn, EscapeArgs);
+    CGBuilderTy(CGM, AllocaInsertPt).CreateCall(FrameEscapeFn, EscapeArgs);
   }
 
   // Remove the AllocaInsertPt instruction, which is just a convenience for us.
@@ -1654,6 +1654,15 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   PGO->verifyCounterMap();
 
+  if (CurCodeDecl->hasAttr<PersonalityAttr>()) {
+    StringRef Identifier =
+        CurCodeDecl->getAttr<PersonalityAttr>()->getRoutine()->getName();
+    llvm::FunctionCallee PersonalityRoutine =
+        CGM.CreateRuntimeFunction(llvm::FunctionType::get(CGM.Int32Ty, true),
+                                  Identifier, {}, /*local=*/true);
+    Fn->setPersonalityFn(cast<llvm::Constant>(PersonalityRoutine.getCallee()));
+  }
+
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
   if (!CurFn->doesNotThrow())
@@ -1777,7 +1786,7 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
     return false;  // Contains a label.
 
   PGO->markStmtMaybeUsed(Cond);
-  ResultInt = Int;
+  ResultInt = std::move(Int);
   return true;
 }
 
@@ -2250,6 +2259,36 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
   CGF.EmitBlock(contBB);
 }
 
+Address CodeGenFunction::EmitAddressOfPFPField(Address RecordPtr,
+                                               const PFPField &Field) {
+  return EmitAddressOfPFPField(
+      RecordPtr,
+      Builder.CreateConstInBoundsByteGEP(RecordPtr.withElementType(Int8Ty),
+                                         Field.Offset),
+      Field.Field);
+}
+
+Address CodeGenFunction::EmitAddressOfPFPField(Address RecordPtr,
+                                               Address PtrPtr,
+                                               const FieldDecl *Field) {
+  llvm::Value *Disc;
+  if (CGM.getContext().arePFPFieldsTriviallyCopyable(Field->getParent())) {
+    uint64_t FieldSignature =
+        llvm::getPointerAuthStableSipHash(CGM.getPFPFieldName(Field));
+    Disc = llvm::ConstantInt::get(CGM.Int64Ty, FieldSignature);
+  } else
+    Disc = Builder.CreatePtrToInt(RecordPtr.getBasePointer(), CGM.Int64Ty);
+
+  llvm::GlobalValue *DS = CGM.getPFPDeactivationSymbol(Field);
+  llvm::OperandBundleDef DSBundle("deactivation-symbol", DS);
+  llvm::Value *Args[] = {PtrPtr.getBasePointer(), Disc, Builder.getTrue()};
+  return Address(
+      Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::protected_field_ptr,
+                                          PtrPtr.getType()),
+                         Args, DSBundle),
+      VoidPtrTy, PtrPtr.getAlignment());
+}
+
 void
 CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
   // Ignore empty classes in C++.
@@ -2309,13 +2348,20 @@ CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
 
     // Get and call the appropriate llvm.memcpy overload.
     Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, false);
-    return;
+  } else {
+    // Otherwise, just memset the whole thing to zero.  This is legal
+    // because in LLVM, all default initializers (other than the ones we just
+    // handled above, and the case handled below) are guaranteed to have a bit
+    // pattern of all zeros.
+    Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   }
 
-  // Otherwise, just memset the whole thing to zero.  This is legal
-  // because in LLVM, all default initializers (other than the ones we just
-  // handled above) are guaranteed to have a bit pattern of all zeros.
-  Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
+  // With the pointer field protection feature, null pointers do not have a bit
+  // pattern of zero in memory, so we must initialize them separately.
+  for (auto &Field : getContext().findPFPFields(Ty)) {
+    auto addr = EmitAddressOfPFPField(DestPtr, Field);
+    Builder.CreateStore(llvm::ConstantPointerNull::get(VoidPtrTy), addr);
+  }
 }
 
 llvm::BlockAddress *CodeGenFunction::GetAddrOfLabel(const LabelDecl *L) {
@@ -2334,7 +2380,7 @@ llvm::BasicBlock *CodeGenFunction::GetIndirectGotoBlock() {
   // If we already made the indirect branch for indirect goto, return its block.
   if (IndirectBranch) return IndirectBranch->getParent();
 
-  CGBuilderTy TmpBuilder(*this, createBasicBlock("indirectgoto"));
+  CGBuilderTy TmpBuilder(CGM, createBasicBlock("indirectgoto"));
 
   // Create the PHI node that indirect gotos will add entries to.
   llvm::Value *DestVal = TmpBuilder.CreatePHI(Int8PtrTy, 0,
@@ -2609,6 +2655,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::UnaryTransform:
     case Type::Attributed:
     case Type::BTFTagAttributed:
+    case Type::OverflowBehavior:
     case Type::HLSLAttributedResource:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
@@ -3028,10 +3075,84 @@ void CodeGenFunction::EmitMultiVersionResolver(
   case llvm::Triple::riscv64be:
     EmitRISCVMultiVersionResolver(Resolver, Options);
     return;
-
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+    if (getContext().getTargetInfo().getTriple().isOSAIX()) {
+      EmitPPCAIXMultiVersionResolver(Resolver, Options);
+      return;
+    }
+    [[fallthrough]];
   default:
-    assert(false && "Only implemented for x86, AArch64 and RISC-V targets");
+    assert(false &&
+           "Only implemented for x86, AArch64, RISC-V, and PowerPC AIX");
   }
+}
+
+/**
+ * define internal ptr @foo.resolver() {
+ * entry:
+ *   %is_version_1 = __builtin_cpu_supports(version_1)
+ *   br i1 %1, label %if.version_1, label %if.else_2
+ *
+ * if.version_1:
+ *   ret ptr @foo.version_1
+ *
+ * if.else_2:
+ *   %is_version_2 = __builtin_cpu_supports(version_2)
+ * ...
+ * if.else:                                          ; preds = %entry
+ *   ret ptr @foo.default
+ * }
+ */
+void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
+
+  // entry:
+  llvm::BasicBlock *CurBlock = createBasicBlock("entry", Resolver);
+
+  SmallVector<std::pair<llvm::Value *, llvm::BasicBlock *>, 3> PhiArgs;
+  for (const FMVResolverOption &RO : Options) {
+    Builder.SetInsertPoint(CurBlock);
+    // The 'default' or 'generic' case.
+    if (!RO.Architecture && RO.Features.empty()) {
+      // if.else:
+      //   ret ptr @foo.default
+      assert(&RO == Options.end() - 1 &&
+             "Default or Generic case must be last");
+      Builder.CreateRet(RO.Function);
+      return;
+    }
+    // if.else_n:
+    //   %is_version_n = __builtin_cpu_supports(version_n)
+    //   br i1 %is_version_n, label %if.version_n, label %if.else_n+1
+    //
+    // if.version_n:
+    //   ret ptr @foo_version_n
+    assert(RO.Features.size() == 1 &&
+           "for now one feature requirement per version");
+
+    assert(RO.Features[0].starts_with("cpu="));
+    StringRef CPU = RO.Features[0].split("=").second.trim();
+    StringRef Feature = llvm::StringSwitch<StringRef>(CPU)
+                            .Case("pwr7", "arch_2_06")
+                            .Case("pwr8", "arch_2_07")
+                            .Case("pwr9", "arch_3_00")
+                            .Case("pwr10", "arch_3_1")
+                            .Case("pwr11", "arch_3_1")
+                            .Default("error");
+
+    llvm::Value *Condition = EmitPPCBuiltinCpu(
+        Builtin::BI__builtin_cpu_supports, Builder.getInt1Ty(), Feature);
+
+    llvm::BasicBlock *ThenBlock = createBasicBlock("if.version", Resolver);
+    CurBlock = createBasicBlock("if.else", Resolver);
+    Builder.CreateCondBr(Condition, ThenBlock, CurBlock);
+
+    Builder.SetInsertPoint(ThenBlock);
+    Builder.CreateRet(RO.Function);
+  }
+
+  llvm_unreachable("Default case missing");
 }
 
 void CodeGenFunction::EmitRISCVMultiVersionResolver(
@@ -3107,7 +3228,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     llvm::Value *FeatsCondition = EmitRISCVCpuSupports(CurrTargetAttrFeats);
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
-    CGBuilderTy RetBuilder(*this, RetBlock);
+    CGBuilderTy RetBuilder(CGM, RetBlock);
     CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder,
                                      Options[Index].Function, SupportsIFunc);
     llvm::BasicBlock *ElseBlock = createBasicBlock("resolver_else", Resolver);
@@ -3168,7 +3289,7 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
       continue;
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
-    CGBuilderTy RetBuilder(*this, RetBlock);
+    CGBuilderTy RetBuilder(CGM, RetBlock);
     CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder, RO.Function,
                                      SupportsIFunc);
     CurBlock = createBasicBlock("resolver_else", Resolver);
@@ -3208,7 +3329,7 @@ void CodeGenFunction::EmitX86MultiVersionResolver(
     }
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
-    CGBuilderTy RetBuilder(*this, RetBlock);
+    CGBuilderTy RetBuilder(CGM, RetBlock);
     CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder, RO.Function,
                                      SupportsIFunc);
     CurBlock = createBasicBlock("resolver_else", Resolver);
@@ -3422,5 +3543,16 @@ void CodeGenFunction::addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
   if (CGDebugInfo *DI = getDebugInfo()) {
     ApplyAtomGroup Grp(getDebugInfo());
     DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
+  }
+}
+
+void CodeGenFunction::emitPFPPostCopyUpdates(Address DestPtr, Address SrcPtr,
+                                             QualType Ty) {
+  for (auto &Field : getContext().findPFPFields(Ty)) {
+    if (getContext().arePFPFieldsTriviallyCopyable(Field.Field->getParent()))
+      continue;
+    auto DestFieldPtr = EmitAddressOfPFPField(DestPtr, Field);
+    auto SrcFieldPtr = EmitAddressOfPFPField(SrcPtr, Field);
+    Builder.CreateStore(Builder.CreateLoad(SrcFieldPtr), DestFieldPtr);
   }
 }

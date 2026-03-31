@@ -44,6 +44,7 @@
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
+#include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -110,6 +111,22 @@ static unsigned getTypeDescFieldId(mlir::Type ty) {
 }
 static unsigned getLenParamFieldId(mlir::Type ty) {
   return getTypeDescFieldId(ty) + 1;
+}
+
+/// Set LLVM alignment operand attributes on a memcpy op using the ABI
+/// alignment of the given type (for dst and src; size has no alignment).
+static void setMemcpyAlignmentArgAttrs(
+    mlir::LLVM::MemcpyOp memcpy, mlir::ConversionPatternRewriter &rewriter,
+    const mlir::DataLayout &dataLayout, mlir::Type llvmType) {
+  unsigned alignValue = dataLayout.getTypeABIAlignment(llvmType);
+  mlir::IntegerAttr alignAttr = rewriter.getI64IntegerAttr(alignValue);
+  mlir::NamedAttribute alignNamedAttr(
+      mlir::StringAttr::get(rewriter.getContext(),
+                            mlir::LLVM::LLVMDialect::getAlignAttrName()),
+      alignAttr);
+  mlir::DictionaryAttr alignDict = rewriter.getDictionaryAttr(alignNamedAttr);
+  memcpy.setArgAttrsAttr(rewriter.getArrayAttr(
+      {alignDict, alignDict, rewriter.getDictionaryAttr({})}));
 }
 
 static llvm::SmallVector<mlir::NamedAttribute>
@@ -319,7 +336,9 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
     unsigned allocaAs = getAllocaAddressSpace(rewriter);
     unsigned programAs = getProgramAddressSpace(rewriter);
 
-    if (mlir::isa<mlir::LLVM::ConstantOp>(size.getDefiningOp())) {
+    // A value defined by a block arg, such as fir.if for a
+    // optional assumed character dummy len, doesn't have a defining op.
+    if (mlir::isa_and_nonnull<mlir::LLVM::ConstantOp>(size.getDefiningOp())) {
       // Set the Block in which the llvm alloca should be inserted.
       mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
@@ -821,6 +840,47 @@ struct IsAssumedSizeExtentOpConversion
     auto cmp = mlir::LLVM::ICmpOp::create(
         rewriter, loc, mlir::LLVM::ICmpPredicate::eq, val, negOne);
     rewriter.replaceOp(op, cmp.getResult());
+    return mlir::success();
+  }
+};
+
+/// Bitcast between types of the same bit size.
+struct BitcastOpConversion : public fir::FIROpConversion<fir::BitcastOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::BitcastOp bitcast, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto fromTy = convertType(bitcast.getValue().getType());
+    auto toTy = convertType(bitcast.getRes().getType());
+    mlir::Value op0 = adaptor.getOperands()[0];
+    if (fromTy == toTy) {
+      rewriter.replaceOp(bitcast, op0);
+      return mlir::success();
+    }
+    mlir::Location loc = bitcast.getLoc();
+    bool fromChar = mlir::isa<fir::CharacterType>(bitcast.getValue().getType());
+    bool toChar = mlir::isa<fir::CharacterType>(bitcast.getRes().getType());
+    mlir::Value cast = op0;
+    mlir::Type scalarFromTy = fromTy;
+    if (fromChar) {
+      cast = mlir::LLVM::ExtractValueOp::create(rewriter, loc, cast, {0});
+      scalarFromTy = cast.getType();
+    }
+    mlir::Type scalarToTy = toTy;
+    if (toChar)
+      scalarToTy = mlir::cast<mlir::LLVM::LLVMArrayType>(toTy).getElementType();
+
+    if (scalarFromTy != scalarToTy)
+      cast = mlir::LLVM::BitcastOp::create(rewriter, loc, scalarToTy, cast);
+
+    if (toChar) {
+      mlir::Value undef = mlir::LLVM::UndefOp::create(rewriter, loc, toTy);
+      llvm::SmallVector<int64_t> position{0};
+      cast = mlir::LLVM::InsertValueOp::create(rewriter, loc, undef, cast,
+                                               position);
+    }
+    rewriter.replaceOp(bitcast, cast);
     return mlir::success();
   }
 };
@@ -2711,6 +2771,16 @@ struct XArrayCoorOpConversion
         baseIsBoxed ? getBoxTypePair(coor.getMemref().getType()) : TypePair{};
     mlir::LLVM::IntegerOverflowFlags nsw =
         mlir::LLVM::IntegerOverflowFlags::nsw;
+    mlir::LLVM::IntegerOverflowFlags nuw =
+        mlir::LLVM::IntegerOverflowFlags::nuw;
+    // TODO Allow for non-default lower bounds that are positive
+    // We know at compile time this is possible, so could be updated in future
+    // to allow for this, and just exclude non-default lower bounds that are
+    // negative. Currently, all shifted XArrayCoorOp's only have nsw on sub
+    // operations.
+    mlir::LLVM::IntegerOverflowFlags subFlags = isShifted ? nsw : (nsw | nuw);
+    mlir::LLVM::IntegerOverflowFlags addMulFlags = nsw | nuw;
+    mlir::LLVM::GEPNoWrapFlags gepFlags = mlir::LLVM::GEPNoWrapFlags::nusw | mlir::LLVM::GEPNoWrapFlags::nuw;
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
@@ -2732,15 +2802,16 @@ struct XArrayCoorOpConversion
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
       auto idx =
-          mlir::LLVM::SubOp::create(rewriter, loc, idxTy, index, lb, nsw);
-      mlir::Value diff =
-          mlir::LLVM::MulOp::create(rewriter, loc, idxTy, idx, step, nsw);
+          mlir::LLVM::SubOp::create(rewriter, loc, idxTy, index, lb, subFlags);
+      mlir::Value diff = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, idx,
+                                                   step, addMulFlags);
       if (normalSlice) {
         mlir::Value sliceLb =
             integerCast(loc, rewriter, idxTy, operands[sliceOffset]);
-        auto adj =
-            mlir::LLVM::SubOp::create(rewriter, loc, idxTy, sliceLb, lb, nsw);
-        diff = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, diff, adj, nsw);
+        auto adj = mlir::LLVM::SubOp::create(rewriter, loc, idxTy, sliceLb, lb,
+                                             subFlags);
+        diff = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, diff, adj,
+                                         addMulFlags);
       }
       // Update the offset given the stride and the zero based index `diff`
       // that was just computed.
@@ -2748,21 +2819,21 @@ struct XArrayCoorOpConversion
         // Use stride in bytes from the descriptor.
         mlir::Value stride =
             getStrideFromBox(loc, baseBoxTyPair, operands[0], i, rewriter);
-        auto sc =
-            mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride, nsw);
-        offset =
-            mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset, nsw);
+        auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride,
+                                            addMulFlags);
+        offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
+                                           addMulFlags);
       } else {
         // Use stride computed at last iteration.
-        auto sc =
-            mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt, nsw);
-        offset =
-            mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset, nsw);
+        auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt,
+                                            addMulFlags);
+        offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
+                                           addMulFlags);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
         auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
         prevExt = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, prevExt,
-                                            nextExt, nsw);
+                                            nextExt, addMulFlags);
       }
     }
 
@@ -2775,7 +2846,7 @@ struct XArrayCoorOpConversion
           getBaseAddrFromBox(loc, baseBoxTyPair, operands[0], rewriter);
       llvm::SmallVector<mlir::LLVM::GEPArg> args{offset};
       auto addr = mlir::LLVM::GEPOp::create(rewriter, loc, llvmPtrTy, byteTy,
-                                            base, args);
+                                            base, args, gepFlags);
       if (coor.getSubcomponent().empty()) {
         rewriter.replaceOp(coor, addr);
         return mlir::success();
@@ -2800,8 +2871,8 @@ struct XArrayCoorOpConversion
           operands.slice(coor.getSubcomponentOperandIndex(),
                          coor.getSubcomponent().size()));
       args.append(indices.begin(), indices.end());
-      rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(coor, llvmPtrTy,
-                                                     elementType, addr, args);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+          coor, llvmPtrTy, elementType, addr, args, gepFlags);
       return mlir::success();
     }
 
@@ -2823,7 +2894,7 @@ struct XArrayCoorOpConversion
           auto length = integerCast(loc, rewriter, idxTy,
                                     operands[coor.getLenParamsOperandIndex()]);
           offset = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, offset,
-                                             length, nsw);
+                                             length, addMulFlags);
         } else {
           TODO(loc, "compute size of derived type with type parameters");
         }
@@ -2839,7 +2910,7 @@ struct XArrayCoorOpConversion
       args.append(indices.begin(), indices.end());
     }
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
-        coor, llvmPtrTy, gepObjectType, adaptor.getMemref(), args);
+        coor, llvmPtrTy, gepObjectType, adaptor.getMemref(), args, gepFlags);
     return mlir::success();
   }
 };
@@ -3257,7 +3328,7 @@ static inline bool attributeTypeIsCompatible(mlir::MLIRContext *ctx,
   // Get attr's LLVM element type.
   if (!attr)
     return true;
-  auto intOrFpEleAttr = mlir::dyn_cast<mlir::DenseIntOrFPElementsAttr>(attr);
+  auto intOrFpEleAttr = mlir::dyn_cast<mlir::DenseTypedElementsAttr>(attr);
   if (!intOrFpEleAttr)
     return true;
   auto tensorTy = mlir::dyn_cast<mlir::TensorType>(intOrFpEleAttr.getType());
@@ -3487,11 +3558,13 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
           computeBoxSize(loc, boxTypePair, inputBoxStorage, rewriter);
       auto memcpy = mlir::LLVM::MemcpyOp::create(
           rewriter, loc, newBoxStorage, inputBoxStorage, boxSize, isVolatile);
+      setMemcpyAlignmentArgAttrs(memcpy, rewriter, getDataLayout(), llvmLoadTy);
 
       if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
         memcpy.setTBAATags(*optionalTag);
       else
         attachTBAATag(memcpy, boxTy, boxTy, nullptr);
+
       rewriter.replaceOp(load, newBoxStorage);
     } else {
       mlir::LLVM::LoadOp loadOp =
@@ -4365,6 +4438,7 @@ public:
     mlir::OpPassManager mathConversionPM("builtin.module");
 
     bool isAMDGCN = fir::getTargetTriple(mod).isAMDGCN();
+    bool isNVPTX = fir::getTargetTriple(mod).isNVPTX();
     // If compiling for AMD target some math operations must be lowered to AMD
     // GPU library calls, the rest can be converted to LLVM intrinsics, which
     // is handled in the mathToLLVM conversion. The lowering to libm calls is
@@ -4373,6 +4447,10 @@ public:
       mathConversionPM.addPass(mlir::createConvertMathToROCDL());
       mathConversionPM.addPass(mlir::createConvertComplexToROCDLLibraryCalls());
     }
+    // If compiling for NVIDIA target some math operations must be lowered to
+    // NVVM libdevice calls.
+    if (isNVPTX)
+      mathConversionPM.addPass(mlir::createConvertMathToNVVM());
 
     // Convert math::FPowI operations to inline implementation
     // only if the exponent's width is greater than 32, otherwise,
@@ -4427,7 +4505,7 @@ public:
     mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, pattern);
     // Math operations that have not been converted yet must be converted
     // to Libm.
-    if (!isAMDGCN)
+    if (!isAMDGCN && !isNVPTX)
       mlir::populateMathToLibmConversionPatterns(pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);
@@ -4541,15 +4619,16 @@ void fir::populateFIRToLLVMConversionPatterns(
     fir::FIRToLLVMPassOptions &options) {
   patterns.insert<
       AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
-      AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
-      BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
-      BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
-      AssumedSizeExtentOpConversion, IsAssumedSizeExtentOpConversion,
-      BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
-      BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
-      CmpcOpConversion, VolatileCastOpConversion, ConvertOpConversion,
-      CoordinateOpConversion, CopyOpConversion, DTEntryOpConversion,
-      DeclareOpConversion, DeclareValueOpConversion,
+      AllocaOpConversion, AllocMemOpConversion, BitcastOpConversion,
+      BoxAddrOpConversion, BoxCharLenOpConversion, BoxDimsOpConversion,
+      BoxEleSizeOpConversion, BoxIsAllocOpConversion, BoxIsArrayOpConversion,
+      BoxIsPtrOpConversion, AssumedSizeExtentOpConversion,
+      IsAssumedSizeExtentOpConversion, BoxOffsetOpConversion,
+      BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeCodeOpConversion,
+      BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
+      VolatileCastOpConversion, ConvertOpConversion, CoordinateOpConversion,
+      CopyOpConversion, DTEntryOpConversion, DeclareOpConversion,
+      DeclareValueOpConversion,
       DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,

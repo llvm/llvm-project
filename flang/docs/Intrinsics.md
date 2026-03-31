@@ -361,6 +361,24 @@ that is present in `SET`, or zero if none is.
 `VERIFY` is essentially the opposite: it returns the index of the first (or last) character
 in `STRING` that is *not* present in `SET`, or zero if all are.
 
+### Character intrinsic subroutines (Fortran 2023)
+```
+CALL SPLIT(CHARACTER(k,n) STRING, CHARACTER(k,m) SET, INTEGER(any) POS, LOGICAL(any) BACK=.FALSE.)
+CALL TOKENIZE(CHARACTER(k,n) STRING, CHARACTER(k,m) SET, CHARACTER(k,:) TOKENS(:) [, SEPARATOR])
+CALL TOKENIZE(CHARACTER(k,n) STRING, CHARACTER(k,m) SET, INTEGER FIRST(:), INTEGER LAST(:))
+```
+
+`SPLIT` scans for separator characters in `STRING` from the set `SET`.
+When `BACK` is absent or `.FALSE.`, it returns (in `POS`) the position of the
+leftmost character in `SET` whose position in `STRING` is greater than `POS`,
+or `LEN(STRING)+1` if no such character exists.
+When `BACK` is `.TRUE.`, it returns the position of the rightmost character in
+`SET` whose position in `STRING` is less than `POS`, or 0 if no such character exists.
+
+`TOKENIZE` extracts tokens from `STRING` delimited by characters in `SET`.
+In Form 1, it returns the tokens as an array of characters and optionally the separator characters.
+In Form 2, it returns the starting and ending positions of each token.
+
 ## Transformational intrinsic functions
 
 This category comprises a large collection of intrinsic functions that
@@ -1181,6 +1199,18 @@ END PROGRAM example_dsecnds
 ### Non-standard Intrinsics: SECOND
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
+
+### Non-Standard Intrinsics: RTC
+
+#### Description
+`RTC()` returns the current time of the system as a REAL(8), interpreted as
+seconds since the Unix epoch.
+
+#### Usage and Info
+
+- **Standard:** Intel extension
+- **Class:** function
+- **Syntax:** `RESULT = RTC()`
 
 ### Non-Standard Intrinsics: TIME
 

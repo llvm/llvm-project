@@ -397,6 +397,7 @@ private:
   SDValue PromoteIntOp_TRUNCATE(SDNode *N);
   SDValue PromoteIntOp_UINT_TO_FP(SDNode *N);
   SDValue PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N);
+  SDValue PromoteIntOp_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue PromoteIntOp_ZERO_EXTEND(SDNode *N);
   SDValue PromoteIntOp_VP_ZERO_EXTEND(SDNode *N);
   SDValue PromoteIntOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
@@ -417,7 +418,7 @@ private:
   SDValue PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_UnaryBooleanVectorOp(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N);
   SDValue PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N);
   SDValue PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N, unsigned OpNo);
@@ -447,6 +448,7 @@ private:
   void ExpandIntRes_ABS               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ABD               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTLZ              (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_CTLS              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTPOP             (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTTZ              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_LOAD          (LoadSDNode *N, SDValue &Lo, SDValue &Hi);
@@ -500,6 +502,7 @@ private:
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_CTTZ_ELTS(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandShiftByConstant(SDNode *N, const APInt &Amt,
                              SDValue &Lo, SDValue &Hi);
@@ -786,6 +789,7 @@ private:
   SDValue SoftPromoteHalfRes_FNEG(SDNode *N);
   SDValue SoftPromoteHalfRes_AssertNoFPClass(SDNode *N);
   SDValue SoftPromoteHalfRes_XINT_TO_FP(SDNode *N);
+  SDValue SoftPromoteHalfRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N);
@@ -837,6 +841,7 @@ private:
   SDValue ScalarizeVecRes_BUILD_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue ScalarizeVecRes_FP_ROUND(SDNode *N);
+  SDValue ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
@@ -876,6 +881,7 @@ private:
   SDValue ScalarizeVecOp_CMP(SDNode *N);
   SDValue ScalarizeVecOp_FAKE_USE(SDNode *N);
   SDValue ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
+  SDValue ScalarizeVecOp_CTTZ_ELTS(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Splitting Support: LegalizeVectorTypes.cpp
@@ -982,6 +988,7 @@ private:
   SDValue SplitVecOp_FPOpDifferentTypes(SDNode *N);
   SDValue SplitVecOp_CMP(SDNode *N);
   SDValue SplitVecOp_FP_TO_XINT_SAT(SDNode *N);
+  SDValue SplitVecOp_CttzElts(SDNode *N);
   SDValue SplitVecOp_VP_CttzElements(SDNode *N);
   SDValue SplitVecOp_VECTOR_HISTOGRAM(SDNode *N);
   SDValue SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N);

@@ -77,8 +77,9 @@ struct Y {
 };
 
 void dangligGslPtrFromTemporary() {
-  MyIntPointer p = Y{}.a; // TODO
-  (void)p;
+  MyIntPointer p = Y{}.a; // cfg-warning {{object whose reference is captured does not live long enough}} \
+                          // cfg-note {{destroyed here}}
+  (void)p;                // cfg-note {{later used here}}
 }
 
 struct DanglingGslPtrField {
@@ -298,19 +299,19 @@ std::string_view danglingRefToOptionalFromTemp4() {
 void danglingReferenceFromTempOwner() {
   int &&r = *std::optional<int>();          // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                             // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        https://github.com/llvm/llvm-project/issues/175893
-  int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  // https://github.com/llvm/llvm-project/issues/175893
+  int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                              // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        https://github.com/llvm/llvm-project/issues/175893
-  int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  // https://github.com/llvm/llvm-project/issues/175893
+  int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                              // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
   const int &r4 = std::vector<int>().at(3); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                             // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   int &&r5 = std::vector<int>().at(3);      // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                             // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  use(r, r2, r3, r4, r5);                   // cfg-note 3 {{later used here}}
+  use(r, r2, r3, r4, r5);                   // cfg-note 5 {{later used here}}
 
   std::string_view sv = *getTempOptStr();  // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
@@ -385,9 +386,9 @@ void handleGslPtrInitsThroughReference2() {
 
 void handleTernaryOperator(bool cond) {
     std::basic_string<char> def;
-    // FIXME: Detect this using the CFG-based lifetime analysis.
-    std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-    use(v);
+    std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                                      // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+    use(v); // cfg-note {{later used here}}
 }
 
 std::string operator+(std::string_view s1, std::string_view s2);
@@ -575,12 +576,13 @@ struct FooView {
   FooView(const Foo& foo [[clang::lifetimebound]]);
 };
 FooView test3(int i, std::optional<Foo> a) {
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        Origin tracking for non-pointers type retured from lifetimebound fn is missing.
-  //        https://github.com/llvm/llvm-project/issues/163600
   if (i)
-    return *a; // expected-warning {{address of stack memory}}
-  return a.value(); // expected-warning {{address of stack memory}}
+    return *a; // expected-warning {{address of stack memory}} \
+               // cfg-warning {{address of stack memory is returned later}} \
+               // cfg-note {{returned here}}
+  return a.value(); // expected-warning {{address of stack memory}} \
+                    // cfg-warning {{address of stack memory is returned later}} \
+                    // cfg-note {{returned here}}
 }
 } // namespace GH93386
 
@@ -590,11 +592,10 @@ struct UrlAnalyzed {
 };
 std::string StrCat(std::string_view, std::string_view);
 void test1() {
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        Origin tracking for non-pointers type retured from lifetimebound fn is missing.
-  //        https://github.com/llvm/llvm-project/issues/163600
-  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}}
-  use(url);
+  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}} \
+                                         // cfg-warning {{object whose reference is captured does not live long enough}} \
+                                         // cfg-note {{destroyed here}}
+  use(url);                              // cfg-note {{later used here}}
 }
 
 std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]]);
@@ -831,28 +832,12 @@ void test13() {
 
 } // namespace GH100526
 
-namespace std {
-template <typename T>
-class __set_iterator {};
-
-template<typename T>
-struct BB {
-  typedef  __set_iterator<T> iterator;
-};
-
-template <typename T>
-class set {
-public:
-  ~set();
-  typedef typename BB<T>::iterator iterator;
-  iterator begin() const;
-};
-} // namespace std
 namespace GH118064{
 
 void test() {
-  auto y = std::set<int>{}.begin(); // expected-warning {{object backing the pointer}}
-  use(y);
+  auto y = std::set<int>{}.begin(); // expected-warning {{object backing the pointer}} \
+  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(y); // cfg-note {{later used here}}
 }
 } // namespace GH118064
 
@@ -1303,3 +1288,8 @@ void test() {
     const auto ptrTSC = StringTemplateSpecC<char>().data();  // Both have attribute         // expected-warning {{temporary whose address is used}}
 }
 } // namespace GH175391
+
+void string_insert_GH_186817() {
+    std::string msg;
+    msg.insert(0, std::string_view(std::string("a temporary")));
+}

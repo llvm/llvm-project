@@ -599,12 +599,20 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
-  case BuiltinType::Id:                                                        \
-    return llvm::PointerType::get(getLLVMContext(), AS);
+  case BuiltinType::Id: {                                                      \
+    if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
+      return llvm::FixedVectorType::get(                                       \
+          llvm::Type::getInt32Ty(getLLVMContext()), 8);                        \
+    }                                                                          \
+    return llvm::PointerType::get(getLLVMContext(), AS);                       \
+  }
 #define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
                                     {}, {Scope});
+#define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align)     \
+  case BuiltinType::Id:                                                        \
+    return ConvertType(getContext().getLogicalOperationType());
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -793,6 +801,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
     ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+    break;
+  case Type::OverflowBehavior:
+    ResultType =
+        ConvertType(dyn_cast<OverflowBehaviorType>(Ty)->getUnderlyingType());
     break;
   }
 

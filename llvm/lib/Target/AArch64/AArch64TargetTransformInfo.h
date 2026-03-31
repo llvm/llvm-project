@@ -165,8 +165,6 @@ public:
     return ST->getVScaleForTuning();
   }
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
-
   bool shouldMaximizeVectorBandwidth(
       TargetTransformInfo::RegisterKind K) const override;
 
@@ -466,14 +464,9 @@ public:
     return ST->hasSVE() ? 5 : 0;
   }
 
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
-    if (ST->hasSVE())
-      return IVUpdateMayOverflow
-                 ? TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck
-                 : TailFoldingStyle::DataAndControlFlow;
-
-    return TailFoldingStyle::DataWithoutLaneMask;
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
+    return ST->hasSVE() ? TailFoldingStyle::DataAndControlFlow
+                        : TailFoldingStyle::DataWithoutLaneMask;
   }
 
   bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const override;
@@ -544,13 +537,15 @@ public:
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I) const override;
 
-  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                             Type *ScalarValTy) const override {
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy, Type *ScalarValTy,
+                             Align Alignment,
+                             unsigned AddrSpace) const override {
     // We can vectorize store v4i8.
     if (ScalarMemTy->isIntegerTy(8) && isPowerOf2_32(VF) && VF >= 4)
       return 4;
 
-    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                    AddrSpace);
   }
 
   std::optional<unsigned> getMinPageSize() const override { return 4096; }

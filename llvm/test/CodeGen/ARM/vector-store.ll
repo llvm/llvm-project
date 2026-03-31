@@ -539,11 +539,11 @@ define void @truncstore_v4i32tov4i8(ptr %ptr, <4 x i32> %val) {
 ; CHECK-BE:       @ %bb.0:
 ; CHECK-BE-NEXT:    vldr d17, [sp]
 ; CHECK-BE-NEXT:    vmov d16, r3, r2
+; CHECK-BE-NEXT:    ldr r0, [r0]
 ; CHECK-BE-NEXT:    vrev64.32 q8, q8
 ; CHECK-BE-NEXT:    vmovn.i32 d16, q8
 ; CHECK-BE-NEXT:    vrev16.8 d16, d16
 ; CHECK-BE-NEXT:    vuzp.8 d16, d17
-; CHECK-BE-NEXT:    ldr r0, [r0]
 ; CHECK-BE-NEXT:    vrev32.8 d16, d17
 ; CHECK-BE-NEXT:    vst1.32 {d16[0]}, [r0:32]
 ; CHECK-BE-NEXT:    bx lr
@@ -570,12 +570,12 @@ define void @truncstore_v4i32tov4i8_fake_update(ptr %ptr, <4 x i32> %val) {
 ; CHECK-BE:       @ %bb.0:
 ; CHECK-BE-NEXT:    vldr d17, [sp]
 ; CHECK-BE-NEXT:    vmov d16, r3, r2
+; CHECK-BE-NEXT:    ldr r1, [r0]
 ; CHECK-BE-NEXT:    movs r2, #16
 ; CHECK-BE-NEXT:    vrev64.32 q8, q8
 ; CHECK-BE-NEXT:    vmovn.i32 d16, q8
 ; CHECK-BE-NEXT:    vrev16.8 d16, d16
 ; CHECK-BE-NEXT:    vuzp.8 d16, d17
-; CHECK-BE-NEXT:    ldr r1, [r0]
 ; CHECK-BE-NEXT:    vrev32.8 d16, d17
 ; CHECK-BE-NEXT:    vst1.32 {d16[0]}, [r1:32], r2
 ; CHECK-BE-NEXT:    str r1, [r0]

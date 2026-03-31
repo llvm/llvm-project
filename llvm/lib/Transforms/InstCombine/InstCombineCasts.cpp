@@ -1077,10 +1077,37 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       if (match(Src, m_Xor(m_Value(X), m_Value(Y))))
         return new ICmpInst(ICmpInst::ICMP_NE, X, Y);
     }
+
+    if (match(Src,
+              m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(m_One(), m_Value(X)))))
+      return new ICmpInst(ICmpInst::ICMP_EQ, X,
+                          ConstantInt::getNullValue(SrcTy));
   }
 
   Value *A, *B;
   Constant *C;
+
+  // trunc(u/smin(zext(a) + zext(b), MAX)) --> uadd.sat(a, b)
+  if (match(Src,
+            m_OneUse(m_CombineOr(
+                m_UMin(m_OneUse(m_Add(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                       m_SpecificInt(APInt::getMaxValue(DestWidth))),
+                m_SMin(m_OneUse(m_Add(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                       m_SpecificInt(APInt::getMaxValue(DestWidth)))))) &&
+      A->getType() == DestTy && B->getType() == DestTy) {
+    return replaceInstUsesWith(
+        Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, A, B));
+  }
+
+  // trunc(smax(zext(a) - zext(b), 0)) --> usub.sat(a, b)
+  if (match(Src, m_OneUse(m_SMax(
+                     m_OneUse(m_Sub(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                     m_Zero()))) &&
+      A->getType() == DestTy && B->getType() == DestTy) {
+    return replaceInstUsesWith(
+        Trunc, Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, B));
+  }
+
   if (match(Src, m_LShr(m_SExt(m_Value(A)), m_Constant(C)))) {
     unsigned AWidth = A->getType()->getScalarSizeInBits();
     unsigned MaxShiftAmt = SrcWidth - std::max(DestWidth, AWidth);
@@ -2024,7 +2051,7 @@ static bool isKnownExactCastIntToFP(CastInst &I, InstCombinerImpl &IC) {
   // Cast from FP to integer and back to FP is independent of the intermediate
   // integer width because of poison on overflow.
   Value *F;
-  if (match(Src, m_FPToSI(m_Value(F))) || match(Src, m_FPToUI(m_Value(F)))) {
+  if (match(Src, m_FPToI(m_Value(F)))) {
     // If this is uitofp (fptosi F), the source needs an extra bit to avoid
     // potential rounding of negative FP input values.
     int SrcNumSigBits = F->getType()->getFPMantissaWidth();
@@ -2853,20 +2880,35 @@ static Instruction *foldBitCastSelect(BitCastInst &BitCast,
   // A vector select must maintain the same number of elements in its operands.
   Type *CondTy = Cond->getType();
   Type *DestTy = BitCast.getType();
+
+  auto *DestVecTy = dyn_cast<VectorType>(DestTy);
+
   if (auto *CondVTy = dyn_cast<VectorType>(CondTy))
-    if (!DestTy->isVectorTy() ||
-        CondVTy->getElementCount() !=
-            cast<VectorType>(DestTy)->getElementCount())
+    if (!DestVecTy ||
+        CondVTy->getElementCount() != DestVecTy->getElementCount())
       return nullptr;
+
+  auto *Sel = cast<Instruction>(BitCast.getOperand(0));
+  auto *SrcVecTy = dyn_cast<VectorType>(TVal->getType());
+
+  if ((isa<Constant>(TVal) || isa<Constant>(FVal)) &&
+      (!DestVecTy ||
+       (SrcVecTy && ElementCount::isKnownLE(DestVecTy->getElementCount(),
+                                            SrcVecTy->getElementCount())))) {
+    // Avoid introducing select of vector (or select of vector with more
+    // elements) until the backend can undo this transformation.
+    Value *CastedTVal = Builder.CreateBitCast(TVal, DestTy);
+    Value *CastedFVal = Builder.CreateBitCast(FVal, DestTy);
+    return SelectInst::Create(Cond, CastedTVal, CastedFVal, "", nullptr, Sel);
+  }
 
   // FIXME: This transform is restricted from changing the select between
   // scalars and vectors to avoid backend problems caused by creating
   // potentially illegal operations. If a fix-up is added to handle that
   // situation, we can remove this check.
-  if (DestTy->isVectorTy() != TVal->getType()->isVectorTy())
+  if ((DestVecTy != nullptr) != (SrcVecTy != nullptr))
     return nullptr;
 
-  auto *Sel = cast<Instruction>(BitCast.getOperand(0));
   Value *X;
   if (match(TVal, m_OneUse(m_BitCast(m_Value(X)))) && X->getType() == DestTy &&
       !isa<Constant>(X)) {

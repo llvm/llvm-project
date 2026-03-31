@@ -1129,12 +1129,13 @@ Value *IRBuilderBase::CreateSelectFMF(Value *C, Value *True, Value *False,
   return Insert(Sel, Name);
 }
 
-Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name) {
+Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name,
+                                    bool IsNUW) {
   assert(LHS->getType() == RHS->getType() &&
          "Pointer subtraction operand types must match!");
   Value *LHSAddr = CreatePtrToAddr(LHS);
   Value *RHSAddr = CreatePtrToAddr(RHS);
-  return CreateSub(LHSAddr, RHSAddr, Name);
+  return CreateSub(LHSAddr, RHSAddr, Name, IsNUW);
 }
 Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
                                     const Twine &Name) {

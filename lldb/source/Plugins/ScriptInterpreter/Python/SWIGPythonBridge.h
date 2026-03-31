@@ -12,10 +12,6 @@
 #include <optional>
 #include <string>
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
@@ -277,5 +273,4 @@ void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);
 
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H

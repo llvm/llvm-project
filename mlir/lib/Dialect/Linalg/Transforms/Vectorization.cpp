@@ -1093,6 +1093,11 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   if (inputShape.getShape().empty())
     return VectorMemoryAccessKind::ScalarBroadcast;
 
+  // 0a. Is the result a 0-D vector? If yes, there are no iteration dimensions
+  // so the tensor.extract is a single scalar load regardless of the index.
+  if (resType.getRank() == 0)
+    return VectorMemoryAccessKind::ScalarBroadcast;
+
   // True for vectors that are effectively 1D, e.g. `vector<1x4x1xi32>`, false
   // otherwise.
   bool isOutput1DVector =
@@ -1254,19 +1259,22 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
         rewriter, loc, resultType, extractOp.getTensor(), transferReadIdxs,
         /*padding=*/std::nullopt, permutationMap, inBounds);
 
-    // Mask this broadcasting xfer_read here rather than relying on the generic
-    // path (the generic path assumes identity masking map, which wouldn't be
-    // valid here).
-    SmallVector<int64_t> readMaskShape = {1};
-    auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
-    auto allTrue = vector::ConstantMaskOp::create(
-        rewriter, loc, readMaskType, vector::ConstantMaskKind::AllTrue);
-    auto *maskedReadOp =
-        mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
+    Operation *readOrMaskedReadOp = transferReadOp;
+    if (dstRank > 0) {
+      // Mask this broadcasting xfer_read here rather than relying on the
+      // generic path (the generic path assumes identity masking map, which
+      // wouldn't be valid here).
+      SmallVector<int64_t> readMaskShape = {1};
+      auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
+      auto allTrue = vector::ConstantMaskOp::create(
+          rewriter, loc, readMaskType, vector::ConstantMaskKind::AllTrue);
+      readOrMaskedReadOp =
+          mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
+    }
 
     LDBG() << "Vectorised as scalar broadcast load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp,
-                                   maskedReadOp};
+                                   readOrMaskedReadOp};
   }
 
   // 2b. Handle contiguous access.
@@ -2110,7 +2118,7 @@ vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
 static LogicalResult
 vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
                                      bool flatten1DDepthwiseConv) {
-  if (isa<ConvolutionOpInterface>(op.getOperation()))
+  if (isaConvolutionOpInterface(op))
     return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
 
   if (hasReductionIterator(op))

@@ -17,6 +17,7 @@
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/Compiler.h"
+#include <iterator>
 
 namespace llvm {
 /// Traits for DenseMap.
@@ -260,6 +261,105 @@ public:
       }
     }
     return Pack;
+  }
+
+  /// Emits the necessary instruction sequence to extract element of type \p
+  /// ExtrTy at \p Lane from \p FromVec. Emits instructions before \p WhereIt.
+  /// Returns the extracted value.
+  /// Note: This handles both vectors and scalars. In the vector case it
+  /// extracts an N-wide element (with N dictated by \p ExtrTy).
+  static Value *unpack(Value *FromVec, Type *ExtrTy, unsigned Lane,
+                       BasicBlock::iterator WhereIt) {
+    assert(isa<FixedVectorType>(FromVec->getType()) && "Expected vector!");
+    auto &Ctx = FromVec->getContext();
+    if (!ExtrTy->isVectorTy()) {
+      // For scalar elements we emit a single ExtractElementInst.
+      assert(Lane <
+                 cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
+             "Out of bounds!");
+      assert(ExtrTy ==
+                 cast<FixedVectorType>(FromVec->getType())->getElementType() &&
+             "Expected same element type!");
+      Constant *ExtractLaneC =
+          ConstantInt::getSigned(Type::getInt32Ty(Ctx), Lane);
+      // Note: This may be folded into a Constant if FromVec is a Constant.
+      return ExtractElementInst::create(FromVec, ExtractLaneC, WhereIt, Ctx,
+                                        "Unpack");
+    }
+    // For vector elements we emit a shuffle.
+    // For example, extracting lanes 2 and 3 of a <4 x i32> vector %vec:
+    //  shufflevector <4 x i32> %vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+    auto *VecTy = cast<FixedVectorType>(FromVec->getType());
+    auto *ExtrVecTy = cast<FixedVectorType>(ExtrTy);
+    assert(ExtrVecTy->getElementType() == VecTy->getElementType() &&
+           "Expected same element type!");
+    SmallVector<int, 4> Mask;
+    for (unsigned Idx = 0, E = ExtrVecTy->getNumElements(); Idx != E; ++Idx) {
+      int MaskLane = Lane + Idx;
+      assert((unsigned)MaskLane <
+                 cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
+             "Out of bounds!");
+      Mask.push_back(MaskLane);
+    }
+    return ShuffleVectorInst::create(FromVec, PoisonValue::get(VecTy), Mask,
+                                     WhereIt, Ctx, "Unpack");
+  }
+
+  /// Iterate over all lanes and Value pairs.
+  // For example, given a range: {i32 %v0, <2 x i32> %v1, i32 %v2} we get:
+  //  Lane Elm
+  //   0   %v0
+  //   1   %v1
+  //   3   %v2
+  template <typename RangeIteratorT> class LaneValueEnumerator {
+    /// Points to current element.
+    RangeIteratorT It;
+    RangeIteratorT ItE;
+    /// Accumulator of lanes.
+    unsigned Lane;
+
+  public:
+    // Note that We can start counting from a non-zero BeginLane, though the
+    // user must make sure it corresponds to the correct lane matching Begin.
+    LaneValueEnumerator(RangeIteratorT Begin, RangeIteratorT End,
+                        unsigned BeginLane)
+        : It(Begin), ItE(End), Lane(BeginLane) {}
+    using iterator_catecotry = std::input_iterator_tag;
+    // NOTE: dereference returns by value instead of by reference.
+    using value_type = std::pair<unsigned, Value *>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = std::pair<unsigned, Value *> *;
+    using reference = std::pair<unsigned, Value *> &;
+    LaneValueEnumerator operator++() {
+      assert(It != ItE && "Already at end!");
+      auto *Ty = Utils::getExpectedType(*It);
+      if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+        Lane += VecTy->getNumElements();
+      } else {
+        assert(!isa<VectorType>(Ty) && "Expected scalar type!");
+        Lane += 1;
+      }
+      ++It;
+      return *this;
+    }
+    value_type operator*() const { return {Lane, *It}; }
+    bool operator==(const LaneValueEnumerator &Other) const {
+      return It == Other.It;
+    }
+    bool operator!=(const LaneValueEnumerator &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  /// Helper for creating LaneValueEnumerator ranges. Can be used in for loops
+  /// like: `for (auto [Lane, V] : enumerateLanes(Range))`
+  template <typename ValueContainerT>
+  static auto enumerateLanes(const ValueContainerT &Range) {
+    auto Begin = LaneValueEnumerator<decltype(Range.begin())>(Range.begin(),
+                                                              Range.end(), 0);
+    auto End = LaneValueEnumerator<decltype(Range.begin())>(Range.end(),
+                                                            Range.end(), 0);
+    return make_range(Begin, End);
   }
 
 #ifndef NDEBUG

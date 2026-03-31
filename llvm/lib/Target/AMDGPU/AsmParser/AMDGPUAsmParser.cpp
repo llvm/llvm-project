@@ -1556,8 +1556,6 @@ public:
     return AMDGPU::isGFX11Plus(getSTI());
   }
 
-  bool isGFX1170() const { return AMDGPU::isGFX1170(getSTI()); }
-
   bool isGFX12() const { return AMDGPU::isGFX12(getSTI()); }
 
   bool isGFX12Plus() const { return AMDGPU::isGFX12Plus(getSTI()); }
@@ -3969,11 +3967,15 @@ AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
                : MCRegister();
   };
 
-  // On GFX12+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
-  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
-                 Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 ||
-                 Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250;
+  bool SkipSrc =
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1170 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx13;
   bool AllowSameVGPR = isGFX1250Plus();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
@@ -5489,6 +5491,10 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
     return false;
   };
 
+  if ((TH & AMDGPU::CPol::TH_ATOMIC_RETURN) &&
+      (TID.TSFlags & SIInstrFlags::IsAtomicNoRet))
+    return PrintError("th:TH_ATOMIC_RETURN requires a destination operand");
+
   if ((TID.TSFlags & SIInstrFlags::IsAtomicRet) &&
       (TID.TSFlags & (SIInstrFlags::FLAT | SIInstrFlags::MUBUF)) &&
       (!(TH & AMDGPU::CPol::TH_ATOMIC_RETURN)))
@@ -5764,7 +5770,8 @@ bool AMDGPUAsmParser::checkUnsupportedInstruction(StringRef Mnemo,
 
   // Finally check if this instruction is supported on any other GPU.
   if (isSupportedMnemo(Mnemo, FeatureBitset().set())) {
-    return Error(IDLoc, "instruction not supported on this GPU");
+    return Error(IDLoc, "instruction not supported on this GPU (" +
+                            getSTI().getCPU() + ")" + ": " + Mnemo);
   }
 
   // Instruction not supported on any GPU. Probably a typo.
@@ -6236,14 +6243,16 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_dx10_clamp") {
-      if (IVersion.Major >= 12)
-        return Error(IDRange.Start, "directive unsupported on gfx12+", IDRange);
+      if (!getSTI().hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
+        return Error(IDRange.Start, "directive unsupported on gfx1170+",
+                     IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_ieee_mode") {
-      if (IVersion.Major >= 12)
-        return Error(IDRange.Start, "directive unsupported on gfx12+", IDRange);
+      if (!getSTI().hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
+        return Error(IDRange.Start, "directive unsupported on gfx1170+",
+                     IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, ExprVal,
                        ValRange);

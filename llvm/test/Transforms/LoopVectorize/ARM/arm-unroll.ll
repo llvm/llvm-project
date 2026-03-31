@@ -13,7 +13,7 @@ target triple = "thumbv7-apple-ios3.0.0"
 ;SWIFT: load <4 x i32>
 ;SWIFT: load <4 x i32>
 ;SWIFT: ret
-define i32 @foo(ptr nocapture %A, i32 %n) nounwind readonly ssp {
+define i32 @foo(ptr nocapture %A, i32 %n) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 

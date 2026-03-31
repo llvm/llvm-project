@@ -196,6 +196,10 @@ static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
     return RISCV::PseudoLongBEQ;
   case RISCV::BNE:
     return RISCV::PseudoLongBNE;
+  case RISCV::BEQI:
+    return RISCV::PseudoLongBEQI;
+  case RISCV::BNEI:
+    return RISCV::PseudoLongBNEI;
   case RISCV::BLT:
     return RISCV::PseudoLongBLT;
   case RISCV::BGE:
@@ -285,6 +289,8 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   }
   case RISCV::BEQ:
   case RISCV::BNE:
+  case RISCV::BEQI:
+  case RISCV::BNEI:
   case RISCV::BLT:
   case RISCV::BGE:
   case RISCV::BLTU:
