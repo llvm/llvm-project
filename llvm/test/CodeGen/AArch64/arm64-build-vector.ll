@@ -329,3 +329,57 @@ define <4 x bfloat> @negzero_v4bf16(<4 x bfloat> %a) {
 ; CHECK-NEXT:    ret
   ret <4 x bfloat> <bfloat -0.0, bfloat -0.0, bfloat -0.0, bfloat -0.0>
 }
+
+; Test that BUILD_VECTOR with an FP constant in lane 0 and +0.0 in upper lanes
+; lowers to a scalar FMOV. On AArch64, writing a scalar FP register zeroes the
+; upper bits of the enclosing vector register.
+
+define <2 x float> @fmov_lane0_zero_upper_v2f32() {
+; CHECK-LABEL: fmov_lane0_zero_upper_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, #1.00000000
+; CHECK-NEXT:    ret
+  ret <2 x float> <float 1.0, float 0.0>
+}
+
+define <2 x double> @fmov_lane0_zero_upper_v2f64() {
+; CHECK-LABEL: fmov_lane0_zero_upper_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, #1.00000000
+; CHECK-NEXT:    ret
+  ret <2 x double> <double 1.0, double 0.0>
+}
+
+define <2 x float> @fmov_lane0_zero_upper_v2f32_half() {
+; CHECK-LABEL: fmov_lane0_zero_upper_v2f32_half:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, #0.50000000
+; CHECK-NEXT:    ret
+  ret <2 x float> <float 0.5, float 0.0>
+}
+
+define <2 x float> @fmov_lane0_zero_upper_v2f32_four() {
+; CHECK-LABEL: fmov_lane0_zero_upper_v2f32_four:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, #4.00000000
+; CHECK-NEXT:    ret
+  ret <2 x float> <float 4.0, float 0.0>
+}
+
+define <4 x float> @fmov_lane0_zero_upper_v4f32_two() {
+; CHECK-LABEL: fmov_lane0_zero_upper_v4f32_two:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, #2.00000000
+; CHECK-NEXT:    ret
+  ret <4 x float> <float 2.0, float 0.0, float 0.0, float 0.0>
+}
+
+; v4f32 <fpimm, fpimm, 0, 0>: low two lanes equal -> fmov v0.2s writes d0,
+; zeroing the upper 64 bits of q0.
+define <4 x float> @fmov_lane0_lane1_zero_upper_v4f32_two() {
+; CHECK-LABEL: fmov_lane0_lane1_zero_upper_v4f32_two:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v0.2s, #2.00000000
+; CHECK-NEXT:    ret
+  ret <4 x float> <float 2.0, float 2.0, float 0.0, float 0.0>
+}

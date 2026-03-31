@@ -8693,6 +8693,22 @@ def FMOVv8f16_ns : SIMDModifiedImmVectorNoShift<1, 0, 1, 0b1111, V128, fpimm8,
 } // Predicates = [HasNEON, HasFullFP16]
 }
 
+// vector_insert(zeros, fpimm, 0) -> SUBREG_TO_REG(FMOVSi/FMOVDi, ssub/dsub)
+// On AArch64, writing a scalar FP register zeroes the upper bits of the
+// enclosing vector register, so no explicit zeroing of the upper lanes is needed.
+def : Pat<(v2f32 (vector_insert (v2f32 immAllZerosV), (f32 fpimm32:$imm), (i64 0))),
+          (SUBREG_TO_REG (FMOVSi (fpimm32XForm f32:$imm)), ssub)>;
+def : Pat<(v4f32 (vector_insert (v4f32 immAllZerosV), (f32 fpimm32:$imm), (i64 0))),
+          (SUBREG_TO_REG (FMOVSi (fpimm32XForm f32:$imm)), ssub)>;
+def : Pat<(v2f64 (vector_insert (v2f64 immAllZerosV), (f64 fpimm64:$imm), (i64 0))),
+          (SUBREG_TO_REG (FMOVDi (fpimm64XForm f64:$imm)), dsub)>;
+
+// v4f32 <fpimm,fpimm,0,0>: concat v2f32 splat with zero v2f32.
+// Writing d0 (FMOVv2f32_ns) zeroes the upper 64 bits of q0.
+def : Pat<(v4f32 (concat_vectors (v2f32 (AArch64fmov imm0_255:$imm)),
+                                 (v2f32 (bitconvert (i64 0))))),
+          (SUBREG_TO_REG (FMOVv2f32_ns imm0_255:$imm), dsub)>;
+
 // AdvSIMD MOVI
 
 // EDIT byte mask: scalar

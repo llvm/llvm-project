@@ -5751,6 +5751,110 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
       return R;
   }
 
+  // If the vector has a valid FP immediate in lane 0 and +0.0 in all upper
+  // lanes, lower to a scalar FMOV inserted into a zero vector via
+  // SUBREG_TO_REG.  On AArch64, writing a scalar FP register (s0 or d0)
+  // automatically zeroes the upper bits of the enclosing vector register.
+  //
+  // Handled cases:
+  //   v2f32 <fpimm, 0>          -> FMOVSi + SUBREG_TO_REG(..., ssub)
+  //   v2f64 <fpimm, 0>          -> FMOVDi + SUBREG_TO_REG(..., dsub)
+  //   v4f32 <fpimm, 0, 0, 0>    -> FMOVSi + SUBREG_TO_REG(..., ssub)
+  //   v4f32 <fpimm, fpimm, 0,0> -> FMOVv2f32_ns + SUBREG_TO_REG(..., dsub)
+  {
+    auto *VTy = dyn_cast<FixedVectorType>(CV->getType());
+    if (VTy && !CV->isNullValue()) {
+      unsigned NumElts = VTy->getNumElements();
+      Type *EltTy = VTy->getElementType();
+      bool IsF32 = EltTy->isFloatTy();
+      bool IsF64 = EltTy->isDoubleTy();
+
+      if ((IsF32 || IsF64) && NumElts >= 2) {
+        // Check lane 0 is a valid FP immediate.
+        auto *Lane0 = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(0U));
+        bool Lane0Valid = false;
+        int FPImm = -1;
+        if (Lane0) {
+          APInt Bits = Lane0->getValueAPF().bitcastToAPInt();
+          FPImm = IsF32 ? AArch64_AM::getFP32Imm(Bits)
+                        : AArch64_AM::getFP64Imm(Bits);
+          Lane0Valid = (FPImm != -1);
+        }
+
+        if (Lane0Valid) {
+          // Check whether all lanes from index 1 onward are +0.0.
+          bool UpperAllZero = true;
+          for (unsigned i = 1; i < NumElts; ++i) {
+            auto *Elt =
+                dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
+            if (!Elt || !Elt->isZero() || Elt->isNegative()) {
+              UpperAllZero = false;
+              break;
+            }
+          }
+
+          // v4f32 <fpimm, fpimm, 0, 0>: check lane 1 == lane 0.
+          bool SplatLow2 = false;
+          if (IsF32 && NumElts == 4 && !UpperAllZero) {
+            auto *Lane1 =
+                dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(1U));
+            auto *Lane2 =
+                dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(2U));
+            auto *Lane3 =
+                dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(3U));
+            if (Lane1 && Lane2 && Lane3 &&
+                Lane1->isExactlyValue(Lane0->getValueAPF()) &&
+                Lane2->isZero() && !Lane2->isNegative() && Lane3->isZero() &&
+                !Lane3->isNegative())
+              SplatLow2 = true;
+          }
+
+          if (UpperAllZero || SplatLow2) {
+            const TargetRegisterClass *DstRC = DstSize == 64
+                                                   ? &AArch64::FPR64RegClass
+                                                   : &AArch64::FPR128RegClass;
+
+            if (SplatLow2) {
+              // v4f32 <fpimm, fpimm, 0, 0>: emit FMOVv2f32_ns into dsub.
+              Register V2f32Reg =
+                  MRI.createVirtualRegister(&AArch64::FPR64RegClass);
+              auto FMovV2 =
+                  MIRBuilder.buildInstr(AArch64::FMOVv2f32_ns, {V2f32Reg}, {})
+                      .addImm(FPImm);
+              constrainSelectedInstRegOperands(*FMovV2, TII, TRI, RBI);
+              auto SubReg =
+                  MIRBuilder.buildInstr(AArch64::SUBREG_TO_REG, {Dst}, {})
+                      .addUse(V2f32Reg)
+                      .addImm(AArch64::dsub);
+              constrainSelectedInstRegOperands(*SubReg, TII, TRI, RBI);
+              RBI.constrainGenericRegister(Dst, *DstRC, MRI);
+              return &*SubReg;
+            }
+
+            // <fpimm, 0, ...>: emit scalar FMOVSi or FMOVDi, then widen.
+            unsigned FMovOpc = IsF32 ? AArch64::FMOVSi : AArch64::FMOVDi;
+            const TargetRegisterClass *ScalarRC =
+                IsF32 ? &AArch64::FPR32RegClass : &AArch64::FPR64RegClass;
+            unsigned SubRegIdx = IsF32 ? AArch64::ssub : AArch64::dsub;
+
+            Register ScalarReg = MRI.createVirtualRegister(ScalarRC);
+            auto FMov =
+                MIRBuilder.buildInstr(FMovOpc, {ScalarReg}, {}).addImm(FPImm);
+            constrainSelectedInstRegOperands(*FMov, TII, TRI, RBI);
+
+            auto SubReg =
+                MIRBuilder.buildInstr(AArch64::SUBREG_TO_REG, {Dst}, {})
+                    .addUse(ScalarReg)
+                    .addImm(SubRegIdx);
+            constrainSelectedInstRegOperands(*SubReg, TII, TRI, RBI);
+            RBI.constrainGenericRegister(Dst, *DstRC, MRI);
+            return &*SubReg;
+          }
+        }
+      }
+    }
+  }
+
   auto *CPLoad = emitLoadFromConstantPool(CV, MIRBuilder);
   if (!CPLoad) {
     LLVM_DEBUG(dbgs() << "Could not generate cp load for constant vector!");
