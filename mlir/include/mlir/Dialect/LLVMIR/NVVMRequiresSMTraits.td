@@ -48,7 +48,7 @@ class NVVMRequiresSMf<list<int> smVersions> :
 class NVVMRequiresSMaOrSMf<list<int> smVersionsA, list<int> smVersionsF> :
   ParamNativeOpTrait<"NVVMRequiresSM",
     !interleave(!foreach(smVersion, smVersionsA, 
-                  !add(!mul(smVersion, 10), 3)), ",") # "," #
-    !interleave(!foreach(smVersion, smVersionsF, 
+                  !add(!mul(smVersion, 10), 3)) #
+                !foreach(smVersion, smVersionsF, 
                   !add(!mul(smVersion, 10), 2)), ",")>;
 #endif //NVVM_REQUIRES_SM_TRAITS

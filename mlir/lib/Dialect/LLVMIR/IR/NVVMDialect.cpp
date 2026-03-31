@@ -6055,7 +6055,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
 
   const unsigned targetFullSmVersion =
       NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
-  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
+  if (NVVMCheckSMVersion::getSMVersion(targetFullSmVersion) < 20) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }

@@ -46,15 +46,21 @@ struct NVVMCheckSMVersion {
 
           if (hasFamilySpecificFeatures(requiredFullSmVersion))
             return hasFamilySpecificFeatures(targetFullSmVersion) &&
-                   ((targetFullSmVersion / 100) ==
-                    (requiredFullSmVersion / 100));
+                   (getSMFamily(targetFullSmVersion) ==
+                    getSMFamily(requiredFullSmVersion)) &&
+                   (getSMVersion(targetFullSmVersion) >=
+                    getSMVersion(requiredFullSmVersion));
 
           return targetFullSmVersion >= requiredFullSmVersion;
         });
   }
 
-  static bool isMinimumSMVersion(unsigned targetFullSmVersion) {
-    return targetFullSmVersion >= 200;
+  static unsigned getSMVersion(unsigned fullSmVersion) {
+    return fullSmVersion / 10;
+  }
+
+  static unsigned getSMFamily(unsigned fullSmVersion) {
+    return fullSmVersion / 100;
   }
 
   // Parses an SM version string and returns an equivalent full SM version

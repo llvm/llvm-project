@@ -41,6 +41,10 @@ gpu.module @check_valid_SM_family_3 [#nvvm.target<chip = "sm_103a">] {
   test.nvvm_requires_sm_100f
 }
 
+gpu.module @check_valid_SM_family_4[#nvvm.target<chip = "sm_103f">] {
+  test.nvvm_requires_sm_100f
+}
+
 gpu.module @check_valid_SM_family_multi_1 [#nvvm.target<chip = "sm_100f">] {
   test.nvvm_requires_sm_100f_or_sm_120f
 }
@@ -132,6 +136,13 @@ gpu.module @check_invalid_SM_arch_acc_multi_2 [#nvvm.target<chip = "sm_90">] {
 gpu.module @check_invalid_SM_family [#nvvm.target<chip = "sm_110a">] {
   // expected-error @below {{is not supported on sm_110a}}
   test.nvvm_requires_sm_100f
+}
+
+// -----
+
+gpu.module @check_invalid_SM_family_higher [#nvvm.target<chip = "sm_100f">] {
+  // expected-error @below {{is not supported on sm_100f}}
+  test.nvvm_requires_sm_103f
 }
 
 // -----
