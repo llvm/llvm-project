@@ -80,12 +80,11 @@ std::optional<ModuleSpec> SymbolLocatorDefault::LocateExecutableObjectFile(
       exec_fspec ? exec_fspec.GetFilename().AsCString("<NULL>") : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
 
+  ModuleSpecList module_specs;
   ModuleSpec matched_module_spec;
-  if (!exec_fspec)
-    return {};
-  ModuleSpecList module_specs =
-      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0);
-  if (module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
+  if (exec_fspec &&
+      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0, module_specs) &&
+      module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
     ModuleSpec result;
     result.GetFileSpec() = exec_fspec;
     return result;
@@ -216,11 +215,12 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
         continue;
 
       if (FileSystem::Instance().Exists(file_spec)) {
-        lldb_private::ModuleSpecList specs =
-            ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
+        lldb_private::ModuleSpecList specs;
+        const size_t num_specs =
+            ObjectFile::GetModuleSpecifications(file_spec, 0, 0, specs);
         ModuleSpec mspec;
         bool valid_mspec = false;
-        if (specs.GetSize() == 2) {
+        if (num_specs == 2) {
           // Special case to handle both i386 and i686 from ObjectFilePECOFF
           ModuleSpec mspec2;
           if (specs.GetModuleSpecAtIndex(0, mspec) &&
@@ -231,9 +231,9 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
           }
         }
         if (!valid_mspec) {
-          assert(specs.GetSize() <= 1 &&
+          assert(num_specs <= 1 &&
                  "Symbol Vendor supports only a single architecture");
-          if (specs.GetSize() == 1) {
+          if (num_specs == 1) {
             if (specs.GetModuleSpecAtIndex(0, mspec)) {
               valid_mspec = true;
             }

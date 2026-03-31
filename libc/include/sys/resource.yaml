@@ -1,9 +1,6 @@
 header: sys/resource.h
-standards:
-  - posix
-macros:
-  - macro_name: RLIMIT_CPU
-    macro_header: sys-resource-macros.h
+header_template: resource.h.def
+macros: []
 types:
   - type_name: struct_rlimit
   - type_name: rlim_t

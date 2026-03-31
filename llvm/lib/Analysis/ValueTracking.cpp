@@ -632,9 +632,11 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
       if (V == I || (!V->mayHaveSideEffects() && !V->isTerminator())) {
         EphValues.insert(V);
 
-        for (const Use &U : V->operands()) {
-          if (const auto *I = dyn_cast<Instruction>(U.get()))
-            WorkSet.push_back(I);
+        if (const User *U = dyn_cast<User>(V)) {
+          for (const Use &U : U->operands()) {
+            if (const auto *I = dyn_cast<Instruction>(U.get()))
+              WorkSet.push_back(I);
+          }
         }
       }
     }
@@ -6045,7 +6047,50 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownBits Bits(EltTy->getPrimitiveSizeInBits());
     computeKnownBits(Src, DemandedElts, Bits, Q, Depth + 1);
 
-    Known = KnownFPClass::bitcast(EltTy->getFltSemantics(), Bits);
+    // Transfer information from the sign bit.
+    if (Bits.isNonNegative())
+      Known.signBitMustBeZero();
+    else if (Bits.isNegative())
+      Known.signBitMustBeOne();
+
+    if (EltTy->isIEEELikeFPTy()) {
+      // IEEE floats are NaN when all bits of the exponent plus at least one of
+      // the fraction bits are 1. This means:
+      //   - If we assume unknown bits are 0 and the value is NaN, it will
+      //     always be NaN
+      //   - If we assume unknown bits are 1 and the value is not NaN, it can
+      //     never be NaN
+      // Note: They do not hold for x86_fp80 format.
+      if (APFloat(EltTy->getFltSemantics(), Bits.One).isNaN())
+        Known.KnownFPClasses = fcNan;
+      else if (!APFloat(EltTy->getFltSemantics(), ~Bits.Zero).isNaN())
+        Known.knownNot(fcNan);
+
+      // Build KnownBits representing Inf and check if it must be equal or
+      // unequal to this value.
+      auto InfKB = KnownBits::makeConstant(
+          APFloat::getInf(EltTy->getFltSemantics()).bitcastToAPInt());
+      InfKB.Zero.clearSignBit();
+      if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
+        assert(!InfResult.value());
+        Known.knownNot(fcInf);
+      } else if (Bits == InfKB) {
+        Known.KnownFPClasses = fcInf;
+      }
+
+      // Build KnownBits representing Zero and check if it must be equal or
+      // unequal to this value.
+      auto ZeroKB = KnownBits::makeConstant(
+          APFloat::getZero(EltTy->getFltSemantics()).bitcastToAPInt());
+      ZeroKB.Zero.clearSignBit();
+      if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
+        assert(!ZeroResult.value());
+        Known.knownNot(fcZero);
+      } else if (Bits == ZeroKB) {
+        Known.KnownFPClasses = fcZero;
+      }
+    }
+
     break;
   }
   default:
@@ -7852,7 +7897,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
   // if what we are checking for includes undef and the value is not an integer.
   if (!includesUndef(Kind) || V->getType()->isIntegerTy())
     while (Dominator) {
-      auto *TI = Dominator->getBlock()->getTerminatorOrNull();
+      auto *TI = Dominator->getBlock()->getTerminator();
 
       Value *Cond = nullptr;
       if (auto BI = dyn_cast_or_null<CondBrInst>(TI)) {

@@ -68,10 +68,6 @@ bool SSAContext::isConstantOrUndefValuePhi(const Instruction &Instr) {
   return false;
 }
 
-template <> bool SSAContext::isAlwaysUniform(const Value *V) {
-  return !isa<Instruction>(V) && !isa<Argument>(V);
-}
-
 template <> Intrinsic::ID SSAContext::getIntrinsicID(const Instruction &I) {
   if (auto *CB = dyn_cast<CallBase>(&I))
     return CB->getIntrinsicID();

@@ -20,7 +20,6 @@
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
@@ -118,13 +117,15 @@ private:
   OriginList *InnerList = nullptr;
 };
 
+bool hasOrigins(QualType QT);
+bool hasOrigins(const Expr *E);
 bool doesDeclHaveStorage(const ValueDecl *D);
 
 /// Manages the creation, storage, and retrieval of origins for pointer-like
 /// variables and expressions.
 class OriginManager {
 public:
-  explicit OriginManager(const AnalysisDeclContext &AC);
+  explicit OriginManager(ASTContext &AST, const Decl *D);
 
   /// Gets or creates the OriginList for a given ValueDecl.
   ///
@@ -154,9 +155,6 @@ public:
 
   unsigned getNumOrigins() const { return NextOriginID.Value; }
 
-  bool hasOrigins(QualType QT) const;
-  bool hasOrigins(const Expr *E) const;
-
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
   /// Collects statistics about expressions that lack associated origins.
@@ -171,14 +169,6 @@ private:
   template <typename T>
   OriginList *buildListForType(QualType QT, const T *Node);
 
-  void initializeThisOrigins(const Decl *D);
-
-  /// Pre-scans the function body (and constructor init lists) to discover
-  /// return types of lifetime-annotated calls (currently
-  /// [[clang::lifetimebound]]), registering them for origin tracking.
-  void collectLifetimeAnnotatedOriginTypes(const AnalysisDeclContext &AC);
-  void registerLifetimeAnnotatedOriginType(QualType QT);
-
   ASTContext &AST;
   OriginID NextOriginID{0};
   /// TODO(opt): Profile and evaluate the usefulness of small buffer
@@ -188,10 +178,6 @@ private:
   llvm::DenseMap<const clang::ValueDecl *, OriginList *> DeclToList;
   llvm::DenseMap<const clang::Expr *, OriginList *> ExprToList;
   std::optional<OriginList *> ThisOrigins;
-  /// Types that are not inherently pointer-like but require origin tracking
-  /// because of lifetime annotations (currently [[clang::lifetimebound]]) on
-  /// functions that return them.
-  llvm::DenseSet<const Type *> LifetimeAnnotatedOriginTypes;
 };
 } // namespace clang::lifetimes::internal
 

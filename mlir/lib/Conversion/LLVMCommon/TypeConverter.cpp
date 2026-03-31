@@ -770,8 +770,7 @@ SmallVector<Value, 4> LLVMTypeConverter::promoteOperands(
         MemRefDescriptor desc(llvmOperand.front());
         promotedOperands.push_back(desc.alignedPtr(builder, loc));
         continue;
-      }
-      if (isa<UnrankedMemRefType>(operand.getType())) {
+      } else if (isa<UnrankedMemRefType>(operand.getType())) {
         llvm_unreachable("Unranked memrefs are not supported");
       }
     } else {

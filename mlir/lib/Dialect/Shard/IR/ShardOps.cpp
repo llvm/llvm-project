@@ -631,12 +631,8 @@ public:
     bool modified = succeeded(foldDynamicIndexList(mixedHalos, true)) ||
                     succeeded(foldDynamicIndexList(mixedOffs, true));
 
-    auto decomposedHalos = decomposeMixedValues(mixedHalos);
-    auto staticHalos = decomposedHalos.first;
-    auto dynamicHalos = decomposedHalos.second;
-    auto decomposedOffs = decomposeMixedValues(mixedOffs);
-    auto staticOffs = decomposedOffs.first;
-    auto dynamicOffs = decomposedOffs.second;
+    auto [staticHalos, dynamicHalos] = decomposeMixedValues(mixedHalos);
+    auto [staticOffs, dynamicOffs] = decomposeMixedValues(mixedOffs);
 
     if (dynamicHalos.empty() && !staticHalos.empty()) {
       if (staticHalos[0] == 0 && llvm::all_equal(staticHalos)) {
@@ -670,12 +666,11 @@ public:
       return failure();
     }
 
-    b.modifyOpInPlace(op, [&]() {
-      op.setStaticHaloSizes(staticHalos);
-      op.getDynamicHaloSizesMutable().assign(dynamicHalos);
-      op.setStaticShardedDimsOffsets(staticOffs);
-      op.getDynamicShardedDimsOffsetsMutable().assign(dynamicOffs);
-    });
+    op.setStaticHaloSizes(staticHalos);
+    op.getDynamicHaloSizesMutable().assign(dynamicHalos);
+    op.setStaticShardedDimsOffsets(staticOffs);
+    op.getDynamicShardedDimsOffsetsMutable().assign(dynamicOffs);
+
     return success();
   }
 };
@@ -882,8 +877,7 @@ public:
           b.eraseOp(op.getOperation());
         } else {
           // use the other sharding as input for op
-          b.modifyOpInPlace(
-              op, [&]() { op.getSrcMutable().assign(otherOp.getResult()); });
+          op.getSrcMutable().assign(otherOp.getResult());
         }
         return success();
       }

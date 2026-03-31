@@ -519,7 +519,8 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    QualifiedLookupValidatorCCC FilterCCC(!SS.isEmpty());
+    // Simple filter callback that, for keywords, only accepts the C++ *_cast
+    DefaultFilterCCC FilterCCC{};
     FilterCCC.WantTypeSpecifiers = false;
     FilterCCC.WantExpressionKeywords = false;
     FilterCCC.WantRemainingKeywords = false;

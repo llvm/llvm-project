@@ -1637,11 +1637,9 @@ void VPPhi::execute(VPTransformState &State) {
   PHINode *NewPhi = State.Builder.CreatePHI(
       State.TypeAnalysis.inferScalarType(this), 2, getName());
   unsigned NumIncoming = getNumIncoming();
-  // Detect header phis: the parent block dominates its second incoming block
-  // (the latch). Those IR incoming values have not been generated yet and need
-  // to be added after they have been executed.
-  if (NumIncoming == 2 &&
-      State.VPDT.dominates(getParent(), getIncomingBlock(1))) {
+  if (getParent() != getParent()->getPlan()->getScalarPreheader()) {
+    // TODO: Fixup all incoming values of header phis once recipes defining them
+    // are introduced.
     NumIncoming = 1;
   }
   for (unsigned Idx = 0; Idx != NumIncoming; ++Idx) {

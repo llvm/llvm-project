@@ -1107,8 +1107,9 @@ void ModuleImportsManager::computeImportForModule(
     auto *Summary = std::get<0>(GVInfo);
     auto Threshold = std::get<1>(GVInfo);
 
-    computeImportForFunction(*Summary, Threshold, DefinedGVSummaries, Worklist,
-                             GVI, ImportList, ImportThresholds);
+    if (auto *FS = dyn_cast<FunctionSummary>(Summary))
+      computeImportForFunction(*FS, Threshold, DefinedGVSummaries, Worklist,
+                               GVI, ImportList, ImportThresholds);
   }
 
   // Print stats about functions considered but rejected for importing

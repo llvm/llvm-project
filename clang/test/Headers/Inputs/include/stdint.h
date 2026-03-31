@@ -39,7 +39,4 @@ typedef unsigned __INTPTR_TYPE__ uintptr_t;
 #define UINT32_MAX  __UINT32_C(4294967295)
 #define UINT64_MAX  __UINT64_C(18446744073709551615)
 
-#define UINT32_C __UINT32_C
-#define UINT64_C __UINT64_C
-
 #endif /* STDINT_H */

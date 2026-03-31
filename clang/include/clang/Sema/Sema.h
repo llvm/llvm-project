@@ -968,10 +968,6 @@ public:
   /// Load weak undeclared identifiers from the external source.
   void LoadExternalWeakUndeclaredIdentifiers();
 
-  /// Load #pragma redefine_extname'd undeclared identifiers from the external
-  /// source.
-  void LoadExternalExtnameUndeclaredIdentifiers();
-
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
   /// unit because its type has no linkage and it's not extern "C".
@@ -9935,10 +9931,9 @@ public:
 
   /// Is the module scope we are an implementation unit?
   bool currentModuleIsImplementation() const {
-    if (ModuleScopes.empty())
-      return false;
-    const Module *M = ModuleScopes.back().Module;
-    return M->isModuleImplementation() || M->isModulePartitionImplementation();
+    return ModuleScopes.empty()
+               ? false
+               : ModuleScopes.back().Module->isModuleImplementation();
   }
 
   // When loading a non-modular PCH files, this is used to restore module

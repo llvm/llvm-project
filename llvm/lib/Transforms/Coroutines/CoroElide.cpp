@@ -73,8 +73,7 @@ private:
   SmallVector<CoroBeginInst *, 1> CoroBegins;
   SmallVector<CoroAllocInst *, 1> CoroAllocs;
   SmallVector<CoroSubFnInst *, 4> ResumeAddr;
-  SmallVector<CoroSubFnInst *, 4> DestroyAddr;
-  DenseMap<CoroBeginInst *, SmallVector<IntrinsicInst *, 4>> BeginDeadMap;
+  DenseMap<CoroBeginInst *, SmallVector<CoroSubFnInst *, 4>> DestroyAddr;
 };
 } // end anonymous namespace
 
@@ -178,28 +177,23 @@ CoroIdElider::CoroIdElider(CoroIdInst *CoroId, FunctionElideInfo &FEI,
       CoroAllocs.push_back(CA);
   }
 
+  // Collect all coro.subfn.addrs associated with coro.begin.
+  // Note, we only devirtualize the calls if their coro.subfn.addr refers to
+  // coro.begin directly. If we run into cases where this check is too
+  // conservative, we can consider relaxing the check.
   for (CoroBeginInst *CB : CoroBegins) {
-    for (User *U : CB->users()) {
-      auto &CoroDeads = BeginDeadMap[CB];
-      // Collect all coro.subfn.addrs associated with coro.begin.
-      // Note, we only devirtualize the calls if their coro.subfn.addr refers to
-      // coro.begin directly. If we run into cases where this check is too
-      // conservative, we can consider relaxing the check.
-      if (auto *II = dyn_cast<CoroSubFnInst>(U)) {
+    for (User *U : CB->users())
+      if (auto *II = dyn_cast<CoroSubFnInst>(U))
         switch (II->getIndex()) {
         case CoroSubFnInst::ResumeIndex:
           ResumeAddr.push_back(II);
           break;
         case CoroSubFnInst::DestroyIndex:
-          CoroDeads.push_back(II); // coro.destroy implies coro.dead
-          DestroyAddr.push_back(II);
+          DestroyAddr[CB].push_back(II);
           break;
         default:
           llvm_unreachable("unexpected coro.subfn.addr constant");
         }
-      } else if (auto *II = dyn_cast<CoroDeadInst>(U))
-        CoroDeads.push_back(II);
-    }
   }
 }
 
@@ -246,8 +240,8 @@ void CoroIdElider::elideHeapAllocations(uint64_t FrameSize, Align FrameAlign) {
 
 bool CoroIdElider::canCoroBeginEscape(
     const CoroBeginInst *CB, const SmallPtrSetImpl<BasicBlock *> &TIs) const {
-  const auto &It = BeginDeadMap.find(CB);
-  assert(It != BeginDeadMap.end());
+  const auto &It = DestroyAddr.find(CB);
+  assert(It != DestroyAddr.end());
 
   // Limit the number of blocks we visit.
   unsigned Limit = 32 * (1 + It->second.size());
@@ -256,8 +250,8 @@ bool CoroIdElider::canCoroBeginEscape(
   Worklist.push_back(CB->getParent());
 
   SmallPtrSet<const BasicBlock *, 32> Visited;
-  // Consider basicblock of coro.dead/destroy as visited one, so that we
-  // skip the path pass through it.
+  // Consider basicblock of coro.destroy as visited one, so that we
+  // skip the path pass through coro.destroy.
   for (auto *DA : It->second)
     Visited.insert(DA->getParent());
 
@@ -333,11 +327,11 @@ bool CoroIdElider::lifetimeEligibleForElide() const {
   if (CoroAllocs.empty())
     return false;
 
-  // Check that for every coro.begin there is at least one coro.dead/destroy
-  // directly referencing the SSA value of that coro.begin along each
+  // Check that for every coro.begin there is at least one coro.destroy directly
+  // referencing the SSA value of that coro.begin along each
   // non-exceptional path.
   //
-  // If the value escaped, then coro.dead/destroy would have been referencing a
+  // If the value escaped, then coro.destroy would have been referencing a
   // memory location storing that value and not the virtual register.
 
   SmallPtrSet<BasicBlock *, 8> Terminators;
@@ -353,16 +347,21 @@ bool CoroIdElider::lifetimeEligibleForElide() const {
     Terminators.insert(&B);
   }
 
-  // Filter out the coro.dead/destroy that lie along exceptional paths.
+  // Filter out the coro.destroy that lie along exceptional paths.
   for (const auto *CB : CoroBegins) {
-    auto It = BeginDeadMap.find(CB);
-    if (It == BeginDeadMap.end())
+    auto It = DestroyAddr.find(CB);
+
+    // FIXME: If we have not found any destroys for this coro.begin, we
+    // disqualify this elide.
+    if (It == DestroyAddr.end())
       return false;
 
-    // If every terminators is dominated by coro.dead/destroy, we could know the
+    const auto &CorrespondingDestroyAddrs = It->second;
+
+    // If every terminators is dominated by coro.destroy, we could know the
     // corresponding coro.begin wouldn't escape.
     auto DominatesTerminator = [&](auto *TI) {
-      return llvm::any_of(It->second, [&](auto *Destroy) {
+      return llvm::any_of(CorrespondingDestroyAddrs, [&](auto *Destroy) {
         return DT.dominates(Destroy, TI->getTerminator());
       });
     };
@@ -372,7 +371,7 @@ bool CoroIdElider::lifetimeEligibleForElide() const {
 
     // Otherwise canCoroBeginEscape would decide whether there is any paths from
     // coro.begin to Terminators which not pass through any of the
-    // coro.dead/destroy. This is a slower analysis.
+    // coro.destroys. This is a slower analysis.
     //
     // canCoroBeginEscape is relatively slow, so we avoid to run it as much as
     // possible.
@@ -402,7 +401,8 @@ bool CoroIdElider::attemptElide() {
       EligibleForElide ? CoroSubFnInst::CleanupIndex
                        : CoroSubFnInst::DestroyIndex);
 
-  replaceWithConstant(DestroyAddrConstant, DestroyAddr);
+  for (auto &It : DestroyAddr)
+    replaceWithConstant(DestroyAddrConstant, It.second);
 
   auto FrameSizeAndAlign = getFrameLayout(cast<Function>(ResumeAddrConstant));
 

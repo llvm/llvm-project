@@ -539,9 +539,9 @@ private:
     if (!SI->hasOneUse())
       return false;
 
-    Instruction *SIUse = SI->user_back();
+    Instruction *SIUse = dyn_cast<Instruction>(SI->user_back());
     // The use of the select inst should be either a phi or another select.
-    if (!isa<PHINode, SelectInst>(SIUse))
+    if (!SIUse || !(isa<PHINode>(SIUse) || isa<SelectInst>(SIUse)))
       return false;
 
     BasicBlock *SIBB = SI->getParent();

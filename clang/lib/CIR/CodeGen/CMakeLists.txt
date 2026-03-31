@@ -52,7 +52,6 @@ add_clang_library(clangCIR
   CIRGenTypes.cpp
   CIRGenVTables.cpp
   TargetInfo.cpp
-  Targets/AMDGPU.cpp
 
   DEPENDS
   MLIRCIR

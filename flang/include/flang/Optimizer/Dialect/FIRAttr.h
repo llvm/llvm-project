@@ -13,7 +13,6 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 
-#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 namespace mlir {

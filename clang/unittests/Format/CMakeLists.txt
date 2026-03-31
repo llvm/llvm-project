@@ -2,7 +2,6 @@
 # distinct target enables faster iteration times at low cost.
 add_distinct_clang_unittest(FormatTests
   AlignBracketsTest.cpp
-  AlignmentTest.cpp
   BracesInserterTest.cpp
   BracesRemoverTest.cpp
   CleanupTest.cpp

@@ -38,7 +38,6 @@ body: |
     ; COEXEC-NEXT: [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF4:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; COEXEC-NEXT: early-clobber %13:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: [[DEF5:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF6:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF7:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
@@ -46,6 +45,7 @@ body: |
     ; COEXEC-NEXT: [[DEF9:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF10:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF10]], 0, 0, implicit $exec
+    ; COEXEC-NEXT: early-clobber %13:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: early-clobber %14:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 0, [[DEF7]], [[DEF8]], [[DEF9]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = V_PK_ADD_F32 8, [[GLOBAL_LOAD_DWORDX2_]], 8, [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; COEXEC-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F32_]], implicit %13, implicit %14
@@ -90,19 +90,19 @@ body: |
     ; DEFAULT-NEXT: S_ENDPGM 0, implicit %10, implicit %11
     ;
     ; COEXEC-LABEL: name: test-sched-pending-structural-stall
-    ; COEXEC: S_NOP 0
-    ; COEXEC-NEXT: S_NOP 0
-    ; COEXEC-NEXT: [[DEF:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+    ; COEXEC: [[DEF:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF4:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; COEXEC-NEXT: early-clobber %10:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: [[DEF5:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF6:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF7:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF8:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; COEXEC-NEXT: [[DEF9:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
+    ; COEXEC-NEXT: early-clobber %10:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; COEXEC-NEXT: S_NOP 0
+    ; COEXEC-NEXT: S_NOP 0
     ; COEXEC-NEXT: early-clobber %11:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 0, [[DEF7]], [[DEF8]], [[DEF9]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; COEXEC-NEXT: S_ENDPGM 0, implicit %10, implicit %11
     %0:vreg_512_align2 = IMPLICIT_DEF

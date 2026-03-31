@@ -675,7 +675,8 @@ static bool processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
   ++NumSaturating;
 
   // See if we can infer the other no-wrap too.
-  processBinOp(BinOp, LVI);
+  if (auto *BO = dyn_cast<BinaryOperator>(BinOp))
+    processBinOp(BO, LVI);
 
   return true;
 }

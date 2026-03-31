@@ -40,11 +40,12 @@ protected:
 
 public:
   MipsPreLegalizerCombinerImpl(MachineFunction &MF, CombinerInfo &CInfo,
+                               const TargetPassConfig *TPC,
                                GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
                                const MipsSubtarget &STI,
                                MachineDominatorTree *MDT,
                                const LegalizerInfo *LI)
-      : Combiner(MF, CInfo, &VT, CSEInfo), STI(STI),
+      : Combiner(MF, CInfo, TPC, &VT, CSEInfo), STI(STI),
         Helper(Observer, B, /*IsPreLegalize*/ true, &VT, MDT, LI) {}
 
   static const char *getName() { return "MipsPreLegalizerCombiner"; }
@@ -99,6 +100,7 @@ public:
 } // end anonymous namespace
 
 void MipsPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.setPreservesCFG();
@@ -113,6 +115,7 @@ bool MipsPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
 
+  auto *TPC = &getAnalysis<TargetPassConfig>();
   const MipsSubtarget &ST = MF.getSubtarget<MipsSubtarget>();
   const MipsLegalizerInfo *LI =
       static_cast<const MipsLegalizerInfo *>(ST.getLegalizerInfo());
@@ -120,8 +123,8 @@ bool MipsPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   GISelValueTracking *VT =
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MipsPreLegalizerCombinerInfo PCInfo;
-  MipsPreLegalizerCombinerImpl Impl(MF, PCInfo, *VT, /*CSEInfo*/ nullptr, ST,
-                                    /*MDT*/ nullptr, LI);
+  MipsPreLegalizerCombinerImpl Impl(MF, PCInfo, TPC, *VT, /*CSEInfo*/ nullptr,
+                                    ST, /*MDT*/ nullptr, LI);
   return Impl.combineMachineInstrs();
 }
 
@@ -129,6 +132,7 @@ char MipsPreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(MipsPreLegalizerCombiner, DEBUG_TYPE,
                       "Combine Mips machine instrs before legalization", false,
                       false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(MipsPreLegalizerCombiner, DEBUG_TYPE,
                     "Combine Mips machine instrs before legalization", false,

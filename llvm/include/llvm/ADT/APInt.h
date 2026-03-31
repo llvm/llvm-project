@@ -443,7 +443,7 @@ public:
       assert(BitWidth && "zero width values not allowed");
       return isPowerOf2_64(U.VAL);
     }
-    return isPowerOf2SlowCase();
+    return countPopulationSlowCase() == 1;
   }
 
   /// Check if this APInt's negated value is a power of two greater than zero.
@@ -2084,9 +2084,6 @@ private:
 
   /// out-of-line slow case for countPopulation
   LLVM_ABI unsigned countPopulationSlowCase() const LLVM_READONLY;
-
-  /// out-of-line slow case for isPowerOf2
-  LLVM_ABI bool isPowerOf2SlowCase() const LLVM_READONLY;
 
   /// out-of-line slow case for intersects.
   LLVM_ABI bool intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;

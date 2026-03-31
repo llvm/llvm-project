@@ -768,8 +768,7 @@ const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
 const Record *ListInit::getElementAsRecord(unsigned Idx) const {
   const auto *DI = dyn_cast<DefInit>(getElement(Idx));
   if (!DI)
-    PrintFatalError("expected record type for the element with index " +
-                    Twine(Idx) + " in list " + getAsString());
+    PrintFatalError("Expected record in list!");
   return DI->getDef();
 }
 

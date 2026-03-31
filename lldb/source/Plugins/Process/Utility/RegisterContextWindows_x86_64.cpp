@@ -9,7 +9,6 @@
 #include "RegisterContextWindows_x86_64.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
-#include "lldb/lldb-defines.h"
 
 #include <vector>
 

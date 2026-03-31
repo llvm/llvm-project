@@ -593,16 +593,22 @@ static bool GetOsFromOSABI(unsigned char osabi_byte,
 
 ModuleSpecList ObjectFileELF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t file_offset, lldb::offset_t length) {
+    lldb::offset_t data_offset, lldb::offset_t file_offset,
+    lldb::offset_t length) {
   Log *log = GetLog(LLDBLog::Modules);
 
   if (!extractor_sp || !extractor_sp->HasData())
     return {};
   if (ObjectFileELF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer(), 0,
                                      extractor_sp->GetByteSize())) {
+    DataExtractor data;
+    if (extractor_sp && extractor_sp->HasData()) {
+      data = *extractor_sp->GetSubsetExtractorSP(data_offset);
+      data_offset = 0;
+    }
     elf::ELFHeader header;
-    lldb::offset_t header_offset = 0;
-    if (header.Parse(*extractor_sp, &header_offset)) {
+    lldb::offset_t header_offset = data_offset;
+    if (header.Parse(data, &header_offset)) {
       ModuleSpec spec(file);
       // In Android API level 23 and above, bionic dynamic linker is able to
       // load .so file directly from zip file. In that case, .so file is
@@ -647,17 +653,18 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
         // calculate CRC32 with this data file_offset and
         // length. It is important for Android zip .so file, which is a slice
         // of a file, to not access the outside of the file slice range.
-        if (extractor_sp->GetByteSize() < length)
+        if (data.GetByteSize() < length)
           if (DataBufferSP data_sp = MapFileData(file, length, file_offset)) {
-            extractor_sp->SetData(data_sp);
+            data.SetData(data_sp);
+            data_offset = 0;
           }
         // In case there is header extension in the section #0, the header we
         // parsed above could have sentinel values for e_phnum, e_shnum, and
         // e_shstrndx.  In this case we need to reparse the header with a
         // bigger data source to get the actual values.
         if (header.HasHeaderExtension()) {
-          lldb::offset_t header_offset = 0;
-          header.Parse(*extractor_sp, &header_offset);
+          lldb::offset_t header_offset = data_offset;
+          header.Parse(data, &header_offset);
         }
 
         uint32_t gnu_debuglink_crc = 0;
@@ -665,7 +672,7 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
         SectionHeaderColl section_headers;
         lldb_private::UUID &uuid = spec.GetUUID();
 
-        GetSectionHeaderInfo(section_headers, *extractor_sp, header, uuid,
+        GetSectionHeaderInfo(section_headers, data, header, uuid,
                              gnu_debuglink_file, gnu_debuglink_crc,
                              spec.GetArchitecture());
 
@@ -692,12 +699,12 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
             // to fallback to something simpler.
             if (header.e_type == llvm::ELF::ET_CORE) {
               ProgramHeaderColl program_headers;
-              GetProgramHeaderInfo(program_headers, *extractor_sp, header);
+              GetProgramHeaderInfo(program_headers, data, header);
 
-              core_notes_crc = CalculateELFNotesSegmentsCRC32(program_headers,
-                                                              *extractor_sp);
+              core_notes_crc =
+                  CalculateELFNotesSegmentsCRC32(program_headers, data);
             } else {
-              gnu_debuglink_crc = calc_crc32(0, *extractor_sp);
+              gnu_debuglink_crc = calc_crc32(0, data);
             }
           }
           using u32le = llvm::support::ulittle32_t;
@@ -971,8 +978,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
       if (symbol.d_tag == DT_MIPS_RLD_MAP) {
         // DT_MIPS_RLD_MAP tag stores an absolute address of the debug pointer.
         Address addr;
-        if (target->ReadPointerFromMemory(Address(d_load_addr), error, addr,
-                                          true))
+        if (target->ReadPointerFromMemory(d_load_addr, error, addr, true))
           return addr;
       }
       if (symbol.d_tag == DT_MIPS_RLD_MAP_REL) {
@@ -980,8 +986,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
         // relative to the address of the tag.
         uint64_t rel_offset;
         rel_offset = target->ReadUnsignedIntegerFromMemory(
-            Address(d_load_addr), GetAddressByteSize(), UINT64_MAX, error,
-            true);
+            d_load_addr, GetAddressByteSize(), UINT64_MAX, error, true);
         if (error.Success() && rel_offset != UINT64_MAX) {
           Address addr;
           addr_t debug_ptr_address =
@@ -1020,7 +1025,7 @@ Address ObjectFileELF::GetBaseAddress() {
       if (header.sh_flags & SHF_ALLOC)
         return Address(GetSectionList()->FindSectionByID(SectionIndex(I)), 0);
     }
-    return Address();
+    return LLDB_INVALID_ADDRESS;
   }
 
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
@@ -1031,7 +1036,7 @@ Address ObjectFileELF::GetBaseAddress() {
     return Address(
         GetSectionList()->FindSectionByID(SegmentID(EnumPHdr.index())), 0);
   }
-  return Address();
+  return LLDB_INVALID_ADDRESS;
 }
 
 size_t ObjectFileELF::ParseDependentModules() {

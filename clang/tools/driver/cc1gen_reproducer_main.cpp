@@ -136,10 +136,12 @@ generateReproducerForInvocationArguments(
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Argv));
   if (C && !C->containsError()) {
     for (const auto &J : C->getJobs()) {
-      Driver::CompilationDiagnosticReport Report;
-      TheDriver.generateCompilationDiagnostics(
-          *C, J, generateReproducerMetaInfo(Info), &Report);
-      return Report;
+      if (const Command *Cmd = dyn_cast<Command>(&J)) {
+        Driver::CompilationDiagnosticReport Report;
+        TheDriver.generateCompilationDiagnostics(
+            *C, *Cmd, generateReproducerMetaInfo(Info), &Report);
+        return Report;
+      }
     }
   }
 

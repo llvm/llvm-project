@@ -113,15 +113,6 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   }
 }
 
-static bool checkDoubleExtensionOps(Intrinsic::ID IID) {
-  switch (IID) {
-  default:
-    return false;
-  case Intrinsic::fma:
-    return true;
-  }
-}
-
 static bool isOptimizationDisabled(const Module &M) {
   const StringRef Key = "dx.disable_optimizations";
   if (auto *Flag = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key)))
@@ -259,8 +250,9 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     if (FunctionFlags.contains(CF))
       CSF.merge(FunctionFlags[CF]);
 
-    CSF.DX11_1_DoubleExtensions |=
-        checkDoubleExtensionOps(CI->getIntrinsicID());
+    // TODO: Set DX11_1_DoubleExtensions if I is a call to DXIL intrinsic
+    // DXIL::Opcode::Fma https://github.com/llvm/llvm-project/issues/114554
+
     CSF.WaveOps |= checkWaveOps(CI->getIntrinsicID());
   }
 }

@@ -226,7 +226,8 @@ namespace LiteralReference {
     int n;
   };
 
-  // CHECK: @[[TEMP:.*]] = internal constant {{.*}} { i32 5 }, align 4
+  // This creates a non-const temporary and binds a reference to it.
+  // CHECK: @[[TEMP:.*]] = internal global {{.*}} { i32 5 }, align 4
   // CHECK: @_ZN16LiteralReference3litE ={{.*}} constant {{.*}} @[[TEMP]], align 8
   const Lit &lit = Lit();
 

@@ -244,6 +244,10 @@ struct CUFSharedMemoryOpConversion
   matchAndRewrite(cuf::SharedMemoryOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
+    if (!op.getOffset())
+      mlir::emitError(loc,
+                      "cuf.shared_memory must have an offset for code gen");
+
     auto gpuMod = op->getParentOfType<gpu::GPUModuleOp>();
 
     std::string sharedGlobalName =
@@ -262,10 +266,7 @@ struct CUFSharedMemoryOpConversion
         rewriter, loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
         sharedGlobalAddr);
     mlir::Type baseType = castPtr->getResultTypes().front();
-    mlir::LLVM::GEPArg offsetArg =
-        op.getOffset() ? mlir::LLVM::GEPArg(op.getOffset())
-                       : mlir::LLVM::GEPArg(static_cast<int32_t>(0));
-    llvm::SmallVector<mlir::LLVM::GEPArg> gepArgs = {offsetArg};
+    llvm::SmallVector<mlir::LLVM::GEPArg> gepArgs = {op.getOffset()};
     mlir::Value shmemPtr = mlir::LLVM::GEPOp::create(
         rewriter, loc, baseType, rewriter.getI8Type(), castPtr, gepArgs);
     rewriter.replaceOp(op, {shmemPtr});

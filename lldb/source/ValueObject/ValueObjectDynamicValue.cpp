@@ -255,7 +255,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
       }
 
       m_value.GetScalar() = (uint64_t)local_buffer.data();
-      m_address = Address();
+      m_address = LLDB_INVALID_ADDRESS;
     } else {
       // Otherwise we have a legitimate address on the target. Point to the load
       // address.

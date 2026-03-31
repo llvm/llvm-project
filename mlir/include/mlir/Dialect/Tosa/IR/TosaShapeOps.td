@@ -346,8 +346,6 @@ def Tosa_SliceShapeOp : Tosa_ShapeOp<"slice_shape", [Pure]> {
   let results = (outs Tosa_Shape:$output);
 
   let hasVerifier = 1;
-
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

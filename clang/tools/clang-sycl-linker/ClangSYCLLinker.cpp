@@ -52,6 +52,9 @@ using namespace llvm::opt;
 using namespace llvm::object;
 using namespace clang;
 
+/// Save intermediary results.
+static bool SaveTemps = false;
+
 /// Print commands/steps with arguments without executing.
 static bool DryRun = false;
 
@@ -588,6 +591,7 @@ int main(int argc, char **argv) {
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
+  SaveTemps = Args.hasArg(OPT_save_temps);
 
   if (!Args.hasArg(OPT_o))
     reportError(createStringError("Output file must be specified"));

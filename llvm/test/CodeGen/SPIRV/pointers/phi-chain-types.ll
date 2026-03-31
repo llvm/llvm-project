@@ -7,35 +7,30 @@
 ; CHECK-DAG: OpName %[[#Foo:]] "foo"
 ; CHECK-DAG: OpName %[[#Bar:]] "bar"
 
-; CHECK-DAG: %[[#Char:]] = OpTypeInt 8 0
-; CHECK-DAG: %[[#CharGenPtr:]] = OpTypePointer Generic %[[#Char]]
 ; CHECK-DAG: %[[#Short:]] = OpTypeInt 16 0
 ; CHECK-DAG: %[[#ShortGenPtr:]] = OpTypePointer Generic %[[#Short]]
 ; CHECK-DAG: %[[#ShortWrkPtr:]] = OpTypePointer Workgroup %[[#Short]]
 ; CHECK-DAG: %[[#G1:]] = OpVariable %[[#ShortWrkPtr]] Workgroup
 
 ; CHECK: %[[#Foo:]] = OpFunction %[[#]] None %[[#]]
-; CHECK: %[[#FooArgP:]] = OpFunctionParameter %[[#CharGenPtr]]
+; CHECK: %[[#FooArgP:]] = OpFunctionParameter %[[#ShortGenPtr]]
 ; CHECK: OpFunctionParameter
 ; CHECK: OpFunctionParameter
 ; CHECK: OpFunctionParameter
 ; CHECK: %[[#FooG1:]] = OpPtrCastToGeneric %[[#ShortGenPtr]] %[[#G1]]
-; CHECK: %[[#FooG1Cast:]] = OpBitcast %[[#CharGenPtr]] %[[#FooG1]]
-; CHECK: %[[#FooVal2:]] = OpPhi %[[#CharGenPtr]] %[[#FooVal3:]] %[[#]] %[[#FooArgP]] %[[#]]
-; CHECK: %[[#FooVal1:]] = OpPhi %[[#CharGenPtr]] %[[#FooVal2]] %[[#]] %[[#FooG1Cast]] %[[#]]
-; CHECK: OpBitcast %[[#ShortGenPtr]] %[[#FooVal1]]
-; CHECK: %[[#FooVal3]] = OpLoad %[[#CharGenPtr]] %[[#]]
+; CHECK: %[[#FooVal2:]] = OpPhi %[[#ShortGenPtr]] %[[#FooArgP]] %[[#]] %[[#FooVal3:]] %[[#]]
+; CHECK: %[[#FooVal1:]] = OpPhi %[[#ShortGenPtr]] %[[#FooG1]] %[[#]] %[[#FooVal2]] %[[#]]
+; CHECK: %[[#FooVal3]] = OpLoad %[[#ShortGenPtr]] %[[#]]
 
 ; CHECK: %[[#Bar:]] = OpFunction %[[#]] None %[[#]]
-; CHECK: %[[#BarArgP:]] = OpFunctionParameter %[[#CharGenPtr]]
+; CHECK: %[[#BarArgP:]] = OpFunctionParameter %[[#ShortGenPtr]]
 ; CHECK: OpFunctionParameter
 ; CHECK: OpFunctionParameter
 ; CHECK: OpFunctionParameter
-; CHECK: %[[#BarVal3:]] = OpLoad %[[#CharGenPtr]] %[[#]]
+; CHECK: %[[#BarVal3:]] = OpLoad %[[#ShortGenPtr]] %[[#]]
 ; CHECK: %[[#BarG1:]] = OpPtrCastToGeneric %[[#ShortGenPtr]] %[[#G1]]
-; CHECK: %[[#BarVal1:]] = OpPhi %[[#ShortGenPtr]] %[[#BarVal2Cast:]] %[[#]] %[[#BarG1]] %[[#]]
-; CHECK: %[[#BarVal2:]] = OpPhi %[[#CharGenPtr]] %[[#BarVal3]] %[[#]] %[[#BarArgP]] %[[#]]
-; CHECK: %[[#BarVal2Cast]] = OpBitcast %[[#ShortGenPtr]] %[[#BarVal2]]
+; CHECK: %[[#BarVal1:]] = OpPhi %[[#ShortGenPtr]] %[[#BarG1]] %[[#]] %[[#BarVal2:]] %[[#]]
+; CHECK: %[[#BarVal2]] = OpPhi %[[#ShortGenPtr]] %[[#BarArgP]] %[[#]] %[[#BarVal3]] %[[#]]
 
 @G1 = internal addrspace(3) global i16 undef, align 8
 @G2 = internal unnamed_addr addrspace(3) global ptr addrspace(4) undef, align 8

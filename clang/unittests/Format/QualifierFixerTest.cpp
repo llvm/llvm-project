@@ -1126,15 +1126,15 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 TEST_F(QualifierFixerTest, IsMacro) {
   auto Tokens = annotate("INT INTPR Foo int");
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
-  EXPECT_TRUE(Tokens[0]->isPossibleMacro());
-  EXPECT_TRUE(Tokens[1]->isPossibleMacro());
-  EXPECT_FALSE(Tokens[2]->isPossibleMacro());
-  EXPECT_FALSE(Tokens[3]->isPossibleMacro());
+  EXPECT_TRUE(isPossibleMacro(Tokens[0]));
+  EXPECT_TRUE(isPossibleMacro(Tokens[1]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[3]));
 
   Tokens = annotate("FOO::BAR");
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
-  EXPECT_FALSE(Tokens[0]->isPossibleMacro());
-  EXPECT_FALSE(Tokens[2]->isPossibleMacro());
+  EXPECT_FALSE(isPossibleMacro(Tokens[0]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
 }
 
 TEST_F(QualifierFixerTest, OverlappingQualifier) {

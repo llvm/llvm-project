@@ -1,5 +1,5 @@
 // RUN: %clang -std=c23 -O0 %s -o %t && %run %t
-// UNSUPPORTED: ubsan
+// UNSUPPORTED: asan, hwasan, ubsan
 
 #include <stddef.h>
 #include <stdlib.h>

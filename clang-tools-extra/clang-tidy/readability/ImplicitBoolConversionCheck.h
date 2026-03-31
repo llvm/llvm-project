@@ -36,7 +36,6 @@ private:
 
   const bool AllowIntegerConditions;
   const bool AllowPointerConditions;
-  const bool AllowLogicalOperatorConversion;
   const bool UseUpperCaseLiteralSuffix;
 };
 

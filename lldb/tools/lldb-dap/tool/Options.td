@@ -54,8 +54,7 @@ def debugger_pid: S<"debugger-pid">,
 def stdio: S<"stdio">,
   MetaVarName<"<stdin:stdout:stderr:...>">,
   HelpText<"An array of file paths for redirecting the program's standard IO "
-    "streams. On Windows, a semicolon-separated list of entries, a "
-    "colon-separated list on other platforms. Empty value means no "
+    "streams. A colon-separated list of entries. Empty value means no "
     "redirection.">;
 
 def repl_mode

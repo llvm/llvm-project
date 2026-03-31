@@ -417,8 +417,7 @@ class AccessOpcode : Opcode {
 
 class BitFieldOpcode : Opcode {
   let Types = [IntegralTypeClass];
-  //          FieldOffset, FieldBitWidth
-  let Args = [ArgUint32, ArgUint32];
+  let Args = [ArgRecordField];
   let HasGroup = 1;
 }
 
@@ -486,7 +485,16 @@ def SetThisField : AccessOpcode;
 def InitThisField : AccessOpcode;
 def InitThisFieldActivate : AccessOpcode;
 // [Value] -> []
-def InitThisBitField : BitFieldOpcode;
+def InitThisBitField : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgRecordField, ArgUint32];
+  let HasGroup = 1;
+}
+def InitThisBitFieldActivate : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgRecordField, ArgUint32];
+  let HasGroup = 1;
+}
 // [Pointer, Value] -> []
 def InitField : AccessOpcode;
 def InitFieldActivate : AccessOpcode;

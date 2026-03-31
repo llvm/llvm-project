@@ -23,6 +23,7 @@
 namespace llvm {
 class MachineRegisterInfo;
 class GISelCSEInfo;
+class TargetPassConfig;
 class MachineFunction;
 class MachineIRBuilder;
 
@@ -57,7 +58,8 @@ public:
   /// If CSEInfo is not null, then the Combiner will use CSEInfo as the observer
   /// and also create a CSEMIRBuilder. Pass nullptr if CSE is not needed.
   Combiner(MachineFunction &MF, const CombinerInfo &CInfo,
-           GISelValueTracking *VT, GISelCSEInfo *CSEInfo = nullptr);
+           const TargetPassConfig *TPC, GISelValueTracking *VT,
+           GISelCSEInfo *CSEInfo = nullptr);
   ~Combiner() override;
 
   virtual bool tryCombineAll(MachineInstr &I) const = 0;
@@ -72,6 +74,7 @@ protected:
   MachineRegisterInfo &MRI;
   GISelValueTracking *VT;
 
+  const TargetPassConfig *TPC;
   GISelCSEInfo *CSEInfo;
 };
 

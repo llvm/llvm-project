@@ -1231,7 +1231,7 @@ const ValueDecl *getDeclFromExpr(const Expr *E) {
   if (!E)
     return nullptr;
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return DRE->getDecl();
+    return dyn_cast<ValueDecl>(DRE->getDecl());
 
   if (const auto *ME = dyn_cast<MemberExpr>(E))
     if (isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))

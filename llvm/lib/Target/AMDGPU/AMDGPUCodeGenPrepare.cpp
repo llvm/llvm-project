@@ -2049,14 +2049,16 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
   Value *Arg1 = I.getArgOperand(1);
 
   const APFloat *C;
-  if (!match(Arg1, m_APFloatAllowPoison(C)))
+  if (!match(Arg1, m_APFloat(C)))
     return nullptr;
 
-  APFloat OneNextDown = APFloat::getOne(C->getSemantics());
-  OneNextDown.next(true);
+  APFloat One(1.0);
+  bool LosesInfo;
+  One.convert(C->getSemantics(), APFloat::rmNearestTiesToEven, &LosesInfo);
 
   // Match nextafter(1.0, -1)
-  if (OneNextDown != *C)
+  One.next(true);
+  if (One != *C)
     return nullptr;
 
   Value *FloorSrc;

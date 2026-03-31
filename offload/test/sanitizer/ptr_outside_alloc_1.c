@@ -9,7 +9,7 @@
 // UNSUPPORTED: nvidiagpu
 //
 // REQUIRES: gpu
-// UNSUPPORTED: intelgpu
+// XFAIL: intelgpu
 
 #include <omp.h>
 

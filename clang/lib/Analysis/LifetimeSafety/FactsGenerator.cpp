@@ -37,14 +37,6 @@ OriginList *FactsGenerator::getOriginsList(const Expr &E) {
   return FactMgr.getOriginMgr().getOrCreateList(&E);
 }
 
-bool FactsGenerator::hasOrigins(QualType QT) const {
-  return FactMgr.getOriginMgr().hasOrigins(QT);
-}
-
-bool FactsGenerator::hasOrigins(const Expr *E) const {
-  return FactMgr.getOriginMgr().hasOrigins(E);
-}
-
 /// Propagates origin information from Src to Dst through all levels of
 /// indirection, creating OriginFlowFacts at each level.
 ///
@@ -79,10 +71,12 @@ void FactsGenerator::flow(OriginList *Dst, OriginList *Src, bool Kill) {
 /// \param DRE The declaration reference expression that initiates the borrow.
 /// \return The new Loan on success, nullptr otherwise.
 static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
-  const ValueDecl *VD = DRE->getDecl();
-  AccessPath Path(VD);
-  // The loan is created at the location of the DeclRefExpr.
-  return FactMgr.getLoanMgr().createLoan(Path, DRE);
+  if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
+    AccessPath Path(VD);
+    // The loan is created at the location of the DeclRefExpr.
+    return FactMgr.getLoanMgr().createLoan(Path, DRE);
+  }
+  return nullptr;
 }
 
 /// Creates a loan for the storage location of a temporary object.
@@ -188,13 +182,14 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     handleGSLPointerConstruction(CCE);
     return;
   }
-  // For defaulted (implicit or `= default`) copy/move constructors, propagate
-  // origins directly. User-defined copy/move constructors have opaque semantics
-  // and fall through to `handleFunctionCall`, where [[clang::lifetimebound]] is
-  // needed to propagate origins.
-  if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
-      CCE->getConstructor()->isDefaulted() && CCE->getNumArgs() == 1 &&
-      hasOrigins(CCE->getType())) {
+  // Implicit copy/move constructors of lambda closures lack
+  // [[clang::lifetimebound]], so `handleFunctionCall` cannot propagate origins.
+  // Handle them directly to keep the origin chain intact (e.g., `return
+  // lambda;` copies the closure).
+  if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
+      RD && RD->isLambda() &&
+      CCE->getConstructor()->isCopyOrMoveConstructor() &&
+      CCE->getNumArgs() == 1) {
     const Expr *Arg = CCE->getArg(0);
     if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
       flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
@@ -403,20 +398,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   // and are handled separately.
   if (OCE->getOperator() == OO_Equal && OCE->getNumArgs() == 2 &&
       hasOrigins(OCE->getArg(0)->getType())) {
-    // Pointer-like types: assignment inherently propagates origins.
-    QualType LHSTy = OCE->getArg(0)->getType();
-    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy)) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
-      return;
-    }
-    // Other tracked types: only defaulted operator= propagates origins.
-    // User-defined operator= has opaque semantics, so don't handle them now.
-    if (const auto *MD =
-            dyn_cast_or_null<CXXMethodDecl>(OCE->getDirectCallee());
-        MD && MD->isDefaulted()) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
-      return;
-    }
+    handleAssignment(OCE->getArg(0), OCE->getArg(1));
+    return;
   }
 
   ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
@@ -663,7 +646,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
+        Method && Method->isInstance()) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
@@ -705,12 +688,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         ArgList = getRValueOrigins(Args[I], ArgList);
       }
       if (isGslOwnerType(Args[I]->getType())) {
-        // The constructed gsl::Pointer borrows from the Owner's storage, not
-        // from what the Owner itself borrows, so only the outermost origin is
-        // needed.
-        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
-            KillSrc));
+        // GSL construction creates a view that borrows from arguments.
+        // This implies flowing origins through the list structure.
+        flow(CallList, ArgList, KillSrc);
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {

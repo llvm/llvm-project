@@ -90,8 +90,7 @@ static void CheckMemoryLayoutSanity() {
     CHECK_LT(start, end);
     CHECK_EQ(prev_end, start);
     CHECK(addr_is_type(start, type));
-    // Use start + (end - start) / 2 to avoid overflow on 32-bit.
-    CHECK(addr_is_type(start + (end - start) / 2, type));
+    CHECK(addr_is_type((start + end) / 2, type));
     CHECK(addr_is_type(end - 1, type));
     if (type == MappingDesc::APP || type == MappingDesc::ALLOCATOR) {
       uptr addr = start;
@@ -99,7 +98,7 @@ static void CheckMemoryLayoutSanity() {
       CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
       CHECK_EQ(MEM_TO_ORIGIN(addr), SHADOW_TO_ORIGIN(MEM_TO_SHADOW(addr)));
 
-      addr = start + (end - start) / 2;
+      addr = (start + end) / 2;
       CHECK(MEM_IS_SHADOW(MEM_TO_SHADOW(addr)));
       CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
       CHECK_EQ(MEM_TO_ORIGIN(addr), SHADOW_TO_ORIGIN(MEM_TO_SHADOW(addr)));

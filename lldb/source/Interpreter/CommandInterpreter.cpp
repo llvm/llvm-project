@@ -1641,9 +1641,9 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
 
   if (!m_alias_dict.empty() &&
       ((cmd_types & eCommandTypesAliases) == eCommandTypesAliases)) {
-    result.AppendMessageWithFormatv(
+    result.AppendMessageWithFormat(
         "Current command abbreviations "
-        "(type '{0}help command alias' for more info):",
+        "(type '%shelp command alias' for more info):\n",
         GetCommandPrefix());
     result.AppendMessage("");
     max_len = FindLongestCommandWord(m_alias_dict);
@@ -1680,8 +1680,8 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
     result.AppendMessage("");
   }
 
-  result.AppendMessageWithFormatv(
-      "For more information on any command, type '{0}help <command-name>'.",
+  result.AppendMessageWithFormat(
+      "For more information on any command, type '%shelp <command-name>'.\n",
       GetCommandPrefix());
 }
 
@@ -2830,8 +2830,8 @@ void CommandInterpreter::HandleCommands(
 
     if (options.GetEchoCommands()) {
       // TODO: Add Stream support.
-      result.AppendMessageWithFormatv(
-          "{0} {1}", m_debugger.GetPrompt().str().c_str(), cmd);
+      result.AppendMessageWithFormat("%s %s\n",
+                                     m_debugger.GetPrompt().str().c_str(), cmd);
     }
 
     CommandReturnObject tmp_result(m_debugger.GetUseColor());
@@ -2892,9 +2892,9 @@ void CommandInterpreter::HandleCommands(
               ": '%s' continued the target.\n",
               (uint64_t)idx + 1, cmd);
         else
-          result.AppendMessageWithFormatv(
-              "Command #{0} '{1}' continued the target.", (uint64_t)idx + 1,
-              cmd);
+          result.AppendMessageWithFormat("Command #%" PRIu64
+                                         " '%s' continued the target.\n",
+                                         (uint64_t)idx + 1, cmd);
 
         result.SetStatus(tmp_result.GetStatus());
         m_debugger.SetAsyncExecution(old_async_execution);
@@ -2912,8 +2912,8 @@ void CommandInterpreter::HandleCommands(
             ": '%s' stopped with a signal or exception.\n",
             (uint64_t)idx + 1, cmd);
       else
-        result.AppendMessageWithFormatv(
-            "Command #{0} '{1}' stopped with a signal or exception.",
+        result.AppendMessageWithFormat(
+            "Command #%" PRIu64 " '%s' stopped with a signal or exception.\n",
             (uint64_t)idx + 1, cmd);
 
       result.SetStatus(tmp_result.GetStatus());
@@ -3552,8 +3552,8 @@ bool CommandInterpreter::SaveTranscript(
                      "Bytes written do not match transcript size.");
 
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
-  result.AppendMessageWithFormatv("Session's transcripts saved to {0}",
-                                  output_file->c_str());
+  result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
+                                 output_file->c_str());
   if (!GetSaveTranscript())
     result.AppendError(
         "Note: the setting interpreter.save-transcript is set to false, so the "

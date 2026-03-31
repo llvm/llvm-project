@@ -8,8 +8,6 @@ set(LLVM_LINK_COMPONENTS
   AMDGPUDesc
   AMDGPUInfo
   AMDGPUUtils
-  Analysis
-  AsmParser
   CodeGen
   CodeGenTypes
   Core
@@ -27,5 +25,4 @@ add_llvm_target_unittest(AMDGPUTests
   ExecMayBeModifiedBeforeAnyUse.cpp
   LiveRegUnits.cpp
   PALMetadata.cpp
-  UniformityAnalysisTest.cpp
   )

@@ -73,16 +73,14 @@ entry:
 define i8 @or8rm(i8 noundef %a, ptr %b) {
 ; NDD-LABEL: or8rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; NDD-NEXT:    orb (%rsi), %al # encoding: [0x0a,0x06]
-; NDD-NEXT:    # kill: def $al killed $al killed $eax
+; NDD-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
+; NDD-NEXT:    orb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x08,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: or8rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; IMMONLY-NEXT:    orb (%rsi), %al # encoding: [0x0a,0x06]
-; IMMONLY-NEXT:    # kill: def $al killed $al killed $eax
+; IMMONLY-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
+; IMMONLY-NEXT:    orb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x08,0xf8]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: or8rm:
@@ -92,9 +90,8 @@ define i8 @or8rm(i8 noundef %a, ptr %b) {
 ;
 ; NF-LABEL: or8rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; NF-NEXT:    orb (%rsi), %al # encoding: [0x0a,0x06]
-; NF-NEXT:    # kill: def $al killed $al killed $eax
+; NF-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
+; NF-NEXT:    orb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x08,0xf8]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i8, ptr %b
@@ -105,16 +102,14 @@ entry:
 define i16 @or16rm(i16 noundef %a, ptr %b) {
 ; NDD-LABEL: or16rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; NDD-NEXT:    orw (%rsi), %ax # encoding: [0x66,0x0b,0x06]
-; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
+; NDD-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
+; NDD-NEXT:    orw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: or16rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; IMMONLY-NEXT:    orw (%rsi), %ax # encoding: [0x66,0x0b,0x06]
-; IMMONLY-NEXT:    # kill: def $ax killed $ax killed $eax
+; IMMONLY-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
+; IMMONLY-NEXT:    orw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xf8]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: or16rm:
@@ -124,9 +119,8 @@ define i16 @or16rm(i16 noundef %a, ptr %b) {
 ;
 ; NF-LABEL: or16rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; NF-NEXT:    orw (%rsi), %ax # encoding: [0x66,0x0b,0x06]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
+; NF-NEXT:    orw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xf8]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i16, ptr %b
@@ -137,14 +131,14 @@ entry:
 define i32 @or32rm(i32 noundef %a, ptr %b) {
 ; NDD-LABEL: or32rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; NDD-NEXT:    orl (%rsi), %eax # encoding: [0x0b,0x06]
+; NDD-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
+; NDD-NEXT:    orl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: or32rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; IMMONLY-NEXT:    orl (%rsi), %eax # encoding: [0x0b,0x06]
+; IMMONLY-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
+; IMMONLY-NEXT:    orl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xf8]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: or32rm:
@@ -154,8 +148,8 @@ define i32 @or32rm(i32 noundef %a, ptr %b) {
 ;
 ; NF-LABEL: or32rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; NF-NEXT:    orl (%rsi), %eax # encoding: [0x0b,0x06]
+; NF-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
+; NF-NEXT:    orl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xf8]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i32, ptr %b
@@ -166,14 +160,14 @@ entry:
 define i64 @or64rm(i64 noundef %a, ptr %b) {
 ; NDD-LABEL: or64rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
-; NDD-NEXT:    orq (%rsi), %rax # encoding: [0x48,0x0b,0x06]
+; NDD-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
+; NDD-NEXT:    orq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: or64rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
-; IMMONLY-NEXT:    orq (%rsi), %rax # encoding: [0x48,0x0b,0x06]
+; IMMONLY-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
+; IMMONLY-NEXT:    orq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xf8]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: or64rm:
@@ -183,8 +177,8 @@ define i64 @or64rm(i64 noundef %a, ptr %b) {
 ;
 ; NF-LABEL: or64rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
-; NF-NEXT:    orq (%rsi), %rax # encoding: [0x48,0x0b,0x06]
+; NF-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
+; NF-NEXT:    orq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xf8]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i64, ptr %b
@@ -306,16 +300,14 @@ entry:
 define i8 @or8mr(ptr %a, i8 noundef %b) {
 ; NDD-LABEL: or8mr:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NDD-NEXT:    orb (%rdi), %al # encoding: [0x0a,0x07]
-; NDD-NEXT:    # kill: def $al killed $al killed $eax
+; NDD-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
+; NDD-NEXT:    orb %sil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x08,0xf0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: or8mr:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; IMMONLY-NEXT:    orb (%rdi), %al # encoding: [0x0a,0x07]
-; IMMONLY-NEXT:    # kill: def $al killed $al killed $eax
+; IMMONLY-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
+; IMMONLY-NEXT:    orb %sil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x08,0xf0]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: or8mr:
@@ -325,9 +317,8 @@ define i8 @or8mr(ptr %a, i8 noundef %b) {
 ;
 ; NF-LABEL: or8mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NF-NEXT:    orb (%rdi), %al # encoding: [0x0a,0x07]
-; NF-NEXT:    # kill: def $al killed $al killed $eax
+; NF-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
+; NF-NEXT:    orb %sil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x08,0xf0]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i8, ptr %a
@@ -338,16 +329,14 @@ entry:
 define i16 @or16mr(ptr %a, i16 noundef %b) {
 ; NDD-LABEL: or16mr:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NDD-NEXT:    orw (%rdi), %ax # encoding: [0x66,0x0b,0x07]
-; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
+; NDD-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
+; NDD-NEXT:    orw %si, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xf0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: or16mr:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; IMMONLY-NEXT:    orw (%rdi), %ax # encoding: [0x66,0x0b,0x07]
-; IMMONLY-NEXT:    # kill: def $ax killed $ax killed $eax
+; IMMONLY-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
+; IMMONLY-NEXT:    orw %si, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xf0]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: or16mr:
@@ -357,9 +346,8 @@ define i16 @or16mr(ptr %a, i16 noundef %b) {
 ;
 ; NF-LABEL: or16mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NF-NEXT:    orw (%rdi), %ax # encoding: [0x66,0x0b,0x07]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
+; NF-NEXT:    orw %si, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xf0]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -370,14 +358,14 @@ entry:
 define i32 @or32mr(ptr %a, i32 noundef %b) {
 ; NDD-LABEL: or32mr:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NDD-NEXT:    orl (%rdi), %eax # encoding: [0x0b,0x07]
+; NDD-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; NDD-NEXT:    orl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xf0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: or32mr:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; IMMONLY-NEXT:    orl (%rdi), %eax # encoding: [0x0b,0x07]
+; IMMONLY-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; IMMONLY-NEXT:    orl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xf0]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: or32mr:
@@ -387,8 +375,8 @@ define i32 @or32mr(ptr %a, i32 noundef %b) {
 ;
 ; NF-LABEL: or32mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; NF-NEXT:    orl (%rdi), %eax # encoding: [0x0b,0x07]
+; NF-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; NF-NEXT:    orl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xf0]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
@@ -399,14 +387,14 @@ entry:
 define i64 @or64mr(ptr %a, i64 noundef %b) {
 ; NDD-LABEL: or64mr:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; NDD-NEXT:    orq (%rdi), %rax # encoding: [0x48,0x0b,0x07]
+; NDD-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
+; NDD-NEXT:    orq %rsi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xf0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: or64mr:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; IMMONLY-NEXT:    orq (%rdi), %rax # encoding: [0x48,0x0b,0x07]
+; IMMONLY-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
+; IMMONLY-NEXT:    orq %rsi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xf0]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: or64mr:
@@ -416,8 +404,8 @@ define i64 @or64mr(ptr %a, i64 noundef %b) {
 ;
 ; NF-LABEL: or64mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
-; NF-NEXT:    orq (%rdi), %rax # encoding: [0x48,0x0b,0x07]
+; NF-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
+; NF-NEXT:    orq %rsi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xf0]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
@@ -739,8 +727,9 @@ define i1 @orflag64rr(i64 %a, i64 %b) {
 define i1 @orflag8rm(ptr %ptr, i8 %b) {
 ; NDD-LABEL: orflag8rm:
 ; NDD:       # %bb.0:
+; NDD-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
 ; NDD-NEXT:    notb %sil, %cl # encoding: [0x62,0xf4,0x74,0x18,0xf6,0xd6]
-; NDD-NEXT:    orb (%rdi), %cl # encoding: [0x0a,0x0f]
+; NDD-NEXT:    orb %al, %cl # EVEX TO LEGACY Compression encoding: [0x08,0xc1]
 ; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NDD-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NDD-NEXT:    # fixup A - offset: 2, value: d64, kind: reloc_riprel_4byte
@@ -748,8 +737,9 @@ define i1 @orflag8rm(ptr %ptr, i8 %b) {
 ;
 ; IMMONLY-LABEL: orflag8rm:
 ; IMMONLY:       # %bb.0:
+; IMMONLY-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
 ; IMMONLY-NEXT:    notb %sil, %cl # encoding: [0x62,0xf4,0x74,0x18,0xf6,0xd6]
-; IMMONLY-NEXT:    orb (%rdi), %cl # encoding: [0x0a,0x0f]
+; IMMONLY-NEXT:    orb %al, %cl # EVEX TO LEGACY Compression encoding: [0x08,0xc1]
 ; IMMONLY-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; IMMONLY-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; IMMONLY-NEXT:    # fixup A - offset: 2, value: d64, kind: reloc_riprel_4byte
@@ -766,8 +756,9 @@ define i1 @orflag8rm(ptr %ptr, i8 %b) {
 ;
 ; NF-LABEL: orflag8rm:
 ; NF:       # %bb.0:
+; NF-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
 ; NF-NEXT:    notb %sil, %cl # encoding: [0x62,0xf4,0x74,0x18,0xf6,0xd6]
-; NF-NEXT:    orb (%rdi), %cl # encoding: [0x0a,0x0f]
+; NF-NEXT:    orb %al, %cl # EVEX TO LEGACY Compression encoding: [0x08,0xc1]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64, kind: reloc_riprel_4byte
@@ -783,8 +774,9 @@ define i1 @orflag8rm(ptr %ptr, i8 %b) {
 define i1 @orflag16rm(ptr %ptr, i16 %b) {
 ; NDD-LABEL: orflag16rm:
 ; NDD:       # %bb.0:
+; NDD-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; NDD-NEXT:    notw %si, %cx # encoding: [0x62,0xf4,0x75,0x18,0xf7,0xd6]
-; NDD-NEXT:    orw (%rdi), %cx # encoding: [0x66,0x0b,0x0f]
+; NDD-NEXT:    orw %ax, %cx # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xc1]
 ; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NDD-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NDD-NEXT:    # fixup A - offset: 3, value: d64, kind: reloc_riprel_4byte
@@ -792,8 +784,9 @@ define i1 @orflag16rm(ptr %ptr, i16 %b) {
 ;
 ; IMMONLY-LABEL: orflag16rm:
 ; IMMONLY:       # %bb.0:
+; IMMONLY-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; IMMONLY-NEXT:    notw %si, %cx # encoding: [0x62,0xf4,0x75,0x18,0xf7,0xd6]
-; IMMONLY-NEXT:    orw (%rdi), %cx # encoding: [0x66,0x0b,0x0f]
+; IMMONLY-NEXT:    orw %ax, %cx # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xc1]
 ; IMMONLY-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; IMMONLY-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; IMMONLY-NEXT:    # fixup A - offset: 3, value: d64, kind: reloc_riprel_4byte
@@ -810,8 +803,9 @@ define i1 @orflag16rm(ptr %ptr, i16 %b) {
 ;
 ; NF-LABEL: orflag16rm:
 ; NF:       # %bb.0:
+; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
 ; NF-NEXT:    notw %si, %cx # encoding: [0x62,0xf4,0x75,0x18,0xf7,0xd6]
-; NF-NEXT:    orw (%rdi), %cx # encoding: [0x66,0x0b,0x0f]
+; NF-NEXT:    orw %ax, %cx # EVEX TO LEGACY Compression encoding: [0x66,0x09,0xc1]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64, kind: reloc_riprel_4byte
@@ -827,7 +821,8 @@ define i1 @orflag16rm(ptr %ptr, i16 %b) {
 define i1 @orflag32rm(ptr %ptr, i32 %b) {
 ; NDD-LABEL: orflag32rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    orl (%rdi), %esi # encoding: [0x0b,0x37]
+; NDD-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; NDD-NEXT:    orl %eax, %esi # EVEX TO LEGACY Compression encoding: [0x09,0xc6]
 ; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NDD-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NDD-NEXT:    # fixup A - offset: 2, value: d64, kind: reloc_riprel_4byte
@@ -835,7 +830,8 @@ define i1 @orflag32rm(ptr %ptr, i32 %b) {
 ;
 ; IMMONLY-LABEL: orflag32rm:
 ; IMMONLY:       # %bb.0:
-; IMMONLY-NEXT:    orl (%rdi), %esi # encoding: [0x0b,0x37]
+; IMMONLY-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; IMMONLY-NEXT:    orl %eax, %esi # EVEX TO LEGACY Compression encoding: [0x09,0xc6]
 ; IMMONLY-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; IMMONLY-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; IMMONLY-NEXT:    # fixup A - offset: 2, value: d64, kind: reloc_riprel_4byte
@@ -851,7 +847,8 @@ define i1 @orflag32rm(ptr %ptr, i32 %b) {
 ;
 ; NF-LABEL: orflag32rm:
 ; NF:       # %bb.0:
-; NF-NEXT:    orl (%rdi), %esi # encoding: [0x0b,0x37]
+; NF-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; NF-NEXT:    orl %eax, %esi # EVEX TO LEGACY Compression encoding: [0x09,0xc6]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64, kind: reloc_riprel_4byte
@@ -866,7 +863,8 @@ define i1 @orflag32rm(ptr %ptr, i32 %b) {
 define i1 @orflag64rm(ptr %ptr, i64 %b) {
 ; NDD-LABEL: orflag64rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    orq (%rdi), %rsi # encoding: [0x48,0x0b,0x37]
+; NDD-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
+; NDD-NEXT:    orq %rax, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xc6]
 ; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NDD-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NDD-NEXT:    # fixup A - offset: 3, value: d64, kind: reloc_riprel_4byte
@@ -874,7 +872,8 @@ define i1 @orflag64rm(ptr %ptr, i64 %b) {
 ;
 ; IMMONLY-LABEL: orflag64rm:
 ; IMMONLY:       # %bb.0:
-; IMMONLY-NEXT:    orq (%rdi), %rsi # encoding: [0x48,0x0b,0x37]
+; IMMONLY-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
+; IMMONLY-NEXT:    orq %rax, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xc6]
 ; IMMONLY-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; IMMONLY-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; IMMONLY-NEXT:    # fixup A - offset: 3, value: d64, kind: reloc_riprel_4byte
@@ -890,7 +889,8 @@ define i1 @orflag64rm(ptr %ptr, i64 %b) {
 ;
 ; NF-LABEL: orflag64rm:
 ; NF:       # %bb.0:
-; NF-NEXT:    orq (%rdi), %rsi # encoding: [0x48,0x0b,0x37]
+; NF-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
+; NF-NEXT:    orq %rax, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xc6]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64, kind: reloc_riprel_4byte

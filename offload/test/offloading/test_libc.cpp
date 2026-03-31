@@ -1,5 +1,5 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
-// UNSUPPORTED: intelgpu
+// XFAIL: intelgpu
 
 #include <algorithm>
 

@@ -305,6 +305,3 @@ ParseResult DimLvlMapParser::parseLvlSpec(bool requireLvlVarBinding) {
 }
 
 //===----------------------------------------------------------------------===//
-
-#undef FAILURE_IF_FAILED
-#undef ERROR_IF

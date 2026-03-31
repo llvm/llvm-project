@@ -3875,40 +3875,26 @@ bool UnwrappedLineParser::parseEnum() {
     return true;
   }
 
-  const bool ManageWhitesmithsBraces =
-      Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths;
-
   if (!Style.AllowShortEnumsOnASingleLine &&
       ShouldBreakBeforeBrace(Style, InitialToken,
                              Tokens->peekNextToken()->is(tok::r_brace))) {
     addUnwrappedLine();
-
-    // If we're in Whitesmiths mode, indent the brace if we're not indenting
-    // the whole block.
-    if (ManageWhitesmithsBraces)
-      ++Line->Level;
   }
   // Parse enum body.
   nextToken();
   if (!Style.AllowShortEnumsOnASingleLine) {
     addUnwrappedLine();
-    if (!ManageWhitesmithsBraces)
-      ++Line->Level;
+    Line->Level += 1;
   }
-  const auto OpeningLineIndex = CurrentLines->empty()
-                                    ? UnwrappedLine::kInvalidIndex
-                                    : CurrentLines->size() - 1;
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
-  if (!Style.AllowShortEnumsOnASingleLine && !ManageWhitesmithsBraces)
-    --Line->Level;
+  if (!Style.AllowShortEnumsOnASingleLine)
+    Line->Level -= 1;
   if (HasError) {
     if (FormatTok->is(tok::semi))
       nextToken();
     addUnwrappedLine();
   }
   setPreviousRBraceType(TT_EnumRBrace);
-  if (ManageWhitesmithsBraces)
-    Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a

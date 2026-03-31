@@ -2287,7 +2287,7 @@ public:
     auto *CE = dyn_cast<CallExpr>(S);
     if (!CE || !CE->getDirectCallee())
       return false;
-    const FunctionDecl *FD = CE->getDirectCallee();
+    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
     if (!FD)
       return false;
 
@@ -2495,7 +2495,7 @@ public:
       const auto *UO = dyn_cast<UnaryOperator>(S);
       if (!UO || UO->getOpcode() != UO_Deref)
         return;
-      const Expr *CE = UO->getSubExpr();
+      const auto *CE = dyn_cast<Expr>(UO->getSubExpr());
       if (!CE)
         return;
       CE = CE->IgnoreParenImpCasts();

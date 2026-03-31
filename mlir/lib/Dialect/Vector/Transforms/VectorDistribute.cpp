@@ -1978,20 +1978,11 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
           // Update any users of escaping values that were forwarded to the
           // inner `WarpOp`. These values are arguments of the inner `WarpOp`.
           innerWarp.walk([&](Operation *op) {
-            SmallVector<std::pair<unsigned, Value>> replacements;
             for (OpOperand &operand : op->getOpOperands()) {
               auto it = escapeValToBlockArgIndex.find(operand.get());
               if (it == escapeValToBlockArgIndex.end())
                 continue;
-              replacements.emplace_back(
-                  operand.getOperandNumber(),
-                  innerWarp.getBodyRegion().getArgument(it->second));
-            }
-            if (!replacements.empty()) {
-              rewriter.modifyOpInPlace(op, [&]() {
-                for (auto [idx, newVal] : replacements)
-                  op->setOperand(idx, newVal);
-              });
+              operand.set(innerWarp.getBodyRegion().getArgument(it->second));
             }
           });
           mlir::vector::moveScalarUniformCode(innerWarp);
@@ -2227,20 +2218,11 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     // Update any users of escaping values that were forwarded to the
     // inner `WarpOp`. These values are now arguments of the inner `WarpOp`.
     newForOp.walk([&](Operation *op) {
-      SmallVector<std::pair<unsigned, Value>> replacements;
       for (OpOperand &operand : op->getOpOperands()) {
         auto it = argIndexMapping.find(operand.get());
         if (it == argIndexMapping.end())
           continue;
-        replacements.emplace_back(
-            operand.getOperandNumber(),
-            innerWarp.getBodyRegion().getArgument(it->second));
-      }
-      if (!replacements.empty()) {
-        rewriter.modifyOpInPlace(op, [&]() {
-          for (auto [idx, newVal] : replacements)
-            op->setOperand(idx, newVal);
-        });
+        operand.set(innerWarp.getBodyRegion().getArgument(it->second));
       }
     });
 

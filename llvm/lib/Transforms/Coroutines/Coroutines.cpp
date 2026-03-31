@@ -118,17 +118,15 @@ bool coro::declaresIntrinsics(const Module &M, ArrayRef<Intrinsic::ID> List) {
   return false;
 }
 
-// Replace all coro.frees associated with the provided frame with 'null' and
-// erase all associated coro.deads
+// Replace all coro.frees associated with the provided frame with 'null'
 void coro::elideCoroFree(Value *FramePtr) {
   SmallVector<CoroFreeInst *, 4> CoroFrees;
-  SmallVector<CoroDeadInst *, 4> CoroDeads;
-  for (User *U : FramePtr->users()) {
-    if (auto *CF = dyn_cast<CoroFreeInst>(U))
+  for (User *U : FramePtr->users())
+    if (auto CF = dyn_cast<CoroFreeInst>(U))
       CoroFrees.push_back(CF);
-    else if (auto *CD = dyn_cast<CoroDeadInst>(U))
-      CoroDeads.push_back(CD);
-  }
+
+  if (CoroFrees.empty())
+    return;
 
   Value *Replacement =
       ConstantPointerNull::get(PointerType::get(FramePtr->getContext(), 0));
@@ -136,9 +134,6 @@ void coro::elideCoroFree(Value *FramePtr) {
     CF->replaceAllUsesWith(Replacement);
     CF->eraseFromParent();
   }
-
-  for (auto *CD : CoroDeads)
-    CD->eraseFromParent();
 }
 
 void coro::suppressCoroAllocs(CoroIdInst *CoroId) {

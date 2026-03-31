@@ -1192,41 +1192,19 @@ public:
 
 LLVM_ABI void diagnoseDontCall(const CallInst &CI);
 
-/// Inlining location extracted from debug info.
-struct DebugInlineInfo {
-  StringRef FuncName;
-  StringRef Filename;
-  unsigned Line;
-  unsigned Column;
-};
-
 class LLVM_ABI DiagnosticInfoDontCall : public DiagnosticInfo {
   StringRef CalleeName;
   StringRef Note;
   uint64_t LocCookie;
-  MDNode *InlinedFromMD = nullptr;
-  SmallVector<DebugInlineInfo, 4> DebugInlineChain;
 
 public:
   DiagnosticInfoDontCall(StringRef CalleeName, StringRef Note,
-                         DiagnosticSeverity DS, uint64_t LocCookie,
-                         MDNode *InlinedFromMD = nullptr)
+                         DiagnosticSeverity DS, uint64_t LocCookie)
       : DiagnosticInfo(DK_DontCall, DS), CalleeName(CalleeName), Note(Note),
-        LocCookie(LocCookie), InlinedFromMD(InlinedFromMD) {}
-
+        LocCookie(LocCookie) {}
   StringRef getFunctionName() const { return CalleeName; }
   StringRef getNote() const { return Note; }
   uint64_t getLocCookie() const { return LocCookie; }
-  MDNode *getInlinedFromMD() const { return InlinedFromMD; }
-  SmallVector<std::pair<StringRef, uint64_t>> getInliningDecisions() const;
-
-  void setDebugInlineChain(SmallVector<DebugInlineInfo, 4> &&Chain) {
-    DebugInlineChain = std::move(Chain);
-  }
-  ArrayRef<DebugInlineInfo> getDebugInlineChain() const {
-    return DebugInlineChain;
-  }
-
   void print(DiagnosticPrinter &DP) const override;
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;

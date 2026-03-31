@@ -48,8 +48,7 @@ public:
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
-  bool widenVPMerge(Instruction *I);
-  bool visitFreezeInst(FreezeInst &BO);
+  bool widenVPMerge(IntrinsicInst &I);
 };
 } // namespace
 
@@ -116,13 +115,12 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // follows:
 //
 // loop:
-//   %phi = phi <vscale x 4 x i1> [zeroinitializer, %entry], [%freeze, %loop]
+//   %phi = phi <vscale x 4 x i1> [ zeroinitializer, %entry ], [ %rec, %loop ]
 //   %cmp = icmp ...
 //   %rec = call <vscale x 4 x i1> @llvm.vp.merge(%cmp, i1 true, %phi, %evl)
-//   %freeze = freeze <vscale x 4 x i1> %rec [optional]
 //   ...
 // middle:
-//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %freeze)
+//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
 //
 // However RVV doesn't have any tail undisturbed mask instructions and so we
 // need a convoluted sequence of mask instructions to lower the i1 vp.merge: see
@@ -132,65 +130,55 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // generate a single vmerge.vim:
 //
 // loop:
-//   %phi = phi <vscale x 4 x i8> [zeroinitializer, %entry], [%freeze, %loop]
+//   %phi = phi <vscale x 4 x i8> [ zeroinitializer, %entry ], [ %rec, %loop ]
 //   %cmp = icmp ...
 //   %rec = call <vscale x 4 x i8> @llvm.vp.merge(%cmp, i8 true, %phi, %evl)
-//   %freeze = freeze <vscale x 4 x i8> %rec
-//   %trunc = trunc <vscale x 4 x i8> %freeze to <vscale x 4 x i1>
+//   %trunc = trunc <vscale x 4 x i8> %rec to <vscale x 4 x i1>
 //   ...
 // middle:
-//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %trunc)
+//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
 //
 // The trunc will normally be sunk outside of the loop, but even if there are
 // users inside the loop it is still profitable.
-bool RISCVCodeGenPrepare::widenVPMerge(Instruction *Root) {
-  if (!Root->getType()->getScalarType()->isIntegerTy(1))
+bool RISCVCodeGenPrepare::widenVPMerge(IntrinsicInst &II) {
+  if (!II.getType()->getScalarType()->isIntegerTy(1))
     return false;
 
   Value *Mask, *True, *PhiV, *EVL;
   using namespace PatternMatch;
-  auto m_VPMerge = m_Intrinsic<Intrinsic::vp_merge>(
-      m_Value(Mask), m_Value(True), m_Value(PhiV), m_Value(EVL));
-  if (!match(Root, m_CombineOr(m_VPMerge, m_Freeze(m_VPMerge))))
+  if (!match(&II,
+             m_Intrinsic<Intrinsic::vp_merge>(m_Value(Mask), m_Value(True),
+                                              m_Value(PhiV), m_Value(EVL))))
     return false;
 
   auto *Phi = dyn_cast<PHINode>(PhiV);
   if (!Phi || !Phi->hasOneUse() || Phi->getNumIncomingValues() != 2 ||
       !match(Phi->getIncomingValue(0), m_Zero()) ||
-      Phi->getIncomingValue(1) != Root)
+      Phi->getIncomingValue(1) != &II)
     return false;
 
   Type *WideTy =
-      VectorType::get(IntegerType::getInt8Ty(Root->getContext()),
-                      cast<VectorType>(Root->getType())->getElementCount());
+      VectorType::get(IntegerType::getInt8Ty(II.getContext()),
+                      cast<VectorType>(II.getType())->getElementCount());
 
   IRBuilder<> Builder(Phi);
   PHINode *WidePhi = Builder.CreatePHI(WideTy, 2);
   WidePhi->addIncoming(ConstantAggregateZero::get(WideTy),
                        Phi->getIncomingBlock(0));
-  Builder.SetInsertPoint(Root);
+  Builder.SetInsertPoint(&II);
   Value *WideTrue = Builder.CreateZExt(True, WideTy);
   Value *WideMerge = Builder.CreateIntrinsic(Intrinsic::vp_merge, {WideTy},
                                              {Mask, WideTrue, WidePhi, EVL});
-  if (isa<FreezeInst>(Root))
-    WideMerge = Builder.CreateFreeze(WideMerge);
   WidePhi->addIncoming(WideMerge, Phi->getIncomingBlock(1));
-  Value *Trunc = Builder.CreateTrunc(WideMerge, Root->getType());
+  Value *Trunc = Builder.CreateTrunc(WideMerge, II.getType());
 
-  Root->replaceAllUsesWith(Trunc);
+  II.replaceAllUsesWith(Trunc);
 
   // Break the cycle and delete the old chain.
   Phi->setIncomingValue(1, Phi->getIncomingValue(0));
-  llvm::RecursivelyDeleteTriviallyDeadInstructions(Root);
+  llvm::RecursivelyDeleteTriviallyDeadInstructions(&II);
 
   return true;
-}
-
-bool RISCVCodeGenPrepare::visitFreezeInst(FreezeInst &I) {
-  if (auto *II = dyn_cast<IntrinsicInst>(I.getOperand(0)))
-    if (II->getIntrinsicID() == Intrinsic::vp_merge)
-      return widenVPMerge(&I);
-  return false;
 }
 
 // LLVM vector reduction intrinsics return a scalar result, but on RISC-V vector
@@ -228,7 +216,7 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
-  if (widenVPMerge(&I))
+  if (widenVPMerge(I))
     return true;
 
   if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd &&

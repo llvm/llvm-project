@@ -194,9 +194,11 @@ bool ObjectFile::IsObjectFile(lldb_private::FileSpec file_spec) {
       extractor_sp, data_offset));
 }
 
-ModuleSpecList ObjectFile::GetModuleSpecifications(
-    const FileSpec &file, lldb::offset_t file_offset, lldb::offset_t file_size,
-    DataExtractorSP extractor_sp) {
+size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
+                                           lldb::offset_t file_offset,
+                                           lldb::offset_t file_size,
+                                           ModuleSpecList &specs,
+                                           DataExtractorSP extractor_sp) {
   if (!extractor_sp)
     extractor_sp = std::make_shared<DataExtractor>();
   if (!extractor_sp->HasData()) {
@@ -211,31 +213,40 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
       if (actual_file_size > file_offset)
         file_size = actual_file_size - file_offset;
     }
-    return ObjectFile::GetModuleSpecifications(file, extractor_sp, file_offset,
-                                               file_size);
+    return ObjectFile::GetModuleSpecifications(file,         // file spec
+                                               extractor_sp, // data bytes
+                                               0,            // data offset
+                                               file_offset,  // file offset
+                                               file_size,    // file length
+                                               specs);
   }
-  return {};
+  return 0;
 }
 
-ModuleSpecList ObjectFile::GetModuleSpecifications(
+size_t ObjectFile::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t file_offset, lldb::offset_t file_size) {
+    lldb::offset_t data_offset, lldb::offset_t file_offset,
+    lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
   // Try the ObjectFile plug-ins
   for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
-    ModuleSpecList specs = cbs.get_module_specifications(
-        file, extractor_sp, file_offset, file_size);
-    if (specs.GetSize() > 0)
-      return specs;
+    ModuleSpecList cb_specs = cbs.get_module_specifications(
+        file, extractor_sp, data_offset, file_offset, file_size);
+    if (cb_specs.GetSize() > 0) {
+      specs.Append(cb_specs);
+      return cb_specs.GetSize();
+    }
   }
 
   // Try the ObjectContainer plug-ins
   for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
-    ModuleSpecList specs = cbs.get_module_specifications(
-        file, extractor_sp, file_offset, file_size);
-    if (specs.GetSize() > 0)
-      return specs;
+    ModuleSpecList cb_specs = cbs.get_module_specifications(
+        file, extractor_sp, data_offset, file_offset, file_size);
+    if (cb_specs.GetSize() > 0) {
+      specs.Append(cb_specs);
+      return cb_specs.GetSize();
+    }
   }
-  return {};
+  return 0;
 }
 
 ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,

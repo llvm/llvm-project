@@ -1767,9 +1767,7 @@ private:
   /// Scop::Context on the other side is an overapproximation and does not
   /// include all requirements, but is always defined. However, there is still
   /// no guarantee that there is no undefined behavior in
-  /// DefinedBehaviorContext. Moreover, AssumedContext and InvalidContext are
-  /// gist'd using Scop::Context, but here we can add assumptions that only hold
-  /// under RTC-checked conditions.
+  /// DefinedBehaviorContext.
   isl::set DefinedBehaviorContext;
 
   /// The schedule of the SCoP

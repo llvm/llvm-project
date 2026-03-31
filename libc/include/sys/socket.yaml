@@ -1,9 +1,6 @@
 header: sys/socket.h
-standards:
-  - posix
-macros:
-  - macro_name: AF_UNSPEC
-    macro_header: sys-socket-macros.h
+header_template: socket.h.def
+macros: []
 types:
   - type_name: struct_sockaddr
   - type_name: socklen_t
@@ -21,7 +18,7 @@ functions:
     return_type: int
     arguments:
       - type: int
-      - type: struct sockaddr *__restrict
+      - type: sockaddr *__restrict
       - type: socklen_t *__restrict
   - name: bind
     standards:

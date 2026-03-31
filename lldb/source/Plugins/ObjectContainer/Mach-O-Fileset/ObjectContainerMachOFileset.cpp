@@ -221,23 +221,25 @@ bool ObjectContainerMachOFileset::ParseHeader() {
 
 ModuleSpecList ObjectContainerMachOFileset::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t file_offset, lldb::offset_t file_size) {
+    lldb::offset_t data_offset, lldb::offset_t file_offset,
+    lldb::offset_t file_size) {
   if (!extractor_sp)
     return {};
 
+  DataExtractorSP data_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
+  if (!data_extractor_sp)
+    return {};
   ModuleSpecList specs;
-  if (MagicBytesMatch(*extractor_sp)) {
+  if (MagicBytesMatch(*data_extractor_sp)) {
     std::vector<Entry> entries;
-    if (ParseHeader(*extractor_sp, file, file_offset, entries)) {
+    if (ParseHeader(*data_extractor_sp, file, file_offset, entries)) {
       for (const Entry &entry : entries) {
         const lldb::offset_t entry_offset = entry.fileoff + file_offset;
-        ModuleSpecList entry_specs = ObjectFile::GetModuleSpecifications(
-            file, entry_offset, file_size - entry_offset);
-        if (entry_specs.GetSize() > 0) {
-          ModuleSpec &spec =
-              entry_specs.GetModuleSpecRefAtIndex(entry_specs.GetSize() - 1);
+        if (ObjectFile::GetModuleSpecifications(
+                file, entry_offset, file_size - entry_offset, specs)) {
+          ModuleSpec &spec = specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
           spec.GetObjectName() = ConstString(entry.id);
-          specs.Append(spec);
         }
       }
     }

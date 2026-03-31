@@ -417,27 +417,6 @@ private:
   }
 };
 
-struct GPUBallotOpToROCDL : public ConvertOpToLLVMPattern<gpu::BallotOp> {
-  using ConvertOpToLLVMPattern<gpu::BallotOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(gpu::BallotOp op, gpu::BallotOp::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto intType = cast<IntegerType>(op.getType());
-    unsigned width = intType.getWidth();
-
-    // ROCDL ballot natively supports i32 and i64 for wavefront sizes of
-    // 32 and 64 lanes.
-    if (width != 32 && width != 64)
-      return rewriter.notifyMatchFailure(
-          op, "rocdl.ballot only supports i32 and i64 result types");
-
-    rewriter.replaceOpWithNewOp<ROCDL::BallotOp>(op, op.getType(),
-                                                 adaptor.getPredicate());
-    return success();
-  }
-};
-
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -785,7 +764,7 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
-               GPUSubgroupBroadcastOpToROCDL, GPUBallotOpToROCDL>(converter);
+               GPUSubgroupBroadcastOpToROCDL>(converter);
   patterns.add<GPUSubgroupIdOpToROCDL, GPUSubgroupSizeOpToROCDL,
                GPUBarrierOpLowering>(converter, chipset);
 

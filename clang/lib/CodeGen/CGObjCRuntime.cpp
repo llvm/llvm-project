@@ -413,13 +413,6 @@ bool CGObjCRuntime::canMessageReceiverBeNull(
   return true;
 }
 
-bool CGObjCRuntime::canClassObjectBeUnrealized(
-    const ObjCInterfaceDecl *CalleeClassDecl, CodeGenFunction &CGF) const {
-  // TODO
-  // Otherwise, assume it can be unrealized.
-  return true;
-}
-
 bool CGObjCRuntime::isWeakLinkedClass(const ObjCInterfaceDecl *ID) {
   do {
     if (ID->isWeakImported())
@@ -471,10 +464,10 @@ clang::CodeGen::emitObjCProtocolObject(CodeGenModule &CGM,
 
 std::string CGObjCRuntime::getSymbolNameForMethod(const ObjCMethodDecl *OMD,
                                                   bool includeCategoryName,
-                                                  bool useDirectABI) {
+                                                  bool includePrefixByte) {
   std::string buffer;
   llvm::raw_string_ostream out(buffer);
   CGM.getCXXABI().getMangleContext().mangleObjCMethodName(
-      OMD, out, /*includePrefixByte=*/true, includeCategoryName, useDirectABI);
+      OMD, out, includePrefixByte, includeCategoryName);
   return buffer;
 }

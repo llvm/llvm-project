@@ -404,7 +404,8 @@ static bool ReadEncodedBufferAndDumpToStream(
   if (!options.GetStream())
     return false;
 
-  if (options.GetLocation() == Address(0) || options.GetLocation() == Address())
+  if (options.GetLocation() == 0 ||
+      options.GetLocation() == LLDB_INVALID_ADDRESS)
     return false;
 
   lldb::TargetSP target_sp = options.GetTargetSP();

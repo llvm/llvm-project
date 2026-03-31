@@ -82,7 +82,7 @@ template <typename T> class WeakAVLNode {
   unsigned char left_rank_diff_2 : 1;
   unsigned char right_rank_diff_2 : 1;
 
-  LIBC_INLINE bool is_leaf() const {
+  LIBC_INLINE bool is_leaf() {
     return (children[0] == nullptr) && (children[1] == nullptr);
   }
 
@@ -214,7 +214,6 @@ public:
 
   LIBC_INLINE const WeakAVLNode *get_left() const { return children[0]; }
   LIBC_INLINE const WeakAVLNode *get_right() const { return children[1]; }
-  LIBC_INLINE const WeakAVLNode *get_parent() const { return parent; }
   LIBC_INLINE const T &get_data() const { return data; }
   LIBC_INLINE bool has_rank_diff_2(bool is_right) const {
     return is_right ? right_rank_diff_2 : left_rank_diff_2;
@@ -226,17 +225,6 @@ public:
       return;
     destroy(node->children[0]);
     destroy(node->children[1]);
-    delete node;
-  }
-
-  // Destroy the subtree rooted at node with finalizer
-  template <typename Finalizer>
-  LIBC_INLINE static void destroy(WeakAVLNode *node, Finalizer finalizer) {
-    if (!node)
-      return;
-    destroy(node->children[0], finalizer);
-    destroy(node->children[1], finalizer);
-    finalizer(node->data);
     delete node;
   }
   // Rotate the subtree rooted at node in the given direction.
@@ -580,25 +568,25 @@ public:
     Leaf,
   };
   template <typename Func>
-  LIBC_INLINE static void walk(const WeakAVLNode *node, Func func,
-                               int depth = 0) {
+  LIBC_INLINE static void walk(WeakAVLNode *node, Func func) {
     if (!node)
       return;
 
     if (node->is_leaf()) {
-      func(node, WalkType::Leaf, depth);
+      func(node, WalkType::Leaf);
       return;
     }
 
-    func(node, WalkType::PreOrder, depth);
-    if (node->children[0])
-      walk(node->children[0], func, depth + 1);
+    func(node, WalkType::PreOrder);
 
-    func(node, WalkType::InOrder, depth);
+    if (node->children[0])
+      walk(node->children[0], func);
+
+    func(node, WalkType::InOrder);
 
     if (node->children[1])
-      walk(node->children[1], func, depth + 1);
-    func(node, WalkType::PostOrder, depth);
+      walk(node->children[1], func);
+    func(node, WalkType::PostOrder);
   }
 };
 

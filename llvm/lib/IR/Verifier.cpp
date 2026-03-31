@@ -6978,11 +6978,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
-  case Intrinsic::structured_alloca:
-    Check(Call.hasRetAttr(Attribute::ElementType),
-          "@llvm.structured.alloca calls require elementtype attribute.",
-          &Call);
-    break;
   case Intrinsic::amdgcn_cs_chain: {
     auto CallerCC = Call.getCaller()->getCallingConv();
     switch (CallerCC) {
@@ -7260,9 +7255,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     Value *Ptr = Call.getArgOperand(0);
-    IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr);
-    Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr) ||
-              (II && II->getIntrinsicID() == Intrinsic::structured_alloca),
+    Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr),
           "llvm.lifetime.start/end can only be used on alloca or poison",
           &Call);
     break;

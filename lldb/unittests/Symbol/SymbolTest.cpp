@@ -131,6 +131,6 @@ TEST(SymbolTest, EncodeDecodeSymbol) {
   symbol.SetIsWeak(false);
 
   // Test encoding a symbol with no address.
-  symbol.GetAddressRef() = Address(SectionSP(), /*offset=*/0);
+  symbol.GetAddressRef().SetSection(SectionSP());
   EncodeDecode(symbol, &sect_list);
 }

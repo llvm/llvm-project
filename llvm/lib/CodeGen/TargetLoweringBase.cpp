@@ -1939,13 +1939,6 @@ void TargetLoweringBase::computeRegisterProperties(
     RepRegClassForVT[i] = RRC;
     RepRegClassCostForVT[i] = Cost;
   }
-
-  // Compute minimum known-legal store size.
-  MaximumLegalStoreInBits = 0;
-  for (MVT VT : MVT::all_valuetypes())
-    if (VT != MVT::Other && isTypeLegal(VT) &&
-        VT.getSizeInBits().getKnownMinValue() >= MaximumLegalStoreInBits)
-      MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
 }
 
 EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,

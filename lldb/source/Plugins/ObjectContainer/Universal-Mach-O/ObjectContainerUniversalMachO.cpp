@@ -190,22 +190,24 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
 
 ModuleSpecList ObjectContainerUniversalMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t file_offset, lldb::offset_t file_size) {
+    lldb::offset_t data_offset, lldb::offset_t file_offset,
+    lldb::offset_t file_size) {
   if (!extractor_sp)
     return {};
 
   ModuleSpecList specs;
-  if (ObjectContainerUniversalMachO::MagicBytesMatch(*extractor_sp)) {
+  DataExtractorSP data_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
+  if (ObjectContainerUniversalMachO::MagicBytesMatch(*data_extractor_sp)) {
     llvm::MachO::fat_header header;
     std::vector<FatArch> fat_archs;
-    if (ParseHeader(*extractor_sp, header, fat_archs)) {
+    if (ParseHeader(*data_extractor_sp, header, fat_archs)) {
       for (const FatArch &fat_arch : fat_archs) {
         const lldb::offset_t slice_file_offset =
             fat_arch.GetOffset() + file_offset;
         if (fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
-          ModuleSpecList arch_specs = ObjectFile::GetModuleSpecifications(
-              file, slice_file_offset, file_size - slice_file_offset);
-          specs.Append(arch_specs);
+          ObjectFile::GetModuleSpecifications(
+              file, slice_file_offset, file_size - slice_file_offset, specs);
         }
       }
     }

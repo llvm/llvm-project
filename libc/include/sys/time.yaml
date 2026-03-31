@@ -1,9 +1,7 @@
 header: sys/time.h
-standards:
-  - posix
-macros:
-  - macro_name: timeradd
-    macro_header: sys-time-macros.h
+header_template: time.h.def
+standards: Linux
+macros: []
 types:
   - type_name: struct_timeval
   - type_name: struct_itimerval
@@ -17,6 +15,8 @@ functions:
       - type: const struct timeval*
 
   - name: setitimer
+    standards:
+      - POSIX
     return_type: int
     arguments:
       - type: int
@@ -24,6 +24,8 @@ functions:
       - type: struct itimerval *__restrict
   
   - name: getitimer
+    standards:
+      - POSIX
     return_type: int
     arguments:
       - type: int

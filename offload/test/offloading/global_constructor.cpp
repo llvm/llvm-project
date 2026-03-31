@@ -1,5 +1,6 @@
 // clang-format off
 // RUN: %libomptarget-compilexx-generic && %libomptarget-run-generic | %fcheck-generic
+// XFAIL: intelgpu
 // clang-format on
 
 #include <cstdio>

@@ -745,16 +745,17 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
 
     // At this stage SUB is guaranteed to be positive no-wrap,
     // that to be used in further KnownBits optimizations.
+    SDNodeFlags SubFlags;
+    SubFlags.setNoUnsignedWrap(true);
     if (!N->isVPOpcode())
       return DAG.getNode(ISD::SUB, dl, NVT,
                          DAG.getNode(N->getOpcode(), dl, NVT, Op),
-                         ExtractLeadingBits, SDNodeFlags::NoUnsignedWrap);
+                         ExtractLeadingBits, SubFlags);
     SDValue Mask = N->getOperand(1);
     SDValue EVL = N->getOperand(2);
     return DAG.getNode(ISD::VP_SUB, dl, NVT,
                        DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
-                       ExtractLeadingBits, Mask, EVL,
-                       SDNodeFlags::NoUnsignedWrap);
+                       ExtractLeadingBits, Mask, EVL, SubFlags);
   }
   if (CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
       CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) {

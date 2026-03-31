@@ -701,7 +701,9 @@ bool GlobalMergeImpl::run(Module &M) {
         !GV.hasLocalLinkage())
       continue;
 
-    PointerType *PT = GV.getType();
+    PointerType *PT = dyn_cast<PointerType>(GV.getType());
+    assert(PT && "Global variable is not a pointer!");
+
     unsigned AddressSpace = PT->getAddressSpace();
     StringRef Section = GV.getSection();
 

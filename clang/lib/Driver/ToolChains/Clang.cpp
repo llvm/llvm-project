@@ -4349,15 +4349,6 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Opt));
   }
 
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_fdiagnostics_show_inlining_chain,
-                          options::OPT_fno_diagnostics_show_inlining_chain)) {
-    if (A->getOption().matches(options::OPT_fdiagnostics_show_inlining_chain))
-      CmdArgs.push_back("-fdiagnostics-show-inlining-chain");
-    else
-      CmdArgs.push_back("-fno-diagnostics-show-inlining-chain");
-  }
-
   if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_format_EQ)) {
     CmdArgs.push_back("-fdiagnostics-format");
     CmdArgs.push_back(A->getValue());
@@ -5027,18 +5018,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (IsCuda || IsHIP) {
     // We have to pass the triple of the host if compiling for a CUDA/HIP device
     // and vice-versa.
-    StringRef TripleStr;
+    std::string NormalizedTriple;
     if (JA.isDeviceOffloading(Action::OFK_Cuda) ||
         JA.isDeviceOffloading(Action::OFK_HIP))
-      TripleStr =
-          C.getSingleOffloadToolChain<Action::OFK_Host>()->getTriple().str();
+      NormalizedTriple = C.getSingleOffloadToolChain<Action::OFK_Host>()
+                             ->getTriple()
+                             .normalize();
     else {
       // Host-side compilation.
-      TripleStr =
+      NormalizedTriple =
           (IsCuda ? C.getOffloadToolChains(Action::OFK_Cuda).first->second
                   : C.getOffloadToolChains(Action::OFK_HIP).first->second)
               ->getTriple()
-              .str();
+              .normalize();
       if (IsCuda) {
         // We need to figure out which CUDA version we're compiling for, as that
         // determines how we load and launch GPU kernels.
@@ -5052,7 +5044,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
     CmdArgs.push_back("-aux-triple");
-    CmdArgs.push_back(Args.MakeArgString(TripleStr));
+    CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
 
     if (JA.isDeviceOffloading(Action::OFK_HIP) &&
         (getToolChain().getTriple().isAMDGPU() ||
@@ -9563,7 +9555,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back(Args.MakeArgString(
           WrapperOption +
-          ToolChain::normalizeOffloadTriple(Val.drop_front()).str() + "=" +
+          ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
           A->getValue(1)));
   }
   Args.ClaimAllArgs(options::OPT_Xoffload_compiler);

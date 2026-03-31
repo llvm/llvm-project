@@ -990,6 +990,4 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
 #undef ANDI
 #undef SUBI
 #undef MULI
-#undef REMUI
-#undef DIVUI
 #undef SELECT

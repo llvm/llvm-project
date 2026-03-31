@@ -4816,7 +4816,7 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
       if (auto *SI = dyn_cast<SelectInst>(Cond)) {
         assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
         // The select is predicated on PBICond
-        assert(SI->getCondition() == PBICond);
+        assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
         // The corresponding probabilities are what was referred to above as
         // PredCommon and PredOther.
         setFittedBranchWeights(*SI, {PredCommon, PredOther},

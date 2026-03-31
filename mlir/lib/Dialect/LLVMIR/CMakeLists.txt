@@ -60,13 +60,11 @@ add_mlir_dialect_library(MLIRNVVMDialect
   LINK_COMPONENTS
   AsmParser
   Core
-  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
   MLIRGPUDialect
-  MLIROpenMPDialect
   MLIRSideEffectInterfaces
   MLIRInferIntRangeInterface
   )
@@ -130,12 +128,10 @@ add_mlir_dialect_library(MLIRXeVMDialect
   LINK_COMPONENTS
   AsmParser
   Core
-  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRDialectUtils
   MLIRIR
   MLIRLLVMDialect
-  MLIROpenMPDialect
   MLIRSideEffectInterfaces
 )

@@ -288,7 +288,8 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP25]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store i32 [[INDEX]], ptr [[TMP28]], align 4
+; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    store i32 [[TMP29]], ptr [[TMP28]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP3]], i32 1

@@ -1724,6 +1724,4 @@ std::unique_ptr<SparseIterator> sparse_tensor::makeTraverseSubSectIterator(
 #undef ANDI
 #undef SUBI
 #undef MULI
-#undef REMUI
-#undef DIVUI
 #undef SELECT

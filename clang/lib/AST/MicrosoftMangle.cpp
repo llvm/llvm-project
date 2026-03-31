@@ -1180,9 +1180,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
 
       if (const NamespaceDecl *NS = dyn_cast<NamespaceDecl>(ND)) {
         if (NS->isAnonymousNamespace()) {
-          llvm::SmallString<16> Name("?A0x");
-          Name += Context.getAnonymousNamespaceHash();
-          mangleSourceName(Name);
+          Out << "?A0x" << Context.getAnonymousNamespaceHash() << '@';
           break;
         }
       }

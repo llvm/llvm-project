@@ -184,6 +184,7 @@ namespace Intrinsic {
 
     union {
       unsigned Integer_Width;
+      unsigned Float_Width;
       unsigned Pointer_AddressSpace;
       unsigned Struct_NumElements;
       unsigned Argument_Info;

@@ -576,13 +576,12 @@ struct FooView {
   FooView(const Foo& foo [[clang::lifetimebound]]);
 };
 FooView test3(int i, std::optional<Foo> a) {
+  // FIXME: Detect this using the CFG-based lifetime analysis.
+  //        Origin tracking for non-pointers type retured from lifetimebound fn is missing.
+  //        https://github.com/llvm/llvm-project/issues/163600
   if (i)
-    return *a; // expected-warning {{address of stack memory}} \
-               // cfg-warning {{address of stack memory is returned later}} \
-               // cfg-note {{returned here}}
-  return a.value(); // expected-warning {{address of stack memory}} \
-                    // cfg-warning {{address of stack memory is returned later}} \
-                    // cfg-note {{returned here}}
+    return *a; // expected-warning {{address of stack memory}}
+  return a.value(); // expected-warning {{address of stack memory}}
 }
 } // namespace GH93386
 
@@ -592,10 +591,11 @@ struct UrlAnalyzed {
 };
 std::string StrCat(std::string_view, std::string_view);
 void test1() {
-  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}} \
-                                         // cfg-warning {{object whose reference is captured does not live long enough}} \
-                                         // cfg-note {{destroyed here}}
-  use(url);                              // cfg-note {{later used here}}
+  // FIXME: Detect this using the CFG-based lifetime analysis.
+  //        Origin tracking for non-pointers type retured from lifetimebound fn is missing.
+  //        https://github.com/llvm/llvm-project/issues/163600
+  UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}}
+  use(url);
 }
 
 std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]]);

@@ -435,9 +435,6 @@ struct SysAlias {
   FeatureBitset getRequiredFeatures() const { return FeaturesRequired; }
 };
 
-#define GET_SysAliasRegUse_DECL
-#include "AArch64GenSystemOperands.inc"
-
 struct SysAliasReg : SysAlias {
   bool NeedsReg;
   constexpr SysAliasReg(const char *N, uint16_t E, bool R)
@@ -447,12 +444,13 @@ struct SysAliasReg : SysAlias {
 };
 
 struct SysAliasOptionalReg : SysAlias {
-  SysAliasRegUse RegUse;
-  constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R)
-      : SysAlias(N, E), RegUse(R) {}
-  constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R,
+  bool NeedsReg;
+  bool OptionalReg;
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O)
+      : SysAlias(N, E), NeedsReg(R), OptionalReg(O) {}
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O,
                                 FeatureBitset F)
-      : SysAlias(N, E, F), RegUse(R) {}
+      : SysAlias(N, E, F), NeedsReg(R), OptionalReg(O) {}
 };
 
 struct SysAliasImm : SysAlias {

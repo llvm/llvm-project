@@ -4179,7 +4179,9 @@ CFGBlock *CFGBuilder::VisitArrayInitLoopExpr(ArrayInitLoopExpr *A,
   if (CFGBlock *R = Visit(A->getSubExpr()))
     B = R;
 
-  OpaqueValueExpr *OVE = A->getCommonExpr();
+  auto *OVE = dyn_cast<OpaqueValueExpr>(A->getCommonExpr());
+  assert(OVE && "ArrayInitLoopExpr->getCommonExpr() should be wrapped in an "
+                "OpaqueValueExpr!");
   if (CFGBlock *R = Visit(OVE->getSourceExpr()))
     B = R;
 

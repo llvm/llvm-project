@@ -7,10 +7,53 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Interfaces/Utils/MemorySlotUtils.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 
 using namespace mlir;
 using namespace mlir::scf;
+
+//===----------------------------------------------------------------------===//
+// Helper functions
+//===----------------------------------------------------------------------===//
+
+/// Adds the corresponding reaching definition to the terminator of the block if
+/// the terminator is of the provided type.
+template <typename TermTy>
+static void
+updateTerminator(Block *block, Value defaultReachingDef,
+                 const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd) {
+  Operation *terminator = block->getTerminator();
+  if (!isa<TermTy>(terminator))
+    return;
+  Value blockReachingDef = reachingAtBlockEnd.lookup(block);
+  if (!blockReachingDef) {
+    // Block is dead code or the region is not using the slot, so we use the
+    // default provided reaching definition.
+    blockReachingDef = defaultReachingDef;
+  }
+  terminator->insertOperands(terminator->getNumOperands(), {blockReachingDef});
+}
+
+/// Creates a shallow copy of an operation with new result types, moving the
+/// regions out of the original operation and deleting the original operation.
+static Operation *replaceWithNewResults(RewriterBase &rewriter, Operation *op,
+                                        TypeRange resultTypes) {
+  RewriterBase::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(op);
+  Operation *newOp =
+      mlir::cloneWithoutRegions(rewriter, op, resultTypes, op->getOperands());
+  rewriter.startOpModification(newOp);
+  rewriter.startOpModification(op);
+  for (unsigned int i : llvm::seq(op->getNumRegions()))
+    newOp->getRegion(i).takeBody(op->getRegion(i));
+  rewriter.finalizeOpModification(op);
+  rewriter.finalizeOpModification(newOp);
+
+  SmallVector<Value> replacementValues(newOp->getResults().drop_back());
+  rewriter.replaceAllOpUsesWith(op, replacementValues);
+  rewriter.eraseOp(op);
+  return newOp;
+}
 
 //===----------------------------------------------------------------------===//
 // ExecuteRegionOp
@@ -37,15 +80,14 @@ Value ExecuteRegionOp::finalizePromotion(
   // Update the yield terminators to return the newly defined reaching
   // definition.
   for (Block &block : getRegion().getBlocks())
-    if (isa<YieldOp>(block.getTerminator()))
-      memoryslot::updateTerminator(&block, reachingDef, reachingAtBlockEnd);
+    updateTerminator<YieldOp>(&block, reachingDef, reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
   resultTypes.push_back(slot.elemType);
 
   IRRewriter rewriter(builder);
   Operation *newOp =
-      memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
   return newOp->getResults().back();
 }
 
@@ -81,14 +123,14 @@ Value ForOp::finalizePromotion(
 
   // Update the yield terminator to return the newly defined reaching
   // definition.
-  memoryslot::updateTerminator(getBody(), reachingDef, reachingAtBlockEnd);
+  updateTerminator<YieldOp>(getBody(), reachingDef, reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
   resultTypes.push_back(slot.elemType);
 
   IRRewriter rewriter(builder);
   Operation *newOp =
-      memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
   return newOp->getResults().back();
 }
 
@@ -145,11 +187,11 @@ Value IfOp::finalizePromotion(
 
   // Update the yield terminators to return the newly defined reaching
   // definition.
-  memoryslot::updateTerminator(&getThenRegion().back(), reachingDef,
-                               reachingAtBlockEnd);
+  updateTerminator<YieldOp>(&getThenRegion().back(), reachingDef,
+                            reachingAtBlockEnd);
   if (getElseRegion().hasOneBlock()) {
-    memoryslot::updateTerminator(&getElseRegion().back(), reachingDef,
-                                 reachingAtBlockEnd);
+    updateTerminator<YieldOp>(&getElseRegion().back(), reachingDef,
+                              reachingAtBlockEnd);
   } else {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.createBlock(&getElseRegion());
@@ -160,7 +202,7 @@ Value IfOp::finalizePromotion(
   resultTypes.push_back(slot.elemType);
 
   Operation *newOp =
-      memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
   return newOp->getResults().back();
 }
 
@@ -192,17 +234,17 @@ Value IndexSwitchOp::finalizePromotion(
 
   // Update the yield terminators to return the newly defined reaching
   // definition.
-  memoryslot::updateTerminator(&getDefaultRegion().back(), reachingDef,
-                               reachingAtBlockEnd);
+  updateTerminator<YieldOp>(&getDefaultRegion().back(), reachingDef,
+                            reachingAtBlockEnd);
   for (Region &caseRegion : getCaseRegions())
-    memoryslot::updateTerminator(&caseRegion.back(), reachingDef,
-                                 reachingAtBlockEnd);
+    updateTerminator<YieldOp>(&caseRegion.back(), reachingDef,
+                              reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
   resultTypes.push_back(slot.elemType);
 
   Operation *newOp =
-      memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
   return newOp->getResults().back();
 }
 
@@ -297,10 +339,10 @@ Value WhileOp::finalizePromotion(
 
   // Update the yield terminators to return the newly defined reaching
   // definition.
-  memoryslot::updateTerminator(&getBefore().back(),
-                               getBefore().getArguments().back(),
-                               reachingAtBlockEnd);
-  memoryslot::updateTerminator(
+  updateTerminator<ConditionOp>(&getBefore().back(),
+                                getBefore().getArguments().back(),
+                                reachingAtBlockEnd);
+  updateTerminator<YieldOp>(
       &getAfter().back(), getAfter().getArguments().back(), reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
@@ -308,6 +350,6 @@ Value WhileOp::finalizePromotion(
 
   IRRewriter rewriter(builder);
   Operation *newOp =
-      memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
   return newOp->getResults().back();
 }

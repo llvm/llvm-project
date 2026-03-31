@@ -44,7 +44,6 @@ import signal
 from subprocess import *
 import sys
 import time
-import datetime
 import traceback
 from typing import Optional, Union
 
@@ -967,9 +966,6 @@ class Base(unittest.TestCase):
                 self.lib_lldb = lib
                 self.darwinWithFramework = self.platformIsDarwin()
 
-        # As the last operation, mark the setup completed for dumpSessionInfo.
-        self.__setup_done__ = True
-
     def setAsync(self, value):
         """Sets async mode to True/False and ensures it is reset after the testcase completes."""
         old_async = self.dbg.GetAsync()
@@ -1251,18 +1247,16 @@ class Base(unittest.TestCase):
         Dump the debugger interactions leading to a test error/failure.  This
         allows for more convenient postmortem analysis.
 
-        See also LLDBTestResult (dotest.py) which is a singleton class derived
+        See also LLDBTestResult (dotest.py) which is a singlton class derived
         from TextTestResult and overwrites addError, addFailure, and
         addExpectedFailure methods to allow us to to mark the test instance as
         such.
         """
-        # Ensure 'setUp' has completed.
-        if not getattr(self, "__setup_done__", False):
-            return
 
-        # The lldb.test_result singleton contains two lists (errors and
-        # failures) which get populated by the unittest framework.  Look over
-        # there for stack trace information.
+        # We are here because self.tearDown() detected that this test instance
+        # either errored or failed.  The lldb.test_result singleton contains
+        # two lists (errors and failures) which get populated by the unittest
+        # framework.  Look over there for stack trace information.
         #
         # The lists contain 2-tuples of TestCase instances and strings holding
         # formatted tracebacks.
@@ -1292,14 +1286,15 @@ class Base(unittest.TestCase):
 
         session_file = self.getLogBasenameForCurrentTest() + ".log"
 
-        lldbutil.mkdir_p(os.path.dirname(session_file))
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        session = encoded_file.open(session_file, "utf-8", mode="a")
+        session = encoded_file.open(session_file, "utf-8", mode="w")
 
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
                     print(traceback, file=session)
+
+        import datetime
 
         print(
             "Session info generated @",
@@ -1312,12 +1307,8 @@ class Base(unittest.TestCase):
         # process the log files
         if prefix != "Success" or lldbtest_config.log_success:
             # keep all log files, rename them to include prefix
-            # e.g. .../TestDAP_module/Incomplete.log > Failure_<test-name>.log
             src_log_basename = self.getLogBasenameForCurrentTest()
-            dst_log_basename = (
-                f"{self.getLogBasenameForCurrentTest(prefix)}_{self.testMethodName}"
-            )
-            files = []
+            dst_log_basename = self.getLogBasenameForCurrentTest(prefix)
             for src in self.log_files:
                 if os.path.isfile(src):
                     dst = src.replace(src_log_basename, dst_log_basename)
@@ -1332,12 +1323,6 @@ class Base(unittest.TestCase):
 
                     lldbutil.mkdir_p(os.path.dirname(dst))
                     os.rename(src, dst)
-                    files.append(dst)
-            if files:
-                print(
-                    "Log Files:\n - %s" % ("\n - ".join(files)),
-                    file=sys.stderr,
-                )
         else:
             # success!  (and we don't want log files) delete log files
             for log_file in self.log_files:

@@ -147,10 +147,11 @@ __gpu_is_first_in_lane(uint64_t __lane_mask) {
 // Copies the value from the first active thread to the rest.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
-  uint32_t __hi = (uint32_t)(__x >> 32);
-  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
-  return ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __hi) << 32) |
-         ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __lo) & 0xFFFFFFFF);
+  uint32_t __hi = (uint32_t)(__x >> 32ull);
+  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFFull);
+  return ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __hi) << 32ull) |
+         ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __lo) &
+          0xFFFFFFFFull);
 }
 
 // Gets the first floating point value from the active lanes.
@@ -173,10 +174,11 @@ __gpu_read_first_lane_f64(uint64_t __lane_mask, double __x) {
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
                       uint32_t __width) {
-  uint32_t __hi = (uint32_t)(__x >> 32);
+  uint32_t __hi = (uint32_t)(__x >> 32ull);
   uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
   uint32_t __mask = (uint32_t)__lane_mask;
-  return ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __hi, __width) << 32) |
+  return ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __hi, __width)
+          << 32ull) |
          ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __lo, __width));
 }
 
@@ -209,9 +211,9 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
   _DEFAULT_FN_ATTRS static __inline__ __type                                   \
   __gpu_suffix_scan_##__prefix##_##__suffix(uint64_t __lane_mask,              \
                                             __type __x) {                      \
-    uint64_t __above = __lane_mask & -(UINT64_C(2) << __gpu_lane_id());        \
+    uint64_t __above = __lane_mask & -(2ull << __gpu_lane_id());               \
     for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {       \
-      uint32_t __src = __builtin_ctzg(__above, (int)sizeof(__above) * 8);      \
+      uint32_t __src = __above ? __builtin_ctzg(__above) : __gpu_lane_id();    \
       __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
                                                      __gpu_num_lanes());       \
       __x = __op(__x, __above ? __result : (__type)__identity);                \
@@ -224,15 +226,15 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
   _DEFAULT_FN_ATTRS static __inline__ __type                                   \
   __gpu_prefix_scan_##__prefix##_##__suffix(uint64_t __lane_mask,              \
                                             __type __x) {                      \
-    uint64_t __below = __lane_mask & ((UINT64_C(1) << __gpu_lane_id()) - 1);   \
+    uint64_t __below = __lane_mask & ((1ull << __gpu_lane_id()) - 1);          \
     for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {       \
-      uint32_t __src = 63 - __builtin_clzg(__below, (int)sizeof(__below) * 8); \
+      uint32_t __src =                                                         \
+          __below ? (63 - __builtin_clzg(__below)) : __gpu_lane_id();          \
       __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
                                                      __gpu_num_lanes());       \
       __x = __op(__x, __below ? __result : (__type)__identity);                \
       for (uint32_t __i = 0; __i < __step; ++__i)                              \
-        __below ^=                                                             \
-            (UINT64_C(1) << (63 - __builtin_clzg(__below, 0))) & __below;      \
+        __below ^= (1ull << (63 - __builtin_clzg(__below, 0))) & __below;      \
     }                                                                          \
     return __x;                                                                \
   }                                                                            \
@@ -245,10 +247,10 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
   }
 
 #define __GPU_OP(__x, __y) ((__x) + (__y))
-__DO_LANE_OPS(uint32_t, __GPU_OP, 0, add, u32);
-__DO_LANE_OPS(uint64_t, __GPU_OP, 0, add, u64);
-__DO_LANE_OPS(float, __GPU_OP, 0, add, f32);
-__DO_LANE_OPS(double, __GPU_OP, 0, add, f64);
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, sum, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, sum, u64);
+__DO_LANE_OPS(float, __GPU_OP, 0, sum, f32);
+__DO_LANE_OPS(double, __GPU_OP, 0, sum, f64);
 #undef __GPU_OP
 
 #define __GPU_OP(__x, __y) ((__x) & (__y))
@@ -336,7 +338,7 @@ __gpu_match_all_u32_impl(uint64_t __lane_mask, uint32_t __x) {
   uint32_t __first = __gpu_shuffle_idx_u32(
       __lane_mask, __builtin_ctzg(__lane_mask), __x, __gpu_num_lanes());
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
-  return __ballot == __lane_mask ? __lane_mask : UINT64_C(0);
+  return __ballot == __lane_mask ? __lane_mask : 0ull;
 }
 
 // Returns the current lane mask if every lane contains __x.
@@ -345,7 +347,7 @@ __gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x) {
   uint64_t __first = __gpu_shuffle_idx_u64(
       __lane_mask, __builtin_ctzg(__lane_mask), __x, __gpu_num_lanes());
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
-  return __ballot == __lane_mask ? __lane_mask : UINT64_C(0);
+  return __ballot == __lane_mask ? __lane_mask : 0ull;
 }
 
 _Pragma("omp end declare variant");

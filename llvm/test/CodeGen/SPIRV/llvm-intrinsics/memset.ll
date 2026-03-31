@@ -40,21 +40,15 @@
 
 ; CHECK: %[[#Entry:]] = OpLabel
 ; CHECK: %[[#IsNonZeroLen:]] = OpINotEqual %[[#]] %[[#Len]] %[[#Zero:]]
-; CHECK: OpBranchConditional %[[#IsNonZeroLen]] %[[#Preheader:]] %[[#End:]]
-
-; CHECK: %[[#Preheader]] = OpLabel
-; CHECK: OpBranch %[[#WhileBody:]]
+; CHECK: OpBranchConditional %[[#IsNonZeroLen]] %[[#WhileBody:]] %[[#End:]]
 
 ; CHECK: %[[#WhileBody]] = OpLabel
-; CHECK: %[[#Offset:]] = OpPhi %[[#]] %[[#OffsetInc:]] %[[#WhileBody]] %[[#Zero]] %[[#Preheader]]
+; CHECK: %[[#Offset:]] = OpPhi %[[#]] %[[#Zero]] %[[#Entry]] %[[#OffsetInc:]] %[[#WhileBody]]
 ; CHECK: %[[#Ptr:]] = OpInBoundsPtrAccessChain %[[#]] %[[#Dest]] %[[#Offset]]
 ; CHECK: OpStore %[[#Ptr]] %[[#Value]] Aligned 1
 ; CHECK: %[[#OffsetInc]] = OpIAdd %[[#]] %[[#Offset]] %[[#One:]]
 ; CHECK: %[[#NotEnd:]] = OpULessThan %[[#]] %[[#OffsetInc]] %[[#Len]]
-; CHECK: OpBranchConditional %[[#NotEnd]] %[[#WhileBody]] %[[#LoopExit:]]
-
-; CHECK: %[[#LoopExit]] = OpLabel
-; CHECK: OpBranch %[[#End]]
+; CHECK: OpBranchConditional %[[#NotEnd]] %[[#WhileBody]] %[[#End]]
 
 ; CHECK: %[[#End]] = OpLabel
 ; CHECK: OpReturn

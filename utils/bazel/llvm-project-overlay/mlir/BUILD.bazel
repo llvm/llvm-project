@@ -4214,7 +4214,6 @@ cc_library(
         ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
-        ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
@@ -4418,7 +4417,6 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemorySlotInterfaces",
-        ":MemorySlotUtils",
         ":ParallelCombiningOpInterface",
         ":SCFDeviceMappingInterfacesIncGen",
         ":SCFIncGen",
@@ -4467,17 +4465,6 @@ cc_library(
         ":IR",
         ":InferIntRangeInterface",
         ":ShapedOpInterfaces",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "MemorySlotUtils",
-    srcs = ["lib/Interfaces/Utils/MemorySlotUtils.cpp"],
-    hdrs = ["include/mlir/Interfaces/Utils/MemorySlotUtils.h"],
-    includes = ["include"],
-    deps = [
-        ":IR",
         "//llvm:Support",
     ],
 )
@@ -10248,7 +10235,6 @@ td_library(
     name = "OpenAccOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/OpenACC/AccCommon.td",
-        "include/mlir/Dialect/OpenACC/OpenACCAttributes.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
         "include/mlir/Dialect/OpenACC/OpenACCCGAttributes.td",
         "include/mlir/Dialect/OpenACC/OpenACCCGOps.td",
@@ -13224,7 +13210,6 @@ cc_library(
         ":MemRefOpsIncGen",
         ":MemoryAccessOpInterfacesIncGen",
         ":MemorySlotInterfaces",
-        ":MemorySlotUtils",
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",

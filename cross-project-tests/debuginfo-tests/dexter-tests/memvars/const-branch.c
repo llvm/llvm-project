@@ -1,4 +1,4 @@
-// XFAIL: !system-darwin || target-x86_64
+// XFAIL: !system-darwin
 //// Suboptimal coverage, see inlined comments.
 
 // REQUIRES: lldb

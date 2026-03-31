@@ -1,9 +1,6 @@
 header: sys/wait.h
-standards:
-  - posix
-macros:
-  - macro_name: WCOREDUMP
-    macro_header: sys-wait-macros.h
+header_template: wait.h.def
+macros: []
 types:
   - type_name: siginfo_t
   - type_name: struct_rusage

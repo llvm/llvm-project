@@ -309,7 +309,7 @@ public:
     });
 
     rewriter.replaceAllOpUsesWith(op, producer);
-    rewriter.eraseOp(op);
+    op->erase();
 
     return success();
   }
@@ -1008,7 +1008,7 @@ public:
 
     Value buffer =
         AllocTensorOp::create(rewriter, loc, bufferTp, dstDynSizes, Value(),
-                              /*size_hint=*/nnz, Attribute())
+                              /*sizeHint=*/nnz, Attribute())
             .getResult();
 
     // Implement the sparse2sparse reshape as follows:

@@ -1563,6 +1563,10 @@ class DropInnerMostUnitDimsTransferRead
     if (readOp.getTransferRank() == 0)
       return failure();
 
+    // TODO: support mask.
+    if (readOp.getMask())
+      return failure();
+
     auto srcType = dyn_cast<MemRefType>(readOp.getBase().getType());
     if (!srcType)
       return failure();
@@ -1610,22 +1614,12 @@ class DropInnerMostUnitDimsTransferRead
                                   readOp.getBase(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
-
-    // If there is a mask, shape_cast it to drop the same inner unit dims.
-    Value mask = readOp.getMask();
-    if (mask) {
-      auto maskType = cast<VectorType>(mask.getType());
-      auto reducedMaskType = VectorType::get(
-          maskType.getShape().drop_back(dimsToDrop), maskType.getElementType(),
-          maskType.getScalableDims().drop_back(dimsToDrop));
-      mask = rewriter.createOrFold<vector::ShapeCastOp>(loc, reducedMaskType,
-                                                        mask);
-    }
-
     Value result = vector::TransferReadOp::create(
         rewriter, loc, resultTargetVecType, rankedReducedView,
         readOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        readOp.getPadding(), mask, inBoundsAttr);
+        readOp.getPadding(),
+        // TODO: support mask.
+        /*mask=*/Value(), inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, targetType,
                                                      result);
     return success();
@@ -1658,6 +1652,10 @@ class DropInnerMostUnitDimsTransferWrite
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (writeOp.getTransferRank() == 0)
+      return failure();
+
+    // TODO: support mask.
+    if (writeOp.getMask())
       return failure();
 
     auto srcType = dyn_cast<MemRefType>(writeOp.getBase().getType());
@@ -1711,22 +1709,11 @@ class DropInnerMostUnitDimsTransferWrite
 
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, resultTargetVecType, writeOp.getVector());
-
-    // If there is a mask, shape_cast it to drop the same inner unit dims.
-    Value mask = writeOp.getMask();
-    if (mask) {
-      auto maskType = cast<VectorType>(mask.getType());
-      auto reducedMaskType = VectorType::get(
-          maskType.getShape().drop_back(dimsToDrop), maskType.getElementType(),
-          maskType.getScalableDims().drop_back(dimsToDrop));
-      mask = rewriter.createOrFold<vector::ShapeCastOp>(loc, reducedMaskType,
-                                                        mask);
-    }
-
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         writeOp, shapeCast, rankedReducedView,
         writeOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        mask, inBoundsAttr);
+        // TODO: support mask.
+        /*mask=*/Value(), inBoundsAttr);
     return success();
   }
 };

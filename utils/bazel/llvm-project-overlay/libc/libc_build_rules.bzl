@@ -255,7 +255,7 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         enforce_headers_only = True,
     )
 
-def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = False):
+def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
     """Generates a libc header file from YAML template.
 
     Args:
@@ -263,13 +263,12 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
       hdr: Path of the header file to generate.
       yaml_template: Path of the YAML template file.
       other_srcs: Other files required to generate the header, if any.
-      proxy: Whether this is a proxy header with slightly different generation results.
     """
     hdrgen = "//libc:hdrgen"
     cmd = "$(location {hdrgen}) $(location {yaml}) -o $@".format(
         hdrgen = hdrgen,
         yaml = yaml_template,
-    ) + (" --proxy" if proxy else "")
+    )
 
     if not hdr.startswith("staging/"):
         fail(
@@ -284,17 +283,6 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
         srcs = [yaml_template] + other_srcs,
         cmd = cmd,
         tools = [hdrgen],
-    )
-
-def libc_header_info(
-        name,
-        has_def_template = False,
-        other_srcs = []):
-    return struct(
-        target_name = "include_{}_h".format(name.replace("/", "_")),
-        staging_path = "staging/include/{}.h".format(name),
-        yaml_template = "include/{}.yaml".format(name),
-        other_srcs = other_srcs + (["include/{}.h.def".format(name)] if has_def_template else []),
     )
 
 def libc_math_function(

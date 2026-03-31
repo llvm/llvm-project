@@ -2883,7 +2883,10 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
-  for (auto [block, mergeInfo] : blockMergeInfoCopy) {
+  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
+       it != e; ++it) {
+    auto &[block, mergeInfo] = *it;
+
     // Skip processing loop regions. For loop regions continueBlock is non-null.
     if (mergeInfo.continueBlock)
       continue;

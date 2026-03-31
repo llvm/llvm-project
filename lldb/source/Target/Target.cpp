@@ -582,7 +582,7 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
       std::make_shared<SearchFilterForUnconstrainedSearches>(
           shared_from_this());
   BreakpointResolverSP resolver_sp =
-      std::make_shared<BreakpointResolverAddress>(nullptr, Address(file_addr),
+      std::make_shared<BreakpointResolverAddress>(nullptr, file_addr,
                                                   file_spec);
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
@@ -3864,19 +3864,8 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
       }
 
       if (default_to_use_pty) {
-#ifdef _WIN32
-        if (info.GetFlags().Test(eLaunchFlagUsePipes)) {
-          llvm::Error Err = info.SetUpPipeRedirection();
-          LLDB_LOG_ERROR(log, std::move(Err),
-                         "SetUpPipeRedirection failed: {0}");
-        } else {
-#endif
-          llvm::Error Err = info.SetUpPtyRedirection();
-          LLDB_LOG_ERROR(log, std::move(Err),
-                         "SetUpPtyRedirection failed: {0}");
-#ifdef _WIN32
-        }
-#endif
+        llvm::Error Err = info.SetUpPtyRedirection();
+        LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
       }
     }
   }

@@ -151,10 +151,6 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
-static cl::opt<bool> EnableTopologicalSorting(
-    "combiner-topological-sorting", cl::Hidden, cl::init(false),
-    cl::desc("DAG combiner nodes consistently processed in topological order"));
-
 static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
                                      cl::init(false),
                                      cl::desc("Disable the DAG combiner"));
@@ -260,6 +256,15 @@ namespace {
       ForCodeSize = DAG.shouldOptForSize();
       DisableGenericCombines =
           DisableCombines || (STI && STI->disableGenericCombines(OptLevel));
+
+      MaximumLegalStoreInBits = 0;
+      // We use the minimum store size here, since that's all we can guarantee
+      // for the scalable vector types.
+      for (MVT VT : MVT::all_valuetypes())
+        if (EVT(VT).isSimple() && VT != MVT::Other &&
+            TLI.isTypeLegal(EVT(VT)) &&
+            VT.getSizeInBits().getKnownMinValue() >= MaximumLegalStoreInBits)
+          MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
     }
 
     void ConsiderForPruning(SDNode *N) {
@@ -335,6 +340,8 @@ namespace {
     void CommitTargetLoweringOpt(const TargetLowering::TargetLoweringOpt &TLO);
 
   private:
+    unsigned MaximumLegalStoreInBits;
+
     /// Check the specified integer node value to see if it can be simplified or
     /// if things it uses can be simplified by bit propagation.
     /// If so, return true.
@@ -1813,14 +1820,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
-  bool UseTopologicalSorting = EnableTopologicalSorting.getNumOccurrences() > 0
-                                   ? EnableTopologicalSorting
-                                   : TLI.useTopologicalSorting();
-
   WorklistInserter AddNodes(*this);
-
-  if (UseTopologicalSorting)
-    DAG.AssignTopologicalOrder();
 
   // Add all the dag nodes to the worklist.
   //
@@ -1828,13 +1828,8 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   // nodes which can be deleted are those which have no uses and all other nodes
   // which would otherwise be added to the worklist by the first call to
   // getNextWorklistEntry are already present in it.
-  if (UseTopologicalSorting) {
-    for (SDNode &Node : reverse(DAG.allnodes()))
-      AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
-  } else {
-    for (SDNode &Node : DAG.allnodes())
-      AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
-  }
+  for (SDNode &Node : DAG.allnodes())
+    AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
 
   // Create a dummy node (which is not added to allnodes), that adds a reference
   // to the root node, preventing it from being deleted, and tracking any
@@ -6331,8 +6326,7 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // If we know the range of vscale, see if we can fold it given a constant.
   if (N0.getOpcode() == ISD::VSCALE) {
     if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
-      bool ForSigned = (Opcode == ISD::SMAX || Opcode == ISD::SMIN);
-      ConstantRange Range = DAG.computeConstantRange(N0, ForSigned);
+      ConstantRange Range = DAG.computeConstantRange(N0, 0);
 
       const APInt &C1V = C1->getAPIntValue();
       if ((Opcode == ISD::UMAX && Range.getUnsignedMax().ule(C1V)) ||
@@ -22708,7 +22702,7 @@ bool DAGCombiner::tryStoreMergeOfConstants(
       unsigned IsFast = 0;
 
       // Break early when size is too large to be legal.
-      if (StoreTy.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
+      if (StoreTy.getSizeInBits() > MaximumLegalStoreInBits)
         break;
 
       if (TLI.isTypeLegal(StoreTy) &&
@@ -22816,7 +22810,7 @@ bool DAGCombiner::tryStoreMergeOfExtracts(
       unsigned IsFast = 0;
 
       // Break early when size is too large to be legal.
-      if (Ty.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
+      if (Ty.getSizeInBits() > MaximumLegalStoreInBits)
         break;
 
       if (TLI.isTypeLegal(Ty) &&
@@ -22963,7 +22957,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       EVT StoreTy = EVT::getVectorVT(Context, MemVT.getScalarType(), Elts);
 
       // Break early when size is too large to be legal.
-      if (StoreTy.getSizeInBits() > TLI.getMaximumLegalStoreInBits())
+      if (StoreTy.getSizeInBits() > MaximumLegalStoreInBits)
         break;
 
       unsigned IsFastSt = 0;
@@ -23183,8 +23177,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   EVT MemVT = St->getMemoryVT();
   if (MemVT.isScalableVT())
     return false;
-  if (!MemVT.isSimple() ||
-      MemVT.getSizeInBits() * 2 > TLI.getMaximumLegalStoreInBits())
+  if (!MemVT.isSimple() || MemVT.getSizeInBits() * 2 > MaximumLegalStoreInBits)
     return false;
 
   // This function cannot currently deal with non-byte-sized memory sizes.

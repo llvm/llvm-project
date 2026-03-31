@@ -213,7 +213,7 @@ SBModuleSpecList SBModuleSpecList::GetModuleSpecifications(const char *path) {
   FileSpec file_spec(path);
   FileSystem::Instance().Resolve(file_spec);
   Host::ResolveExecutableInBundle(file_spec);
-  *specs.m_opaque_up = ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
+  ObjectFile::GetModuleSpecifications(file_spec, 0, 0, *specs.m_opaque_up);
   return specs;
 }
 

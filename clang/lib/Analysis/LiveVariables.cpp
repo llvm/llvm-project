@@ -197,7 +197,8 @@ static const VariableArrayType *FindVA(QualType Ty) {
 
 static const Expr *LookThroughExpr(const Expr *E) {
   while (E) {
-    E = E->IgnoreParens();
+    if (const Expr *Ex = dyn_cast<Expr>(E))
+      E = Ex->IgnoreParens();
     if (const FullExpr *FE = dyn_cast<FullExpr>(E)) {
       E = FE->getSubExpr();
       continue;

@@ -11,7 +11,6 @@
 
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
@@ -1122,7 +1121,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   // later. Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can reach it from the peeled
   // iterations too.
-  MapVector<BasicBlock *, BasicBlock *> NonLoopBlocksIDom;
+  DenseMap<BasicBlock *, BasicBlock *> NonLoopBlocksIDom;
   for (auto *BB : L->blocks()) {
     auto *BBDomNode = DT.getNode(BB);
     SmallVector<BasicBlock *, 16> ChildrenToUpdate;

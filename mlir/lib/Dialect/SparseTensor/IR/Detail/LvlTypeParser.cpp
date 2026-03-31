@@ -125,6 +125,3 @@ LvlTypeParser::parseStructured(AsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-
-#undef FAILURE_IF_FAILED
-#undef ERROR_IF

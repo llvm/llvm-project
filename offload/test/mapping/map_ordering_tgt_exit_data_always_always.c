@@ -2,6 +2,7 @@
 // RUN: env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=DEBUG -check-prefix=CHECK
 // REQUIRES: libomptarget-debug
+// XFAIL: intelgpu
 
 // There should only be one "from" data-transfer, despite the two duplicate
 // maps.

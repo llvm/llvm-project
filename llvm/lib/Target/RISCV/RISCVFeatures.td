@@ -141,8 +141,7 @@ def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                           "(Integer Conditional Operations)">;
 
 def FeatureStdExtZifencei
-    : RISCVExtension<2, 0, "fence.i">,
-      RISCVExtensionBitmask<1, 11>;
+    : RISCVExtension<2, 0, "fence.i">;
 def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
                         AssemblerPredicate<(all_of FeatureStdExtZifencei),
                                            "'Zifencei' (fence.i)">;
@@ -202,8 +201,7 @@ def FeatureZilsd4ByteAlign
 // Multiply Extensions
 
 def FeatureStdExtZmmul
-    : RISCVExtension<1, 0, "Integer Multiplication">,
-      RISCVExtensionBitmask<1, 12>;
+    : RISCVExtension<1, 0, "Integer Multiplication">;
 def HasStdExtZmmul : Predicate<"Subtarget->hasStdExtZmmul()">,
                      AssemblerPredicate<(all_of FeatureStdExtZmmul),
                      "'Zmmul' (Integer Multiplication)">;
