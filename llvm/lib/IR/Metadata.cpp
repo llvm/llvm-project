@@ -1632,12 +1632,8 @@ void Value::addMetadata(unsigned KindID, MDNode &MD) {
   unsigned NewIdx = Ctx.pImpl->MetadataRecycleHead;
   if (NewIdx == 0) {
     NewIdx = Ctx.pImpl->Metadatas.size();
-    if (NewIdx == 0) {
-#ifndef NDEBUG
-      Ctx.pImpl->MetadataRecycleSize = 0;
-#endif
+    if (NewIdx == 0)
       NewIdx = 1;
-    }
     Ctx.pImpl->Metadatas.resize(NewIdx + 1);
   } else {
     Ctx.pImpl->MetadataRecycleHead = Ctx.pImpl->Metadatas[NewIdx].Next;
