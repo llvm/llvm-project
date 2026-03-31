@@ -65,7 +65,7 @@ TEST_CONSTEXPR_CXX23 void test_proxy_references(Ref& r1, Ref& r2) {
   static_assert(!has_builtin_operator_address_of<Ref>::value, "");
   static_assert(!has_builtin_operator_address_of<const Ref>::value, "");
 
-  static_assert(std::is_same<decltype(&r1), Ref*>::value);
+  static_assert(std::is_same<decltype(&r1), Ref*>::value, "");
 
   assert(std::addressof(r1) == &r1);
   assert(std::addressof(r2) == &r2);
