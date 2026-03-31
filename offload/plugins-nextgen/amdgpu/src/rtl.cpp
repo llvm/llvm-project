@@ -738,8 +738,7 @@ struct AMDGPUQueueTy {
     // If enabling profiling fails, leave the queue usable and preserve existing
     // event behavior; only elapsed-time queries will later report that timing
     // is unavailable.
-    Status = hsa_amd_profiling_set_profiler_enabled(Queue, 1);
-    if (Status == HSA_STATUS_SUCCESS)
+    if (hsa_amd_profiling_set_profiler_enabled(Queue, 1) == HSA_STATUS_SUCCESS)
       ProfilingEnabled = true;
 
     return Plugin::success();
