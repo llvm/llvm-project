@@ -372,7 +372,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
                                      all_of(Rep->operands(), isSingleScalar));
   }
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
+  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return preservesUniformity(WidenR->getOpcode()) &&
@@ -384,14 +384,12 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPCanonicalIVPHIRecipe, VPVectorPointerRecipe,
-          VPVectorEndPointerRecipe>(VPV))
-    return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();
 
   // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
-  return isa<VPExpandSCEVRecipe>(VPV);
+  return isa<VPExpandSCEVRecipe, VPCanonicalIVPHIRecipe, VPVectorPointerRecipe,
+             VPVectorEndPointerRecipe, VPDerivedIVRecipe>(VPV);
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
