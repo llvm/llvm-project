@@ -10,7 +10,6 @@ import re
 from functools import reduce
 from pathlib import PurePosixPath
 
-
 STDINT_SIZES = [
     "16",
     "32",
@@ -175,6 +174,7 @@ class HeaderFile:
                     PurePosixPath("llvm-libc-types") / f"{typ.name}.h",
                 )
                 for typ in self.all_types()
+                if typ.guard is None
             }
             | {
                 PurePosixPath("llvm-libc-macros") / f"{attr.split('(')[0]}.h"
@@ -239,7 +239,7 @@ class HeaderFile:
         # It's implicitly emitted here when using the default template so
         # it can get the right relative path.  Custom template files should
         # all have it explicitly with their right particular relative path.
-        return [
+        content = [
             f"#include {file}"
             for file in ([f'"{relpath(COMMON_HEADER)!s}"'] if with_common else [])
             + sorted(
@@ -247,6 +247,38 @@ class HeaderFile:
                 for file in self.includes()
             )
         ]
+
+        # Add guarded types
+        seen_guard = False
+        current_guard = None
+        for typ in sorted(self.types):
+            path = COMPILER_HEADER_TYPES.get(
+                typ.name,
+                PurePosixPath("llvm-libc-types") / f"{typ.name}.h",
+            )
+            if not seen_guard and typ.guard is not None:
+                seen_guard = True
+                content.append("")
+            if typ.guard is None:
+                continue
+            if current_guard is None:
+                current_guard = typ.guard
+                content.append(f"#ifdef {current_guard}")
+                content.append(f'#include "{relpath(path)!s}"')
+            elif current_guard == typ.guard:
+                content.append(f'#include "{relpath(path)!s}"')
+            else:
+                content.append(f"#endif // {current_guard}")
+                content.append("")
+                current_guard = typ.guard
+                if current_guard is not None:
+                    content.append(f"#ifdef {current_guard}")
+                content.append(f'#include "{relpath(path)!s}"')
+        if current_guard is not None:
+            content.append(f"#endif // {current_guard}")
+            content.append("")
+
+        return content
 
     def macro_lines(self):
         content = []
