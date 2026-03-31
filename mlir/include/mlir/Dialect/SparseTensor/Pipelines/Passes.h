@@ -153,7 +153,9 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
 
   /// This option is used to specify the number of threads of GPU codegen.
   PassOptions::Option<unsigned> gpuNumThreads{
-      *this, "gpu-num-threads", desc("Number of threads for GPU codegen"),
+      *this, "gpu-num-threads",
+      desc("Number of threads for GPU codegen. Setting this to 0 enables "
+           "direct library calls instead."),
       init(1024)};
 
   /// Projects out the options for `createSparsificationPass`.
