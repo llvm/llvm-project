@@ -227,7 +227,7 @@ static Type *buildReturnType(ArrayRef<Type *> NewRetTypes,
 /// for a converted "rm" constraint). This is used to safely reconstruct the
 /// parameter attribute list: attributes from the original call are only
 /// propagated to arguments whose type is unchanged.
-static CallInst *
+static CallBase *
 createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
                    Type *NewRetTy, ArrayRef<Value *> NewArgs,
                    ArrayRef<std::pair<unsigned, Type *>> ElementTypeAttrs,
@@ -245,7 +245,17 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
 
   SmallVector<OperandBundleDef, 1> Bundles;
   CB->getOperandBundlesAsDefs(Bundles);
-  CallInst *NewCall = Builder.CreateCall(NewFTy, NewIA, NewArgs, Bundles);
+
+  CallBase *NewCall;
+  if (auto *CBI = dyn_cast<CallBrInst>(CB)) {
+    NewCall = Builder.CreateCallBr(NewFTy, NewIA, CBI->getDefaultDest(),
+                                   CBI->getIndirectDests(), NewArgs, Bundles);
+  } else if (auto *II = dyn_cast<InvokeInst>(CB)) {
+    NewCall = Builder.CreateInvoke(NewFTy, NewIA, II->getNormalDest(),
+                                   II->getUnwindDest(), NewArgs, Bundles);
+  } else {
+    NewCall = Builder.CreateCall(NewFTy, NewIA, NewArgs, Bundles);
+  }
   NewCall->setCallingConv(CB->getCallingConv());
 
   // Rebuild the parameter attribute list. Arguments whose types changed (e.g.
@@ -281,7 +291,7 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
 
 /// Reconstruct the return value from the new call and allocas.
 static Value *
-reconstructReturnValue(Type *RetTy, CallInst *NewCall,
+reconstructReturnValue(Type *RetTy, CallBase *NewCall,
                        const InlineAsm::ConstraintInfoVector &Constraints,
                        ArrayRef<std::pair<AllocaInst *, Type *>> OutputAllocas,
                        ArrayRef<Type *> NewRetTypes, IRBuilder<> &Builder) {
@@ -341,14 +351,14 @@ reconstructReturnValue(Type *RetTy, CallInst *NewCall,
   llvm_unreachable("non-void return type but no direct output constraint");
 }
 
-static bool processInlineAsm(Function &F, CallBase *CB) {
+static CallBase *processInlineAsm(Function &F, CallBase *CB, DominatorTree *DT) {
   InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
   const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
   const auto &[NewConstraintStr, NewME] =
       convertConstraintsToMemory(IA->getConstraintString(), Constraints);
   if (NewME.doesNotAccessMemory())
-    return false;
+    return nullptr;
 
   IRBuilder<> Builder(CB);
   IRBuilder<> EntryBuilder(&F.getEntryBlock(), F.getEntryBlock().begin());
@@ -427,20 +437,72 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   Type *NewRetTy = buildReturnType(NewRetTypes, F.getContext());
 
   // Create the new inline assembly call.
-  CallInst *NewCall = createNewInlineAsm(
+  CallBase *NewCall = createNewInlineAsm(
       IA, NewConstraintStr, NewRetTy, NewArgs, ElementTypeAttrs,
       NewArgToOrigArg, CB, NewME, Builder, F.getContext());
 
   // Reconstruct the return value and update users.
   if (!CB->use_empty()) {
-    if (Value *Replacement =
-            reconstructReturnValue(CB->getType(), NewCall, Constraints,
-                                   OutputAllocas, NewRetTypes, Builder))
-      CB->replaceAllUsesWith(Replacement);
+    if (auto *CBI = dyn_cast<CallBrInst>(CB)) {
+      SSAUpdater SSAUpdate;
+      SSAUpdate.Initialize(CB->getType(), CB->getName());
+
+      // If the return type is unchanged, we can use the new call as the
+      // default value for the parent block.
+      if (NewCall->getType() == CB->getType())
+        SSAUpdate.AddAvailableValue(CB->getParent(), NewCall);
+
+      SmallPtrSet<BasicBlock *, 4> Successors;
+      Successors.insert(CBI->getDefaultDest());
+      for (BasicBlock *Ind : CBI->getIndirectDests())
+        Successors.insert(Ind);
+
+      for (BasicBlock *Succ : Successors) {
+        IRBuilder<> SuccBuilder(&*Succ->getFirstInsertionPt());
+        Value *V = reconstructReturnValue(CB->getType(), NewCall, Constraints,
+                                           OutputAllocas, NewRetTypes,
+                                           SuccBuilder);
+        SSAUpdate.AddAvailableValue(Succ, V);
+      }
+
+      // Update all uses of CB.
+      for (auto UI = CB->use_begin(), UE = CB->use_end(); UI != UE;) {
+        Use &U = *UI++;
+        // Don't rewrite the use in the new call.
+        if (U.getUser() == NewCall)
+          continue;
+
+        auto *I = dyn_cast<Instruction>(U.getUser());
+        if (!I)
+          continue;
+
+        BasicBlock *UserBB = I->getParent();
+        if (auto *PN = dyn_cast<PHINode>(I))
+          UserBB = PN->getIncomingBlock(U);
+
+        if (Successors.count(UserBB))
+          U.set(SSAUpdate.GetValueAtEndOfBlock(UserBB));
+        else
+          SSAUpdate.RewriteUse(U);
+      }
+    } else if (auto *II = dyn_cast<InvokeInst>(CB)) {
+      IRBuilder<> NormalBuilder(&*II->getNormalDest()->getFirstInsertionPt());
+      Value *V = reconstructReturnValue(CB->getType(), NewCall, Constraints,
+                                         OutputAllocas, NewRetTypes,
+                                         NormalBuilder);
+      CB->replaceAllUsesWith(V);
+    } else {
+      // CallInst. Insert after NewCall. Since NewCall was created at Builder,
+      // and Builder is set to CB, NewCall is before CB. reconstruction
+      // happens before CB but after NewCall.
+      Value *V = reconstructReturnValue(CB->getType(), NewCall, Constraints,
+                                         OutputAllocas, NewRetTypes, Builder);
+      CB->replaceAllUsesWith(V);
+    }
   }
 
   CB->eraseFromParent();
-  return true;
+  return NewCall;
 }
 
 //===----------------------------------------------------------------------===//
@@ -539,7 +601,7 @@ static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
   SmallPtrSet<const BasicBlock *, 4> Visited;
   IRBuilder<> Builder(CBR->getContext());
 
-  if (!CBR->getNumIndirectDests())
+  if (!CBR->getNumIndirectDests() || CBR->getType()->isVoidTy())
     return false;
 
   SSAUpdater SSAUpdate;
@@ -571,14 +633,35 @@ static bool processCallBrInst(Function &F, CallBrInst *CBR, DominatorTree *DT) {
   return Changed;
 }
 
-static bool runImpl(Function &F, ArrayRef<CallBase *> IAs, DominatorTree *DT) {
+static bool runImpl(Function &F, ArrayRef<CallBase *> IAs, DominatorTree *DT,
+                   const TargetMachine *TM) {
   bool Changed = false;
+  bool isOptLevelNone = TM->getOptLevel() == CodeGenOptLevel::None;
 
-  for (CallBase *CB : IAs)
-    if (auto *CBR = dyn_cast<CallBrInst>(CB))
-      Changed |= processCallBrInst(F, CBR, DT);
-    else
-      Changed |= processInlineAsm(F, CB);
+  for (CallBase *CB : IAs) {
+    bool LocalChanged = false;
+    CallBase *CurrentCB = CB;
+
+    // Only process "rm" to "m" conversion if at -O0.
+    if (isOptLevelNone) {
+      if (CallBase *NewCB = processInlineAsm(F, CurrentCB, DT)) {
+        CurrentCB = NewCB;
+        LocalChanged = true;
+      }
+    }
+
+    // CallBrInst always needs SSA fixups, but skip if it was already erased
+    // and replaced by processInlineAsm (which would have returned a new call).
+    // Actually, processInlineAsm returns the NEW call. If it was a CallBr,
+    // it's still a CallBr.
+    if (auto *CBR = dyn_cast<CallBrInst>(CurrentCB)) {
+      // If we are at -O0, processCallBrInst is always called.
+      // If NOT at -O0, we only got here if CBR was a candidate.
+      LocalChanged |= processCallBrInst(F, CBR, DT);
+    }
+
+    Changed |= LocalChanged;
+  }
 
   return Changed;
 }
@@ -593,18 +676,24 @@ findInlineAsmCandidates(Function &F, const TargetMachine *TM) {
   SmallVector<CallBase *, 4> InlineAsms;
 
   for (BasicBlock &BB : F) {
-    if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator())) {
-      if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
-        InlineAsms.push_back(CBR);
-      continue;
-    }
+    for (Instruction &I : BB) {
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB || !CB->isInlineAsm())
+        continue;
 
-    if (isOptLevelNone)
-      // Only inline assembly compiled at '-O0' (i.e. uses the fast register
-      // allocator) needs to be processed.
-      for (Instruction &I : BB)
-        if (auto *CI = dyn_cast<CallInst>(&I); CI && CI->isInlineAsm())
-          InlineAsms.push_back(CI);
+      InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
+      if (auto *CBR = dyn_cast<CallBrInst>(CB)) {
+        bool NeedsSSA = !CBR->getType()->isVoidTy() && !CBR->use_empty();
+        bool NeedsConversion = isOptLevelNone &&
+                               IA->getConstraintString().find("rm") !=
+                                   std::string::npos;
+        if (NeedsSSA || NeedsConversion)
+          InlineAsms.push_back(CBR);
+      } else if (isOptLevelNone) {
+        if (IA->getConstraintString().find("rm") != std::string::npos)
+          InlineAsms.push_back(CB);
+      }
+    }
   }
 
   return InlineAsms;
@@ -632,7 +721,7 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
     DT = &*LazilyComputedDomTree;
   }
 
-  return runImpl(F, IAs, DT);
+  return runImpl(F, IAs, DT, TM);
 }
 
 PreservedAnalyses InlineAsmPreparePass::run(Function &F,
@@ -643,7 +732,7 @@ PreservedAnalyses InlineAsmPreparePass::run(Function &F,
 
   DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
 
-  if (runImpl(F, IAs, DT)) {
+  if (runImpl(F, IAs, DT, TM)) {
     PreservedAnalyses PA;
     PA.preserve<DominatorTreeAnalysis>();
     return PA;
