@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK-LABEL: @foo(
 ;CHECK: fadd fast <4 x float>
 ;CHECK: ret
-define float @foo(ptr nocapture %A, ptr nocapture %n) nounwind uwtable readonly ssp {
+define float @foo(ptr nocapture %A, ptr nocapture %n) readonly {
 entry:
   br label %for.body
 
@@ -26,7 +26,7 @@ for.end:                                          ; preds = %for.body
 ;CHECK-LABEL: @foosub(
 ;CHECK: fsub fast <4 x float>
 ;CHECK: ret
-define float @foosub(ptr nocapture %A, ptr nocapture %n) nounwind uwtable readonly ssp {
+define float @foosub(ptr nocapture %A, ptr nocapture %n) readonly {
 entry:
   br label %for.body
 
@@ -48,7 +48,7 @@ for.end:                                          ; preds = %for.body
 ;CHECK-LABEL: @foodiv(
 ;CHECK: fdiv fast <4 x float>
 ;CHECK: ret
-define float @foodiv(ptr nocapture %A, ptr nocapture %n) nounwind uwtable readonly ssp {
+define float @foodiv(ptr nocapture %A, ptr nocapture %n) readonly {
 entry:
   br label %for.body
 
@@ -70,7 +70,7 @@ for.end:                                          ; preds = %for.body
 ;CHECK-LABEL: @foonodiv(
 ;CHECK-NOT: fdiv fast <4 x float>
 ;CHECK: ret
-define float @foonodiv(ptr nocapture %A, ptr nocapture %n) nounwind uwtable readonly ssp {
+define float @foonodiv(ptr nocapture %A, ptr nocapture %n) readonly {
 entry:
   br label %for.body
 

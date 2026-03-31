@@ -197,6 +197,8 @@ public:
                                 mlir::Value numElements, const CXXNewExpr *e,
                                 QualType elementType) override;
 
+  bool isZeroInitializable(const MemberPointerType *MPT) override;
+
 protected:
   CharUnits getArrayCookieSizeImpl(QualType elementType) override;
 
@@ -2894,4 +2896,8 @@ mlir::Value CIRGenItaniumCXXABI::performReturnAdjustment(
   return performTypeAdjustment(cgf, ret, unadjustedClass, ra.NonVirtual,
                                ra.Virtual.Itanium.VBaseOffsetOffset,
                                /*isReturnAdjustment=*/true);
+}
+
+bool CIRGenItaniumCXXABI::isZeroInitializable(const MemberPointerType *mpt) {
+  return mpt->isMemberFunctionPointer();
 }
