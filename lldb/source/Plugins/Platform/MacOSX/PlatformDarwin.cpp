@@ -256,13 +256,13 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
 llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
 PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
-  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
   if (!target)
-    return file_specs;
+    return empty;
 
   // For now only Python scripts supported for auto-loading.
   if (target->GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
-    return file_specs;
+    return empty;
 
   // NB some extensions might be meaningful and should not be stripped -
   // "this.binary.file"
@@ -274,15 +274,15 @@ PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
   const FileSpec &module_spec = module.GetFileSpec();
 
   if (!module_spec)
-    return file_specs;
+    return empty;
 
   SymbolFile *symfile = module.GetSymbolFile();
   if (!symfile)
-    return file_specs;
+    return empty;
 
   ObjectFile *objfile = symfile->GetObjectFile();
   if (!objfile)
-    return file_specs;
+    return empty;
 
   const FileSpec &symfile_spec = objfile->GetFileSpec();
   if (symfile_spec &&
@@ -292,7 +292,7 @@ PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     return LocateExecutableScriptingResourcesFromDSYM(
         feedback_stream, module_spec, *target, symfile_spec);
 
-  return file_specs;
+  return empty;
 }
 
 Status PlatformDarwin::ResolveSymbolFile(Target &target,
