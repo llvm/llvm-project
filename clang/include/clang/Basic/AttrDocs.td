@@ -6445,6 +6445,46 @@ the ``int`` parameter is the one that represents the error.
 }];
 }
 
+def ProfilesEnforceDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``[[profiles::enforce]]`` attribute requests enforcement of one or more
+C++ profiles (P3589R2) for the remainder of the translation unit. It must
+appear on an empty-declaration or module-declaration before any non-empty
+declaration.
+
+.. code-block:: c++
+
+  [[profiles::enforce(std::type)]];
+  void f(); // subject to std::type profile rules
+  }];
+}
+
+def ProfilesSuppressDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``[[profiles::suppress]]`` attribute locally suppresses enforcement of
+a C++ profile (P3589R2) for the appertaining declaration or statement.
+
+.. code-block:: c++
+
+  [[profiles::suppress(std::type, justification: "legacy code")]]
+  void legacy_function();
+  }];
+}
+
+def ProfilesRequireDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``[[profiles::require]]`` attribute on a module-import-declaration
+validates that the imported module enforces the specified profile (P3589R2).
+
+.. code-block:: c++
+
+  import MyModule [[profiles::require(std::type)]];
+  }];
+}
+
 def SuppressDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{

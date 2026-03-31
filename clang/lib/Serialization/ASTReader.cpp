@@ -6568,6 +6568,18 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       CurrentModule->ExportAsModule = Blob.str();
       ModMap.addLinkAsDependency(CurrentModule);
       break;
+
+    case SUBMODULE_ENFORCED_PROFILES: {
+      unsigned Idx = 0;
+      while (Idx < Record.size()) {
+        unsigned Len = Record[Idx++];
+        std::string Desig(Record.begin() + Idx,
+                          Record.begin() + Idx + Len);
+        Idx += Len;
+        CurrentModule->EnforcedProfileDesignators.push_back(std::move(Desig));
+      }
+      break;
+    }
     }
   }
 }

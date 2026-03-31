@@ -881,6 +881,9 @@ enum SubmoduleRecordTypes {
 
   /// Specifies affecting modules that were not imported.
   SUBMODULE_AFFECTING_MODULES = 18,
+
+  /// Specifies enforced profile designators (P3589R2).
+  SUBMODULE_ENFORCED_PROFILES = 19,
 };
 
 /// Record types used within a comments block.

@@ -441,6 +441,8 @@ def ObjCNonFragileRuntime
 
 def HLSL : LangOpt<"HLSL">;
 
+def Profiles : LangOpt<"Profiles">;
+
 // Language option for CMSE extensions
 def Cmse : LangOpt<"Cmse">;
 
@@ -3452,6 +3454,43 @@ def Suppress : DeclOrStmtAttr {
     ObjCImplementation, Namespace, Empty
   ], ErrorDiag, "variables, functions, structs, interfaces, and namespaces">;
   let Documentation = [SuppressDocs];
+}
+
+// C++ Profiles framework (P3589R2)
+
+def ProfilesEnforce : Attr {
+  let Spellings = [CXX11<"profiles", "enforce">];
+  let Args = [
+    VariadicStringArgument<"ProfileNames">,
+    VariadicStringArgument<"ProfileDesignators">
+  ];
+  let LangOpts = [Profiles];
+  let HasCustomParsing = 1;
+  let Documentation = [ProfilesEnforceDocs];
+}
+
+def ProfilesSuppress : DeclOrStmtAttr {
+  let Spellings = [CXX11<"profiles", "suppress">];
+  let Args = [
+    StringArgument<"ProfileName">,
+    StringArgument<"Justification", 1>,
+    StringArgument<"Rule", 1>,
+    VariadicStringArgument<"RawArguments">
+  ];
+  let LangOpts = [Profiles];
+  let HasCustomParsing = 1;
+  let Subjects = SubjectList<[
+    Stmt, Var, Field, Function, Record, Namespace, Empty
+  ], ErrorDiag, "variables, functions, structs, and namespaces">;
+  let Documentation = [ProfilesSuppressDocs];
+}
+
+def ProfilesRequire : Attr {
+  let Spellings = [CXX11<"profiles", "require">];
+  let Args = [StringArgument<"Designator">];
+  let LangOpts = [Profiles];
+  let HasCustomParsing = 1;
+  let Documentation = [ProfilesRequireDocs];
 }
 
 def SysVABI : DeclOrTypeAttr {

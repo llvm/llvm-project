@@ -20,6 +20,7 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
@@ -74,6 +75,8 @@ StmtResult Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 
   if (getLangOpts().HLSL)
     MaybeParseMicrosoftAttributes(GNUOrMSAttrs);
+
+  Sema::ProfileSuppressRAII ProfileSuppressGuard(Actions, CXX11Attrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs,

@@ -31,6 +31,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Attr.h"
 #include "clang/Sema/CXXFieldCollector.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ExternalSemaSource.h"
@@ -2977,4 +2978,97 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
   }
 
   return CreateAnnotationAttr(AL, Str, Args);
+}
+
+//===----------------------------------------------------------------------===//
+// C++ Profiles framework (P3589R2)
+//===----------------------------------------------------------------------===//
+
+bool Sema::isProfileEnforced(StringRef ProfileName) const {
+  return getProfileEnforcement(ProfileName) != nullptr;
+}
+
+const Sema::ProfileEnforcement *
+Sema::getProfileEnforcement(StringRef ProfileName) const {
+  for (const auto &E : EnforcedProfiles)
+    if (E.ProfileName == ProfileName)
+      return &E;
+  return nullptr;
+}
+
+void Sema::pushProfileSuppression(StringRef ProfileName, StringRef RuleName) {
+  ProfileSuppressStack.push_back(
+      {ProfileName.str(), RuleName.str()});
+}
+
+void Sema::popProfileSuppressions(unsigned Count) {
+  assert(ProfileSuppressStack.size() >= Count);
+  ProfileSuppressStack.pop_back_n(Count);
+}
+
+bool Sema::isProfileSuppressedByStmt(StringRef ProfileName,
+                                     StringRef RuleName) const {
+  for (const auto &E : ProfileSuppressStack) {
+    if (E.ProfileName != ProfileName)
+      continue;
+    if (E.RuleName.empty() || E.RuleName == RuleName)
+      return true;
+  }
+  return false;
+}
+
+bool Sema::isProfileSuppressedByDeclAttr(StringRef ProfileName,
+                                         StringRef RuleName) const {
+  for (const DeclContext *DC = CurContext; DC; DC = DC->getParent()) {
+    if (const auto *D = dyn_cast<Decl>(DC)) {
+      for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>()) {
+        if (A->getProfileName() != ProfileName)
+          continue;
+        if (A->getRule().empty() || A->getRule() == RuleName)
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool Sema::isProfileSuppressed(StringRef ProfileName,
+                                StringRef RuleName) const {
+  return isProfileSuppressedByStmt(ProfileName, RuleName) ||
+         isProfileSuppressedByDeclAttr(ProfileName, RuleName);
+}
+
+bool Sema::checkProfileViolation(StringRef ProfileName, StringRef RuleName,
+                                 SourceLocation Loc, unsigned DiagID) {
+  if (!isProfileEnforced(ProfileName))
+    return false;
+  if (isProfileSuppressed(ProfileName, RuleName))
+    return false;
+  Diag(Loc, DiagID) << ProfileName;
+  return true;
+}
+
+Sema::ProfileSuppressRAII::ProfileSuppressRAII(
+    Sema &S, const ParsedAttributesView &Attrs)
+    : S(S), Count(0) {
+  for (const auto &AL : Attrs) {
+    if (AL.getKind() != ParsedAttr::AT_ProfilesSuppress)
+      continue;
+    if (AL.getNumArgs() < 1)
+      continue;
+    if (const auto *SL =
+            dyn_cast<StringLiteral>(AL.getArgAsExpr(0))) {
+      StringRef Rule;
+      if (AL.getNumArgs() >= 3)
+        if (const auto *RuleSL =
+                dyn_cast<StringLiteral>(AL.getArgAsExpr(2)))
+          Rule = RuleSL->getString();
+      S.pushProfileSuppression(SL->getString(), Rule);
+      ++Count;
+    }
+  }
+}
+
+Sema::ProfileSuppressRAII::~ProfileSuppressRAII() {
+  S.popProfileSuppressions(Count);
 }

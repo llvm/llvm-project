@@ -2378,13 +2378,8 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   if (!Tok.isOneOf(tok::semi, tok::l_square))
     SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
 
-  // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
-  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr,
-                          diag::err_keyword_not_module_attr,
-                          /*DiagnoseEmptyAttrs=*/false,
-                          /*WarnOnUnknownAttrs=*/true);
 
   if (ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
                            tok::getKeywordSpelling(tok::kw_module)))
@@ -2392,7 +2387,8 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
                                  ImportState,
-                                 Introducer.hasSeenNoTrivialPPDirective());
+                                 Introducer.hasSeenNoTrivialPPDirective(),
+                                 Attrs);
 }
 
 Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
@@ -2438,11 +2434,6 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
-  // We don't support any module import attributes yet.
-  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr,
-                          diag::err_keyword_not_import_attr,
-                          /*DiagnoseEmptyAttrs=*/false,
-                          /*WarnOnUnknownAttrs=*/true);
 
   if (PP.hadModuleLoaderFatalFailure()) {
     // With a fatal failure in the module loader, we abort parsing.
@@ -2516,6 +2507,8 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
                                        IsPartition);
   if (Import.isInvalid())
     return nullptr;
+
+  Actions.ActOnModuleImportAttrs(Import.get(), Attrs);
 
   // Using '@import' in framework headers requires modules to be enabled so that
   // the header is parseable. Emit a warning to make the user aware.

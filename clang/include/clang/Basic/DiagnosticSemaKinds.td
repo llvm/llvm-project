@@ -14115,4 +14115,22 @@ def err_cuda_device_kernel_launch_not_supported
 def err_cuda_device_kernel_launch_require_rdc
     : Error<"kernel launch from __device__ or __global__ function requires "
             "relocatable device code (i.e. requires -fgpu-rdc)">;
+// C++ Profiles framework (P3589R2)
+def err_profiles_enforce_not_empty_decl : Error<
+  "'profiles::enforce' attribute only allowed on empty-declarations and module-declarations">;
+def err_profiles_enforce_not_at_tu_scope : Error<
+  "'profiles::enforce' attribute on empty-declaration must be at translation unit scope">;
+def err_profiles_enforce_after_decl : Error<
+  "'profiles::enforce' attribute on empty-declaration must precede all non-empty declarations">;
+def err_profiles_enforce_mismatch : Error<
+  "repeated enforcement of profile '%0' with different designator">;
+def err_profiles_require_not_on_import : Error<
+  "'profiles::require' attribute only allowed on module-import-declarations">;
+def err_profiles_require_not_enforced : Error<
+  "required profile '%0' is not enforced by imported module">;
+def err_profiles_suppress_justification_not_string : Error<
+  "'justification' argument of 'profiles::suppress' must be a string literal">;
+def warn_profile_type_cast_reinterpret : Warning<
+  "'reinterpret_cast' is unsafe under profile '%0'">,
+  InGroup<DiagGroup<"profile-type-cast">>;
 } // end of sema component.

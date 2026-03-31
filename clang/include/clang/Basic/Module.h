@@ -457,6 +457,9 @@ public:
   /// module depends.
   llvm::SmallSetVector<Module *, 2> Imports;
 
+  /// Profile designators enforced on this module's declaration (P3589R2).
+  SmallVector<std::string, 4> EnforcedProfileDesignators;
+
   /// The set of top-level modules that affected the compilation of this module,
   /// but were not imported.
   llvm::SmallSetVector<Module *, 2> AffectingClangModules;

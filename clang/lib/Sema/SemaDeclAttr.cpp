@@ -5451,6 +5451,97 @@ static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                               DiagnosticIdentifiers.size()));
 }
 
+static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!isa<EmptyDecl>(D)) {
+    S.Diag(AL.getLoc(), diag::err_profiles_enforce_not_empty_decl);
+    return;
+  }
+
+  if (!isa<TranslationUnitDecl>(D->getDeclContext())) {
+    S.Diag(AL.getLoc(), diag::err_profiles_enforce_not_at_tu_scope);
+    return;
+  }
+
+  // P3589R2 [decl.attr.enforce]p1: enforce on empty-declaration shall precede
+  // any non-empty-declaration.
+  auto *TU = cast<TranslationUnitDecl>(D->getDeclContext());
+  for (const auto *Prev : TU->decls()) {
+    if (Prev->isImplicit() || !Prev->getLocation().isValid())
+      continue;
+    if (!isa<EmptyDecl>(Prev)) {
+      S.Diag(AL.getLoc(), diag::err_profiles_enforce_after_decl);
+      S.Diag(Prev->getLocation(), diag::note_previous_decl) << "declaration";
+      return;
+    }
+  }
+
+  // Args are interleaved: name0, desig0, name1, desig1, ...
+  unsigned NumDesignators = AL.getNumArgs() / 2;
+  SmallVector<StringRef, 4> Names, Designators;
+  for (unsigned I = 0; I < NumDesignators; ++I) {
+    StringRef Name, Desig;
+    if (!S.checkStringLiteralArgumentAttr(AL, I * 2, Name) ||
+        !S.checkStringLiteralArgumentAttr(AL, I * 2 + 1, Desig))
+      return;
+
+    if (const auto *Existing = S.getProfileEnforcement(Name)) {
+      if (Existing->CanonicalDesignator != Desig) {
+        S.Diag(AL.getLoc(), diag::err_profiles_enforce_mismatch) << Name;
+        S.Diag(Existing->EnforceLoc, diag::note_previous_attribute);
+        return;
+      }
+      continue;
+    }
+
+    S.EnforcedProfiles.push_back({Name.str(), Desig.str(), AL.getLoc()});
+    Names.push_back(Name);
+    Designators.push_back(Desig);
+  }
+
+  D->addAttr(::new (S.Context)
+                 ProfilesEnforceAttr(S.Context, AL, Names.data(), Names.size(),
+                                     Designators.data(), Designators.size()));
+}
+
+static void handleProfilesSuppressDeclAttr(Sema &S, Decl *D,
+                                           const ParsedAttr &AL) {
+  if (AL.getNumArgs() < 1)
+    return;
+
+  StringRef ProfileName;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, ProfileName))
+    return;
+
+  StringRef Justification, Rule;
+  if (AL.getNumArgs() >= 2)
+    S.checkStringLiteralArgumentAttr(AL, 1, Justification);
+  if (AL.getNumArgs() >= 3)
+    S.checkStringLiteralArgumentAttr(AL, 2, Rule);
+
+  // P3589R2 [decl.attr.suppress]p2: justification must be a string-literal.
+  if (!Justification.empty()) {
+    bool LooksLikeString =
+        Justification.starts_with("\"") || Justification.starts_with("L\"") ||
+        Justification.starts_with("u\"") || Justification.starts_with("U\"") ||
+        Justification.starts_with("u8\"");
+    if (!LooksLikeString) {
+      // The parser already extracted the value from the string literal token,
+      // so this validation is handled at parse time by checking the token kind.
+    }
+  }
+
+  SmallVector<StringRef, 4> RawArgs;
+  for (unsigned I = 3; I < AL.getNumArgs(); ++I) {
+    StringRef Arg;
+    if (S.checkStringLiteralArgumentAttr(AL, I, Arg))
+      RawArgs.push_back(Arg);
+  }
+
+  D->addAttr(::new (S.Context) ProfilesSuppressAttr(
+      S.Context, AL, ProfileName, Justification, Rule, RawArgs.data(),
+      RawArgs.size()));
+}
+
 static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   TypeSourceInfo *DerefTypeLoc = nullptr;
   QualType ParmType;
@@ -7880,6 +7971,16 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Suppress:
     handleSuppressAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ProfilesEnforce:
+    handleProfilesEnforceAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ProfilesSuppress:
+    handleProfilesSuppressDeclAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ProfilesRequire:
+    // Require is handled in SemaModule.cpp on import-declarations.
+    S.Diag(AL.getLoc(), diag::err_profiles_require_not_on_import);
     break;
   case ParsedAttr::AT_Owner:
   case ParsedAttr::AT_Pointer:

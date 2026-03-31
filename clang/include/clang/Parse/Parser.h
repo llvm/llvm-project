@@ -2274,6 +2274,19 @@ private:
                           IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
                           ParsedAttr::Form Form);
 
+  bool ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
+                                  SourceLocation AttrNameLoc,
+                                  ParsedAttributes &Attrs,
+                                  SourceLocation *EndLoc,
+                                  IdentifierInfo *ScopeName,
+                                  SourceLocation ScopeLoc);
+  bool ParseProfileName(std::string &Name);
+  bool ParseProfileDesignator(std::string &Name, std::string &Designator);
+  bool ParseProfileDesignatorList(SmallVectorImpl<std::string> &Names,
+                                  SmallVectorImpl<std::string> &Designators);
+  bool ParseProfileArgumentList(SmallVectorImpl<std::string> &Args);
+  bool ParseNonCommaBalancedToken(std::string &Spelling);
+
   void MaybeParseCXX11Attributes(Declarator &D) {
     if (isAllowedCXX11AttributeSpecifier()) {
       ParsedAttributes Attrs(AttrFactory);

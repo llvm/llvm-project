@@ -1015,6 +1015,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SUBMODULE_PRIVATE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_INITIALIZERS);
   RECORD(SUBMODULE_EXPORT_AS);
+  RECORD(SUBMODULE_ENFORCED_PROFILES);
 
   // Comments Block.
   BLOCK(COMMENTS_BLOCK);
@@ -3253,6 +3254,16 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     if (!Mod->ExportAsModule.empty()) {
       RecordData::value_type Record[] = {SUBMODULE_EXPORT_AS};
       Stream.EmitRecordWithBlob(ExportAsAbbrev, Record, Mod->ExportAsModule);
+    }
+
+    // Emit enforced profile designators (P3589R2).
+    if (!Mod->EnforcedProfileDesignators.empty()) {
+      RecordData Record;
+      for (const auto &Desig : Mod->EnforcedProfileDesignators) {
+        Record.push_back(Desig.size());
+        Record.append(Desig.begin(), Desig.end());
+      }
+      Stream.EmitRecord(SUBMODULE_ENFORCED_PROFILES, Record);
     }
 
     // Queue up the submodules of this module.

@@ -71,6 +71,34 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       S.Context, A, DiagnosticIdentifiers.data(), DiagnosticIdentifiers.size());
 }
 
+static Attr *handleProfilesSuppressStmtAttr(Sema &S, Stmt *St,
+                                            const ParsedAttr &A,
+                                            SourceRange Range) {
+  if (A.getNumArgs() < 1)
+    return nullptr;
+
+  StringRef ProfileName;
+  if (!S.checkStringLiteralArgumentAttr(A, 0, ProfileName))
+    return nullptr;
+
+  StringRef Justification, Rule;
+  if (A.getNumArgs() >= 2)
+    S.checkStringLiteralArgumentAttr(A, 1, Justification);
+  if (A.getNumArgs() >= 3)
+    S.checkStringLiteralArgumentAttr(A, 2, Rule);
+
+  SmallVector<StringRef, 4> RawArgs;
+  for (unsigned I = 3; I < A.getNumArgs(); ++I) {
+    StringRef Arg;
+    if (S.checkStringLiteralArgumentAttr(A, I, Arg))
+      RawArgs.push_back(Arg);
+  }
+
+  return ::new (S.Context) ProfilesSuppressAttr(
+      S.Context, A, ProfileName, Justification, Rule, RawArgs.data(),
+      RawArgs.size());
+}
+
 static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange) {
   IdentifierLoc *PragmaNameLoc = A.getArgAsIdent(0);
@@ -704,6 +732,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
     return handleSuppressAttr(S, St, A, Range);
+  case ParsedAttr::AT_ProfilesSuppress:
+    return handleProfilesSuppressStmtAttr(S, St, A, Range);
   case ParsedAttr::AT_NoMerge:
     return handleNoMergeAttr(S, St, A, Range);
   case ParsedAttr::AT_NoInline:

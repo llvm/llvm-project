@@ -1034,6 +1034,45 @@ public:
   void ActOnEndOfTranslationUnit();
   void ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind);
 
+  // C++ Profiles framework (P3589R2)
+
+  struct ProfileEnforcement {
+    std::string ProfileName;
+    std::string CanonicalDesignator;
+    SourceLocation EnforceLoc;
+  };
+  SmallVector<ProfileEnforcement, 4> EnforcedProfiles;
+
+  struct ProfileSuppressEntry {
+    std::string ProfileName;
+    std::string RuleName;
+  };
+  SmallVector<ProfileSuppressEntry, 4> ProfileSuppressStack;
+
+  bool isProfileEnforced(StringRef ProfileName) const;
+  const ProfileEnforcement *getProfileEnforcement(StringRef ProfileName) const;
+
+  void pushProfileSuppression(StringRef ProfileName, StringRef RuleName);
+  void popProfileSuppressions(unsigned Count);
+
+  bool isProfileSuppressedByStmt(StringRef ProfileName,
+                                 StringRef RuleName = "") const;
+  bool isProfileSuppressedByDeclAttr(StringRef ProfileName,
+                                     StringRef RuleName = "") const;
+  bool isProfileSuppressed(StringRef ProfileName,
+                           StringRef RuleName = "") const;
+  bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
+                             SourceLocation Loc, unsigned DiagID);
+
+  class ProfileSuppressRAII {
+    Sema &S;
+    unsigned Count;
+
+  public:
+    ProfileSuppressRAII(Sema &S, const ParsedAttributesView &Attrs);
+    ~ProfileSuppressRAII();
+  };
+
   /// Determines the active Scope associated with the given declaration
   /// context.
   ///
@@ -9953,7 +9992,8 @@ public:
                                  SourceLocation ModuleLoc, ModuleDeclKind MDK,
                                  ModuleIdPath Path, ModuleIdPath Partition,
                                  ModuleImportState &ImportState,
-                                 bool SeenNoTrivialPPDirective);
+                                 bool SeenNoTrivialPPDirective,
+                                 const ParsedAttributesView &Attrs = {});
 
   /// The parser has processed a global-module-fragment declaration that begins
   /// the definition of the global module fragment of the current module unit.
@@ -9983,6 +10023,9 @@ public:
                                SourceLocation ExportLoc,
                                SourceLocation ImportLoc, Module *M,
                                ModuleIdPath Path = {});
+
+  void ActOnModuleImportAttrs(Decl *ImportDecl,
+                              const ParsedAttributesView &Attrs);
 
   /// The parser has processed a module import translated from a
   /// #include or similar preprocessing directive.

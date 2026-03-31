@@ -1890,4 +1890,16 @@ def err_hlsl_number_literal_underflow : Error<
   "float literal has a magnitude that is too small to be represented as a float type">;
 def err_hlsl_rootsig_non_zero_flag : Error<"flag value is neither a literal 0 nor a named value">;
 
+// C++ Profiles framework (P3589R2)
+def err_profiles_expected_profile_name : Error<
+  "expected profile name">;
+def err_profiles_expected_lparen : Error<
+  "expected '(' in '%0' attribute">;
+def err_profiles_expected_rparen : Error<
+  "expected ')' in '%0' attribute">;
+def err_profiles_expected_argument : Error<
+  "expected argument after ':' in profile argument">;
+def err_profiles_invalid_argument_token : Error<
+  "invalid token in profile argument">;
+
 } // end of Parser diagnostics

@@ -249,7 +249,8 @@ Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
                       ModuleIdPath Partition, ModuleImportState &ImportState,
-                      bool SeenNoTrivialPPDirective) {
+                      bool SeenNoTrivialPPDirective,
+                      const ParsedAttributesView &Attrs) {
   assert(getLangOpts().CPlusPlusModules &&
          "should only have module decl in standard C++ modules");
 
@@ -459,6 +460,36 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ReachableWhenImported);
   TU->setLocalOwningModule(Mod);
 
+  // Process [[profiles::enforce]] on the module-declaration.
+  for (const auto &AL : Attrs) {
+    if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce) {
+      unsigned NumDesignators = AL.getNumArgs() / 2;
+      for (unsigned I = 0; I < NumDesignators; ++I) {
+        StringRef Name, Desig;
+        if (!checkStringLiteralArgumentAttr(AL, I * 2, Name) ||
+            !checkStringLiteralArgumentAttr(AL, I * 2 + 1, Desig))
+          continue;
+
+        if (const auto *Existing = getProfileEnforcement(Name)) {
+          if (Existing->CanonicalDesignator != Desig) {
+            Diag(AL.getLoc(), diag::err_profiles_enforce_mismatch) << Name;
+            Diag(Existing->EnforceLoc, diag::note_previous_attribute);
+            continue;
+          }
+          continue;
+        }
+
+        EnforcedProfiles.push_back({Name.str(), Desig.str(), AL.getLoc()});
+
+        if (MDK == ModuleDeclKind::Interface)
+          Mod->EnforcedProfileDesignators.push_back(Desig.str());
+      }
+    } else {
+      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
+          << AL.getAttrName();
+    }
+  }
+
   // We are in the module purview, but before any other (non import)
   // statements, so imports are allowed.
   ImportState = ModuleImportState::ImportAllowed;
@@ -467,6 +498,18 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   if (auto *Listener = getASTMutationListener())
     Listener->EnteringModulePurview();
+
+  // P3589R2 [decl.attr.enforce]p4: propagate interface's enforced profiles to
+  // implementation unit.
+  if (Interface) {
+    for (const auto &Desig : Interface->EnforcedProfileDesignators) {
+      std::string Name = Desig;
+      if (auto Paren = Name.find('('); Paren != std::string::npos)
+        Name = Name.substr(0, Paren);
+      if (!isProfileEnforced(Name))
+        EnforcedProfiles.push_back({Name, Desig, ModuleLoc});
+    }
+  }
 
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible
@@ -1599,4 +1642,40 @@ void Sema::checkReferenceToTULocalFromOtherTU(
 
   PendingCheckReferenceForTULocal.push_back(
       std::make_pair(FD, PointOfInstantiation));
+}
+
+void Sema::ActOnModuleImportAttrs(Decl *D,
+                                  const ParsedAttributesView &Attrs) {
+  if (!D)
+    return;
+
+  auto *ID = dyn_cast<clang::ImportDecl>(D);
+  Module *ImportedMod = ID ? ID->getImportedModule() : nullptr;
+
+  for (const auto &AL : Attrs) {
+    if (AL.getKind() == ParsedAttr::AT_ProfilesRequire) {
+      if (!ImportedMod) {
+        Diag(AL.getLoc(), diag::err_profiles_require_not_on_import);
+        continue;
+      }
+
+      StringRef Desig;
+      if (!checkStringLiteralArgumentAttr(AL, 0, Desig))
+        continue;
+
+      bool Found = false;
+      for (const auto &Enforced : ImportedMod->EnforcedProfileDesignators) {
+        if (Enforced == Desig) {
+          Found = true;
+          break;
+        }
+      }
+
+      if (!Found)
+        Diag(AL.getLoc(), diag::err_profiles_require_not_enforced) << Desig;
+    } else {
+      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
+          << AL.getAttrName();
+    }
+  }
 }

@@ -72,7 +72,7 @@ public:
     IgnoredAttribute,
     UnknownAttribute,
   };
-  enum class Scope { NONE, CLANG, GNU, MSVC, OMP, HLSL, VK, GSL, RISCV };
+  enum class Scope { NONE, CLANG, GNU, MSVC, OMP, HLSL, VK, GSL, RISCV, PROFILES };
   enum class AttrArgsInfo {
     None,
     Optional,
