@@ -1370,6 +1370,9 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
 
+  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
+    return false;
+
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstConst = Dst->getStart();
@@ -1386,17 +1389,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   Level--;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  if (Delta->isZero() && SE->isKnownNonZero(Coeff)) {
-    Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
-    Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
-    ++WeakCrossingSIVsuccesses;
-    if (!Result.DV[Level].Direction) {
-      ++WeakCrossingSIVindependence;
-      return true;
-    }
-    Result.DV[Level].Distance = Delta; // = 0
-    return false;
-  }
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(Coeff);
   if (!ConstCoeff)
     return false;
@@ -1429,7 +1421,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << "\t    SrcRange = " << SrcRange << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstRange = " << DstRange << "\n");
   if (SrcRange.intersectWith(DstRange).isSingleElement()) {
-    // The ranges touch at exactly one value (i = i' = BTC).
+    // The ranges touch at exactly one value (i = i' = 0 or i = i' = BTC).
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
     Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
     ++WeakCrossingSIVsuccesses;
@@ -2114,12 +2106,9 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  bool disproven = false;
-  if (SrcAddRec && DstAddRec)
-    disproven = exactRDIVtest(SrcAddRec, DstAddRec, Result);
-  else
-    llvm_unreachable("RDIV expected at least one AddRec");
-  return disproven || gcdMIVtest(Src, Dst, Result);
+  assert(SrcAddRec && DstAddRec && "Unexpected non-addrec input");
+  return exactRDIVtest(SrcAddRec, DstAddRec, Result) ||
+         gcdMIVtest(Src, Dst, Result);
 }
 
 // Tests the single-subscript MIV pair (Src and Dst) for dependence.

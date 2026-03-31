@@ -16,6 +16,9 @@ namespace lldb_private {
 
 class ThreadPlanStepUntil : public ThreadPlan {
 public:
+  ThreadPlanStepUntil(Thread &thread, llvm::ArrayRef<lldb::addr_t> address_list,
+                      bool stop_others, uint32_t frame_idx = 0);
+
   ~ThreadPlanStepUntil() override;
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
@@ -29,10 +32,6 @@ public:
 protected:
   bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
   bool DoPlanExplainsStop(Event *event_ptr) override;
-
-  ThreadPlanStepUntil(Thread &thread, lldb::addr_t *address_list,
-                      size_t num_addresses, bool stop_others,
-                      uint32_t frame_idx = 0);
 
   void AnalyzeStop();
 
@@ -51,10 +50,6 @@ private:
   bool m_stop_others;
 
   void Clear();
-
-  friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
-      bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
-      bool stop_others, uint32_t frame_idx, Status &status);
 
   // Need an appropriate marker for the current stack so we can tell step out
   // from step in.
