@@ -86,11 +86,13 @@ CompilerType ResolveTypeByName(const std::string &name,
   return {};
 }
 
-llvm::Expected<ASTNodeUP>
-DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
-                 std::shared_ptr<StackFrame> frame_sp,
-                 lldb::DynamicValueType use_dynamic, uint32_t options) {
-    const bool check_ptr_vs_member =
+llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
+                                           DILLexer lexer,
+                                           std::shared_ptr<StackFrame> frame_sp,
+
+                                           lldb::DynamicValueType use_dynamic,
+                                           uint32_t options) {
+  const bool check_ptr_vs_member =
       (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
   const bool no_fragile_ivar =
       (options & StackFrame::eExpressionPathOptionsNoFragileObjcIvar) != 0;

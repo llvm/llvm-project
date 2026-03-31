@@ -549,9 +549,9 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   }
 
   // Parse the expression.
-  auto tree_or_error = dil::DILParser::Parse(
-      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic,
-      options);
+  auto tree_or_error =
+      dil::DILParser::Parse(var_expr, std::move(*lex_or_err),
+                            shared_from_this(), use_dynamic, options);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
     return ValueObjectConstResult::Create(nullptr, std::move(error));
