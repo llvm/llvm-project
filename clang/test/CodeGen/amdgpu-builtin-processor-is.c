@@ -7,11 +7,17 @@
 // things happens:
 //    1) for gfx900 we emit a call to trap (concrete target, matches)
 //    2) for gfx1010 we emit an empty kernel (concrete target, does not match)
+<<<<<<< HEAD
 //    3) for AMDGCNSPIRV we emit llvm.amdgcn.is.gfx900 as a bool global, and
 //       load from it to provide the condition a br (abstract target)
 //.
 // AMDGCNSPIRV: @llvm.amdgcn.is.gfx900 = external addrspace(1) externally_initialized constant i1
 //.
+=======
+//    3) for AMDGCNSPIRV we emit a boolean specialisation constant, via a call
+//       to __spirv_SpecConstant, with the id of UINT32_MAX, and the boolean
+//       value of false, which will yield an OpSpecConstantFalse in SPIR-V
+>>>>>>> 18e695890306
 // AMDGCN-GFX900-LABEL: define dso_local void @foo(
 // AMDGCN-GFX900-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGCN-GFX900-NEXT:  [[ENTRY:.*:]]
@@ -26,9 +32,31 @@
 // AMDGCNSPIRV-LABEL: define spir_func void @foo(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
+<<<<<<< HEAD
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.is.gfx900, align 1
 // AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+=======
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META2:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[LOR_LHS_FALSE:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE]]:
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META3:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL1:%.*]] = icmp ne i1 [[TMP1]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL1]], label %[[IF_THEN]], label %[[LOR_LHS_FALSE2:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE2]]:
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META4:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL3:%.*]] = icmp ne i1 [[TMP2]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL3]], label %[[IF_THEN]], label %[[LOR_LHS_FALSE4:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE4]]:
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META5:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL5:%.*]] = icmp ne i1 [[TMP3]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL5]], label %[[IF_THEN]], label %[[LOR_LHS_FALSE6:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE6]]:
+// AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata [[META6:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL7:%.*]] = icmp ne i1 [[TMP4]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL7]], label %[[IF_THEN]], label %[[IF_END:.*]]
+>>>>>>> 18e695890306
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
 // AMDGCNSPIRV-NEXT:    br label %[[IF_END]]
@@ -36,7 +64,15 @@
 // AMDGCNSPIRV-NEXT:    ret void
 //
 void foo() {
+<<<<<<< HEAD
     if (__builtin_amdgcn_processor_is("gfx900"))
+=======
+    if (__builtin_amdgcn_processor_is("gfx900") ||
+        __builtin_amdgcn_processor_is("gfx906") ||
+        __builtin_amdgcn_processor_is("gfx90c") ||
+        (__builtin_amdgcn_processor_is("gfx90a")) ||
+        (__builtin_amdgcn_processor_is("gfx942")))
+>>>>>>> 18e695890306
         return __builtin_trap();
 }
 //.
@@ -46,7 +82,12 @@ void foo() {
 // AMDGCN-GFX1010: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1010" }
 //.
 // AMDGCNSPIRV: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-trans-insts,+bf8-cvt-scale-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot11-insts,+dot12-insts,+dot13-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp4-cvt-scale-insts,+fp6bf6-cvt-scale-insts,+fp8-conversion-insts,+fp8-cvt-scale-insts,+fp8-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+gfx950-insts,+gws,+image-insts,+mai-insts,+permlane16-swap,+permlane32-swap,+prng-inst,+s-memrealtime,+s-memtime-inst,+setprio-inc-wg-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+vmem-to-lds-load-insts,+wavefrontsize32,+wavefrontsize64" }
+<<<<<<< HEAD
 // AMDGCNSPIRV: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
+=======
+// AMDGCNSPIRV: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+// AMDGCNSPIRV: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
+>>>>>>> 18e695890306
 //.
 // AMDGCN-GFX900: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // AMDGCN-GFX900: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
@@ -56,4 +97,12 @@ void foo() {
 //.
 // AMDGCNSPIRV: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // AMDGCNSPIRV: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+<<<<<<< HEAD
+=======
+// AMDGCNSPIRV: [[META2]] = !{!"is.gfx900"}
+// AMDGCNSPIRV: [[META3]] = !{!"is.gfx906"}
+// AMDGCNSPIRV: [[META4]] = !{!"is.gfx90c"}
+// AMDGCNSPIRV: [[META5]] = !{!"is.gfx90a"}
+// AMDGCNSPIRV: [[META6]] = !{!"is.gfx942"}
+>>>>>>> 18e695890306
 //.
