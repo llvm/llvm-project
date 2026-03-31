@@ -45,6 +45,7 @@ def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
 def defaultlib : P<"defaultlib", "Add the library to the list of input files">;
 def delayload : P<"delayload", "Delay loaded DLL name">;
 def diasdkdir : P<"diasdkdir", "Set the location of the DIA SDK">;
+def discard : P<"discard", "Discard input sections by name">;
 def dwodir : P<"dwodir",
     "Directory to store .dwo files when LTO and debug fission are used">;
 def entry   : P<"entry", "Name of entry point symbol">;
@@ -110,8 +111,6 @@ def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,
 def section : P<"section", "Specify section attributes">;
 def sectionlayout : P<"sectionlayout", "Specifies the layout strategy for output sections">;
 def stack   : P<"stack", "Size of the stack">;
-def strip_embedded_bitcode : F<"strip-embedded-bitcode">,
-    HelpText<"Strip .llvmbc and .llvmcmd sections from the output">;
 def stub    : P<"stub", "Specify DOS stub file">;
 def subsystem : P<"subsystem", "Specify subsystem">;
 def timestamp : P<"timestamp", "Specify the PE header timestamp">;

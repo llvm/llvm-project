@@ -134,7 +134,6 @@ struct Configuration {
   bool forceUnresolved = false;
   bool debug = false;
   bool includeDwarfChunks = false;
-  bool stripEmbeddedBitcode = false;
   bool debugGHashes = false;
   bool writeSymtab = false;
   bool driver = false;
@@ -216,6 +215,9 @@ struct Configuration {
 
   // Used for /merge:from=to (e.g. /merge:.rdata=.text)
   std::map<StringRef, StringRef> merge;
+
+  // Used for /discard:.name
+  llvm::StringSet<> discard;
 
   // Used for /section=.name,{DEKPRSW} to set section attributes.
   std::map<StringRef, uint32_t> section;
