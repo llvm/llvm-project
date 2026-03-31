@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
@@ -21,6 +20,7 @@
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 
@@ -821,9 +821,8 @@ TEST(GSYMV2Test, TestReaderV2TruncatedFileTable) {
   auto GR = GsymReaderV2::copyBuffer(StringRef(Bytes.data(), Bytes.size()));
   ASSERT_FALSE(bool(GR));
   std::string ErrMsg;
-  handleAllErrors(GR.takeError(), [&](const ErrorInfoBase &E) {
-    ErrMsg = E.message();
-  });
+  handleAllErrors(GR.takeError(),
+                  [&](const ErrorInfoBase &E) { ErrMsg = E.message(); });
   EXPECT_NE(ErrMsg.find("FileTable section too small"), std::string::npos)
       << "Unexpected error: " << ErrMsg;
 }
