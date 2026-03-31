@@ -5494,6 +5494,13 @@ static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
 
     S.EnforcedProfiles.push_back({Name.str(), Desig.str(), AL.getLoc()});
+
+    // P3589R2 [decl.attr.require]p2: for header units, enforce from
+    // empty-declarations is visible to require.
+    if (auto *M = S.getCurrentModule())
+      if (M->isHeaderUnit())
+        M->EnforcedProfileDesignators.push_back(Desig.str());
+
     Names.push_back(Name);
     Designators.push_back(Desig);
   }
@@ -5517,18 +5524,6 @@ static void handleProfilesSuppressDeclAttr(Sema &S, Decl *D,
     S.checkStringLiteralArgumentAttr(AL, 1, Justification);
   if (AL.getNumArgs() >= 3)
     S.checkStringLiteralArgumentAttr(AL, 2, Rule);
-
-  // P3589R2 [decl.attr.suppress]p2: justification must be a string-literal.
-  if (!Justification.empty()) {
-    bool LooksLikeString =
-        Justification.starts_with("\"") || Justification.starts_with("L\"") ||
-        Justification.starts_with("u\"") || Justification.starts_with("U\"") ||
-        Justification.starts_with("u8\"");
-    if (!LooksLikeString) {
-      // The parser already extracted the value from the string literal token,
-      // so this validation is handled at parse time by checking the token kind.
-    }
-  }
 
   SmallVector<StringRef, 4> RawArgs;
   for (unsigned I = 3; I < AL.getNumArgs(); ++I) {

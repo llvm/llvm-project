@@ -1897,8 +1897,6 @@ def err_profiles_expected_lparen : Error<
   "expected '(' in '%0' attribute">;
 def err_profiles_expected_rparen : Error<
   "expected ')' in '%0' attribute">;
-def err_profiles_expected_argument : Error<
-  "expected argument after ':' in profile argument">;
 def err_profiles_invalid_argument_token : Error<
   "invalid token in profile argument">;
 

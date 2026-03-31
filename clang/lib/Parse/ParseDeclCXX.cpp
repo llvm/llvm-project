@@ -5249,9 +5249,20 @@ bool Parser::ParseProfilesAttributeArgs(IdentifierInfo *AttrName,
 
       for (const auto &Arg : RawArgs) {
         StringRef ArgRef(Arg);
-        if (ArgRef.starts_with("justification : "))
-          Justification = ArgRef.substr(strlen("justification : ")).str();
-        else if (ArgRef.starts_with("rule : "))
+        if (ArgRef.starts_with("justification : ")) {
+          StringRef JustVal = ArgRef.substr(strlen("justification : "));
+          // P3589R2 [decl.attr.suppress]p2: justification must be a
+          // string-literal. Check the spelling recorded by the parser.
+          if (!JustVal.starts_with("\"") && !JustVal.starts_with("L\"") &&
+              !JustVal.starts_with("u\"") && !JustVal.starts_with("U\"") &&
+              !JustVal.starts_with("u8\"")) {
+            Diag(AttrNameLoc,
+                 diag::err_profiles_suppress_justification_not_string);
+            SkipToRParen();
+            return true;
+          }
+          Justification = JustVal.str();
+        } else if (ArgRef.starts_with("rule : "))
           Rule = ArgRef.substr(strlen("rule : ")).str();
       }
     }

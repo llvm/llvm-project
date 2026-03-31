@@ -4,7 +4,20 @@
 // Valid enforce forms
 // ===================================================================
 
+// Single designator
 [[profiles::enforce(std::type)]];
+
+// Multi-designator in one enforce
+[[profiles::enforce(acme::hardened, lib::safety)]];
+
+// Designator with profile arguments
+[[profiles::enforce(vendor(fortify: 3, sanitize: thread))]];
+
+// Nested balanced groups in arguments
+[[profiles::enforce(nested(config: (a b)))]];
+
+// Bare token arguments
+[[profiles::enforce(bare(3))]];
 
 // ===================================================================
 // Valid suppress forms
@@ -23,11 +36,11 @@ void suppress_with_rule();
 void suppress_with_both();
 
 // ===================================================================
-// Parse errors
+// [[using profiles: ...]] syntax
 // ===================================================================
 
-// enforce with empty parens: parse error
-[[profiles::enforce()]]; // expected-error {{expected profile name}}
+[[using profiles: suppress(std::type)]]
+void using_syntax();
 
 // ===================================================================
 // Profile name with :: separators
@@ -35,3 +48,16 @@ void suppress_with_both();
 
 [[profiles::suppress(a::b::c)]]
 void deep_name();
+
+// ===================================================================
+// Parse errors
+// ===================================================================
+
+// enforce with empty parens: parse error
+[[profiles::enforce()]]; // expected-error {{expected profile name}}
+
+// enforce with non-identifier first token
+[[profiles::enforce(42)]]; // expected-error {{expected profile name}}
+
+// suppress with empty parens: parse error
+[[profiles::suppress()]]; // expected-error {{expected profile name}}

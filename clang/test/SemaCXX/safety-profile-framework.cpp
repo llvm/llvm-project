@@ -6,6 +6,11 @@
 [[profiles::enforce(test::type_cast)]]; // #enforce1
 
 // ===================================================================
+// Multiple different profiles enforced: OK
+// ===================================================================
+[[profiles::enforce(test::bounds)]];
+
+// ===================================================================
 // Enforce: exact repetition is OK
 // ===================================================================
 [[profiles::enforce(test::type_cast)]];
@@ -15,6 +20,25 @@
 // ===================================================================
 [[profiles::enforce(test::type_cast(strict: true))]]; // expected-error {{repeated enforcement of profile 'test::type_cast' with different designator}} \
                                                       // expected-note@#enforce1 {{previous attribute is here}}
+
+// ===================================================================
+// Enforce after a non-empty declaration: error
+// ===================================================================
+void some_function(); // #some_function
+[[profiles::enforce(test::new_profile)]]; // expected-error {{'profiles::enforce' attribute on empty-declaration must precede all non-empty declarations}} \
+                                          // expected-note@#some_function {{declaration declared here}}
+
+// ===================================================================
+// Enforce inside a namespace: error
+// ===================================================================
+namespace ns {
+  [[profiles::enforce(test::type_cast)]]; // expected-error {{'profiles::enforce' attribute on empty-declaration must be at translation unit scope}}
+}
+
+// ===================================================================
+// Require not on import: error
+// ===================================================================
+[[profiles::require(test::type_cast)]]; // expected-error {{'profiles::require' attribute only allowed on module-import-declarations}}
 
 // ===================================================================
 // Suppress on declarations
@@ -31,4 +55,19 @@ void suppressed_func();
 void test_stmt_suppress() {
   [[profiles::suppress(test::type_cast)]] int x = 0;
   [[profiles::suppress(test::type_cast)]] { int y = 0; }
+}
+
+// ===================================================================
+// Suppress with non-string justification: error
+// ===================================================================
+[[profiles::suppress(test::type_cast, justification: legacy)]] // expected-error {{'justification' argument of 'profiles::suppress' must be a string literal}}
+void bad_justification();
+
+// ===================================================================
+// No diagnostic for a profile that is not enforced
+// ===================================================================
+// test::type_cast IS enforced, but test::not_enforced is not, so the
+// reinterpret_cast warning fires for the enforced profile only.
+void test_enforced_profile_warns() {
+  int *p = reinterpret_cast<int*>(0); // expected-warning {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
 }
