@@ -6467,14 +6467,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
            "reverse directive does not support any clauses");
     Res = ActOnOpenMPReverseDirective(AStmt, StartLoc, EndLoc);
     break;
-  case OMPD_split: {
-    assert(OMPExecutableDirective::getSingleClause<OMPCountsClause>(
-               ClausesWithImplicit) &&
-           "split directive requires counts clause");
+  case OMPD_split:
     Res =
         ActOnOpenMPSplitDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
     break;
-  }
   case OMPD_interchange:
     Res = ActOnOpenMPInterchangeDirective(ClausesWithImplicit, AStmt, StartLoc,
                                           EndLoc);
