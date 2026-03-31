@@ -661,8 +661,8 @@ bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
 // All uses of %2 are replaced by %1, since the load is already zero extending.
 bool AArch64MIPeepholeOptImpl::removeRedundantAndMask(MachineInstr &MI) {
   assert((MI.getOpcode() == AArch64::ANDWri ||
-         MI.getOpcode() == AArch64::ANDXri) &&
-             "Unsupported masking instructions");
+          MI.getOpcode() == AArch64::ANDXri) &&
+         "Unsupported masking instructions");
 
   unsigned RegSize = MI.getOpcode() == AArch64::ANDWri ? 32 : 64;
   auto EncodedImm = MI.getOperand(2).getImm();
