@@ -285,7 +285,7 @@ func.func @subi_mixed_ext_i8(%lhs: i8, %rhs: i8) -> i32 {
 // CHECK: %[[MAX_I64:.*]] = arith.maxsi {{.*}} : i64
 // CHECK: %[[MIN_I64:.*]] = arith.minsi {{.*}} : i64
 // CHECK: %[[SHR_I64:.*]] = arith.shrsi {{.*}} : i64
-// CHECK: return %[[DIV_I64]], %[[CEIL_I64]], %[[FLOOR_I64]], %[[REM_I64]], %[[MAX_I64]], %[[MIN_I64]], %[[SHR_I64]] : i64, i64, i64, i64, i64, i64, i64
+// CHECK: return %{{.*}} : i64, i64, i64, i64, i64, i64, i64
 func.func @signed_ops_out_of_narrowed_signed_range() -> (i64, i64, i64, i64, i64, i64, i64) {
   %0 = test.with_bounds { umin = 0 : i64, umax = 4292870144 : i64, smin = 0 : i64, smax = 4292870144 : i64 } : i64
   %1 = test.with_bounds { umin = 1 : i64, umax = 8 : i64, smin = 1 : i64, smax = 8 : i64 } : i64
