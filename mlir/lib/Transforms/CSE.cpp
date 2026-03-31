@@ -536,7 +536,8 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
     ScopedMapTy::ScopeTy scope(knownPureOps);
     for (auto &region : op->getRegions()) {
       simplifyRegion(knownValues, knownPureOps, region);
-    }
+    for (auto &region : op->getRegions())
+      simplifyRegion(knownValues, knownPureOps, region);
   }
 
   /// Erase any operations that were marked as dead during simplification, and
