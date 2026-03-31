@@ -1503,8 +1503,12 @@ To run all discovered debug scripts in this session:
              scripting_fspec.GetPath());
 
     if (!LoadScriptingModule(scripting_fspec, *script_interpreter, *target,
-                             error))
+                             error)) {
+      LLDB_LOG(GetLog(LLDBLog::Modules),
+               "Failed to load '{0}'. Remaining scripts won't be loaded.",
+               scripting_fspec.GetPath());
       return false;
+    }
   }
 
   return true;
