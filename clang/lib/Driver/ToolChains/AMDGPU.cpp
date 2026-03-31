@@ -849,16 +849,6 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  // For SPIR-V, enable basic optimizations but disable target-specific
-  // transformations that could harm JIT performance.
-  if (getTriple().isSPIRV() &&
-      !DriverArgs.hasArg(options::OPT_disable_llvm_optzns)) {
-    CC1Args.append({"-mllvm", "-vectorize-loops=false"});
-    CC1Args.append({"-mllvm", "-vectorize-slp=false"});
-    CC1Args.push_back("-fno-unroll-loops");
-    CC1Args.append({"-mllvm", "-interleave-loops=false"});
-  }
-
   if (DeviceOffloadingKind == Action::OFK_None)
     addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);
 }

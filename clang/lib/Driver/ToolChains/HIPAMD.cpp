@@ -274,18 +274,6 @@ void HIPAMDToolChain::addClangTargetOptions(
     // with options that match the user-supplied ones.
     if (!DriverArgs.hasArg(options::OPT_fembed_bitcode_marker))
       CC1Args.push_back("-fembed-bitcode=marker");
-    // Enable basic optimizations but disable target-specific transformations
-    // that could harm JIT performance. The JIT will make target-specific
-    // decisions. Users can pass -disable-llvm-passes to disable all opts.
-    if (!DriverArgs.hasArg(options::OPT_disable_llvm_passes)) {
-      // Disable vectorization (problematic with SPIR-V, let JIT decide)
-      CC1Args.append({"-mllvm", "-vectorize-loops=false"});
-      CC1Args.append({"-mllvm", "-vectorize-slp=false"});
-      // Disable loop unrolling (let JIT decide based on target)
-      CC1Args.push_back("-fno-unroll-loops");
-      // Disable loop interleaving
-      CC1Args.append({"-mllvm", "-interleave-loops=false"});
-    }
     return; // No DeviceLibs for SPIR-V.
   }
 
