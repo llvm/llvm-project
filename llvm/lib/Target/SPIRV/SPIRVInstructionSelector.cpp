@@ -390,11 +390,8 @@ private:
   bool selectGetDimensionsMSIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                       MachineInstr &I) const;
   bool
-  selectImageQuerySize(unsigned Opcode, Register ImageReg, Register &ResVReg,
-                       SPIRVTypeInst ResType, MachineInstr &I,
+  selectImageQuerySize(Register ImageReg, Register &ResVReg, MachineInstr &I,
                        std::optional<Register> LodReg = std::nullopt) const;
-  SPIRVTypeInst removeElementFromVectorType(SPIRVTypeInst ResType,
-                                            MachineInstr &I) const;
   bool selectSampleBasicIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                   MachineInstr &I) const;
   bool selectCalculateLodIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
@@ -4980,9 +4977,41 @@ bool SPIRVInstructionSelector::generateSampleImage(
 }
 
 bool SPIRVInstructionSelector::selectImageQuerySize(
-    unsigned Opcode, Register ImageReg, Register &ResVReg,
-    SPIRVTypeInst ResType, MachineInstr &I,
+    Register ImageReg, Register &ResVReg, MachineInstr &I,
     std::optional<Register> LodReg) const {
+  unsigned Opcode =
+      LodReg ? SPIRV::OpImageQuerySizeLod : SPIRV::OpImageQuerySize;
+  SPIRVTypeInst ImageType = GR.getSPIRVTypeForVReg(ImageReg);
+  assert(ImageType && ImageType->getOpcode() == SPIRV::OpTypeImage &&
+         "ImageReg is not an image type.");
+
+  auto Dim = static_cast<SPIRV::Dim::Dim>(ImageType->getOperand(2).getImm());
+  bool IsArray = ImageType->getOperand(4).getImm() != 0;
+  unsigned NumComponents = 0;
+  switch (Dim) {
+  case SPIRV::Dim::DIM_1D:
+  case SPIRV::Dim::DIM_Buffer:
+    NumComponents = IsArray ? 2 : 1;
+    break;
+  case SPIRV::Dim::DIM_2D:
+  case SPIRV::Dim::DIM_Cube:
+  case SPIRV::Dim::DIM_Rect:
+    NumComponents = IsArray ? 3 : 2;
+    break;
+  case SPIRV::Dim::DIM_3D:
+    NumComponents = 3;
+    break;
+  default:
+    I.emitGenericError("Unsupported image dimension for OpImageQuerySize.");
+    return false;
+  }
+
+  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  SPIRVTypeInst ResType =
+      NumComponents == 1
+          ? I32Ty
+          : GR.getOrCreateSPIRVVectorType(I32Ty, NumComponents, I, TII);
+
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
                  .addUse(GR.getSPIRVTypeID(ResType))
@@ -4991,17 +5020,6 @@ bool SPIRVInstructionSelector::selectImageQuerySize(
     MIB.addUse(*LodReg);
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
-}
-
-SPIRVTypeInst
-SPIRVInstructionSelector::removeElementFromVectorType(SPIRVTypeInst ResType,
-                                                      MachineInstr &I) const {
-  unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
-  assert(NumResComponents >= 2);
-  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  return NumResComponents == 2 ? I32Ty
-                               : GR.getOrCreateSPIRVVectorType(
-                                     I32Ty, NumResComponents - 1, I, TII);
 }
 
 bool SPIRVInstructionSelector::selectGetDimensionsIntrinsic(
@@ -5013,8 +5031,23 @@ bool SPIRVInstructionSelector::selectGetDimensionsIntrinsic(
                                 *ImageDef, I)) {
     return false;
   }
-  return selectImageQuerySize(SPIRV::OpImageQuerySize, NewImageReg, ResVReg,
-                              ResType, I);
+  SPIRVTypeInst ScalarResTy = GR.getScalarOrVectorComponentType(ResType);
+  bool IsFloat = ScalarResTy->getOpcode() == SPIRV::OpTypeFloat;
+
+  Register QueryResultReg =
+      IsFloat ? MRI->createVirtualRegister(&SPIRV::iIDRegClass) : ResVReg;
+
+  if (!selectImageQuerySize(NewImageReg, QueryResultReg, I, std::nullopt))
+    return false;
+
+  if (IsFloat) {
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpConvertUToF))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(QueryResultReg)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
@@ -5027,20 +5060,21 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
     return false;
   }
 
-  SPIRVTypeInst SizeResTy = removeElementFromVectorType(ResType, I);
-  Register SizeReg = createVirtualRegister(SizeResTy, &GR, MRI, *I.getMF());
+  SPIRVTypeInst ScalarResTy = GR.getScalarOrVectorComponentType(ResType);
+  bool IsFloat = ScalarResTy->getOpcode() == SPIRV::OpTypeFloat;
+
+  Register SizeReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
   Register LodReg = I.getOperand(3).getReg();
 
   assert(GR.getSPIRVTypeForVReg(NewImageReg)->getOperand(6).getImm() == 1 &&
          "OpImageQuerySizeLod and OpImageQueryLevels require a sampled image");
 
-  if (!selectImageQuerySize(SPIRV::OpImageQuerySizeLod, NewImageReg, SizeReg,
-                            SizeResTy, I, LodReg)) {
+  if (!selectImageQuerySize(NewImageReg, SizeReg, I, LodReg)) {
     return false;
   }
 
   SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register LevelsReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
+  Register LevelsReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(SPIRV::OpImageQueryLevels))
       .addDef(LevelsReg)
@@ -5048,13 +5082,32 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
       .addUse(NewImageReg)
       .constrainAllUses(TII, TRI, RBI);
 
+  SPIRVTypeInst IntResTy = ResType;
+  Register CompositeReg = ResVReg;
+  if (IsFloat) {
+    unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
+    IntResTy =
+        NumResComponents == 1
+            ? I32Ty
+            : GR.getOrCreateSPIRVVectorType(I32Ty, NumResComponents, I, TII);
+    CompositeReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  }
+
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(SPIRV::OpCompositeConstruct))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
+      .addDef(CompositeReg)
+      .addUse(GR.getSPIRVTypeID(IsFloat ? IntResTy : ResType))
       .addUse(SizeReg)
       .addUse(LevelsReg)
       .constrainAllUses(TII, TRI, RBI);
+
+  if (IsFloat) {
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpConvertUToF))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(CompositeReg)
+        .constrainAllUses(TII, TRI, RBI);
+  }
   return true;
 }
 
@@ -5068,20 +5121,21 @@ bool SPIRVInstructionSelector::selectGetDimensionsMSIntrinsic(
     return false;
   }
 
-  SPIRVTypeInst SizeResTy = removeElementFromVectorType(ResType, I);
-  Register SizeReg = createVirtualRegister(SizeResTy, &GR, MRI, *I.getMF());
+  SPIRVTypeInst ScalarResTy = GR.getScalarOrVectorComponentType(ResType);
+  bool IsFloat = ScalarResTy->getOpcode() == SPIRV::OpTypeFloat;
+
+  Register SizeReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
 
   assert(GR.getSPIRVTypeForVReg(NewImageReg)->getOperand(5).getImm() == 1 &&
          "OpImageQuerySamples requires a multisampled image");
 
-  if (!selectImageQuerySize(SPIRV::OpImageQuerySize, NewImageReg, SizeReg,
-                            SizeResTy, I, std::nullopt)) {
+  if (!selectImageQuerySize(NewImageReg, SizeReg, I, std::nullopt)) {
     return false;
   }
 
-  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register SamplesReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
+  Register SamplesReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
 
+  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(SPIRV::OpImageQuerySamples))
       .addDef(SamplesReg)
@@ -5089,13 +5143,32 @@ bool SPIRVInstructionSelector::selectGetDimensionsMSIntrinsic(
       .addUse(NewImageReg)
       .constrainAllUses(TII, TRI, RBI);
 
+  SPIRVTypeInst IntResTy = ResType;
+  Register CompositeReg = ResVReg;
+  if (IsFloat) {
+    unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
+    IntResTy =
+        NumResComponents == 1
+            ? I32Ty
+            : GR.getOrCreateSPIRVVectorType(I32Ty, NumResComponents, I, TII);
+    CompositeReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  }
+
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(SPIRV::OpCompositeConstruct))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
+      .addDef(CompositeReg)
+      .addUse(GR.getSPIRVTypeID(IntResTy))
       .addUse(SizeReg)
       .addUse(SamplesReg)
       .constrainAllUses(TII, TRI, RBI);
+
+  if (IsFloat) {
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpConvertUToF))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(CompositeReg)
+        .constrainAllUses(TII, TRI, RBI);
+  }
   return true;
 }
 
