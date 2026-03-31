@@ -3,10 +3,14 @@ add_header_library(
   HDRS
     signal_utils.h
   DEPENDS
+    libc.hdr.types.siginfo_t
     libc.hdr.types.sigset_t
-    libc.include.signal
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_sigaction
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.vdso
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
 )
 
 add_entrypoint_object(
@@ -57,10 +61,7 @@ add_entrypoint_object(
     ../sigaction.h
   DEPENDS
     .__restore
-    libc.hdr.types.sigset_t
-    libc.hdr.types.struct_sigaction
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    .signal_utils
     libc.src.errno.errno
 )
 
