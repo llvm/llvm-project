@@ -17,10 +17,10 @@ struct B : A {
 struct C : A {
   int c;
   C(C&& other) :
-    A(std::move(other)),
+    A(std::move(other))
     {
-      std::move(other.a)
-      // CHECK-NOTES: [[@LINE-1]]:17: warning: 'other' used after it was moved
-      // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
+      other.a;
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: 'other' used after it was moved
+      // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
     }
 };
