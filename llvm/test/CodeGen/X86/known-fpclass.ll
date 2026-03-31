@@ -29,3 +29,32 @@ define i1 @sqrt_neginf_v4f32(<4 x float> %a0, ptr %p1) {
   %res = tail call i1 @llvm.is.fpclass.f32(float %elt, i32 4)  ; 0x4 = "neginf"
   ret i1 %res
 }
+
+define i1 @demanded_elts_safe_lane(float %unknown) {
+; CHECK-LABEL: demanded_elts_safe_lane:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %vec1 = insertelement <2 x float> poison, float %unknown, i32 0
+  %vec2 = insertelement <2 x float> %vec1, float 1.000000e+00, i32 1
+
+  %ext = extractelement <2 x float> %vec2, i32 1
+
+  %cmp = fcmp uno float %ext, 0.000000e+00
+  ret i1 %cmp
+}
+
+define i1 @demanded_elts_unknown_lane(float %unknown) {
+; CHECK-LABEL: demanded_elts_unknown_lane:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vucomiss %xmm0, %xmm0
+; CHECK-NEXT:    setp %al
+; CHECK-NEXT:    retq
+  %vec1 = insertelement <2 x float> poison, float %unknown, i32 0
+  %vec2 = insertelement <2 x float> %vec1, float 1.000000e+00, i32 1
+
+  %ext = extractelement <2 x float> %vec2, i32 0
+
+  %cmp = fcmp uno float %ext, 0.000000e+00
+  ret i1 %cmp
+}
