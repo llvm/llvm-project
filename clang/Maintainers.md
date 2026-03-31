@@ -205,6 +205,9 @@ umbrella or components used to support such tools.
 MyDeveloperDay \
 mydeveloperday@gmail.com (email), MyDeveloperDay (Phabricator), [MyDeveloperDay](https://github.com/MyDeveloperDay) (GitHub)
 
+Björn Schäpers \
+llvm@hazardy.de (email), [HazardyKnusperkeks](https://github.com/HazardyKnusperkeks) (GitHub), HazardyKnusperkeks (Discourse)
+
 ## ABIs
 
 The following people are responsible for decisions involving ABI.

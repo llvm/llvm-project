@@ -1415,10 +1415,10 @@ ThreadPlanSP Thread::QueueThreadPlanForRunToAddress(bool abort_other_plans,
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
-    bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
+    bool abort_other_plans, llvm::ArrayRef<addr_t> address_list,
     bool stop_other_threads, uint32_t frame_idx, Status &status) {
-  ThreadPlanSP thread_plan_sp(new ThreadPlanStepUntil(
-      *this, address_list, num_addresses, stop_other_threads, frame_idx));
+  ThreadPlanSP thread_plan_sp = std::make_shared<ThreadPlanStepUntil>(
+      *this, address_list, stop_other_threads, frame_idx);
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
@@ -1632,8 +1632,15 @@ llvm::Error Thread::LoadScriptedFrameProvider(
         last_id);
   }
 
+  // Protect provider construction (__init__) from re-entrancy. If the
+  // provider calls back into the frame machinery (e.g. HandleCommand("bt"))
+  // during __init__, GetStackFrameList() will find this thread in the
+  // active-provider map and return input_frames instead of trying to
+  // build a new synthetic list — preventing infinite recursion.
+  PushProviderFrameList(input_frames);
   auto provider_or_err =
       SyntheticFrameProvider::CreateInstance(input_frames, descriptor);
+  PopProviderFrameList();
   if (!provider_or_err)
     return provider_or_err.takeError();
 

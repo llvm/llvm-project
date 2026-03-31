@@ -121,6 +121,10 @@ public:
     llvm_unreachable("Unsupported");
   }
 
+  Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override {
+    llvm_unreachable("Unsupported");
+  }
+
   Error disconnect() override { return Error::success(); }
 };
 
