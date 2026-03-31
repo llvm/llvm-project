@@ -1457,10 +1457,11 @@ Currently, only the following parameter attributes are defined:
     present and assign it particular semantics. This will be documented on
     individual intrinsics.
 
-    The attribute may only be applied to pointer typed arguments of intrinsic
-    calls. It cannot be applied to non-intrinsic calls, and cannot be applied
-    to parameters on function declarations. For non-opaque pointers, the type
-    passed to ``elementtype`` must match the pointer element type.
+    The attribute may only be applied to pointer typed arguments or return
+    values of intrinsic calls. It cannot be applied to non-intrinsic calls,
+    and cannot be applied to parameters on function declarations.
+    For non-opaque pointers, the type passed to ``elementtype`` must match
+    the pointer element type.
 
 .. _attr_align:
 
@@ -12128,6 +12129,8 @@ operation. The operation must be one of the following keywords:
 -  fmin
 -  fmaximum
 -  fminimum
+-  fmaximumnum
+-  fminimumnum
 -  uinc_wrap
 -  udec_wrap
 -  usub_cond
@@ -12137,7 +12140,7 @@ For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight.
 For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum, this must be a floating-point
+as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
 or fixed vector of floating-point type.  The type of the '``<pointer>``'
 operand must be a pointer to that type. If the ``atomicrmw`` is marked
 as ``volatile``, then the optimizer is not allowed to modify the
@@ -12182,6 +12185,8 @@ operation argument:
 -  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*` intrinsic)
 -  fmaximum: ``*ptr = maximum(*ptr, val)`` (match the `llvm.maximum.*` intrinsic)
 -  fminimum: ``*ptr = minimum(*ptr, val)`` (match the `llvm.minimum.*` intrinsic)
+-  fmaximumnum: ``*ptr = maximumnum(*ptr, val)`` (match the `llvm.maximumnum.*` intrinsic)
+-  fminimumnum: ``*ptr = minimumnum(*ptr, val)`` (match the `llvm.minimumnum.*` intrinsic)
 -  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
 -  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
 -  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
@@ -14008,8 +14013,9 @@ ensures that each ``catchpad`` has exactly one predecessor block, and it always
 terminates in a ``catchswitch``.
 
 The ``args`` correspond to whatever information the personality routine
-requires to determine if this is an appropriate handler for the exception. Control
-will transfer to the ``catchpad`` if this is the first appropriate handler for
+requires to determine if this is an appropriate handler for the exception.
+Each operand must be an alloca or a constant.
+Control will transfer to the ``catchpad`` if this is the first appropriate handler for
 the exception.
 
 The ``resultval`` has the type :ref:`token <t_token>` and is used to match the
@@ -15320,6 +15326,86 @@ Or:
 
 This is, however, dependent on context that codegen has an insight on. The
 fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
+
+
+.. _i_structured_alloca:
+
+'``llvm.structured.alloca``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare elementtype(<allocated_type>) ptr
+      @llvm.structured.alloca()
+
+Overview:
+"""""""""
+
+The '``llvm.structured.alloca``' intrinsic allocates uninitialized memory on
+the stack for a logical type, such as an aggregate, an array, or a scalar.
+
+Unlike the standard :ref:`alloca <i_alloca>` instruction, the physical memory
+layout of a ``llvm.structured.alloca`` is completely opaque to the IR.
+Exact padding, size, alignment and subtype offsets is target-dependent and
+may differ from the standard ``DataLayout``.
+
+Arguments:
+""""""""""
+
+The intrinsic must be annotated with an :ref:`elementtype <attr_elementtype>`
+attribute at the call-site on the return value. This attribute specifies the
+type of the allocated element.
+
+Semantics:
+""""""""""
+
+The ``llvm.structured.alloca`` intrinsic allocates uninitialized memory for a
+logical type. Loading from uninitialized memory produces an undefined value.
+This intrinsic does not guarantee that the allocated memory will store a value
+of the given type, only that it allocates enough space for it on the destination
+target. While the type's size and layout are constant (independent of location),
+the exact padding and offsets between subtypes are opaque to the IR and are
+determined by the target's backend.
+
+The resulting pointer is in the :ref:`alloca address space <alloca_addrspace>`
+defined in the :ref:`datalayout string <langref_datalayout>`.
+
+Standard pointer arithmetic (``getelementptr``, ``ptradd``) and lifetime
+intrinsics (:ref:`llvm.lifetime.start <int_lifestart>`,
+:ref:`llvm.lifetime.end <int_lifeend>`) are permitted on the returned pointer.
+However, because the physical layout is opaque, using physical pointer
+arithmetic requires the frontend or emitting pass to have explicit knowledge of
+the backend's layout rules.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+    %S = type { i32, i32, i32, i32 }
+
+    ; Allocate one instance of %S on the stack
+    %ptr = call elementtype(%S) ptr @llvm.structured.alloca()
+
+    ; Access the second field of the allocated struct
+    %field_ptr = call ptr @llvm.structured.gep(ptr elementtype(%S) %ptr, i32 1)
+    %val = load i32, ptr %field_ptr
+
+    ; Allocate an array of 10 i32s on the stack
+    %array_ptr = call elementtype([10 x i32]) ptr @llvm.structured.alloca()
+
+    ; Allocate a single i32 on the stack
+    %scalar_ptr = call elementtype(i32) ptr @llvm.structured.alloca()
+
+    ; Although the exact size of 'i32' or '%S' is opaque, it is constant
+    ; for the duration of the module. This allows, for example, reusing
+    ; an allocation slot for two different values of the same type.
+    %a = call elementtype(float) ptr @llvm.structured.alloca()
+    %b = call elementtype(float) ptr @llvm.structured.alloca()
+    ; %a and %b are guaranteed to have the same allocation size.
 
 
 .. _int_get_dynamic_area_offset:
@@ -27838,8 +27924,8 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a pointer to an ``alloca`` instruction or an
+``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
@@ -27850,8 +27936,8 @@ Otherwise, the stack-allocated object that ``ptr`` points to is initially
 marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
 alive and has an uninitialized value.
 The stack object is marked as dead when either
-:ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
-function returns.
+:ref:`llvm.lifetime.end <int_lifeend>` to the alloca/structured.alloca is
+executed or the function returns.
 
 After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
@@ -27879,8 +27965,8 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a pointer to an ``alloca`` instruction or an
+``llvm.structured.alloca`` intrinsic, or a ``poison`` value.
 
 Semantics:
 """"""""""
@@ -27890,7 +27976,8 @@ If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
 Otherwise, the stack-allocated object that ``ptr`` points to becomes dead after
 the call to this intrinsic.
 
-Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
+Calling ``llvm.lifetime.end`` on an already dead alloca/structured.alloca is
+no-op.
 
 '``llvm.invariant.start``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -550,6 +550,14 @@ public:
   /// format.
   std::string SSAFTUSummaryFile;
 
+  /// Show available SSAF summary extractors.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SSAFShowExtractors : 1;
+
+  /// Show available SSAF serialization formats.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SSAFShowFormats : 1;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
@@ -567,7 +575,8 @@ public:
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
         ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
-        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
+        TimeTraceGranularity(500), TimeTraceVerbose(false),
+        SSAFShowExtractors(false), SSAFShowFormats(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

@@ -427,11 +427,14 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
           isPCRelFixupResolved(Target.getSubSym(), F))
         return Fallback();
 
-      // In SecA == SecB case. If the section is not linker-relaxable, the
-      // FixedValue has already been calculated out in evaluateFixup,
-      // return true and avoid record relocations.
-      if (&SecA == &SecB && !SecA.isLinkerRelaxable())
-        return true;
+      if (&SecA == &SecB) {
+        // If the section is not linker-relaxable, or if the fixup is in a .dwo
+        // section (where relocations are forbidden), we must resolve the
+        // difference directly. The computed Value in evaluateFixup is correct
+        // based on the current layout.
+        if (!SecA.isLinkerRelaxable() || SecCur.getName().ends_with(".dwo"))
+          return true;
+      }
     }
 
     switch (Fixup.getKind()) {

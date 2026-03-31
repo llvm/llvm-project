@@ -9,12 +9,17 @@
 #include "clc/clc_convert.h"
 #include "clc/math/clc_div_fast.h"
 #include "clc/math/clc_ep.h"
+#include "clc/math/clc_exp.h"
 #include "clc/math/clc_fma.h"
+#include "clc/math/clc_frexp.h"
 #include "clc/math/clc_ldexp.h"
+#include "clc/math/clc_mad.h"
 #include "clc/math/clc_recip_fast.h"
+#include "clc/math/clc_rint.h"
 #include "clc/math/clc_sqrt_fast.h"
+#include "clc/math/math.h"
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_signbit.h"
 
-#define __CLC_BODY <clc_ep.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_ep.inc"
+#include "clc/math/gentype.inc"

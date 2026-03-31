@@ -39,8 +39,8 @@ void case1(A *arg) {
 // CHECK-NEXT:  %arraydestroy.elementPast = phi ptr [ %delete.end, %delete.notnull ], [ %arraydestroy.element, %arraydestroy.body ]
 // X64-NEXT:  %arraydestroy.element = getelementptr inbounds %struct.A, ptr %arraydestroy.elementPast, i64 -1
 // X86-NEXT:  %arraydestroy.element = getelementptr inbounds %struct.A, ptr %arraydestroy.elementPast, i32 -1
-// X64-NEXT:  call void @"??1A@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
-// X86-NEXT:  call x86_thiscallcc void @"??1A@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %arraydestroy.element)
+// X64-NEXT:  call void @"??1A@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %arraydestroy.element)
+// X86-NEXT:  call x86_thiscallcc void @"??1A@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %arraydestroy.element)
 // CHECK-NEXT:  %arraydestroy.done = icmp eq ptr %arraydestroy.element, %0
 // CHECK-NEXT:  br i1 %arraydestroy.done, label %arraydestroy.done1, label %arraydestroy.body
 // CHECK:  arraydestroy.done1:
@@ -79,8 +79,8 @@ void case2(B *arg) {
 // CHECK-NEXT:  %arraydestroy.elementPast = phi ptr [ %delete.end, %delete.notnull ], [ %arraydestroy.element, %arraydestroy.body ]
 // X64-NEXT:  %arraydestroy.element = getelementptr inbounds %struct.B, ptr %arraydestroy.elementPast, i64 -1
 // X86-NEXT:  %arraydestroy.element = getelementptr inbounds %struct.B, ptr %arraydestroy.elementPast, i32 -1
-// X64-NEXT:  call void @"??1B@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
-// X86-NEXT:  call x86_thiscallcc void @"??1B@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %arraydestroy.element)
+// X64-NEXT:  call void @"??1B@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %arraydestroy.element)
+// X86-NEXT:  call x86_thiscallcc void @"??1B@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %arraydestroy.element)
 // CHECK-NEXT:  %arraydestroy.done = icmp eq ptr %arraydestroy.element, %0
 // CHECK-NEXT:  br i1 %arraydestroy.done, label %arraydestroy.done1, label %arraydestroy.body
 // CHECK:  arraydestroy.done1:

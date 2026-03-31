@@ -1037,6 +1037,12 @@ public:
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
+
+    /// Whether there are any pending cleanups that have been pushed since
+    /// this scope was entered.
+    bool hasPendingCleanups() const {
+      return cgf.ehStack.stable_begin() != cleanupStackDepth;
+    }
   };
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
@@ -1932,6 +1938,9 @@ public:
   void emitVariablyModifiedType(QualType ty);
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+
+  std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
 
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);

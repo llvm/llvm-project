@@ -270,5 +270,19 @@ bool CheckForSingleVariableOnRHS(const AssignmentStmt &);
 
 const Name *GetDesignatorNameIfDataRef(const Designator &);
 
+// Is the template argument "Statement<T>" for some T?
+template <typename T> struct IsStatement {
+  static constexpr bool value{false};
+};
+template <typename T> struct IsStatement<Statement<T>> {
+  static constexpr bool value{true};
+};
+
+std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &);
+
+std::optional<Label> GetFinalLabel(const Block &);
+std::optional<Label> GetFinalLabel(const OpenMPConstruct &);
+std::optional<Label> GetFinalLabel(const OpenACCConstruct &);
+
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TOOLS_H_

@@ -92,6 +92,17 @@ private:
   bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
 
+  MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
+                                    const SDLoc &DL) const;
+  MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
+                                    const SDLoc &DL) const;
+  MachineSDNode *buildRegSequence(SmallVectorImpl<SDValue> &Elts,
+                                  const SDLoc &DL, unsigned ElementSize) const;
+
+  void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
+                            SmallVectorImpl<SDValue> &Elts, SDValue &Src,
+                            const SDLoc &DL, unsigned ElementSize) const;
+
   // Returns true if ISD::AND SDNode `N`'s masking of the shift amount operand's
   // `ShAmtBits` bits is unneeded.
   bool isUnneededShiftMask(const SDNode *N, unsigned ShAmtBits) const;
@@ -233,6 +244,9 @@ private:
   bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods,
                        bool IsDOT = false) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PNoModsDOT(SDValue In, SDValue &Src) const;
+  bool SelectVOP3PModsF32(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PNoModsF32(SDValue In, SDValue &Src) const;
 
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 

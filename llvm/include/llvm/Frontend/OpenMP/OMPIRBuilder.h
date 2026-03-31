@@ -4230,7 +4230,7 @@ public:
   /// eventually branch to the \p Latch block.
   BasicBlock *getBody() const {
     assert(isValid() && "Requires a valid canonical loop");
-    return cast<BranchInst>(Cond->getTerminator())->getSuccessor(0);
+    return cast<CondBrInst>(Cond->getTerminator())->getSuccessor(0);
   }
 
   /// Reaching the latch indicates the end of the loop body code. In the

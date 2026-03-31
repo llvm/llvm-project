@@ -1092,6 +1092,8 @@ static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
   N->dump(G);
 }
 
+LLVM_DUMP_METHOD void SelectionDAG::dump() const { dump(false); }
+
 LLVM_DUMP_METHOD void SelectionDAG::dump(bool Sorted) const {
   dbgs() << "SelectionDAG has " << AllNodes.size() << " nodes:\n";
 

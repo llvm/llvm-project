@@ -68,7 +68,9 @@ TripletResult IR2VecTool::generateTriplets(const Function &F) const {
   bool HasPrevOpcode = false;
 
   for (const BasicBlock &BB : F) {
-    for (const auto &I : BB.instructionsWithoutDebug()) {
+    for (const auto &I : BB) {
+      if (I.isDebugOrPseudoInst())
+        continue;
       unsigned Opcode = Vocabulary::getIndex(I.getOpcode());
       unsigned TypeID = Vocabulary::getIndex(I.getType()->getTypeID());
 
