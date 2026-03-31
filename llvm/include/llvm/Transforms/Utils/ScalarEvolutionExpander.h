@@ -490,42 +490,45 @@ private:
   /// Determine the most "relevant" loop for the given SCEV.
   const Loop *getRelevantLoop(const SCEV *);
 
-  Value *expandMinMaxExpr(const SCEVNAryExpr *S, Intrinsic::ID IntrinID,
-                          Twine Name, bool IsSequential = false);
+  Value *expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
+                          Intrinsic::ID IntrinID, Twine Name,
+                          bool IsSequential = false);
 
-  Value *visitConstant(SCEVUse S) { return cast<SCEVConstant>(S)->getValue(); }
+  Value *visitConstant(SCEVUseT<const SCEVConstant *> S) {
+    return S->getValue();
+  }
 
-  Value *visitVScale(SCEVUse S);
+  Value *visitVScale(SCEVUseT<const SCEVVScale *> S);
 
-  Value *visitPtrToAddrExpr(SCEVUse S);
+  Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
 
-  Value *visitPtrToIntExpr(SCEVUse S);
+  Value *visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S);
 
-  Value *visitTruncateExpr(SCEVUse S);
+  Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);
 
-  Value *visitZeroExtendExpr(SCEVUse S);
+  Value *visitZeroExtendExpr(SCEVUseT<const SCEVZeroExtendExpr *> S);
 
-  Value *visitSignExtendExpr(SCEVUse S);
+  Value *visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> S);
 
-  Value *visitAddExpr(SCEVUse S);
+  Value *visitAddExpr(SCEVUseT<const SCEVAddExpr *> S);
 
-  Value *visitMulExpr(SCEVUse S);
+  Value *visitMulExpr(SCEVUseT<const SCEVMulExpr *> S);
 
-  Value *visitUDivExpr(SCEVUse S);
+  Value *visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S);
 
-  Value *visitAddRecExpr(SCEVUse S);
+  Value *visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S);
 
-  Value *visitSMaxExpr(SCEVUse S);
+  Value *visitSMaxExpr(SCEVUseT<const SCEVSMaxExpr *> S);
 
-  Value *visitUMaxExpr(SCEVUse S);
+  Value *visitUMaxExpr(SCEVUseT<const SCEVUMaxExpr *> S);
 
-  Value *visitSMinExpr(SCEVUse S);
+  Value *visitSMinExpr(SCEVUseT<const SCEVSMinExpr *> S);
 
-  Value *visitUMinExpr(SCEVUse S);
+  Value *visitUMinExpr(SCEVUseT<const SCEVUMinExpr *> S);
 
-  Value *visitSequentialUMinExpr(SCEVUse S);
+  Value *visitSequentialUMinExpr(SCEVUseT<const SCEVSequentialUMinExpr *> S);
 
-  Value *visitUnknown(SCEVUse S) { return cast<SCEVUnknown>(S)->getValue(); }
+  Value *visitUnknown(SCEVUseT<const SCEVUnknown *> S) { return S->getValue(); }
 
   LLVM_ABI void rememberInstruction(Value *I);
 
@@ -535,8 +538,8 @@ private:
 
   bool isExpandedAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
-  Value *tryToReuseLCSSAPhi(const SCEVAddRecExpr *S);
-  Value *expandAddRecExprLiterally(const SCEVAddRecExpr *);
+  Value *tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S);
+  Value *expandAddRecExprLiterally(SCEVUseT<const SCEVAddRecExpr *> S);
   PHINode *getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
                                      const Loop *L, Type *&TruncTy,
                                      bool &InvertStep);

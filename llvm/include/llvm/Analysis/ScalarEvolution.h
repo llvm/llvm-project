@@ -68,17 +68,22 @@ LLVM_ABI extern bool VerifySCEV;
 
 class SCEV;
 
-struct SCEVUse : PointerIntPair<const SCEV *, 2> {
-  SCEVUse() : PointerIntPair() { setFromOpaqueValue(nullptr); }
-  SCEVUse(const SCEV *S) : PointerIntPair() {
-    setFromOpaqueValue(reinterpret_cast<void *>(const_cast<SCEV *>(S)));
-  }
-  SCEVUse(const SCEV *S, unsigned Flags) : PointerIntPair(S, Flags) {}
+template <typename SCEVPtrT = const SCEV *>
+struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
+  using Base = PointerIntPair<SCEVPtrT, 2>;
 
-  operator const SCEV *() const { return getPointer(); }
-  const SCEV *operator->() const { return getPointer(); }
+  SCEVUseT() : Base() { Base::setFromOpaqueValue(nullptr); }
+  SCEVUseT(SCEVPtrT S) : SCEVUseT(S, 0) {}
+  SCEVUseT(SCEVPtrT S, unsigned Flags) : Base(S, Flags) {}
+  template <typename OtherPtrT, typename = std::enable_if_t<
+                                    std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
+  SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
+      : Base(Other.getPointer(), Other.getInt()) {}
 
-  void *getRawPointer() const { return getOpaqueValue(); }
+  operator const SCEV *() const { return Base::getPointer(); }
+  SCEVPtrT operator->() const { return Base::getPointer(); }
+
+  void *getRawPointer() const { return Base::getOpaqueValue(); }
 
   /// Returns true of the SCEVUse is canonical, i.e. no SCEVUse flags set in any
   /// operands.
@@ -89,7 +94,8 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
 
   unsigned getFlags() const { return getInt(); }
 
-  bool operator==(const SCEVUse &RHS) const {
+
+  bool operator==(const SCEVUseT &RHS) const {
     return getRawPointer() == RHS.getRawPointer();
   }
 
@@ -102,6 +108,11 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
   /// This method is used for debugging.
   void dump() const;
 };
+
+/// Deduction guide for various SCEV subclass pointers.
+template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
+
+using SCEVUse = SCEVUseT<const SCEV *>;
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.

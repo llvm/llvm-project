@@ -523,8 +523,7 @@ public:
 
 }
 
-Value *SCEVExpander::visitAddExpr(SCEVUse SU) {
-  const SCEVAddExpr *S = cast<SCEVAddExpr>(SU);
+Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   // Recognize the canonical representation of an unsimplifed urem.
   const SCEV *URemLHS = nullptr;
   const SCEV *URemRHS = nullptr;
@@ -596,8 +595,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUse SU) {
   return Sum;
 }
 
-Value *SCEVExpander::visitMulExpr(SCEVUse SU) {
-  const SCEVMulExpr *S = cast<SCEVMulExpr>(SU);
+Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
   Type *Ty = S->getType();
 
   // Collect all the mul operands in a loop, along with their associated loops.
@@ -689,8 +687,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUse SU) {
   return Prod;
 }
 
-Value *SCEVExpander::visitUDivExpr(SCEVUse SU) {
-  const SCEVUDivExpr *S = cast<SCEVUDivExpr>(SU);
+Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
   Value *LHS = expand(S->getLHS());
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(S->getRHS())) {
     const APInt &RHS = SC->getAPInt();
@@ -1159,12 +1156,13 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   return PN;
 }
 
-Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
+Value *
+SCEVExpander::expandAddRecExprLiterally(SCEVUseT<const SCEVAddRecExpr *> S) {
   const Loop *L = S->getLoop();
 
   // Determine a normalized form of this expression, which is the expression
   // before any post-inc adjustment is made.
-  const SCEVAddRecExpr *Normalized = S;
+  const SCEVAddRecExpr *Normalized = S.getPointer();
   if (PostIncLoops.count(L)) {
     PostIncLoopSet Loops;
     Loops.insert(L);
@@ -1249,7 +1247,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   return Result;
 }
 
-Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
+Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
   Type *STy = S->getType();
   const Loop *L = S->getLoop();
   BasicBlock *EB = L->getExitBlock();
@@ -1262,7 +1260,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
   auto CanReuse = [&](const SCEV *ExitSCEV) -> const SCEV * {
     if (isa<SCEVCouldNotCompute>(ExitSCEV))
       return nullptr;
-    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
+    const SCEV *Diff = SE.getMinusSCEV(S.getPointer(), ExitSCEV);
     const SCEV *Op = Diff;
     match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
     match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
@@ -1311,8 +1309,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
   return nullptr;
 }
 
-Value *SCEVExpander::visitAddRecExpr(SCEVUse SU) {
-  const SCEVAddRecExpr *S = cast<SCEVAddRecExpr>(SU);
+Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   // In canonical mode we compute the addrec as an expression of a canonical IV
   // using evaluateAtIteration and expand the resulting SCEV expression. This
   // way we avoid introducing new IVs to carry on the computation of the addrec
@@ -1452,8 +1449,7 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUse SU) {
   return expand(T);
 }
 
-Value *SCEVExpander::visitPtrToAddrExpr(SCEVUse SU) {
-  const SCEVPtrToAddrExpr *S = cast<SCEVPtrToAddrExpr>(SU);
+Value *SCEVExpander::visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S) {
   Value *V = expand(S->getOperand());
   Type *Ty = S->getType();
 
@@ -1473,33 +1469,31 @@ Value *SCEVExpander::visitPtrToAddrExpr(SCEVUse SU) {
                            GetOptimalInsertionPointForCastOf(V));
 }
 
-Value *SCEVExpander::visitPtrToIntExpr(SCEVUse SU) {
-  const SCEVPtrToIntExpr *S = cast<SCEVPtrToIntExpr>(SU);
+Value *SCEVExpander::visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S) {
   Value *V = expand(S->getOperand());
   return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
                            GetOptimalInsertionPointForCastOf(V));
 }
 
-Value *SCEVExpander::visitTruncateExpr(SCEVUse SU) {
-  const SCEVTruncateExpr *S = cast<SCEVTruncateExpr>(SU);
+Value *SCEVExpander::visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S) {
   Value *V = expand(S->getOperand());
   return Builder.CreateTrunc(V, S->getType());
 }
 
-Value *SCEVExpander::visitZeroExtendExpr(SCEVUse SU) {
-  const SCEVZeroExtendExpr *S = cast<SCEVZeroExtendExpr>(SU);
+Value *
+SCEVExpander::visitZeroExtendExpr(SCEVUseT<const SCEVZeroExtendExpr *> S) {
   Value *V = expand(S->getOperand());
   return Builder.CreateZExt(V, S->getType(), "",
                             SE.isKnownNonNegative(S->getOperand()));
 }
 
-Value *SCEVExpander::visitSignExtendExpr(SCEVUse SU) {
-  const SCEVSignExtendExpr *S = cast<SCEVSignExtendExpr>(SU);
+Value *
+SCEVExpander::visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> S) {
   Value *V = expand(S->getOperand());
   return Builder.CreateSExt(V, S->getType());
 }
 
-Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
+Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
   bool PrevSafeMode = SafeUDivMode;
@@ -1528,29 +1522,30 @@ Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
   return LHS;
 }
 
-Value *SCEVExpander::visitSMaxExpr(SCEVUse SU) {
-  return expandMinMaxExpr(cast<SCEVSMaxExpr>(SU), Intrinsic::smax, "smax");
+Value *SCEVExpander::visitSMaxExpr(SCEVUseT<const SCEVSMaxExpr *> S) {
+  return expandMinMaxExpr(S, Intrinsic::smax, "smax");
 }
 
-Value *SCEVExpander::visitUMaxExpr(SCEVUse SU) {
-  return expandMinMaxExpr(cast<SCEVUMaxExpr>(SU), Intrinsic::umax, "umax");
+Value *SCEVExpander::visitUMaxExpr(SCEVUseT<const SCEVUMaxExpr *> S) {
+  return expandMinMaxExpr(S, Intrinsic::umax, "umax");
 }
 
-Value *SCEVExpander::visitSMinExpr(SCEVUse SU) {
-  return expandMinMaxExpr(cast<SCEVSMinExpr>(SU), Intrinsic::smin, "smin");
+Value *SCEVExpander::visitSMinExpr(SCEVUseT<const SCEVSMinExpr *> S) {
+  return expandMinMaxExpr(S, Intrinsic::smin, "smin");
 }
 
-Value *SCEVExpander::visitUMinExpr(SCEVUse SU) {
-  return expandMinMaxExpr(cast<SCEVUMinExpr>(SU), Intrinsic::umin, "umin");
+Value *SCEVExpander::visitUMinExpr(SCEVUseT<const SCEVUMinExpr *> S) {
+  return expandMinMaxExpr(S, Intrinsic::umin, "umin");
 }
 
-Value *SCEVExpander::visitSequentialUMinExpr(SCEVUse SU) {
-  return expandMinMaxExpr(cast<SCEVSequentialUMinExpr>(SU), Intrinsic::umin,
-                          "umin", /*IsSequential*/ true);
+Value *SCEVExpander::visitSequentialUMinExpr(
+    SCEVUseT<const SCEVSequentialUMinExpr *> S) {
+  return expandMinMaxExpr(S, Intrinsic::umin, "umin",
+                          /*IsSequential*/ true);
 }
 
-Value *SCEVExpander::visitVScale(SCEVUse SU) {
-  return Builder.CreateVScale(cast<SCEVVScale>(SU)->getType());
+Value *SCEVExpander::visitVScale(SCEVUseT<const SCEVVScale *> S) {
+  return Builder.CreateVScale(S->getType());
 }
 
 Value *SCEVExpander::expandCodeFor(SCEVUse SH, Type *Ty,

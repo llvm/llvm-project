@@ -343,7 +343,7 @@ LLVM_DUMP_METHOD void SCEVUse::dump() const {
 }
 #endif
 
-void SCEVUse::print(raw_ostream &OS) const {
+template <> void SCEVUseT<const SCEV *>::print(raw_ostream &OS) const {
   getPointer()->print(OS);
   SCEV::NoWrapFlags Flags = static_cast<SCEV::NoWrapFlags>(getInt());
   if (Flags & SCEV::FlagNUW)
@@ -351,6 +351,13 @@ void SCEVUse::print(raw_ostream &OS) const {
   if (Flags & SCEV::FlagNSW)
     OS << "(u nsw)";
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <> LLVM_DUMP_METHOD void SCEVUseT<const SCEV *>::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+#endif
 
 //===----------------------------------------------------------------------===//
 // Implementation of the SCEV class.
