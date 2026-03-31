@@ -34,7 +34,7 @@ if(CMAKE_ASM_COMPILER)
     RESULT_VARIABLE asm_result)
 
   if(asm_result EQUAL 0)
-    set(HAVE_INCBIN_SUPPORT 1)
+    set(HAVE_INCBIN_SUPPORT 1 PARENT_SCOPE)
   endif()
 endif()
 
