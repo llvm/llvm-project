@@ -5042,7 +5042,7 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(SizeReg)
-      .addUse(LodReg)
+      .addUse(LevelsReg)
       .constrainAllUses(TII, TRI, RBI);
   return true;
 }
