@@ -2776,7 +2776,7 @@ for (uint64_t Addr = 0x4000; Addr < 0x4030; ++Addr) {
   ASSERT_THAT_EXPECTED(GR4000->lookup(0x1000), Failed());
   ASSERT_THAT_EXPECTED(GR4000->lookup(0x2000), Failed());
   ASSERT_THAT_EXPECTED(GR4000->lookup(0x3000), Failed());
-  }
+}
 }
 
 TEST(GSYMTest, TestGsymSegmentingNoBase) {
@@ -2928,7 +2928,7 @@ for (uint64_t Addr = 0x4000; Addr < 0x4030; ++Addr) {
   ASSERT_THAT_EXPECTED(GR4000->lookup(0x1000), Failed());
   ASSERT_THAT_EXPECTED(GR4000->lookup(0x2000), Failed());
   ASSERT_THAT_EXPECTED(GR4000->lookup(0x3000), Failed());
-  }
+}
 }
 
 

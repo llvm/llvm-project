@@ -338,7 +338,7 @@ TEST(GSYMV2Test, TestCreatorV2StrpSize3) {
 /// specified AddrInfoOffSize. Each function gets a unique name and a line
 /// table entry to increase its encoded size.
 static void TestV2AddrInfoOffSize(uint8_t ExpectedSize,
-                                   llvm::endianness ByteOrder) {
+                                  llvm::endianness ByteOrder) {
   GsymCreatorV2 GC;
   // We need FISectionSize >= (1 << ((ExpectedSize-1) * 8)).
   // Each FunctionInfo is roughly 20-30 bytes with a line table entry.
