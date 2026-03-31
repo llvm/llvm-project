@@ -424,8 +424,7 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
   Value *Add2;
   for (unsigned I = Len; I >= 16; I = I / 2) {
     // Matching "x = x + (x >> I/2)" for I-bit.
-    if (Len >= I &&
-        !match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
+    if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
                              m_Deferred(Add2))))
       return false;
     Add1 = Add2;
