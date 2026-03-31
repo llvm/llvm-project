@@ -388,7 +388,6 @@ private:
                                           MachineInstr &I) const;
   bool selectGetDimensionsMSIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                                       MachineInstr &I) const;
-  unsigned getNumQuerySizeComponents(SPIRVTypeInst ImageType) const;
   bool selectImageQuerySize(Register &ResVReg, SPIRVTypeInst ResType,
                             MachineInstr &I, Register ImageReg, unsigned Opcode,
                             std::optional<Register> LodReg) const;
@@ -4976,87 +4975,18 @@ bool SPIRVInstructionSelector::generateSampleImage(
   return true;
 }
 
-unsigned SPIRVInstructionSelector::getNumQuerySizeComponents(
-    SPIRVTypeInst ImageType) const {
-  auto Dim = static_cast<SPIRV::Dim::Dim>(ImageType->getOperand(2).getImm());
-  unsigned Arrayed = ImageType->getOperand(4).getImm();
-  if (Dim == SPIRV::Dim::DIM_1D)
-    return Arrayed ? 2 : 1;
-  if (Dim == SPIRV::Dim::DIM_2D || Dim == SPIRV::Dim::DIM_Cube ||
-      Dim == SPIRV::Dim::DIM_Rect)
-    return Arrayed ? 3 : 2;
-  if (Dim == SPIRV::Dim::DIM_3D)
-    return 3;
-  return 1;
-}
-
+// TODO: The operands should be in the order they appear in the instructions.
+// Opcode, ImageReg, LodReg.
 bool SPIRVInstructionSelector::selectImageQuerySize(
     Register &ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
     Register ImageReg, unsigned Opcode, std::optional<Register> LodReg) const {
-  SPIRVTypeInst ImageType = GR.getSPIRVTypeForVReg(ImageReg);
-  unsigned NumSizeComponents = getNumQuerySizeComponents(ImageType);
-  unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
-
-  if (NumSizeComponents == NumResComponents) {
-    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
-                   .addDef(ResVReg)
-                   .addUse(GR.getSPIRVTypeID(ResType))
-                   .addUse(ImageReg);
-    if (LodReg)
-      MIB.addUse(*LodReg);
-    MIB.constrainAllUses(TII, TRI, RBI);
-    return true;
-  }
-
-  SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  SPIRVTypeInst QuerySizeTy =
-      NumSizeComponents == 1
-          ? I32Ty
-          : GR.getOrCreateSPIRVVectorType(I32Ty, NumSizeComponents, I, TII);
-
-  Register QuerySizeReg =
-      createVirtualRegister(QuerySizeTy, &GR, MRI, *I.getMF());
-
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
-                 .addDef(QuerySizeReg)
-                 .addUse(GR.getSPIRVTypeID(QuerySizeTy))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
                  .addUse(ImageReg);
   if (LodReg)
     MIB.addUse(*LodReg);
   MIB.constrainAllUses(TII, TRI, RBI);
-
-  if (NumResComponents == 1) {
-    BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(SPIRV::OpCompositeExtract))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(QuerySizeReg)
-        .addImm(0)
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
-  }
-
-  SmallVector<Register, 4> CompRegs;
-  for (unsigned i = 0; i < NumResComponents; ++i) {
-    Register CompReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
-    BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(SPIRV::OpCompositeExtract))
-        .addDef(CompReg)
-        .addUse(GR.getSPIRVTypeID(I32Ty))
-        .addUse(QuerySizeReg)
-        .addImm(i)
-        .constrainAllUses(TII, TRI, RBI);
-    CompRegs.push_back(CompReg);
-  }
-
-  auto ConstructMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                              TII.get(SPIRV::OpCompositeConstruct))
-                          .addDef(ResVReg)
-                          .addUse(GR.getSPIRVTypeID(ResType));
-  for (Register Reg : CompRegs)
-    ConstructMIB.addUse(Reg);
-
-  ConstructMIB.constrainAllUses(TII, TRI, RBI);
   return true;
 }
 
@@ -5084,13 +5014,13 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
     return false;
   }
 
+  // TODO: This is repeat code. Move to a new function.
   unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
   SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   SPIRVTypeInst SizeResTy =
       NumResComponents == 2
           ? I32Ty
           : GR.getOrCreateSPIRVVectorType(I32Ty, NumResComponents - 1, I, TII);
-
   Register SizeReg = createVirtualRegister(SizeResTy, &GR, MRI, *I.getMF());
 
   Register LodReg = I.getOperand(3).getReg();
@@ -5100,7 +5030,6 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
   }
 
   Register LevelsReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
-
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(SPIRV::OpImageQueryLevels))
       .addDef(LevelsReg)
@@ -5108,32 +5037,13 @@ bool SPIRVInstructionSelector::selectGetDimensionsLevelsIntrinsic(
       .addUse(NewImageReg)
       .constrainAllUses(TII, TRI, RBI);
 
-  SmallVector<Register, 4> Constituents;
-  if (NumResComponents == 2) {
-    Constituents.push_back(SizeReg);
-  } else {
-    for (unsigned i = 0; i < NumResComponents - 1; ++i) {
-      Register CompReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(SPIRV::OpCompositeExtract))
-          .addDef(CompReg)
-          .addUse(GR.getSPIRVTypeID(I32Ty))
-          .addUse(SizeReg)
-          .addImm(i)
-          .constrainAllUses(TII, TRI, RBI);
-      Constituents.push_back(CompReg);
-    }
-  }
-  Constituents.push_back(LevelsReg);
-
-  auto ConstructMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                              TII.get(SPIRV::OpCompositeConstruct))
-                          .addDef(ResVReg)
-                          .addUse(GR.getSPIRVTypeID(ResType));
-  for (Register Reg : Constituents)
-    ConstructMIB.addUse(Reg);
-
-  ConstructMIB.constrainAllUses(TII, TRI, RBI);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(),
+          TII.get(SPIRV::OpCompositeConstruct))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(SizeReg)
+      .addUse(LodReg)
+      .constrainAllUses(TII, TRI, RBI);
   return true;
 }
 
@@ -5147,6 +5057,8 @@ bool SPIRVInstructionSelector::selectGetDimensionsMSIntrinsic(
     return false;
   }
 
+  // TODO: This is repeat code. Move to a new function, and call from both
+  // places.
   unsigned NumResComponents = GR.getScalarOrVectorComponentCount(ResType);
   SPIRVTypeInst I32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   SPIRVTypeInst SizeResTy =
@@ -5170,32 +5082,13 @@ bool SPIRVInstructionSelector::selectGetDimensionsMSIntrinsic(
       .addUse(NewImageReg)
       .constrainAllUses(TII, TRI, RBI);
 
-  SmallVector<Register, 4> Constituents;
-  if (NumResComponents == 2) {
-    Constituents.push_back(SizeReg);
-  } else {
-    for (unsigned i = 0; i < NumResComponents - 1; ++i) {
-      Register CompReg = createVirtualRegister(I32Ty, &GR, MRI, *I.getMF());
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(SPIRV::OpCompositeExtract))
-          .addDef(CompReg)
-          .addUse(GR.getSPIRVTypeID(I32Ty))
-          .addUse(SizeReg)
-          .addImm(i)
-          .constrainAllUses(TII, TRI, RBI);
-      Constituents.push_back(CompReg);
-    }
-  }
-  Constituents.push_back(SamplesReg);
-
-  auto ConstructMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                              TII.get(SPIRV::OpCompositeConstruct))
-                          .addDef(ResVReg)
-                          .addUse(GR.getSPIRVTypeID(ResType));
-  for (Register Reg : Constituents)
-    ConstructMIB.addUse(Reg);
-
-  ConstructMIB.constrainAllUses(TII, TRI, RBI);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(),
+          TII.get(SPIRV::OpCompositeConstruct))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(SizeReg)
+      .addUse(SamplesReg)
+      .constrainAllUses(TII, TRI, RBI);
   return true;
 }
 
