@@ -13,10 +13,10 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/AssignmentQuery.h"
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <cstddef>
 
 namespace {

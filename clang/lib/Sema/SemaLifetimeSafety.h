@@ -58,9 +58,8 @@ inline void reportAssignmentImpl(Sema &S, const Expr *IssueExpr,
 
 inline void reportAssignment(Sema &S, const Expr *IssueExpr,
                              const OriginDestExpr &LHS, const Expr *RHS) {
-  if (!LHS || !RHS) {
+  if (!LHS || !RHS)
     return;
-  }
 
   if (const DeclRefExpr *LDExpr = llvm::dyn_cast<const DeclRefExpr *>(LHS)) {
     reportAssignmentImpl(S, IssueExpr, LDExpr->getDecl(), RHS,
