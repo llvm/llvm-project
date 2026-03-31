@@ -69,7 +69,10 @@ jobs:
       fail-fast: true
       matrix:
         targets:
-          - { arch: Hexagon, triple: hexagon-unknown-linux-musl }
+          - arch: Hexagon
+            triple: hexagon-unknown-linux-musl
+            cxx_flags:
+            sysroot: ${{ github.workspace }}/hexagon_toolchain/target/hexagon-unknown-linux-musl
 
     steps:
       - name: Checkout Code
@@ -130,8 +133,9 @@ jobs:
             -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
             -DCMAKE_C_COMPILER_TARGET=${{ matrix.targets.triple }} \
             -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.targets.triple }} \
+            -DCMAKE_CXX_FLAGS="${{ matrix.targets.cxx_flags }}" \
             -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=eld" \
-            -DCMAKE_SYSROOT="${{ github.workspace }}/hexagon_toolchain/target/${{ matrix.targets.triple }}"
+            -DCMAKE_SYSROOT="${{ matrix.targets.sysroot }}"
 
       - name: Build Ripple compiler-rt
         run: cmake --build build-compiler-rt
