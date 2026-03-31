@@ -152,8 +152,8 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // OffloadArch::Unknown if the string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
 
-llvm::StringRef OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
-                                    OffloadArch ID);
+llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
+                                 OffloadArch ID);
 
 } // namespace clang
 
