@@ -15,7 +15,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-MASKED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], 1
 ; CHECK-MASKED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
 ; CHECK-MASKED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-MASKED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMAX]], 1
+; CHECK-MASKED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[UMAX]], 1
 ; CHECK-MASKED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-MASKED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-MASKED-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -46,7 +46,7 @@ define void @simple_memcpy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-PREDICATE-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], 1
 ; CHECK-PREDICATE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
 ; CHECK-PREDICATE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-PREDICATE-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMAX]], 1
+; CHECK-PREDICATE-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[UMAX]], 1
 ; CHECK-PREDICATE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-PREDICATE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-PREDICATE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -110,7 +110,7 @@ define void @non_consecutive_copy(ptr noalias %dst, ptr noalias %src, i64 %n)  {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMAX]], 1
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[UMAX]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

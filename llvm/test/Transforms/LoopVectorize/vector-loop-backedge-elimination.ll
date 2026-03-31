@@ -111,7 +111,7 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
 ; VF8UF1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
-; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
+; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[TMP0]], 1
 ; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF1-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -185,7 +185,7 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF2-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
 ; VF8UF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
-; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
+; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[TMP0]], 1
 ; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -316,7 +316,7 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF16UF1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
 ; VF16UF1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
-; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
+; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[TMP0]], 1
 ; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF16UF1-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -620,7 +620,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; VF8UF1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
-; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
+; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -720,7 +720,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF2-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; VF8UF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
-; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
+; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -901,7 +901,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF16UF1-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; VF16UF1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
-; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
+; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF16UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
