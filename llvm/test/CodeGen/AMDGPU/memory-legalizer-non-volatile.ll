@@ -2,8 +2,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU,GFX12-CU-DAGISEL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU,GFX12-CU-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-DAGISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mattr=+globally-addressable-scratch -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS,GFX1250-GAS-DAGISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s                 | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS,GFX1250-NOGAS-DAGISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mattr=+globally-addressable-scratch -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS,GFX1250-GAS-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s                 | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS,GFX1250-NOGAS-GISEL %s
 
 define void @flat_i32_nonatomic(ptr addrspace(0) %in, ptr addrspace(0) %out) {
 ; GFX12-CU-LABEL: flat_i32_nonatomic:
@@ -174,14 +176,23 @@ define void @scratch_i32_nonatomic(ptr addrspace(5) %in, ptr addrspace(5) %out) 
 ; GFX12-CU-NEXT:    scratch_store_b32 v1, v0, off
 ; GFX12-CU-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-LABEL: scratch_i32_nonatomic:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    scratch_store_b32 v1, v0, off
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GAS-LABEL: scratch_i32_nonatomic:
+; GFX1250-GAS:       ; %bb.0: ; %entry
+; GFX1250-GAS-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GAS-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GAS-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-GAS-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GAS-NEXT:    scratch_store_b32 v1, v0, off
+; GFX1250-GAS-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-NOGAS-LABEL: scratch_i32_nonatomic:
+; GFX1250-NOGAS:       ; %bb.0: ; %entry
+; GFX1250-NOGAS-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOGAS-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NOGAS-NEXT:    scratch_load_b32 v0, v0, off nv
+; GFX1250-NOGAS-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NOGAS-NEXT:    scratch_store_b32 v1, v0, off nv
+; GFX1250-NOGAS-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %val = load i32, ptr addrspace(5) %in
   store i32 %val, ptr addrspace(5) %out
@@ -303,33 +314,61 @@ define void @buffer_i32_nonatomic(ptr addrspace(7) inreg %in, ptr addrspace(7) i
 ; GFX12-CU-GISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen
 ; GFX12-CU-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-DAGISEL-LABEL: buffer_i32_nonatomic:
-; GFX1250-DAGISEL:       ; %bb.0: ; %entry
-; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-DAGISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-DAGISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s21
-; GFX1250-DAGISEL-NEXT:    s_mov_b32 s7, s20
-; GFX1250-DAGISEL-NEXT:    s_mov_b32 s6, s19
-; GFX1250-DAGISEL-NEXT:    s_mov_b32 s5, s18
-; GFX1250-DAGISEL-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
-; GFX1250-DAGISEL-NEXT:    s_mov_b32 s4, s17
-; GFX1250-DAGISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-DAGISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen
-; GFX1250-DAGISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-GAS-DAGISEL-LABEL: buffer_i32_nonatomic:
+; GFX1250-GAS-DAGISEL:       ; %bb.0: ; %entry
+; GFX1250-GAS-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GAS-DAGISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GAS-DAGISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s21
+; GFX1250-GAS-DAGISEL-NEXT:    s_mov_b32 s7, s20
+; GFX1250-GAS-DAGISEL-NEXT:    s_mov_b32 s6, s19
+; GFX1250-GAS-DAGISEL-NEXT:    s_mov_b32 s5, s18
+; GFX1250-GAS-DAGISEL-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX1250-GAS-DAGISEL-NEXT:    s_mov_b32 s4, s17
+; GFX1250-GAS-DAGISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GAS-DAGISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen
+; GFX1250-GAS-DAGISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: buffer_i32_nonatomic:
-; GFX1250-GISEL:       ; %bb.0: ; %entry
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s21
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, s17
-; GFX1250-GISEL-NEXT:    s_mov_b32 s5, s18
-; GFX1250-GISEL-NEXT:    s_mov_b32 s6, s19
-; GFX1250-GISEL-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
-; GFX1250-GISEL-NEXT:    s_mov_b32 s7, s20
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-NOGAS-DAGISEL-LABEL: buffer_i32_nonatomic:
+; GFX1250-NOGAS-DAGISEL:       ; %bb.0: ; %entry
+; GFX1250-NOGAS-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOGAS-DAGISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NOGAS-DAGISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s21
+; GFX1250-NOGAS-DAGISEL-NEXT:    s_mov_b32 s7, s20
+; GFX1250-NOGAS-DAGISEL-NEXT:    s_mov_b32 s6, s19
+; GFX1250-NOGAS-DAGISEL-NEXT:    s_mov_b32 s5, s18
+; GFX1250-NOGAS-DAGISEL-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX1250-NOGAS-DAGISEL-NEXT:    s_mov_b32 s4, s17
+; GFX1250-NOGAS-DAGISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NOGAS-DAGISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen
+; GFX1250-NOGAS-DAGISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GAS-GISEL-LABEL: buffer_i32_nonatomic:
+; GFX1250-GAS-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GAS-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GAS-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GAS-GISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s21
+; GFX1250-GAS-GISEL-NEXT:    s_mov_b32 s4, s17
+; GFX1250-GAS-GISEL-NEXT:    s_mov_b32 s5, s18
+; GFX1250-GAS-GISEL-NEXT:    s_mov_b32 s6, s19
+; GFX1250-GAS-GISEL-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX1250-GAS-GISEL-NEXT:    s_mov_b32 s7, s20
+; GFX1250-GAS-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GAS-GISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen
+; GFX1250-GAS-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-NOGAS-GISEL-LABEL: buffer_i32_nonatomic:
+; GFX1250-NOGAS-GISEL:       ; %bb.0: ; %entry
+; GFX1250-NOGAS-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NOGAS-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NOGAS-GISEL-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s21
+; GFX1250-NOGAS-GISEL-NEXT:    s_mov_b32 s4, s17
+; GFX1250-NOGAS-GISEL-NEXT:    s_mov_b32 s5, s18
+; GFX1250-NOGAS-GISEL-NEXT:    s_mov_b32 s6, s19
+; GFX1250-NOGAS-GISEL-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX1250-NOGAS-GISEL-NEXT:    s_mov_b32 s7, s20
+; GFX1250-NOGAS-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NOGAS-GISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen
+; GFX1250-NOGAS-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %val = load i32, ptr addrspace(7) %in
   store i32 %val, ptr addrspace(7) %out

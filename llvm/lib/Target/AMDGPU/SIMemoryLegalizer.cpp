@@ -1011,11 +1011,22 @@ SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
 /// being marked as non-volatile. This means that either they are accessing the
 /// constant address space, are accessing a known invariant memory location, or
 /// that they are marked with the non-volatile metadata/MMO flag.
-static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
+static bool isNonVolatileMemoryAccess(const GCNSubtarget &ST,
+                                      const MachineInstr &MI) {
   if (MI.getNumMemOperands() == 0)
     return false;
+  // If globally addressable scratch is not in use, we can assume any scratch
+  // opcode accesses thread-local memory, thus is NV=1.
+  bool GASEnabled = ST.isGloballyAddressableScratchEnabled();
+  if (!GASEnabled && ST.getInstrInfo()->isFLATScratch(MI.getOpcode()))
+    return true;
   return all_of(MI.memoperands(), [&](const MachineMemOperand *MMO) {
-    return MMO->getFlags() & (MOThreadPrivate | MachineMemOperand::MOInvariant);
+    // If globally addressable scratch is enabled, we can only set NV=1 by
+    // checking for the thread-private or invariant memory. If it is disabled,
+    // we can additionally consider private memory.
+    return (!GASEnabled && MMO->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS) ||
+           (MMO->getFlags() &
+            (MOThreadPrivate | MachineMemOperand::MOInvariant));
   });
 }
 
@@ -2629,7 +2640,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
           Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
       }
 
-      if (isNonVolatileMemoryAccess(*MI))
+      if (isNonVolatileMemoryAccess(ST, *MI))
         Changed |= CC->handleNonVolatile(*MI);
     }
   }
