@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 @str = constant [5 x i8] c"foo\0A\00"
+@fmt = constant [3 x i8] c"%s\00"
 
 ; Make puts un-emittable by redefining it as a global variable.
 @puts = global i32 0
@@ -9,6 +10,7 @@
 
 ;.
 ; CHECK: @str = constant [5 x i8] c"foo\0A\00"
+; CHECK: @fmt = constant [3 x i8] c"%s\00"
 ; CHECK: @puts = global i32 0
 ;.
 define i32 @test() {
@@ -17,6 +19,15 @@ define i32 @test() {
 ; CHECK-NEXT:    ret i32 0
 ;
   %call = call i32 (ptr, ...) @printf(ptr @str)
+  ret i32 0
+}
+
+define i32 @test2() {
+; CHECK-LABEL: define i32 @test2() {
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @fmt, ptr nonnull @str)
+; CHECK-NEXT:    ret i32 0
+;
+  %call = call i32 (ptr, ...) @printf(ptr @fmt, ptr @str)
   ret i32 0
 }
 
