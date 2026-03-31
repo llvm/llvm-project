@@ -614,3 +614,118 @@ entry:
   %cond = select i1 %cmp.i.i, i8 %conv4, i8 %cond.i
   ret i8 %cond
 }
+
+define i8 @clamp_i16_to_i8(i16 %x) {
+; CHECK-LABEL: @clamp_i16_to_i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i16 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i16
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i16 [[X]], i16 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[COND]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i16 %x, 256
+  %0 = icmp sgt i16 %x, 0
+  %shr = sext i1 %0 to i16
+  %cond = select i1 %tobool.not, i16 %x, i16 %shr
+  %trunc = trunc i16 %cond to i8
+  ret i8 %trunc
+}
+
+define i8 @clamp_i32_to_i8(i32 %x) {
+; CHECK-LABEL: @clamp_i32_to_i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i32 [[X:%.*]], 256
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 [[X]], i32 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[COND]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i32 %x, 256
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %tobool.not, i32 %x, i32 %shr
+  %trunc = trunc i32 %cond to i8
+  ret i8 %trunc
+}
+
+define i8 @clamp_i64_to_i8(i64 %x) {
+; CHECK-LABEL: @clamp_i64_to_i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i64 [[X:%.*]], 256
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i64
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i64 [[X]], i64 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[COND]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i64 %x, 256
+  %0 = icmp sgt i64 %x, 0
+  %shr = sext i1 %0 to i64
+  %cond = select i1 %tobool.not, i64 %x, i64 %shr
+  %trunc = trunc i64 %cond to i8
+  ret i8 %trunc
+}
+
+define i16 @clamp_i32_to_i16(i32 %x) {
+; CHECK-LABEL: @clamp_i32_to_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i32 [[X:%.*]], 65536
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 [[X]], i32 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[COND]] to i16
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i32 %x, 65536
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %tobool.not, i32 %x, i32 %shr
+  %trunc = trunc i32 %cond to i16
+  ret i16 %trunc
+}
+
+define i16 @clamp_i64_to_i16(i64 %x) {
+; CHECK-LABEL: @clamp_i64_to_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i64 [[X:%.*]], 65536
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i64
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i64 [[X]], i64 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[COND]] to i16
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i64 %x, 65536
+  %0 = icmp sgt i64 %x, 0
+  %shr = sext i1 %0 to i64
+  %cond = select i1 %tobool.not, i64 %x, i64 %shr
+  %trunc = trunc i64 %cond to i16
+  ret i16 %trunc
+}
+
+define i32 @clamp_i64_to_i32(i64 %x) {
+; CHECK-LABEL: @clamp_i64_to_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i64 [[X:%.*]], 4294967296
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i64
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i64 [[X]], i64 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[COND]] to i32
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i64 %x, 4294967296
+  %0 = icmp sgt i64 %x, 0
+  %shr = sext i1 %0 to i64
+  %cond = select i1 %tobool.not, i64 %x, i64 %shr
+  %trunc = trunc i64 %cond to i32
+  ret i32 %trunc
+}
+
