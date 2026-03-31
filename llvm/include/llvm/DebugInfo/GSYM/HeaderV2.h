@@ -41,7 +41,7 @@ enum class StringTableEncoding : uint8_t {
 /// The V2 file layout is:
 ///
 ///   [HeaderV2 - 24 bytes fixed]
-///   [GlobalData entries - array of 24-byte entries, terminated by EndOfList]
+///   [GlobalData entries - array of 20-byte entries, terminated by EndOfList]
 ///   [... data sections at arbitrary file offsets, zero-padded for alignment]
 ///
 /// Each GlobalData entry (see GlobalData.h) describes a section by its type,

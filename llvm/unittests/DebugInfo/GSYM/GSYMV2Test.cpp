@@ -1355,3 +1355,45 @@ TEST(GSYMV2Test, TestV2Segmenting) {
   ASSERT_THAT_EXPECTED(FI, Succeeded());
   EXPECT_EQ((*GR)->getString(FI->Name), "func_0");
 }
+
+TEST(GSYMV2Test, TestV2SegmentingSize) {
+  // Test that V2 segmenting produces segments whose actual encoded size
+  // does not exceed the requested segment size. This catches bugs where
+  // calculateHeaderAndTableSize() overestimates (e.g. using wrong
+  // GlobalData entry size), causing segments to contain fewer functions
+  // than they could.
+  GsymCreatorV2 GC;
+  const uint64_t BaseAddr = 0x1000;
+  // Add 10 simple functions (no line table, minimal size).
+  for (uint32_t I = 0; I < 10; ++I) {
+    std::string Name = "f" + std::to_string(I);
+    uint32_t NameOff = GC.insertString(Name);
+    GC.addFunctionInfo(FunctionInfo(BaseAddr + I * 0x100, 0x100, NameOff));
+  }
+  OutputAggregator Null(nullptr);
+  ASSERT_FALSE(GC.finalize(Null));
+
+  // Create the first segment with a generous-but-bounded size.
+  // We want a size that fits all 10 functions if the estimate is correct,
+  // but might not fit all 10 if the estimate is too large.
+  // First, encode the full GSYM to know the actual total size.
+  SmallString<512> FullStr;
+  raw_svector_ostream FullOS(FullStr);
+  FileWriter FullFW(FullOS, llvm::endianness::native, &GC);
+  ASSERT_FALSE(GC.encode(FullFW));
+  const uint64_t FullSize = FullStr.size();
+
+  // Use the full size as segment size — all functions should fit in one
+  // segment. If calculateHeaderAndTableSize() overestimates, some functions
+  // won't fit.
+  size_t FuncIdx = 0;
+  auto SegOrErr = GC.createSegment(FullSize, FuncIdx);
+  ASSERT_THAT_EXPECTED(SegOrErr, Succeeded());
+  ASSERT_NE(SegOrErr->get(), nullptr);
+  // All or almost all functions should fit. The estimate may slightly
+  // overestimate due to string/file table differences between the full
+  // creator and the segment, but it should not be off by more than 1.
+  EXPECT_GE(FuncIdx, 9u)
+      << "Too few functions fit in segment — calculateHeaderAndTableSize() "
+         "may be overestimating";
+}

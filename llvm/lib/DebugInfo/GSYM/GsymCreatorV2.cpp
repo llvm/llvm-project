@@ -52,7 +52,7 @@ uint64_t GsymCreatorV2::calculateHeaderAndTableSize() const {
   const uint64_t HeaderSize = sizeof(HeaderV2);
   const size_t NumFuncs = Funcs.size();
   const uint32_t NumEntries = 5 + (UUID.empty() ? 0 : 1) + 1;
-  uint64_t Size = HeaderSize + NumEntries * 24;
+  uint64_t Size = HeaderSize + NumEntries * 20;
   Size = llvm::alignTo(Size, getAddressOffsetSize());
   Size += NumFuncs * getAddressOffsetSize();
   Size = llvm::alignTo(Size, 4);
