@@ -60,7 +60,7 @@ function(add_unittest_framework_library name)
   endif()
 endfunction()
 
-if (NOT TARGET libc.src.__support.OSUtil.osutil AND NOT LLVM_LIBC_FULL_BUILD)
+if (NOT TARGET libc.src.__support.OSUtil.osutil OR NOT LLVM_LIBC_FULL_BUILD)
   message(STATUS "TestLogger will use system libc's stdio to print.")
   set(test_logger_compile_options "-DLIBC_TEST_USE_SYSTEM_PRINTF")
   set(test_logger_osutil "")
