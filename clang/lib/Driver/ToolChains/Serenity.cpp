@@ -142,10 +142,6 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--pop-state");
   }
 
-  // FIXME: This is currently required to building Ports, but we should take
-  //        care of that in the Port's build system rather than here.
-  CmdArgs.push_back("-L=/usr/local/lib");
-
   // Silence warnings when linking C code with a C++ '-stdlib' argument.
   Args.ClaimAllArgs(options::OPT_stdlib_EQ);
 
@@ -197,10 +193,6 @@ void Serenity::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
-
-  // FIXME: See FIXME about "/usr/local/lib" in Linker::ConstructJob.
-  addSystemInclude(DriverArgs, CC1Args,
-                   concat(D.SysRoot, "/usr/local/include"));
 
   addSystemInclude(DriverArgs, CC1Args, concat(D.SysRoot, "/usr/include"));
 }

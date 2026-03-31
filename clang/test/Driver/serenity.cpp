@@ -16,10 +16,8 @@
 // PATHS:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // PATHS-SAME: "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/include/c++/v1"
 // PATHS-SAME: "-internal-isystem" "[[RESOURCE]]/include"
-// PATHS-SAME: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // PATHS-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include"
-// PATHS: "-L[[SYSROOT]]/usr/lib"
-// PATHS-SAME: "-L=/usr/local/lib"
+// PATHS:      "-L[[SYSROOT]]/usr/lib"
 
 /// Check include paths with -nostdinc
 // RUN: %clang -### %s --target=x86_64-unknown-serenity --sysroot=%S/Inputs/serenity_tree \
@@ -37,7 +35,6 @@
 // PATH_NOBUILTIN-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // PATH_NOBUILTIN-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 // PATH_NOBUILTIN-NOT: "-internal-isystem" "[[RESOURCE]]/include"
-// PATH_NOBUILTIN-SAME: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // PATH_NOBUILTIN-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include"
 
 /// Check include paths with -nostdlibinc
@@ -49,7 +46,6 @@
 // PATH_NOSTDLIBINC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // PATH_NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 // PATH_NOSTDLIBINC-SAME: "-internal-isystem" "[[RESOURCE]]/include"
-// PATH_NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // PATH_NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include"
 
 /// Check that PIC and PIE are enabled by default
