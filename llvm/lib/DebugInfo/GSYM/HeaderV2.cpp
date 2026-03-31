@@ -55,10 +55,6 @@ llvm::Error HeaderV2::checkForError() const {
   switch (StrTableEncoding) {
   case StringTableEncoding::Default:
     break;
-  default:
-    return createStringError(std::errc::invalid_argument,
-                             "unsupported string table encoding %u",
-                             static_cast<uint8_t>(StrTableEncoding));
   }
   return Error::success();
 }
