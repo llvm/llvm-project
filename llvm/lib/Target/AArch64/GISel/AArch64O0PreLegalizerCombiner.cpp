@@ -125,8 +125,8 @@ bool runCombiner(
   const Function &F = MF.getFunction();
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
 
-  CombinerInfo CInfo(/*AllowIllegalOps=*/ true, /*ShouldLegalizeIllegal=*/ false,
-                     /*LegalizerInfo=*/ nullptr, /*EnableOpt=*/ false,
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
+                     /*LegalizerInfo=*/nullptr, /*EnableOpt=*/false,
                      F.hasOptSize(), F.hasMinSize());
   // Disable fixed-point iteration in the Combiner. This improves compile-time
   // at the cost of possibly missing optimizations. See PR#94291 for details.
