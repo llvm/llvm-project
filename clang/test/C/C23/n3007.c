@@ -107,6 +107,7 @@ void test_misc(void) {
   auto something;                           // expected-error {{declaration of variable 'something' with deduced type 'auto' requires an initializer}}
   auto test_char = 'A';
   auto test_char_ptr = "test";
+  auto test_char_ptr2[] = "another test";   // expected-error {{variable 'test_char_ptr2' with type 'auto[]' has incompatible initializer of type 'char[13]'}}
   auto auto_size = sizeof(auto);            // expected-error {{expected expression}}
 
   _Static_assert(_Generic(test_char, int : 1));
