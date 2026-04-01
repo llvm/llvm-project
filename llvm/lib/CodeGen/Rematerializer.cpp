@@ -30,6 +30,9 @@
 using namespace llvm;
 using RegisterIdx = Rematerializer::RegisterIdx;
 
+// Pin the vtable to this file.
+void Rematerializer::Listener::anchor() {}
+
 /// Checks whether the value in \p LI at \p UseIdx is identical to \p OVNI (this
 /// implies it is also live there). When \p LI has sub-ranges, checks that
 /// all sub-ranges intersecting with \p Mask are also live at \p UseIdx.
@@ -401,6 +404,8 @@ void Rematerializer::deleteRegIfUnused(RegisterIdx RootIdx) {
 }
 
 void Rematerializer::deleteReg(RegisterIdx RegIdx) {
+  noteRegDeleted(RegIdx);
+
   Reg &DeleteReg = Regs[RegIdx];
   assert(DeleteReg.DefMI && "register was already deleted");
   // It is not possible for the deleted instruction to be the upper region
@@ -626,6 +631,8 @@ RegisterIdx Rematerializer::rematerializeReg(
     NewDepReg.addUser(NewReg.DefMI, UseRegion);
     LISUpdates.insert(NewDep.RegIdx);
   }
+
+  noteRegCreated(NewRegIdx);
 
   LLVM_DEBUG({
     dbgs() << "** Rematerialized " << printID(RegIdx) << " as "

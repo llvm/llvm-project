@@ -121,6 +121,11 @@ Changes to the AArch64 Backend
 
 * The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
   requiring the `+d128` feature gating.
+* Added a new internal option `-aarch64-emit-debug-tls-location` to allow the
+  emission of `DW_AT_location` for thread-local variables. This is currently
+  disabled by default to maintain compatibility with Binutils and LLVM older
+  toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
+  type for TLS offsets.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -269,6 +274,15 @@ Changes to LLDB
 
 * On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
 * Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
+* LLDB now supports AArch64 Linux systems that only have SME (as opposed to
+  SVE and SME). Prior to this version of LLDB, there was a bug that caused LLDB
+  to crash on startup on these systems
+  ([#138717](https://github.com/llvm/llvm-project/issues/138717)).
+  This affected LLDB versions from 18 up to and including 22. 17 and below are not affected.
+  If you are using such a system and cannot change LLDB version, or want to package
+  an affected version in a way that is compatible with these systems, the issue
+  contains details of backports that could be done to fix the affected versions.
+
 
 Changes to BOLT
 ---------------

@@ -1876,7 +1876,7 @@ class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
   bits<3> policy;
-  let Inst{20-12} = 0b000011001;
+  let Inst{20-12} = 0b000110010;
   let Inst{11-8} = 0b0110;
   let Inst{7-5} = policy;
 }
