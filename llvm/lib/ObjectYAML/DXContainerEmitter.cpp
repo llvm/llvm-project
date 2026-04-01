@@ -172,6 +172,21 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       }
       break;
     }
+    case dxbc::PartType::ILDN: {
+      if (!P.DebugName)
+        continue;
+
+      dxbc::DebugNameHeader Header;
+      Header.Flags = P.DebugName->Flags;
+      Header.NameLength = P.DebugName->NameLength;
+
+      if (sys::IsBigEndianHost)
+        Header.swapBytes();
+      OS.write(reinterpret_cast<const char *>(&Header),
+               sizeof(dxbc::DebugNameHeader));
+      OS.write(P.DebugName->DebugName.c_str(), P.DebugName->NameLength + 1);
+      break;
+    }
     case dxbc::PartType::SFI0: {
       // If we don't have any flags we can continue here and the data will be
       // zeroed out.

@@ -460,6 +460,7 @@ public:
 class DXContainer {
 public:
   using DXILData = std::pair<dxbc::ProgramHeader, const char *>;
+  using ILDNData = std::pair<dxbc::DebugNameHeader, StringRef>;
 
 private:
   DXContainer(MemoryBufferRef O);
@@ -475,10 +476,12 @@ private:
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
+  std::optional<ILDNData> DebugName;
 
   Error parseHeader();
   Error parsePartOffsets();
   Error parseDXILHeader(StringRef Part);
+  Error parseDebugName(StringRef Part);
   Error parseShaderFeatureFlags(StringRef Part);
   Error parseHash(StringRef Part);
   Error parseRootSignature(StringRef Part);
@@ -562,6 +565,8 @@ public:
   const dxbc::Header &getHeader() const { return Header; }
 
   const std::optional<DXILData> &getDXIL() const { return DXIL; }
+
+  const std::optional<ILDNData> getDebugName() const { return DebugName; }
 
   std::optional<uint64_t> getShaderFeatureFlags() const {
     return ShaderFeatureFlags;
