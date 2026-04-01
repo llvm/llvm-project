@@ -1657,6 +1657,9 @@ void Sema::ActOnModuleImportAttrs(Decl *D,
 
   for (const auto &AL : Attrs) {
     if (AL.getKind() == ParsedAttr::AT_ProfilesRequire) {
+      if (!AL.checkAtLeastNumArgs(*this, 1))
+        continue;
+
       if (!ImportedMod) {
         Diag(AL.getLoc(), diag::err_profiles_require_not_on_import);
         continue;
