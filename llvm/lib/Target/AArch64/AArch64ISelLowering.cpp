@@ -25934,10 +25934,14 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
   if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
     return false;
 
+  auto getCanonicalCompareVecVT = [&]() {
+    unsigned BitsPerElement = std::max(64 / NumElts, 8u);
+    return MVT::getVectorVT(MVT::getIntegerVT(BitsPerElement), NumElts);
+  };
+
   EVT CompareVecVT = tryGetOriginalBoolVectorType(Vec);
   if (!CompareVecVT.isSimple() || CompareVecVT.getSizeInBits() > 128) {
-    unsigned BitsPerElement = std::max(64 / NumElts, 8u);
-    CompareVecVT = MVT::getVectorVT(MVT::getIntegerVT(BitsPerElement), NumElts);
+    CompareVecVT = getCanonicalCompareVecVT();
   }
   CompareVecVT = CompareVecVT.changeVectorElementTypeToInteger();
 
@@ -25945,9 +25949,27 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
     return false;
 
   SDValue CompareBits = DAG.getSExtOrTrunc(Vec, DL, CompareVecVT);
+  unsigned CompareBitsSize = CompareBits.getValueSizeInBits();
 
-  if (CompareVecVT.getSizeInBits() == 64) {
+  // Use a canonical 64/128-bit vector representation before bitcasting to a
+  // scalar view. Some legal original vector types are smaller than 64-bit,
+  // which would make the direct scalar bitcasts below invalid.
+  if (CompareBitsSize != 64 && CompareBitsSize != 128) {
+    CompareVecVT = getCanonicalCompareVecVT();
+    CompareBits = DAG.getSExtOrTrunc(Vec, DL, CompareVecVT);
+    CompareBitsSize = CompareBits.getValueSizeInBits();
+  }
+
+  if (CompareBitsSize != 64 && CompareBitsSize != 128)
+    return false;
+
+  if (CompareBitsSize == 64) {
     CompareLHS = DAG.getBitcast(MVT::i64, CompareBits);
+  } else if (isNullConstant(RHS)) {
+    SDValue PairwiseBits = DAG.getBitcast(MVT::v2i64, CompareBits);
+    SDValue Lo = DAG.getExtractVectorElt(DL, MVT::i64, PairwiseBits, 0);
+    SDValue Hi = DAG.getExtractVectorElt(DL, MVT::i64, PairwiseBits, 1);
+    CompareLHS = DAG.getNode(ISD::ADD, DL, MVT::i64, Lo, Hi);
   } else {
     SDValue Lo, Hi;
     std::tie(Lo, Hi) = DAG.SplitVector(CompareBits, DL);
