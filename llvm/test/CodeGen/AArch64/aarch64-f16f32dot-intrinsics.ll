@@ -25,7 +25,7 @@ define <2 x float> @test_vfdot_lane_f32(<2 x float> %r, <4 x half> %a, <4 x half
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fdot v0.2s, v1.4h, v2.2h[0]
 ; CHECK-NEXT:    ret
-  %lane = shufflevector <4 x half> %b, <4 x half> undef, <4 x i32> zeroinitializer
+  %lane = shufflevector <4 x half> %b, <4 x half> poison, <4 x i32> zeroinitializer
   %res = call <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float> %r, <4 x half> %a, <4 x half> %lane)
   ret <2 x float> %res
 }
@@ -35,7 +35,7 @@ define <4 x float> @test_vfdotq_laneq_f32(<4 x float> %r, <8 x half> %a, <8 x ha
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fdot v0.4s, v1.8h, v2.2h[3]
 ; CHECK-NEXT:    ret
-  %lane = shufflevector <8 x half> %b, <8 x half> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  %lane = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %res = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> %r, <8 x half> %a, <8 x half> %lane)
   ret <4 x float> %res
 }
@@ -45,7 +45,7 @@ define <2 x float> @test_vfdot_laneq_f32(<2 x float> %r, <4 x half> %a, <8 x hal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fdot v0.2s, v1.4h, v2.2h[3]
 ; CHECK-NEXT:    ret
-  %lane = shufflevector <8 x half> %b, <8 x half> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %lane = shufflevector <8 x half> %b, <8 x half> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %res = call <2 x float> @llvm.aarch64.neon.fdot.v2f32.v4f16(<2 x float> %r, <4 x half> %a, <4 x half> %lane)
   ret <2 x float> %res
 }
@@ -56,7 +56,7 @@ define <4 x float> @test_vfdotq_lane_f32(<4 x float> %r, <8 x half> %a, <4 x hal
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fdot v0.4s, v1.8h, v2.2h[0]
 ; CHECK-NEXT:    ret
-  %lane = shufflevector <4 x half> %b, <4 x half> undef, <8 x i32> zeroinitializer
+  %lane = shufflevector <4 x half> %b, <4 x half> poison, <8 x i32> zeroinitializer
   %res = call <4 x float> @llvm.aarch64.neon.fdot.v4f32.v8f16(<4 x float> %r, <8 x half> %a, <8 x half> %lane)
   ret <4 x float> %res
 }
