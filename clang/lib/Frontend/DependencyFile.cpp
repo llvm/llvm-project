@@ -12,6 +12,7 @@
 
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/InputDependencyCollection.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/Utils.h"
@@ -105,6 +106,100 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
     // Files that actually exist are handled by FileChanged.
   }
 
+  enum IsRecursive : bool { Flat = false, Recursive = true };
+
+  static inline void DoSearch(FileManager &FM, const PatternFilter &Filter,
+                              DependencyCollector &DepCollector, StringRef Dir,
+                              IsRecursive Recurse) {
+    std::error_code EC;
+    for (llvm::vfs::directory_iterator
+             FileIt = FM.getVirtualFileSystem().dir_begin(Dir, EC),
+             FileEnd = {};
+         FileIt != FileEnd && !EC; FileIt.increment(EC)) {
+      const auto &File = *FileIt;
+      switch (File.type()) {
+      case llvm::sys::fs::file_type::directory_file: {
+        if (Recurse) {
+          DoSearch(FM, Filter, DepCollector, File.path(), Recurse);
+        }
+        break;
+      }
+      case llvm::sys::fs::file_type::regular_file: {
+        StringRef Filename = File.path();
+        if (Filter.SimpleInputDependencyCheck(Filename)) {
+          DepCollector.maybeAddDependency(Filename,
+                                          /*FromModule*/ false,
+                                          /*IsSystem*/ false,
+                                          /*IsModuleFile*/ false,
+                                          /*IsDirectModuleImport*/ false,
+                                          /*IsMissing*/ false);
+        }
+        break;
+      }
+      default:
+        // do nothing
+        break;
+      }
+    }
+  }
+
+  void DependDirective(SourceLocation HashLoc, const Token &DependTok,
+                       StringRef Pattern, bool IsAngled,
+                       const PatternFilter &Filter,
+                       OptionalFileEntryRef CurrentFile) override {
+    if (Pattern.empty())
+      return;
+    FileManager &FM = PP.getFileManager();
+    llvm::vfs::FileSystem &VFS = FM.getVirtualFileSystem();
+    if (Filter.SearchRoot.empty()) {
+      // nothing we can do for ourselves here, just check the file directly and
+      // leave
+      if (Filter.RootHandling == RootPatternScanType::None) {
+        // it's either a directory or a file; add the dependency as-is
+        DepCollector.maybeAddDependency(
+            Filter.PatternRoot,
+            /*FromModule*/ false,
+            /*IsSystem*/ false,
+            /*IsModuleFile*/ false,
+            /*IsDirectModuleImport*/ false,
+            /*IsMissing*/ !VFS.exists(Filter.PatternRoot));
+        return;
+      }
+      // if there's no search root, simply search from the current file's
+      // working directory (if it's quoted)
+      if (!IsAngled && CurrentFile) {
+        StringRef CurrentDir = CurrentFile->getDir().getName();
+        DoSearch(FM, Filter, DepCollector, CurrentDir,
+                 Filter.RootHandling == RootPatternScanType::Directory
+                     ? Flat
+                     : Recursive);
+      }
+      return;
+    }
+    // Otherwise, it's not empty. Note that we pre-computed the roots according
+    // to the compiler driver's resource/embed directory arguments previously,
+    // so we just need to do a singular check-if-exists-and-fire here.
+    if (Filter.RootHandling == RootPatternScanType::None) {
+      // treat as a single file, do a lookup and mark it for approval.
+      if (VFS.exists(Filter.PatternRoot)) {
+        // If it exists, it's what the user meant.
+        DepCollector.maybeAddDependency(Filter.Input,
+                                        /*FromModule*/ false,
+                                        /*IsSystem*/ false,
+                                        /*IsModuleFile*/ false,
+                                        /*IsDirectModuleImport*/ false,
+                                        /*IsMissing*/ false);
+      }
+    } else {
+      if (VFS.exists(Filter.SearchRoot)) {
+        DoSearch(FM, Filter, DepCollector, Filter.SearchRoot,
+                 Filter.RootHandling == RootPatternScanType::Directory
+                     ? Flat
+                     : Recursive);
+      }
+    }
+  }
+
   void HasEmbed(SourceLocation, StringRef, bool,
                 OptionalFileEntryRef File) override {
     if (!File)
@@ -168,8 +263,8 @@ struct DepCollectorASTListener : public ASTReaderListener {
                                     /*IsDirectModuleImport*/ DirectlyImported,
                                     /*IsMissing*/ false);
   }
-  bool visitInputFile(StringRef Filename, bool IsSystem,
-                      bool IsOverridden, bool IsExplicitModule) override {
+  bool visitInputFile(StringRef Filename, bool IsSystem, bool IsOverridden,
+                      bool IsExplicitModule) override {
     if (IsOverridden || IsExplicitModule)
       return true;
 
@@ -228,7 +323,7 @@ bool DependencyCollector::sawDependency(StringRef Filename, bool FromModule,
          (needSystemDependencies() || !IsSystem);
 }
 
-DependencyCollector::~DependencyCollector() { }
+DependencyCollector::~DependencyCollector() {}
 void DependencyCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<DepCollectorPPCallbacks>(*this, PP));
   PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(

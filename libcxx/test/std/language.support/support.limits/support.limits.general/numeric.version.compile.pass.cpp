@@ -199,7 +199,7 @@
 #    error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_constexpr_numeric
 #    error "__cpp_lib_constexpr_numeric should be defined in c++26"
@@ -249,6 +249,56 @@
 #    error "__cpp_lib_saturation_arithmetic should have the value 202603L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_constexpr_numeric
+#    error "__cpp_lib_constexpr_numeric should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_numeric != 201911L
+#    error "__cpp_lib_constexpr_numeric should have the value 201911L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_gcd_lcm
+#    error "__cpp_lib_gcd_lcm should be defined in c++29"
+#  endif
+#  if __cpp_lib_gcd_lcm != 201606L
+#    error "__cpp_lib_gcd_lcm should have the value 201606L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_interpolate
+#    error "__cpp_lib_interpolate should be defined in c++29"
+#  endif
+#  if __cpp_lib_interpolate != 201902L
+#    error "__cpp_lib_interpolate should have the value 201902L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_parallel_algorithm
+#      error "__cpp_lib_parallel_algorithm should be defined in c++29"
+#    endif
+#    if __cpp_lib_parallel_algorithm != 201603L
+#      error "__cpp_lib_parallel_algorithm should have the value 201603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_parallel_algorithm
+#      error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_ranges_iota
+#    error "__cpp_lib_ranges_iota should be defined in c++29"
+#  endif
+#  if __cpp_lib_ranges_iota != 202202L
+#    error "__cpp_lib_ranges_iota should have the value 202202L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_saturation_arithmetic
+#    error "__cpp_lib_saturation_arithmetic should be defined in c++29"
+#  endif
+#  if __cpp_lib_saturation_arithmetic != 202603L
+#    error "__cpp_lib_saturation_arithmetic should have the value 202603L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

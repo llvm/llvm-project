@@ -1060,8 +1060,30 @@ void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
 /// \return \c true if we reached EOD or EOF while looking for a > token in
 ///         a concatenated header name and diagnosed it. \c false otherwise.
 bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
+  return LexHeaderNameWithExport(FilenameTok, nullptr, AllowMacroExpansion);
+}
+
+/// Lex a header-name token (including one formed from header-name-tokens if
+/// \p AllowMacroExpansion is \c true).
+///
+/// \param FilenameTok Filled in with the next token. On success, this will
+///        be either a header_name token. On failure, it will be whatever other
+///        token was found instead.
+/// \param MaybeExportTok Set if there is a token preceding the filename that
+///        is the keyword "export". Used for #depend export[opt] ...
+///        clauses.
+/// \param AllowMacroExpansion If \c true, allow the header name to be formed
+///        by macro expansion (concatenating tokens as necessary if the first
+///        token is a '<').
+/// \return \c true if we reached EOD or EOF while looking for a > token in
+///         a concatenated header name and diagnosed it. \c false otherwise.
+bool Preprocessor::LexHeaderNameWithExport(Token &FilenameTok,
+                                           bool *MaybeExportTok,
+                                           bool AllowMacroExpansion) {
   // Lex using header-name tokenization rules if tokens are being lexed from
   // a file. Just grab a token normally if we're in a macro expansion.
+  bool SeenExport = false;
+header_name_start:
   if (CurPPLexer) {
     // Avoid nested header-name lexing when macro expansion recurses
     // __has_include(__has_include))
@@ -1071,6 +1093,16 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
       CurPPLexer->LexIncludeFilename(FilenameTok);
   } else {
     Lex(FilenameTok);
+  }
+
+  if (!SeenExport && MaybeExportTok != nullptr) {
+    if (FilenameTok.is(tok::kw_export)) {
+      *MaybeExportTok = true;
+      SeenExport = true;
+      goto header_name_start;
+    } else {
+      *MaybeExportTok = false;
+    }
   }
 
   // This could be a <foo/bar.h> file coming from a macro expansion.  In this

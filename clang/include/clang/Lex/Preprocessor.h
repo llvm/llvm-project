@@ -17,6 +17,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/InputDependencyCollection.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
@@ -342,6 +343,10 @@ class Preprocessor {
 public:
   /// The kind of translation unit we are processing.
   const TranslationUnitKind TUKind;
+
+  /// The #depend dependency patterns seen in this translation unit
+  std::shared_ptr<InputDependencyCollection> InputDependencyPatterns =
+      std::make_shared<InputDependencyCollection>();
 
   /// Returns a pointer into the given file's buffer that's guaranteed
   /// to be between tokens. The returned pointer is always before \p Start.
@@ -1793,6 +1798,10 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
+  /// Lex a token, forming a header-name token if possible.
+  bool LexHeaderNameWithExport(Token &Result, bool *MaybeHasExport,
+                               bool AllowMacroExpansion = true);
+
   /// Lex the parameters for an #embed directive, returns nullopt on error.
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
@@ -2875,6 +2884,8 @@ private:
       const FileEntry *LookupFromFile, StringRef &LookupFilename,
       SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
       ModuleMap::KnownHeader &SuggestedModule, bool isAngled);
+  // Input dependency caching
+  void HandleDependDirective(SourceLocation HashLoc, Token &Tok);
   // Binary data inclusion
   void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok);
   void HandleEmbedDirectiveImpl(SourceLocation HashLoc,

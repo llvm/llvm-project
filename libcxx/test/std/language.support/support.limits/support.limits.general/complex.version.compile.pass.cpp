@@ -86,7 +86,7 @@
 #    error "__cpp_lib_constexpr_complex should have the value 201711L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_complex_udls
 #    error "__cpp_lib_complex_udls should be defined in c++26"
@@ -102,6 +102,22 @@
 #    error "__cpp_lib_constexpr_complex should have the value 201711L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_complex_udls
+#    error "__cpp_lib_complex_udls should be defined in c++29"
+#  endif
+#  if __cpp_lib_complex_udls != 201309L
+#    error "__cpp_lib_complex_udls should have the value 201309L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_complex
+#    error "__cpp_lib_constexpr_complex should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_complex != 201711L
+#    error "__cpp_lib_constexpr_complex should have the value 201711L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

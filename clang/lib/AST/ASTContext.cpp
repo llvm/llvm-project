@@ -953,6 +953,20 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
   addTranslationUnitDecl();
 }
 
+void ASTContext::setCurrentPreprocessorOptions(
+    const PreprocessorOptions &NewOpts) {
+  PPOpts = &NewOpts;
+}
+
+void ASTContext::setCurrentPreprocessorOptions(
+    PreprocessorOptions const *NewOpts) {
+  PPOpts = NewOpts;
+}
+
+PreprocessorOptions const *ASTContext::getCurrentPreprocessorOptions() const {
+  return PPOpts;
+}
+
 void ASTContext::cleanup() {
   // Release the DenseMaps associated with DeclContext objects.
   // FIXME: Is this the ideal solution?

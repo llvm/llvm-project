@@ -1,0 +1,290 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===---------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_EMBED
+#define _LIBCPP_EMBED
+
+/*
+    embed synopsis
+
+namespace std {
+
+  class file_not_found_error;
+
+  class dependency_error;
+
+  template <class T>
+consteval span<const T> embed(string_view resource_idenfier,
+  size_t offset = 0,
+  optional<size_t> limit = nullopt);
+
+  template <class T>
+consteval span<const T> embed(wstring_view resource_idenfier,
+  size_t offset = 0,
+  optional<size_t> limit = nullopt);
+
+  template <class T>
+consteval span<const T> embed(u8string_view resource_idenfier,
+  size_t offset = 0,
+  optional<size_t> limit = nullopt);
+
+  template <class T, size_t Limit>
+consteval span<const T, Limit> embed(string_view resource_idenfier,
+  size_t offset = 0);
+
+  template <class T, size_t Limit>
+consteval span<const , Limit> embed(wstring_view resource_idenfier,
+  size_t offset = 0);
+
+  template <class T, size_t Limit>
+consteval span<const T, Limit> embed(u8string_view resource_idenfier,
+  size_t offset = 0);
+
+} // namespace std
+
+*/
+
+#include <__assert>
+#include <__config>
+#include <__cstddef/byte.h>
+#include <__type_traits/is_same.h>
+#include <__verbose_abort>
+#include <optional>
+#include <source_location>
+#include <span>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <version>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#if __has_builtin(__builtin_std_embed) && _LIBCPP_STD_VER > 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+class file_not_found_error : public std::exception {
+private:
+  optional<string> __what;
+  u8string __u8what;
+  source_location __where;
+
+public:
+  consteval file_not_found_error(u8string_view __in_u8what,
+                                 source_location __in_where = source_location::current()) noexcept
+      : __what(), __u8what(__in_u8what), __where(std::move(__in_where)) {
+    // FIXME: we are just assuming the ordinary literal encoding can handle UTF-8.
+    const size_t __u8what_size = __u8what.size();
+    __what.emplace(__u8what_size, '\0');
+    string& __wh = *__what;
+    for (size_t __idx = 0; __idx < __u8what_size; ++__idx)
+      __wh[__idx] = static_cast<char>(__u8what[__idx]);
+  }
+
+  consteval file_not_found_error(string_view __in_what,
+                                 source_location __in_where = source_location::current()) noexcept
+      : __what(__in_what), __u8what(), __where(std::move(__in_where)) {
+    // FIXME: get specific about `__u8what` only containing UTF-8, or doing nothing when the ordinary literal encoding
+    // is not proper
+    const size_t __what_size = __what->size();
+    __u8what.resize(__what_size);
+    string& __wh = *__what;
+    for (size_t __idx = 0; __idx < __what_size; ++__idx)
+      __u8what[__idx] = __wh[__idx];
+  }
+
+  file_not_found_error(const file_not_found_error&) = default;
+  file_not_found_error(file_not_found_error&&)      = default;
+
+  file_not_found_error& operator=(const file_not_found_error&) = default;
+  file_not_found_error& operator=(file_not_found_error&&)      = default;
+
+  constexpr const char* what() const noexcept override { return __what ? __what->c_str() : ""; }
+  consteval u8string_view u8what() const noexcept { return __u8what; }
+  consteval source_location where() const noexcept { return __where; }
+};
+
+class dependency_error : public std::exception {
+private:
+  optional<string> __what;
+  u8string __u8what;
+  source_location __where;
+
+public:
+  consteval dependency_error(u8string_view __in_what, source_location __in_where = source_location::current()) noexcept
+      : __what(), __u8what(__in_what), __where(std::move(__in_where)) {
+    // FIXME: we are just assuming the ordinary literal encoding can handle UTF-8.
+    const size_t __u8what_size = __u8what.size();
+    __what.emplace(__u8what_size, '\0');
+    string& __wh = *__what;
+    for (size_t __idx = 0; __idx < __u8what_size; ++__idx)
+      __wh[__idx] = static_cast<char>(__u8what[__idx]);
+  }
+
+  consteval dependency_error(string_view __in_what, source_location __in_where = source_location::current()) noexcept
+      : __what(__in_what), __u8what(), __where(std::move(__in_where)) {
+    // FIXME: get specific about `__u8what` only containing UTF-8, or doing nothing when the ordinary literal encoding
+    // is not proper
+    const size_t __what_size = __what->size();
+    __u8what.resize(__what_size);
+    string& __wh = *__what;
+    for (size_t __idx = 0; __idx < __what_size; ++__idx)
+      __u8what[__idx] = __wh[__idx];
+  }
+
+  dependency_error(const dependency_error&) = default;
+  dependency_error(dependency_error&&)      = default;
+
+  dependency_error& operator=(const dependency_error&) = default;
+  dependency_error& operator=(dependency_error&&)      = default;
+
+  constexpr const char* what() const noexcept override { return __what ? __what->c_str() : ""; }
+  consteval u8string_view u8what() const noexcept { return __u8what; }
+  consteval source_location where() const noexcept { return __where; }
+};
+
+namespace __embed_detail {
+enum __builtin_embed_status {
+  __file_not_found        = 0,
+  __file_found            = 1,
+  __file_found_no_depends = 2,
+  __file_found_empty      = 3,
+};
+inline constexpr unsigned int __quoted_search_distance = 0b101;
+inline constexpr unsigned int __call_stack_distance    = 0b010;
+
+#  if defined(__cpp_constexpr_exceptions) && defined(__cpp_exceptions)
+#    define _LIBCPP_EMBED_FAIL_WITH(_TY, _MSG, _LOC) throw _TY(u8##_MSG, _LOC)
+#  else
+#    define _LIBCPP_EMBED_FAIL_WITH(_TY, _MSG, _LOC) _LIBCPP_VERBOSE_ABORT(_MSG)
+#  endif
+
+template <typename _Byte, size_t _Extent, typename _StrView>
+[[nodiscard]] consteval _LIBCPP_HIDE_FROM_ABI span<const _Byte, _Extent>
+__embed(const _StrView& __resource_identifier, size_t __offset, [[maybe_unused]] const optional<size_t>& __limit) {
+  static_assert(is_same_v<_Byte, unsigned char> || is_same_v<_Byte, char> || is_same_v<_Byte, byte>,
+                "embed type must be unqualified 'char', 'unsigned char', or 'byte'");
+  size_t __size      = 0;
+  _Byte const* __ptr = nullptr;
+  int __status       = -1;
+  if constexpr (_Extent != std::dynamic_extent) {
+    __ptr = __builtin_std_embed(
+        __quoted_search_distance,
+        __status,
+        __size,
+        __ptr,
+        __resource_identifier.size(),
+        __resource_identifier.data(),
+        __offset,
+        _Extent);
+  } else {
+    if (__limit) {
+      __ptr = __builtin_std_embed(
+          __quoted_search_distance,
+          __status,
+          __size,
+          __ptr,
+          __resource_identifier.size(),
+          __resource_identifier.data(),
+          __offset,
+          *__limit);
+    } else {
+      __ptr = __builtin_std_embed(
+          __quoted_search_distance,
+          __status,
+          __size,
+          __ptr,
+          __resource_identifier.size(),
+          __resource_identifier.data(),
+          __offset);
+    }
+  }
+  if (__status == __file_not_found) {
+    // FIXME: kind of cheating to use current() to do this, but that's how it is!
+#  if __has_builtin(__builtin_source_location_at)
+    // FIXME: kind of cheating to use current() to do this, but that's how it is!
+    auto __builtin_loc          = __builtin_source_location_at(__call_stack_distance);
+    [[maybe_unused]] auto __loc = source_location::current(__builtin_loc);
+#  else
+    [[maybe_unused]] auto __loc = source_location::current();
+#  endif
+    _LIBCPP_EMBED_FAIL_WITH(file_not_found_error, "file not found", __loc);
+  } else if (__status == __file_found_no_depends) {
+#  if __has_builtin(__builtin_source_location_at)
+    // FIXME: kind of cheating to use current() to do this, but that's how it is!
+    auto __builtin_loc          = __builtin_source_location_at(__call_stack_distance);
+    [[maybe_unused]] auto __loc = source_location::current(__builtin_loc);
+#  else
+    [[maybe_unused]] auto __loc = source_location::current();
+#  endif
+    _LIBCPP_EMBED_FAIL_WITH(dependency_error,
+                            "file found but not appropriately '#depend'-ed on",
+                            __loc);
+  }
+  if constexpr (_Extent != std::dynamic_extent) {
+    if (_Extent > __size) {
+      _LIBCPP_VERBOSE_ABORT("the fixed-size span extent is larger "
+                            "than the resource data size");
+    }
+    __size = _Extent;
+  }
+  if (__status == __file_found_empty) {
+    return span<const _Byte, _Extent>();
+  }
+  _LIBCPP_ASSERT(__status == __file_found,
+                 "status value should be `1`, indicating a "
+                 "successful finding of a file with data that has been '#depend <>`-ed on");
+  return span<const _Byte, _Extent>(__ptr, __size);
+}
+
+#  undef _LIBCPP_EMBED_FAIL
+#  undef _LIBCPP_EMBED_FAIL_WITH
+
+} // namespace __embed_detail
+
+template <typename _Byte = byte>
+[[nodiscard]] consteval span<const _Byte>
+embed(string_view __resource_identifier, size_t __offset = 0, optional<size_t> __limit = nullopt) {
+  return __embed_detail::__embed<_Byte, dynamic_extent>(__resource_identifier, __offset, __limit);
+}
+
+template <typename _Byte = byte>
+[[nodiscard]] consteval span<const _Byte>
+embed(wstring_view __resource_identifier, size_t __offset = 0, optional<size_t> __limit = nullopt) {
+  return __embed_detail::__embed<_Byte, dynamic_extent>(__resource_identifier, __offset, __limit);
+}
+
+template <typename _Byte = byte>
+[[nodiscard]] consteval span<const _Byte>
+embed(u8string_view __resource_identifier, size_t __offset = 0, optional<size_t> __limit = nullopt) {
+  return __embed_detail::__embed<_Byte, dynamic_extent>(__resource_identifier, __offset, __limit);
+}
+
+template <size_t _Limit, typename _Byte = byte>
+[[nodiscard]] consteval span<const _Byte, _Limit> embed(string_view __resource_identifier, size_t __offset = 0) {
+  return __embed_detail::__embed<_Byte, _Limit>(__resource_identifier, __offset, nullopt);
+}
+
+template <size_t _Limit, typename _Byte = byte>
+[[nodiscard]] consteval span<const _Byte, _Limit> embed(wstring_view __resource_identifier, size_t __offset = 0) {
+  return __embed_detail::__embed<_Byte, _Limit>(__resource_identifier, __offset, nullopt);
+}
+
+template <size_t _Limit, typename _Byte = byte>
+[[nodiscard]] consteval span<const _Byte, _Limit> embed(u8string_view __resource_identifier, size_t __offset = 0) {
+  return __embed_detail::__embed<_Byte, _Limit>(__resource_identifier, __offset, nullopt);
+}
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // __has_builtin(__builtin_std_embed)
+
+#endif // _LIBCPP_EMBED

@@ -22,8 +22,10 @@
 // CHECK-NEXT: note: use 'gnu++20' for 'ISO C++ 2020 DIS with GNU extensions' standard
 // CHECK-NEXT: note: use 'c++23' for 'ISO C++ 2023 DIS' standard
 // CHECK-NEXT: note: use 'gnu++23' for 'ISO C++ 2023 DIS with GNU extensions' standard
-// CHECK-NEXT: note: use 'c++2c' or 'c++26' for 'Working draft for C++2c' standard
-// CHECK-NEXT: note: use 'gnu++2c' or 'gnu++26' for 'Working draft for C++2c with GNU extensions' standard
+// CHECK-NEXT: note: use 'c++2c' or 'c++26' for 'Working draft for C++26' standard
+// CHECK-NEXT: note: use 'gnu++2c' or 'gnu++26' for 'Working draft for C++26 with GNU extensions' standard
+// CHECK-NEXT: note: use 'c++2d' or 'c++29' for 'Working draft for C++2d' standard
+// CHECK-NEXT: note: use 'gnu++2d' or 'gnu++29' for 'Working draft for C++2d with GNU extensions' standard
 
 // Make sure that no other output is present.
 // CHECK-NOT: {{^.+$}}

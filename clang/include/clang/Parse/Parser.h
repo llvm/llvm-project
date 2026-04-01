@@ -3897,6 +3897,7 @@ private:
   bool isRevertibleTypeTrait(const IdentifierInfo *Id,
                              clang::tok::TokenKind *Kind = nullptr);
 
+  // clang-format off
   /// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
   /// a unary-expression.
   ///
@@ -3967,6 +3968,7 @@ private:
   /// [GNU]   '__builtin_LINE' '(' ')'
   /// [CLANG] '__builtin_COLUMN' '(' ')'
   /// [GNU]   '__builtin_source_location' '(' ')'
+  /// [CLANG] '__builtin_source_location_at' '(' assign-expr ')'
   /// [GNU]   '__builtin_types_compatible_p' '(' type-name ',' type-name ')'
   /// [GNU]   '__null'
   /// [OBJC]  '[' objc-message-expr ']'
@@ -4149,6 +4151,7 @@ private:
   /// \endverbatim
   ExprResult ParseUnaryExprOrTypeTraitExpression();
 
+  // clang-format off
   /// ParseBuiltinPrimaryExpression
   ///
   /// \verbatim
@@ -4165,6 +4168,7 @@ private:
   /// [GNU]   '__builtin_LINE' '(' ')'
   /// [CLANG] '__builtin_COLUMN' '(' ')'
   /// [GNU]   '__builtin_source_location' '(' ')'
+  /// [CLANG] '__builtin_source_location_at' '(' assign-expr ')'
   /// [OCL]   '__builtin_astype' '(' assignment-expression ',' type-name ')'
   ///
   /// [GNU] offsetof-member-designator:
@@ -4172,6 +4176,7 @@ private:
   /// [GNU]   offsetof-member-designator '.' identifier
   /// [GNU]   offsetof-member-designator '[' expression ']'
   /// \endverbatim
+  // clang-format on
   ExprResult ParseBuiltinPrimaryExpression();
 
   /// Parse a __builtin_sycl_unique_stable_name expression.  Accepts a type-id

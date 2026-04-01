@@ -29,6 +29,7 @@ class MacroDefinition;
 class MacroDirective;
 class MacroArgs;
 struct LexEmbedParametersResult;
+struct PatternFilter;
 
 /// This interface provides a way to observe the actions of the
 /// preprocessor as it does its thing.
@@ -174,6 +175,12 @@ public:
                                   const Module *SuggestedModule,
                                   bool ModuleImported,
                                   SrcMgr::CharacteristicKind FileType) {}
+
+  /// Hook called when a 'depend' directive is read.
+  virtual void DependDirective(SourceLocation HashLoc, const Token &DependTok,
+                               StringRef FileName, bool IsAngled,
+                               const PatternFilter &Filter,
+                               OptionalFileEntryRef CurrentFile) {}
 
   /// Callback invoked whenever a submodule was entered.
   ///
@@ -563,6 +570,17 @@ public:
     Second->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
                                FilenameRange, File, SearchPath, RelativePath,
                                SuggestedModule, ModuleImported, FileType);
+  }
+
+  /// Hook called whenever an \#depend is seen.
+  void DependDirective(SourceLocation HashLoc, const Token &DependTok,
+                       StringRef Pattern, bool IsAngled,
+                       const PatternFilter &Filter,
+                       OptionalFileEntryRef CurrentFile) override {
+    First->DependDirective(HashLoc, DependTok, Pattern, IsAngled, Filter,
+                           CurrentFile);
+    Second->DependDirective(HashLoc, DependTok, Pattern, IsAngled, Filter,
+                            CurrentFile);
   }
 
   void EnteredSubmodule(Module *M, SourceLocation ImportLoc,

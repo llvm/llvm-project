@@ -763,12 +763,13 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
 
-  if (ToLoad >= LoadASTOnly)
+  if (ToLoad >= LoadASTOnly) {
     AST->Ctx = llvm::makeIntrusiveRefCnt<ASTContext>(
         *AST->LangOpts, AST->getSourceManager(), AST->PP->getIdentifierTable(),
         AST->PP->getSelectorTable(), AST->PP->getBuiltinInfo(),
         AST->getTranslationUnitKind());
-
+    AST->Ctx->InputDependencyPatterns = AST->PP->InputDependencyPatterns;
+  }
   DisableValidationForModuleKind disableValid =
       DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
@@ -806,6 +807,9 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   if (AST->Ctx) {
     // Initialize the ASTContext
     AST->Ctx->InitBuiltinTypes(*AST->Target);
+
+    // Set preprocessor options
+    AST->Ctx->setCurrentPreprocessorOptions(AST->PP->getPreprocessorOpts());
 
     // Adjust printing policy based on language options.
     AST->Ctx->setPrintingPolicy(PrintingPolicy(*AST->LangOpts));

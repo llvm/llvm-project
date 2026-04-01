@@ -311,6 +311,7 @@ protected:
     ASTContext Context(OpenCLLangOpts, SourceMgr, PP.getIdentifierTable(),
                        PP.getSelectorTable(), PP.getBuiltinInfo(), PP.TUKind);
     Context.InitBuiltinTypes(*Target);
+    Context.setCurrentPreprocessorOptions(PP.getPreprocessorOpts());
 
     ASTConsumer Consumer;
     Sema S(PP, Context, Consumer);

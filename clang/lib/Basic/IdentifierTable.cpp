@@ -442,6 +442,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
 
   CASE( 6, 'a', 's', assert);
   CASE( 6, 'd', 'f', define);
+  CASE( 6, 'd', 'p', depend);
   CASE( 6, 'i', 'n', ifndef);
   CASE( 6, 'i', 'p', import);
   CASE( 6, 'm', 'd', module);

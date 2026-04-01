@@ -4029,6 +4029,13 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinCountedByRef(TheCall))
       return ExprError();
     break;
+  case Builtin::BI__builtin_std_embed:
+    // while we do not have Custom Typechecking,
+    // we have a `...` signature, so we do need to
+    // at least gently inspect some of the arguments
+    if (BuiltinStdEmbed(TheCall))
+      return ExprError();
+    break;
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
@@ -6949,6 +6956,139 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
   }
 
   TheCall->setType(Context.getPointerType(Context.VoidTy));
+  return false;
+}
+
+bool Sema::BuiltinStdEmbed(CallExpr *TheCall) {
+  const bool HasProperArgCount = !checkArgCountAtLeast(TheCall, 7);
+  const bool HasExtraLimitArg =
+      !checkArgCountAtMost(TheCall, 8) && TheCall->getNumArgs() == 8;
+  if (!HasProperArgCount && !HasExtraLimitArg)
+    return true;
+
+  const Expr *Locus = TheCall->getArg(0);
+  const Expr *StatusRef = TheCall->getArg(1);
+  const Expr *SizeRef = TheCall->getArg(2);
+  const unsigned int PtrRefIndex = 3;
+  const Expr *PtrRef = TheCall->getArg(PtrRefIndex);
+  const unsigned int ResourceNameSizeIndex = 4;
+  const Expr *ResourceNameSize = TheCall->getArg(ResourceNameSizeIndex);
+  const unsigned int ResourceNamePtrIndex = 5;
+  const Expr *ResourceNamePtr = TheCall->getArg(ResourceNamePtrIndex);
+  const unsigned int OffsetIndex = 6;
+  const Expr *Offset = TheCall->getArg(OffsetIndex);
+  const unsigned int LimitIndex = 7;
+  const Expr *Limit = HasExtraLimitArg ? TheCall->getArg(LimitIndex) : nullptr;
+  const uint64_t CharSize = Context.getCharWidth();
+
+  // Locus argument type
+  QualType LocusTy = Locus->getType();
+  if (!LocusTy->isIntegralOrUnscopedEnumerationType()) {
+    Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_std_embed_argument)
+        << Locus << "an integral type with a non-negative value"
+        << Locus->getSourceRange();
+    return true;
+  }
+
+  // Status argument type
+  QualType StatusRefTy = StatusRef->getType();
+  if ((!StatusRefTy->isIntegralOrUnscopedEnumerationType()) ||
+      StatusRefTy.isConstant(Context) || !StatusRef->isLValue()) {
+    Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_std_embed_argument)
+        << StatusRef << "'int&'" << StatusRef->getSourceRange();
+    return true;
+  }
+
+  // Size argument type
+  QualType SizeRefTy = SizeRef->getType();
+  if ((!SizeRefTy->isIntegralOrUnscopedEnumerationType()) ||
+      SizeRefTy.isConstant(Context) || !SizeRef->isLValue()) {
+    Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_std_embed_argument)
+        << SizeRef << "'size_t&'" << SizeRef->getSourceRange();
+    return true;
+  }
+
+  // value pointer, has to be non-constant (but pointer to `const`).
+  // tells us what the type for the builtin return is as well.
+  QualType PtrRefTy = PtrRef->getType();
+  if (!PtrRefTy->isPointerType() || PtrRefTy.isConstant(Context)) {
+    Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_std_embed_argument)
+        << PtrRefTy
+        << "a pointer to const 'char', 'unsigned char', or 'std::byte'"
+        << PtrRef->getSourceRange();
+    return true;
+  }
+  QualType ArrElementTy = PtrRefTy->getPointeeType();
+  if (!ArrElementTy.isConstant(Context) ||
+      !(Context.getTypeSize(ArrElementTy) == CharSize &&
+        Context.getTypeAlign(ArrElementTy) == CharSize &&
+        ArrElementTy->isIntegralOrEnumerationType())) {
+    Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_std_embed_argument)
+        << PtrRefTy
+        << "a pointer to const 'char', 'unsigned char', or 'std::byte'"
+        << PtrRef->getSourceRange();
+    return true;
+  }
+
+  // Next argument is size of the string
+  QualType ResourceNameSizeTy = ResourceNameSize->getType();
+  if (!ResourceNameSizeTy->isIntegralOrEnumerationType()) {
+    Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_std_embed_argument)
+        << ResourceNameSizeTy << "an integral type with a non-negative value"
+        << ResourceNameSize->getSourceRange();
+    return true;
+  }
+
+  // Pointer to an appropriate string type
+  // (char, wchar_t, or char8_t)
+  QualType ResourceNamePtrTy = ResourceNamePtr->getType();
+  if (!ResourceNamePtrTy->isPointerType()) {
+    Diag(ResourceNamePtr->getBeginLoc(),
+         diag::err_invalid_builtin_std_embed_argument)
+        << ResourceNamePtrTy
+        << "a pointer to (possibly qualified) 'char', 'wchar_t', or 'char8_t'"
+        << ResourceNamePtr->getSourceRange();
+    return true;
+  }
+  QualType ResourceNameCharTy(ResourceNamePtrTy->getPointeeOrArrayElementType(),
+                              0);
+  if (!ResourceNameCharTy->isCharType() && !ResourceNameCharTy->isChar8Type() &&
+      !ResourceNameCharTy->isWideCharType()) {
+    Diag(ResourceNamePtr->getBeginLoc(),
+         diag::err_invalid_builtin_std_embed_argument)
+        << ResourceNamePtrTy
+        << "a pointer to (possibly qualified) 'char', 'wchar_t', or 'char8_t'"
+        << ResourceNamePtr->getSourceRange();
+    return true;
+  }
+
+  // Check offset is an integer-convertible argument
+  QualType OffsetTy = Offset->getType();
+  if (!OffsetTy->isIntegralOrEnumerationType()) {
+    Diag(TheCall->getBeginLoc(),
+         diag::err_typecheck_converted_constant_expression)
+        << OffsetTy << "a non-negative integer of integral type"
+        << Offset->getSourceRange();
+    return true;
+  }
+
+  if (HasExtraLimitArg) {
+    // If present, final argument is offset
+    QualType LimitTy = Limit->getType();
+    if (!LimitTy->isIntegralOrEnumerationType()) {
+      Diag(TheCall->getBeginLoc(),
+           diag::err_typecheck_converted_constant_expression)
+          << LimitTy << "a non-negative integer of integral type"
+          << Limit->getSourceRange();
+      return true;
+    }
+  }
+
+  // return the same type as was put in; we don't actually do anything with
+  // the pointer-reference type other than to use it for
+  // proper typesetting.
+  TheCall->setType(PtrRefTy);
+
   return false;
 }
 

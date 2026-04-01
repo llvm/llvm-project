@@ -3784,9 +3784,10 @@ public:
   ExprResult RebuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
                                   SourceLocation BuiltinLoc,
                                   SourceLocation RPLoc,
-                                  DeclContext *ParentContext) {
+                                  DeclContext *ParentContext,
+                                  Expr *CallStackDistance) {
     return getSema().BuildSourceLocExpr(Kind, ResultTy, BuiltinLoc, RPLoc,
-                                        ParentContext);
+                                        ParentContext, CallStackDistance);
   }
 
   ExprResult RebuildConceptSpecializationExpr(NestedNameSpecifierLoc NNS,
@@ -14512,9 +14513,9 @@ ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
   if (!getDerived().AlwaysRebuild() && !NeedRebuildFunc)
     return E;
 
-  return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
-                                           E->getBeginLoc(), E->getEndLoc(),
-                                           getSema().CurContext);
+  return getDerived().RebuildSourceLocExpr(
+      E->getIdentKind(), E->getType(), E->getBeginLoc(), E->getEndLoc(),
+      getSema().CurContext, E->getCallStackDistance());
 }
 
 template <typename Derived>

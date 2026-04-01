@@ -4466,8 +4466,8 @@ public:
 /// uniquified by value within a translation unit.
 ///
 /// These is currently only used to back the LValue returned by
-/// __builtin_source_location, but could potentially be used for other similar
-/// situations in the future.
+/// __builtin_source_location and __builtin_source_location_at, but could
+/// potentially be used for other similar situations in the future.
 class UnnamedGlobalConstantDecl : public ValueDecl,
                                   public Mergeable<UnnamedGlobalConstantDecl>,
                                   public llvm::FoldingSetNode {

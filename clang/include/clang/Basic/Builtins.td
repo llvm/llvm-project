@@ -1219,6 +1219,13 @@ def GetVtablePointer : LangBuiltin<"CXX_LANG"> {
   let Prototype = "void*(void*)";
 }
 
+// p1040 std::embed
+def StdEmbed : Builtin {
+  let Spellings = ["__builtin_std_embed"];
+  let Attributes = [NoThrow, Const, Consteval];
+  let Prototype = "void const*(unsigned int, int&, size_t&, ...)";
+}
+
 // GCC exception builtins
 def EHReturn : Builtin {
   let Spellings = ["__builtin_eh_return"];

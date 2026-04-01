@@ -410,8 +410,9 @@ def CXXPre23CompatPedantic :
 def CXXPre26Compat : DiagGroup<"pre-c++26-compat">;
 def CXXPre26CompatPedantic :
   DiagGroup<"pre-c++26-compat-pedantic", [CXXPre26Compat]>;
-def : DiagGroup<"pre-c++2c-compat", [CXXPre26Compat]>;
-def : DiagGroup<"pre-c++2c-compat-pedantic", [CXXPre26CompatPedantic]>;
+def CXXPre29Compat : DiagGroup<"pre-c++2d-compat">;
+def CXXPre29CompatPedantic :
+  DiagGroup<"pre-c++2d-compat-pedantic", [CXXPre29Compat]>;
 
 def CXX98CompatBindToTemporaryCopy :
   DiagGroup<"c++98-compat-bind-to-temporary-copy">;
@@ -527,6 +528,8 @@ def : DiagGroup<"c++2a-compat-pedantic", [CXX20CompatPedantic]>;
 def CXX23Compat : DiagGroup<"c++23-compat", [CXXPre26Compat]>;
 
 def CXX26Compat : DiagGroup<"c++2c-compat", [DeleteIncomplete]>;
+
+def CXX29Compat : DiagGroup<"c++2d-compat", [DeleteIncomplete]>;
 
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
@@ -1572,12 +1575,17 @@ def CXX23 : DiagGroup<"c++23-extensions", [CXX23AttrsOnLambda]>;
 // earlier C++ versions.
 def CXX26 : DiagGroup<"c++26-extensions">;
 
+// A warning group for warnings about using C++29 features as extensions in
+// earlier C++ versions.
+def CXX29 : DiagGroup<"c++29-extensions">;
+
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
 def : DiagGroup<"c++1z-extensions", [CXX17]>;
 def : DiagGroup<"c++2a-extensions", [CXX20]>;
 def : DiagGroup<"c++2b-extensions", [CXX23]>;
-def : DiagGroup<"c++2c-extensions", [CXX26]>;
+def CXX2C : DiagGroup<"c++2c-extensions", [CXX26]>;
+def CXX2D : DiagGroup<"c++2d-extensions", [CXX29]>;
 
 def DelegatingCtorCycles :
   DiagGroup<"delegating-ctor-cycles">;

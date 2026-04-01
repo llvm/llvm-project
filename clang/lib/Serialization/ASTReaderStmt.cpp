@@ -1381,6 +1381,7 @@ void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
   E->BuiltinLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
   E->SourceLocExprBits.Kind = Record.readInt();
+  E->CallStackDistance = Record.readExpr();
 }
 
 void ASTStmtReader::VisitEmbedExpr(EmbedExpr *E) {

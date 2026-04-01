@@ -534,7 +534,7 @@
 #    error "__cpp_lib_transparent_operators should have the value 201510L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_addressof_constexpr
 #    error "__cpp_lib_addressof_constexpr should be defined in c++26"
@@ -675,6 +675,147 @@
 #    error "__cpp_lib_transparent_operators should have the value 201510L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_addressof_constexpr
+#    error "__cpp_lib_addressof_constexpr should be defined in c++29"
+#  endif
+#  if __cpp_lib_addressof_constexpr != 201603L
+#    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_allocate_at_least
+#    error "__cpp_lib_allocate_at_least should be defined in c++29"
+#  endif
+#  if __cpp_lib_allocate_at_least != 202302L
+#    error "__cpp_lib_allocate_at_least should have the value 202302L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_allocator_traits_is_always_equal
+#    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++29"
+#  endif
+#  if __cpp_lib_allocator_traits_is_always_equal != 201411L
+#    error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_assume_aligned
+#    error "__cpp_lib_assume_aligned should be defined in c++29"
+#  endif
+#  if __cpp_lib_assume_aligned != 201811L
+#    error "__cpp_lib_assume_aligned should have the value 201811L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_atomic_value_initialization
+#    error "__cpp_lib_atomic_value_initialization should be defined in c++29"
+#  endif
+#  if __cpp_lib_atomic_value_initialization != 201911L
+#    error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_dynamic_alloc
+#    error "__cpp_lib_constexpr_dynamic_alloc should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_dynamic_alloc != 201907L
+#    error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_memory
+#    error "__cpp_lib_constexpr_memory should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_memory != 202202L
+#    error "__cpp_lib_constexpr_memory should have the value 202202L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_enable_shared_from_this
+#    error "__cpp_lib_enable_shared_from_this should be defined in c++29"
+#  endif
+#  if __cpp_lib_enable_shared_from_this != 201603L
+#    error "__cpp_lib_enable_shared_from_this should have the value 201603L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_is_sufficiently_aligned
+#    error "__cpp_lib_is_sufficiently_aligned should be defined in c++29"
+#  endif
+#  if __cpp_lib_is_sufficiently_aligned != 202411L
+#    error "__cpp_lib_is_sufficiently_aligned should have the value 202411L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_make_unique
+#    error "__cpp_lib_make_unique should be defined in c++29"
+#  endif
+#  if __cpp_lib_make_unique != 201304L
+#    error "__cpp_lib_make_unique should have the value 201304L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_out_ptr
+#    error "__cpp_lib_out_ptr should be defined in c++29"
+#  endif
+#  if __cpp_lib_out_ptr != 202311L
+#    error "__cpp_lib_out_ptr should have the value 202311L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_ranges
+#    error "__cpp_lib_ranges should be defined in c++29"
+#  endif
+#  if __cpp_lib_ranges != 202406L
+#    error "__cpp_lib_ranges should have the value 202406L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_raw_memory_algorithms
+#    error "__cpp_lib_raw_memory_algorithms should be defined in c++29"
+#  endif
+#  if __cpp_lib_raw_memory_algorithms != 201606L
+#    error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_shared_ptr_arrays
+#    error "__cpp_lib_shared_ptr_arrays should be defined in c++29"
+#  endif
+#  if __cpp_lib_shared_ptr_arrays != 201707L
+#    error "__cpp_lib_shared_ptr_arrays should have the value 201707L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_shared_ptr_weak_type
+#    error "__cpp_lib_shared_ptr_weak_type should be defined in c++29"
+#  endif
+#  if __cpp_lib_shared_ptr_weak_type != 201606L
+#    error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_smart_ptr_for_overwrite
+#    error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++29"
+#  endif
+#  if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#    error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_smart_ptr_owner_equality
+#      error "__cpp_lib_smart_ptr_owner_equality should be defined in c++29"
+#    endif
+#    if __cpp_lib_smart_ptr_owner_equality != 202306L
+#      error "__cpp_lib_smart_ptr_owner_equality should have the value 202306L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_smart_ptr_owner_equality
+#      error "__cpp_lib_smart_ptr_owner_equality should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_to_address
+#    error "__cpp_lib_to_address should be defined in c++29"
+#  endif
+#  if __cpp_lib_to_address != 201711L
+#    error "__cpp_lib_to_address should have the value 201711L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_transparent_operators
+#    error "__cpp_lib_transparent_operators should be defined in c++29"
+#  endif
+#  if __cpp_lib_transparent_operators != 201510L
+#    error "__cpp_lib_transparent_operators should have the value 201510L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

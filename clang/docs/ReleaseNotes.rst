@@ -193,6 +193,9 @@ C++ Language Changes
 - ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
 - ``auto`` parameters are now available in all C++ language modes as an extension.
 
+C++2d Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

@@ -392,7 +392,7 @@
 #    error "__cpp_lib_to_string should not be defined before c++26"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++26"
@@ -510,6 +510,124 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_allocator_traits_is_always_equal
+#    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++29"
+#  endif
+#  if __cpp_lib_allocator_traits_is_always_equal != 201411L
+#    error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++29"
+#  endif
+
+#  if defined(__cpp_char8_t)
+#    ifndef __cpp_lib_char8_t
+#      error "__cpp_lib_char8_t should be defined in c++29"
+#    endif
+#    if __cpp_lib_char8_t != 201907L
+#      error "__cpp_lib_char8_t should have the value 201907L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_char8_t
+#      error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_constexpr_string
+#    error "__cpp_lib_constexpr_string should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_string != 201907L
+#    error "__cpp_lib_constexpr_string should have the value 201907L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_containers_ranges
+#    error "__cpp_lib_containers_ranges should be defined in c++29"
+#  endif
+#  if __cpp_lib_containers_ranges != 202202L
+#    error "__cpp_lib_containers_ranges should have the value 202202L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_default_template_type_for_algorithm_values
+#      error "__cpp_lib_default_template_type_for_algorithm_values should be defined in c++29"
+#    endif
+#    if __cpp_lib_default_template_type_for_algorithm_values != 202403L
+#      error "__cpp_lib_default_template_type_for_algorithm_values should have the value 202403L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_default_template_type_for_algorithm_values
+#      error "__cpp_lib_default_template_type_for_algorithm_values should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_erase_if
+#    error "__cpp_lib_erase_if should be defined in c++29"
+#  endif
+#  if __cpp_lib_erase_if != 202002L
+#    error "__cpp_lib_erase_if should have the value 202002L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_nonmember_container_access
+#    error "__cpp_lib_nonmember_container_access should be defined in c++29"
+#  endif
+#  if __cpp_lib_nonmember_container_access != 201411L
+#    error "__cpp_lib_nonmember_container_access should have the value 201411L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_starts_ends_with
+#    error "__cpp_lib_starts_ends_with should be defined in c++29"
+#  endif
+#  if __cpp_lib_starts_ends_with != 201711L
+#    error "__cpp_lib_starts_ends_with should have the value 201711L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_string_contains
+#    error "__cpp_lib_string_contains should be defined in c++29"
+#  endif
+#  if __cpp_lib_string_contains != 202011L
+#    error "__cpp_lib_string_contains should have the value 202011L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_string_resize_and_overwrite
+#    error "__cpp_lib_string_resize_and_overwrite should be defined in c++29"
+#  endif
+#  if __cpp_lib_string_resize_and_overwrite != 202110L
+#    error "__cpp_lib_string_resize_and_overwrite should have the value 202110L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should be defined in c++29"
+#  endif
+#  if __cpp_lib_string_subview != 202506L
+#    error "__cpp_lib_string_subview should have the value 202506L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_string_udls
+#    error "__cpp_lib_string_udls should be defined in c++29"
+#  endif
+#  if __cpp_lib_string_udls != 201304L
+#    error "__cpp_lib_string_udls should have the value 201304L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_string_view
+#    error "__cpp_lib_string_view should be defined in c++29"
+#  endif
+#  if __cpp_lib_string_view != 202403L
+#    error "__cpp_lib_string_view should have the value 202403L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_to_string
+#      error "__cpp_lib_to_string should be defined in c++29"
+#    endif
+#    if __cpp_lib_to_string != 202306L
+#      error "__cpp_lib_to_string should have the value 202306L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_to_string
+#      error "__cpp_lib_to_string should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

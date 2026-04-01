@@ -19,6 +19,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/ResourceSearch.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -1193,68 +1194,12 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
                                                    bool isAngled,
                                                    bool OpenFile) {
   FileManager &FM = this->getFileManager();
-  if (llvm::sys::path::is_absolute(Filename)) {
-    // lookup path or immediately fail
-    return FM.getOptionalFileRef(Filename, OpenFile, /*CacheFailure=*/true,
-                                 /*IsText=*/false);
-  }
-
-  auto SeparateComponents = [](SmallVectorImpl<char> &LookupPath,
-                               StringRef StartingFrom, StringRef FileName,
-                               bool RemoveInitialFileComponentFromLookupPath) {
-    llvm::sys::path::native(StartingFrom, LookupPath);
-    if (RemoveInitialFileComponentFromLookupPath)
-      llvm::sys::path::remove_filename(LookupPath);
-    if (!LookupPath.empty() &&
-        !llvm::sys::path::is_separator(LookupPath.back())) {
-      LookupPath.push_back(llvm::sys::path::get_separator().front());
-    }
-    LookupPath.append(FileName.begin(), FileName.end());
-  };
-
-  // Otherwise, it's search time!
-  SmallString<512> LookupPath;
-  // Non-angled lookup
+  OptionalFileEntryRef LookupFromFile = std::nullopt;
   if (!isAngled) {
-    OptionalFileEntryRef LookupFromFile = getCurrentFileLexer()->getFileEntry();
-    if (LookupFromFile) {
-      // Use file-based lookup.
-      SmallString<1024> TmpDir;
-      TmpDir = LookupFromFile->getDir().getName();
-      llvm::sys::path::append(TmpDir, Filename);
-      if (!TmpDir.empty()) {
-        OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
-            TmpDir, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
-        if (ShouldBeEntry)
-          return ShouldBeEntry;
-      }
-    }
-
-    // Otherwise, do working directory lookup.
-    LookupPath.clear();
-    auto MaybeWorkingDirEntry = FM.getOptionalDirectoryRef(".");
-    if (MaybeWorkingDirEntry) {
-      DirectoryEntryRef WorkingDirEntry = *MaybeWorkingDirEntry;
-      StringRef WorkingDir = WorkingDirEntry.getName();
-      if (!WorkingDir.empty()) {
-        SeparateComponents(LookupPath, WorkingDir, Filename, false);
-        OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
-            LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
-        if (ShouldBeEntry)
-          return ShouldBeEntry;
-      }
-    }
+    LookupFromFile = getCurrentFileLexer()->getFileEntry();
   }
-
-  for (const auto &Entry : PPOpts.EmbedEntries) {
-    LookupPath.clear();
-    SeparateComponents(LookupPath, Entry, Filename, false);
-    OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
-        LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
-    if (ShouldBeEntry)
-      return ShouldBeEntry;
-  }
-  return std::nullopt;
+  return LookupFileWithStdVec(Filename, isAngled, OpenFile, FM,
+                              PPOpts.EmbedEntries, LookupFromFile);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1355,6 +1300,7 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp___include_macros:
       case tok::pp_pragma:
       case tok::pp_embed:
+      case tok::pp_depend:
       case tok::pp_module:
       case tok::pp___preprocessed_module:
       case tok::pp___preprocessed_import:
@@ -1491,6 +1437,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIdentSCCSDirective(Result);
     case tok::pp_embed:
       return HandleEmbedDirective(Introducer.getLocation(), Result);
+    case tok::pp_depend:
+      return HandleDependDirective(Introducer.getLocation(), Result);
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
       break;
@@ -4196,6 +4144,54 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
   StringRef FilenameToGo =
       StringRef(static_cast<char *>(Mem), OriginalFilename.size());
   HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents, FilenameToGo);
+}
+
+void Preprocessor::HandleDependDirective(SourceLocation HashLoc,
+                                         Token &DependTok) {
+  // Give the usual extension/compatibility warnings.
+  if (!LangOpts.CPlusPlus29)
+    Diag(DependTok, diag::ext_pp_depend_directive);
+
+  // this unfortunately has no meaning but it's part of the grammar for the
+  // future so we should parse it normally
+  bool IsExported = false;
+  Token PatternTok;
+  // Parse the pattern header-name, with a potential skip for export keyword
+  if (LexHeaderNameWithExport(PatternTok, &IsExported)) {
+    return;
+  }
+
+  if (PatternTok.isNot(tok::header_name)) {
+    Diag(PatternTok.getLocation(), diag::err_pp_expects_pattern);
+    if (PatternTok.isNot(tok::eod))
+      DiscardUntilEndOfDirective();
+    return;
+  }
+
+  Token EoDTok;
+  LexNonComment(EoDTok);
+  if (!EoDTok.isNot(tok::eod) && !EoDTok.isNot(tok::eof)) {
+    Diag(PatternTok.getLocation(), diag::err_pp_expected_eol);
+    DiscardUntilEndOfDirective();
+    return;
+  }
+
+  SmallString<256> PatternBuffer;
+  StringRef Pattern = getSpelling(PatternTok, PatternBuffer);
+  bool IsAngled = GetIncludeFilenameSpelling(PatternTok.getLocation(), Pattern);
+  // Every pattern is local to where it was found, so prepend the current
+  // directory of the file if it's a non-absolute path from the perspective of
+  // this current header file
+  OptionalFileEntryRef CurrentFile = std::nullopt;
+  if (IsFileLexer()) {
+    CurrentFile = getCurrentFileLexer()->getFileEntry();
+  }
+  const PatternFilter &Filter = InputDependencyPatterns->Add(
+      Pattern.str(), IsAngled, IsExported, getFileManager(),
+      PPOpts.EmbedEntries, CurrentFile);
+  if (Callbacks)
+    Callbacks->DependDirective(HashLoc, DependTok, Pattern, IsAngled, Filter,
+                               CurrentFile);
 }
 
 /// HandleCXXImportDirective - Handle the C++ modules import directives
