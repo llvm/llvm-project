@@ -933,7 +933,7 @@ def OpCooperativeMatrixStoreKHR: Op<4458, (outs),
 def OpCooperativeMatrixMulAddKHR: Op<4459, (outs ID:$res),
                   (ins TYPE:$type, ID:$A, ID:$B, ID:$C, variable_ops),
                   "$res = OpCooperativeMatrixMulAddKHR $type $A $B $C">;
-def OpCooperativeMatrixLengthKHR: Op<4460, (outs ID:$res), (ins TYPE:$type, ID:$coop_matr_type),
+def OpCooperativeMatrixLengthKHR: Op<4460, (outs ID:$res), (ins TYPE:$type, TYPE:$coop_matr_type),
                   "$res = OpCooperativeMatrixLengthKHR $type $coop_matr_type">;
 
 // SPV_INTEL_joint_matrix

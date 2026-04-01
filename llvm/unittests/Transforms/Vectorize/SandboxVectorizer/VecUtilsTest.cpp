@@ -632,7 +632,7 @@ bb0:
   auto &BB = getBasicBlockByName(F, "bb0");
   auto It = BB.begin();
   sandboxir::Value *Vec = F.getArg(0);
-  sandboxir::Value *Scalar = F.getArg(1);
+  [[maybe_unused]] sandboxir::Value *Scalar = F.getArg(1);
 
   auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
 
@@ -678,4 +678,35 @@ bb0:
   auto *Ty2xi8 = sandboxir::FixedVectorType::get(Int8Ty, 2);
   EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Ty2xi8, 4, WhereIt),
                      ".*type.*");
+}
+
+TEST_F(VecUtilsTest, LaneValueEnumerator) {
+  parseIR(R"IR(
+define void @foo(i32 %s0, <4 x i32> %v0, i32 %s1, <2 x i32> %v1, <3 x i32> %v2, i32 %s2) {
+bb0:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  unsigned Idx = 0;
+  sandboxir::Value *S0 = F.getArg(Idx++);
+  sandboxir::Value *V0 = F.getArg(Idx++);
+  sandboxir::Value *S1 = F.getArg(Idx++);
+  sandboxir::Value *V1 = F.getArg(Idx++);
+  sandboxir::Value *V2 = F.getArg(Idx++);
+  sandboxir::Value *S2 = F.getArg(Idx++);
+
+  SmallVector<sandboxir::Value *, 6> Bndl({S0, V0, S1, V1, V2, S2});
+  SmallVector<unsigned, 6> Lanes;
+  SmallVector<sandboxir::Value *, 6> Elms;
+  for (auto [Lane, Elm] : sandboxir::VecUtils::enumerateLanes(Bndl)) {
+    Lanes.push_back(Lane);
+    Elms.push_back(Elm);
+  }
+
+  EXPECT_EQ(Elms, Bndl);
+  EXPECT_THAT(Lanes, testing::ElementsAre(0, 1, 5, 6, 8, 11));
 }

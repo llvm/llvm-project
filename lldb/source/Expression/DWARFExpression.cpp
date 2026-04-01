@@ -1899,10 +1899,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           case Value::ValueType::LoadAddress: {
             if (target) {
               if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
-                if (target->ReadMemory(addr, curr_piece.GetBuffer().GetBytes(),
-                                       piece_byte_size, error,
-                                       /*force_live_memory=*/false) !=
-                    piece_byte_size) {
+                if (target->ReadMemory(
+                        Address(addr), curr_piece.GetBuffer().GetBytes(),
+                        piece_byte_size, error,
+                        /*force_live_memory=*/false) != piece_byte_size) {
                   const char *addr_type = (curr_piece_source_value_type ==
                                            Value::ValueType::LoadAddress)
                                               ? "load"

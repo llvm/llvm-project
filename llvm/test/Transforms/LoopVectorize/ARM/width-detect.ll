@@ -6,7 +6,7 @@ target triple = "thumbv7-apple-ios3.0.0"
 ;CHECK:foo_F32
 ;CHECK: <4 x float>
 ;CHECK:ret
-define float @foo_F32(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
+define float @foo_F32(ptr nocapture %A, i32 %n) readonly {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -29,7 +29,7 @@ define float @foo_F32(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
 ;CHECK:foo_I8
 ;CHECK: xor <16 x i8>
 ;CHECK:ret
-define signext i8 @foo_I8(ptr nocapture %A, i32 %n) nounwind uwtable readonly ssp {
+define i8 @foo_I8(ptr nocapture %A, i32 %n) readonly {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 

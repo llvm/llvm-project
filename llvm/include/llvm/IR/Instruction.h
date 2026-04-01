@@ -78,6 +78,7 @@ public:
       : iterator_adaptor_base<succ_iterator, op_iterator,
                               std::random_access_iterator_tag, BasicBlock *,
                               ptrdiff_t, BasicBlock *, BasicBlock *> {
+    succ_iterator() = default;
     explicit succ_iterator(op_iterator I) : iterator_adaptor_base(I) {}
 
     BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
@@ -92,6 +93,7 @@ public:
                               std::random_access_iterator_tag,
                               const BasicBlock *, ptrdiff_t, const BasicBlock *,
                               const BasicBlock *> {
+    const_succ_iterator() = default;
     explicit const_succ_iterator(const_op_iterator I)
         : iterator_adaptor_base(I) {}
 
@@ -103,6 +105,10 @@ public:
 
 private:
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
+
+  friend class Value;
+  /// Index of first metadata attachment in context, or zero.
+  unsigned MetadataIndex = 0;
 
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.

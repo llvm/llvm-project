@@ -2857,8 +2857,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // This is already the correct result for CTPOP and CTTZs
     if (Opcode == TargetOpcode::G_CTLZ || Opcode == TargetOpcode::G_CTLS) {
       // The correct result is NewOp - (Difference in widety and current ty).
+      // At this stage SUB is guaranteed to be positive no-wrap,
+      // that to be used in further KnownBits optimizations for CTLZ.
       MIBNewOp = MIRBuilder.buildSub(
-          WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff));
+          WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff),
+          Opcode == TargetOpcode::G_CTLZ
+              ? std::optional<unsigned>(MachineInstr::NoUWrap)
+              : std::nullopt);
     }
 
     MIRBuilder.buildZExtOrTrunc(MI.getOperand(0), MIBNewOp);
@@ -5620,6 +5625,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_CTTZ:
   case G_CTTZ_ZERO_UNDEF:
   case G_CTPOP:
+  case G_CTLS:
   case G_FCOPYSIGN:
   case G_ZEXT:
   case G_SEXT:

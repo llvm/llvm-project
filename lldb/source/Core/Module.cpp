@@ -157,10 +157,9 @@ Module::Module(const ModuleSpec &module_spec)
 
   // First extract all module specifications from the file using the local file
   // path. If there are no specifications, then don't fill anything in
-  ModuleSpecList modules_specs;
-  if (ObjectFile::GetModuleSpecifications(module_spec.GetFileSpec(), 0,
-                                          file_size, modules_specs,
-                                          extractor_sp) == 0)
+  ModuleSpecList modules_specs = ObjectFile::GetModuleSpecifications(
+      module_spec.GetFileSpec(), 0, file_size, extractor_sp);
+  if (modules_specs.GetSize() == 0)
     return;
 
   // Now make sure that one of the module specifications matches what we just
@@ -1420,7 +1419,22 @@ bool Module::IsLoadedInTarget(Target *target) {
   return false;
 }
 
+static bool LoadScriptingModule(const FileSpec &scripting_fspec,
+                                ScriptInterpreter &script_interpreter,
+                                Target &target, Status &error) {
+  assert(scripting_fspec);
+
+  StreamString scripting_stream;
+  scripting_fspec.Dump(scripting_stream.AsRawOstream());
+  LoadScriptOptions options;
+  return script_interpreter.LoadScriptingModule(
+      scripting_stream.GetData(), options, error,
+      /*module_sp*/ nullptr, /*extra_path*/ {}, target.shared_from_this());
+}
+
 bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
+  Log *log = GetLog(LLDBLog::Modules);
+
   if (!target) {
     error = Status::FromErrorString("invalid destination Target");
     return false;
@@ -1463,7 +1477,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
 
   for (uint32_t i = 0; i < num_specs; ++i) {
     FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
-    if (!scripting_fspec && !FileSystem::Instance().Exists(scripting_fspec))
+    if (!FileSystem::Instance().Exists(scripting_fspec))
       continue;
 
     if (should_load == eLoadScriptFromSymFileWarn) {
@@ -1486,17 +1500,14 @@ To run all discovered debug scripts in this session:
       return false;
     }
 
-    LLDB_LOG(GetLog(LLDBLog::Modules), "Auto-loading {0}",
-             scripting_fspec.GetPath());
+    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
 
-    StreamString scripting_stream;
-    scripting_fspec.Dump(scripting_stream.AsRawOstream());
-    LoadScriptOptions options;
-    bool did_load = script_interpreter->LoadScriptingModule(
-        scripting_stream.GetData(), options, error,
-        /*module_sp*/ nullptr, /*extra_path*/ {}, target->shared_from_this());
-    if (!did_load)
+    if (!LoadScriptingModule(scripting_fspec, *script_interpreter, *target,
+                             error)) {
+      LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
+               scripting_fspec.GetPath());
       return false;
+    }
   }
 
   return true;
