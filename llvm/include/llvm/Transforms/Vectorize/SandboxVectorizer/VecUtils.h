@@ -68,8 +68,8 @@ public:
     return *Diff == ElmBytes;
   }
 
-  template <typename LoadOrStoreT>
-  static bool areConsecutive(ArrayRef<Value *> &Bndl, ScalarEvolution &SE,
+  template <typename LoadOrStoreT, typename ValT>
+  static bool areConsecutive(ArrayRef<ValT *> Bndl, ScalarEvolution &SE,
                              const DataLayout &DL) {
     static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
                       std::is_same<LoadOrStoreT, StoreInst>::value,
@@ -119,6 +119,28 @@ public:
       NumElts = VecTy->getNumElements() * NumElts;
     }
     return FixedVectorType::get(ElemTy, NumElts);
+  }
+  /// \Returns the combined vector type for \p Bndl, even when the element types
+  /// differ. For example: i8,i8,i16 will return <4 x i8>. \Returns null if
+  /// types are of mixed float/integer types.
+  static Type *getCombinedVectorTypeFor(ArrayRef<Instruction *> Bndl,
+                                        const DataLayout &DL) {
+    assert(!Bndl.empty() && "Expected non-empty Bndl!");
+    unsigned TotalBits = 0;
+    unsigned MinElmBits = std::numeric_limits<unsigned>::max();
+    Type *MinElmTy = nullptr;
+    for (auto [Idx, V] : enumerate(Bndl)) {
+      Type *ElmTy = getElementType(Utils::getExpectedType(V));
+
+      unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
+      TotalBits += ElmBits * VecUtils::getNumLanes(V);
+      if (ElmBits < MinElmBits) {
+        MinElmBits = ElmBits;
+        MinElmTy = ElmTy;
+      }
+    }
+    unsigned NumElms = TotalBits / MinElmBits;
+    return FixedVectorType::get(MinElmTy, NumElms);
   }
   /// \Returns the instruction in \p Instrs that is lowest in the BB. Expects
   /// that all instructions are in the same BB.
