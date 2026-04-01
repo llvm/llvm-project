@@ -1,6 +1,12 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; This test verifies that sub-byte integer arguments (e.g. i2) don't cause a
+; type mismatch during call lowering.
+;
+; Sub-byte types like i2 are widened to i8 early on, so the vreg gets LLT s8.
+;   %vreg = G_ANYEXT s8, ...   ; vreg is s8 after widening
+
 ; CHECK: %[[#CharTy:]] = OpTypeInt 8 0
 ; CHECK: %[[#FnTy:]] = OpTypeFunction %[[#CharTy]] %[[#CharTy]] %[[#CharTy]]
 ; CHECK: %[[#Fn:]] = OpFunction %[[#CharTy]] None %[[#FnTy]]
