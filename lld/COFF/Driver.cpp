@@ -294,6 +294,8 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   case file_magic::archive: {
     std::unique_ptr<Archive> file =
         CHECK(Archive::create(mbref), filename + ": failed to parse archive");
+    if (file->isWholeArchive())
+      wholeArchive = true;
 
     // On ARM64EC/ARM64X, the archive may contain both, potentially conflicting,
     // native and EC symbols in the symbol table. Regular archives handle this
