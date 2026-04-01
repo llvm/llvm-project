@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCN %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK %s
 
 // Both atomics produce the wrong scope in LLVM IR because a HIP scope was
@@ -11,9 +11,9 @@
 // CHECK-LABEL: test_scoped_atomic
 // CHECK: atomicrmw {{.*}} syncscope("workgroup")
 //
-// CHECK-LABEL: test_intrinsic_metadata
-// CHECK: call {{.*}} @llvm.amdgcn.flat.load.monitor{{.*}} metadata [[SCOPE:![0-9]+]]
-// CHECK: [[SCOPE]] = !{!"workgroup"}
+// AMDGCN-LABEL: test_intrinsic_metadata
+// AMDGCN: call {{.*}} @llvm.amdgcn.flat.load.monitor{{.*}} metadata [[SCOPE:![0-9]+]]
+// AMDGCN: [[SCOPE]] = !{!"workgroup"}
 
 #if !defined(__SPIRV__)
 void test_builtin_rmw(local float *out, float src) {
@@ -29,9 +29,7 @@ void test_scoped_atomic(int *ptr) {
 
 #if !defined(__SPIRV__)
 int test_intrinsic_metadata(int* ptr)
-#else
-int test_intrinsic_metadata(__attribute__((address_space(0)))int* ptr)
-#endif
 {
  return __builtin_amdgcn_flat_load_monitor_b32(ptr, __ATOMIC_RELAXED, __OPENCL_MEMORY_SCOPE_DEVICE);
 }
+#endif
