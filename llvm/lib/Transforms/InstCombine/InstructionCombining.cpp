@@ -5790,8 +5790,8 @@ bool InstCombinerImpl::run() {
       // Therefore, we need to push them back to the worklist after
       // all instructions are visited.
       for (auto SunkInst : SunkInsts)
-        if (SunkInst)
-          Worklist.push(dyn_cast<Instruction>(SunkInst));
+        if (auto *I = dyn_cast_or_null<Instruction>(SunkInst))
+          Worklist.push(I);
       LLVM_DEBUG(dbgs() << "End to Push Sunk Instructions.\n");
       SunkInsts.clear();
     }
