@@ -8873,7 +8873,7 @@ void SelectionDAGBuilder::visitVPCmp(const VPCmpIntrinsic &VPIntrin) {
   if (VPIntrin.getOperand(0)->getType()->isFPOrFPVectorTy()) {
     Condition = getFCmpCondCode(CondCode);
     SimplifyQuery SQ(DAG.getDataLayout(), &VPIntrin);
-    if (isKnownNeverNaN(Op1, SQ) && isKnownNeverNaN(Op2, SQ))
+    if (isKnownNeverNaN(Op2, SQ) && isKnownNeverNaN(Op1, SQ))
       Condition = getFCmpCodeWithoutNaN(Condition);
   } else {
     Condition = getICmpCondCode(CondCode);
