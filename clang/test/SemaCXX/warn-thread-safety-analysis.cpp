@@ -7494,17 +7494,13 @@ void testPointerAliasNoEscape3() {
   ptr->mu.Unlock();
 }
 
-// Passing an alias by non-const reference or pointer-to-pointer to a function
-// is no longer treated as an escape: dropping call-based alias invalidation
-// eliminates false positives (e.g. annotated acquire/release functions that
-// incidentally take the alias by mutable pointer) at the cost of not warning
-// when the called function actually changes what the alias points to.
 void testPointerAliasEscape1(Foo *f) {
   Foo *ptr = f;
   escapeAlias(0, ptr);
 
   ptr->mu.Lock();
-  f->data = 42;
+  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                          // expected-note{{found near match 'ptr->mu'}}
   ptr->mu.Unlock();
 }
 
@@ -7513,7 +7509,8 @@ void testPointerAliasEscape2(Foo *f) {
   escapeAlias(0, &ptr);
 
   ptr->mu.Lock();
-  f->data = 42;
+  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                          // expected-note{{found near match 'ptr->mu'}}
   ptr->mu.Unlock();
 }
 
@@ -7524,7 +7521,8 @@ void testPointerAliasEscape3(Foo *f) {
   escapeAlias(0, &ptr);
 
   ptr->mu.Lock();
-  f->data = 42;
+  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                          // expected-note{{found near match 'ptr->mu'}}
   ptr->mu.Unlock();
 }
 
@@ -7540,35 +7538,22 @@ void testPointerAliasEscapeAndReset(Foo *f) {
   ptr->mu.Unlock();
 }
 
-// Annotated acquire/release functions that incidentally take the alias by
-// non-const pointer must not produce false positives.
-void lockFooPtr(Foo **Fp) EXCLUSIVE_LOCK_FUNCTION((*Fp)->mu);
-void unlockFooPtr(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
-
-void testAnnotatedAcquireReleaseNoFalsePositive(Foo *F) {
-  Foo *ptr = F;
-  lockFooPtr(&ptr);
-  F->data = 42;
-  ptr->data = 42;
-  unlockFooPtr(&ptr);
-}
-
 // A function that may do anything to the objects referred to by the inputs.
 void escapeAliasMultiple(void *, void *, void *);
 void testPointerAliasEscapeMultiple(Foo *F) {
   Foo *L;
-  F->mu.Lock();
+  F->mu.Lock(); // expected-note{{mutex acquired here}}
   Foo *Fp = F;
-  escapeAliasMultiple(&L, &L, &Fp);  // Fp alias retained
-  Fp->mu.Unlock();                   // ok: Fp still aliases F
-}
+  escapeAliasMultiple(&L, &L, &Fp);
+  Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
+} // expected-warning{{mutex 'F->mu' is still held at the end of function}}
 
 void unlockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
 void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
   Foo* L;
   L = F;
   L->mu.Lock();
-  // L's alias is retained across the call.
+  // Release the lock held by 'L' before clearing its definition.
   unlockFooWithEscapablePointer(&L);
 }
 

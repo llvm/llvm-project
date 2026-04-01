@@ -353,11 +353,6 @@ Improvements to Clang's diagnostics
 - Improved ``-Wgnu-zero-variadic-macro-arguments`` to suggest using
   ``__VA_OPT__`` if the current language version supports it(#GH188624)
 
-- The :doc:`ThreadSafetyAnalysis` no longer performs call-based alias
-  invalidation (alias analysis only with ``-Wthread-safety-beta``), eliminating
-  false positives when passing local variable aliases by non-const pointer or
-  reference.
-
 Improvements to Clang's time-trace
 ----------------------------------
 
