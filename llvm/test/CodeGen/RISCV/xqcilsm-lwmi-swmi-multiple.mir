@@ -21,6 +21,8 @@
       ret void
   }
 
+  define void @setwmi_no_pair_move_insn_back() { ret void }
+
 ...
 ---
 name:            lwmi
@@ -184,5 +186,23 @@ body:             |
     SW $x0, $x10, 4 :: (store (s32) into %ir.b, align 4)
     SW $x0, $x10, 8 :: (store (s32) into %ir.c, align 4)
     SW $x0, $x10, 12 :: (store (s32) into %ir.d, align 4)
+    PseudoRET
+...
+---
+name:            setwmi_no_pair_move_insn_back
+body:             |
+  bb.0:
+    liveins: $x1, $x2
+    ; CHECK-LABEL: name: setwmi_no_pair_move_insn_back
+    ; CHECK: liveins: $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW $x0, $x2, 8 :: (store (s32))
+    ; CHECK-NEXT: SW killed $x1, $x2, 12 :: (store (s32))
+    ; CHECK-NEXT: QC_SETWMI $x0, $x2, 2, 0 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW killed $x1, $x2, 12 :: (store (s32), align 4)
+    SW $x0, $x2, 0 :: (store (s32), align 4)
+    SW $x0, $x2, 4 :: (store (s32), align 4)
+    SW $x0, $x2, 8 :: (store (s32), align 4)
     PseudoRET
 ...
