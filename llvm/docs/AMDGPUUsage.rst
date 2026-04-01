@@ -7172,7 +7172,6 @@ It applies to atomic ``load``, ``store``, ``atomicrmw``, and ``cmpxchg``
 instructions, and to ``fence`` instructions, when they use synchronizing memory
 orderings (``acquire``, ``release``, ``acq_rel``, or ``seq_cst``).
 
-
 The memory model does not support the region address space which is treated as
 non-atomic.
 
