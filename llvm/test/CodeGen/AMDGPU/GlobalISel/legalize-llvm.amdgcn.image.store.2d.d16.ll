@@ -72,7 +72,7 @@ define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, ha
   ;
   ; GFX12-LABEL: name: image_store_f16
   ; GFX12: bb.1 (%ir-block.0):
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2
+  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
   ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
@@ -85,10 +85,8 @@ define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, ha
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
-  ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:_(i32) = COPY $vgpr2
-  ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY10]](i32)
-  ; GFX12-NEXT:   [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
-  ; GFX12-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[BITCAST]](f16), 1, [[COPY8]](i32), [[COPY9]](i32), [[BUILD_VECTOR]](<8 x i32>), 0, 0, 0 :: (dereferenceable store (f16), addrspace 8)
+  ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:_(f16) = COPY $vgpr2_lo16
+  ; GFX12-NEXT:   G_AMDGPU_INTRIN_IMAGE_STORE_D16 intrinsic(@llvm.amdgcn.image.store.2d), [[COPY10]](f16), 1, [[COPY8]](i32), [[COPY9]](i32), [[BUILD_VECTOR]](<8 x i32>), 0, 0, 0 :: (dereferenceable store (f16), addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.image.store.2d.f16.i32(half %data, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
