@@ -352,8 +352,7 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
     if (!RISCVII::hasVecPolicyOp(True->getDesc().TSFlags))
       return false;
     uint64_t TruePolicy =
-        True->getOperand(RISCVII::getVecPolicyOpNum(True->getDesc()))
-            .getImm();
+        True->getOperand(RISCVII::getVecPolicyOpNum(True->getDesc())).getImm();
     if (TruePolicy & RISCVVType::TAIL_AGNOSTIC)
       return false;
   }
