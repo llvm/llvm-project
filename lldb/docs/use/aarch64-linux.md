@@ -232,10 +232,9 @@ expression evaluation and restored afterwards.
 
 ## SME Only Systems
 
-AArch64 systems may have both SVE and SME (that is, `FEAT_SVE` and `FEAT_SME`),
-or they can have only SME. If they only have SME, the system has the usual
-SVE state, but that state and SVE instructions may only be used while in
-streaming mode.
+AArch64 systems may have both SVE and SME, or they can have only SME. If they
+only have SME, the system has the usual SVE state, but that state and SVE
+instructions may only be used while in streaming mode.
 
 The LLDB experience is very similar to SVE+SME systems, with a few changes.
 
@@ -270,7 +269,7 @@ mode, use of `ffr` is forbidden so it will also show as 0s. It cannot be written
 to in either state.
 
 (in the former state, LLDB generates the fake value, in the latter state, the
-kernel tells `lldb-server` that the value is 0)
+kernel tells `lldb-server` that the value is 0, the result is the same)
 
 The `ZA` and `ZT0` registers act as they would for an SVE+SME system.
 
@@ -288,11 +287,12 @@ current mode.
 
 If part of an expression is not compatible, it will
 result in a `SIGILL` that will be cleaned up as any other signal would be. All
-register, `ZA` and mode state will be restored as normal after an expression.
+register, `ZA` and mode state will be restored as normal after expression
+evaluation.
 
 Note that to restore to a non-streaming state from a streaming state, LLDB uses
 a special part of the Linux Kernel's
-[SME ABI](https://docs.kernel.org/arch/arm64/sme.html). FPSIMD format data is
+[SVE ABI](https://docs.kernel.org/arch/arm64/sve.html). FPSIMD format data is
 written to the non-existent non-streaming SVE register set, with the vector
 length set to 0 to cause the process to exit streaming mode and apply those
 FPSIMD values to the `V` registers.
