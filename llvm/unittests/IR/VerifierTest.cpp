@@ -429,8 +429,8 @@ TEST(VerifierTest, AtomicRMWElementwiseIntOpOnFPVector) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
-  EXPECT_TRUE(StringRef(Error).starts_with(
-      "atomicrmw add operand must have integer"))
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("atomicrmw add operand must have integer"))
       << Error;
 }
 
