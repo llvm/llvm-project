@@ -13,11 +13,13 @@ body: |
     ; CHECK-NEXT: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr(p0) = IMPLICIT_DEF
     ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
     ; CHECK-NEXT: successors: %bb.2(0x80000000)
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[PHI:%[0-9]+]]:vgpr(p0) = G_PHI [[DEF1]](p0), %bb.0, %2(p0), %bb.2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES %func_ptr(p0)
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
@@ -31,7 +33,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc
     ; CHECK-NEXT: %g_ptr:sgpr(p0) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p0) = COPY %g_ptr(p0)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p0) = COPY %g_ptr(p0), implicit [[PHI]](tied-def 0)(p0)
     ; CHECK-NEXT: %func_ptr:vgpr(p0) = G_LOAD [[COPY]](p0) :: (load (p0))
     ; CHECK-NEXT: $sgpr2_sgpr3 = G_SI_CALL [[MV]](p0), 0, csr_amdgpu
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc
@@ -66,11 +68,13 @@ body: |
     ; CHECK-NEXT: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr(p4) = IMPLICIT_DEF
     ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
     ; CHECK-NEXT: successors: %bb.2(0x80000000)
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[PHI:%[0-9]+]]:vgpr(p4) = G_PHI [[DEF1]](p4), %bb.0, %2(p4), %bb.2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES %func_ptr(p4)
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
@@ -84,7 +88,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc
     ; CHECK-NEXT: %g_ptr:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY %g_ptr(p4)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY %g_ptr(p4), implicit [[PHI]](tied-def 0)(p4)
     ; CHECK-NEXT: %func_ptr:vgpr(p4) = G_LOAD [[COPY]](p4) :: (load (p4))
     ; CHECK-NEXT: $sgpr2_sgpr3 = G_SI_CALL [[MV]](p4), 0, csr_amdgpu
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc
@@ -119,11 +123,13 @@ body: |
     ; CHECK-NEXT: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr(p0) = IMPLICIT_DEF
     ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
     ; CHECK-NEXT: successors: %bb.2(0x80000000)
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[PHI:%[0-9]+]]:vgpr(p0) = G_PHI [[DEF1]](p0), %bb.0, %2(p0), %bb.2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES %func_ptr(p0)
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
@@ -137,7 +143,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc
     ; CHECK-NEXT: %g_ptr:sgpr(p0) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p0) = COPY %g_ptr(p0)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p0) = COPY %g_ptr(p0), implicit [[PHI]](tied-def 0)(p0)
     ; CHECK-NEXT: %func_ptr:vgpr(p0) = G_LOAD [[COPY]](p0) :: (load (p0))
     ; CHECK-NEXT: $sgpr2_sgpr3 = G_SI_CALL [[MV]](p0), 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc
@@ -172,11 +178,13 @@ body: |
     ; CHECK-NEXT: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr(p4) = IMPLICIT_DEF
     ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
     ; CHECK-NEXT: successors: %bb.2(0x80000000)
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[PHI:%[0-9]+]]:vgpr(p4) = G_PHI [[DEF1]](p4), %bb.0, %2(p4), %bb.2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES %func_ptr(p4)
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
@@ -190,7 +198,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $scc
     ; CHECK-NEXT: %g_ptr:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY %g_ptr(p4)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY %g_ptr(p4), implicit [[PHI]](tied-def 0)(p4)
     ; CHECK-NEXT: %func_ptr:vgpr(p4) = G_LOAD [[COPY]](p4) :: (load (p4))
     ; CHECK-NEXT: $sgpr2_sgpr3 = G_SI_CALL [[MV]](p4), 0, csr_amdgpu, implicit $sgpr4, implicit $sgpr5, implicit-def $vgpr0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $scc
