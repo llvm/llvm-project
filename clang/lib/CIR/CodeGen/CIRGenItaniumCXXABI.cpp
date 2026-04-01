@@ -603,6 +603,9 @@ class CIRGenItaniumRTTIBuilder {
 
   /// Build an abi::__pointer_to_member_type_info, used for pointer to member
   /// types, according to the Itanium C++ ABI, 2.9.4p9.
+
+  /// Build an abi::__pointer_to_member_type_info
+  /// struct, used for member pointer types.
   void buildPointerToMemberTypeInfo(mlir::Location loc,
                                     const MemberPointerType *ty);
 
@@ -1860,18 +1863,22 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   // null dtor). In CIR, we forward this info and allow for
   // Lowering pass to skip passing the trivial function.
   //
-  if (const RecordType *recordTy = clangThrowType->getAs<RecordType>()) {
-    auto *rec = cast<CXXRecordDecl>(recordTy->getDecl()->getDefinition());
-    assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
-    if (!rec->hasTrivialDestructor()) {
-      cgm.errorNYI("emitThrow: non-trivial destructor");
-      return;
-    }
+  const auto *cxxrd = clangThrowType->getAsCXXRecordDecl();
+  mlir::FlatSymbolRefAttr dtor{};
+  if (cxxrd && !cxxrd->hasTrivialDestructor()) {
+    // __cxa_throw is declared to take its destructor as void (*)(void *). We
+    // must match that if function pointers can be authenticated with a
+    // discriminator based on their type.
+    assert(!cir::MissingFeatures::pointerAuthentication());
+    CXXDestructorDecl *dtorD = cxxrd->getDestructor();
+    dtor = mlir::FlatSymbolRefAttr::get(
+        cgm.getAddrOfCXXStructor(GlobalDecl(dtorD, Dtor_Complete))
+            .getSymNameAttr());
   }
 
   // Now throw the exception.
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
-  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo.getSymbol());
+  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo.getSymbol(), dtor);
 }
 
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
