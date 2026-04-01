@@ -274,8 +274,8 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
   AttributeSet NewRetAttrs =
       NewRetTy == CB->getType() ? OldAL.getRetAttrs() : AttributeSet();
 
-  NewCall->setAttributes(AttributeList::get(
-      Context, OldAL.getFnAttrs(), NewRetAttrs, NewParamAttrs));
+  NewCall->setAttributes(AttributeList::get(Context, OldAL.getFnAttrs(),
+                                            NewRetAttrs, NewParamAttrs));
 
   NewCall->copyMetadata(*CB);
 
@@ -351,7 +351,8 @@ reconstructReturnValue(Type *RetTy, CallBase *NewCall,
   llvm_unreachable("non-void return type but no direct output constraint");
 }
 
-static CallBase *processInlineAsm(Function &F, CallBase *CB, DominatorTree *DT) {
+static CallBase *processInlineAsm(Function &F, CallBase *CB,
+                                  DominatorTree *DT) {
   InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
   const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
@@ -459,9 +460,9 @@ static CallBase *processInlineAsm(Function &F, CallBase *CB, DominatorTree *DT) 
 
       for (BasicBlock *Succ : Successors) {
         IRBuilder<> SuccBuilder(&*Succ->getFirstInsertionPt());
-        Value *V = reconstructReturnValue(CB->getType(), NewCall, Constraints,
-                                           OutputAllocas, NewRetTypes,
-                                           SuccBuilder);
+        Value *V =
+            reconstructReturnValue(CB->getType(), NewCall, Constraints,
+                                   OutputAllocas, NewRetTypes, SuccBuilder);
         SSAUpdate.AddAvailableValue(Succ, V);
       }
 
@@ -487,16 +488,16 @@ static CallBase *processInlineAsm(Function &F, CallBase *CB, DominatorTree *DT) 
       }
     } else if (auto *II = dyn_cast<InvokeInst>(CB)) {
       IRBuilder<> NormalBuilder(&*II->getNormalDest()->getFirstInsertionPt());
-      Value *V = reconstructReturnValue(CB->getType(), NewCall, Constraints,
-                                         OutputAllocas, NewRetTypes,
-                                         NormalBuilder);
+      Value *V =
+          reconstructReturnValue(CB->getType(), NewCall, Constraints,
+                                 OutputAllocas, NewRetTypes, NormalBuilder);
       CB->replaceAllUsesWith(V);
     } else {
       // CallInst. Insert after NewCall. Since NewCall was created at Builder,
       // and Builder is set to CB, NewCall is before CB. reconstruction
       // happens before CB but after NewCall.
       Value *V = reconstructReturnValue(CB->getType(), NewCall, Constraints,
-                                         OutputAllocas, NewRetTypes, Builder);
+                                        OutputAllocas, NewRetTypes, Builder);
       CB->replaceAllUsesWith(V);
     }
   }
@@ -634,7 +635,7 @@ static bool processCallBrInst(Function &F, CallBrInst *CBR, DominatorTree *DT) {
 }
 
 static bool runImpl(Function &F, ArrayRef<CallBase *> IAs, DominatorTree *DT,
-                   const TargetMachine *TM) {
+                    const TargetMachine *TM) {
   bool Changed = false;
   bool isOptLevelNone = TM->getOptLevel() == CodeGenOptLevel::None;
 
@@ -684,9 +685,8 @@ findInlineAsmCandidates(Function &F, const TargetMachine *TM) {
       InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
       if (auto *CBR = dyn_cast<CallBrInst>(CB)) {
         bool NeedsSSA = !CBR->getType()->isVoidTy() && !CBR->use_empty();
-        bool NeedsConversion = isOptLevelNone &&
-                               IA->getConstraintString().find("rm") !=
-                                   std::string::npos;
+        bool NeedsConversion = isOptLevelNone && IA->getConstraintString().find(
+                                                     "rm") != std::string::npos;
         if (NeedsSSA || NeedsConversion)
           InlineAsms.push_back(CBR);
       } else if (isOptLevelNone) {
