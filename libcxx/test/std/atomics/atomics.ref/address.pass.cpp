@@ -74,10 +74,10 @@ struct TestEachAtomicTypeWithCV {
 template <template <class TestArg> class TestFunctor>
 struct TestEachCVAtomicType {
   void operator()() const {
-    TestEachAtomicTypeWithCV<TestFunctor, identity_t>()();
-    TestEachAtomicTypeWithCV<TestFunctor, add_const_t>()();
-    TestEachAtomicTypeWithCV<TestFunctor, add_volatile_t>()();
-    TestEachAtomicTypeWithCV<TestFunctor, add_const_volatile_t>()();
+    TestEachAtomicTypeWithCV<TestFunctor, std::type_identity_t>()();
+    TestEachAtomicTypeWithCV<TestFunctor, std::add_const_t>()();
+    TestEachAtomicTypeWithCV<TestFunctor, std::add_volatile_t>()();
+    TestEachAtomicTypeWithCV<TestFunctor, std::add_cv_t>()();
   }
 };
 
