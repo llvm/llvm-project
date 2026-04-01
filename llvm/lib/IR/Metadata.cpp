@@ -1620,6 +1620,8 @@ void Value::setMetadata(unsigned KindID, MDNode *Node) {
 }
 
 void Value::setMetadata(StringRef Kind, MDNode *Node) {
+  if (!Node && getMetadataIndex() == 0)
+    return;
   setMetadata(getContext().getMDKindID(Kind), Node);
 }
 

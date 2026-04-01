@@ -78,8 +78,7 @@ Instruction::~Instruction() {
   if (hasMetadata()) {
     // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
     // mapping in LLVMContext.
-    // TODO: still needed?
-    setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+    updateDIAssignIDMapping(nullptr);
     clearMetadata();
   }
 }
