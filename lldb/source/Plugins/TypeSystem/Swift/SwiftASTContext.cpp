@@ -1065,6 +1065,7 @@ void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
   // to avoid crashing due to module recovery issues.
   swift::LangOptions &lang_opts = m_compiler_invocation_up->getLangOptions();
   lang_opts.AllowDeserializingImplementationOnly = true;
+  lang_opts.DisableDeserializationOfExplicitPaths = false;
   lang_opts.DebuggerSupport = true;
 
   // ModuleFileSharedCore::getTransitiveLoadingBehavior() has a
