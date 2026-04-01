@@ -437,9 +437,9 @@ define i32 @and_imm16_i32(i32 %a) {
 define i64 @and_imm16_i64(i64 %a) {
 ; SDAG-X86-LABEL: and_imm16_i64:
 ; SDAG-X86:       # %bb.0:
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SDAG-X86-NEXT:    movl $-5022, %eax # imm = 0xEC62
 ; SDAG-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: and_imm16_i64:
@@ -497,9 +497,9 @@ define i32 @and_imm32_i32(i32 %a) {
 define i64 @and_imm32_i64(i64 %a) {
 ; SDAG-X86-LABEL: and_imm32_i64:
 ; SDAG-X86:       # %bb.0:
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SDAG-X86-NEXT:    movl $-125778, %eax # imm = 0xFFFE14AE
 ; SDAG-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: and_imm32_i64:
@@ -529,9 +529,9 @@ define i64 @and_imm32_i64(i64 %a) {
 define i64 @and_imm64_i64(i64 %a) {
 ; SDAG-X86-LABEL: and_imm64_i64:
 ; SDAG-X86:       # %bb.0:
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SDAG-X86-NEXT:    movl $-1850691612, %eax # imm = 0x91B0AFE4
 ; SDAG-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SDAG-X86-NEXT:    andl $-2, %edx
 ; SDAG-X86-NEXT:    retl
 ;

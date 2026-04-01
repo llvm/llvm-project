@@ -11,18 +11,17 @@ define double @negative_sincos_with_stores_within_call_sequence(double %a) nounw
 ; CHECK-LABEL: negative_sincos_with_stores_within_call_sequence:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subl $44, %esp
-; CHECK-NEXT:    fldl 48(%esp)
 ; CHECK-NEXT:    leal 24(%esp), %eax
 ; CHECK-NEXT:    movl %eax, 12(%esp)
 ; CHECK-NEXT:    leal 32(%esp), %eax
 ; CHECK-NEXT:    movl %eax, 8(%esp)
+; CHECK-NEXT:    fldl 48(%esp)
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    calll sincos
 ; CHECK-NEXT:    fldl 32(%esp)
+; CHECK-NEXT:    fstpl 8(%esp)
 ; CHECK-NEXT:    fldl 24(%esp)
 ; CHECK-NEXT:    faddl {{\.?LCPI[0-9]+_[0-9]+}}
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fstpl 8(%esp)
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    calll g@PLT
 ; CHECK-NEXT:    addl $44, %esp

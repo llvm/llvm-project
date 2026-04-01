@@ -30,10 +30,10 @@ define i16 @foo(i16 %x, i16 %y, i16 %z) nounwind {
 define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86-LABEL: bar:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shldw %cl, %dx, %ax
 ; X86-NEXT:    retl
 ;
@@ -79,10 +79,10 @@ define i16 @un(i16 %x, i16 %y, i16 %z) nounwind {
 define i16 @bu(i16 %x, i16 %y, i16 %z) nounwind {
 ; X86-LABEL: bu:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrdw %cl, %dx, %ax
 ; X86-NEXT:    retl
 ;
@@ -185,8 +185,8 @@ define i32 @rot16_demandedbits(i32 %x, i32 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $11, %ecx
-; X86-NEXT:    shll $5, %eax
+; X86-NEXT:    shll $5, %ecx
+; X86-NEXT:    shrl $11, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
@@ -211,8 +211,8 @@ define i16 @rot16_trunc(i32 %x, i32 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $11, %ecx
-; X86-NEXT:    shll $5, %eax
+; X86-NEXT:    shll $5, %ecx
+; X86-NEXT:    shrl $11, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
@@ -292,18 +292,18 @@ define void @rotate16_memory(ptr %p, ptr %q) {
 ; X86-BASE-LABEL: rotate16_memory:
 ; X86-BASE:       # %bb.0:
 ; X86-BASE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BASE-NEXT:    movzwl (%eax), %eax
+; X86-BASE-NEXT:    rolw $8, %ax
 ; X86-BASE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BASE-NEXT:    movzwl (%ecx), %ecx
-; X86-BASE-NEXT:    rolw $8, %cx
-; X86-BASE-NEXT:    movw %cx, (%eax)
+; X86-BASE-NEXT:    movw %ax, (%ecx)
 ; X86-BASE-NEXT:    retl
 ;
 ; X86-MOVBE-LABEL: rotate16_memory:
 ; X86-MOVBE:       # %bb.0:
 ; X86-MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-MOVBE-NEXT:    movzwl (%eax), %eax
 ; X86-MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-MOVBE-NEXT:    movzwl (%ecx), %ecx
-; X86-MOVBE-NEXT:    movbew %cx, (%eax)
+; X86-MOVBE-NEXT:    movbew %ax, (%ecx)
 ; X86-MOVBE-NEXT:    retl
 ;
 ; X64-BASE-LABEL: rotate16_memory:

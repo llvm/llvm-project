@@ -26,7 +26,7 @@ define void @test2(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB0_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -62,7 +62,7 @@ define void @test2b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB1_1
 ; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
@@ -100,7 +100,7 @@ define void @atest2(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB2_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -136,7 +136,7 @@ define void @atest2b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB3_1
 ; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
@@ -174,7 +174,7 @@ define void @test3(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB4_1
 ; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
@@ -212,7 +212,7 @@ define void @test3b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB5_1
 ; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
@@ -250,7 +250,7 @@ define void @testne2(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB6_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -286,7 +286,7 @@ define void @testne2b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB7_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -322,7 +322,7 @@ define void @atestne2(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB8_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -358,7 +358,7 @@ define void @atestne2b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB9_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -394,7 +394,7 @@ define void @testne3(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB10_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -430,7 +430,7 @@ define void @testne3b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB11_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -466,7 +466,7 @@ define void @query2(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB12_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -502,7 +502,7 @@ define void @query2b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB13_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -538,7 +538,7 @@ define void @aquery2(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB14_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -574,7 +574,7 @@ define void @aquery2b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB15_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -610,7 +610,7 @@ define void @query3(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB16_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -646,7 +646,7 @@ define void @query3b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB17_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -682,7 +682,7 @@ define void @query3x(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB18_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -718,7 +718,7 @@ define void @query3bx(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jae .LBB19_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -754,7 +754,7 @@ define void @queryne2(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB20_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -790,7 +790,7 @@ define void @queryne2b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB21_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -826,7 +826,7 @@ define void @aqueryne2(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB22_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -862,7 +862,7 @@ define void @aqueryne2b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB23_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -898,7 +898,7 @@ define void @queryne3(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB24_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -934,7 +934,7 @@ define void @queryne3b(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB25_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -970,7 +970,7 @@ define void @queryne3x(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB26_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -1006,7 +1006,7 @@ define void @queryne3bx(i32 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    jb .LBB27_2
 ; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    calll foo@PLT
@@ -1044,7 +1044,7 @@ define zeroext i1 @invert(i32 %flags, i32 %flag) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
@@ -1065,7 +1065,7 @@ define zeroext i1 @extend(i32 %bit, i64 %bits) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
@@ -1092,18 +1092,18 @@ define void @demanded_i32(ptr nocapture readonly, ptr nocapture, i32) nounwind {
 ; X86-LABEL: demanded_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shrl $5, %eax
-; X86-NEXT:    movl (%edx,%eax,4), %esi
-; X86-NEXT:    movl $1, %edx
-; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    movl $1, %eax
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    shrl $5, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl (%esi,%edx,4), %esi
 ; X86-NEXT:    btl %ecx, %esi
 ; X86-NEXT:    jae .LBB30_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    orl %edx, (%ecx,%eax,4)
+; X86-NEXT:    orl %eax, (%ecx,%edx,4)
 ; X86-NEXT:  .LBB30_2:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -1150,8 +1150,8 @@ define zeroext i1 @demanded_with_known_zeroes(i32 %bit, i32 %bits) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shlb $2, %al
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl

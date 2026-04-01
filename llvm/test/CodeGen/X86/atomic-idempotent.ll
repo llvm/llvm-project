@@ -20,17 +20,10 @@ define i8 @add8(ptr %p) #0 {
 ;
 ; X86-SSE2-LABEL: add8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: add8:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movzbl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: add8:
 ; X86-ATOM:       # %bb.0:
@@ -53,17 +46,10 @@ define i16 @or16(ptr %p) #0 {
 ;
 ; X86-SSE2-LABEL: or16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzwl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: or16:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movzwl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: or16:
 ; X86-ATOM:       # %bb.0:
@@ -86,17 +72,10 @@ define i32 @xor32(ptr %p) #0 {
 ;
 ; X86-SSE2-LABEL: xor32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: xor32:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: xor32:
 ; X86-ATOM:       # %bb.0:
@@ -271,17 +250,10 @@ define i32 @and32 (ptr %p) #0 {
 ;
 ; X86-SSE2-LABEL: and32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: and32:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: and32:
 ; X86-ATOM:       # %bb.0:
@@ -631,17 +603,10 @@ define void @atomic_umin_uint_max(ptr %addr) #0 {
 ;
 ; X86-SSE2-LABEL: atomic_umin_uint_max:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: atomic_umin_uint_max:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: atomic_umin_uint_max:
 ; X86-ATOM:       # %bb.0:
@@ -664,17 +629,10 @@ define void @atomic_umax_zero(ptr %addr) #0 {
 ;
 ; X86-SSE2-LABEL: atomic_umax_zero:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: atomic_umax_zero:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: atomic_umax_zero:
 ; X86-ATOM:       # %bb.0:
@@ -697,17 +655,10 @@ define void @atomic_min_smax_char(ptr %addr) #0 {
 ;
 ; X86-SSE2-LABEL: atomic_min_smax_char:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: atomic_min_smax_char:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movzbl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: atomic_min_smax_char:
 ; X86-ATOM:       # %bb.0:
@@ -730,17 +681,10 @@ define void @atomic_max_smin_char(ptr %addr) #0 {
 ;
 ; X86-SSE2-LABEL: atomic_max_smin_char:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: atomic_max_smin_char:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movzbl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: atomic_max_smin_char:
 ; X86-ATOM:       # %bb.0:
@@ -763,17 +707,10 @@ define void @atomic_min_umax_char(ptr %addr) #0 {
 ;
 ; X86-SSE2-LABEL: atomic_min_umax_char:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: atomic_min_umax_char:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movzbl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: atomic_min_umax_char:
 ; X86-ATOM:       # %bb.0:
@@ -796,17 +733,10 @@ define void @atomic_max_umin_char(ptr %addr) #0 {
 ;
 ; X86-SSE2-LABEL: atomic_max_umin_char:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    mfence
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl (%eax), %eax
 ; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: atomic_max_umin_char:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movzbl (%eax), %eax
-; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: atomic_max_umin_char:
 ; X86-ATOM:       # %bb.0:

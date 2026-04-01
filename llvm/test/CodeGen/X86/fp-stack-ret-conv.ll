@@ -7,19 +7,15 @@ target triple = "i686-apple-darwin8"
 define void @test(ptr%b) {
 ; CHECK-LABEL: test:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %esi, -8
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    calll _foo
 ; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
-; CHECK-NEXT:    movsd %xmm0, (%esi)
-; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movsd %xmm0, (%eax)
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
 	%tmp13 = tail call double @foo()

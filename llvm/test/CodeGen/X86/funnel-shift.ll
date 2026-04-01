@@ -43,9 +43,9 @@ define i64 @fshl_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    testb $32, %cl
 ; X86-SSE2-NEXT:    movl %edx, %edi
 ; X86-SSE2-NEXT:    cmovnel %esi, %edi
@@ -80,50 +80,49 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    movl 48(%ebp), %edi
-; X86-SSE2-NEXT:    movl 52(%ebp), %eax
-; X86-SSE2-NEXT:    movl 24(%ebp), %edx
 ; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
+; X86-SSE2-NEXT:    movl 48(%ebp), %edi
+; X86-SSE2-NEXT:    movl 52(%ebp), %esi
+; X86-SSE2-NEXT:    movl 24(%ebp), %edx
 ; X86-SSE2-NEXT:    testb $64, %cl
 ; X86-SSE2-NEXT:    movl %edx, %ecx
 ; X86-SSE2-NEXT:    cmovnel %edi, %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 28(%ebp), %esi
-; X86-SSE2-NEXT:    movl %esi, %ebx
-; X86-SSE2-NEXT:    cmovnel %eax, %ebx
-; X86-SSE2-NEXT:    cmovnel 44(%ebp), %eax
-; X86-SSE2-NEXT:    cmovnel 40(%ebp), %edi
-; X86-SSE2-NEXT:    cmovel 36(%ebp), %esi
+; X86-SSE2-NEXT:    movl 28(%ebp), %ebx
+; X86-SSE2-NEXT:    movl %ebx, %eax
+; X86-SSE2-NEXT:    cmovnel %esi, %eax
+; X86-SSE2-NEXT:    cmovel 36(%ebp), %ebx
 ; X86-SSE2-NEXT:    cmovel 32(%ebp), %edx
+; X86-SSE2-NEXT:    cmovnel 44(%ebp), %esi
+; X86-SSE2-NEXT:    cmovnel 40(%ebp), %edi
 ; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
 ; X86-SSE2-NEXT:    testb $32, %cl
-; X86-SSE2-NEXT:    cmovnel %edx, %esi
-; X86-SSE2-NEXT:    cmovnel %ebx, %edx
+; X86-SSE2-NEXT:    cmovnel %edx, %ebx
+; X86-SSE2-NEXT:    cmovnel %eax, %edx
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    cmovnel %ecx, %ebx
-; X86-SSE2-NEXT:    cmovel %eax, %edi
-; X86-SSE2-NEXT:    cmovel %ecx, %eax
-; X86-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
-; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE2-NEXT:    shldl %cl, %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-SSE2-NEXT:    movl %ebx, %edi
+; X86-SSE2-NEXT:    cmovnel %ecx, %eax
+; X86-SSE2-NEXT:    cmovel %esi, %edi
+; X86-SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    cmovel %ecx, %esi
+; X86-SSE2-NEXT:    movl %edx, %edi
 ; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-SSE2-NEXT:    shldl %cl, %eax, %edi
-; X86-SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl %edx, %edi
+; X86-SSE2-NEXT:    movl 8(%ebp), %ecx
+; X86-SSE2-NEXT:    movl %edi, 8(%ecx)
+; X86-SSE2-NEXT:    movl %ecx, %edi
 ; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
-; X86-SSE2-NEXT:    shldl %cl, %ebx, %edi
-; X86-SSE2-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE2-NEXT:    shldl %cl, %edx, %esi
-; X86-SSE2-NEXT:    movl %esi, 12(%eax)
-; X86-SSE2-NEXT:    movl %edi, 8(%eax)
-; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 4(%eax)
-; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, (%eax)
+; X86-SSE2-NEXT:    shldl %cl, %esi, %eax
+; X86-SSE2-NEXT:    movl %eax, 4(%edi)
+; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
+; X86-SSE2-NEXT:    shldl %cl, %edx, %ebx
+; X86-SSE2-NEXT:    movl %ebx, 12(%edi)
+; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-SSE2-NEXT:    shldl %cl, %eax, %esi
+; X86-SSE2-NEXT:    movl %esi, (%edi)
+; X86-SSE2-NEXT:    movl %edi, %eax
 ; X86-SSE2-NEXT:    leal -12(%ebp), %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -152,40 +151,33 @@ declare i37 @llvm.fshl.i37(i37, i37, i37)
 define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-LABEL: fshl_i37:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    andl $31, %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    andl $31, %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE2-NEXT:    shldl $27, %ebx, %edi
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE2-NEXT:    shldl $27, %edi, %esi
+; X86-SSE2-NEXT:    shll $27, %edi
 ; X86-SSE2-NEXT:    pushl $0
 ; X86-SSE2-NEXT:    pushl $37
+; X86-SSE2-NEXT:    pushl %ecx
 ; X86-SSE2-NEXT:    pushl %eax
-; X86-SSE2-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    calll __umoddi3
 ; X86-SSE2-NEXT:    addl $16, %esp
 ; X86-SSE2-NEXT:    movl %eax, %ecx
 ; X86-SSE2-NEXT:    testb $32, %cl
-; X86-SSE2-NEXT:    jne .LBB3_1
-; X86-SSE2-NEXT:  # %bb.2:
-; X86-SSE2-NEXT:    movl %edi, %ebx
-; X86-SSE2-NEXT:    movl %esi, %edi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    jmp .LBB3_3
-; X86-SSE2-NEXT:  .LBB3_1:
-; X86-SSE2-NEXT:    shll $27, %ebx
-; X86-SSE2-NEXT:  .LBB3_3:
-; X86-SSE2-NEXT:    movl %edi, %eax
-; X86-SSE2-NEXT:    shldl %cl, %ebx, %eax
+; X86-SSE2-NEXT:    cmovel %esi, %edi
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    cmovel %edx, %esi
+; X86-SSE2-NEXT:    cmovel {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    movl %esi, %eax
+; X86-SSE2-NEXT:    shldl %cl, %edi, %eax
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE2-NEXT:    shldl %cl, %edi, %esi
-; X86-SSE2-NEXT:    movl %esi, %edx
+; X86-SSE2-NEXT:    shldl %cl, %esi, %edx
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
-; X86-SSE2-NEXT:    popl %ebx
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fshl_i37:
@@ -318,41 +310,40 @@ declare i37 @llvm.fshr.i37(i37, i37, i37)
 define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-LABEL: fshr_i37:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    andl $31, %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    andl $31, %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    shldl $27, %ebx, %esi
+; X86-SSE2-NEXT:    shldl $27, %edi, %esi
 ; X86-SSE2-NEXT:    pushl $0
 ; X86-SSE2-NEXT:    pushl $37
+; X86-SSE2-NEXT:    pushl %ecx
 ; X86-SSE2-NEXT:    pushl %eax
-; X86-SSE2-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    calll __umoddi3
 ; X86-SSE2-NEXT:    addl $16, %esp
 ; X86-SSE2-NEXT:    movl %eax, %ecx
 ; X86-SSE2-NEXT:    addl $27, %ecx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    testb $32, %cl
 ; X86-SSE2-NEXT:    je .LBB10_1
 ; X86-SSE2-NEXT:  # %bb.2:
-; X86-SSE2-NEXT:    movl %edi, %edx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE2-NEXT:    movl %eax, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    jmp .LBB10_3
 ; X86-SSE2-NEXT:  .LBB10_1:
-; X86-SSE2-NEXT:    shll $27, %ebx
+; X86-SSE2-NEXT:    shll $27, %edi
 ; X86-SSE2-NEXT:    movl %esi, %edx
-; X86-SSE2-NEXT:    movl %ebx, %esi
+; X86-SSE2-NEXT:    movl %edi, %esi
 ; X86-SSE2-NEXT:  .LBB10_3:
 ; X86-SSE2-NEXT:    shrdl %cl, %edx, %esi
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE2-NEXT:    shrdl %cl, %edi, %edx
+; X86-SSE2-NEXT:    shrdl %cl, %eax, %edx
 ; X86-SSE2-NEXT:    movl %esi, %eax
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
-; X86-SSE2-NEXT:    popl %ebx
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fshr_i37:
@@ -450,9 +441,9 @@ define i32 @fshl_i32_undef0(i32 %a0, i32 %a1) nounwind {
 define i32 @fshl_i32_undef0_msk(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshl_i32_undef0_msk:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    andl $7, %ecx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-SSE2-NEXT:    shldl %cl, %eax, %eax
 ; X86-SSE2-NEXT:    retl
@@ -535,9 +526,9 @@ define i32 @fshl_i32_undef1(i32 %a0, i32 %a1) nounwind {
 define i32 @fshl_i32_undef1_msk(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshl_i32_undef1_msk:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    andb $7, %cl
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    shll %cl, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -628,9 +619,9 @@ define i32 @fshr_i32_undef0(i32 %a0, i32 %a1) nounwind {
 define i32 @fshr_i32_undef0_msk(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshr_i32_undef0_msk:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    andb $7, %cl
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    shrl %cl, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -707,9 +698,9 @@ define i32 @fshr_i32_undef1(i32 %a0, i32 %a1) nounwind {
 define i32 @fshr_i32_undef1_msk(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshr_i32_undef1_msk:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    andl $7, %ecx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-SSE2-NEXT:    shrdl %cl, %eax, %eax
 ; X86-SSE2-NEXT:    retl
@@ -825,8 +816,8 @@ define i32 @fshl_i32_zero1(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshl_i32_zero1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    xorl %edx, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    shldl %cl, %edx, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -862,8 +853,8 @@ define i32 @fshr_i32_zero0(i32 %a0, i32 %a1) nounwind {
 ; X86-SSE2-LABEL: fshr_i32_zero0:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    xorl %edx, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    shrdl %cl, %edx, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -1085,34 +1076,37 @@ define <4 x i32> @fshr_v4i32_shift_by_bitwidth(<4 x i32> %x, <4 x i32> %y) nounw
 define void @PR45265(i32 %0, ptr nocapture readonly %1) nounwind {
 ; X86-SSE2-LABEL: PR45265:
 ; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    leal (%eax,%eax,2), %esi
-; X86-SSE2-NEXT:    movzwl 8(%ecx,%esi,4), %edx
-; X86-SSE2-NEXT:    movl 4(%ecx,%esi,4), %edi
-; X86-SSE2-NEXT:    shrdl $8, %edx, %edi
-; X86-SSE2-NEXT:    xorl %eax, %edi
-; X86-SSE2-NEXT:    sarl $31, %eax
-; X86-SSE2-NEXT:    movzbl 10(%ecx,%esi,4), %ecx
+; X86-SSE2-NEXT:    leal (%eax,%eax,2), %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE2-NEXT:    movzwl 8(%edi,%edx,4), %esi
+; X86-SSE2-NEXT:    movzbl 10(%edi,%edx,4), %ecx
 ; X86-SSE2-NEXT:    shll $16, %ecx
-; X86-SSE2-NEXT:    orl %edx, %ecx
+; X86-SSE2-NEXT:    orl %esi, %ecx
 ; X86-SSE2-NEXT:    shll $8, %ecx
-; X86-SSE2-NEXT:    movl %ecx, %edx
-; X86-SSE2-NEXT:    sarl $8, %edx
+; X86-SSE2-NEXT:    movl %ecx, %ebx
+; X86-SSE2-NEXT:    sarl $8, %ebx
 ; X86-SSE2-NEXT:    sarl $31, %ecx
-; X86-SSE2-NEXT:    shldl $24, %edx, %ecx
-; X86-SSE2-NEXT:    xorl %eax, %ecx
-; X86-SSE2-NEXT:    orl %ecx, %edi
+; X86-SSE2-NEXT:    shldl $24, %ebx, %ecx
+; X86-SSE2-NEXT:    movl 4(%edi,%edx,4), %edx
+; X86-SSE2-NEXT:    shrdl $8, %esi, %edx
+; X86-SSE2-NEXT:    xorl %eax, %edx
+; X86-SSE2-NEXT:    sarl $31, %eax
+; X86-SSE2-NEXT:    xorl %ecx, %eax
+; X86-SSE2-NEXT:    orl %eax, %edx
 ; X86-SSE2-NEXT:    jne .LBB50_1
 ; X86-SSE2-NEXT:  # %bb.2:
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
+; X86-SSE2-NEXT:    popl %ebx
 ; X86-SSE2-NEXT:    jmp _Z3foov # TAILCALL
 ; X86-SSE2-NEXT:  .LBB50_1:
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
+; X86-SSE2-NEXT:    popl %ebx
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-AVX-LABEL: PR45265:
@@ -1150,10 +1144,10 @@ declare dso_local void @_Z3foov()
 define i32 @or_shl_fshl(i32 %x, i32 %y, i32 %s) nounwind {
 ; X86-SSE2-LABEL: or_shl_fshl:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    orl %edx, %eax
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    shldl %cl, %edx, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -1174,10 +1168,10 @@ define i32 @or_shl_fshl(i32 %x, i32 %y, i32 %s) nounwind {
 define i32 @or_shl_rotl(i32 %x, i32 %y, i32 %s) nounwind {
 ; X86-SSE2-LABEL: or_shl_rotl:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    shll %cl, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    roll %cl, %eax
 ; X86-SSE2-NEXT:    orl %edx, %eax
 ; X86-SSE2-NEXT:    retl
@@ -1200,10 +1194,10 @@ define i32 @or_shl_rotl(i32 %x, i32 %y, i32 %s) nounwind {
 define i32 @or_shl_fshl_commute(i32 %x, i32 %y, i32 %s) nounwind {
 ; X86-SSE2-LABEL: or_shl_fshl_commute:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    orl %edx, %eax
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    shldl %cl, %edx, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -1224,11 +1218,11 @@ define i32 @or_shl_fshl_commute(i32 %x, i32 %y, i32 %s) nounwind {
 define i32 @or_shl_rotl_commute(i32 %x, i32 %y, i32 %s) nounwind {
 ; X86-SSE2-LABEL: or_shl_rotl_commute:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    shll %cl, %edx
-; X86-SSE2-NEXT:    roll %cl, %eax
+; X86-SSE2-NEXT:    roll %cl, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    shll %cl, %eax
 ; X86-SSE2-NEXT:    orl %edx, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -1250,10 +1244,10 @@ define i32 @or_shl_rotl_commute(i32 %x, i32 %y, i32 %s) nounwind {
 define i32 @or_lshr_fshr(i32 %x, i32 %y, i32 %s) nounwind {
 ; X86-SSE2-LABEL: or_lshr_fshr:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    orl %edx, %eax
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    shrdl %cl, %edx, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -1274,10 +1268,10 @@ define i32 @or_lshr_fshr(i32 %x, i32 %y, i32 %s) nounwind {
 define i32 @or_lshr_rotr(i32 %x, i32 %y, i32 %s) nounwind {
 ; X86-SSE2-LABEL: or_lshr_rotr:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    shrl %cl, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    rorl %cl, %eax
 ; X86-SSE2-NEXT:    orl %edx, %eax
 ; X86-SSE2-NEXT:    retl
@@ -1300,10 +1294,10 @@ define i32 @or_lshr_rotr(i32 %x, i32 %y, i32 %s) nounwind {
 define i32 @or_lshr_fshr_commute(i32 %x, i32 %y, i32 %s) nounwind {
 ; X86-SSE2-LABEL: or_lshr_fshr_commute:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    orl %edx, %eax
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    shrdl %cl, %edx, %eax
 ; X86-SSE2-NEXT:    retl
 ;
@@ -1324,11 +1318,11 @@ define i32 @or_lshr_fshr_commute(i32 %x, i32 %y, i32 %s) nounwind {
 define i32 @or_lshr_rotr_commute(i32 %x, i32 %y, i32 %s) nounwind {
 ; X86-SSE2-LABEL: or_lshr_rotr_commute:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    shrl %cl, %edx
-; X86-SSE2-NEXT:    rorl %cl, %eax
+; X86-SSE2-NEXT:    rorl %cl, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    shrl %cl, %eax
 ; X86-SSE2-NEXT:    orl %edx, %eax
 ; X86-SSE2-NEXT:    retl
 ;

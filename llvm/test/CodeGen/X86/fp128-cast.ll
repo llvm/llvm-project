@@ -33,8 +33,7 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ;
 ; X86-LABEL: TestFPExtF32_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    flds vf32
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -42,15 +41,14 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ; X86-NEXT:    calll __extendsftf2
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $40, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPExtF32_F128:
@@ -80,8 +78,7 @@ define dso_local void @TestFPExtF64_F128() nounwind {
 ;
 ; X86-LABEL: TestFPExtF64_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    fldl vf64
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -89,15 +86,14 @@ define dso_local void @TestFPExtF64_F128() nounwind {
 ; X86-NEXT:    calll __extenddftf2
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $40, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPExtF64_F128:
@@ -128,8 +124,7 @@ define dso_local void @TestFPExtF80_F128() nounwind {
 ;
 ; X86-LABEL: TestFPExtF80_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    fldt vf80
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -137,15 +132,14 @@ define dso_local void @TestFPExtF80_F128() nounwind {
 ; X86-NEXT:    calll __extendxftf2
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $40, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPExtF80_F128:
@@ -176,15 +170,21 @@ define dso_local void @TestFPToSIF128_I16() nounwind {
 ;
 ; X86-LABEL: TestFPToSIF128_I16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __fixtfsi
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movw %ax, vi16
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPToSIF128_I16:
@@ -214,15 +214,21 @@ define dso_local void @TestFPToUIF128_I16() nounwind {
 ;
 ; X86-LABEL: TestFPToUIF128_I16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __fixunstfsi
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movw %ax, vi16
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPToUIF128_I16:
@@ -252,15 +258,21 @@ define dso_local void @TestFPToSIF128_I32() nounwind {
 ;
 ; X86-LABEL: TestFPToSIF128_I32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __fixtfsi
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, vi32
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPToSIF128_I32:
@@ -290,15 +302,21 @@ define dso_local void @TestFPToUIF128_U32() nounwind {
 ;
 ; X86-LABEL: TestFPToUIF128_U32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __fixunstfsi
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, vu32
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPToUIF128_U32:
@@ -329,17 +347,23 @@ define dso_local void @TestFPToSIF128_I64() nounwind {
 ;
 ; X86-LABEL: TestFPToSIF128_I64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __fixtfsi
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, vi64
 ; X86-NEXT:    sarl $31, %eax
 ; X86-NEXT:    movl %eax, vi64+4
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPToSIF128_I64:
@@ -372,16 +396,22 @@ define dso_local void @TestFPToUIF128_U64() nounwind {
 ;
 ; X86-LABEL: TestFPToUIF128_U64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __fixunstfsi
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, vu64
 ; X86-NEXT:    movl $0, vu64+4
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPToUIF128_U64:
@@ -414,30 +444,28 @@ define dso_local void @TestFPToSIF128_I128() nounwind {
 ;
 ; X86-LABEL: TestFPToSIF128_I128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    subl $60, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl vf128+8, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl vf128+4, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl vf128, %eax
-; X86-NEXT:    movl vf128+4, %ecx
-; X86-NEXT:    movl vf128+8, %edx
-; X86-NEXT:    movl vf128+12, %esi
-; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __fixtfti
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vi128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vi128+8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vi128+12
-; X86-NEXT:    movl %edx, vi128+8
 ; X86-NEXT:    movl %ecx, vi128+4
 ; X86-NEXT:    movl %eax, vi128
-; X86-NEXT:    addl $56, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $60, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPToSIF128_I128:
@@ -469,30 +497,28 @@ define dso_local void @TestFPToUIF128_U128() nounwind {
 ;
 ; X86-LABEL: TestFPToUIF128_U128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    subl $60, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl vf128+8, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl vf128+4, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl vf128, %eax
-; X86-NEXT:    movl vf128+4, %ecx
-; X86-NEXT:    movl vf128+8, %edx
-; X86-NEXT:    movl vf128+12, %esi
-; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __fixunstfti
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vu128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vu128+8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vu128+12
-; X86-NEXT:    movl %edx, vu128+8
 ; X86-NEXT:    movl %ecx, vu128+4
 ; X86-NEXT:    movl %eax, vu128
-; X86-NEXT:    addl $56, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $60, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPToUIF128_U128:
@@ -523,15 +549,21 @@ define dso_local void @TestFPTruncF128_F32() nounwind {
 ;
 ; X86-LABEL: TestFPTruncF128_F32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __trunctfsf2
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    fstps vf32
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPTruncF128_F32:
@@ -561,15 +593,21 @@ define dso_local void @TestFPTruncF128_F64() nounwind {
 ;
 ; X86-LABEL: TestFPTruncF128_F64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __trunctfdf2
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    fstpl vf64
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPTruncF128_F64:
@@ -599,15 +637,21 @@ define dso_local void @TestFPTruncF128_F80() nounwind {
 ;
 ; X86-LABEL: TestFPTruncF128_F80:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl vf128+8, %ecx
+; X86-NEXT:    movl vf128+4, %edx
+; X86-NEXT:    movl vf128, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __trunctfxf2
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    fstpt vf80
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestFPTruncF128_F80:
@@ -637,25 +681,22 @@ define dso_local void @TestSIToFPI16_F128() nounwind {
 ;
 ; X86-LABEL: TestSIToFPI16_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    subl $36, %esp
 ; X86-NEXT:    movswl vi16, %eax
-; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll __floatsitf
 ; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestSIToFPI16_F128:
@@ -685,25 +726,22 @@ define dso_local void @TestSIToFPU16_F128() nounwind {
 ;
 ; X86-LABEL: TestSIToFPU16_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    subl $36, %esp
 ; X86-NEXT:    movzwl vi16, %eax
-; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll __floatunsitf
 ; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestSIToFPU16_F128:
@@ -733,23 +771,22 @@ define dso_local void @TestSIToFPI32_F128() nounwind {
 ;
 ; X86-LABEL: TestSIToFPI32_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl vi32
+; X86-NEXT:    subl $36, %esp
+; X86-NEXT:    movl vi32, %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll __floatsitf
 ; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestSIToFPI32_F128:
@@ -779,23 +816,22 @@ define dso_local void @TestUIToFPU32_F128() #2 {
 ;
 ; X86-LABEL: TestUIToFPU32_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl vu32
+; X86-NEXT:    subl $36, %esp
+; X86-NEXT:    movl vu32, %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    calll __floatunsitf
 ; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestUIToFPU32_F128:
@@ -825,24 +861,24 @@ define dso_local void @TestSIToFPI64_F128() nounwind {
 ;
 ; X86-LABEL: TestSIToFPI64_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $28, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl vi64+4
-; X86-NEXT:    pushl vi64
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    movl vi64+4, %eax
+; X86-NEXT:    movl vi64, %ecx
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll __floatditf
 ; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestSIToFPI64_F128:
@@ -872,24 +908,24 @@ define dso_local void @TestUIToFPU64_F128() #2 {
 ;
 ; X86-LABEL: TestUIToFPU64_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $28, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl vu64+4
-; X86-NEXT:    pushl vu64
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    movl vu64+4, %eax
+; X86-NEXT:    movl vu64, %ecx
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll __floatunditf
 ; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestUIToFPU64_F128:
@@ -920,30 +956,28 @@ define dso_local void @TestSIToFPI128_F128() nounwind {
 ;
 ; X86-LABEL: TestSIToFPI128_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    subl $60, %esp
+; X86-NEXT:    movl vi128+12, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl vi128+8, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl vi128+4, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl vi128, %eax
-; X86-NEXT:    movl vi128+4, %ecx
-; X86-NEXT:    movl vi128+8, %edx
-; X86-NEXT:    movl vi128+12, %esi
-; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __floattitf
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $56, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $60, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestSIToFPI128_F128:
@@ -975,30 +1009,28 @@ define dso_local void @TestUIToFPU128_F128() #2 {
 ;
 ; X86-LABEL: TestUIToFPU128_F128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    subl $60, %esp
+; X86-NEXT:    movl vu128+12, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl vu128+8, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl vu128+4, %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl vu128, %eax
-; X86-NEXT:    movl vu128+4, %ecx
-; X86-NEXT:    movl vu128+8, %edx
-; X86-NEXT:    movl vu128+12, %esi
-; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __floatuntitf
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+12
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, vf128+8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+12
-; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
 ; X86-NEXT:    movl %eax, vf128
-; X86-NEXT:    addl $56, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $60, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestUIToFPU128_F128:
@@ -1032,22 +1064,28 @@ define dso_local i32 @TestConst128(fp128 %v) nounwind {
 ;
 ; X86-LABEL: TestConst128:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pushl $1073676288 # imm = 0x3FFF0000
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll __gttf2
 ; X86-NEXT:    addl $32, %esp
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setg %cl
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestConst128:
@@ -1083,22 +1121,28 @@ define dso_local i32 @TestConst128Zero(fp128 %v) nounwind {
 ;
 ; X86-LABEL: TestConst128Zero:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll __gttf2
 ; X86-NEXT:    addl $32, %esp
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setg %cl
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: TestConst128Zero:
@@ -1153,17 +1197,17 @@ define dso_local i32 @TestBits128(fp128 %ld) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $72, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __multf3
@@ -1234,14 +1278,14 @@ define fp128 @TestPair128(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    addl $3, %ecx
-; X86-NEXT:    adcl $0, %edx
-; X86-NEXT:    adcl $0, %esi
+; X86-NEXT:    addl $3, %esi
 ; X86-NEXT:    adcl $0, %edi
-; X86-NEXT:    movl %esi, 8(%eax)
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    movl %ecx, 8(%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    movl %edx, 12(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
@@ -1283,7 +1327,7 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $36, %esp
+; X86-NEXT:    subl $52, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1292,31 +1336,29 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X86-NEXT:    cmpl $50001, {{[0-9]+}}(%esp) # imm = 0xC351
 ; X86-NEXT:    jl .LBB26_4
 ; X86-NEXT:  # %bb.1: # %if.then
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    pushl %ecx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %edx
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, (%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __trunctfdf2
-; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    jne .LBB26_3
 ; X86-NEXT:  # %bb.2: # %if.then
 ; X86-NEXT:    fstp %st(1)
 ; X86-NEXT:    fldz
 ; X86-NEXT:  .LBB26_3: # %if.then
 ; X86-NEXT:    fstp %st(0)
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __extenddftf2
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:  .LBB26_4: # %cleanup
 ; X86-NEXT:    movl %edx, (%esi)
@@ -1324,7 +1366,7 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl %ecx, 8(%esi)
 ; X86-NEXT:    movl %eax, 12(%esi)
 ; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $36, %esp
+; X86-NEXT:    addl $52, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4

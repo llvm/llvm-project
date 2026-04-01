@@ -18,8 +18,8 @@ define void @foo(i32 %N) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movw %cx, X
 ; CHECK-NEXT:    movw %dx, Y
-; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    addl $4, %edx
+; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: # %return

@@ -65,31 +65,33 @@ define i64 @rotate_left_64(i64 %a, i64 %b) {
 ; X86-NEXT:    .cfi_offset %esi, -16
 ; X86-NEXT:    .cfi_offset %edi, -12
 ; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    shldl %cl, %esi, %edx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X86-NEXT:    movb %ch, %cl
+; X86-NEXT:    negb %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shrl %cl, %esi
+; X86-NEXT:    movl %ebx, %edi
+; X86-NEXT:    shrdl %cl, %edx, %edi
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB2_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:  .LBB2_2:
-; X86-NEXT:    negb %cl
-; X86-NEXT:    movl %edi, %ebx
-; X86-NEXT:    shrl %cl, %ebx
-; X86-NEXT:    shrdl %cl, %edi, %esi
-; X86-NEXT:    testb $32, %cl
+; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    movb %ch, %cl
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    shldl %cl, %ebx, %edx
+; X86-NEXT:    testb $32, %ch
 ; X86-NEXT:    je .LBB2_4
 ; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %ebx, %esi
-; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:  .LBB2_4:
-; X86-NEXT:    orl %ebx, %edx
-; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    orl %edi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
@@ -242,34 +244,37 @@ define void @rotate_left_m64(ptr%pa, i64 %b) {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %esi
-; X86-NEXT:    movl 4(%eax), %ebx
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    movl %ebx, %edi
-; X86-NEXT:    shldl %cl, %esi, %edi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    negb %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl (%edx), %ebx
+; X86-NEXT:    movl 4(%edx), %esi
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    shrl %cl, %edi
+; X86-NEXT:    movl %ebx, %edx
+; X86-NEXT:    shrdl %cl, %esi, %edx
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB6_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    movl %edi, %edx
+; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:  .LBB6_2:
-; X86-NEXT:    negb %cl
 ; X86-NEXT:    movl %ebx, %ebp
-; X86-NEXT:    shrl %cl, %ebp
-; X86-NEXT:    shrdl %cl, %ebx, %esi
-; X86-NEXT:    testb $32, %cl
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shll %cl, %ebp
+; X86-NEXT:    shldl %cl, %ebx, %esi
+; X86-NEXT:    testb $32, %al
 ; X86-NEXT:    je .LBB6_4
 ; X86-NEXT:  # %bb.3:
 ; X86-NEXT:    movl %ebp, %esi
 ; X86-NEXT:    xorl %ebp, %ebp
 ; X86-NEXT:  .LBB6_4:
-; X86-NEXT:    orl %esi, %edx
-; X86-NEXT:    orl %ebp, %edi
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    orl %edi, %esi
+; X86-NEXT:    orl %edx, %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ebp, (%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
@@ -312,10 +317,10 @@ define void @rotate_right_m64(ptr%pa, i64 %b) {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %ebx
 ; X86-NEXT:    movl 4(%eax), %esi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    movl %ebx, %edi
@@ -336,8 +341,8 @@ define void @rotate_right_m64(ptr%pa, i64 %b) {
 ; X86-NEXT:    movl %ebp, %esi
 ; X86-NEXT:    xorl %ebp, %ebp
 ; X86-NEXT:  .LBB7_4:
-; X86-NEXT:    orl %ebp, %edi
 ; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    orl %ebp, %edi
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %edx, 4(%eax)
 ; X86-NEXT:    popl %esi
@@ -581,9 +586,9 @@ define void @rotate_right_m16(ptr %p, i32 %amount) {
 define i32 @rotate_demanded_bits(i32, i32) {
 ; X86-LABEL: rotate_demanded_bits:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $30, %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    roll %cl, %eax
 ; X86-NEXT:    retl
 ;
@@ -607,9 +612,9 @@ define i32 @rotate_demanded_bits(i32, i32) {
 define i32 @rotate_demanded_bits_2(i32, i32) {
 ; X86-LABEL: rotate_demanded_bits_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $23, %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    roll %cl, %eax
 ; X86-NEXT:    retl
 ;

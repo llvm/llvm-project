@@ -49,8 +49,8 @@ define zeroext i8 @test_urem_zext_ah(i8 %x, i8 %y) {
 define i8 @test_urem_noext_ah(i8 %x, i8 %y) {
 ; X86-LABEL: test_urem_noext_ah:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    divb %cl
 ; X86-NEXT:    movzbl %ah, %eax
 ; X86-NEXT:    addb %cl, %al
@@ -137,8 +137,8 @@ define signext i8 @test_srem_sext_ah(i8 %x, i8 %y) {
 define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 ; X86-LABEL: test_srem_noext_ah:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    idivb %cl
 ; X86-NEXT:    movsbl %ah, %eax
 ; X86-NEXT:    addb %cl, %al

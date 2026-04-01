@@ -6,8 +6,8 @@
 define void @bork(ptr nocapture align 4 %dst) nounwind {
 ; FAST-LABEL: bork:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FAST-NEXT:    xorps %xmm0, %xmm0
+; FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FAST-NEXT:    movups %xmm0, 64(%eax)
 ; FAST-NEXT:    movups %xmm0, 48(%eax)
 ; FAST-NEXT:    movups %xmm0, 32(%eax)
@@ -17,8 +17,8 @@ define void @bork(ptr nocapture align 4 %dst) nounwind {
 ;
 ; SLOW_32-LABEL: bork:
 ; SLOW_32:       # %bb.0:
-; SLOW_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SLOW_32-NEXT:    xorps %xmm0, %xmm0
+; SLOW_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SLOW_32-NEXT:    movsd %xmm0, 72(%eax)
 ; SLOW_32-NEXT:    movsd %xmm0, 64(%eax)
 ; SLOW_32-NEXT:    movsd %xmm0, 56(%eax)

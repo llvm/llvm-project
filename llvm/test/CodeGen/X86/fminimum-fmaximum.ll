@@ -236,11 +236,11 @@ define float @test_fmaximum_nnan(float %x, float %y) nounwind {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vaddss %xmm0, %xmm1, %xmm2
-; X86-NEXT:    vsubss %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vmaxss %xmm0, %xmm2, %xmm0
-; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm1
-; X86-NEXT:    vandps %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vsubss %xmm0, %xmm1, %xmm2
+; X86-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -292,11 +292,11 @@ define double @test_fmaximum_zero0(double %x, double %y) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
-; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm2
-; X86-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vcmpunordsd %xmm1, %xmm1, %xmm2
+; X86-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -349,11 +349,11 @@ define double @test_fmaximum_zero1(double %x, double %y) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
-; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm2
-; X86-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vcmpunordsd %xmm1, %xmm1, %xmm2
+; X86-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -2148,22 +2148,11 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ;
 ; X86-LABEL: test_fmaximum_v4f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $164, %esp
-; X86-NEXT:    vmovdqa %xmm0, %xmm2
-; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    vpsrlq $48, %xmm0, %xmm0
-; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm2[1,1,3,3]
+; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    vmovups %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    vpsrlq $48, %xmm1, %xmm0
-; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    vpsrld $16, %xmm2, %xmm0
-; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    vpsrld $16, %xmm1, %xmm0
-; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    vpextrw $0, %xmm1, (%esp)
+; X86-NEXT:    vpextrw $0, %xmm0, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -2173,7 +2162,8 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vpextrw $0, %xmm0, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    vmovshdup {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; X86-NEXT:    # xmm0 = mem[1,1,3,3]
 ; X86-NEXT:    vpextrw $0, %xmm0, (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
@@ -2205,17 +2195,21 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; X86-NEXT:    vpextrw $0, %xmm0, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; X86-NEXT:    vpextrw $0, %xmm0, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; X86-NEXT:    vpextrw $0, %xmm0, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; X86-NEXT:    vpextrw $0, %xmm0, (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
@@ -2241,17 +2235,17 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    vmovd %xmm0, (%esp)
+; X86-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    vmovss %xmm1, (%esp)
+; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
 ; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
-; X86-NEXT:    vpunpcklwd {{[-0-9]+}}(%e{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
-; X86-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[1],mem[1],xmm1[2],mem[2],xmm1[3],mem[3]
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
-; X86-NEXT:    addl $164, %esp
+; X86-NEXT:    vinsertps $28, {{[-0-9]+}}(%e{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; X86-NEXT:    # xmm0 = xmm0[0],mem[0],zero,zero
+; X86-NEXT:    addl $112, %esp
 ; X86-NEXT:    retl
   %r = call <4 x half> @llvm.maximum.v4f16(<4 x half> %x, <4 x half> %y)
   ret <4 x half> %r
@@ -2841,47 +2835,31 @@ define <4 x bfloat> @test_fmaximum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) {
 ;
 ; X86-LABEL: test_fmaximum_v4bf16:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    subl $68, %esp
+; X86-NEXT:    subl $84, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 88
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    vpsrlq $48, %xmm0, %xmm2
-; X86-NEXT:    vpextrw $0, %xmm2, %esi
-; X86-NEXT:    vpsrlq $48, %xmm1, %xmm2
-; X86-NEXT:    vpextrw $0, %xmm2, %edi
-; X86-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; X86-NEXT:    vpextrw $0, %xmm2, %ebx
-; X86-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; X86-NEXT:    vpextrw $0, %xmm2, %ebp
+; X86-NEXT:    vpextrw $0, %xmm1, %eax
+; X86-NEXT:    vmovdqa %xmm1, %xmm5
+; X86-NEXT:    vmovdqu %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm2
 ; X86-NEXT:    vpextrw $0, %xmm0, %eax
-; X86-NEXT:    vpsrld $16, %xmm0, %xmm0
-; X86-NEXT:    vpsrld $16, %xmm1, %xmm2
-; X86-NEXT:    vpextrw $0, %xmm2, %ecx
-; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    vmovd %ecx, %xmm2
-; X86-NEXT:    vpextrw $0, %xmm0, %ecx
-; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
-; X86-NEXT:    vpextrw $0, %xmm1, %ecx
-; X86-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vmovdqa %xmm0, %xmm4
+; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    vmaxss %xmm2, %xmm1, %xmm0
 ; X86-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
-; X86-NEXT:    vorps %xmm3, %xmm0, %xmm2
-; X86-NEXT:    vandps %xmm1, %xmm2, %xmm1
-; X86-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
-; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vorps %xmm3, %xmm1, %xmm2
+; X86-NEXT:    vandps %xmm0, %xmm2, %xmm0
+; X86-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm2
+; X86-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm5[1,1,3,3]
+; X86-NEXT:    vpextrw $0, %xmm0, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm4[1,1,3,3]
+; X86-NEXT:    vpextrw $0, %xmm1, %eax
 ; X86-NEXT:    shll $16, %eax
 ; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
@@ -2894,10 +2872,16 @@ define <4 x bfloat> @test_fmaximum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) {
 ; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vmovss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %ebp
-; X86-NEXT:    vmovd %ebp, %xmm0
-; X86-NEXT:    shll $16, %ebx
-; X86-NEXT:    vmovd %ebx, %xmm1
+; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    vpsrlq $48, %xmm0, %xmm0
+; X86-NEXT:    vpextrw $0, %xmm0, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    vpsrlq $48, %xmm1, %xmm1
+; X86-NEXT:    vpextrw $0, %xmm1, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm2
 ; X86-NEXT:    vandps %xmm0, %xmm2, %xmm0
@@ -2908,10 +2892,16 @@ define <4 x bfloat> @test_fmaximum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) {
 ; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vmovss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %edi
-; X86-NEXT:    vmovd %edi, %xmm0
-; X86-NEXT:    shll $16, %esi
-; X86-NEXT:    vmovd %esi, %xmm1
+; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    vpsrld $16, %xmm0, %xmm0
+; X86-NEXT:    vpextrw $0, %xmm0, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    vpsrld $16, %xmm1, %xmm1
+; X86-NEXT:    vpextrw $0, %xmm1, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm2
 ; X86-NEXT:    vandps %xmm0, %xmm2, %xmm0
@@ -2919,25 +2909,17 @@ define <4 x bfloat> @test_fmaximum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) {
 ; X86-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    vmovd %xmm0, (%esp)
+; X86-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    vmovss %xmm1, (%esp)
+; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    calll __truncsfbf2
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
 ; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
-; X86-NEXT:    vpunpcklwd {{[-0-9]+}}(%e{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
-; X86-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[1],mem[1],xmm1[2],mem[2],xmm1[3],mem[3]
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
-; X86-NEXT:    addl $68, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    vinsertps $28, {{[-0-9]+}}(%e{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; X86-NEXT:    # xmm0 = xmm0[0],mem[0],zero,zero
+; X86-NEXT:    addl $84, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %r = call <4 x bfloat> @llvm.maximum.v4bf16(<4 x bfloat> %x, <4 x bfloat> %y)

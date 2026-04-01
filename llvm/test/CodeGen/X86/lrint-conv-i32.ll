@@ -145,15 +145,21 @@ define i32 @test_lrint_i32_f128(fp128 %x) nounwind {
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
+; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-16, %esp
 ; X86-NOSSE-NEXT:    subl $16, %esp
-; X86-NOSSE-NEXT:    pushl 20(%ebp)
-; X86-NOSSE-NEXT:    pushl 16(%ebp)
-; X86-NOSSE-NEXT:    pushl 12(%ebp)
-; X86-NOSSE-NEXT:    pushl 8(%ebp)
+; X86-NOSSE-NEXT:    movl 16(%ebp), %eax
+; X86-NOSSE-NEXT:    movl 20(%ebp), %ecx
+; X86-NOSSE-NEXT:    movl 8(%ebp), %edx
+; X86-NOSSE-NEXT:    movl 12(%ebp), %esi
+; X86-NOSSE-NEXT:    pushl %ecx
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    pushl %esi
+; X86-NOSSE-NEXT:    pushl %edx
 ; X86-NOSSE-NEXT:    calll lrintl
 ; X86-NOSSE-NEXT:    addl $16, %esp
-; X86-NOSSE-NEXT:    movl %ebp, %esp
+; X86-NOSSE-NEXT:    leal -4(%ebp), %esp
+; X86-NOSSE-NEXT:    popl %esi
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
 ;
@@ -161,15 +167,21 @@ define i32 @test_lrint_i32_f128(fp128 %x) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    pushl 20(%ebp)
-; X86-SSE2-NEXT:    pushl 16(%ebp)
-; X86-SSE2-NEXT:    pushl 12(%ebp)
-; X86-SSE2-NEXT:    pushl 8(%ebp)
+; X86-SSE2-NEXT:    movl 16(%ebp), %eax
+; X86-SSE2-NEXT:    movl 20(%ebp), %ecx
+; X86-SSE2-NEXT:    movl 8(%ebp), %edx
+; X86-SSE2-NEXT:    movl 12(%ebp), %esi
+; X86-SSE2-NEXT:    pushl %ecx
+; X86-SSE2-NEXT:    pushl %eax
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    pushl %edx
 ; X86-SSE2-NEXT:    calll lrintl
 ; X86-SSE2-NEXT:    addl $16, %esp
-; X86-SSE2-NEXT:    movl %ebp, %esp
+; X86-SSE2-NEXT:    leal -4(%ebp), %esp
+; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -343,15 +355,21 @@ define i32 @test_lrint_i32_f128_strict(fp128 %x) nounwind strictfp {
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %ebp
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
+; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-16, %esp
 ; X86-NOSSE-NEXT:    subl $16, %esp
-; X86-NOSSE-NEXT:    pushl 20(%ebp)
-; X86-NOSSE-NEXT:    pushl 16(%ebp)
-; X86-NOSSE-NEXT:    pushl 12(%ebp)
-; X86-NOSSE-NEXT:    pushl 8(%ebp)
+; X86-NOSSE-NEXT:    movl 16(%ebp), %eax
+; X86-NOSSE-NEXT:    movl 20(%ebp), %ecx
+; X86-NOSSE-NEXT:    movl 8(%ebp), %edx
+; X86-NOSSE-NEXT:    movl 12(%ebp), %esi
+; X86-NOSSE-NEXT:    pushl %ecx
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    pushl %esi
+; X86-NOSSE-NEXT:    pushl %edx
 ; X86-NOSSE-NEXT:    calll lrintl
 ; X86-NOSSE-NEXT:    addl $16, %esp
-; X86-NOSSE-NEXT:    movl %ebp, %esp
+; X86-NOSSE-NEXT:    leal -4(%ebp), %esp
+; X86-NOSSE-NEXT:    popl %esi
 ; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
 ;
@@ -359,15 +377,21 @@ define i32 @test_lrint_i32_f128_strict(fp128 %x) nounwind strictfp {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    pushl 20(%ebp)
-; X86-SSE2-NEXT:    pushl 16(%ebp)
-; X86-SSE2-NEXT:    pushl 12(%ebp)
-; X86-SSE2-NEXT:    pushl 8(%ebp)
+; X86-SSE2-NEXT:    movl 16(%ebp), %eax
+; X86-SSE2-NEXT:    movl 20(%ebp), %ecx
+; X86-SSE2-NEXT:    movl 8(%ebp), %edx
+; X86-SSE2-NEXT:    movl 12(%ebp), %esi
+; X86-SSE2-NEXT:    pushl %ecx
+; X86-SSE2-NEXT:    pushl %eax
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    pushl %edx
 ; X86-SSE2-NEXT:    calll lrintl
 ; X86-SSE2-NEXT:    addl $16, %esp
-; X86-SSE2-NEXT:    movl %ebp, %esp
+; X86-SSE2-NEXT:    leal -4(%ebp), %esp
+; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;

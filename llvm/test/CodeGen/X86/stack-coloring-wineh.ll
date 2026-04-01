@@ -16,10 +16,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; I686-NEXT:    subl $24, %esp
 ; I686-NEXT:    movl %esp, -28(%ebp)
 ; I686-NEXT:    movl $-1, -16(%ebp)
-; I686-NEXT:    leal -24(%ebp), %eax
 ; I686-NEXT:    movl $___ehhandler$pr66984, -20(%ebp)
-; I686-NEXT:    movl %fs:0, %ecx
-; I686-NEXT:    movl %ecx, -24(%ebp)
+; I686-NEXT:    movl %fs:0, %eax
+; I686-NEXT:    movl %eax, -24(%ebp)
+; I686-NEXT:    leal -24(%ebp), %eax
 ; I686-NEXT:    movl %eax, %fs:0
 ; I686-NEXT:    movl $1, -16(%ebp)
 ; I686-NEXT:    calll _throw
@@ -48,8 +48,8 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; I686-NEXT:    pushl %ebp
 ; I686-NEXT:    addl $12, %ebp
 ; I686-NEXT:    movl %esp, -28(%ebp)
-; I686-NEXT:    movl -36(%ebp), %ecx
 ; I686-NEXT:    movl $2, -16(%ebp)
+; I686-NEXT:    movl -36(%ebp), %ecx
 ; I686-NEXT:    calll _cleanup
 ; I686-NEXT:    movl $LBB0_3, %eax
 ; I686-NEXT:    popl %ebp
@@ -82,10 +82,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    .seh_endprologue
 ; X86_64-NEXT:    movq $-2, -16(%rbp)
 ; X86_64-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; X86_64-NEXT:  .Ltmp0:
+; X86_64-NEXT:  .Ltmp0: # EH_LABEL
 ; X86_64-NEXT:    callq throw
 ; X86_64-NEXT:    nop
-; X86_64-NEXT:  .Ltmp1:
+; X86_64-NEXT:  .Ltmp1: # EH_LABEL
 ; X86_64-NEXT:  # %bb.1: # %bb14
 ; X86_64-NEXT:  .LBB0_3: # Block address taken
 ; X86_64-NEXT:    # %exit

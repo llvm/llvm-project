@@ -453,8 +453,8 @@ define <4 x double> @test_buildvector_4f64_2_load(ptr %p0, ptr %p1) {
 ; AVX1-32-LABEL: test_buildvector_4f64_2_load:
 ; AVX1-32:       # %bb.0:
 ; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX1-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX1-32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX1-32-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
 ; AVX1-32-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -473,8 +473,8 @@ define <4 x double> @test_buildvector_4f64_2_load(ptr %p0, ptr %p1) {
 ; AVX2-32-LABEL: test_buildvector_4f64_2_load:
 ; AVX2-32:       # %bb.0:
 ; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX2-32-NEXT:    vbroadcastsd (%ecx), %ymm0
+; AVX2-32-NEXT:    vbroadcastsd (%eax), %ymm0
+; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX2-32-NEXT:    vbroadcastsd (%eax), %ymm1
 ; AVX2-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
 ; AVX2-32-NEXT:    retl
@@ -535,8 +535,8 @@ define <8 x float> @test_buildvector_8f32_2_load(ptr %p0, ptr %p1) {
 ; AVX-32-LABEL: test_buildvector_8f32_2_load:
 ; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    vbroadcastss (%eax), %xmm1
 ; AVX-32-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0,1,2],xmm0[0]
 ; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
@@ -674,9 +674,9 @@ define <16 x i16> @test_buildvector_16i16_2_var(i16 %a0, i16 %a1) {
 define <16 x i16> @test_buildvector_16i16_2_load(ptr %p0, ptr %p1) {
 ; AVX1-32-LABEL: test_buildvector_16i16_2_load:
 ; AVX1-32:       # %bb.0:
-; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX1-32-NEXT:    movzwl (%eax), %eax
+; AVX1-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX1-32-NEXT:    movzwl (%ecx), %ecx
 ; AVX1-32-NEXT:    vmovd %ecx, %xmm0
 ; AVX1-32-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
@@ -722,9 +722,9 @@ define <16 x i16> @test_buildvector_16i16_2_load(ptr %p0, ptr %p1) {
 ;
 ; AVX2-32-LABEL: test_buildvector_16i16_2_load:
 ; AVX2-32:       # %bb.0:
-; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX2-32-NEXT:    movzwl (%eax), %eax
+; AVX2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX2-32-NEXT:    movzwl (%ecx), %ecx
 ; AVX2-32-NEXT:    vmovd %ecx, %xmm0
 ; AVX2-32-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0

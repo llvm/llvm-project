@@ -29,12 +29,12 @@ define void @fn2() nounwind optsize {
 ; CHECK-NEXT:    movl $48, (%esp)
 ; CHECK-NEXT:    calll putchar@PLT
 ; CHECK-NEXT:    movl h, %eax
-; CHECK-NEXT:    movl c, %ecx
-; CHECK-NEXT:    movl j, %edx
-; CHECK-NEXT:    movl (%edx), %edx
-; CHECK-NEXT:    movl (%edx), %edx
+; CHECK-NEXT:    movl j, %ecx
+; CHECK-NEXT:    movl (%ecx), %ecx
+; CHECK-NEXT:    movl (%ecx), %ecx
+; CHECK-NEXT:    movl c, %edx
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    cmpl (%edx), %ecx
+; CHECK-NEXT:    cmpl (%ecx), %edx
 ; CHECK-NEXT:    setg %bl
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl %ebx, i
@@ -49,9 +49,9 @@ define void @fn2() nounwind optsize {
 ; CHECK-NEXT:    andl %eax, e
 ; CHECK-NEXT:    sarl $31, %eax
 ; CHECK-NEXT:    andl %eax, e+4
-; CHECK-NEXT:    decl g
 ; CHECK-NEXT:    addl $1, f
 ; CHECK-NEXT:    adcl $0, f+4
+; CHECK-NEXT:    decl g
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    retl

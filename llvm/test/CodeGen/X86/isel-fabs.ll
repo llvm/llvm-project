@@ -58,9 +58,9 @@ define double @test_double_abs(double %arg) nounwind {
 ;
 ; X86-LABEL: test_double_abs:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: test_double_abs:

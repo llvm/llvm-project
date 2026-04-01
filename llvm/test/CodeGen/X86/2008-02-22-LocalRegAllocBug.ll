@@ -15,12 +15,12 @@ define void @transpose4x4(ptr %dst, ptr %src, i32 %dst_stride, i32 %src_stride) 
 ; CHECK-NEXT:    .cfi_offset %esi, -16
 ; CHECK-NEXT:    .cfi_offset %edi, -12
 ; CHECK-NEXT:    .cfi_offset %ebx, -8
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    leal (%ecx,%ecx,2), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    leal (%edi,%edi,2), %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    leal (%ecx,%ecx,2), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    movd (%esi), %mm0
 ; CHECK-NEXT:    movd (%esi,%edi), %mm1

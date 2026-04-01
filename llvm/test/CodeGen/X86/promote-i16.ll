@@ -64,10 +64,10 @@ define void @bat(ptr %a, ptr %x, i16 signext %y) nounwind {
 ; X86-LABEL: bat:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    subw {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    subw {{[0-9]+}}(%esp), %cx
-; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: bat:

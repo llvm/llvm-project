@@ -41,9 +41,9 @@ define float @foo(ptr swifterror %error_ptr_ref) {
 ; CHECK-i386-NEXT:    subl $8, %esp
 ; CHECK-i386-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-i386-NEXT:    .cfi_offset %esi, -8
-; CHECK-i386-NEXT:    movl 16(%esp), %esi
 ; CHECK-i386-NEXT:    movl $0, 4(%esp)
 ; CHECK-i386-NEXT:    movl $16, (%esp)
+; CHECK-i386-NEXT:    movl 16(%esp), %esi
 ; CHECK-i386-NEXT:    calll _malloc
 ; CHECK-i386-NEXT:    movl %eax, (%esi)
 ; CHECK-i386-NEXT:    movb $1, 8(%eax)
@@ -568,31 +568,27 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ;
 ; CHECK-i386-LABEL: foo_sret:
 ; CHECK-i386:       ## %bb.0: ## %entry
-; CHECK-i386-NEXT:    pushl %ebx
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-i386-NEXT:    pushl %edi
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-i386-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-i386-NEXT:    pushl %esi
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-i386-NEXT:    subl $16, %esp
+; CHECK-i386-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-i386-NEXT:    subl $20, %esp
 ; CHECK-i386-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-i386-NEXT:    .cfi_offset %esi, -16
-; CHECK-i386-NEXT:    .cfi_offset %edi, -12
-; CHECK-i386-NEXT:    .cfi_offset %ebx, -8
+; CHECK-i386-NEXT:    .cfi_offset %esi, -12
+; CHECK-i386-NEXT:    .cfi_offset %edi, -8
 ; CHECK-i386-NEXT:    movl 32(%esp), %esi
-; CHECK-i386-NEXT:    movl 36(%esp), %edi
-; CHECK-i386-NEXT:    movl 40(%esp), %ebx
 ; CHECK-i386-NEXT:    movl $0, 4(%esp)
 ; CHECK-i386-NEXT:    movl $16, (%esp)
+; CHECK-i386-NEXT:    movl 40(%esp), %edi
 ; CHECK-i386-NEXT:    calll _malloc
-; CHECK-i386-NEXT:    movl %eax, (%ebx)
+; CHECK-i386-NEXT:    movl %eax, (%edi)
 ; CHECK-i386-NEXT:    movb $1, 8(%eax)
-; CHECK-i386-NEXT:    movl %edi, 4(%esi)
+; CHECK-i386-NEXT:    movl 36(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 4(%esi)
 ; CHECK-i386-NEXT:    movl %esi, %eax
-; CHECK-i386-NEXT:    addl $16, %esp
+; CHECK-i386-NEXT:    addl $20, %esp
 ; CHECK-i386-NEXT:    popl %esi
 ; CHECK-i386-NEXT:    popl %edi
-; CHECK-i386-NEXT:    popl %ebx
 ; CHECK-i386-NEXT:    retl $4
 
 ; spill sret to stack
@@ -1055,9 +1051,9 @@ define swiftcc float @foo_swiftcc(ptr swifterror %error_ptr_ref) {
 ; CHECK-i386-NEXT:    subl $8, %esp
 ; CHECK-i386-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-i386-NEXT:    .cfi_offset %esi, -8
-; CHECK-i386-NEXT:    movl 16(%esp), %esi
 ; CHECK-i386-NEXT:    movl $0, 4(%esp)
 ; CHECK-i386-NEXT:    movl $16, (%esp)
+; CHECK-i386-NEXT:    movl 16(%esp), %esi
 ; CHECK-i386-NEXT:    calll _malloc
 ; CHECK-i386-NEXT:    movl %eax, (%esi)
 ; CHECK-i386-NEXT:    movb $1, 8(%eax)
@@ -1456,25 +1452,9 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, ptr swiftself, 
 ;
 ; CHECK-i386-LABEL: params_in_reg:
 ; CHECK-i386:       ## %bb.0:
-; CHECK-i386-NEXT:    pushl %ebp
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-i386-NEXT:    pushl %ebx
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-i386-NEXT:    pushl %edi
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-i386-NEXT:    pushl %esi
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 20
 ; CHECK-i386-NEXT:    subl $60, %esp
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-i386-NEXT:    .cfi_offset %esi, -20
-; CHECK-i386-NEXT:    .cfi_offset %edi, -16
-; CHECK-i386-NEXT:    .cfi_offset %ebx, -12
-; CHECK-i386-NEXT:    .cfi_offset %ebp, -8
+; CHECK-i386-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-i386-NEXT:    movl $0, 56(%esp)
-; CHECK-i386-NEXT:    movl 120(%esp), %ebx
-; CHECK-i386-NEXT:    movl 124(%esp), %ebp
-; CHECK-i386-NEXT:    movl 128(%esp), %esi
-; CHECK-i386-NEXT:    movl 132(%esp), %edi
 ; CHECK-i386-NEXT:    leal 56(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 52(%esp)
 ; CHECK-i386-NEXT:    movl $0, 48(%esp)
@@ -1491,36 +1471,36 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, ptr swiftself, 
 ; CHECK-i386-NEXT:    movl $0, 4(%esp)
 ; CHECK-i386-NEXT:    movl $1, (%esp)
 ; CHECK-i386-NEXT:    calll _params_in_reg2
-; CHECK-i386-NEXT:    movl %edi, 52(%esp)
-; CHECK-i386-NEXT:    movl %esi, 48(%esp)
-; CHECK-i386-NEXT:    movl %ebp, 44(%esp)
-; CHECK-i386-NEXT:    movl %ebx, 40(%esp)
 ; CHECK-i386-NEXT:    movl 116(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 36(%esp)
+; CHECK-i386-NEXT:    movl %eax, 52(%esp)
 ; CHECK-i386-NEXT:    movl 112(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 32(%esp)
+; CHECK-i386-NEXT:    movl %eax, 48(%esp)
 ; CHECK-i386-NEXT:    movl 108(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 28(%esp)
+; CHECK-i386-NEXT:    movl %eax, 44(%esp)
 ; CHECK-i386-NEXT:    movl 104(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 24(%esp)
+; CHECK-i386-NEXT:    movl %eax, 40(%esp)
 ; CHECK-i386-NEXT:    movl 100(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 20(%esp)
+; CHECK-i386-NEXT:    movl %eax, 36(%esp)
 ; CHECK-i386-NEXT:    movl 96(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 16(%esp)
+; CHECK-i386-NEXT:    movl %eax, 32(%esp)
 ; CHECK-i386-NEXT:    movl 92(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 12(%esp)
+; CHECK-i386-NEXT:    movl %eax, 28(%esp)
 ; CHECK-i386-NEXT:    movl 88(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 8(%esp)
+; CHECK-i386-NEXT:    movl %eax, 24(%esp)
 ; CHECK-i386-NEXT:    movl 84(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 4(%esp)
+; CHECK-i386-NEXT:    movl %eax, 20(%esp)
 ; CHECK-i386-NEXT:    movl 80(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 16(%esp)
+; CHECK-i386-NEXT:    movl 76(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 12(%esp)
+; CHECK-i386-NEXT:    movl 72(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 8(%esp)
+; CHECK-i386-NEXT:    movl 68(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 4(%esp)
+; CHECK-i386-NEXT:    movl 64(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, (%esp)
 ; CHECK-i386-NEXT:    calll _params_in_reg2
 ; CHECK-i386-NEXT:    addl $60, %esp
-; CHECK-i386-NEXT:    popl %esi
-; CHECK-i386-NEXT:    popl %edi
-; CHECK-i386-NEXT:    popl %ebx
-; CHECK-i386-NEXT:    popl %ebp
 ; CHECK-i386-NEXT:    retl
   %error_ptr_ref = alloca swifterror ptr, align 8
   store ptr null, ptr %error_ptr_ref
@@ -1692,11 +1672,7 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    .cfi_offset %edi, -16
 ; CHECK-i386-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-i386-NEXT:    .cfi_offset %ebp, -8
-; CHECK-i386-NEXT:    movl 148(%esp), %esi
 ; CHECK-i386-NEXT:    movl $0, 64(%esp)
-; CHECK-i386-NEXT:    movl 192(%esp), %ebx
-; CHECK-i386-NEXT:    movl 196(%esp), %ebp
-; CHECK-i386-NEXT:    movl 200(%esp), %edi
 ; CHECK-i386-NEXT:    leal 64(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 52(%esp)
 ; CHECK-i386-NEXT:    movl $0, 48(%esp)
@@ -1713,9 +1689,12 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl $0, 4(%esp)
 ; CHECK-i386-NEXT:    movl $1, (%esp)
 ; CHECK-i386-NEXT:    calll _params_in_reg2
-; CHECK-i386-NEXT:    movl %edi, 56(%esp)
-; CHECK-i386-NEXT:    movl %ebp, 52(%esp)
-; CHECK-i386-NEXT:    movl %ebx, 48(%esp)
+; CHECK-i386-NEXT:    movl 200(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 56(%esp)
+; CHECK-i386-NEXT:    movl 196(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 52(%esp)
+; CHECK-i386-NEXT:    movl 192(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 48(%esp)
 ; CHECK-i386-NEXT:    movl 188(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 44(%esp)
 ; CHECK-i386-NEXT:    movl 184(%esp), %eax
@@ -1736,7 +1715,8 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl %eax, 12(%esp)
 ; CHECK-i386-NEXT:    movl 152(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 8(%esp)
-; CHECK-i386-NEXT:    movl %esi, 4(%esp)
+; CHECK-i386-NEXT:    movl 148(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 4(%esp)
 ; CHECK-i386-NEXT:    leal 88(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, (%esp)
 ; CHECK-i386-NEXT:    calll _params_and_return_in_reg2
@@ -1751,8 +1731,8 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; CHECK-i386-NEXT:    movl 104(%esp), %ebp
 ; CHECK-i386-NEXT:    movl 108(%esp), %edi
-; CHECK-i386-NEXT:    movl 112(%esp), %esi
-; CHECK-i386-NEXT:    movl 116(%esp), %ebx
+; CHECK-i386-NEXT:    movl 112(%esp), %ebx
+; CHECK-i386-NEXT:    movl 116(%esp), %esi
 ; CHECK-i386-NEXT:    leal 64(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 52(%esp)
 ; CHECK-i386-NEXT:    movl $0, 48(%esp)
@@ -1770,8 +1750,8 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl $1, (%esp)
 ; CHECK-i386-NEXT:    calll _params_in_reg2
 ; CHECK-i386-NEXT:    movl 144(%esp), %eax
-; CHECK-i386-NEXT:    movl %ebx, 28(%eax)
-; CHECK-i386-NEXT:    movl %esi, 24(%eax)
+; CHECK-i386-NEXT:    movl %esi, 28(%eax)
+; CHECK-i386-NEXT:    movl %ebx, 24(%eax)
 ; CHECK-i386-NEXT:    movl %edi, 20(%eax)
 ; CHECK-i386-NEXT:    movl %ebp, 16(%eax)
 ; CHECK-i386-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload

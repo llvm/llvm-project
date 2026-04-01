@@ -75,7 +75,6 @@ define float @frem(float %x, float %y) #0 {
 ; CHECK-NEXT:    subl $20, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait
@@ -129,7 +128,6 @@ define float @pow(float %x, float %y) #0 {
 ; CHECK-NEXT:    subl $20, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait
@@ -234,7 +232,6 @@ define float @atan2(float %x, float %y) #0 {
 ; CHECK-NEXT:    subl $20, %esp
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    wait

@@ -8,19 +8,19 @@ define i32 @fn(i32 %a0, i32 %a1) {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %cl
-; X86-NEXT:    setne %al
+; X86-NEXT:    addb %cl, %cl
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %dl
-; X86-NEXT:    negl %eax
-; X86-NEXT:    addb %cl, %cl
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    shll %cl, %ebx
+; X86-NEXT:    setne %bl
+; X86-NEXT:    negl %ebx
+; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    addb %dl, %dl
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    shll %cl, %ebx
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %bb1
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1

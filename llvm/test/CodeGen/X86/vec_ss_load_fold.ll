@@ -375,8 +375,8 @@ define <4 x float> @double_fold(ptr %x, <4 x float> %y) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    movaps %xmm0, %xmm2
-; X86-NEXT:    minss %xmm1, %xmm2
-; X86-NEXT:    maxss %xmm1, %xmm0
+; X86-NEXT:    maxss %xmm1, %xmm2
+; X86-NEXT:    minss %xmm1, %xmm0
 ; X86-NEXT:    addps %xmm2, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -393,9 +393,9 @@ define <4 x float> @double_fold(ptr %x, <4 x float> %y) {
 ; X86_AVX:       ## %bb.0: ## %entry
 ; X86_AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86_AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86_AVX-NEXT:    vminss %xmm1, %xmm0, %xmm2
-; X86_AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
-; X86_AVX-NEXT:    vaddps %xmm0, %xmm2, %xmm0
+; X86_AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm2
+; X86_AVX-NEXT:    vminss %xmm1, %xmm0, %xmm0
+; X86_AVX-NEXT:    vaddps %xmm2, %xmm0, %xmm0
 ; X86_AVX-NEXT:    retl
 ;
 ; X64_AVX-LABEL: double_fold:

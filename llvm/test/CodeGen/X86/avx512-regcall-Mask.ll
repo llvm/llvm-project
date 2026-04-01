@@ -291,11 +291,11 @@ define dso_local x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, 
 ; X32-NEXT:    vmovups %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
+; X32-NEXT:    kmovd %eax, %k0
+; X32-NEXT:    vpmovm2b %k0, %zmm0
+; X32-NEXT:    kmovd %ecx, %k0
+; X32-NEXT:    vpmovm2b %k0, %zmm1
 ; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    kmovd %eax, %k2
-; X32-NEXT:    vpmovm2b %k2, %zmm0
-; X32-NEXT:    vpmovm2b %k1, %zmm1
 ; X32-NEXT:    vpmovm2b %k0, %zmm2
 ; X32-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; X32-NEXT:    # kill: def $ymm1 killed $ymm1 killed $zmm1
@@ -522,11 +522,11 @@ define dso_local x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, 
 ; X32-NEXT:    vmovups %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
+; X32-NEXT:    kmovd %eax, %k0
+; X32-NEXT:    vpmovm2b %k0, %zmm0
+; X32-NEXT:    kmovd %ecx, %k0
+; X32-NEXT:    vpmovm2b %k0, %zmm1
 ; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    kmovd %eax, %k2
-; X32-NEXT:    vpmovm2b %k2, %zmm0
-; X32-NEXT:    vpmovm2b %k1, %zmm1
 ; X32-NEXT:    vpmovm2b %k0, %zmm2
 ; X32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; X32-NEXT:    # kill: def $xmm1 killed $xmm1 killed $zmm1
@@ -752,11 +752,11 @@ define dso_local x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x
 ; X32-NEXT:    vmovups %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
+; X32-NEXT:    kmovd %eax, %k0
+; X32-NEXT:    vpmovm2w %k0, %zmm0
+; X32-NEXT:    kmovd %ecx, %k0
+; X32-NEXT:    vpmovm2w %k0, %zmm1
 ; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    kmovd %eax, %k2
-; X32-NEXT:    vpmovm2w %k2, %zmm0
-; X32-NEXT:    vpmovm2w %k1, %zmm1
 ; X32-NEXT:    vpmovm2w %k0, %zmm2
 ; X32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; X32-NEXT:    # kill: def $xmm1 killed $xmm1 killed $zmm1

@@ -144,23 +144,21 @@ define <2 x float> @powi_v2f32(<2 x float> %a) nounwind minsize {
 ; X86-X87-LABEL: powi_v2f32:
 ; X86-X87:       # %bb.0:
 ; X86-X87-NEXT:    pushl %esi
-; X86-X87-NEXT:    subl $16, %esp
-; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    subl $12, %esp
 ; X86-X87-NEXT:    pushl $15
 ; X86-X87-NEXT:    popl %esi
 ; X86-X87-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    fstps (%esp)
 ; X86-X87-NEXT:    calll __powisf2
 ; X86-X87-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-X87-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    fstps (%esp)
 ; X86-X87-NEXT:    calll __powisf2
 ; X86-X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; X86-X87-NEXT:    fxch %st(1)
-; X86-X87-NEXT:    addl $16, %esp
+; X86-X87-NEXT:    addl $12, %esp
 ; X86-X87-NEXT:    popl %esi
 ; X86-X87-NEXT:    retl
 ;

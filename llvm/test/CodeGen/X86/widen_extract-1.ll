@@ -7,8 +7,8 @@
 define void @convert(ptr %dst.addr, <3 x double> %src)  {
 ; X32-LABEL: convert:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movaps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;

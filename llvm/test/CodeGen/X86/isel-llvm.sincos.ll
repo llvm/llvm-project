@@ -11,20 +11,20 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=1 -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X64
 
 define { float, float } @test_sincos_f32(float %Val) nounwind {
-; X86-LABEL: test_sincos_f32:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $28, %esp
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    calll sincosf
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
+; FASTISEL-X86-LABEL: test_sincos_f32:
+; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    subl $28, %esp
+; FASTISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    fstps (%esp)
+; FASTISEL-X86-NEXT:    calll sincosf
+; FASTISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    addl $28, %esp
+; FASTISEL-X86-NEXT:    retl
 ;
 ; X64-LABEL: test_sincos_f32:
 ; X64:       # %bb.0:
@@ -36,6 +36,21 @@ define { float, float } @test_sincos_f32(float %Val) nounwind {
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: test_sincos_f32:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    subl $28, %esp
+; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fstps (%esp)
+; SDAG-X86-NEXT:    calll sincosf
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    addl $28, %esp
+; SDAG-X86-NEXT:    retl
 ;
 ; MACOS-SINCOS-STRET-LABEL: test_sincos_f32:
 ; MACOS-SINCOS-STRET:       ## %bb.0:
@@ -93,20 +108,20 @@ define { float, float } @test_sincos_f32(float %Val) nounwind {
 }
 
 define { double, double } @test_sincos_f64(double %Val) nounwind  {
-; X86-LABEL: test_sincos_f64:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $44, %esp
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl (%esp)
-; X86-NEXT:    calll sincos
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    retl
+; FASTISEL-X86-LABEL: test_sincos_f64:
+; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    subl $44, %esp
+; FASTISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    fstpl (%esp)
+; FASTISEL-X86-NEXT:    calll sincos
+; FASTISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    addl $44, %esp
+; FASTISEL-X86-NEXT:    retl
 ;
 ; X64-LABEL: test_sincos_f64:
 ; X64:       # %bb.0:
@@ -118,6 +133,21 @@ define { double, double } @test_sincos_f64(double %Val) nounwind  {
 ; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: test_sincos_f64:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    subl $44, %esp
+; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fstpl (%esp)
+; SDAG-X86-NEXT:    calll sincos
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    addl $44, %esp
+; SDAG-X86-NEXT:    retl
 ;
 ; MACOS-SINCOS-STRET-LABEL: test_sincos_f64:
 ; MACOS-SINCOS-STRET:       ## %bb.0:
@@ -144,11 +174,11 @@ define { double, double } @test_sincos_f64(double %Val) nounwind  {
 ; GISEL-X86-LABEL: test_sincos_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $44, %esp
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fstpl (%esp)
 ; GISEL-X86-NEXT:    calll sincos
 ; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -173,20 +203,20 @@ define { double, double } @test_sincos_f64(double %Val) nounwind  {
 }
 
 define { x86_fp80, x86_fp80 } @test_sincos_f80(x86_fp80 %Val) nounwind {
-; X86-LABEL: test_sincos_f80:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $44, %esp
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpt (%esp)
-; X86-NEXT:    calll sincosl
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    retl
+; FASTISEL-X86-LABEL: test_sincos_f80:
+; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    subl $44, %esp
+; FASTISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    fstpt (%esp)
+; FASTISEL-X86-NEXT:    calll sincosl
+; FASTISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    addl $44, %esp
+; FASTISEL-X86-NEXT:    retl
 ;
 ; X64-LABEL: test_sincos_f80:
 ; X64:       # %bb.0:
@@ -200,6 +230,21 @@ define { x86_fp80, x86_fp80 } @test_sincos_f80(x86_fp80 %Val) nounwind {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    addq $56, %rsp
 ; X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: test_sincos_f80:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    subl $44, %esp
+; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fstpt (%esp)
+; SDAG-X86-NEXT:    calll sincosl
+; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    addl $44, %esp
+; SDAG-X86-NEXT:    retl
 ;
 ; MACOS-SINCOS-STRET-LABEL: test_sincos_f80:
 ; MACOS-SINCOS-STRET:       ## %bb.0:
@@ -329,17 +374,15 @@ define void @can_fold_with_call_in_chain(float %x, ptr noalias %a, ptr noalias %
 ; SDAG-X86-NEXT:    pushl %edi
 ; SDAG-X86-NEXT:    pushl %esi
 ; SDAG-X86-NEXT:    subl $20, %esp
-; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SDAG-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; SDAG-X86-NEXT:    movl %edi, (%esp)
 ; SDAG-X86-NEXT:    calll foo@PLT
 ; SDAG-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstps (%esp)
 ; SDAG-X86-NEXT:    calll sincosf
 ; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
@@ -486,3 +529,5 @@ entry:
   store float %cos, ptr %b, align 4
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; X86: {{.*}}

@@ -227,10 +227,10 @@ define void @fneg_int_bfloat(ptr %src, ptr %dst) nounwind {
 ; X86-SSE-LABEL: fneg_int_bfloat:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movzwl (%eax), %eax
+; X86-SSE-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movzwl (%ecx), %ecx
-; X86-SSE-NEXT:    xorl $32768, %ecx # imm = 0x8000
-; X86-SSE-NEXT:    movw %cx, (%eax)
+; X86-SSE-NEXT:    movw %ax, (%ecx)
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fneg_int_bfloat:
@@ -266,18 +266,18 @@ define void @fneg_int_f64(ptr %src, ptr %dst) {
 ; X86-SSE1-LABEL: fneg_int_f64:
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    fldl (%ecx)
+; X86-SSE1-NEXT:    fldl (%eax)
 ; X86-SSE1-NEXT:    fchs
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    fstpl (%eax)
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: fneg_int_f64:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
 ; X86-SSE2-NEXT:    retl
 ;
@@ -298,9 +298,9 @@ define void @fneg_int_v4f32(ptr %src, ptr %dst) {
 ; X86-SSE-LABEL: fneg_int_v4f32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movaps (%ecx), %xmm0
+; X86-SSE-NEXT:    movaps (%eax), %xmm0
 ; X86-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;

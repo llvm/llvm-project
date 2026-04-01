@@ -5,12 +5,19 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512vl,+avx512bw | FileCheck %s --check-prefixes=CHECK,AVX512BW,X64-AVX512BW
 
 define <16 x i32> @shuffle_v8i64(<16 x i32> %t0, <16 x i32> %t1) {
-; CHECK-LABEL: shuffle_v8i64:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm2
-; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm2[0,1],zmm0[2,3],zmm2[4,5],zmm0[6,7],zmm2[8,9],zmm0[10,11],zmm2[12,13],zmm0[14,15]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: shuffle_v8i64:
+; X86-AVX512BW:       # %bb.0: # %entry
+; X86-AVX512BW-NEXT:    vpsubd %zmm1, %zmm0, %zmm2
+; X86-AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; X86-AVX512BW-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[0,1],zmm2[2,3],zmm0[4,5],zmm2[6,7],zmm0[8,9],zmm2[10,11],zmm0[12,13],zmm2[14,15]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: shuffle_v8i64:
+; X64-AVX512BW:       # %bb.0: # %entry
+; X64-AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm2
+; X64-AVX512BW-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
+; X64-AVX512BW-NEXT:    vshufps {{.*#+}} zmm0 = zmm2[0,1],zmm0[2,3],zmm2[4,5],zmm0[6,7],zmm2[8,9],zmm0[10,11],zmm2[12,13],zmm0[14,15]
+; X64-AVX512BW-NEXT:    retq
 entry:
   %t2 = add nsw <16 x i32> %t0, %t1
   %t3 = sub nsw <16 x i32> %t0, %t1
@@ -19,12 +26,19 @@ entry:
 }
 
 define <8 x i32> @shuffle_v4i64(<8 x i32> %t0, <8 x i32> %t1) {
-; CHECK-LABEL: shuffle_v4i64:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
-; CHECK-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3],ymm2[4,5],ymm0[6,7]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: shuffle_v4i64:
+; X86-AVX512BW:       # %bb.0: # %entry
+; X86-AVX512BW-NEXT:    vpsubd %ymm1, %ymm0, %ymm2
+; X86-AVX512BW-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; X86-AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3],ymm0[4,5],ymm2[6,7]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: shuffle_v4i64:
+; X64-AVX512BW:       # %bb.0: # %entry
+; X64-AVX512BW-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; X64-AVX512BW-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; X64-AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3],ymm2[4,5],ymm0[6,7]
+; X64-AVX512BW-NEXT:    retq
 entry:
   %t2 = add nsw <8 x i32> %t0, %t1
   %t3 = sub nsw <8 x i32> %t0, %t1
@@ -33,12 +47,19 @@ entry:
 }
 
 define <4 x i32> @shuffle_v2i64(<4 x i32> %t0, <4 x i32> %t1) {
-; CHECK-LABEL: shuffle_v2i64:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: shuffle_v2i64:
+; X86-AVX512BW:       # %bb.0: # %entry
+; X86-AVX512BW-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; X86-AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; X86-AVX512BW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: shuffle_v2i64:
+; X64-AVX512BW:       # %bb.0: # %entry
+; X64-AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; X64-AVX512BW-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; X64-AVX512BW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
+; X64-AVX512BW-NEXT:    retq
 entry:
   %t2 = add nsw <4 x i32> %t0, %t1
   %t3 = sub nsw <4 x i32> %t0, %t1
@@ -47,12 +68,19 @@ entry:
 }
 
 define <2 x i32> @shuffle_v2i32(<2 x i32> %t0, <2 x i32> %t1) {
-; CHECK-LABEL: shuffle_v2i32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: shuffle_v2i32:
+; X86-AVX512BW:       # %bb.0: # %entry
+; X86-AVX512BW-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; X86-AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; X86-AVX512BW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: shuffle_v2i32:
+; X64-AVX512BW:       # %bb.0: # %entry
+; X64-AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; X64-AVX512BW-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; X64-AVX512BW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3]
+; X64-AVX512BW-NEXT:    retq
 entry:
   %t2 = add nsw <2 x i32> %t0, %t1
   %t3 = sub nsw <2 x i32> %t0, %t1
@@ -97,13 +125,21 @@ define <64 x i8> @addb_selectw_64xi8(<64 x i8> %t0, <64 x i8> %t1) {
 }
 
 define <32 x i8> @addb_selectw_32xi8(<32 x i8> %t0, <32 x i8> %t1) {
-; CHECK-LABEL: addb_selectw_32xi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpaddb %ymm1, %ymm0, %ymm2
-; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: addb_selectw_32xi8:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm2
+; X86-AVX512BW-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
+; X86-AVX512BW-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm0[1,2,3,4,5,6,7]
+; X86-AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: addb_selectw_32xi8:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    vpaddb %ymm1, %ymm0, %ymm2
+; X64-AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; X64-AVX512BW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; X64-AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
+; X64-AVX512BW-NEXT:    retq
   %t2 = add nsw <32 x i8> %t0, %t1
   %t3 = sub nsw <32 x i8> %t0, %t1
   %t4 = shufflevector <32 x i8> %t2, <32 x i8> %t3, <32 x i32> <i32 32, i32 33, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -111,12 +147,19 @@ define <32 x i8> @addb_selectw_32xi8(<32 x i8> %t0, <32 x i8> %t1) {
 }
 
 define <16 x i8> @addb_selectw_16xi8(<16 x i8> %t0, <16 x i8> %t1) {
-; CHECK-LABEL: addb_selectw_16xi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: addb_selectw_16xi8:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm2
+; X86-AVX512BW-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; X86-AVX512BW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3,4,5,6,7]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: addb_selectw_16xi8:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
+; X64-AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; X64-AVX512BW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; X64-AVX512BW-NEXT:    retq
   %t2 = add nsw <16 x i8> %t0, %t1
   %t3 = sub nsw <16 x i8> %t0, %t1
   %t4 = shufflevector <16 x i8> %t2, <16 x i8> %t3, <16 x i32> <i32 16, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -124,12 +167,19 @@ define <16 x i8> @addb_selectw_16xi8(<16 x i8> %t0, <16 x i8> %t1) {
 }
 
 define <8 x i8> @addb_selectw_8xi8(<8 x i8> %t0, <8 x i8> %t1) {
-; CHECK-LABEL: addb_selectw_8xi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: addb_selectw_8xi8:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm2
+; X86-AVX512BW-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; X86-AVX512BW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3,4,5,6,7]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: addb_selectw_8xi8:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    vpaddb %xmm1, %xmm0, %xmm2
+; X64-AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; X64-AVX512BW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; X64-AVX512BW-NEXT:    retq
   %t2 = add nsw <8 x i8> %t0, %t1
   %t3 = sub nsw <8 x i8> %t0, %t1
   %t4 = shufflevector <8 x i8> %t2, <8 x i8> %t3, <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -166,12 +216,19 @@ define <32 x i16> @addw_selectd_32xi16(<32 x i16> %t0, <32 x i16> %t1) {
 }
 
 define <16 x i16> @addw_selectd_16xi16(<16 x i16> %t0, <16 x i16> %t1) {
-; CHECK-LABEL: addw_selectd_16xi16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpaddw %ymm1, %ymm0, %ymm2
-; CHECK-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: addw_selectd_16xi16:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    vpsubw %ymm1, %ymm0, %ymm2
+; X86-AVX512BW-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; X86-AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0],ymm0[1,2,3,4,5,6,7]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: addw_selectd_16xi16:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    vpaddw %ymm1, %ymm0, %ymm2
+; X64-AVX512BW-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
+; X64-AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
+; X64-AVX512BW-NEXT:    retq
   %t2 = add nsw <16 x i16> %t0, %t1
   %t3 = sub nsw <16 x i16> %t0, %t1
   %t4 = shufflevector <16 x i16> %t2, <16 x i16> %t3, <16 x i32> <i32 16, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -204,12 +261,19 @@ define <16 x i32> @addd_selectq_16xi32(<16 x i32> %t0, <16 x i32> %t1) {
 }
 
 define <8 x i32> @addd_selectq_8xi32(<8 x i32> %t0, <8 x i32> %t1) {
-; CHECK-LABEL: addd_selectq_8xi32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
-; CHECK-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-AVX512BW-LABEL: addd_selectq_8xi32:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    vpsubd %ymm1, %ymm0, %ymm2
+; X86-AVX512BW-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; X86-AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3,4,5,6,7]
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: addd_selectq_8xi32:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; X64-AVX512BW-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; X64-AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
+; X64-AVX512BW-NEXT:    retq
   %t2 = add nsw <8 x i32> %t0, %t1
   %t3 = sub nsw <8 x i32> %t0, %t1
   %t4 = shufflevector <8 x i32> %t2, <8 x i32> %t3, <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

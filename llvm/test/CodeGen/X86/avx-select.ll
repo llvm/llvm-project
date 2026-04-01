@@ -5,8 +5,8 @@
 define <8 x i32> @select00(i32 %a, <8 x i32> %b) nounwind {
 ; X86-LABEL: select00:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB0_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    vmovaps %ymm0, %ymm1
@@ -33,8 +33,8 @@ define <8 x i32> @select00(i32 %a, <8 x i32> %b) nounwind {
 define <4 x i64> @select01(i32 %a, <4 x i64> %b) nounwind {
 ; X86-LABEL: select01:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB1_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    vmovaps %ymm0, %ymm1

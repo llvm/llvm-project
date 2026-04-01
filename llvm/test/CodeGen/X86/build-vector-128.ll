@@ -704,8 +704,8 @@ define <4 x float> @test_buildvector_4f32_2_load(ptr %p0, ptr %p1) {
 ; SSE2-32-LABEL: test_buildvector_4f32_2_load:
 ; SSE2-32:       # %bb.0:
 ; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE2-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-32-NEXT:    movaps %xmm1, %xmm2
 ; SSE2-32-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
@@ -726,8 +726,8 @@ define <4 x float> @test_buildvector_4f32_2_load(ptr %p0, ptr %p1) {
 ; SSE41-32-LABEL: test_buildvector_4f32_2_load:
 ; SSE41-32:       # %bb.0:
 ; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE41-32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE41-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE41-32-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
@@ -746,8 +746,8 @@ define <4 x float> @test_buildvector_4f32_2_load(ptr %p0, ptr %p1) {
 ; AVX-32-LABEL: test_buildvector_4f32_2_load:
 ; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    vbroadcastss (%eax), %xmm1
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
@@ -860,9 +860,9 @@ define <8 x i16> @test_buildvector_8i16_2_load(ptr %p0, ptr %p1) {
 ; SSE2-32-LABEL: test_buildvector_8i16_2_load:
 ; SSE2-32:       # %bb.0:
 ; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE2-32-NEXT:    movzwl (%ecx), %ecx
-; SSE2-32-NEXT:    movd %ecx, %xmm1
+; SSE2-32-NEXT:    movzwl (%eax), %eax
+; SSE2-32-NEXT:    movd %eax, %xmm1
+; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-32-NEXT:    movzwl (%eax), %eax
 ; SSE2-32-NEXT:    movd %eax, %xmm0
 ; SSE2-32-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[0,0,0,0,4,5,6,7]
@@ -889,9 +889,9 @@ define <8 x i16> @test_buildvector_8i16_2_load(ptr %p0, ptr %p1) {
 ;
 ; SSE41-32-LABEL: test_buildvector_8i16_2_load:
 ; SSE41-32:       # %bb.0:
-; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE41-32-NEXT:    movzwl (%eax), %eax
+; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE41-32-NEXT:    movzwl (%ecx), %ecx
 ; SSE41-32-NEXT:    movd %ecx, %xmm0
 ; SSE41-32-NEXT:    pinsrw $1, %eax, %xmm0
@@ -920,17 +920,17 @@ define <8 x i16> @test_buildvector_8i16_2_load(ptr %p0, ptr %p1) {
 ; AVX-32-LABEL: test_buildvector_8i16_2_load:
 ; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX-32-NEXT:    movzwl (%eax), %eax
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    movzwl (%ecx), %ecx
-; AVX-32-NEXT:    movzwl (%eax), %eax
-; AVX-32-NEXT:    vmovd %eax, %xmm0
-; AVX-32-NEXT:    vpinsrw $1, %ecx, %xmm0, %xmm0
-; AVX-32-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
-; AVX-32-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
-; AVX-32-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
-; AVX-32-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
-; AVX-32-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
-; AVX-32-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
+; AVX-32-NEXT:    vmovd %ecx, %xmm0
+; AVX-32-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $5, %ecx, %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
+; AVX-32-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: test_buildvector_8i16_2_load:
@@ -1108,9 +1108,9 @@ define <16 x i8> @test_buildvector_16i8_2_load(ptr %p0, ptr %p1) {
 ; SSE2-32-LABEL: test_buildvector_16i8_2_load:
 ; SSE2-32:       # %bb.0:
 ; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE2-32-NEXT:    movzbl (%ecx), %ecx
-; SSE2-32-NEXT:    movd %ecx, %xmm0
+; SSE2-32-NEXT:    movzbl (%eax), %eax
+; SSE2-32-NEXT:    movd %eax, %xmm0
+; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-32-NEXT:    movzbl (%eax), %eax
 ; SSE2-32-NEXT:    movd %eax, %xmm2
 ; SSE2-32-NEXT:    movdqa %xmm2, %xmm1
@@ -1156,8 +1156,8 @@ define <16 x i8> @test_buildvector_16i8_2_load(ptr %p0, ptr %p1) {
 ; SSE41-32-LABEL: test_buildvector_16i8_2_load:
 ; SSE41-32:       # %bb.0:
 ; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE41-32-NEXT:    movzbl (%ecx), %ecx
+; SSE41-32-NEXT:    movzbl (%eax), %ecx
+; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE41-32-NEXT:    movzbl (%eax), %eax
 ; SSE41-32-NEXT:    movd %eax, %xmm0
 ; SSE41-32-NEXT:    pinsrb $1, %ecx, %xmm0
@@ -1202,8 +1202,8 @@ define <16 x i8> @test_buildvector_16i8_2_load(ptr %p0, ptr %p1) {
 ; AVX-32-LABEL: test_buildvector_16i8_2_load:
 ; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX-32-NEXT:    movzbl (%ecx), %ecx
+; AVX-32-NEXT:    movzbl (%eax), %ecx
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    movzbl (%eax), %eax
 ; AVX-32-NEXT:    vmovd %eax, %xmm0
 ; AVX-32-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
@@ -1410,7 +1410,6 @@ define <4 x float> @PR37502(float %x, float %y) {
 define void @pr60168_buildvector_of_zeros_and_undef(<2 x i32> %x, ptr %out) {
 ; SSE2-32-LABEL: pr60168_buildvector_of_zeros_and_undef:
 ; SSE2-32:       # %bb.0:
-; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-32-NEXT:    paddd %xmm0, %xmm0
 ; SSE2-32-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-32-NEXT:    psubd %xmm0, %xmm1
@@ -1418,6 +1417,7 @@ define void @pr60168_buildvector_of_zeros_and_undef(<2 x i32> %x, ptr %out) {
 ; SSE2-32-NEXT:    psrad $31, %xmm0
 ; SSE2-32-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-32-NEXT:    psubd %xmm0, %xmm1
+; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-32-NEXT:    movq %xmm1, (%eax)
 ; SSE2-32-NEXT:    retl
 ;
@@ -1435,11 +1435,11 @@ define void @pr60168_buildvector_of_zeros_and_undef(<2 x i32> %x, ptr %out) {
 ;
 ; SSE41-32-LABEL: pr60168_buildvector_of_zeros_and_undef:
 ; SSE41-32:       # %bb.0:
-; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE41-32-NEXT:    paddd %xmm0, %xmm0
 ; SSE41-32-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-32-NEXT:    psubd %xmm0, %xmm1
 ; SSE41-32-NEXT:    pabsd %xmm1, %xmm0
+; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE41-32-NEXT:    movq %xmm0, (%eax)
 ; SSE41-32-NEXT:    retl
 ;
@@ -1454,11 +1454,11 @@ define void @pr60168_buildvector_of_zeros_and_undef(<2 x i32> %x, ptr %out) {
 ;
 ; AVX-32-LABEL: pr60168_buildvector_of_zeros_and_undef:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; AVX-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-32-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-32-NEXT:    vpabsd %xmm0, %xmm0
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    vmovq %xmm0, (%eax)
 ; AVX-32-NEXT:    retl
 ;

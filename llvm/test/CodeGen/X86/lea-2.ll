@@ -30,10 +30,10 @@ define i32 @test1(i32 %A, i32 %B) {
 define i64 @test2(i32 %a0, i64 %a1) {
 ; X86-LABEL: test2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    andl $2147483640, %eax # imm = 0x7FFFFFF8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shrl $31, %edx
+; X86-NEXT:    andl $2147483640, %eax # imm = 0x7FFFFFF8
 ; X86-NEXT:    leal 4(%eax,%eax), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx

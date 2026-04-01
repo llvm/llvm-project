@@ -103,9 +103,9 @@ define i64 @bts63() nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
 ; X86-NEXT:    movl v64+4, %edx
 ; X86-NEXT:    movl v64, %eax
+; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB4_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -227,9 +227,9 @@ define i64 @btc63() nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
 ; X86-NEXT:    movl v64+4, %edx
 ; X86-NEXT:    movl v64, %eax
+; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB9_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -356,10 +356,10 @@ define i64 @btr63() nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl $2147483647, %esi # imm = 0x7FFFFFFF
-; X86-NEXT:    movl $-1, %edi
 ; X86-NEXT:    movl v64+4, %edx
 ; X86-NEXT:    movl v64, %eax
+; X86-NEXT:    movl $2147483647, %esi # imm = 0x7FFFFFFF
+; X86-NEXT:    movl $-1, %edi
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB14_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -407,8 +407,8 @@ define i16 @multi_use1() nounwind {
 ; X86-NEXT:    jne .LBB15_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    xorl $2, %eax
+; X86-NEXT:    xorl $2, %ecx
+; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
@@ -572,12 +572,11 @@ if.end:                                           ; preds = %entry
 define i32 @split_hoist_and(i32 %0) nounwind {
 ; X86-LABEL: split_hoist_and:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    lock btsl $3, v32
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: split_hoist_and:

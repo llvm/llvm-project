@@ -50,15 +50,15 @@
 define i32 @test2(i32 %x) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    shrl $8, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shll $8, %ecx
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    andl $65280, %edx # imm = 0xFF00
 ; CHECK-NEXT:    andl $-16777216, %ecx # imm = 0xFF000000
-; CHECK-NEXT:    andl $16711680, %eax # imm = 0xFF0000
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    shrl $8, %eax
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $16711680, %edx # imm = 0xFF0000
+; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    andl $65280, %eax # imm = 0xFF00
 ; CHECK-NEXT:    orl %edx, %eax
 ; CHECK-NEXT:    retl
 ;
@@ -101,16 +101,16 @@ define i32 @test3(float %x) nounwind {
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw (%esp)
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    shll $8, %edx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    shrl $8, %eax
-; CHECK-NEXT:    andl $65280, %ecx # imm = 0xFF00
-; CHECK-NEXT:    andl $-16777216, %edx # imm = 0xFF000000
-; CHECK-NEXT:    andl $16711680, %eax # imm = 0xFF0000
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shll $8, %ecx
+; CHECK-NEXT:    andl $-16777216, %ecx # imm = 0xFF000000
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    shrl $8, %edx
+; CHECK-NEXT:    andl $16711680, %edx # imm = 0xFF0000
+; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    andl $65280, %eax # imm = 0xFF00
 ; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    retl
 ;

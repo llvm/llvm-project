@@ -235,9 +235,9 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    pushl %esi
-; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; LINUX-NEXT:    movl id+4, %edx
 ; LINUX-NEXT:    movl id, %eax
+; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; LINUX-NEXT:    .p2align 4
 ; LINUX-NEXT:  .LBB4_1: # %atomicrmw.start
 ; LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -249,8 +249,8 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; LINUX-NEXT:    jne .LBB4_1
 ; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
 ; LINUX-NEXT:    addl $1, %eax
-; LINUX-NEXT:    adcl $0, %edx
 ; LINUX-NEXT:    movl %eax, (%esi)
+; LINUX-NEXT:    adcl $0, %edx
 ; LINUX-NEXT:    movl %edx, 4(%esi)
 ; LINUX-NEXT:    popl %esi
 ; LINUX-NEXT:    popl %ebx
@@ -264,9 +264,9 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; PIC-NEXT:    calll L4$pb
 ; PIC-NEXT:  L4$pb:
 ; PIC-NEXT:    popl %edi
-; PIC-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; PIC-NEXT:    movl _id-L4$pb+4(%edi), %edx
 ; PIC-NEXT:    movl _id-L4$pb(%edi), %eax
+; PIC-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; PIC-NEXT:    .p2align 4
 ; PIC-NEXT:  LBB4_1: ## %atomicrmw.start
 ; PIC-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -278,8 +278,8 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; PIC-NEXT:    jne LBB4_1
 ; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; PIC-NEXT:    addl $1, %eax
-; PIC-NEXT:    adcl $0, %edx
 ; PIC-NEXT:    movl %eax, (%esi)
+; PIC-NEXT:    adcl $0, %edx
 ; PIC-NEXT:    movl %edx, 4(%esi)
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %edi

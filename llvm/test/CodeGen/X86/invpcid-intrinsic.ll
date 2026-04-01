@@ -31,9 +31,9 @@ define void @test_invpcid2(ptr readonly %type, ptr %descriptor) {
 ; X86-LABEL: test_invpcid2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    invpcid (%eax), %ecx
+; X86-NEXT:    invpcid (%ecx), %eax
 ; X86-NEXT:    retl
 ;
 ; X86_64-LABEL: test_invpcid2:

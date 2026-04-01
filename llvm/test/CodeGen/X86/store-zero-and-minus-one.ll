@@ -179,10 +179,10 @@ entry:
 define void @volatile_zero_64(ptr %p) minsize {
 ; CHECK32-LABEL: volatile_zero_64:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    xorl %ecx, %ecx
-; CHECK32-NEXT:    movl %ecx, 4(%eax)
-; CHECK32-NEXT:    movl %ecx, (%eax)
+; CHECK32-NEXT:    xorl %eax, %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movl %eax, 4(%ecx)
+; CHECK32-NEXT:    movl %eax, (%ecx)
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: volatile_zero_64:
@@ -230,11 +230,11 @@ entry:
 define void @volatile_minus_one_64(ptr %p) minsize {
 ; CHECK32-LABEL: volatile_minus_one_64:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    xorl %ecx, %ecx
-; CHECK32-NEXT:    decl %ecx
-; CHECK32-NEXT:    movl %ecx, 4(%eax)
-; CHECK32-NEXT:    movl %ecx, (%eax)
+; CHECK32-NEXT:    xorl %eax, %eax
+; CHECK32-NEXT:    decl %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movl %eax, 4(%ecx)
+; CHECK32-NEXT:    movl %eax, (%ecx)
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: volatile_minus_one_64:

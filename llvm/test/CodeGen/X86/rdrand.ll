@@ -8,12 +8,12 @@ declare {i32, i32} @llvm.x86.rdrand.32()
 define i32 @_rdrand16_step(ptr %random_val) {
 ; X86-LABEL: _rdrand16_step:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    rdrandw %ax
-; X86-NEXT:    movzwl %ax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    rdrandw %cx
+; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    movzwl %cx, %ecx
 ; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    cmovael %edx, %eax
-; X86-NEXT:    movw %dx, (%ecx)
+; X86-NEXT:    cmovael %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _rdrand16_step:
@@ -34,11 +34,11 @@ define i32 @_rdrand16_step(ptr %random_val) {
 define i32 @_rdrand32_step(ptr %random_val) {
 ; X86-LABEL: _rdrand32_step:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    rdrandl %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    rdrandl %ecx
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    cmovael %edx, %eax
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    cmovael %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _rdrand32_step:

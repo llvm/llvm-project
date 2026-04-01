@@ -6,15 +6,14 @@ define void @fadd_2f64_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: fadd_2f64_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    fldl 8(%eax)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    fldl 8(%edx)
-; X32-NEXT:    fldl (%edx)
-; X32-NEXT:    faddl (%ecx)
-; X32-NEXT:    fxch %st(1)
 ; X32-NEXT:    faddl 8(%ecx)
-; X32-NEXT:    fstpl 8(%eax)
-; X32-NEXT:    fstpl (%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    fstpl 8(%edx)
+; X32-NEXT:    fldl (%eax)
+; X32-NEXT:    faddl (%ecx)
+; X32-NEXT:    fstpl (%edx)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fadd_2f64_mem:
@@ -38,24 +37,20 @@ define void @fadd_4f32_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: fadd_4f32_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    flds 12(%eax)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    flds 12(%edx)
-; X32-NEXT:    flds 8(%edx)
-; X32-NEXT:    flds 4(%edx)
-; X32-NEXT:    flds (%edx)
-; X32-NEXT:    fadds (%ecx)
-; X32-NEXT:    fxch %st(1)
-; X32-NEXT:    fadds 4(%ecx)
-; X32-NEXT:    fxch %st(2)
-; X32-NEXT:    fadds 8(%ecx)
-; X32-NEXT:    fxch %st(3)
 ; X32-NEXT:    fadds 12(%ecx)
-; X32-NEXT:    fstps 12(%eax)
-; X32-NEXT:    fxch %st(2)
-; X32-NEXT:    fstps 8(%eax)
-; X32-NEXT:    fstps 4(%eax)
-; X32-NEXT:    fstps (%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    fstps 12(%edx)
+; X32-NEXT:    flds 8(%eax)
+; X32-NEXT:    fadds 8(%ecx)
+; X32-NEXT:    fstps 8(%edx)
+; X32-NEXT:    flds 4(%eax)
+; X32-NEXT:    fadds 4(%ecx)
+; X32-NEXT:    fstps 4(%edx)
+; X32-NEXT:    flds (%eax)
+; X32-NEXT:    fadds (%ecx)
+; X32-NEXT:    fstps (%edx)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fadd_4f32_mem:
@@ -88,24 +83,20 @@ define void @fdiv_4f32_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: fdiv_4f32_mem:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    flds 12(%eax)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    flds 12(%edx)
-; X32-NEXT:    flds 8(%edx)
-; X32-NEXT:    flds 4(%edx)
-; X32-NEXT:    flds (%edx)
-; X32-NEXT:    fdivs (%ecx)
-; X32-NEXT:    fxch %st(1)
-; X32-NEXT:    fdivs 4(%ecx)
-; X32-NEXT:    fxch %st(2)
-; X32-NEXT:    fdivs 8(%ecx)
-; X32-NEXT:    fxch %st(3)
 ; X32-NEXT:    fdivs 12(%ecx)
-; X32-NEXT:    fstps 12(%eax)
-; X32-NEXT:    fxch %st(2)
-; X32-NEXT:    fstps 8(%eax)
-; X32-NEXT:    fstps 4(%eax)
-; X32-NEXT:    fstps (%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    fstps 12(%edx)
+; X32-NEXT:    flds 8(%eax)
+; X32-NEXT:    fdivs 8(%ecx)
+; X32-NEXT:    fstps 8(%edx)
+; X32-NEXT:    flds 4(%eax)
+; X32-NEXT:    fdivs 4(%ecx)
+; X32-NEXT:    fstps 4(%edx)
+; X32-NEXT:    flds (%eax)
+; X32-NEXT:    fdivs (%ecx)
+; X32-NEXT:    fstps (%edx)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fdiv_4f32_mem:
@@ -144,36 +135,34 @@ define void @sitofp_4i64_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    andl $-8, %esp
 ; X32-NEXT:    subl $48, %esp
-; X32-NEXT:    movl 8(%ebp), %edx
-; X32-NEXT:    movl 24(%edx), %eax
+; X32-NEXT:    movl 8(%ebp), %esi
+; X32-NEXT:    movl 28(%esi), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl 24(%esi), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl (%esi), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl 28(%edx), %eax
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    movl 16(%edx), %esi
-; X32-NEXT:    movl 20(%edx), %edi
-; X32-NEXT:    movl 8(%edx), %ebx
-; X32-NEXT:    movl 12(%edx), %ecx
-; X32-NEXT:    movl (%edx), %eax
-; X32-NEXT:    movl 4(%edx), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl 4(%esi), %ecx
+; X32-NEXT:    movl 8(%esi), %edx
+; X32-NEXT:    movl 12(%esi), %edi
+; X32-NEXT:    movl 16(%esi), %ebx
+; X32-NEXT:    movl 20(%esi), %eax
+; X32-NEXT:    fildll {{[0-9]+}}(%esp)
+; X32-NEXT:    movl 12(%ebp), %esi
+; X32-NEXT:    fstps 12(%esi)
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X32-NEXT:    fildll {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps 8(%esi)
 ; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl (%esp), %eax # 4-byte Reload
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X32-NEXT:    fildll {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps 4(%esi)
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl 12(%ebp), %eax
 ; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fstps 12(%eax)
-; X32-NEXT:    fstps 8(%eax)
-; X32-NEXT:    fstps 4(%eax)
-; X32-NEXT:    fstps (%eax)
+; X32-NEXT:    fstps (%esi)
 ; X32-NEXT:    leal -12(%ebp), %esp
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
@@ -209,30 +198,26 @@ define void @sitofp_4i64_4f32_mem(ptr %p0, ptr %p1) nounwind {
 define void @sitofp_4i32_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X32-LABEL: sitofp_4i32_4f32_mem:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $16, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl 12(%ecx), %edx
-; X32-NEXT:    movl 8(%ecx), %esi
-; X32-NEXT:    movl (%ecx), %edi
-; X32-NEXT:    movl 4(%ecx), %ecx
-; X32-NEXT:    movl %edi, (%esp)
+; X32-NEXT:    movl 12(%eax), %ecx
 ; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    fildl {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps 12(%ecx)
+; X32-NEXT:    movl 8(%eax), %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X32-NEXT:    fildl {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps 8(%ecx)
+; X32-NEXT:    movl (%eax), %edx
+; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    fildl {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps 4(%ecx)
+; X32-NEXT:    movl %edx, (%esp)
 ; X32-NEXT:    fildl (%esp)
-; X32-NEXT:    fildl {{[0-9]+}}(%esp)
-; X32-NEXT:    fildl {{[0-9]+}}(%esp)
-; X32-NEXT:    fildl {{[0-9]+}}(%esp)
-; X32-NEXT:    fstps 12(%eax)
-; X32-NEXT:    fstps 8(%eax)
-; X32-NEXT:    fstps 4(%eax)
-; X32-NEXT:    fstps (%eax)
+; X32-NEXT:    fstps (%ecx)
 ; X32-NEXT:    addl $16, %esp
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %edi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_4i32_4f32_mem:
@@ -263,27 +248,25 @@ define void @sitofp_4i32_4f32_mem(ptr %p0, ptr %p1) nounwind {
 define void @add_2i64_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: add_2i64_mem:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl 12(%edx), %esi
-; X32-NEXT:    movl 8(%edx), %edi
-; X32-NEXT:    movl (%edx), %ebx
-; X32-NEXT:    movl 4(%edx), %edx
-; X32-NEXT:    addl (%ecx), %ebx
-; X32-NEXT:    adcl 4(%ecx), %edx
-; X32-NEXT:    addl 8(%ecx), %edi
-; X32-NEXT:    adcl 12(%ecx), %esi
-; X32-NEXT:    movl %edi, 8(%eax)
-; X32-NEXT:    movl %ebx, (%eax)
-; X32-NEXT:    movl %esi, 12(%eax)
-; X32-NEXT:    movl %edx, 4(%eax)
+; X32-NEXT:    movl 8(%ecx), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    addl 8(%esi), %edx
+; X32-NEXT:    movl %edx, 8(%eax)
+; X32-NEXT:    movl 12(%ecx), %edx
+; X32-NEXT:    adcl 12(%esi), %edx
+; X32-NEXT:    movl (%ecx), %edi
+; X32-NEXT:    movl 4(%ecx), %ecx
+; X32-NEXT:    addl (%esi), %edi
+; X32-NEXT:    movl %edi, (%eax)
+; X32-NEXT:    movl %edx, 12(%eax)
+; X32-NEXT:    adcl 4(%esi), %ecx
+; X32-NEXT:    movl %ecx, 4(%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
-; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: add_2i64_mem:
@@ -305,27 +288,23 @@ define void @add_2i64_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 define void @add_4i32_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-LABEL: add_4i32_mem:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl 12(%edx), %esi
-; X32-NEXT:    movl 8(%edx), %edi
-; X32-NEXT:    movl (%edx), %ebx
-; X32-NEXT:    movl 4(%edx), %edx
-; X32-NEXT:    addl (%ecx), %ebx
-; X32-NEXT:    addl 4(%ecx), %edx
-; X32-NEXT:    addl 8(%ecx), %edi
-; X32-NEXT:    addl 12(%ecx), %esi
-; X32-NEXT:    movl %esi, 12(%eax)
-; X32-NEXT:    movl %edi, 8(%eax)
-; X32-NEXT:    movl %edx, 4(%eax)
-; X32-NEXT:    movl %ebx, (%eax)
+; X32-NEXT:    movl 12(%ecx), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    addl 12(%eax), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl %edx, 12(%esi)
+; X32-NEXT:    movl 8(%ecx), %edx
+; X32-NEXT:    addl 8(%eax), %edx
+; X32-NEXT:    movl %edx, 8(%esi)
+; X32-NEXT:    movl (%ecx), %edx
+; X32-NEXT:    movl 4(%ecx), %ecx
+; X32-NEXT:    addl 4(%eax), %ecx
+; X32-NEXT:    movl %ecx, 4(%esi)
+; X32-NEXT:    addl (%eax), %edx
+; X32-NEXT:    movl %edx, (%esi)
 ; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %edi
-; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: add_4i32_mem:

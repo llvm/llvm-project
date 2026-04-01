@@ -101,8 +101,8 @@ define dso_local void @fadd_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    movl %esp, %ebp
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
-; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -648,9 +648,9 @@ define dso_local void @fadd_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    movl %esp, %ebp
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
+; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movl 20(%ebp), %eax
 ; X86-SSE1-NEXT:    movl 8(%ebp), %ecx
-; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -808,8 +808,8 @@ define dso_local void @fsub_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    movl %esp, %ebp
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
-; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -1362,9 +1362,9 @@ define dso_local void @fsub_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    movl %esp, %ebp
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
+; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movl 20(%ebp), %eax
 ; X86-SSE1-NEXT:    movl 8(%ebp), %ecx
-; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -1522,8 +1522,8 @@ define dso_local void @fmul_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    movl %esp, %ebp
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
-; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -2066,9 +2066,9 @@ define dso_local void @fmul_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    movl %esp, %ebp
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
+; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movl 20(%ebp), %eax
 ; X86-SSE1-NEXT:    movl 8(%ebp), %ecx
-; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -2226,8 +2226,8 @@ define dso_local void @fdiv_64r(ptr %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    movl %esp, %ebp
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
-; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -2774,9 +2774,9 @@ define dso_local void @fdiv_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    movl %esp, %ebp
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
+; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movl 20(%ebp), %eax
 ; X86-SSE1-NEXT:    movl 8(%ebp), %ecx
-; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]

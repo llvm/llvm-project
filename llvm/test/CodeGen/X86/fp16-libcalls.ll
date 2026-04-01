@@ -35,10 +35,8 @@ define void @test_half_ceil(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_ceil:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -47,9 +45,9 @@ define void @test_half_ceil(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.ceil.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -87,13 +85,13 @@ define void @test_half_copysign(half %a0, half %a1, ptr %p0) nounwind {
 ; X86-LABEL: test_half_copysign:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    pextrw $0, %xmm0, %ecx
-; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    por %xmm0, %xmm1
+; X86-NEXT:    pextrw $0, %xmm1, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    retl
   %res = call half @llvm.copysign.half(half %a0, half %a1)
   store half %res, ptr %p0, align 2
@@ -137,10 +135,8 @@ define void @test_half_cos(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_cos:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -149,9 +145,9 @@ define void @test_half_cos(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.cos.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -195,10 +191,8 @@ define void @test_half_exp(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_exp:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -207,9 +201,9 @@ define void @test_half_exp(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.exp.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -253,10 +247,8 @@ define void @test_half_exp2(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_exp2:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -265,9 +257,9 @@ define void @test_half_exp2(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.exp2.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -311,10 +303,8 @@ define void @test_half_exp10(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_exp10:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -323,9 +313,9 @@ define void @test_half_exp10(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.exp10.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -355,10 +345,10 @@ define void @test_half_fabs(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_fabs:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    retl
   %res = call half @llvm.fabs.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -394,10 +384,8 @@ define void @test_half_floor(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_floor:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -406,9 +394,9 @@ define void @test_half_floor(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.floor.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -472,24 +460,18 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_fma:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $88, %esp
+; X86-NEXT:    subl $60, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -502,9 +484,9 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 ; X86-NEXT:    fstpl (%esp)
 ; X86-NEXT:    calll __truncdfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $88, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $60, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.fma.half(half %a0, half %a1, half %a2)
   store half %res, ptr %p0, align 2
@@ -534,10 +516,10 @@ define void @test_half_fneg(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_fneg:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $32768, %ecx # imm = 0x8000
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    movl $32768, %eax # imm = 0x8000
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    retl
   %res = fneg half %a0
   store half %res, ptr %p0, align 2
@@ -581,10 +563,8 @@ define void @test_half_log(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_log:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -593,9 +573,9 @@ define void @test_half_log(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.log.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -639,10 +619,8 @@ define void @test_half_log2(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_log2:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -651,9 +629,9 @@ define void @test_half_log2(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.log2.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -697,10 +675,8 @@ define void @test_half_log10(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_log10:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -709,9 +685,9 @@ define void @test_half_log10(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.log10.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -747,10 +723,8 @@ define void @test_half_nearbyint(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_nearbyint:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -759,9 +733,9 @@ define void @test_half_nearbyint(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.nearbyint.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -817,17 +791,13 @@ define void @test_half_pow(half %a0, half %a1, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_pow:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -838,9 +808,9 @@ define void @test_half_pow(half %a0, half %a1, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $56, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.pow.half(half %a0, half %a1)
   store half %res, ptr %p0, align 2
@@ -890,25 +860,21 @@ define void @test_half_powi(half %a0, i32 %a1, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_powi:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $20, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __powisf2
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $20, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.powi.half(half %a0, i32 %a1)
   store half %res, ptr %p0, align 2
@@ -944,10 +910,8 @@ define void @test_half_rint(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_rint:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -956,9 +920,9 @@ define void @test_half_rint(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.rint.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -1002,10 +966,8 @@ define void @test_half_sin(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_sin:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -1014,9 +976,9 @@ define void @test_half_sin(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.sin.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -1052,10 +1014,8 @@ define void @test_half_sqrt(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_sqrt:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -1065,9 +1025,9 @@ define void @test_half_sqrt(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.sqrt.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -1111,10 +1071,8 @@ define void @test_half_tan(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_tan:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -1123,9 +1081,9 @@ define void @test_half_tan(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.tan.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -1161,10 +1119,8 @@ define void @test_half_trunc(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_trunc:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -1173,9 +1129,9 @@ define void @test_half_trunc(half %a0, ptr %p0) nounwind {
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
   %res = call half @llvm.trunc.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -1357,15 +1313,13 @@ define half @test_half_atan2(half %a, half %b) nounwind {
 ;
 ; X86-LABEL: test_half_atan2:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $60, %esp
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
@@ -1375,7 +1329,7 @@ define half @test_half_atan2(half %a, half %b) nounwind {
 ; X86-NEXT:    calll atan2f
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    addl $60, %esp
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
   %x = call half @llvm.atan2.f16(half %a, half %b)
   ret half %x

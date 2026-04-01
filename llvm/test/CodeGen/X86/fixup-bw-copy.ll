@@ -86,8 +86,8 @@ define i8 @test_movb_hreg(i16 %a0) {
 ; X86-LABEL: test_movb_hreg:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addb %al, %ah
-; X86-NEXT:    movb %ah, %al
+; X86-NEXT:    addb %ah, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
   %tmp0 = trunc i16 %a0 to i8
   %tmp1 = lshr i16 %a0, 8

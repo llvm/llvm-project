@@ -42,9 +42,9 @@ define i32 @or_and_trunc_fold(i64 %x, i64 %y) {
 define i32 @test1(i32 %x, i16 %y) {
 ; DARWIN-LABEL: test1:
 ; DARWIN:       ## %bb.0:
-; DARWIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; DARWIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; DARWIN-NEXT:    shll $16, %eax
+; DARWIN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; DARWIN-NEXT:    shll $16, %ecx
+; DARWIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; DARWIN-NEXT:    orl %ecx, %eax
 ; DARWIN-NEXT:    andl $16711807, %eax ## imm = 0xFF007F
 ; DARWIN-NEXT:    retl

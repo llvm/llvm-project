@@ -9,28 +9,28 @@ define void @test0(ptr %A, ptr %B) nounwind {
 ; X86-LABEL: test0:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    paddb %xmm0, %xmm1
-; X86-NEXT:    movdq2q %xmm1, %mm0
 ; X86-NEXT:    movq %xmm1, (%eax)
+; X86-NEXT:    movdq2q %xmm1, %mm0
 ; X86-NEXT:    paddsb (%ecx), %mm0
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    paddusb (%ecx), %mm0
-; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    movq %mm0, (%eax)
+; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    psubb %xmm1, %xmm0
-; X86-NEXT:    movdq2q %xmm0, %mm0
 ; X86-NEXT:    movq %xmm0, (%eax)
+; X86-NEXT:    movdq2q %xmm0, %mm0
 ; X86-NEXT:    psubsb (%ecx), %mm0
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    psubusb (%ecx), %mm0
-; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    movq %mm0, (%eax)
-; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-NEXT:    pmullw %xmm0, %xmm1
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
@@ -143,8 +143,8 @@ define void @test1(ptr %A, ptr %B) nounwind {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    paddd %xmm1, %xmm0
 ; X86-NEXT:    movq %xmm0, (%eax)
@@ -245,37 +245,37 @@ define void @test2(ptr %A, ptr %B) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 12(%ebp), %ecx
-; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    paddw %xmm0, %xmm1
-; X86-NEXT:    movdq2q %xmm1, %mm0
 ; X86-NEXT:    movq %xmm1, (%eax)
+; X86-NEXT:    movdq2q %xmm1, %mm0
 ; X86-NEXT:    paddsw (%ecx), %mm0
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    paddusw (%ecx), %mm0
-; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    movq %mm0, (%eax)
+; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    psubw %xmm1, %xmm0
-; X86-NEXT:    movdq2q %xmm0, %mm0
 ; X86-NEXT:    movq %xmm0, (%eax)
+; X86-NEXT:    movdq2q %xmm0, %mm0
 ; X86-NEXT:    psubsw (%ecx), %mm0
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    psubusw (%ecx), %mm0
-; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    movq %mm0, (%eax)
+; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    pmullw %xmm0, %xmm1
-; X86-NEXT:    movdq2q %xmm1, %mm0
 ; X86-NEXT:    movq %xmm1, (%eax)
+; X86-NEXT:    movdq2q %xmm1, %mm0
 ; X86-NEXT:    pmulhw (%ecx), %mm0
 ; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    pmaddwd (%ecx), %mm0
+; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movq %mm0, (%eax)
 ; X86-NEXT:    andl 4(%ecx), %esi
 ; X86-NEXT:    movd %esi, %xmm0
 ; X86-NEXT:    andl (%ecx), %edx
@@ -548,8 +548,8 @@ define void @ti64(double %a, double %b) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, 0
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, 4
 ; X86-NEXT:    retl
 ;

@@ -87,11 +87,11 @@ define i32 @t3_random_constant(i32 %ptr) nounwind {
 define i32 @t4_extrause(i32 %ptr, ptr %bias_storage) nounwind {
 ; X86-LABEL: t4_extrause:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    andl $15, %edx
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, (%edx)
 ; X86-NEXT:    andl $-16, %eax
 ; X86-NEXT:    retl
 ;
@@ -114,9 +114,9 @@ define i32 @t4_extrause(i32 %ptr, ptr %bias_storage) nounwind {
 define i32 @n5_different_ptrs(i32 %ptr0, i32 %ptr1) nounwind {
 ; X86-LABEL: n5_different_ptrs:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;

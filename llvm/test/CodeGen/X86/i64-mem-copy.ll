@@ -16,16 +16,16 @@ define void @foo(ptr %x, ptr %y) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X86AVX-LABEL: foo:
 ; X86AVX:       # %bb.0:
 ; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX-NEXT:    vmovsd %xmm0, (%eax)
 ; X86AVX-NEXT:    retl
   %tmp1 = load i64, ptr %y, align 8
@@ -45,15 +45,15 @@ define void @store_i64_from_vector(<8 x i16> %x, <8 x i16> %y, ptr %i) nounwind 
 ;
 ; X86-LABEL: store_i64_from_vector:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    paddw %xmm1, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X86AVX-LABEL: store_i64_from_vector:
 ; X86AVX:       # %bb.0:
-; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX-NEXT:    vmovq %xmm0, (%eax)
 ; X86AVX-NEXT:    retl
   %z = add <8 x i16> %x, %y                          ; force execution domain
@@ -76,8 +76,8 @@ define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, ptr %i) noun
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 24(%ebp), %eax
 ; X86-NEXT:    paddw 8(%ebp), %xmm1
+; X86-NEXT:    movl 24(%ebp), %eax
 ; X86-NEXT:    movq %xmm1, (%eax)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -85,10 +85,10 @@ define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, ptr %i) noun
 ;
 ; X86AVX-LABEL: store_i64_from_vector256:
 ; X86AVX:       # %bb.0:
-; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; X86AVX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X86AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; X86AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86AVX-NEXT:    vmovq %xmm0, (%eax)
 ; X86AVX-NEXT:    vzeroupper
 ; X86AVX-NEXT:    retl
@@ -127,17 +127,17 @@ define void @PR23476(<5 x i64> %in, ptr %out, i32 %index) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $80, %esp
+; X86-NEXT:    movups 24(%ebp), %xmm0
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movups 8(%ebp), %xmm0
+; X86-NEXT:    movaps %xmm0, (%esp)
+; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl 52(%ebp), %eax
 ; X86-NEXT:    andl $7, %eax
-; X86-NEXT:    movl 48(%ebp), %ecx
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movups 8(%ebp), %xmm1
-; X86-NEXT:    movups 24(%ebp), %xmm2
-; X86-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
-; X86-NEXT:    movaps %xmm1, (%esp)
-; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movsd %xmm0, (%ecx)
+; X86-NEXT:    movl 48(%ebp), %eax
+; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -148,15 +148,15 @@ define void @PR23476(<5 x i64> %in, ptr %out, i32 %index) nounwind {
 ; X86AVX-NEXT:    movl %esp, %ebp
 ; X86AVX-NEXT:    andl $-32, %esp
 ; X86AVX-NEXT:    subl $96, %esp
+; X86AVX-NEXT:    vmovups 8(%ebp), %ymm0
+; X86AVX-NEXT:    vmovaps %ymm0, (%esp)
 ; X86AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X86AVX-NEXT:    movl 52(%ebp), %eax
 ; X86AVX-NEXT:    andl $7, %eax
-; X86AVX-NEXT:    movl 48(%ebp), %ecx
-; X86AVX-NEXT:    vmovups 8(%ebp), %ymm1
-; X86AVX-NEXT:    vmovaps %ymm1, (%esp)
-; X86AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X86AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86AVX-NEXT:    vmovsd %xmm0, (%ecx)
+; X86AVX-NEXT:    movl 48(%ebp), %eax
+; X86AVX-NEXT:    vmovsd %xmm0, (%eax)
 ; X86AVX-NEXT:    movl %ebp, %esp
 ; X86AVX-NEXT:    popl %ebp
 ; X86AVX-NEXT:    vzeroupper

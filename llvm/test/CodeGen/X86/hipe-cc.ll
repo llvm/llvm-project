@@ -51,8 +51,8 @@ define cc 11 void @foo(i32 %hp, i32 %p, i32 %arg0, i32 %arg1, i32 %arg2) nounwin
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subl $20, %esp
-; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ecx, (%esp)

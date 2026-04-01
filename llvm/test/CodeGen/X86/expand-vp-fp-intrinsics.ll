@@ -8,8 +8,8 @@
 define void @vp_fadd_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_fadd_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -33,8 +33,8 @@ declare <4 x float> @llvm.vp.fadd.v4f32(<4 x float>, <4 x float>, <4 x i1>, i32)
 define void @vp_fsub_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_fsub_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vsubps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -58,8 +58,8 @@ declare <4 x float> @llvm.vp.fsub.v4f32(<4 x float>, <4 x float>, <4 x i1>, i32)
 define void @vp_fmul_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_fmul_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -83,8 +83,8 @@ declare <4 x float> @llvm.vp.fmul.v4f32(<4 x float>, <4 x float>, <4 x i1>, i32)
 define void @vp_fdiv_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_fdiv_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vdivps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -108,11 +108,9 @@ declare <4 x float> @llvm.vp.fdiv.v4f32(<4 x float>, <4 x float>, <4 x i1>, i32)
 define void @vp_frem_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_frem_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $80, %esp
 ; X86-NEXT:    vmovups %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    vextractps $2, %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    vextractps $2, %xmm0, (%esp)
 ; X86-NEXT:    calll fmodf
@@ -143,9 +141,9 @@ define void @vp_frem_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) 
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
-; X86-NEXT:    vmovaps %xmm0, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    addl $80, %esp
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; SSE-LABEL: vp_frem_v4f32:
@@ -230,8 +228,8 @@ declare <4 x float> @llvm.vp.frem.v4f32(<4 x float>, <4 x float>, <4 x i1>, i32)
 define void @vp_fabs_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_fabs_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -268,8 +266,8 @@ declare <4 x float> @llvm.vp.fabs.v4f32(<4 x float>, <4 x i1>, i32)
 define void @vp_sqrt_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_sqrt_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vsqrtps %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -293,8 +291,8 @@ declare <4 x float> @llvm.vp.sqrt.v4f32(<4 x float>, <4 x i1>, i32)
 define void @vp_fneg_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
 ; X86-LABEL: vp_fneg_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -331,11 +329,9 @@ declare <4 x float> @llvm.vp.fneg.v4f32(<4 x float>, <4 x i1>, i32)
 define void @vp_fma_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i4 %a5) nounwind {
 ; X86-LABEL: vp_fma_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $84, %esp
 ; X86-NEXT:    vmovupd %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    vextractps $2, %xmm0, (%esp)
 ; X86-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
 ; X86-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
@@ -373,9 +369,9 @@ define void @vp_fma_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i4 %a5) no
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
-; X86-NEXT:    vmovaps %xmm0, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    addl $84, %esp
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; SSE-LABEL: vp_fma_v4f32:
@@ -515,9 +511,9 @@ declare <4 x float> @llvm.vp.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, <4
 define void @vp_fmuladd_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i4 %a5) nounwind {
 ; X86-LABEL: vp_fmuladd_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

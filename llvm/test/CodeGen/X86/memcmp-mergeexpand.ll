@@ -10,12 +10,12 @@ define zeroext i1 @opeq1(
 ; X86-LABEL: opeq1:
 ; X86:       # %bb.0: # %"entry+land.rhs.i"
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    xorl 4(%eax), %ecx
-; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl 4(%edx), %eax
+; X86-NEXT:    xorl (%edx), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;

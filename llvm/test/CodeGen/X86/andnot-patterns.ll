@@ -17,9 +17,9 @@ define i64 @andnot_rotl_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NOBMI-LABEL: andnot_rotl_i64:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %esi
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    jne .LBB0_1
 ; X86-NOBMI-NEXT:  # %bb.2:
@@ -43,9 +43,9 @@ define i64 @andnot_rotl_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-BMI-LABEL: andnot_rotl_i64:
 ; X86-BMI:       # %bb.0:
 ; X86-BMI-NEXT:    pushl %esi
+; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    testb $32, %cl
 ; X86-BMI-NEXT:    jne .LBB0_1
 ; X86-BMI-NEXT:  # %bb.2:
@@ -196,30 +196,30 @@ define i64 @andnot_rotl_i64_multiuse_rot(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    notl %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    notl %eax
 ; X86-NEXT:    notl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    jne .LBB4_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    jmp .LBB4_3
 ; X86-NEXT:  .LBB4_1:
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:  .LBB4_3:
-; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    shldl %cl, %eax, %ebx
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    shldl %cl, %edx, %ebx
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-NEXT:    shldl %cl, %edx, %eax
+; X86-NEXT:    shldl %cl, %eax, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    andl %eax, %esi
+; X86-NEXT:    andl %edx, %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    andl %ebx, %edi
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll use_i64@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    movl %esi, %eax
@@ -258,9 +258,9 @@ define i64 @andnot_rotr_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NOBMI-LABEL: andnot_rotr_i64:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %esi
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    testb $32, %cl
 ; X86-NOBMI-NEXT:    je .LBB5_1
 ; X86-NOBMI-NEXT:  # %bb.2:
@@ -284,9 +284,9 @@ define i64 @andnot_rotr_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-BMI-LABEL: andnot_rotr_i64:
 ; X86-BMI:       # %bb.0:
 ; X86-BMI-NEXT:    pushl %esi
+; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    testb $32, %cl
 ; X86-BMI-NEXT:    je .LBB5_1
 ; X86-BMI-NEXT:  # %bb.2:
@@ -435,9 +435,9 @@ define i32 @andnot_rotr_i32_multiuse_not(i32 %a0, i32 %a1, i32 %a2) nounwind {
 ; X86-NOBMI-LABEL: andnot_rotr_i32_multiuse_not:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %esi
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    notl %eax
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl %eax, %esi
 ; X86-NOBMI-NEXT:    rorl %cl, %esi
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %esi
@@ -451,10 +451,10 @@ define i32 @andnot_rotr_i32_multiuse_not(i32 %a0, i32 %a1, i32 %a2) nounwind {
 ; X86-BMI-LABEL: andnot_rotr_i32_multiuse_not:
 ; X86-BMI:       # %bb.0:
 ; X86-BMI-NEXT:    pushl %esi
-; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    movl %eax, %edx
 ; X86-BMI-NEXT:    notl %edx
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    rorl %cl, %eax
 ; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %esi
 ; X86-BMI-NEXT:    pushl %edx

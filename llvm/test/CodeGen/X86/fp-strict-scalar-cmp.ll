@@ -11,10 +11,10 @@
 define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_oeq_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
@@ -30,10 +30,10 @@ define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_oeq_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
@@ -54,27 +54,27 @@ define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    fucompp
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    jne .LBB0_3
 ; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    jp .LBB0_3
 ; X87-NEXT:  # %bb.2:
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:  .LBB0_3:
-; X87-NEXT:    movl (%eax), %eax
+; X87-NEXT:    movl (%ecx), %eax
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: test_f32_oeq_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
@@ -89,10 +89,10 @@ define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ogt_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmoval %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -106,10 +106,10 @@ define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ogt_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmoval %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -142,13 +142,13 @@ define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ogt_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -162,10 +162,10 @@ define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_oge_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovael %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -179,10 +179,10 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_oge_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -215,13 +215,13 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_oge_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -235,10 +235,10 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_olt_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmoval %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -252,10 +252,10 @@ define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_olt_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmoval %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -288,13 +288,13 @@ define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_olt_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -308,10 +308,10 @@ define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ole_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovael %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -325,10 +325,10 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ole_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -361,13 +361,13 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ole_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -381,10 +381,10 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_one_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -398,10 +398,10 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_one_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -434,13 +434,13 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_one_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -454,10 +454,10 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ord_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -471,10 +471,10 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ord_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -507,13 +507,13 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ord_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -527,10 +527,10 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ueq_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -544,10 +544,10 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ueq_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -580,13 +580,13 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ueq_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -600,10 +600,10 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ugt_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -617,10 +617,10 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ugt_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -653,13 +653,13 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ugt_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -673,10 +673,10 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_uge_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -690,10 +690,10 @@ define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_uge_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -726,13 +726,13 @@ define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_uge_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -746,10 +746,10 @@ define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ult_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -763,10 +763,10 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ult_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -799,13 +799,13 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ult_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -819,10 +819,10 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ule_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -836,10 +836,10 @@ define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ule_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -872,13 +872,13 @@ define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ule_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -892,10 +892,10 @@ define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_une_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
@@ -911,10 +911,10 @@ define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_une_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
@@ -935,27 +935,27 @@ define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    fucompp
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    jne .LBB12_3
 ; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    jp .LBB12_3
 ; X87-NEXT:  # %bb.2:
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:  .LBB12_3:
-; X87-NEXT:    movl (%eax), %eax
+; X87-NEXT:    movl (%ecx), %eax
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: test_f32_une_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
@@ -970,10 +970,10 @@ define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_uno_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -987,10 +987,10 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_uno_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1023,13 +1023,13 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_uno_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1043,10 +1043,10 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_oeq_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
@@ -1062,10 +1062,10 @@ define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_oeq_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
@@ -1086,27 +1086,27 @@ define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fucompp
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    jne .LBB14_3
 ; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    jp .LBB14_3
 ; X87-NEXT:  # %bb.2:
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:  .LBB14_3:
-; X87-NEXT:    movl (%eax), %eax
+; X87-NEXT:    movl (%ecx), %eax
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: test_f64_oeq_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
@@ -1121,10 +1121,10 @@ define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ogt_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmoval %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1138,10 +1138,10 @@ define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ogt_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmoval %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1174,13 +1174,13 @@ define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ogt_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1194,10 +1194,10 @@ define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_oge_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovael %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1211,10 +1211,10 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_oge_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1247,13 +1247,13 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_oge_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1267,10 +1267,10 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_olt_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmoval %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1284,10 +1284,10 @@ define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_olt_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmoval %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1320,13 +1320,13 @@ define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_olt_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1340,10 +1340,10 @@ define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ole_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovael %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1357,10 +1357,10 @@ define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ole_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1393,13 +1393,13 @@ define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ole_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1413,10 +1413,10 @@ define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_one_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1430,10 +1430,10 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_one_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1466,13 +1466,13 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_one_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1486,10 +1486,10 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ord_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1503,10 +1503,10 @@ define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ord_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1539,13 +1539,13 @@ define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ord_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1559,10 +1559,10 @@ define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ueq_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1576,10 +1576,10 @@ define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ueq_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1612,13 +1612,13 @@ define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ueq_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1632,10 +1632,10 @@ define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ugt_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1649,10 +1649,10 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ugt_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1685,13 +1685,13 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ugt_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1705,10 +1705,10 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_uge_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1722,10 +1722,10 @@ define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_uge_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1758,13 +1758,13 @@ define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_uge_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1778,10 +1778,10 @@ define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ult_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1795,10 +1795,10 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ult_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1831,13 +1831,13 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ult_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1851,10 +1851,10 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ule_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -1868,10 +1868,10 @@ define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ule_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -1904,13 +1904,13 @@ define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ule_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -1924,10 +1924,10 @@ define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_une_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
@@ -1943,10 +1943,10 @@ define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_une_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
@@ -1967,27 +1967,27 @@ define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fucompp
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    jne .LBB26_3
 ; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    jp .LBB26_3
 ; X87-NEXT:  # %bb.2:
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:  .LBB26_3:
-; X87-NEXT:    movl (%eax), %eax
+; X87-NEXT:    movl (%ecx), %eax
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: test_f64_une_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
@@ -2002,10 +2002,10 @@ define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_uno_q:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    ucomisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2019,10 +2019,10 @@ define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_uno_q:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2055,13 +2055,13 @@ define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_uno_q:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2075,10 +2075,10 @@ define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_oeq_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
@@ -2094,10 +2094,10 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_oeq_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
@@ -2118,27 +2118,27 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    fcompp
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    jne .LBB28_3
 ; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    jp .LBB28_3
 ; X87-NEXT:  # %bb.2:
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:  .LBB28_3:
-; X87-NEXT:    movl (%eax), %eax
+; X87-NEXT:    movl (%ecx), %eax
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: test_f32_oeq_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
@@ -2153,10 +2153,10 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ogt_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmoval %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2170,10 +2170,10 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ogt_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmoval %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2206,13 +2206,13 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ogt_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2226,10 +2226,10 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_oge_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovael %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2243,10 +2243,10 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_oge_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2279,13 +2279,13 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_oge_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2299,10 +2299,10 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_olt_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmoval %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2316,10 +2316,10 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_olt_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmoval %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2352,13 +2352,13 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_olt_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2372,10 +2372,10 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ole_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovael %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2389,10 +2389,10 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ole_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2425,13 +2425,13 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ole_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2445,10 +2445,10 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_one_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2462,10 +2462,10 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_one_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2498,13 +2498,13 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_one_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2518,10 +2518,10 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ord_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2535,10 +2535,10 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ord_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2571,13 +2571,13 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ord_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2591,10 +2591,10 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ueq_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2608,10 +2608,10 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ueq_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2644,13 +2644,13 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ueq_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2664,10 +2664,10 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ugt_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2681,10 +2681,10 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ugt_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2717,13 +2717,13 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ugt_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2737,10 +2737,10 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_uge_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2754,10 +2754,10 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_uge_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2790,13 +2790,13 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_uge_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2810,10 +2810,10 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ult_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2827,10 +2827,10 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ult_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2863,13 +2863,13 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ult_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2883,10 +2883,10 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_ule_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -2900,10 +2900,10 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_ule_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -2936,13 +2936,13 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_ule_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -2956,10 +2956,10 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_une_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
@@ -2975,10 +2975,10 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_une_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
@@ -2999,27 +2999,27 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    fcompp
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    jne .LBB40_3
 ; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    jp .LBB40_3
 ; X87-NEXT:  # %bb.2:
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:  .LBB40_3:
-; X87-NEXT:    movl (%eax), %eax
+; X87-NEXT:    movl (%ecx), %eax
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: test_f32_une_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
@@ -3034,10 +3034,10 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SSE-32-LABEL: test_f32_uno_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    comiss {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3051,10 +3051,10 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f32_uno_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vcomiss {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3087,13 +3087,13 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f32_uno_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3107,10 +3107,10 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_oeq_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
@@ -3126,10 +3126,10 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_oeq_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
@@ -3150,27 +3150,27 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fcompp
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    jne .LBB42_3
 ; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    jp .LBB42_3
 ; X87-NEXT:  # %bb.2:
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:  .LBB42_3:
-; X87-NEXT:    movl (%eax), %eax
+; X87-NEXT:    movl (%ecx), %eax
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: test_f64_oeq_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
@@ -3185,10 +3185,10 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ogt_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmoval %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3202,10 +3202,10 @@ define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ogt_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmoval %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3238,13 +3238,13 @@ define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ogt_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3258,10 +3258,10 @@ define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_oge_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovael %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3275,10 +3275,10 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_oge_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3311,13 +3311,13 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_oge_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3331,10 +3331,10 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_olt_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmoval %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3348,10 +3348,10 @@ define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_olt_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmoval %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3384,13 +3384,13 @@ define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_olt_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3404,10 +3404,10 @@ define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ole_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovael %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3421,10 +3421,10 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ole_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3457,13 +3457,13 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ole_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3477,10 +3477,10 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_one_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3494,10 +3494,10 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_one_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3530,13 +3530,13 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_one_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3550,10 +3550,10 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ord_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3567,10 +3567,10 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ord_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3603,13 +3603,13 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ord_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3623,10 +3623,10 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ueq_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3640,10 +3640,10 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ueq_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3676,13 +3676,13 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ueq_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3696,10 +3696,10 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ugt_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3713,10 +3713,10 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ugt_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3749,13 +3749,13 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ugt_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3769,10 +3769,10 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_uge_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3786,10 +3786,10 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_uge_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3822,13 +3822,13 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_uge_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3842,10 +3842,10 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ult_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3859,10 +3859,10 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ult_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3895,13 +3895,13 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ult_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3915,10 +3915,10 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_ule_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovbel %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -3932,10 +3932,10 @@ define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_ule_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovbel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -3968,13 +3968,13 @@ define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_ule_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl
@@ -3988,10 +3988,10 @@ define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_une_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
@@ -4007,10 +4007,10 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_une_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
@@ -4031,27 +4031,27 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fcompp
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    jne .LBB54_3
 ; X87-NEXT:  # %bb.1:
 ; X87-NEXT:    jp .LBB54_3
 ; X87-NEXT:  # %bb.2:
-; X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:  .LBB54_3:
-; X87-NEXT:    movl (%eax), %eax
+; X87-NEXT:    movl (%ecx), %eax
 ; X87-NEXT:    retl
 ;
 ; X87-CMOV-LABEL: test_f64_une_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
@@ -4066,10 +4066,10 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SSE-32-LABEL: test_f64_uno_s:
 ; SSE-32:       # %bb.0:
-; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    comisd {{[0-9]+}}(%esp), %xmm0
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
 ; SSE-32-NEXT:    movl (%ecx), %eax
 ; SSE-32-NEXT:    retl
@@ -4083,10 +4083,10 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; AVX-32-LABEL: test_f64_uno_s:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vcomisd {{[0-9]+}}(%esp), %xmm0
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
@@ -4119,13 +4119,13 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; X87-CMOV-LABEL: test_f64_uno_s:
 ; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
 ; X87-CMOV-NEXT:    wait
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
 ; X87-CMOV-NEXT:    movl (%ecx), %eax
 ; X87-CMOV-NEXT:    retl

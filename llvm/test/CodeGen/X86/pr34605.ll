@@ -4,7 +4,15 @@
 define void @pr34605(ptr nocapture %s, i32 %p) {
 ; CHECK-LABEL: pr34605:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vmovups %zmm0, 448(%eax)
+; CHECK-NEXT:    vmovups %zmm0, 384(%eax)
+; CHECK-NEXT:    vmovups %zmm0, 320(%eax)
+; CHECK-NEXT:    vmovups %zmm0, 256(%eax)
+; CHECK-NEXT:    vmovups %zmm0, 192(%eax)
+; CHECK-NEXT:    vmovups %zmm0, 128(%eax)
+; CHECK-NEXT:    vmovups %zmm0, 64(%eax)
 ; CHECK-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %zmm0
 ; CHECK-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %k0
 ; CHECK-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %k1
@@ -19,14 +27,6 @@ define void @pr34605(ptr nocapture %s, i32 %p) {
 ; CHECK-NEXT:    kandq %k1, %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 {{.*#+}} zmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    vmovdqu64 %zmm0, (%eax)
-; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, 64(%eax)
-; CHECK-NEXT:    vmovdqu64 %zmm0, 128(%eax)
-; CHECK-NEXT:    vmovdqu64 %zmm0, 192(%eax)
-; CHECK-NEXT:    vmovdqu64 %zmm0, 256(%eax)
-; CHECK-NEXT:    vmovdqu64 %zmm0, 320(%eax)
-; CHECK-NEXT:    vmovdqu64 %zmm0, 384(%eax)
-; CHECK-NEXT:    vmovdqu64 %zmm0, 448(%eax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:

@@ -26,9 +26,9 @@ define <2 x double> @signbits_sext_v2i64_sitofp_v2f64(i32 %a0, i32 %a1) nounwind
 define <4 x float> @signbits_sext_v4i64_sitofp_v4f32(i8 signext %a0, i16 signext %a1, i32 %a2, i32 %a3) nounwind {
 ; X86-LABEL: signbits_sext_v4i64_sitofp_v4f32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
 ; X86-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -264,9 +264,9 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: signbits_sext_shuffle_sitofp:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; X86-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -418,24 +418,24 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovapd 8(%ebp), %xmm3
-; X86-NEXT:    vpsrad $31, %xmm2, %xmm4
-; X86-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
-; X86-NEXT:    vpsrad $1, %xmm5, %xmm5
-; X86-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1],xmm4[2,3],xmm5[4,5],xmm4[6,7]
-; X86-NEXT:    vextractf128 $1, %ymm2, %xmm2
-; X86-NEXT:    vpsrad $31, %xmm2, %xmm5
+; X86-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X86-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; X86-NEXT:    vpcmpeqq %xmm3, %xmm4, %xmm3
+; X86-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; X86-NEXT:    vpsrad $31, %xmm4, %xmm5
+; X86-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
+; X86-NEXT:    vpsrad $1, %xmm4, %xmm4
+; X86-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1],xmm5[2,3],xmm4[4,5],xmm5[6,7]
+; X86-NEXT:    vmovapd 8(%ebp), %xmm5
+; X86-NEXT:    vshufps {{.*#+}} xmm6 = xmm5[2,2,3,3]
+; X86-NEXT:    vblendvpd %xmm3, %xmm4, %xmm6, %xmm3
+; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpsrad $31, %xmm2, %xmm1
 ; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; X86-NEXT:    vpsrad $1, %xmm2, %xmm2
-; X86-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm5[2,3],xmm2[4,5],xmm5[6,7]
-; X86-NEXT:    vshufps {{.*#+}} xmm5 = xmm3[2,2,3,3]
-; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm6
-; X86-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvpd %xmm0, %xmm2, %xmm5, %xmm0
-; X86-NEXT:    vblendvpd %xmm6, %xmm4, %xmm3, %xmm1
-; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X86-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; X86-NEXT:    vblendvpd %xmm0, %xmm1, %xmm5, %xmm0
+; X86-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; X86-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -712,12 +712,12 @@ declare <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double>, <2 x double>, i8 immarg
 define void @cross_bb_signbits_insert_subvec(ptr %ptr, <32 x i8> %x, <32 x i8> %z) {
 ; X86-LABEL: cross_bb_signbits_insert_subvec:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; X86-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; X86-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
 ; X86-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vandnps %ymm1, %ymm0, %ymm1
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    vorps %ymm1, %ymm0, %ymm0

@@ -10,11 +10,11 @@
 define void @t0(ptr %dest, ptr %old) nounwind {
 ; X86-LABEL: t0:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl $1, %eax
+; X86-NEXT:    movd %eax, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $1, %edx
-; X86-NEXT:    movd %edx, %xmm0
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -38,10 +38,10 @@ define <8 x i16> @t1(ptr %A, ptr %B) nounwind {
 ; X86-LABEL: t1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movaps {{.*#+}} xmm0 = [0,65535,65535,65535,65535,65535,65535,65535]
 ; X86-NEXT:    movaps %xmm0, %xmm1
-; X86-NEXT:    andnps (%ecx), %xmm1
+; X86-NEXT:    andnps (%eax), %xmm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andps (%eax), %xmm0
 ; X86-NEXT:    orps %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -175,9 +175,9 @@ define void @t8(ptr %res, ptr %A) nounwind {
 ; X86-LABEL: t8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pshuflw {{.*#+}} xmm0 = mem[2,1,0,3,4,5,6,7]
 ; X86-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,5,4,7]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -214,10 +214,10 @@ define void @t9(ptr %r, ptr %A) nounwind {
 ; X86-LABEL: t9:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movaps (%eax), %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movaps (%ecx), %xmm0
 ; X86-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; X86-NEXT:    movaps %xmm0, (%ecx)
+; X86-NEXT:    movaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t9:

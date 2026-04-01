@@ -55,9 +55,9 @@ define i64 @t1_64(i64 %alignment) nounwind {
 define i32 @t2_extrause(i32 %alignment, ptr %mask_storage) nounwind {
 ; X86-LABEL: t2_extrause:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    decl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    notl %eax
 ; X86-NEXT:    retl

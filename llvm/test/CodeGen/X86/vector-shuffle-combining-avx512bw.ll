@@ -52,10 +52,10 @@ define <64 x i8> @combine_pshufb_identity(<64 x i8> %x0) {
 define <64 x i8> @combine_pshufb_identity_mask(<64 x i8> %x0, i64 %m) {
 ; X86-LABEL: combine_pshufb_identity_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X86-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X86-NEXT:    vpternlogd {{.*#+}} zmm3 = -1
 ; X86-NEXT:    vpshufb %zmm2, %zmm0, %zmm3 {%k1}
 ; X86-NEXT:    vpshufb %zmm2, %zmm3, %zmm1 {%k1}
@@ -100,8 +100,8 @@ define <64 x i8> @combine_pshufb_as_pslldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_pslldq_mask(<64 x i8> %a0, i64 %m) {
 ; X86-LABEL: combine_pshufb_as_pslldq_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpslldq {{.*#+}} zmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
@@ -126,8 +126,8 @@ define <64 x i8> @combine_pshufb_as_psrldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_psrldq_mask(<64 x i8> %a0, i64 %m) {
 ; X86-LABEL: combine_pshufb_as_psrldq_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
@@ -156,9 +156,9 @@ define <64 x i8> @combine_permi2q_pshufb_as_permi2d(<8 x i64> %a0, <8 x i64> %a1
 define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64> %a1, i64 %m) {
 ; X86-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [7,0,5,0,0,12,0,14]
 ; X86-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm2[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,20,21,22,23,20,21,22,23,20,21,22,23,20,21,22,23,40,41,42,43,40,41,42,43,40,41,42,43,40,41,42,43,60,61,62,63,60,61,62,63,60,61,62,63,60,61,62,63]
 ; X86-NEXT:    retl
 ;
@@ -194,12 +194,19 @@ define <32 x i16> @combine_permvar_as_pshufhw(<32 x i16> %a0) {
 }
 
 define <32 x i16> @combine_vpermi2var_as_packssdw(<16 x i32> %a0, <16 x i32> %a1) nounwind {
-; CHECK-LABEL: combine_vpermi2var_as_packssdw:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrad $25, %zmm0, %zmm0
-; CHECK-NEXT:    vpsrad $25, %zmm1, %zmm1
-; CHECK-NEXT:    vpackssdw %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: combine_vpermi2var_as_packssdw:
+; X86:       # %bb.0:
+; X86-NEXT:    vpsrad $25, %zmm1, %zmm1
+; X86-NEXT:    vpsrad $25, %zmm0, %zmm0
+; X86-NEXT:    vpackssdw %zmm1, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_as_packssdw:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsrad $25, %zmm0, %zmm0
+; X64-NEXT:    vpsrad $25, %zmm1, %zmm1
+; X64-NEXT:    vpackssdw %zmm1, %zmm0, %zmm0
+; X64-NEXT:    retq
   %1 = ashr <16 x i32> %a0, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
   %2 = ashr <16 x i32> %a1, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
   %3 = bitcast <16 x i32> %1 to <32 x i16>
@@ -209,12 +216,19 @@ define <32 x i16> @combine_vpermi2var_as_packssdw(<16 x i32> %a0, <16 x i32> %a1
 }
 
 define <32 x i16> @combine_vpermi2var_as_packusdw(<16 x i32> %a0, <16 x i32> %a1) nounwind {
-; CHECK-LABEL: combine_vpermi2var_as_packusdw:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrld $25, %zmm0, %zmm0
-; CHECK-NEXT:    vpsrld $25, %zmm1, %zmm1
-; CHECK-NEXT:    vpackusdw %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: combine_vpermi2var_as_packusdw:
+; X86:       # %bb.0:
+; X86-NEXT:    vpsrld $25, %zmm1, %zmm1
+; X86-NEXT:    vpsrld $25, %zmm0, %zmm0
+; X86-NEXT:    vpackusdw %zmm1, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_as_packusdw:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsrld $25, %zmm0, %zmm0
+; X64-NEXT:    vpsrld $25, %zmm1, %zmm1
+; X64-NEXT:    vpackusdw %zmm1, %zmm0, %zmm0
+; X64-NEXT:    retq
   %1 = lshr <16 x i32> %a0, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
   %2 = lshr <16 x i32> %a1, <i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25>
   %3 = bitcast <16 x i32> %1 to <32 x i16>
@@ -224,12 +238,19 @@ define <32 x i16> @combine_vpermi2var_as_packusdw(<16 x i32> %a0, <16 x i32> %a1
 }
 
 define <64 x i8> @combine_pshufb_as_packsswb(<32 x i16> %a0, <32 x i16> %a1) nounwind {
-; CHECK-LABEL: combine_pshufb_as_packsswb:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsraw $11, %zmm0, %zmm0
-; CHECK-NEXT:    vpsraw $11, %zmm1, %zmm1
-; CHECK-NEXT:    vpacksswb %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: combine_pshufb_as_packsswb:
+; X86:       # %bb.0:
+; X86-NEXT:    vpsraw $11, %zmm1, %zmm1
+; X86-NEXT:    vpsraw $11, %zmm0, %zmm0
+; X86-NEXT:    vpacksswb %zmm1, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_as_packsswb:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsraw $11, %zmm0, %zmm0
+; X64-NEXT:    vpsraw $11, %zmm1, %zmm1
+; X64-NEXT:    vpacksswb %zmm1, %zmm0, %zmm0
+; X64-NEXT:    retq
   %1 = ashr <32 x i16> %a0, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
   %2 = ashr <32 x i16> %a1, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
   %3 = bitcast <32 x i16> %1 to <64 x i8>
@@ -241,12 +262,19 @@ define <64 x i8> @combine_pshufb_as_packsswb(<32 x i16> %a0, <32 x i16> %a1) nou
 }
 
 define <64 x i8> @combine_pshufb_as_packuswb(<32 x i16> %a0, <32 x i16> %a1) nounwind {
-; CHECK-LABEL: combine_pshufb_as_packuswb:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrlw $11, %zmm0, %zmm0
-; CHECK-NEXT:    vpsrlw $11, %zmm1, %zmm1
-; CHECK-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: combine_pshufb_as_packuswb:
+; X86:       # %bb.0:
+; X86-NEXT:    vpsrlw $11, %zmm1, %zmm1
+; X86-NEXT:    vpsrlw $11, %zmm0, %zmm0
+; X86-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_as_packuswb:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsrlw $11, %zmm0, %zmm0
+; X64-NEXT:    vpsrlw $11, %zmm1, %zmm1
+; X64-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
+; X64-NEXT:    retq
   %1 = lshr <32 x i16> %a0, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
   %2 = lshr <32 x i16> %a1, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
   %3 = bitcast <32 x i16> %1 to <64 x i8>

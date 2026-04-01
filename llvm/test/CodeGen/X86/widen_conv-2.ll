@@ -7,8 +7,8 @@
 define void @convert_v2i16_v2i32(ptr %dst.addr, <2 x i16> %src) nounwind {
 ; X86-LABEL: convert_v2i16_v2i32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pmovsxwd %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

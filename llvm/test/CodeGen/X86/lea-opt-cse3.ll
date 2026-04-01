@@ -16,8 +16,8 @@ define i32 @foo(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal 4(%ecx,%eax,2), %edx
-; X86-NEXT:    leal 4(%ecx,%eax,4), %eax
+; X86-NEXT:    leal 4(%ecx,%eax,4), %edx
+; X86-NEXT:    leal 4(%ecx,%eax,2), %eax
 ; X86-NEXT:    imull %edx, %eax
 ; X86-NEXT:    retl
 entry:
@@ -44,8 +44,8 @@ define i32 @foo1(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal 4(%ecx,%eax,4), %edx
-; X86-NEXT:    leal 4(%ecx,%eax,8), %eax
+; X86-NEXT:    leal 4(%ecx,%eax,8), %edx
+; X86-NEXT:    leal 4(%ecx,%eax,4), %eax
 ; X86-NEXT:    imull %edx, %eax
 ; X86-NEXT:    retl
 entry:

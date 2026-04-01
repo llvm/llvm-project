@@ -92,21 +92,19 @@ define i32 @adc_merge_constants(i32 %a0) nounwind {
 define i32 @adc_merge_sub(i32 %a0) nounwind {
 ; X86-LABEL: adc_merge_sub:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    addl $42, %edi
+; X86-NEXT:    addl $42, %ecx
 ; X86-NEXT:    setb %al
-; X86-NEXT:    movl %edi, %esi
+; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    negl %esi
+; X86-NEXT:    xorl %ecx, %esi
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    xorl %edi, %esi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: adc_merge_sub:
@@ -171,10 +169,10 @@ define i32 @adc_add(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
 define i32 @adc_add_wrong_flags(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
 ; X86-LABEL: adc_add_wrong_flags:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl %ecx, %eax
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    jb .LBB5_2
@@ -204,26 +202,22 @@ define i32 @adc_add_wrong_flags(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
 define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) nounwind {
 ; X86-LABEL: adc_add_multi_use:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    leal (%esi,%edx), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    leal (%edi,%esi), %ebx
 ; X86-NEXT:    cmpl %ecx, %eax
-; X86-NEXT:    movl %ebx, (%edx)
-; X86-NEXT:    adcl %esi, %edi
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    adcl %edx, %esi
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    js .LBB6_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB6_2:
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: adc_add_multi_use:

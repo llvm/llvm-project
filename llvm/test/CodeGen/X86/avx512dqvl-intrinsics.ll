@@ -167,8 +167,8 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2qq_128_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2qq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7b,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -186,8 +186,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load(ptr %p, <2 x i64> 
 define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2qq_128_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2qq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7b,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -223,8 +223,8 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load_2(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_2(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2qq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7b,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -242,8 +242,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_2(ptr %p, <2 x i64
 define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load_2(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2qq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7b,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -277,8 +277,8 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load_3(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_3(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2qq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7b,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -295,8 +295,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_3(ptr %p, <2 x i64
 define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load_3(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2qq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7b,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -388,8 +388,8 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2uqq_128_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2uqq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x79,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -407,8 +407,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load(ptr %p, <2 x i64>
 define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2uqq_128_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2uqq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x79,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -443,8 +443,8 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load_2(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_2(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2uqq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x79,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -462,8 +462,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_2(ptr %p, <2 x i6
 define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_2(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2uqq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x79,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -497,8 +497,8 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load_3(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_3(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2uqq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x79,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -515,8 +515,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_3(ptr %p, <2 x i6
 define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_3(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvtps2uqq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x79,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -816,8 +816,8 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2qq_128_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2qq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7a,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -835,8 +835,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load(ptr %p, <2 x i64>
 define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2qq_128_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2qq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7a,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -872,8 +872,8 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load_2(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_2(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2qq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7a,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -891,8 +891,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_2(ptr %p, <2 x i6
 define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_2(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2qq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7a,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -926,8 +926,8 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load_3(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_3(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2qq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7a,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -944,8 +944,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_3(ptr %p, <2 x i6
 define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_3(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2qq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7a,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1130,8 +1130,8 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2uqq_128_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2uqq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x78,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1149,8 +1149,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load(ptr %p, <2 x i64
 define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2uqq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x78,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1186,8 +1186,8 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load_2(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_2(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2uqq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x78,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1205,8 +1205,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_2(ptr %p, <2 x i
 define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_2(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2uqq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x78,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1240,8 +1240,8 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load_3(ptr %p) {
 define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_3(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2uqq (%eax), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x78,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1258,8 +1258,8 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_3(ptr %p, <2 x i
 define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_3(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vcvttps2uqq (%eax), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x78,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;

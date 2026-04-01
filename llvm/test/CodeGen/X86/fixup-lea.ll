@@ -12,6 +12,7 @@ define void @foo(i32 inreg %dns) minsize {
 ; CHECK-NEXT:    movzwl %cx, %edx
 ; CHECK-NEXT:    decl %ecx
 ; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; CHECK-NEXT:    jl .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    retl
@@ -39,6 +40,7 @@ define void @bar(i32 inreg %dns) minsize {
 ; CHECK-NEXT:    movzwl %cx, %edx
 ; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; CHECK-NEXT:    jl .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    retl
@@ -65,6 +67,7 @@ define void @foo_optsize(i32 inreg %dns) optsize {
 ; CHECK-NEXT:    movzwl %cx, %edx
 ; CHECK-NEXT:    decl %ecx
 ; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; CHECK-NEXT:    jl .LBB2_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    retl
@@ -92,6 +95,7 @@ define void @bar_optsize(i32 inreg %dns) optsize {
 ; CHECK-NEXT:    movzwl %cx, %edx
 ; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; CHECK-NEXT:    jl .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    retl
@@ -118,6 +122,7 @@ define void @foo_pgso(i32 inreg %dns) !prof !14 {
 ; CHECK-NEXT:    movzwl %cx, %edx
 ; CHECK-NEXT:    decl %ecx
 ; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; CHECK-NEXT:    jl .LBB4_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    retl
@@ -145,6 +150,7 @@ define void @bar_pgso(i32 inreg %dns) !prof !14 {
 ; CHECK-NEXT:    movzwl %cx, %edx
 ; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; CHECK-NEXT:    jl .LBB5_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    retl
@@ -171,6 +177,7 @@ define void @foo_nosize(i32 inreg %dns) {
 ; SLOW-NEXT:    movzwl %cx, %edx
 ; SLOW-NEXT:    decl %ecx
 ; SLOW-NEXT:    cmpl %eax, %edx
+; SLOW-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; SLOW-NEXT:    jl .LBB6_1
 ; SLOW-NEXT:  # %bb.2: # %for.end
 ; SLOW-NEXT:    retl
@@ -184,6 +191,7 @@ define void @foo_nosize(i32 inreg %dns) {
 ; FAST-NEXT:    movzwl %cx, %edx
 ; FAST-NEXT:    addl $-1, %ecx
 ; FAST-NEXT:    cmpl %eax, %edx
+; FAST-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; FAST-NEXT:    jl .LBB6_1
 ; FAST-NEXT:  # %bb.2: # %for.end
 ; FAST-NEXT:    retl
@@ -211,6 +219,7 @@ define void @bar_nosize(i32 inreg %dns) {
 ; SLOW-NEXT:    movzwl %cx, %edx
 ; SLOW-NEXT:    incl %ecx
 ; SLOW-NEXT:    cmpl %eax, %edx
+; SLOW-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; SLOW-NEXT:    jl .LBB7_1
 ; SLOW-NEXT:  # %bb.2: # %for.end
 ; SLOW-NEXT:    retl
@@ -224,6 +233,7 @@ define void @bar_nosize(i32 inreg %dns) {
 ; FAST-NEXT:    movzwl %cx, %edx
 ; FAST-NEXT:    addl $1, %ecx
 ; FAST-NEXT:    cmpl %eax, %edx
+; FAST-NEXT:    # kill: def $cx killed $cx killed $ecx def $ecx
 ; FAST-NEXT:    jl .LBB7_1
 ; FAST-NEXT:  # %bb.2: # %for.end
 ; FAST-NEXT:    retl

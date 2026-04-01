@@ -118,16 +118,33 @@ define i64 @test_urem_i64(i64 %arg1, i64 %arg2) nounwind {
 ; X64-NEXT:    movq %rdx, %rax
 ; X64-NEXT:    retq
 ;
-; DAG-X86-LABEL: test_urem_i64:
-; DAG-X86:       # %bb.0:
-; DAG-X86-NEXT:    subl $12, %esp
-; DAG-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; DAG-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; DAG-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; DAG-X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; DAG-X86-NEXT:    calll __umoddi3
-; DAG-X86-NEXT:    addl $28, %esp
-; DAG-X86-NEXT:    retl
+; SDAG-X86-LABEL: test_urem_i64:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    pushl %esi
+; SDAG-X86-NEXT:    subl $8, %esp
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SDAG-X86-NEXT:    pushl %ecx
+; SDAG-X86-NEXT:    pushl %eax
+; SDAG-X86-NEXT:    pushl %esi
+; SDAG-X86-NEXT:    pushl %edx
+; SDAG-X86-NEXT:    calll __umoddi3
+; SDAG-X86-NEXT:    addl $24, %esp
+; SDAG-X86-NEXT:    popl %esi
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: test_urem_i64:
+; FAST-X86:       # %bb.0:
+; FAST-X86-NEXT:    subl $12, %esp
+; FAST-X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    calll __umoddi3
+; FAST-X86-NEXT:    addl $28, %esp
+; FAST-X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: test_urem_i64:
 ; GISEL-X86:       # %bb.0:

@@ -5,13 +5,21 @@
 ; Splat patterns below
 
 define <4 x i32> @shl4(<4 x i32> %A) nounwind {
-; CHECK-LABEL: shl4:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    pslld $2, %xmm1
-; CHECK-NEXT:    paddd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shl4:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    paddd %xmm1, %xmm1
+; X86-NEXT:    pslld $2, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shl4:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    pslld $2, %xmm1
+; X64-NEXT:    paddd %xmm0, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = shl <4 x i32> %A,  < i32 2, i32 2, i32 2, i32 2>
   %C = shl <4 x i32> %A,  < i32 1, i32 1, i32 1, i32 1>
@@ -20,13 +28,21 @@ entry:
 }
 
 define <4 x i32> @shr4(<4 x i32> %A) nounwind {
-; CHECK-LABEL: shr4:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrld $2, %xmm1
-; CHECK-NEXT:    psrld $1, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shr4:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrld $1, %xmm1
+; X86-NEXT:    psrld $2, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shr4:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psrld $2, %xmm1
+; X64-NEXT:    psrld $1, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = lshr <4 x i32> %A,  < i32 2, i32 2, i32 2, i32 2>
   %C = lshr <4 x i32> %A,  < i32 1, i32 1, i32 1, i32 1>
@@ -35,13 +51,21 @@ entry:
 }
 
 define <4 x i32> @sra4(<4 x i32> %A) nounwind {
-; CHECK-LABEL: sra4:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrad $2, %xmm1
-; CHECK-NEXT:    psrad $1, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: sra4:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrad $1, %xmm1
+; X86-NEXT:    psrad $2, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: sra4:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psrad $2, %xmm1
+; X64-NEXT:    psrad $1, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = ashr <4 x i32> %A,  < i32 2, i32 2, i32 2, i32 2>
   %C = ashr <4 x i32> %A,  < i32 1, i32 1, i32 1, i32 1>
@@ -50,13 +74,21 @@ entry:
 }
 
 define <2 x i64> @shl2(<2 x i64> %A) nounwind {
-; CHECK-LABEL: shl2:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psllq $2, %xmm1
-; CHECK-NEXT:    psllq $9, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shl2:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psllq $9, %xmm1
+; X86-NEXT:    psllq $2, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shl2:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psllq $2, %xmm1
+; X64-NEXT:    psllq $9, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = shl <2 x i64> %A,  < i64 2, i64 2>
   %C = shl <2 x i64> %A,  < i64 9, i64 9>
@@ -65,13 +97,21 @@ entry:
 }
 
 define <2 x i64> @shr2(<2 x i64> %A) nounwind {
-; CHECK-LABEL: shr2:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlq $8, %xmm1
-; CHECK-NEXT:    psrlq $1, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shr2:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlq $1, %xmm1
+; X86-NEXT:    psrlq $8, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shr2:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psrlq $8, %xmm1
+; X64-NEXT:    psrlq $1, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = lshr <2 x i64> %A,  < i64 8, i64 8>
   %C = lshr <2 x i64> %A,  < i64 1, i64 1>
@@ -80,13 +120,21 @@ entry:
 }
 
 define <8 x i16> @shl8(<8 x i16> %A) nounwind {
-; CHECK-LABEL: shl8:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psllw $2, %xmm1
-; CHECK-NEXT:    paddw %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shl8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    paddw %xmm1, %xmm1
+; X86-NEXT:    psllw $2, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shl8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psllw $2, %xmm1
+; X64-NEXT:    paddw %xmm0, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = shl <8 x i16> %A,  < i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
   %C = shl <8 x i16> %A,  < i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -95,13 +143,21 @@ entry:
 }
 
 define <8 x i16> @shr8(<8 x i16> %A) nounwind {
-; CHECK-LABEL: shr8:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlw $2, %xmm1
-; CHECK-NEXT:    psrlw $1, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shr8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $1, %xmm1
+; X86-NEXT:    psrlw $2, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shr8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psrlw $2, %xmm1
+; X64-NEXT:    psrlw $1, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = lshr <8 x i16> %A,  < i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
   %C = lshr <8 x i16> %A,  < i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -110,13 +166,21 @@ entry:
 }
 
 define <8 x i16> @sra8(<8 x i16> %A) nounwind {
-; CHECK-LABEL: sra8:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psraw $2, %xmm1
-; CHECK-NEXT:    psraw $1, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: sra8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psraw $1, %xmm1
+; X86-NEXT:    psraw $2, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: sra8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psraw $2, %xmm1
+; X64-NEXT:    psraw $1, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = ashr <8 x i16> %A,  < i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
   %C = ashr <8 x i16> %A,  < i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -129,9 +193,9 @@ entry:
 define <8 x i16> @sll8_nosplat(<8 x i16> %A) nounwind {
 ; X86-LABEL: sll8_nosplat:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [2,4,8,64,4,4,4,4]
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [512,128,32,2,16,2,2,2]
 ; X86-NEXT:    pmullw %xmm0, %xmm1
-; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [512,128,32,2,16,2,2,2]
+; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [2,4,8,64,4,4,4,4]
 ; X86-NEXT:    pxor %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -150,16 +214,27 @@ entry:
 }
 
 define <2 x i64> @shr2_nosplat(<2 x i64> %A) nounwind {
-; CHECK-LABEL: shr2_nosplat:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlq $8, %xmm1
-; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    psrlq $1, %xmm2
-; CHECK-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[0],xmm2[1]
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
-; CHECK-NEXT:    xorpd %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shr2_nosplat:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlq $1, %xmm1
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
+; X86-NEXT:    psrlq $8, %xmm0
+; X86-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; X86-NEXT:    xorpd %xmm2, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shr2_nosplat:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psrlq $8, %xmm1
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    psrlq $1, %xmm2
+; X64-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[0],xmm2[1]
+; X64-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
+; X64-NEXT:    xorpd %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = lshr <2 x i64> %A,  < i64 8, i64 1>
   %C = lshr <2 x i64> %A,  < i64 1, i64 0>
@@ -170,13 +245,21 @@ entry:
 ; Other shifts
 
 define <2 x i32> @shl2_other(<2 x i32> %A) nounwind {
-; CHECK-LABEL: shl2_other:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    pslld $2, %xmm1
-; CHECK-NEXT:    pslld $9, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shl2_other:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    pslld $9, %xmm1
+; X86-NEXT:    pslld $2, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shl2_other:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    pslld $2, %xmm1
+; X64-NEXT:    pslld $9, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = shl <2 x i32> %A,  < i32 2, i32 2>
   %C = shl <2 x i32> %A,  < i32 9, i32 9>
@@ -185,13 +268,21 @@ entry:
 }
 
 define <2 x i32> @shr2_other(<2 x i32> %A) nounwind {
-; CHECK-LABEL: shr2_other:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrld $8, %xmm1
-; CHECK-NEXT:    psrld $1, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: shr2_other:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrld $1, %xmm1
+; X86-NEXT:    psrld $8, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: shr2_other:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psrld $8, %xmm1
+; X64-NEXT:    psrld $1, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
 entry:
   %B = lshr <2 x i32> %A,  < i32 8, i32 8>
   %C = lshr <2 x i32> %A,  < i32 1, i32 1>

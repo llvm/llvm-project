@@ -128,10 +128,10 @@ define i32 @test4(i32 %A, i32 %B, i8 %C) nounwind {
 define i16 @test5(i16 %A, i16 %B, i8 %C) nounwind {
 ; X86-LABEL: test5:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shldw %cl, %dx, %ax
 ; X86-NEXT:    retl
 ;
@@ -183,10 +183,10 @@ define i32 @test6(i32 %A, i32 %B, i8 %C) nounwind {
 define i16 @test7(i16 %A, i16 %B, i8 %C) nounwind {
 ; X86-LABEL: test7:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrdw %cl, %dx, %ax
 ; X86-NEXT:    retl
 ;
@@ -487,11 +487,11 @@ define i32 @test18(i32 %hi, i32 %lo, i32 %bits) nounwind {
 define i32 @not_shld_i32(i32, i32, i32) {
 ; X86-LABEL: not_shld_i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    negb %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl %cl, %eax
 ; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    retl
@@ -518,11 +518,11 @@ define i32 @not_shld_i32(i32, i32, i32) {
 define i32 @not_shrd_i32(i32, i32, i32) {
 ; X86-LABEL: not_shrd_i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    negb %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    retl

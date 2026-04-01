@@ -697,8 +697,8 @@ define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
 ; X86-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vucomiss %xmm1, %xmm0
 ; X86-AVX1-NEXT:    cmovael %edx, %eax
-; X86-AVX1-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    movl $-1, %ecx
+; X86-AVX1-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    cmovbel %eax, %ecx
 ; X86-AVX1-NEXT:    vmovd %ecx, %xmm0
 ; X86-AVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
@@ -751,16 +751,16 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; X86-AVX1-NEXT:    fldl (%esp)
 ; X86-AVX1-NEXT:    fisttpll (%esp)
 ; X86-AVX1-NEXT:    xorl %eax, %eax
-; X86-AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; X86-AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    movl $0, %edx
 ; X86-AVX1-NEXT:    jb .LBB19_2
 ; X86-AVX1-NEXT:  # %bb.1:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX1-NEXT:    movl (%esp), %edx
 ; X86-AVX1-NEXT:  .LBB19_2:
-; X86-AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    movl $-1, %esi
+; X86-AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    cmovbel %edx, %esi
 ; X86-AVX1-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
 ; X86-AVX1-NEXT:    cmovbel %ecx, %edx

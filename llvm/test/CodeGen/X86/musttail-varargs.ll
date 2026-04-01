@@ -246,9 +246,9 @@ define void @f_thunk(ptr %this, ...) {
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-16, %esp
 ; X86-NOSSE-NEXT:    subl $32, %esp
-; X86-NOSSE-NEXT:    movl 8(%ebp), %esi
 ; X86-NOSSE-NEXT:    leal 12(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    movl 8(%ebp), %esi
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    calll _get_f
 ; X86-NOSSE-NEXT:    addl $4, %esp
@@ -268,9 +268,9 @@ define void @f_thunk(ptr %this, ...) {
 ; X86-SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE-NEXT:    movaps %xmm0, (%esp) # 16-byte Spill
-; X86-SSE-NEXT:    movl 8(%ebp), %esi
 ; X86-SSE-NEXT:    leal 12(%ebp), %eax
 ; X86-SSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movl 8(%ebp), %esi
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    calll _get_f
 ; X86-SSE-NEXT:    addl $4, %esp
@@ -375,8 +375,8 @@ define void @h_thunk(ptr %this, ...) {
 ; X86-NEXT:    jmpl *%ecx # TAILCALL
 ; X86-NEXT:  LBB2_2: # %else
 ; X86-NEXT:    movl 8(%eax), %ecx
-; X86-NEXT:    movl $42, _g
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $42, _g
 ; X86-NEXT:    jmpl *%ecx # TAILCALL
   %cond = load i1, ptr %this
   br i1 %cond, label %then, label %else

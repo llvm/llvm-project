@@ -5,35 +5,31 @@
 define i32 @extract3(ptr, i32) nounwind {
 ; X86-LABEL: extract3:
 ; X86:       # %bb.0: # %_L1
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 24(%esp), %esi
-; X86-NEXT:    andl $7, %esi
-; X86-NEXT:    movl 20(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %ebx
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    movl 12(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $12, %ecx
+; X86-NEXT:    movb %cl, 4(%esp)
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $9, %ecx
 ; X86-NEXT:    andb $7, %cl
-; X86-NEXT:    movb %bl, %ch
-; X86-NEXT:    andb $7, %ch
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    shrl $6, %eax
+; X86-NEXT:    movb %cl, 3(%esp)
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $6, %ecx
+; X86-NEXT:    andb $7, %cl
+; X86-NEXT:    movb %cl, 2(%esp)
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andb $7, %cl
+; X86-NEXT:    movb %cl, (%esp)
+; X86-NEXT:    shrb $3, %al
 ; X86-NEXT:    andb $7, %al
-; X86-NEXT:    movl %ebx, %edx
-; X86-NEXT:    shrl $9, %edx
-; X86-NEXT:    andb $7, %dl
-; X86-NEXT:    shrl $12, %ebx
-; X86-NEXT:    movb %bl, 4(%esp)
-; X86-NEXT:    movb %dl, 3(%esp)
-; X86-NEXT:    movb %al, 2(%esp)
-; X86-NEXT:    movb %ch, (%esp)
-; X86-NEXT:    movb %cl, 1(%esp)
-; X86-NEXT:    movzbl (%esp,%esi), %eax
+; X86-NEXT:    movb %al, 1(%esp)
+; X86-NEXT:    movl 16(%esp), %eax
+; X86-NEXT:    andl $7, %eax
+; X86-NEXT:    movzbl (%esp,%eax), %eax
 ; X86-NEXT:    andl $7, %eax
 ; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extract3:

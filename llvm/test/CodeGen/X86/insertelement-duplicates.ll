@@ -8,12 +8,12 @@ define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinli
 ; SSE-32-LABEL: PR15298:
 ; SSE-32:       # %bb.0: # %L.entry
 ; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-32-NEXT:    xorps %xmm0, %xmm0
 ; SSE-32-NEXT:    xorps %xmm1, %xmm1
 ; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0]
-; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
+; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    movups %xmm0, 624(%eax)
+; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
 ; SSE-32-NEXT:    movups %xmm1, 608(%eax)
 ; SSE-32-NEXT:    retl
 ;
@@ -30,10 +30,10 @@ define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinli
 ; AVX-32-LABEL: PR15298:
 ; AVX-32:       # %bb.0: # %L.entry
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX-32-NEXT:    vbroadcastss 304(%ecx), %xmm0
+; AVX-32-NEXT:    vbroadcastss 304(%eax), %xmm0
 ; AVX-32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    vmovups %ymm0, 608(%eax)
 ; AVX-32-NEXT:    vzeroupper
 ; AVX-32-NEXT:    retl

@@ -5,11 +5,17 @@
 define i64 @test_sdiv_i64(i64 %a, i64 %b) {
 ; CHECK32-LABEL: test_sdiv_i64:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK32-NEXT:    pushl %esi
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK32-NEXT:    pushl %ecx
+; CHECK32-NEXT:    pushl %eax
+; CHECK32-NEXT:    pushl %esi
+; CHECK32-NEXT:    pushl %edx
 ; CHECK32-NEXT:    calll __alldiv
+; CHECK32-NEXT:    popl %esi
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_sdiv_i64:
@@ -26,11 +32,17 @@ define i64 @test_sdiv_i64(i64 %a, i64 %b) {
 define i64 @test_srem_i64(i64 %a, i64 %b) {
 ; CHECK32-LABEL: test_srem_i64:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK32-NEXT:    pushl %esi
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK32-NEXT:    pushl %ecx
+; CHECK32-NEXT:    pushl %eax
+; CHECK32-NEXT:    pushl %esi
+; CHECK32-NEXT:    pushl %edx
 ; CHECK32-NEXT:    calll __allrem
+; CHECK32-NEXT:    popl %esi
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_srem_i64:
@@ -48,11 +60,17 @@ define i64 @test_srem_i64(i64 %a, i64 %b) {
 define i64 @test_udiv_i64(i64 %a, i64 %b) {
 ; CHECK32-LABEL: test_udiv_i64:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK32-NEXT:    pushl %esi
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK32-NEXT:    pushl %ecx
+; CHECK32-NEXT:    pushl %eax
+; CHECK32-NEXT:    pushl %esi
+; CHECK32-NEXT:    pushl %edx
 ; CHECK32-NEXT:    calll __aulldiv
+; CHECK32-NEXT:    popl %esi
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_udiv_i64:
@@ -69,11 +87,17 @@ define i64 @test_udiv_i64(i64 %a, i64 %b) {
 define i64 @test_urem_i64(i64 %a, i64 %b) {
 ; CHECK32-LABEL: test_urem_i64:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK32-NEXT:    pushl {{[0-9]+}}(%esp)
+; CHECK32-NEXT:    pushl %esi
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK32-NEXT:    pushl %ecx
+; CHECK32-NEXT:    pushl %eax
+; CHECK32-NEXT:    pushl %esi
+; CHECK32-NEXT:    pushl %edx
 ; CHECK32-NEXT:    calll __aullrem
+; CHECK32-NEXT:    popl %esi
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_urem_i64:

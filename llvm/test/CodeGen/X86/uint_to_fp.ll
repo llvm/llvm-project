@@ -7,9 +7,9 @@ define void @test(i32 %x, ptr %y) nounwind {
 ; X86-LABEL: test:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $23, %ecx
-; X86-NEXT:    cvtsi2ss %ecx, %xmm0
+; X86-NEXT:    shrl $23, %eax
+; X86-NEXT:    cvtsi2ss %eax, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

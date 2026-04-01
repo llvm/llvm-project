@@ -38,8 +38,8 @@ define <4 x i32> @foo(<4 x float> inreg %0, ...) nounwind {
 ; MSVC-LABEL: foo:
 ; MSVC:       # %bb.0:
 ; MSVC-NEXT:    pushl %eax
-; MSVC-NEXT:    movups 8(%esp), %xmm0
 ; MSVC-NEXT:    movups 24(%esp), %xmm1
+; MSVC-NEXT:    movups 8(%esp), %xmm0
 ; MSVC-NEXT:    cmpltps %xmm1, %xmm0
 ; MSVC-NEXT:    popl %eax
 ; MSVC-NEXT:    retl
@@ -50,8 +50,8 @@ define <4 x i32> @foo(<4 x float> inreg %0, ...) nounwind {
 ; MINGW-NEXT:    movl %esp, %ebp
 ; MINGW-NEXT:    andl $-16, %esp
 ; MINGW-NEXT:    subl $16, %esp
-; MINGW-NEXT:    movaps 8(%ebp), %xmm0
 ; MINGW-NEXT:    movups 24(%ebp), %xmm1
+; MINGW-NEXT:    movaps 8(%ebp), %xmm0
 ; MINGW-NEXT:    cmpltps %xmm1, %xmm0
 ; MINGW-NEXT:    movl %ebp, %esp
 ; MINGW-NEXT:    popl %ebp

@@ -7,9 +7,9 @@
 define void @convert(ptr %dst.addr, <3 x i32> %src) nounwind {
 ; X86-LABEL: convert:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-NEXT:    psubd %xmm1, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pextrd $2, %xmm0, 8(%eax)
 ; X86-NEXT:    pextrd $1, %xmm0, 4(%eax)
 ; X86-NEXT:    movd %xmm0, (%eax)

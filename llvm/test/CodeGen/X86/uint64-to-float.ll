@@ -15,9 +15,9 @@ define float @test(i64 %a) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
@@ -51,9 +51,9 @@ define float @test(i64 %a) nounwind {
 ; X86-WIN-NEXT:    movl %esp, %ebp
 ; X86-WIN-NEXT:    andl $-8, %esp
 ; X86-WIN-NEXT:    subl $24, %esp
-; X86-WIN-NEXT:    movl 12(%ebp), %eax
 ; X86-WIN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-WIN-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-WIN-NEXT:    movl 12(%ebp), %eax
 ; X86-WIN-NEXT:    shrl $31, %eax
 ; X86-WIN-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)

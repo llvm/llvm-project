@@ -11,11 +11,11 @@ define i32 @fn4(i32 %i) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl d, %ecx
+; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    sarl %cl, %esi
-; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movl $2, %ecx
 ; CHECK-NEXT:    movl $5, %edx
 ; CHECK-NEXT:    pushl %eax

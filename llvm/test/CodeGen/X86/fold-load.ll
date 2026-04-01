@@ -44,11 +44,11 @@ cond_next:		; preds = %entry
 define i32 @test2(ptr %P, ptr %Q) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movzwl (%eax), %edx
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movw %dx, (%ecx)
+; CHECK-NEXT:    movzwl (%eax), %ecx
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movw %cx, (%edx)
 ; CHECK-NEXT:    retl
   %A = load i16, ptr %P, align 4                      ; <i16> [#uses=11]
   %C = zext i16 %A to i32                         ; <i32> [#uses=1]
@@ -68,8 +68,8 @@ define i1 @test3(ptr %P, ptr %Q) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    xorl (%ecx), %eax
 ; CHECK-NEXT:    testl $89947, %eax # imm = 0x15F5B
 ; CHECK-NEXT:    je .LBB2_2

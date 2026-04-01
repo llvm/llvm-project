@@ -297,10 +297,12 @@ define i64 @PR23590(i64 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $12345 # imm = 0x3039
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll __umoddi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, %esi
@@ -612,8 +614,8 @@ define i64 @urem_i64_255(i64 %x) nounwind {
 ; X86-LABEL: urem_i64_255:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    addl %esi, %eax
 ; X86-NEXT:    adcl $0, %eax
@@ -685,8 +687,8 @@ define i64 @urem_i64_65535(i64 %x) nounwind {
 ; X86-LABEL: urem_i64_65535:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    addl %esi, %eax
 ; X86-NEXT:    adcl $0, %eax
@@ -1195,10 +1197,12 @@ define i64 @urem_i64_3_optsize(i64 %x) nounwind optsize {
 ; X86-LABEL: urem_i64_3_optsize:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $3
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll __umoddi3
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl

@@ -32,10 +32,10 @@ define void @test1() nounwind {
 ; X86-LABEL: test1:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    pxor %mm0, %mm0
-; X86-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}, %mm1 ## mm1 = 0x7070606040400000
+; X86-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}, %mm0 ## mm0 = 0x7070606040400000
+; X86-NEXT:    pxor %mm1, %mm1
 ; X86-NEXT:    xorl %edi, %edi
-; X86-NEXT:    maskmovq %mm1, %mm0
+; X86-NEXT:    maskmovq %mm0, %mm1
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
@@ -92,12 +92,12 @@ define <4 x float> @pr35869() nounwind {
 ; X86-NEXT:    punpcklbw %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3]
 ; X86-NEXT:    pcmpgtw %mm0, %mm1
 ; X86-NEXT:    movq %mm0, %mm2
-; X86-NEXT:    punpckhwd %mm1, %mm2 ## mm2 = mm2[2],mm1[2],mm2[3],mm1[3]
+; X86-NEXT:    punpcklwd %mm1, %mm2 ## mm2 = mm2[0],mm1[0],mm2[1],mm1[1]
+; X86-NEXT:    punpckhwd %mm1, %mm0 ## mm0 = mm0[2],mm1[2],mm0[3],mm1[3]
 ; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    cvtpi2ps %mm2, %xmm0
-; X86-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
-; X86-NEXT:    punpcklwd %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 ; X86-NEXT:    cvtpi2ps %mm0, %xmm0
+; X86-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; X86-NEXT:    cvtpi2ps %mm2, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr35869:

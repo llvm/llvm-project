@@ -27,23 +27,24 @@ define i128 @mulhioverflow(i64 %a, i64 %b, i64 %c) nounwind {
 ; X32-NEXT:    movl %edx, %esi
 ; X32-NEXT:    addl %ebx, %eax
 ; X32-NEXT:    adcl %edi, %esi
-; X32-NEXT:    setb %bl
+; X32-NEXT:    setb %al
+; X32-NEXT:    movzbl %al, %edi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    mull %ecx
 ; X32-NEXT:    addl %esi, %eax
-; X32-NEXT:    movzbl %bl, %ecx
-; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    adcl %edi, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    andl $1, %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    addl %eax, %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %ecx, (%eax)
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    movl %esi, (%ecx)
 ; X32-NEXT:    adcl $0, %edx
-; X32-NEXT:    movl %edx, 4(%eax)
-; X32-NEXT:    setb %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl %ecx, 8(%eax)
-; X32-NEXT:    movl $0, 12(%eax)
+; X32-NEXT:    movl %edx, 4(%ecx)
+; X32-NEXT:    setb %al
+; X32-NEXT:    movzbl %al, %eax
+; X32-NEXT:    movl %eax, 8(%ecx)
+; X32-NEXT:    movl $0, 12(%ecx)
+; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx

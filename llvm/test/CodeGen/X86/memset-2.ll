@@ -36,11 +36,11 @@ declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 define void @t3(ptr nocapture %s, i8 %a) nounwind {
 ; CHECK-LABEL: t3:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    imull $16843009, %ecx, %ecx ## imm = 0x1010101
-; CHECK-NEXT:    movl %ecx, 4(%eax)
-; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    imull $16843009, %eax, %eax ## imm = 0x1010101
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, 4(%ecx)
+; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    retl
 entry:
   tail call void @llvm.memset.p0.i32(ptr %s, i8 %a, i32 8, i1 false)
@@ -50,13 +50,13 @@ entry:
 define void @t4(ptr nocapture %s, i8 %a) nounwind {
 ; CHECK-LABEL: t4:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    imull $16843009, %ecx, %ecx ## imm = 0x1010101
-; CHECK-NEXT:    movl %ecx, 11(%eax)
-; CHECK-NEXT:    movl %ecx, 8(%eax)
-; CHECK-NEXT:    movl %ecx, 4(%eax)
-; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    imull $16843009, %eax, %eax ## imm = 0x1010101
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, 11(%ecx)
+; CHECK-NEXT:    movl %eax, 8(%ecx)
+; CHECK-NEXT:    movl %eax, 4(%ecx)
+; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    retl
 entry:
   tail call void @llvm.memset.p0.i32(ptr %s, i8 %a, i32 15, i1 false)

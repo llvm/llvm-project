@@ -188,19 +188,19 @@ define i32 @test7(ptr nocapture %a0, i8 zeroext %a1, ptr %P2) nounwind {
 ;
 ; X86-BWON-LABEL: test7:
 ; X86-BWON:       ## %bb.0: ## %entry
-; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWON-NEXT:    movl (%eax), %eax
+; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-BWON-NEXT:    movb %cl, 5(%edx)
 ; X86-BWON-NEXT:    retl
 ;
 ; X86-BWOFF-LABEL: test7:
 ; X86-BWOFF:       ## %bb.0: ## %entry
-; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWOFF-NEXT:    movl (%eax), %eax
+; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-BWOFF-NEXT:    movb %cl, 5(%edx)
 ; X86-BWOFF-NEXT:    retl
 entry:

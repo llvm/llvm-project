@@ -14,16 +14,16 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
 ; WIN32-NEXT:    subl $80, %esp
+; WIN32-NEXT:    movl %esp, %eax
+; WIN32-NEXT:    movups 24(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm0
+; WIN32-NEXT:    movups 40(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm1
+; WIN32-NEXT:    movups 56(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm2
 ; WIN32-NEXT:    movups 72(%ebp), %xmm4
 ; WIN32-NEXT:    movups 8(%ebp), %xmm3
 ; WIN32-NEXT:    addps %xmm4, %xmm3
-; WIN32-NEXT:    movups 56(%ebp), %xmm4
-; WIN32-NEXT:    movups 40(%ebp), %xmm5
-; WIN32-NEXT:    movups 24(%ebp), %xmm6
-; WIN32-NEXT:    movl %esp, %eax
-; WIN32-NEXT:    addps %xmm6, %xmm0
-; WIN32-NEXT:    addps %xmm5, %xmm1
-; WIN32-NEXT:    addps %xmm4, %xmm2
 ; WIN32-NEXT:    pushl %eax
 ; WIN32-NEXT:    calll _func_float16_ptr
 ; WIN32-NEXT:    addl $4, %esp
@@ -92,30 +92,30 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
 ; WIN32-NEXT:    subl $80, %esp
-; WIN32-NEXT:    movups 72(%ebp), %xmm6
-; WIN32-NEXT:    movups 8(%ebp), %xmm3
-; WIN32-NEXT:    movups 56(%ebp), %xmm7
-; WIN32-NEXT:    movups 40(%ebp), %xmm5
-; WIN32-NEXT:    movups 24(%ebp), %xmm4
 ; WIN32-NEXT:    movl %esp, %eax
-; WIN32-NEXT:    addps %xmm4, %xmm0
-; WIN32-NEXT:    addps %xmm5, %xmm1
-; WIN32-NEXT:    addps %xmm7, %xmm2
-; WIN32-NEXT:    addps %xmm6, %xmm3
+; WIN32-NEXT:    movups 24(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm0
+; WIN32-NEXT:    movups 40(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm1
+; WIN32-NEXT:    movups 56(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm3, %xmm2
+; WIN32-NEXT:    movups 72(%ebp), %xmm4
+; WIN32-NEXT:    movups 8(%ebp), %xmm3
+; WIN32-NEXT:    addps %xmm4, %xmm3
 ; WIN32-NEXT:    pushl %eax
 ; WIN32-NEXT:    calll _func_float16_ptr
 ; WIN32-NEXT:    addl $4, %esp
-; WIN32-NEXT:    movups 72(%ebp), %xmm4
-; WIN32-NEXT:    addps %xmm4, %xmm3
-; WIN32-NEXT:    movups 56(%ebp), %xmm4
-; WIN32-NEXT:    addps %xmm4, %xmm2
-; WIN32-NEXT:    movups 40(%ebp), %xmm4
-; WIN32-NEXT:    addps %xmm4, %xmm1
 ; WIN32-NEXT:    movups 24(%ebp), %xmm4
 ; WIN32-NEXT:    addps %xmm4, %xmm0
 ; WIN32-NEXT:    addps (%esp), %xmm0
+; WIN32-NEXT:    movups 40(%ebp), %xmm4
+; WIN32-NEXT:    addps %xmm4, %xmm1
 ; WIN32-NEXT:    addps {{[0-9]+}}(%esp), %xmm1
+; WIN32-NEXT:    movups 56(%ebp), %xmm4
+; WIN32-NEXT:    addps %xmm4, %xmm2
 ; WIN32-NEXT:    addps {{[0-9]+}}(%esp), %xmm2
+; WIN32-NEXT:    movups 72(%ebp), %xmm4
+; WIN32-NEXT:    addps %xmm4, %xmm3
 ; WIN32-NEXT:    addps {{[0-9]+}}(%esp), %xmm3
 ; WIN32-NEXT:    movl %ebp, %esp
 ; WIN32-NEXT:    popl %ebp
@@ -201,13 +201,13 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
 ; WIN32-NEXT:    subl $96, %esp
+; WIN32-NEXT:    movups 56(%ebp), %xmm4
+; WIN32-NEXT:    movups %xmm4, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    movups 40(%ebp), %xmm4
+; WIN32-NEXT:    movups %xmm4, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    movups 24(%ebp), %xmm4
+; WIN32-NEXT:    movups %xmm4, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movups 8(%ebp), %xmm4
-; WIN32-NEXT:    movups 24(%ebp), %xmm5
-; WIN32-NEXT:    movups 40(%ebp), %xmm6
-; WIN32-NEXT:    movups 56(%ebp), %xmm7
-; WIN32-NEXT:    movups %xmm7, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movups %xmm6, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movups %xmm5, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movups %xmm4, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movups %xmm3, (%esp)
 ; WIN32-NEXT:    calll _func_float16

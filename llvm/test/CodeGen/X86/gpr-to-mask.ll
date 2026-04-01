@@ -514,17 +514,17 @@ define void @test_add(i1 %cond, ptr %ptr1, ptr %ptr2, <8 x float> %fvec1, <8 x f
 ; X86-32-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X86-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-32-NEXT:    kmovb (%edx), %k0
-; X86-32-NEXT:    kmovb (%ecx), %k1
+; X86-32-NEXT:    kmovb (%eax), %k0
+; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-32-NEXT:    kmovb (%eax), %k1
+; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-32-NEXT:    je .LBB9_2
 ; X86-32-NEXT:  # %bb.1: # %if
-; X86-32-NEXT:    kandb %k1, %k0, %k1
+; X86-32-NEXT:    kandb %k0, %k1, %k1
 ; X86-32-NEXT:    jmp .LBB9_3
 ; X86-32-NEXT:  .LBB9_2: # %else
-; X86-32-NEXT:    kaddb %k1, %k0, %k1
+; X86-32-NEXT:    kaddb %k0, %k1, %k1
 ; X86-32-NEXT:  .LBB9_3: # %exit
 ; X86-32-NEXT:    vmovaps %zmm0, %zmm1 {%k1}
 ; X86-32-NEXT:    vmovaps %ymm1, (%eax)

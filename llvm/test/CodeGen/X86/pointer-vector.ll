@@ -129,8 +129,8 @@ define <4 x i32> @ICMP0(ptr %p0, ptr %p1) nounwind {
 ; CHECK-LABEL: ICMP0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movdqa (%ecx), %xmm0
+; CHECK-NEXT:    movdqa (%eax), %xmm0
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    pcmpgtd (%eax), %xmm0
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [9,8,7,6]
 ; CHECK-NEXT:    blendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
@@ -148,8 +148,8 @@ define <4 x i32> @ICMP1(ptr %p0, ptr %p1) nounwind {
 ; CHECK-LABEL: ICMP1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movdqa (%ecx), %xmm0
+; CHECK-NEXT:    movdqa (%eax), %xmm0
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    pcmpeqd (%eax), %xmm0
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [9,8,7,6]
 ; CHECK-NEXT:    blendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1

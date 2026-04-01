@@ -23,9 +23,9 @@ define i1 @intrinsic_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: intrinsic_v2i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    cmpw (%eax), %cx
+; X86-NEXT:    cmpw (%ecx), %ax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -47,9 +47,9 @@ define i1 @intrinsic_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: intrinsic_v4i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    cmpl (%eax), %ecx
+; X86-NEXT:    cmpl (%ecx), %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -71,12 +71,12 @@ define i1 @intrinsic_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: intrinsic_v8i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    xorl 4(%eax), %ecx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl 4(%edx), %eax
+; X86-NEXT:    xorl (%edx), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -98,9 +98,9 @@ define i1 @vector_version_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: vector_version_v2i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    cmpw (%eax), %cx
+; X86-NEXT:    cmpw (%ecx), %ax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -123,9 +123,9 @@ define i1 @vector_version_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: vector_version_v4i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    cmpl (%eax), %ecx
+; X86-NEXT:    cmpl (%ecx), %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -148,12 +148,12 @@ define i1 @vector_version_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: vector_version_v8i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    xorl 4(%eax), %ecx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl 4(%edx), %eax
+; X86-NEXT:    xorl (%edx), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -176,9 +176,9 @@ define i1 @mixed_version_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: mixed_version_v2i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    cmpw (%eax), %cx
+; X86-NEXT:    cmpw (%ecx), %ax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -201,9 +201,9 @@ define i1 @mixed_version_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: mixed_version_v4i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    cmpl (%eax), %ecx
+; X86-NEXT:    cmpl (%ecx), %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -226,12 +226,12 @@ define i1 @mixed_version_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: mixed_version_v8i8:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    xorl 4(%eax), %ecx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl 4(%edx), %eax
+; X86-NEXT:    xorl (%edx), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -254,9 +254,9 @@ define i1 @scalar_version_i16(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: scalar_version_i16:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    cmpw (%eax), %cx
+; X86-NEXT:    cmpw (%ecx), %ax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -277,9 +277,9 @@ define i1 @scalar_version_i32(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: scalar_version_i32:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    cmpl (%eax), %ecx
+; X86-NEXT:    cmpl (%ecx), %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -300,12 +300,12 @@ define i1 @scalar_version_i64(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86-LABEL: scalar_version_i64:
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    xorl 4(%eax), %ecx
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl 4(%edx), %eax
+; X86-NEXT:    xorl (%edx), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:

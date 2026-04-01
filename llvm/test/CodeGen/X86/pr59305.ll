@@ -32,15 +32,13 @@ define double @foo(double %0) #0 {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $60, %esp
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
-; X86-NEXT:    wait
 ; X86-NEXT:    movl $1024, (%esp) # imm = 0x400
 ; X86-NEXT:    calll fesetround@PLT
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NEXT:    fstl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
 ; X86-NEXT:    fld1
 ; X86-NEXT:    fstl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
-; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
-; X86-NEXT:    fdivrp %st, %st(1)
+; X86-NEXT:    fdivp %st, %st(1)
 ; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
 ; X86-NEXT:    wait
 ; X86-NEXT:    movl $1024, (%esp) # imm = 0x400
@@ -101,11 +99,10 @@ define double @bar(double %0) #0 {
 ; X86-LABEL: bar:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $28, %esp
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    wait
 ; X86-NEXT:    #APP
 ; X86-NEXT:    fldcw 0
 ; X86-NEXT:    #NO_APP
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld1
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fdiv %st(2), %st

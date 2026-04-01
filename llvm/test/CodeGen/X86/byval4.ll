@@ -53,17 +53,17 @@ define void @g(i16 signext  %a1, i16 signext  %a2, i16 signext  %a3,
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $288, %esp # imm = 0x120
-; X86-NEXT:    movzwl 8(%ebp), %eax
-; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl 12(%ebp), %eax
-; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl 16(%ebp), %eax
-; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl 20(%ebp), %eax
+; X86-NEXT:    movzwl 28(%ebp), %eax
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl 24(%ebp), %eax
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl 28(%ebp), %eax
+; X86-NEXT:    movzwl 20(%ebp), %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl 16(%ebp), %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl 12(%ebp), %eax
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl 8(%ebp), %eax
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl $32, %ecx

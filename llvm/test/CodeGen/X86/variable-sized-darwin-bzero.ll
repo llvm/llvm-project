@@ -7,8 +7,8 @@ define void @foo(ptr %p, i64 %n) {
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    calll ___bzero
 ; CHECK-NEXT:    addl $12, %esp

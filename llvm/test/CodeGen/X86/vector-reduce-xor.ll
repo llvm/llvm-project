@@ -164,17 +164,17 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
-; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
-; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
-; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 72(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    pxor %xmm3, %xmm1
-; X86-SSE-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
+; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
+; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE-NEXT:    movd %xmm0, %eax
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE-NEXT:    pxor %xmm0, %xmm1
+; X86-SSE-NEXT:    movd %xmm1, %eax
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; X86-SSE-NEXT:    movd %xmm0, %edx
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
@@ -412,18 +412,18 @@ define i32 @test_v32i32(<32 x i32> %a0) nounwind {
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
-; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
-; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
-; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 72(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    pxor %xmm3, %xmm1
-; X86-SSE-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
+; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
+; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-SSE-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE-NEXT:    movd %xmm1, %eax
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X86-SSE-NEXT:    pxor %xmm1, %xmm0
+; X86-SSE-NEXT:    movd %xmm0, %eax
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
 ; X86-SSE-NEXT:    retl
@@ -733,21 +733,21 @@ define i16 @test_v64i16(<64 x i16> %a0) nounwind {
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
-; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
-; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
-; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 72(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    pxor %xmm3, %xmm1
-; X86-SSE-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
+; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
+; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-SSE-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
-; X86-SSE-NEXT:    psrld $16, %xmm0
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE-NEXT:    movd %xmm0, %eax
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
+; X86-SSE-NEXT:    psrld $16, %xmm1
+; X86-SSE-NEXT:    pxor %xmm0, %xmm1
+; X86-SSE-NEXT:    movd %xmm1, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
@@ -1128,24 +1128,24 @@ define i8 @test_v128i8(<128 x i8> %a0) nounwind {
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
-; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
-; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
-; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor 72(%ebp), %xmm3
 ; X86-SSE-NEXT:    pxor 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    pxor %xmm3, %xmm1
-; X86-SSE-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE-NEXT:    pxor 56(%ebp), %xmm2
+; X86-SSE-NEXT:    pxor 24(%ebp), %xmm0
+; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-SSE-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
-; X86-SSE-NEXT:    psrld $16, %xmm0
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm0
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE-NEXT:    psrlw $8, %xmm1
+; X86-SSE-NEXT:    psrld $16, %xmm1
 ; X86-SSE-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE-NEXT:    movd %xmm1, %eax
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE-NEXT:    psrlw $8, %xmm0
+; X86-SSE-NEXT:    pxor %xmm1, %xmm0
+; X86-SSE-NEXT:    movd %xmm0, %eax
 ; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp

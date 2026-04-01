@@ -23,16 +23,16 @@ define dso_local i32 @test_select_fcmp_oeq_i32(float %a, float %b, i32 %c, i32 %
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; NOCMOV-NEXT:    sahf
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    jne .LBB0_3
 ; NOCMOV-NEXT:  # %bb.1: # %entry
 ; NOCMOV-NEXT:    jp .LBB0_3
 ; NOCMOV-NEXT:  # %bb.2: # %entry
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:  .LBB0_3: # %entry
-; NOCMOV-NEXT:    movl (%eax), %eax
+; NOCMOV-NEXT:    movl (%ecx), %eax
 ; NOCMOV-NEXT:    retl
 entry:
   %cmp = fcmp oeq float %a, %b
@@ -55,9 +55,9 @@ define i64 @test_select_fcmp_oeq_i64(float %a, float %b, i64 %c, i64 %d) nounwin
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; NOCMOV-NEXT:    sahf
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    jne .LBB1_3
 ; NOCMOV-NEXT:  # %bb.1: # %entry
 ; NOCMOV-NEXT:    jp .LBB1_3
@@ -88,9 +88,9 @@ define i64 @test_select_fcmp_une_i64(float %a, float %b, i64 %c, i64 %d) nounwin
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; NOCMOV-NEXT:    sahf
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    jne .LBB2_3
 ; NOCMOV-NEXT:  # %bb.1: # %entry
 ; NOCMOV-NEXT:    jp .LBB2_3
@@ -125,16 +125,16 @@ define dso_local double @test_select_fcmp_oeq_f64(float %a, float %b, double %c,
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; NOCMOV-NEXT:    sahf
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    jne .LBB3_3
 ; NOCMOV-NEXT:  # %bb.1: # %entry
 ; NOCMOV-NEXT:    jp .LBB3_3
 ; NOCMOV-NEXT:  # %bb.2: # %entry
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:  .LBB3_3: # %entry
-; NOCMOV-NEXT:    fldl (%eax)
+; NOCMOV-NEXT:    fldl (%ecx)
 ; NOCMOV-NEXT:    retl
 entry:
   %cmp = fcmp oeq float %a, %b
@@ -157,53 +157,49 @@ define <4 x i32> @test_select_fcmp_oeq_v4i32(float %a, float %b, <4 x i32> %c, <
 ;
 ; NOCMOV-LABEL: test_select_fcmp_oeq_v4i32:
 ; NOCMOV:       # %bb.0: # %entry
-; NOCMOV-NEXT:    pushl %edi
-; NOCMOV-NEXT:    pushl %esi
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; NOCMOV-NEXT:    sahf
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    jne .LBB4_3
 ; NOCMOV-NEXT:  # %bb.1: # %entry
 ; NOCMOV-NEXT:    jp .LBB4_3
 ; NOCMOV-NEXT:  # %bb.2: # %entry
 ; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:  .LBB4_3: # %entry
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; NOCMOV-NEXT:    movl (%ecx), %ecx
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    movl %ecx, 12(%eax)
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    jne .LBB4_6
 ; NOCMOV-NEXT:  # %bb.4: # %entry
 ; NOCMOV-NEXT:    jp .LBB4_6
 ; NOCMOV-NEXT:  # %bb.5: # %entry
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:  .LBB4_6: # %entry
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; NOCMOV-NEXT:    movl (%ecx), %ecx
+; NOCMOV-NEXT:    movl %ecx, 8(%eax)
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    jne .LBB4_9
 ; NOCMOV-NEXT:  # %bb.7: # %entry
 ; NOCMOV-NEXT:    jp .LBB4_9
 ; NOCMOV-NEXT:  # %bb.8: # %entry
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:  .LBB4_9: # %entry
 ; NOCMOV-NEXT:    movl (%ecx), %ecx
-; NOCMOV-NEXT:    movl (%edx), %edx
-; NOCMOV-NEXT:    movl (%esi), %esi
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %edi
+; NOCMOV-NEXT:    movl %ecx, 4(%eax)
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    jne .LBB4_12
 ; NOCMOV-NEXT:  # %bb.10: # %entry
 ; NOCMOV-NEXT:    jp .LBB4_12
 ; NOCMOV-NEXT:  # %bb.11: # %entry
-; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %edi
+; NOCMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:  .LBB4_12: # %entry
-; NOCMOV-NEXT:    movl (%edi), %edi
-; NOCMOV-NEXT:    movl %edi, 12(%eax)
-; NOCMOV-NEXT:    movl %esi, 8(%eax)
-; NOCMOV-NEXT:    movl %edx, 4(%eax)
+; NOCMOV-NEXT:    movl (%ecx), %ecx
 ; NOCMOV-NEXT:    movl %ecx, (%eax)
-; NOCMOV-NEXT:    popl %esi
-; NOCMOV-NEXT:    popl %edi
 ; NOCMOV-NEXT:    retl $4
 entry:
   %cmp = fcmp oeq float %a, %b
@@ -227,10 +223,10 @@ define dso_local float @test_zext_fcmp_une(float %a, float %b) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
-; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
-; NOCMOV-NEXT:    sahf
 ; NOCMOV-NEXT:    fld1
 ; NOCMOV-NEXT:    fldz
+; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
+; NOCMOV-NEXT:    sahf
 ; NOCMOV-NEXT:    jne .LBB5_1
 ; NOCMOV-NEXT:  # %bb.2: # %entry
 ; NOCMOV-NEXT:    jp .LBB5_5
@@ -265,10 +261,10 @@ define dso_local float @test_zext_fcmp_oeq(float %a, float %b) nounwind {
 ; NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOCMOV-NEXT:    fucompp
 ; NOCMOV-NEXT:    fnstsw %ax
-; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
-; NOCMOV-NEXT:    sahf
 ; NOCMOV-NEXT:    fldz
 ; NOCMOV-NEXT:    fld1
+; NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
+; NOCMOV-NEXT:    sahf
 ; NOCMOV-NEXT:    jne .LBB6_1
 ; NOCMOV-NEXT:  # %bb.2: # %entry
 ; NOCMOV-NEXT:    jp .LBB6_5
@@ -325,9 +321,9 @@ define dso_local void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwi
 ;
 ; NOCMOV-LABEL: no_cascade_opt:
 ; NOCMOV:       # %bb.0: # %entry
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movb $20, %al
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
 ; NOCMOV-NEXT:    movb $20, %cl
 ; NOCMOV-NEXT:    jge .LBB7_1
 ; NOCMOV-NEXT:  # %bb.2: # %entry

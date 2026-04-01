@@ -44,16 +44,14 @@ define i32 @test_encodekey128_u32(i32 %htype, <2 x i64> %key, ptr nocapture %h0,
 ;
 ; X86-LABEL: test_encodekey128_u32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    encodekey128 %eax, %eax
-; X86-NEXT:    vmovaps %xmm0, (%esi)
-; X86-NEXT:    vmovaps %xmm1, (%edx)
+; X86-NEXT:    vmovaps %xmm0, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovaps %xmm1, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps %xmm2, (%ecx)
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
   %0 = tail call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 %htype, <2 x i64> %key)
@@ -79,20 +77,16 @@ define i32 @test_encodekey256_u32(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_
 ;
 ; X86-LABEL: test_encodekey256_u32:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    encodekey256 %eax, %eax
-; X86-NEXT:    vmovaps %xmm0, (%edi)
-; X86-NEXT:    vmovaps %xmm1, (%esi)
-; X86-NEXT:    vmovaps %xmm2, (%edx)
+; X86-NEXT:    vmovaps %xmm0, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovaps %xmm1, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovaps %xmm2, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps %xmm3, (%ecx)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 entry:
   %0 = tail call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 %htype, <2 x i64> %key_lo, <2 x i64> %key_hi)
@@ -118,11 +112,11 @@ define i8 @test_mm_aesenc128kl_u8(<2 x i64> %data, ptr %h, ptr %out) {
 ;
 ; X86-LABEL: test_mm_aesenc128kl_u8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    aesenc128kl (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    aesenc128kl (%ecx), %xmm0
+; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    sete %al
-; X86-NEXT:    vmovaps %xmm0, (%ecx)
 ; X86-NEXT:    retl
 entry:
   %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> %data, ptr %h)
@@ -142,11 +136,11 @@ define i8 @test_mm_aesdec128kl_u8(<2 x i64> %data, ptr %h, ptr %out) {
 ;
 ; X86-LABEL: test_mm_aesdec128kl_u8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    aesdec128kl (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    aesdec128kl (%ecx), %xmm0
+; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    sete %al
-; X86-NEXT:    vmovaps %xmm0, (%ecx)
 ; X86-NEXT:    retl
 entry:
   %0 = tail call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> %data, ptr %h)
@@ -166,11 +160,11 @@ define i8 @test_mm_aesenc256kl_u8(<2 x i64> %data, ptr %h, ptr %out) {
 ;
 ; X86-LABEL: test_mm_aesenc256kl_u8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    aesenc256kl (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    aesenc256kl (%ecx), %xmm0
+; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    sete %al
-; X86-NEXT:    vmovaps %xmm0, (%ecx)
 ; X86-NEXT:    retl
 entry:
   %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %data, ptr %h)
@@ -190,11 +184,11 @@ define i8 @test_mm_aesdec256kl_u8(<2 x i64> %data, ptr %h, ptr %out) {
 ;
 ; X86-LABEL: test_mm_aesdec256kl_u8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    aesdec256kl (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    aesdec256kl (%ecx), %xmm0
+; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    sete %al
-; X86-NEXT:    vmovaps %xmm0, (%ecx)
 ; X86-NEXT:    retl
 entry:
   %0 = tail call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> %data, ptr %h)
@@ -230,14 +224,14 @@ define i8 @test_mm_aesencwide128kl_u8(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 104(%ebp), %eax
 ; X86-NEXT:    vmovaps 24(%ebp), %xmm3
 ; X86-NEXT:    vmovaps 40(%ebp), %xmm4
 ; X86-NEXT:    vmovaps 56(%ebp), %xmm5
 ; X86-NEXT:    vmovaps 72(%ebp), %xmm6
 ; X86-NEXT:    vmovaps 88(%ebp), %xmm7
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    aesencwide128kl (%eax)
-; X86-NEXT:    movl 104(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    aesencwide128kl (%ecx)
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    movl 108(%ebp), %eax
 ; X86-NEXT:    vmovaps %xmm1, (%eax)
@@ -305,14 +299,14 @@ define i8 @test_mm_aesdecwide128kl_u8(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 104(%ebp), %eax
 ; X86-NEXT:    vmovaps 24(%ebp), %xmm3
 ; X86-NEXT:    vmovaps 40(%ebp), %xmm4
 ; X86-NEXT:    vmovaps 56(%ebp), %xmm5
 ; X86-NEXT:    vmovaps 72(%ebp), %xmm6
 ; X86-NEXT:    vmovaps 88(%ebp), %xmm7
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    aesdecwide128kl (%eax)
-; X86-NEXT:    movl 104(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    aesdecwide128kl (%ecx)
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    movl 108(%ebp), %eax
 ; X86-NEXT:    vmovaps %xmm1, (%eax)
@@ -380,14 +374,14 @@ define i8 @test_mm_aesencwide256kl_u8(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 104(%ebp), %eax
 ; X86-NEXT:    vmovaps 24(%ebp), %xmm3
 ; X86-NEXT:    vmovaps 40(%ebp), %xmm4
 ; X86-NEXT:    vmovaps 56(%ebp), %xmm5
 ; X86-NEXT:    vmovaps 72(%ebp), %xmm6
 ; X86-NEXT:    vmovaps 88(%ebp), %xmm7
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    aesencwide256kl (%eax)
-; X86-NEXT:    movl 104(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    aesencwide256kl (%ecx)
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    movl 108(%ebp), %eax
 ; X86-NEXT:    vmovaps %xmm1, (%eax)
@@ -455,14 +449,14 @@ define i8 @test_mm_aesdecwide256kl_u8(ptr %p, <2 x i64> %v0, <2 x i64> %v1, <2 x
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 104(%ebp), %eax
 ; X86-NEXT:    vmovaps 24(%ebp), %xmm3
 ; X86-NEXT:    vmovaps 40(%ebp), %xmm4
 ; X86-NEXT:    vmovaps 56(%ebp), %xmm5
 ; X86-NEXT:    vmovaps 72(%ebp), %xmm6
 ; X86-NEXT:    vmovaps 88(%ebp), %xmm7
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    aesdecwide256kl (%eax)
-; X86-NEXT:    movl 104(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    aesdecwide256kl (%ecx)
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    movl 108(%ebp), %eax
 ; X86-NEXT:    vmovaps %xmm1, (%eax)
@@ -518,10 +512,10 @@ define i8 @test_mm_aesenc256kl_u8_global(<2 x i64> %data, ptr %out) {
 ;
 ; X86-LABEL: test_mm_aesenc256kl_u8_global:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    aesenc256kl foo, %xmm0
+; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    sete %al
-; X86-NEXT:    vmovaps %xmm0, (%ecx)
 ; X86-NEXT:    retl
 entry:
   %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %data, ptr @foo)

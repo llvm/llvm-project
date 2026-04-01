@@ -16,8 +16,8 @@
 define i16 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movw $1, foo
 ; CHECK-NEXT:    movw $2, bar
+; CHECK-NEXT:    movw $1, foo
 ; CHECK-NEXT:    movw $4, aliasFoo
 ; CHECK-NEXT:    movzwl foo, %eax
 ; CHECK-NEXT:    addw bar, %ax

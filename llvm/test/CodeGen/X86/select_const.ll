@@ -347,8 +347,8 @@ define i32 @select_lea_2(i1 zeroext %cond) {
 define i64 @select_lea_3(i1 zeroext %cond) {
 ; X86-LABEL: select_lea_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-2, %eax
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB19_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl $-1, %edx
@@ -395,8 +395,8 @@ define i32 @select_lea_5(i1 zeroext %cond) {
 define i64 @select_lea_9(i1 zeroext %cond) {
 ; X86-LABEL: select_lea_9:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-7, %eax
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB21_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl $-1, %edx
@@ -608,8 +608,8 @@ define i32 @select_pow2_diff_neg(i1 zeroext %cond) {
 define i64 @select_pow2_diff_neg_invert(i1 zeroext %cond) {
 ; X86-LABEL: select_pow2_diff_neg_invert:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-99, %eax
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB30_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl $-1, %edx
@@ -640,8 +640,8 @@ define i64 @select_pow2_diff_neg_invert(i1 zeroext %cond) {
 define i8 @sel_67_neg125(i32 %x) {
 ; X86-LABEL: sel_67_neg125:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $43, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movb $67, %al
+; X86-NEXT:    cmpl $43, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jge .LBB31_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movb $-125, %al
@@ -689,8 +689,8 @@ define i32 @select_C1_C2(i1 %cond) {
 define i32 @select_C1_C2_zeroext(i1 zeroext %cond) {
 ; X86-LABEL: select_C1_C2_zeroext:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $421, %eax # imm = 0x1A5
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jne .LBB33_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl $42, %eax
@@ -759,15 +759,15 @@ define i64 @select_2_or_inc(i64 %x) {
 ; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    .cfi_offset %edi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    xorl $2, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:    addl $1, %ecx
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    adcl $0, %eax
+; X86-NEXT:    xorl $2, %esi
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    orl %esi, %edi
+; X86-NEXT:    orl %edi, %esi
 ; X86-NEXT:    je .LBB36_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %eax, %edx
@@ -798,35 +798,25 @@ define i64 @select_2_or_inc(i64 %x) {
 define <4 x i32> @sel_constants_add_constant_vec(i1 %cond) {
 ; X86-LABEL: sel_constants_add_constant_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl $1, %ecx
 ; X86-NEXT:    negl %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    andl $-15, %edx
-; X86-NEXT:    orl $12, %edx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    andl $3, %esi
-; X86-NEXT:    xorl $13, %esi
-; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    andl $10, %edi
-; X86-NEXT:    xorl $14, %edi
-; X86-NEXT:    andl $11, %ecx
-; X86-NEXT:    xorl $15, %ecx
-; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    andl $11, %edx
+; X86-NEXT:    xorl $15, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    andl $10, %edx
+; X86-NEXT:    xorl $14, %edx
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    andl $3, %edx
+; X86-NEXT:    xorl $13, %edx
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    andl $-15, %ecx
+; X86-NEXT:    orl $12, %ecx
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: sel_constants_add_constant_vec:
@@ -847,9 +837,9 @@ define <4 x i32> @sel_constants_add_constant_vec(i1 %cond) {
 define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
 ; X86-LABEL: sel_constants_fmul_constant_vec:
 ; X86:       # %bb.0:
+; X86-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    jne .LBB38_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    fstp %st(1)
@@ -887,14 +877,13 @@ define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
 define i64 @opaque_constant(i1 %cond, i64 %x) {
 ; X86-LABEL: opaque_constant:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl $1, %edx
+; X86-NEXT:    xorl $1, %eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    sete %cl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    andl $1, %edx
@@ -902,17 +891,8 @@ define i64 @opaque_constant(i1 %cond, i64 %x) {
 ; X86-NEXT:    andl $1, %edx
 ; X86-NEXT:    decl %eax
 ; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    xorl $1, %esi
-; X86-NEXT:    xorl $1, %ecx
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    orl %esi, %ecx
-; X86-NEXT:    sete %bl
-; X86-NEXT:    subl %ebx, %eax
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    sbbl $0, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: opaque_constant:
@@ -1010,8 +990,8 @@ define i32 @select_ult9_7_6(i32 %X) {
 define i32 @select_ult2_2_3(i32 %X) {
 ; X86-LABEL: select_ult2_2_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $2, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $3, %eax
+; X86-NEXT:    cmpl $2, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    retl
 ;
@@ -1029,8 +1009,8 @@ define i32 @select_ult2_2_3(i32 %X) {
 define i32 @select_ugt3_3_2(i32 %X) {
 ; X86-LABEL: select_ugt3_3_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $4, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $2, %eax
+; X86-NEXT:    cmpl $4, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sbbl $-1, %eax
 ; X86-NEXT:    retl
 ;

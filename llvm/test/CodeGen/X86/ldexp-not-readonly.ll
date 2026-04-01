@@ -13,9 +13,9 @@ define float @call_ldexpf(float %a, i32 %b) nounwind {
 ; CHECK-WIN-LABEL: call_ldexpf:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    subl $8, %esp
-; CHECK-WIN-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-WIN-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-WIN-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    fstps (%esp)
 ; CHECK-WIN-NEXT:    calll _ldexpf
 ; CHECK-WIN-NEXT:    addl $8, %esp
@@ -35,9 +35,9 @@ define double @call_ldexp(double %a, i32 %b) nounwind {
 ; CHECK-WIN-LABEL: call_ldexp:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    subl $12, %esp
-; CHECK-WIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-WIN-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-WIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-WIN-NEXT:    fstpl (%esp)
 ; CHECK-WIN-NEXT:    calll _ldexp
 ; CHECK-WIN-NEXT:    addl $12, %esp

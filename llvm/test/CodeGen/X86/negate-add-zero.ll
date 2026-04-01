@@ -828,45 +828,39 @@ define linkonce void @_ZN21HNodeTranslateRotate36setVelERK9CDSVectorIdLi1EN3CDS1
 ; CHECK-LABEL: _ZN21HNodeTranslateRotate36setVelERK9CDSVectorIdLi1EN3CDS12DefaultAllocEE:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    fldl 0
-; CHECK-NEXT:    fldl 3184(%ecx)
-; CHECK-NEXT:    fld %st(1)
-; CHECK-NEXT:    fmull 3176(%ecx)
-; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fld %st(1)
-; CHECK-NEXT:    fadd %st(1), %st
-; CHECK-NEXT:    fld %st(3)
-; CHECK-NEXT:    fmul %st(5), %st
-; CHECK-NEXT:    fadd %st(2), %st
-; CHECK-NEXT:    fxch %st(5)
-; CHECK-NEXT:    fmul %st, %st(0)
-; CHECK-NEXT:    fadd %st, %st(5)
-; CHECK-NEXT:    fsubr %st, %st(5)
-; CHECK-NEXT:    fxch %st(4)
+; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    fmull 3176(%eax)
+; CHECK-NEXT:    fldl 3184(%eax)
+; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fmull -8
-; CHECK-NEXT:    fxch %st(5)
-; CHECK-NEXT:    fstl 8
-; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:    fsubp %st, %st(5)
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fsub %st, %st(1)
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fsub %st(3), %st
+; CHECK-NEXT:    fld %st(4)
+; CHECK-NEXT:    fmul %st(5), %st
+; CHECK-NEXT:    fadd %st, %st(1)
+; CHECK-NEXT:    fadd %st, %st(1)
+; CHECK-NEXT:    fxch %st(3)
+; CHECK-NEXT:    fmulp %st, %st(5)
 ; CHECK-NEXT:    fxch %st(4)
+; CHECK-NEXT:    fadd %st(1), %st
+; CHECK-NEXT:    fadd %st(2), %st
 ; CHECK-NEXT:    fsubp %st, %st(2)
 ; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fadd %st(2), %st
-; CHECK-NEXT:    faddp %st, %st(2)
-; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fstl 8
+; CHECK-NEXT:    fxch %st(3)
 ; CHECK-NEXT:    fstl 16
-; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    fxch %st(3)
 ; CHECK-NEXT:    fadd %st, %st(0)
-; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fstpl 2064(%eax)
+; CHECK-NEXT:    faddp %st, %st(1)
 ; CHECK-NEXT:    fadd %st, %st(0)
-; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    fstpl 2056(%eax)
 ; CHECK-NEXT:    fadd %st, %st(0)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fstpl 2056(%ecx)
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fstpl 2064(%ecx)
-; CHECK-NEXT:    fstpl 2072(%ecx)
+; CHECK-NEXT:    fstpl 2072(%eax)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, 0
 ; CHECK-NEXT:    movl $4, 4
 ; CHECK-NEXT:    movl $3, 8

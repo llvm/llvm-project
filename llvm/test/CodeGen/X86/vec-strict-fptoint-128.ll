@@ -577,8 +577,8 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64(<2 x float> %a) #0 {
 ; AVX-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-32-NEXT:    andl $-8, %esp
 ; AVX-32-NEXT:    subl $16, %esp
-; AVX-32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-32-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
+; AVX-32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-32-NEXT:    flds (%esp)
 ; AVX-32-NEXT:    fisttpll (%esp)
 ; AVX-32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -612,8 +612,8 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64(<2 x float> %a) #0 {
 ; AVX512F-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX512F-32-NEXT:    andl $-8, %esp
 ; AVX512F-32-NEXT:    subl $16, %esp
-; AVX512F-32-NEXT:    vmovd %xmm0, (%esp)
 ; AVX512F-32-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vmovd %xmm0, (%esp)
 ; AVX512F-32-NEXT:    flds (%esp)
 ; AVX512F-32-NEXT:    fisttpll (%esp)
 ; AVX512F-32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -647,8 +647,8 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64(<2 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX512VL-32-NEXT:    andl $-8, %esp
 ; AVX512VL-32-NEXT:    subl $16, %esp
-; AVX512VL-32-NEXT:    vmovd %xmm0, (%esp)
 ; AVX512VL-32-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vmovd %xmm0, (%esp)
 ; AVX512VL-32-NEXT:    flds (%esp)
 ; AVX512VL-32-NEXT:    fisttpll (%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -753,8 +753,8 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64_load128(ptr %x) strictfp {
 ; AVX-32-NEXT:    subl $16, %esp
 ; AVX-32-NEXT:    movl 8(%ebp), %eax
 ; AVX-32-NEXT:    vmovaps (%eax), %xmm0
-; AVX-32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-32-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
+; AVX-32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-32-NEXT:    flds (%esp)
 ; AVX-32-NEXT:    fisttpll (%esp)
 ; AVX-32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -789,8 +789,8 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64_load128(ptr %x) strictfp {
 ; AVX512F-32-NEXT:    subl $16, %esp
 ; AVX512F-32-NEXT:    movl 8(%ebp), %eax
 ; AVX512F-32-NEXT:    vmovdqa (%eax), %xmm0
-; AVX512F-32-NEXT:    vmovd %xmm0, (%esp)
 ; AVX512F-32-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vmovd %xmm0, (%esp)
 ; AVX512F-32-NEXT:    flds (%esp)
 ; AVX512F-32-NEXT:    fisttpll (%esp)
 ; AVX512F-32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -825,8 +825,8 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64_load128(ptr %x) strictfp {
 ; AVX512VL-32-NEXT:    subl $16, %esp
 ; AVX512VL-32-NEXT:    movl 8(%ebp), %eax
 ; AVX512VL-32-NEXT:    vmovdqa (%eax), %xmm0
-; AVX512VL-32-NEXT:    vmovd %xmm0, (%esp)
 ; AVX512VL-32-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vmovd %xmm0, (%esp)
 ; AVX512VL-32-NEXT:    flds (%esp)
 ; AVX512VL-32-NEXT:    fisttpll (%esp)
 ; AVX512VL-32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -1561,9 +1561,9 @@ define <2 x i32> @strict_vector_fptosi_v2f64_to_v2i32(<2 x double> %a) #0 {
 define <2 x i32> @strict_vector_fptoui_v2f64_to_v2i32(<2 x double> %a) #0 {
 ; SSE-32-LABEL: strict_vector_fptoui_v2f64_to_v2i32:
 ; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    xorpd %xmm2, %xmm2
 ; SSE-32-NEXT:    movsd {{.*#+}} xmm3 = [2.147483648E+9,0.0E+0]
 ; SSE-32-NEXT:    comisd %xmm3, %xmm0
-; SSE-32-NEXT:    xorpd %xmm2, %xmm2
 ; SSE-32-NEXT:    xorpd %xmm1, %xmm1
 ; SSE-32-NEXT:    jb .LBB7_2
 ; SSE-32-NEXT:  # %bb.1:
@@ -1717,9 +1717,9 @@ define <2 x i32> @strict_vector_fptosi_v2f32_to_v2i32(<2 x float> %a) #0 {
 define <2 x i32> @strict_vector_fptoui_v2f32_to_v2i32(<2 x float> %a) #0 {
 ; SSE-32-LABEL: strict_vector_fptoui_v2f32_to_v2i32:
 ; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    xorps %xmm2, %xmm2
 ; SSE-32-NEXT:    movss {{.*#+}} xmm3 = [2.14748365E+9,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-32-NEXT:    comiss %xmm3, %xmm0
-; SSE-32-NEXT:    xorps %xmm2, %xmm2
 ; SSE-32-NEXT:    xorps %xmm1, %xmm1
 ; SSE-32-NEXT:    jb .LBB9_2
 ; SSE-32-NEXT:  # %bb.1:
@@ -1770,8 +1770,8 @@ define <2 x i32> @strict_vector_fptoui_v2f32_to_v2i32(<2 x float> %a) #0 {
 ; AVX-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-32-NEXT:    andl $-8, %esp
 ; AVX-32-NEXT:    subl $16, %esp
-; AVX-32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-32-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
+; AVX-32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-32-NEXT:    flds (%esp)
 ; AVX-32-NEXT:    fisttpll (%esp)
 ; AVX-32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -2659,8 +2659,8 @@ define <2 x i1> @strict_vector_fptosi_v2f32_to_v2i1(<2 x float> %a) #0 {
 ; AVX-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-32-NEXT:    andl $-8, %esp
 ; AVX-32-NEXT:    subl $16, %esp
-; AVX-32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-32-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
+; AVX-32-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-32-NEXT:    flds (%esp)
 ; AVX-32-NEXT:    fisttpll (%esp)
 ; AVX-32-NEXT:    flds {{[0-9]+}}(%esp)

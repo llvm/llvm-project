@@ -34,17 +34,29 @@ declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i64(<4 x i64>,
 declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i64(<4 x i64>, metadata, metadata)
 
 define <8 x float> @sitofp_v8i1_v8f32(<8 x i1> %x) #0 {
-; AVX1-LABEL: sitofp_v8i1_v8f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm0[4,4,5,5,6,6,7,7]
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
-; AVX1-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-32-LABEL: sitofp_v8i1_v8f32:
+; AVX1-32:       # %bb.0:
+; AVX1-32-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-32-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
+; AVX1-32-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-32-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX1-32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-32-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX1-32-NEXT:    retl
+;
+; AVX1-64-LABEL: sitofp_v8i1_v8f32:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm0[4,4,5,5,6,6,7,7]
+; AVX1-64-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-64-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX1-64-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX1-64-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX1-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX1-64-NEXT:    retq
 ;
 ; AVX2-LABEL: sitofp_v8i1_v8f32:
 ; AVX2:       # %bb.0:

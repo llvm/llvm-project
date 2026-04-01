@@ -34,17 +34,16 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    # kill: def $ax killed $ax def $eax
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
-; NOSSE-NEXT:    shll $16, %eax
-; NOSSE-NEXT:    movzwl %si, %edi
-; NOSSE-NEXT:    orl %eax, %edi
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NOSSE-NEXT:    movw %ax, 4(%edi)
+; NOSSE-NEXT:    shll $16, %esi
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movw %ax, 4(%esi)
-; NOSSE-NEXT:    movl %edi, (%esi)
-; NOSSE-NEXT:    movl %esi, %eax
+; NOSSE-NEXT:    movzwl %ax, %eax
+; NOSSE-NEXT:    orl %esi, %eax
+; NOSSE-NEXT:    movl %eax, (%edi)
+; NOSSE-NEXT:    movl %edi, %eax
 ; NOSSE-NEXT:    addl $4, %esp
 ; NOSSE-NEXT:    popl %esi
 ; NOSSE-NEXT:    popl %edi
@@ -62,17 +61,16 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    # kill: def $ax killed $ax def $eax
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    movzwl %si, %edi
-; SSE-NEXT:    orl %eax, %edi
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; SSE-NEXT:    movw %ax, 4(%edi)
+; SSE-NEXT:    shll $16, %esi
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movw %ax, 4(%esi)
-; SSE-NEXT:    movl %edi, (%esi)
-; SSE-NEXT:    movl %esi, %eax
+; SSE-NEXT:    movzwl %ax, %eax
+; SSE-NEXT:    orl %esi, %eax
+; SSE-NEXT:    movl %eax, (%edi)
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    addl $4, %esp
 ; SSE-NEXT:    popl %esi
 ; SSE-NEXT:    popl %edi
@@ -83,11 +81,10 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 define <4 x bfloat> @return_arg_v4bf16(<4 x bfloat> %x) #0 {
 ; NOSSE-LABEL: return_arg_v4bf16:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    pushl %ebp
 ; NOSSE-NEXT:    pushl %ebx
 ; NOSSE-NEXT:    pushl %edi
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    subl $12, %esp
+; NOSSE-NEXT:    subl $16, %esp
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
@@ -99,30 +96,27 @@ define <4 x bfloat> @return_arg_v4bf16(<4 x bfloat> %x) #0 {
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movl %eax, %ebx
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; NOSSE-NEXT:    movw %ax, 6(%ebx)
+; NOSSE-NEXT:    movw %di, 4(%ebx)
+; NOSSE-NEXT:    movw %si, 2(%ebx)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movw %ax, 6(%ebp)
-; NOSSE-NEXT:    movw %bx, 4(%ebp)
-; NOSSE-NEXT:    movw %di, 2(%ebp)
-; NOSSE-NEXT:    movw %si, (%ebp)
-; NOSSE-NEXT:    movl %ebp, %eax
-; NOSSE-NEXT:    addl $12, %esp
+; NOSSE-NEXT:    movw %ax, (%ebx)
+; NOSSE-NEXT:    movl %ebx, %eax
+; NOSSE-NEXT:    addl $16, %esp
 ; NOSSE-NEXT:    popl %esi
 ; NOSSE-NEXT:    popl %edi
 ; NOSSE-NEXT:    popl %ebx
-; NOSSE-NEXT:    popl %ebp
 ; NOSSE-NEXT:    retl $4
 ;
 ; SSE-LABEL: return_arg_v4bf16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushl %ebp
 ; SSE-NEXT:    pushl %ebx
 ; SSE-NEXT:    pushl %edi
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    subl $12, %esp
+; SSE-NEXT:    subl $16, %esp
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
@@ -134,21 +128,19 @@ define <4 x bfloat> @return_arg_v4bf16(<4 x bfloat> %x) #0 {
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movl %eax, %ebx
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; SSE-NEXT:    movw %ax, 6(%ebx)
+; SSE-NEXT:    movw %di, 4(%ebx)
+; SSE-NEXT:    movw %si, 2(%ebx)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movw %ax, 6(%ebp)
-; SSE-NEXT:    movw %bx, 4(%ebp)
-; SSE-NEXT:    movw %di, 2(%ebp)
-; SSE-NEXT:    movw %si, (%ebp)
-; SSE-NEXT:    movl %ebp, %eax
-; SSE-NEXT:    addl $12, %esp
+; SSE-NEXT:    movw %ax, (%ebx)
+; SSE-NEXT:    movl %ebx, %eax
+; SSE-NEXT:    addl $16, %esp
 ; SSE-NEXT:    popl %esi
 ; SSE-NEXT:    popl %edi
 ; SSE-NEXT:    popl %ebx
-; SSE-NEXT:    popl %ebp
 ; SSE-NEXT:    retl $4
   ret <4 x bfloat> %x
 }
@@ -176,7 +168,7 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) #0 {
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; NOSSE-NEXT:    movl %eax, %ebp
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
@@ -188,24 +180,22 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) #0 {
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movl %eax, %ebx
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; NOSSE-NEXT:    movw %ax, 14(%ebx)
+; NOSSE-NEXT:    movw %di, 12(%ebx)
+; NOSSE-NEXT:    movw %si, 10(%ebx)
+; NOSSE-NEXT:    movw %bp, 8(%ebx)
+; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
+; NOSSE-NEXT:    movw %ax, 6(%ebx)
+; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
+; NOSSE-NEXT:    movw %ax, 4(%ebx)
+; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
+; NOSSE-NEXT:    movw %ax, 2(%ebx)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movw %ax, 14(%ebp)
-; NOSSE-NEXT:    movw %bx, 12(%ebp)
-; NOSSE-NEXT:    movw %di, 10(%ebp)
-; NOSSE-NEXT:    movw %si, 8(%ebp)
-; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
-; NOSSE-NEXT:    movw %ax, 6(%ebp)
-; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
-; NOSSE-NEXT:    movw %ax, 4(%ebp)
-; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
-; NOSSE-NEXT:    movw %ax, 2(%ebp)
-; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
-; NOSSE-NEXT:    movw %ax, (%ebp)
-; NOSSE-NEXT:    movl %ebp, %eax
+; NOSSE-NEXT:    movw %ax, (%ebx)
+; NOSSE-NEXT:    movl %ebx, %eax
 ; NOSSE-NEXT:    addl $12, %esp
 ; NOSSE-NEXT:    popl %esi
 ; NOSSE-NEXT:    popl %edi
@@ -235,7 +225,7 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) #0 {
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; SSE-NEXT:    movl %eax, %ebp
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
@@ -247,24 +237,22 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) #0 {
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movl %eax, %ebx
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; SSE-NEXT:    movw %ax, 14(%ebx)
+; SSE-NEXT:    movw %di, 12(%ebx)
+; SSE-NEXT:    movw %si, 10(%ebx)
+; SSE-NEXT:    movw %bp, 8(%ebx)
+; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
+; SSE-NEXT:    movw %ax, 6(%ebx)
+; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
+; SSE-NEXT:    movw %ax, 4(%ebx)
+; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
+; SSE-NEXT:    movw %ax, 2(%ebx)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movw %ax, 14(%ebp)
-; SSE-NEXT:    movw %bx, 12(%ebp)
-; SSE-NEXT:    movw %di, 10(%ebp)
-; SSE-NEXT:    movw %si, 8(%ebp)
-; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
-; SSE-NEXT:    movw %ax, 6(%ebp)
-; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
-; SSE-NEXT:    movw %ax, 4(%ebp)
-; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
-; SSE-NEXT:    movw %ax, 2(%ebp)
-; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
-; SSE-NEXT:    movw %ax, (%ebp)
-; SSE-NEXT:    movl %ebp, %eax
+; SSE-NEXT:    movw %ax, (%ebx)
+; SSE-NEXT:    movl %ebx, %eax
 ; SSE-NEXT:    addl $12, %esp
 ; SSE-NEXT:    popl %esi
 ; SSE-NEXT:    popl %edi
@@ -329,7 +317,7 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; NOSSE-NEXT:    movl %eax, %ebp
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
@@ -341,15 +329,13 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movl %eax, %ebp
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; NOSSE-NEXT:    calll __truncsfbf2
 ; NOSSE-NEXT:    movw %ax, 30(%edi)
-; NOSSE-NEXT:    movw %bp, 28(%edi)
-; NOSSE-NEXT:    movw %bx, 26(%edi)
-; NOSSE-NEXT:    movw %si, 24(%edi)
+; NOSSE-NEXT:    movw %bx, 28(%edi)
+; NOSSE-NEXT:    movw %si, 26(%edi)
+; NOSSE-NEXT:    movw %bp, 24(%edi)
 ; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
 ; NOSSE-NEXT:    movw %ax, 22(%edi)
 ; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
@@ -372,7 +358,7 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; NOSSE-NEXT:    movw %ax, 4(%edi)
 ; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
 ; NOSSE-NEXT:    movw %ax, 2(%edi)
-; NOSSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
+; NOSSE-NEXT:    calll __truncsfbf2
 ; NOSSE-NEXT:    movw %ax, (%edi)
 ; NOSSE-NEXT:    movl %edi, %eax
 ; NOSSE-NEXT:    addl $28, %esp
@@ -436,7 +422,7 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; SSE-NEXT:    movl %eax, %ebp
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
@@ -448,15 +434,13 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movl %eax, %ebp
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SSE-NEXT:    calll __truncsfbf2
 ; SSE-NEXT:    movw %ax, 30(%edi)
-; SSE-NEXT:    movw %bp, 28(%edi)
-; SSE-NEXT:    movw %bx, 26(%edi)
-; SSE-NEXT:    movw %si, 24(%edi)
+; SSE-NEXT:    movw %bx, 28(%edi)
+; SSE-NEXT:    movw %si, 26(%edi)
+; SSE-NEXT:    movw %bp, 24(%edi)
 ; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
 ; SSE-NEXT:    movw %ax, 22(%edi)
 ; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
@@ -479,7 +463,7 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; SSE-NEXT:    movw %ax, 4(%edi)
 ; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
 ; SSE-NEXT:    movw %ax, 2(%edi)
-; SSE-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 2-byte Folded Reload
+; SSE-NEXT:    calll __truncsfbf2
 ; SSE-NEXT:    movw %ax, (%edi)
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    addl $28, %esp
@@ -543,14 +527,13 @@ define void @call_ret_bf16(ptr %ptr) #0 {
 define void @call_ret_v2bf16(ptr %ptr) #0 {
 ; NOSSE-LABEL: call_ret_v2bf16:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    pushl %edi
 ; NOSSE-NEXT:    pushl %esi
-; NOSSE-NEXT:    subl $20, %esp
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; NOSSE-NEXT:    movzwl 2(%edi), %eax
+; NOSSE-NEXT:    subl $24, %esp
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NOSSE-NEXT:    movzwl 2(%esi), %eax
 ; NOSSE-NEXT:    shll $16, %eax
 ; NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; NOSSE-NEXT:    movl (%edi), %eax
+; NOSSE-NEXT:    movl (%esi), %eax
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    shll $16, %eax
@@ -558,31 +541,27 @@ define void @call_ret_v2bf16(ptr %ptr) #0 {
 ; NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll returns_v2bf16@PLT
-; NOSSE-NEXT:    fxch %st(1)
 ; NOSSE-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; NOSSE-NEXT:    fstps (%esp)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movl %eax, %esi
 ; NOSSE-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; NOSSE-NEXT:    fstps (%esp)
+; NOSSE-NEXT:    movw %ax, 2(%esi)
 ; NOSSE-NEXT:    calll __truncsfbf2
-; NOSSE-NEXT:    movw %ax, 2(%edi)
-; NOSSE-NEXT:    movw %si, (%edi)
-; NOSSE-NEXT:    addl $20, %esp
+; NOSSE-NEXT:    movw %ax, (%esi)
+; NOSSE-NEXT:    addl $24, %esp
 ; NOSSE-NEXT:    popl %esi
-; NOSSE-NEXT:    popl %edi
 ; NOSSE-NEXT:    retl
 ;
 ; SSE-LABEL: call_ret_v2bf16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushl %edi
 ; SSE-NEXT:    pushl %esi
-; SSE-NEXT:    subl $36, %esp
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SSE-NEXT:    movzwl 2(%edi), %eax
+; SSE-NEXT:    subl $40, %esp
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; SSE-NEXT:    movzwl 2(%esi), %eax
 ; SSE-NEXT:    shll $16, %eax
 ; SSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; SSE-NEXT:    movl (%edi), %eax
+; SSE-NEXT:    movl (%esi), %eax
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; SSE-NEXT:    shll $16, %eax
@@ -590,19 +569,16 @@ define void @call_ret_v2bf16(ptr %ptr) #0 {
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss %xmm0, (%esp)
 ; SSE-NEXT:    calll returns_v2bf16@PLT
-; SSE-NEXT:    fxch %st(1)
 ; SSE-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
 ; SSE-NEXT:    fstps (%esp)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movl %eax, %esi
 ; SSE-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; SSE-NEXT:    fstps (%esp)
+; SSE-NEXT:    movw %ax, 2(%esi)
 ; SSE-NEXT:    calll __truncsfbf2
-; SSE-NEXT:    movw %ax, 2(%edi)
-; SSE-NEXT:    movw %si, (%edi)
-; SSE-NEXT:    addl $36, %esp
+; SSE-NEXT:    movw %ax, (%esi)
+; SSE-NEXT:    addl $40, %esp
 ; SSE-NEXT:    popl %esi
-; SSE-NEXT:    popl %edi
 ; SSE-NEXT:    retl
   %val = load <2 x bfloat>, ptr %ptr
   %bf16 = call <2 x bfloat> @returns_v2bf16(<2 x bfloat> %val)
@@ -714,8 +690,8 @@ define void @call_ret_v4bf16(ptr %ptr) #0 {
 ; NOSSE-NEXT:    subl $4, %esp
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; NOSSE-NEXT:    movw %dx, 6(%esi)
+; NOSSE-NEXT:    movw %cx, 6(%esi)
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; NOSSE-NEXT:    movw %cx, 4(%esi)
 ; NOSSE-NEXT:    movl %eax, (%esi)
 ; NOSSE-NEXT:    addl $48, %esp
@@ -757,8 +733,8 @@ define void @call_ret_v4bf16(ptr %ptr) #0 {
 ; SSE-NEXT:    subl $4, %esp
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; SSE-NEXT:    movw %dx, 6(%esi)
+; SSE-NEXT:    movw %cx, 6(%esi)
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; SSE-NEXT:    movw %cx, 4(%esi)
 ; SSE-NEXT:    movl %eax, (%esi)
 ; SSE-NEXT:    addl $48, %esp
@@ -832,20 +808,18 @@ define void @call_ret_v8bf16(ptr %ptr) #0 {
 ; NOSSE-NEXT:    calll returns_v8bf16@PLT
 ; NOSSE-NEXT:    subl $4, %esp
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
-; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
-; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
-; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    movw %ax, 14(%esi)
-; NOSSE-NEXT:    movw %bp, 12(%esi)
-; NOSSE-NEXT:    movw %bx, 10(%esi)
-; NOSSE-NEXT:    movw %di, 8(%esi)
-; NOSSE-NEXT:    movw %dx, 6(%esi)
+; NOSSE-NEXT:    movw %cx, 14(%esi)
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NEXT:    movw %cx, 12(%esi)
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NEXT:    movw %cx, 10(%esi)
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NEXT:    movw %cx, 8(%esi)
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NEXT:    movw %cx, 6(%esi)
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; NOSSE-NEXT:    movw %cx, 4(%esi)
-; NOSSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; NOSSE-NEXT:    movl %eax, (%esi)
 ; NOSSE-NEXT:    addl $108, %esp
 ; NOSSE-NEXT:    popl %esi
@@ -913,20 +887,18 @@ define void @call_ret_v8bf16(ptr %ptr) #0 {
 ; SSE-NEXT:    calll returns_v8bf16@PLT
 ; SSE-NEXT:    subl $4, %esp
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
-; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
-; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
-; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    movw %ax, 14(%esi)
-; SSE-NEXT:    movw %bp, 12(%esi)
-; SSE-NEXT:    movw %bx, 10(%esi)
-; SSE-NEXT:    movw %di, 8(%esi)
-; SSE-NEXT:    movw %dx, 6(%esi)
+; SSE-NEXT:    movw %cx, 14(%esi)
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SSE-NEXT:    movw %cx, 12(%esi)
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SSE-NEXT:    movw %cx, 10(%esi)
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SSE-NEXT:    movw %cx, 8(%esi)
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SSE-NEXT:    movw %cx, 6(%esi)
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; SSE-NEXT:    movw %cx, 4(%esi)
-; SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; SSE-NEXT:    movl %eax, (%esi)
 ; SSE-NEXT:    addl $108, %esp
 ; SSE-NEXT:    popl %esi

@@ -18,18 +18,18 @@ define dso_local i32 @foo() optsize {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $1234, %eax # imm = 0x4D2
-; X86-NEXT:    movl %eax, a
 ; X86-NEXT:    movl %eax, b
+; X86-NEXT:    movl %eax, a
 ; X86-NEXT:    movl $12, c
 ; X86-NEXT:    cmpl $12, e
 ; X86-NEXT:    jne .LBB0_2
 ; X86-NEXT:  # %bb.1: # %if.then
 ; X86-NEXT:    movl $1, x
 ; X86-NEXT:  .LBB0_2: # %if.end
-; X86-NEXT:    movl $1234, f # imm = 0x4D2
 ; X86-NEXT:    movl $555, %eax # imm = 0x22B
 ; X86-NEXT:    movl %eax, h
 ; X86-NEXT:    addl %eax, i
+; X86-NEXT:    movl $1234, f # imm = 0x4D2
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;
@@ -79,18 +79,18 @@ define dso_local i32 @foo_pgso() !prof !14 {
 ; X86-LABEL: foo_pgso:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $1234, %eax # imm = 0x4D2
-; X86-NEXT:    movl %eax, a
 ; X86-NEXT:    movl %eax, b
+; X86-NEXT:    movl %eax, a
 ; X86-NEXT:    movl $12, c
 ; X86-NEXT:    cmpl $12, e
 ; X86-NEXT:    jne .LBB1_2
 ; X86-NEXT:  # %bb.1: # %if.then
 ; X86-NEXT:    movl $1, x
 ; X86-NEXT:  .LBB1_2: # %if.end
-; X86-NEXT:    movl $1234, f # imm = 0x4D2
 ; X86-NEXT:    movl $555, %eax # imm = 0x22B
 ; X86-NEXT:    movl %eax, h
 ; X86-NEXT:    addl %eax, i
+; X86-NEXT:    movl $1234, f # imm = 0x4D2
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;
@@ -137,8 +137,8 @@ if.end:                                           ; preds = %if.then, %entry
 define dso_local i32 @foo2() {
 ; X86-LABEL: foo2:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl $1234, a # imm = 0x4D2
 ; X86-NEXT:    movl $1234, b # imm = 0x4D2
+; X86-NEXT:    movl $1234, a # imm = 0x4D2
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;

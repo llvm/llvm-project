@@ -7,29 +7,23 @@
 define void @FFT(ptr noalias nocapture %destination, ptr noalias %re, ptr noalias nocapture %ptr_cast_for_load) nounwind {
 ; X86-LABEL: FFT:
 ; X86:       # %bb.0: # %begin
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    movdqu (%eax), %xmm0
 ; X86-NEXT:    pslld $4, %xmm0
-; X86-NEXT:    movd %xmm0, %edx
-; X86-NEXT:    pextrd $1, %xmm0, %esi
-; X86-NEXT:    pextrd $2, %xmm0, %edi
-; X86-NEXT:    pextrd $3, %xmm0, %ebx
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    pextrd $1, %xmm0, %eax
 ; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    pextrd $2, %xmm0, %eax
 ; X86-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm0, 128(%eax)
-; X86-NEXT:    movss %xmm1, 164(%eax)
-; X86-NEXT:    movss %xmm2, 200(%eax)
-; X86-NEXT:    movss %xmm3, 236(%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    pextrd $3, %xmm0, %eax
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movss %xmm0, 236(%eax)
+; X86-NEXT:    movss %xmm3, 200(%eax)
+; X86-NEXT:    movss %xmm2, 164(%eax)
+; X86-NEXT:    movss %xmm1, 128(%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: FFT:

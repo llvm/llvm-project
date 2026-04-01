@@ -46,8 +46,8 @@ define <4 x float> @knownbits_insert_uitofp(<4 x i32> %a0, i16 %a1, i16 %a2) nou
 ; X86-LABEL: knownbits_insert_uitofp:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
@@ -592,11 +592,11 @@ define <4 x float> @knownbits_and_select_shuffle_uitofp(<4 x i32> %a0, <4 x i32>
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovaps 8(%ebp), %xmm3
-; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2
-; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3, %xmm3
 ; X86-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm1
+; X86-NEXT:    vmovaps 8(%ebp), %xmm2
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2
+; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    movl %ebp, %esp
@@ -628,11 +628,11 @@ define <4 x float> @knownbits_lshr_and_select_shuffle_uitofp(<4 x i32> %a0, <4 x
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovaps 8(%ebp), %xmm3
-; X86-NEXT:    vpsrld $5, %xmm2, %xmm2
-; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3, %xmm3
 ; X86-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
+; X86-NEXT:    vpsrld $5, %xmm2, %xmm1
+; X86-NEXT:    vmovaps 8(%ebp), %xmm2
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2
+; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    movl %ebp, %esp

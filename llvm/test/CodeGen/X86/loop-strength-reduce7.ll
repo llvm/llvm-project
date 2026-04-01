@@ -23,14 +23,14 @@ define fastcc void @outer_loop(ptr nocapture %gfp, ptr nocapture %xr, i32 %targ_
 ; CHECK-NEXT:  LBB0_3: ## %bb29.i38
 ; CHECK-NEXT:    ## Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    incl %edx
 ; CHECK-NEXT:    addl $12, %esi
+; CHECK-NEXT:    incl %edx
 ; CHECK-NEXT:    cmpl $11, %edx
 ; CHECK-NEXT:    jbe LBB0_3
 ; CHECK-NEXT:  ## %bb.1: ## %bb28.i37.loopexit
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    addl $168, %ecx
+; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    jmp LBB0_2
 entry:
 	br label %bb4

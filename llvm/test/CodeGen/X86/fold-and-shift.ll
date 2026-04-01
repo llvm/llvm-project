@@ -6,9 +6,9 @@ define i32 @t1(ptr %X, i32 %i) {
 ; X86-LABEL: t1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl %cl, %ecx
-; X86-NEXT:    movl (%eax,%ecx,4), %eax
+; X86-NEXT:    movl (%ecx,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1:
@@ -28,9 +28,9 @@ define i32 @t2(ptr %X, i32 %i) {
 ; X86-LABEL: t2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl %cx, %ecx
-; X86-NEXT:    movl (%eax,%ecx,4), %eax
+; X86-NEXT:    movl (%ecx,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t2:
@@ -55,12 +55,12 @@ entry:
 define i32 @t3(ptr %i.ptr, ptr %arr) {
 ; X86-LABEL: t3:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl (%eax), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shrl $11, %edx
-; X86-NEXT:    addl (%ecx,%edx,4), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $11, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl (%edx,%ecx,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t3:
@@ -85,13 +85,13 @@ entry:
 define i32 @t4(ptr %i.ptr, ptr %arr) {
 ; X86-LABEL: t4:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl (%eax), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shrl $11, %edx
-; X86-NEXT:    addl (%ecx,%edx,4), %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $11, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl (%edx,%ecx,4), %eax
+; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t4:
@@ -118,9 +118,9 @@ define i8 @t5(ptr %X, i32 %i) {
 ; X86-LABEL: t5:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $-14, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $-14, %ecx
-; X86-NEXT:    movzbl (%eax,%ecx,4), %eax
+; X86-NEXT:    movzbl (%ecx,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t5:
@@ -141,10 +141,10 @@ entry:
 define i8 @t6(ptr %X, i32 %i) {
 ; X86-LABEL: t6:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $-255, %ecx
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl (%eax,%ecx,4), %eax
+; X86-NEXT:    movl $-255, %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl (%ecx,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t6:

@@ -93,8 +93,8 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
 ; CHECK-NEXT:    ## Parent Loop BB0_13 Depth=2
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    addl $4, %edx
+; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    decl %ebx
 ; CHECK-NEXT:    jne LBB0_16
 ; CHECK-NEXT:  LBB0_17: ## %bb57

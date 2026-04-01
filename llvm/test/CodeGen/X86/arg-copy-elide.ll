@@ -188,25 +188,25 @@ define void @split_i128(ptr %sret, i128 %x) {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    subl $48, %esp
-; CHECK-NEXT:    movl 24(%ebp), %eax
+; CHECK-NEXT:    movl 36(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl 28(%ebp), %ebx
-; CHECK-NEXT:    movl 32(%ebp), %esi
-; CHECK-NEXT:    movl 36(%ebp), %edi
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl 32(%ebp), %edi
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl 24(%ebp), %ebx
+; CHECK-NEXT:    movl 28(%ebp), %esi
 ; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll _addrof_i128
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %eax
-; CHECK-NEXT:    movl %edi, 12(%eax)
-; CHECK-NEXT:    movl %esi, 8(%eax)
-; CHECK-NEXT:    movl %ebx, 4(%eax)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    movl %ecx, 12(%eax)
+; CHECK-NEXT:    movl %edi, 8(%eax)
+; CHECK-NEXT:    movl %esi, 4(%eax)
+; CHECK-NEXT:    movl %ebx, (%eax)
 ; CHECK-NEXT:    leal -12(%ebp), %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
@@ -332,10 +332,10 @@ define void @escape_with_store(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %esp, %ecx
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %eax, (%esp)
-; CHECK-NEXT:    pushl %ecx
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll _addrof_i32
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl

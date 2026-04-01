@@ -38,8 +38,8 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; ENABLE-NEXT:    pushl %esi
 ; ENABLE-NEXT:    subl $8, %esp
 ; ENABLE-NEXT:    xorl %edx, %edx
-; ENABLE-NEXT:    cmpb $0, _d
 ; ENABLE-NEXT:    movl $6, %ecx
+; ENABLE-NEXT:    cmpb $0, _d
 ; ENABLE-NEXT:    cmovnel %edx, %ecx
 ; ENABLE-NEXT:    movl L_e$non_lazy_ptr, %edx
 ; ENABLE-NEXT:    movb %cl, (%edx)
@@ -76,8 +76,8 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; DISABLE-NEXT:    jmp LBB0_3
 ; DISABLE-NEXT:  LBB0_4: ## %for.end
 ; DISABLE-NEXT:    xorl %edx, %edx
-; DISABLE-NEXT:    cmpb $0, _d
 ; DISABLE-NEXT:    movl $6, %ecx
+; DISABLE-NEXT:    cmpb $0, _d
 ; DISABLE-NEXT:    cmovnel %edx, %ecx
 ; DISABLE-NEXT:    movl L_e$non_lazy_ptr, %edx
 ; DISABLE-NEXT:    movb %cl, (%edx)

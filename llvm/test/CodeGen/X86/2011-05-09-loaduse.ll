@@ -8,9 +8,9 @@ define float @test(ptr %A) nounwind {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movaps (%eax), %xmm0
-; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-NEXT:    xorps %xmm1, %xmm1
 ; X86-NEXT:    movaps %xmm1, (%eax)
+; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax

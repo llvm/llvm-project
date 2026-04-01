@@ -9,56 +9,34 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    movl 456(%ebp), %esi
-; X86-NEXT:    vmovdqa64 328(%ebp), %zmm3
-; X86-NEXT:    vmovdqa64 200(%ebp), %zmm4
-; X86-NEXT:    vmovdqa64 72(%ebp), %zmm5
 ; X86-NEXT:    vp2intersectd %zmm1, %zmm0, %k0
-; X86-NEXT:    kmovw %k0, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; X86-NEXT:    kmovw %k0, %ecx
+; X86-NEXT:    kmovw %k1, %eax
+; X86-NEXT:    vmovdqa64 328(%ebp), %zmm0
+; X86-NEXT:    vp2intersectd 392(%ebp), %zmm0, %k0
+; X86-NEXT:    kmovw %k0, %edx
+; X86-NEXT:    addl %eax, %edx
 ; X86-NEXT:    vp2intersectd 8(%ebp), %zmm2, %k0
-; X86-NEXT:    kmovw %k0, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    vp2intersectd 136(%ebp), %zmm5, %k0
-; X86-NEXT:    kmovw %k0, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    vp2intersectd 264(%ebp), %zmm4, %k0
-; X86-NEXT:    kmovw %k0, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    vp2intersectd 392(%ebp), %zmm3, %k0
-; X86-NEXT:    kmovw %k0, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; X86-NEXT:    kmovw %k0, %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    vmovdqa64 200(%ebp), %zmm0
+; X86-NEXT:    vp2intersectd 264(%ebp), %zmm0, %k0
+; X86-NEXT:    kmovw %k0, %ecx
+; X86-NEXT:    vmovdqa64 72(%ebp), %zmm0
+; X86-NEXT:    vp2intersectd 136(%ebp), %zmm0, %k0
+; X86-NEXT:    kmovw %k0, %esi
+; X86-NEXT:    addl %ecx, %esi
+; X86-NEXT:    addl %eax, %esi
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    calll dummy@PLT
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
-; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
-; X86-NEXT:    kmovw %k0, %edx
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
-; X86-NEXT:    kmovw %k0, %ecx
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
-; X86-NEXT:    kmovw %k0, %edi
-; X86-NEXT:    addl %edi, %eax
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k2 # 2-byte Reload
-; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k3 # 2-byte Reload
-; X86-NEXT:    kmovw %k2, %edi
-; X86-NEXT:    addl %edx, %ecx
-; X86-NEXT:    kmovw %k1, %edx
-; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    addl %edx, %eax
-; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    movl 456(%ebp), %eax
+; X86-NEXT:    movw %si, (%eax)
+; X86-NEXT:    leal -4(%ebp), %esp
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;

@@ -10,12 +10,13 @@
 define void @test(i32 %A) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andb $16, %cl
-; CHECK-NEXT:    shll %cl, B
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    shrl $3, %eax
 ; CHECK-NEXT:    addl %eax, C
+; CHECK-NEXT:    andb $16, %cl
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, B
 ; CHECK-NEXT:    retl
 	%A.upgrd.1 = trunc i32 %A to i8		; <i8> [#uses=1]
 	%tmp2 = load i32, ptr @B		; <i32> [#uses=1]

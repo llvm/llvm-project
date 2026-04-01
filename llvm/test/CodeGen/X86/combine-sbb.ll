@@ -10,13 +10,13 @@ define void @PR25858_i32(ptr sret(%WideUInt32), ptr, ptr) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl (%edx), %esi
-; X86-NEXT:    movl 4(%edx), %edx
-; X86-NEXT:    subl (%ecx), %esi
-; X86-NEXT:    sbbl 4(%ecx), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl (%ecx), %edx
+; X86-NEXT:    movl 4(%ecx), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl (%esi), %edx
+; X86-NEXT:    sbbl 4(%esi), %ecx
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl $4
 ;
@@ -60,21 +60,21 @@ define void @PR25858_i64(ptr sret(%WideUInt64), ptr, ptr) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl 12(%esi), %ecx
+; X86-NEXT:    movl 8(%esi), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl (%edi), %edx
-; X86-NEXT:    movl 4(%edi), %esi
-; X86-NEXT:    movl 12(%edi), %ecx
-; X86-NEXT:    movl 8(%edi), %edi
-; X86-NEXT:    subl 8(%ebx), %edi
-; X86-NEXT:    sbbl 12(%ebx), %ecx
-; X86-NEXT:    subl (%ebx), %edx
-; X86-NEXT:    sbbl 4(%ebx), %esi
-; X86-NEXT:    sbbl $0, %edi
-; X86-NEXT:    sbbl $0, %ecx
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    subl 8(%edi), %edx
+; X86-NEXT:    sbbl 12(%edi), %ecx
+; X86-NEXT:    movl (%esi), %ebx
+; X86-NEXT:    movl 4(%esi), %esi
+; X86-NEXT:    subl (%edi), %ebx
+; X86-NEXT:    movl %ebx, (%eax)
+; X86-NEXT:    sbbl 4(%edi), %esi
 ; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    sbbl $0, %edx
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    sbbl $0, %ecx
 ; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -368,21 +368,19 @@ define i32 @sbb_merge_add1(i32 %a0) nounwind {
 define i32 @sbb_merge_add2(i32 %a0) nounwind {
 ; X86-LABEL: sbb_merge_add2:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl $42, %edi
+; X86-NEXT:    movl $42, %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    setb %al
-; X86-NEXT:    movl %edi, %esi
+; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    negl %esi
+; X86-NEXT:    xorl %ecx, %esi
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    xorl %edi, %esi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sbb_merge_add2:

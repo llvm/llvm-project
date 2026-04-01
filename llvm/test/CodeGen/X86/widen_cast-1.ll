@@ -19,9 +19,9 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    psubw %xmm0, %xmm1
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movq %xmm1, (%ecx,%eax,8)
 ; CHECK-NEXT:    incl (%esp)
 ; CHECK-NEXT:    cmpl $3, (%esp)

@@ -25,11 +25,10 @@ define dso_local i32 @test1() nounwind {
 ; X32-NEXT:    incl c
 ; X32-NEXT:    sete %dl
 ; X32-NEXT:    movb a, %ah
-; X32-NEXT:    movb %ah, %ch
-; X32-NEXT:    incb %ch
 ; X32-NEXT:    cmpb %cl, %ah
 ; X32-NEXT:    sete d
-; X32-NEXT:    movb %ch, a
+; X32-NEXT:    incb %ah
+; X32-NEXT:    movb %ah, a
 ; X32-NEXT:    testb %dl, %dl
 ; X32-NEXT:    jne .LBB0_2
 ; X32-NEXT:  # %bb.1: # %if.then
@@ -293,30 +292,24 @@ bb1:
 define dso_local void @PR37431(ptr %arg1, ptr %arg2, ptr %arg3, i32 %arg4, i64 %arg5) nounwind {
 ; X32-LABEL: PR37431:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    sarl $31, %edx
+; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl (%edi), %edi
-; X32-NEXT:    movl %edi, %ebp
-; X32-NEXT:    sarl $31, %ebp
-; X32-NEXT:    xorl %ebx, %ebx
-; X32-NEXT:    cmpl %edi, {{[0-9]+}}(%esp)
-; X32-NEXT:    sbbl %ebp, %esi
-; X32-NEXT:    sbbl %ebx, %ebx
-; X32-NEXT:    movb %bl, (%edx)
+; X32-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    sbbl %edx, %esi
+; X32-NEXT:    sbbl %ecx, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb %cl, (%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    cltd
-; X32-NEXT:    idivl %ebx
-; X32-NEXT:    movb %dl, (%ecx)
+; X32-NEXT:    idivl %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb %dl, (%eax)
 ; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %edi
-; X32-NEXT:    popl %ebx
-; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR37431:

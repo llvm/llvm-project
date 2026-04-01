@@ -121,88 +121,70 @@ define <64 x ptr> @AGEP9(ptr %param, <64 x i32> %off) nounwind {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-32, %esp
-; CHECK-NEXT:    subl $160, %esp
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm3
-; CHECK-NEXT:    vbroadcastss 12(%ebp), %xmm5
-; CHECK-NEXT:    vpaddd %xmm3, %xmm5, %xmm3
-; CHECK-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpaddd %xmm1, %xmm1, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpaddd %xmm2, %xmm2, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovdqa 40(%ebp), %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovdqa 56(%ebp), %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovdqa 72(%ebp), %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa %xmm0, (%esp) # 16-byte Spill
-; CHECK-NEXT:    vmovdqa 88(%ebp), %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm2
-; CHECK-NEXT:    vmovdqa 104(%ebp), %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm1
-; CHECK-NEXT:    vmovdqa 120(%ebp), %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; CHECK-NEXT:    vmovdqa 136(%ebp), %xmm6
-; CHECK-NEXT:    vpaddd %xmm6, %xmm6, %xmm6
-; CHECK-NEXT:    vpaddd %xmm6, %xmm5, %xmm6
-; CHECK-NEXT:    vmovdqa 152(%ebp), %xmm7
-; CHECK-NEXT:    vpaddd %xmm7, %xmm7, %xmm7
-; CHECK-NEXT:    vpaddd %xmm7, %xmm5, %xmm7
+; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    vmovdqa 168(%ebp), %xmm4
-; CHECK-NEXT:    vpaddd %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vpaddd %xmm4, %xmm5, %xmm4
 ; CHECK-NEXT:    vmovdqa 184(%ebp), %xmm3
-; CHECK-NEXT:    vpaddd %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vpaddd %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vpaddd %xmm3, %xmm3, %xmm5
+; CHECK-NEXT:    vbroadcastss 12(%ebp), %xmm3
+; CHECK-NEXT:    vpaddd %xmm5, %xmm3, %xmm5
 ; CHECK-NEXT:    movl 8(%ebp), %eax
-; CHECK-NEXT:    vmovdqa %xmm3, 240(%eax)
+; CHECK-NEXT:    vmovdqa %xmm5, 240(%eax)
+; CHECK-NEXT:    vpaddd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpaddd %xmm4, %xmm3, %xmm4
 ; CHECK-NEXT:    vmovdqa %xmm4, 224(%eax)
-; CHECK-NEXT:    vmovdqa %xmm7, 208(%eax)
-; CHECK-NEXT:    vmovdqa %xmm6, 192(%eax)
-; CHECK-NEXT:    vmovdqa %xmm0, 176(%eax)
-; CHECK-NEXT:    vmovdqa %xmm1, 160(%eax)
-; CHECK-NEXT:    vmovdqa %xmm2, 144(%eax)
-; CHECK-NEXT:    vmovaps (%esp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, 128(%eax)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, 112(%eax)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, 96(%eax)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, 80(%eax)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, 64(%eax)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, 48(%eax)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, 32(%eax)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, 16(%eax)
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vmovaps %xmm0, (%eax)
+; CHECK-NEXT:    vmovdqa 136(%ebp), %xmm4
+; CHECK-NEXT:    vmovdqa 152(%ebp), %xmm5
+; CHECK-NEXT:    vpaddd %xmm5, %xmm5, %xmm5
+; CHECK-NEXT:    vpaddd %xmm5, %xmm3, %xmm5
+; CHECK-NEXT:    vmovdqa %xmm5, 208(%eax)
+; CHECK-NEXT:    vpaddd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpaddd %xmm4, %xmm3, %xmm4
+; CHECK-NEXT:    vmovdqa %xmm4, 192(%eax)
+; CHECK-NEXT:    vmovdqa 104(%ebp), %xmm4
+; CHECK-NEXT:    vmovdqa 120(%ebp), %xmm5
+; CHECK-NEXT:    vpaddd %xmm5, %xmm5, %xmm5
+; CHECK-NEXT:    vpaddd %xmm5, %xmm3, %xmm5
+; CHECK-NEXT:    vmovdqa %xmm5, 176(%eax)
+; CHECK-NEXT:    vpaddd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpaddd %xmm4, %xmm3, %xmm4
+; CHECK-NEXT:    vmovdqa %xmm4, 160(%eax)
+; CHECK-NEXT:    vmovdqa 72(%ebp), %xmm4
+; CHECK-NEXT:    vmovdqa 88(%ebp), %xmm5
+; CHECK-NEXT:    vpaddd %xmm5, %xmm5, %xmm5
+; CHECK-NEXT:    vpaddd %xmm5, %xmm3, %xmm5
+; CHECK-NEXT:    vmovdqa %xmm5, 144(%eax)
+; CHECK-NEXT:    vpaddd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpaddd %xmm4, %xmm3, %xmm4
+; CHECK-NEXT:    vmovdqa %xmm4, 128(%eax)
+; CHECK-NEXT:    vmovdqa 40(%ebp), %xmm4
+; CHECK-NEXT:    vmovdqa 56(%ebp), %xmm5
+; CHECK-NEXT:    vpaddd %xmm5, %xmm5, %xmm5
+; CHECK-NEXT:    vpaddd %xmm5, %xmm3, %xmm5
+; CHECK-NEXT:    vmovdqa %xmm5, 112(%eax)
+; CHECK-NEXT:    vpaddd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpaddd %xmm4, %xmm3, %xmm4
+; CHECK-NEXT:    vmovdqa %xmm4, 96(%eax)
+; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; CHECK-NEXT:    vpaddd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpaddd %xmm4, %xmm3, %xmm4
+; CHECK-NEXT:    vmovdqa %xmm4, 80(%eax)
+; CHECK-NEXT:    vpaddd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vmovdqa %xmm2, 64(%eax)
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpaddd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vmovdqa %xmm2, 48(%eax)
+; CHECK-NEXT:    vpaddd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vmovdqa %xmm1, 32(%eax)
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vpaddd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vmovdqa %xmm1, 16(%eax)
+; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd %xmm0, %xmm3, %xmm0
+; CHECK-NEXT:    vmovdqa %xmm0, (%eax)
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    vzeroupper

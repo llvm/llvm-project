@@ -6,8 +6,8 @@
 define void @shuf(ptr %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind {
 ; X86-LABEL: shuf:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addps %xmm1, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    extractps $2, %xmm0, 8(%eax)
 ; X86-NEXT:    extractps $1, %xmm0, 4(%eax)
 ; X86-NEXT:    movss %xmm0, (%eax)
@@ -31,9 +31,9 @@ entry:
 define void @shuf2(ptr %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind {
 ; X86-LABEL: shuf2:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; X86-NEXT:    addps %xmm1, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    extractps $2, %xmm0, 8(%eax)
 ; X86-NEXT:    extractps $1, %xmm0, 4(%eax)
 ; X86-NEXT:    movss %xmm0, (%eax)
@@ -59,8 +59,8 @@ entry:
 define void @shuf3(<4 x float> %tmp10, <4 x float> %vecinit15, ptr %dst) nounwind {
 ; X86-LABEL: shuf3:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movaps %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -104,8 +104,8 @@ define <8 x i8> @shuf4(<4 x i8> %a, <4 x i8> %b) nounwind readnone {
 define void @shuf5(ptr %p) nounwind {
 ; X86-LABEL: shuf5:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = [33,33,u,u,u,u,u,u,0,0,u,u,u,u,u,u]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

@@ -76,8 +76,8 @@ define i64 @t3(i64 %x) nounwind readnone ssp {
 define i32 @t4(i32 %a) {
 ; X86-LABEL: t4:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl L_v4$non_lazy_ptr, %ecx
 ; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl L_v4$non_lazy_ptr, %ecx
 ; X86-NEXT:    cmpl $1, (%ecx)
 ; X86-NEXT:    adcw $1, %ax
 ; X86-NEXT:    shll $16, %eax
@@ -186,7 +186,7 @@ define i64 @t9(i32 %0, i32 %1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %edx, %ecx
+; X86-NEXT:    btl %ecx, %edx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
@@ -216,7 +216,7 @@ define i32 @t10(i32 %0, i32 %1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %edx, %ecx
+; X86-NEXT:    btl %ecx, %edx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
@@ -238,7 +238,7 @@ define i32 @t11(i32 %0, i32 %1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %edx, %ecx
+; X86-NEXT:    btl %ecx, %edx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
@@ -260,7 +260,7 @@ define i32 @t12(i32 %0, i32 %1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %edx, %ecx
+; X86-NEXT:    btl %ecx, %edx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;

@@ -152,11 +152,11 @@ define void @large_caller_new_value(%twenty_bytes* byval(%twenty_bytes) align 4 
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    sub esp, 20
 ; X32-NEXT:    .cfi_def_cfa_offset 24
-; X32-NEXT:    mov dword ptr [esp], 0
-; X32-NEXT:    mov dword ptr [esp + 4], 1
-; X32-NEXT:    mov dword ptr [esp + 8], 2
-; X32-NEXT:    mov dword ptr [esp + 12], 3
 ; X32-NEXT:    mov dword ptr [esp + 16], 4
+; X32-NEXT:    mov dword ptr [esp + 12], 3
+; X32-NEXT:    mov dword ptr [esp + 8], 2
+; X32-NEXT:    mov dword ptr [esp + 4], 1
+; X32-NEXT:    mov dword ptr [esp], 0
 ; X32-NEXT:    mov dword ptr [esp + 24], 0
 ; X32-NEXT:    mov dword ptr [esp + 28], 1
 ; X32-NEXT:    mov dword ptr [esp + 32], 2

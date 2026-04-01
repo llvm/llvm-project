@@ -9,9 +9,9 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; X86-NEXT:    movl $256, %eax # imm = 0x100
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    cwtl
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    movl $32, %ecx
+; X86-NEXT:    bsfl %eax, %eax
+; X86-NEXT:    cmovel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sext_known_nonzero:

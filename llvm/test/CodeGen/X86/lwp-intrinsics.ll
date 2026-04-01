@@ -43,18 +43,18 @@ define i8 @test_lwpins32_rri(i32 %a0, i32 %a1) nounwind {
 ; X86_LWP-LABEL: test_lwpins32_rri:
 ; X86_LWP:       # %bb.0:
 ; X86_LWP-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_LWP-NEXT:    addl %eax, %eax
 ; X86_LWP-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_LWP-NEXT:    addl %ecx, %ecx
-; X86_LWP-NEXT:    lwpins $-1985229329, %ecx, %eax # imm = 0x89ABCDEF
+; X86_LWP-NEXT:    lwpins $-1985229329, %eax, %ecx # imm = 0x89ABCDEF
 ; X86_LWP-NEXT:    setb %al
 ; X86_LWP-NEXT:    retl
 ;
 ; X86_BDVER-LABEL: test_lwpins32_rri:
 ; X86_BDVER:       # %bb.0:
-; X86_BDVER-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86_BDVER-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_BDVER-NEXT:    addl %ecx, %ecx
-; X86_BDVER-NEXT:    lwpins $-1985229329, %ecx, %eax # imm = 0x89ABCDEF
+; X86_BDVER-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER-NEXT:    addl %eax, %eax
+; X86_BDVER-NEXT:    lwpins $-1985229329, %eax, %ecx # imm = 0x89ABCDEF
 ; X86_BDVER-NEXT:    setb %al
 ; X86_BDVER-NEXT:    retl
 ;
@@ -92,17 +92,17 @@ define void @test_lwpval32_rri(i32 %a0, i32 %a1) nounwind {
 ; X86_LWP-LABEL: test_lwpval32_rri:
 ; X86_LWP:       # %bb.0:
 ; X86_LWP-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_LWP-NEXT:    addl %eax, %eax
 ; X86_LWP-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_LWP-NEXT:    addl %ecx, %ecx
-; X86_LWP-NEXT:    lwpval $-19088744, %ecx, %eax # imm = 0xFEDCBA98
+; X86_LWP-NEXT:    lwpval $-19088744, %eax, %ecx # imm = 0xFEDCBA98
 ; X86_LWP-NEXT:    retl
 ;
 ; X86_BDVER-LABEL: test_lwpval32_rri:
 ; X86_BDVER:       # %bb.0:
-; X86_BDVER-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86_BDVER-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_BDVER-NEXT:    addl %ecx, %ecx
-; X86_BDVER-NEXT:    lwpval $-19088744, %ecx, %eax # imm = 0xFEDCBA98
+; X86_BDVER-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER-NEXT:    addl %eax, %eax
+; X86_BDVER-NEXT:    lwpval $-19088744, %eax, %ecx # imm = 0xFEDCBA98
 ; X86_BDVER-NEXT:    retl
 ;
 ; X64-LABEL: test_lwpval32_rri:

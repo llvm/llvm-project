@@ -230,9 +230,9 @@ define void @fpext_f16_to_f32(ptr %val, ptr %ret) nounwind strictfp {
 ; X86-LABEL: fpext_f16_to_f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -273,9 +273,9 @@ define void @fpext_f16_to_f64(ptr %val, ptr %ret) nounwind strictfp {
 ; X86-LABEL: fpext_f16_to_f64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -314,9 +314,9 @@ define void @fptrunc_float_to_f16(ptr %val, ptr%ret) nounwind strictfp {
 ; X86-LABEL: fptrunc_float_to_f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -359,9 +359,9 @@ define void @fptrunc_double_to_f16(ptr %val, ptr%ret) nounwind strictfp {
 ; X86-LABEL: fptrunc_double_to_f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vcvtsd2sh %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

@@ -69,9 +69,9 @@ define i32 @pcmpestri_reg_diff_i8(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, 
 ; X86-NEXT:    jmp .LBB2_3
 ; X86-NEXT:  .LBB2_2: # %compare
 ; X86-NEXT:    movdqa %xmm0, (%esp)
+; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    andl $15, %ecx
 ; X86-NEXT:    movzbl (%esp,%ecx), %eax
-; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subb 16(%esp,%ecx), %al
 ; X86-NEXT:  .LBB2_3: # %exit
 ; X86-NEXT:    movzbl %al, %eax
@@ -119,15 +119,13 @@ exit:
 define i1 @pcmpestri_mem_eq_i8(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_eq_i8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movdqu (%esi), %xmm0
 ; X86-NEXT:    pcmpestri $24, (%ecx), %xmm0
 ; X86-NEXT:    setae %al
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpestri_mem_eq_i8:
@@ -150,15 +148,13 @@ entry:
 define i32 @pcmpestri_mem_idx_i8(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_idx_i8:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movdqu (%esi), %xmm0
 ; X86-NEXT:    pcmpestri $24, (%ecx), %xmm0
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpestri_mem_idx_i8:
@@ -182,15 +178,14 @@ define i32 @pcmpestri_mem_diff_i8(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm1
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 20(%ebp), %edx
-; X86-NEXT:    movl 16(%ebp), %ecx
-; X86-NEXT:    movl 8(%ebp), %esi
-; X86-NEXT:    movdqu (%esi), %xmm1
-; X86-NEXT:    movdqu (%ecx), %xmm0
 ; X86-NEXT:    pcmpestri $24, %xmm0, %xmm1
 ; X86-NEXT:    cmpl $16, %ecx
 ; X86-NEXT:    jne .LBB5_2
@@ -199,14 +194,13 @@ define i32 @pcmpestri_mem_diff_i8(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 
 ; X86-NEXT:    jmp .LBB5_3
 ; X86-NEXT:  .LBB5_2: # %compare
 ; X86-NEXT:    movdqa %xmm1, (%esp)
+; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    andl $15, %ecx
 ; X86-NEXT:    movzbl (%esp,%ecx), %eax
-; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subb 16(%esp,%ecx), %al
 ; X86-NEXT:  .LBB5_3: # %exit
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    leal -4(%ebp), %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
@@ -315,10 +309,10 @@ define i32 @pcmpestri_reg_diff_i16(<8 x i16> %lhs, i32 %lhs_len, <8 x i16> %rhs,
 ; X86-NEXT:    jmp .LBB8_3
 ; X86-NEXT:  .LBB8_2: # %compare
 ; X86-NEXT:    movdqa %xmm0, (%esp)
+; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    andl $14, %ecx
 ; X86-NEXT:    movzwl (%esp,%ecx), %eax
-; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subw 16(%esp,%ecx), %ax
 ; X86-NEXT:  .LBB8_3: # %exit
 ; X86-NEXT:    movzwl %ax, %eax
@@ -369,15 +363,13 @@ exit:
 define i1 @pcmpestri_mem_eq_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_eq_i16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movdqu (%esi), %xmm0
 ; X86-NEXT:    pcmpestri $25, (%ecx), %xmm0
 ; X86-NEXT:    setae %al
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpestri_mem_eq_i16:
@@ -402,15 +394,13 @@ entry:
 define i32 @pcmpestri_mem_idx_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_idx_i16:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movdqu (%esi), %xmm0
 ; X86-NEXT:    pcmpestri $25, (%ecx), %xmm0
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpestri_mem_idx_i16:
@@ -436,15 +426,14 @@ define i32 @pcmpestri_mem_diff_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm1
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 20(%ebp), %edx
-; X86-NEXT:    movl 16(%ebp), %ecx
-; X86-NEXT:    movl 8(%ebp), %esi
-; X86-NEXT:    movdqu (%esi), %xmm1
-; X86-NEXT:    movdqu (%ecx), %xmm0
 ; X86-NEXT:    pcmpestri $25, %xmm0, %xmm1
 ; X86-NEXT:    cmpl $8, %ecx
 ; X86-NEXT:    jne .LBB11_2
@@ -453,15 +442,14 @@ define i32 @pcmpestri_mem_diff_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32
 ; X86-NEXT:    jmp .LBB11_3
 ; X86-NEXT:  .LBB11_2: # %compare
 ; X86-NEXT:    movdqa %xmm1, (%esp)
+; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    andl $14, %ecx
 ; X86-NEXT:    movzwl (%esp,%ecx), %eax
-; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subw 16(%esp,%ecx), %ax
 ; X86-NEXT:  .LBB11_3: # %exit
 ; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    leal -4(%ebp), %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
@@ -560,9 +548,9 @@ define i32 @pcmpistri_reg_diff_i8(<16 x i8> %lhs, <16 x i8> %rhs) nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movdqa %xmm0, (%esp)
+; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    andl $15, %ecx
 ; X86-NEXT:    movzbl (%esp,%ecx), %eax
-; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subb 16(%esp,%ecx), %al
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -608,8 +596,8 @@ define i1 @pcmpistri_mem_eq_i8(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_eq_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movdqu (%ecx), %xmm0
+; X86-NEXT:    movdqu (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pcmpistri $24, (%eax), %xmm0
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
@@ -632,8 +620,8 @@ define i32 @pcmpistri_mem_idx_i8(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_idx_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movdqu (%ecx), %xmm0
+; X86-NEXT:    movdqu (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pcmpistri $24, (%eax), %xmm0
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    retl
@@ -659,9 +647,9 @@ define i32 @pcmpistri_mem_diff_i8(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movdqu (%ecx), %xmm1
 ; X86-NEXT:    movdqu (%eax), %xmm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm1
 ; X86-NEXT:    pcmpistri $24, %xmm0, %xmm1
 ; X86-NEXT:    cmpl $16, %ecx
 ; X86-NEXT:    jne .LBB17_2
@@ -670,9 +658,9 @@ define i32 @pcmpistri_mem_diff_i8(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-NEXT:    jmp .LBB17_3
 ; X86-NEXT:  .LBB17_2: # %compare
 ; X86-NEXT:    movdqa %xmm1, (%esp)
+; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    andl $15, %ecx
 ; X86-NEXT:    movzbl (%esp,%ecx), %eax
-; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subb 16(%esp,%ecx), %al
 ; X86-NEXT:  .LBB17_3: # %exit
 ; X86-NEXT:    movzbl %al, %eax
@@ -774,10 +762,10 @@ define i32 @pcmpistri_reg_diff_i16(<8 x i16> %lhs, <8 x i16> %rhs) nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movdqa %xmm0, (%esp)
+; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    andl $14, %ecx
 ; X86-NEXT:    movzwl (%esp,%ecx), %eax
-; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subw 16(%esp,%ecx), %ax
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -826,8 +814,8 @@ define i1 @pcmpistri_mem_eq_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_eq_i16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movdqu (%ecx), %xmm0
+; X86-NEXT:    movdqu (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pcmpistri $25, (%eax), %xmm0
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
@@ -852,8 +840,8 @@ define i32 @pcmpistri_mem_idx_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_idx_i16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movdqu (%ecx), %xmm0
+; X86-NEXT:    movdqu (%eax), %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pcmpistri $25, (%eax), %xmm0
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    retl
@@ -881,9 +869,9 @@ define i32 @pcmpistri_mem_diff_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
-; X86-NEXT:    movl 8(%ebp), %ecx
-; X86-NEXT:    movdqu (%ecx), %xmm1
 ; X86-NEXT:    movdqu (%eax), %xmm0
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movdqu (%eax), %xmm1
 ; X86-NEXT:    pcmpistri $25, %xmm0, %xmm1
 ; X86-NEXT:    cmpl $8, %ecx
 ; X86-NEXT:    jne .LBB23_2
@@ -892,10 +880,10 @@ define i32 @pcmpistri_mem_diff_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-NEXT:    jmp .LBB23_3
 ; X86-NEXT:  .LBB23_2: # %compare
 ; X86-NEXT:    movdqa %xmm1, (%esp)
+; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    andl $14, %ecx
 ; X86-NEXT:    movzwl (%esp,%ecx), %eax
-; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subw 16(%esp,%ecx), %ax
 ; X86-NEXT:  .LBB23_3: # %exit
 ; X86-NEXT:    movzwl %ax, %eax
@@ -949,19 +937,17 @@ define void @pcmpestr_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i
 ; X86-LABEL: pcmpestr_index_flag:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    pcmpestri $24, %xmm1, %xmm0
+; X86-NEXT:    movl %ecx, (%esi)
 ; X86-NEXT:    setb %bl
-; X86-NEXT:    movl %ecx, (%edi)
-; X86-NEXT:    movl %ebx, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ebx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
@@ -988,19 +974,17 @@ entry:
 define void @pcmpestr_mask_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, ptr %mptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpestr_mask_flag:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    pcmpestrm $24, %xmm1, %xmm0
-; X86-NEXT:    setb %bl
 ; X86-NEXT:    movdqa %xmm0, (%esi)
-; X86-NEXT:    movl %ebx, (%ecx)
+; X86-NEXT:    setb %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpestr_mask_flag:
@@ -1025,19 +1009,17 @@ entry:
 define void @pcmpestr_mask_index(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, ptr %mptr, ptr %iptr) nounwind {
 ; X86-LABEL: pcmpestr_mask_index:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    pcmpestrm $24, %xmm1, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    pcmpestri $24, %xmm1, %xmm2
-; X86-NEXT:    movdqa %xmm0, (%edi)
-; X86-NEXT:    movl %ecx, (%esi)
+; X86-NEXT:    movdqa %xmm0, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpestr_mask_index:
@@ -1063,27 +1045,23 @@ entry:
 define void @pcmpestr_mask_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, ptr %mptr, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpestr_mask_index_flag:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    pcmpestrm $24, %xmm1, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    pcmpestri $24, %xmm1, %xmm2
+; X86-NEXT:    movdqa %xmm0, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    setb %bl
-; X86-NEXT:    movdqa %xmm0, (%ebp)
-; X86-NEXT:    movl %ecx, (%edi)
-; X86-NEXT:    movl %ebx, (%esi)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ebx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpestr_mask_index_flag:
@@ -1114,15 +1092,13 @@ entry:
 define void @pcmpistr_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_index_flag:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    pcmpistri $24, %xmm1, %xmm0
+; X86-NEXT:    movl %ecx, (%edx)
 ; X86-NEXT:    setb %al
-; X86-NEXT:    movl %ecx, (%esi)
-; X86-NEXT:    movl %eax, (%edx)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpistr_index_flag:
@@ -1145,11 +1121,11 @@ define void @pcmpistr_mask_flag(<16 x i8> %lhs, <16 x i8> %rhs, ptr %mptr, ptr %
 ; X86-LABEL: pcmpistr_mask_flag:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    pcmpistrm $24, %xmm1, %xmm0
+; X86-NEXT:    movdqa %xmm0, (%ecx)
 ; X86-NEXT:    setb %al
-; X86-NEXT:    movdqa %xmm0, (%edx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
 ;
@@ -1172,11 +1148,12 @@ entry:
 define void @pcmpistr_mask_index(<16 x i8> %lhs, <16 x i8> %rhs, ptr %mptr, ptr %iptr) nounwind {
 ; X86-LABEL: pcmpistr_mask_index:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    pcmpistri $24, %xmm1, %xmm0
 ; X86-NEXT:    pcmpistrm $24, %xmm1, %xmm0
-; X86-NEXT:    movdqa %xmm0, (%edx)
+; X86-NEXT:    movdqa %xmm0, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pcmpistri $24, %xmm1, %xmm2
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1198,21 +1175,17 @@ entry:
 define void @pcmpistr_mask_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, ptr %mptr, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_mask_index_flag:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pcmpistrm $24, %xmm1, %xmm0
-; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    movdqa %xmm0, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    pcmpistri $24, %xmm1, %xmm2
-; X86-NEXT:    setb %bl
-; X86-NEXT:    movdqa %xmm0, (%esi)
 ; X86-NEXT:    movl %ecx, (%edx)
-; X86-NEXT:    movl %ebx, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    setb %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpistr_mask_index_flag:
@@ -1240,23 +1213,19 @@ entry:
 define void @pcmpistr_mask_index_flag_load(<16 x i8> %lhs, ptr %rhsptr, ptr %mptr, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_mask_index_flag_load:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movdqu (%ecx), %xmm2
+; X86-NEXT:    movdqu (%eax), %xmm2
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pcmpistrm $24, %xmm2, %xmm0
-; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    movdqa %xmm0, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    pcmpistri $24, %xmm2, %xmm1
-; X86-NEXT:    setb %bl
-; X86-NEXT:    movdqa %xmm0, (%esi)
 ; X86-NEXT:    movl %ecx, (%edx)
-; X86-NEXT:    movl %ebx, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    setb %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pcmpistr_mask_index_flag_load:
@@ -1289,9 +1258,9 @@ define i32 @pcmpestri_nontemporal(<16 x i8> %lhs, i32 %lhs_len, ptr %rhsptr, i32
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movntdqa (%eax), %xmm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movntdqa (%ecx), %xmm1
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    pcmpestri $24, %xmm1, %xmm0
 ; X86-NEXT:    setb %bl

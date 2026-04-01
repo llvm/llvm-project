@@ -41,20 +41,15 @@ define %0 @test2() {
 define void @call1(ptr%P1, ptr%P2) {
 ; i686-LABEL: call1:
 ; i686:       # %bb.0:
-; i686-NEXT:    pushl %edi
-; i686-NEXT:    .cfi_def_cfa_offset 8
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    .cfi_def_cfa_offset 12
-; i686-NEXT:    .cfi_offset %esi, -12
-; i686-NEXT:    .cfi_offset %edi, -8
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    calll test@PLT
-; i686-NEXT:    fstpt (%edi)
-; i686-NEXT:    fstpt (%esi)
-; i686-NEXT:    popl %esi
 ; i686-NEXT:    .cfi_def_cfa_offset 8
-; i686-NEXT:    popl %edi
+; i686-NEXT:    .cfi_offset %esi, -8
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; i686-NEXT:    calll test@PLT
+; i686-NEXT:    fstpt (%esi)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    fstpt (%eax)
+; i686-NEXT:    popl %esi
 ; i686-NEXT:    .cfi_def_cfa_offset 4
 ; i686-NEXT:    retl
 ;
@@ -93,21 +88,16 @@ define void @call1(ptr%P1, ptr%P2) {
 define void @call2(ptr%P1, ptr%P2) {
 ; i686-LABEL: call2:
 ; i686:       # %bb.0:
-; i686-NEXT:    pushl %edi
-; i686-NEXT:    .cfi_def_cfa_offset 8
 ; i686-NEXT:    pushl %esi
-; i686-NEXT:    .cfi_def_cfa_offset 12
-; i686-NEXT:    .cfi_offset %esi, -12
-; i686-NEXT:    .cfi_offset %edi, -8
+; i686-NEXT:    .cfi_def_cfa_offset 8
+; i686-NEXT:    .cfi_offset %esi, -8
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; i686-NEXT:    calll test@PLT
 ; i686-NEXT:    fxch %st(1)
-; i686-NEXT:    fstpt (%edi)
 ; i686-NEXT:    fstpt (%esi)
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    fstpt (%eax)
 ; i686-NEXT:    popl %esi
-; i686-NEXT:    .cfi_def_cfa_offset 8
-; i686-NEXT:    popl %edi
 ; i686-NEXT:    .cfi_def_cfa_offset 4
 ; i686-NEXT:    retl
 ;

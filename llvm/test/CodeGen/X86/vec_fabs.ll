@@ -586,9 +586,9 @@ define <32 x half> @fabs_v32f16(ptr %p) nounwind {
 ;
 ; X86-AVX512VL-LABEL: fabs_v32f16:
 ; X86-AVX512VL:       # %bb.0:
-; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VL-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; X86-AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VL-NEXT:    vpandq (%eax), %zmm0, %zmm0
 ; X86-AVX512VL-NEXT:    retl
 ;
@@ -601,9 +601,9 @@ define <32 x half> @fabs_v32f16(ptr %p) nounwind {
 ;
 ; X86-AVX512VLDQ-LABEL: fabs_v32f16:
 ; X86-AVX512VLDQ:       # %bb.0:
-; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VLDQ-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; X86-AVX512VLDQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512VLDQ-NEXT:    vpandq (%eax), %zmm0, %zmm0
 ; X86-AVX512VLDQ-NEXT:    retl
 ;
@@ -714,25 +714,25 @@ define void @PR70947(ptr %src, ptr %dst) nounwind {
 ; X86-SSE-LABEL: PR70947:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movups (%ecx), %xmm0
-; X86-SSE-NEXT:    movups 32(%ecx), %xmm1
+; X86-SSE-NEXT:    movups (%eax), %xmm0
+; X86-SSE-NEXT:    movups 32(%eax), %xmm1
 ; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN]
 ; X86-SSE-NEXT:    andps %xmm2, %xmm0
-; X86-SSE-NEXT:    andps %xmm2, %xmm1
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movups %xmm0, (%eax)
+; X86-SSE-NEXT:    andps %xmm2, %xmm1
 ; X86-SSE-NEXT:    movups %xmm1, 16(%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: PR70947:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
-; X86-AVX-NEXT:    vandps (%ecx), %ymm0, %ymm1
-; X86-AVX-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
-; X86-AVX-NEXT:    vmovups %ymm1, (%eax)
-; X86-AVX-NEXT:    vmovups %xmm0, 16(%eax)
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    vandps 32(%eax), %xmm0, %xmm1
+; X86-AVX-NEXT:    vandps (%eax), %ymm0, %ymm0
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    vmovups %ymm0, (%eax)
+; X86-AVX-NEXT:    vmovups %xmm1, 16(%eax)
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
 ;

@@ -7,10 +7,10 @@ define x86_fp80 @fma(x86_fp80 %x, x86_fp80 %y, x86_fp80 %z) nounwind strictfp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $36, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll fmal
@@ -40,8 +40,8 @@ define x86_fp80 @frem(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll fmodl
@@ -319,8 +319,8 @@ define x86_fp80 @maxnum(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll fmaxl
@@ -348,8 +348,8 @@ define x86_fp80 @minnum(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll fminl
@@ -402,8 +402,8 @@ define x86_fp80 @pow(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll powl
@@ -430,10 +430,9 @@ define x86_fp80 @powi(x86_fp80 %x, i32 %y) nounwind strictfp {
 ; X86-LABEL: powi:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    wait
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll __powixf2
@@ -634,8 +633,8 @@ define x86_fp80 @atan2(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpt (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll atan2l

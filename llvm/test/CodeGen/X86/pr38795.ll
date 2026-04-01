@@ -52,11 +52,11 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    movl $0, h
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl a
 ; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    movl $0, h
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dh # 1-byte Reload
 ; CHECK-NEXT:    cmpb $8, %dh
 ; CHECK-NEXT:    jg .LBB0_7

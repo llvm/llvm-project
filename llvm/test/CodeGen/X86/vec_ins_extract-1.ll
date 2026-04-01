@@ -12,8 +12,8 @@ define i32 @t0(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movaps %xmm0, (%esp)
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movl $76, (%esp,%eax,4)
 ; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl %ebp, %esp
@@ -40,10 +40,10 @@ define i32 @t1(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movl $76, %ecx
 ; X32-NEXT:    pinsrd $0, %ecx, %xmm0
 ; X32-NEXT:    movdqa %xmm0, (%esp)
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movl (%esp,%eax,4), %eax
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
@@ -70,8 +70,8 @@ define <4 x i32> @t2(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movdqa %xmm0, (%esp)
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    pinsrd $0, (%esp,%eax,4), %xmm0
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
@@ -96,8 +96,8 @@ define <4 x i32> @t3(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movaps %xmm0, (%esp)
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movss %xmm0, (%esp,%eax,4)
 ; X32-NEXT:    movaps (%esp), %xmm0
 ; X32-NEXT:    movl %ebp, %esp

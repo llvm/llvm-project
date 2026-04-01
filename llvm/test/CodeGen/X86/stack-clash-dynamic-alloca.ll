@@ -39,8 +39,8 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 {
 ; CHECK-X86-32-NEXT:    movl %esp, %ebp
 ; CHECK-X86-32-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-X86-32-NEXT:    subl $8, %esp
-; CHECK-X86-32-NEXT:    movl 8(%ebp), %ecx
 ; CHECK-X86-32-NEXT:    movl %esp, %eax
+; CHECK-X86-32-NEXT:    movl 8(%ebp), %ecx
 ; CHECK-X86-32-NEXT:    leal 15(,%ecx,4), %ecx
 ; CHECK-X86-32-NEXT:    andl $-16, %ecx
 ; CHECK-X86-32-NEXT:    subl %ecx, %eax

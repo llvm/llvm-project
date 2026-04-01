@@ -150,15 +150,15 @@ define i64 @fold_and_xor_neg_v1_64(i64 %x, i64 %y) nounwind {
 ; X86-LABEL: fold_and_xor_neg_v1_64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    xorl %esi, %edx
-; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl

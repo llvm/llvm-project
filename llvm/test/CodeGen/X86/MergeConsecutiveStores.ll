@@ -20,8 +20,8 @@ define void @merge_const_store(i32 %count, ptr nocapture %p) nounwind uwtable no
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_2: # %.lr.ph
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
 ; X86-NEXT:    movl $134678021, 4(%ecx) # imm = 0x8070605
+; X86-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
 ; X86-NEXT:    addl $8, %ecx
 ; X86-NEXT:    decl %eax
 ; X86-NEXT:    jne .LBB0_2
@@ -84,14 +84,14 @@ define void @merge_const_store_no_vec(i32 %count, ptr nocapture %p) noimplicitfl
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB1_2: # %.lr.ph
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl $0, (%ecx)
-; X86-NEXT:    movl $0, 4(%ecx)
-; X86-NEXT:    movl $0, 8(%ecx)
-; X86-NEXT:    movl $0, 12(%ecx)
-; X86-NEXT:    movl $0, 16(%ecx)
-; X86-NEXT:    movl $0, 20(%ecx)
-; X86-NEXT:    movl $0, 24(%ecx)
 ; X86-NEXT:    movl $0, 28(%ecx)
+; X86-NEXT:    movl $0, 24(%ecx)
+; X86-NEXT:    movl $0, 20(%ecx)
+; X86-NEXT:    movl $0, 16(%ecx)
+; X86-NEXT:    movl $0, 12(%ecx)
+; X86-NEXT:    movl $0, 8(%ecx)
+; X86-NEXT:    movl $0, 4(%ecx)
+; X86-NEXT:    movl $0, (%ecx)
 ; X86-NEXT:    addl $32, %ecx
 ; X86-NEXT:    decl %eax
 ; X86-NEXT:    jne .LBB1_2
@@ -222,10 +222,10 @@ define void @merge_nonconst_store(i32 %count, i8 %zz, ptr nocapture %p) nounwind
 ; X86-BWON-NEXT:    .p2align 4
 ; X86-BWON-NEXT:  .LBB3_2: # %.lr.ph
 ; X86-BWON-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-BWON-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
 ; X86-BWON-NEXT:    movb %dl, 4(%ecx)
-; X86-BWON-NEXT:    movw $1798, 5(%ecx) # imm = 0x706
 ; X86-BWON-NEXT:    movb $8, 7(%ecx)
+; X86-BWON-NEXT:    movw $1798, 5(%ecx) # imm = 0x706
+; X86-BWON-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
 ; X86-BWON-NEXT:    addl $8, %ecx
 ; X86-BWON-NEXT:    decl %eax
 ; X86-BWON-NEXT:    jne .LBB3_2
@@ -243,10 +243,10 @@ define void @merge_nonconst_store(i32 %count, i8 %zz, ptr nocapture %p) nounwind
 ; X86-BWOFF-NEXT:    .p2align 4
 ; X86-BWOFF-NEXT:  .LBB3_2: # %.lr.ph
 ; X86-BWOFF-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-BWOFF-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
 ; X86-BWOFF-NEXT:    movb %dl, 4(%ecx)
-; X86-BWOFF-NEXT:    movw $1798, 5(%ecx) # imm = 0x706
 ; X86-BWOFF-NEXT:    movb $8, 7(%ecx)
+; X86-BWOFF-NEXT:    movw $1798, 5(%ecx) # imm = 0x706
+; X86-BWOFF-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
 ; X86-BWOFF-NEXT:    addl $8, %ecx
 ; X86-BWOFF-NEXT:    decl %eax
 ; X86-BWOFF-NEXT:    jne .LBB3_2
@@ -530,8 +530,8 @@ define void @merge_loads_integer(i32 %count, ptr noalias nocapture %q, ptr noali
 ; X86-NEXT:  .LBB6_2: # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl (%edx), %esi
 ; X86-NEXT:    movl 4(%edx), %edi
-; X86-NEXT:    movl %esi, (%ecx)
 ; X86-NEXT:    movl %edi, 4(%ecx)
+; X86-NEXT:    movl %esi, (%ecx)
 ; X86-NEXT:    addl $32, %ecx
 ; X86-NEXT:    decl %eax
 ; X86-NEXT:    jne .LBB6_2
@@ -872,9 +872,9 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(ptr %a, ptr %b, ptr %c, i6
 ; X86-BWON-NEXT:    movl %eax, %edx
 ; X86-BWON-NEXT:    orl $1, %edx
 ; X86-BWON-NEXT:    movb %cl, (%ebx,%edx)
-; X86-BWON-NEXT:    incl %edi
 ; X86-BWON-NEXT:    addl $2, %eax
 ; X86-BWON-NEXT:    adcl $0, %ebp
+; X86-BWON-NEXT:    incl %edi
 ; X86-BWON-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-BWON-NEXT:    movl %ebp, %ecx
 ; X86-BWON-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
@@ -918,9 +918,9 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(ptr %a, ptr %b, ptr %c, i6
 ; X86-BWOFF-NEXT:    movl %eax, %edx
 ; X86-BWOFF-NEXT:    orl $1, %edx
 ; X86-BWOFF-NEXT:    movb %cl, (%ebx,%edx)
-; X86-BWOFF-NEXT:    incl %edi
 ; X86-BWOFF-NEXT:    addl $2, %eax
 ; X86-BWOFF-NEXT:    adcl $0, %ebp
+; X86-BWOFF-NEXT:    incl %edi
 ; X86-BWOFF-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-BWOFF-NEXT:    movl %ebp, %ecx
 ; X86-BWOFF-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
@@ -1145,8 +1145,8 @@ define void @loadStoreBaseIndexOffsetSextNoSex(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; X86-BWON-NEXT:    incb %bl
 ; X86-BWON-NEXT:    movsbl %bl, %ebx
 ; X86-BWON-NEXT:    movb (%edx,%ebx), %ch
-; X86-BWON-NEXT:    movb %cl, (%esi,%eax,2)
 ; X86-BWON-NEXT:    movb %ch, 1(%esi,%eax,2)
+; X86-BWON-NEXT:    movb %cl, (%esi,%eax,2)
 ; X86-BWON-NEXT:    incl %eax
 ; X86-BWON-NEXT:    cmpl %eax, %ebp
 ; X86-BWON-NEXT:    jne .LBB12_1
@@ -1187,8 +1187,8 @@ define void @loadStoreBaseIndexOffsetSextNoSex(ptr %a, ptr %b, ptr %c, i32 %n) {
 ; X86-BWOFF-NEXT:    incb %bl
 ; X86-BWOFF-NEXT:    movsbl %bl, %ebx
 ; X86-BWOFF-NEXT:    movb (%edx,%ebx), %ch
-; X86-BWOFF-NEXT:    movb %cl, (%esi,%eax,2)
 ; X86-BWOFF-NEXT:    movb %ch, 1(%esi,%eax,2)
+; X86-BWOFF-NEXT:    movb %cl, (%esi,%eax,2)
 ; X86-BWOFF-NEXT:    incl %eax
 ; X86-BWOFF-NEXT:    cmpl %eax, %ebp
 ; X86-BWOFF-NEXT:    jne .LBB12_1
@@ -1314,8 +1314,8 @@ define void @merge_vec_extract_stores(<8 x float> %v1, <8 x float> %v2, ptr %ptr
 ; X86-LABEL: merge_vec_extract_stores:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovups %ymm0, 48(%eax)
 ; X86-NEXT:    vmovups %ymm1, 80(%eax)
+; X86-NEXT:    vmovups %ymm0, 48(%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -1346,8 +1346,8 @@ define void @merge_vec_stores_from_loads(ptr %v, ptr %ptr) {
 ; X86-LABEL: merge_vec_stores_from_loads:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovups (%ecx), %ymm0
+; X86-NEXT:    vmovups (%eax), %ymm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovups %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -1373,8 +1373,8 @@ define void @merge_vec_stores_from_loads(ptr %v, ptr %ptr) {
 define void @merge_vec_stores_of_zero(ptr %ptr) {
 ; X86-LABEL: merge_vec_stores_of_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovups %ymm0, 48(%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -1395,10 +1395,10 @@ define void @merge_vec_stores_of_zero(ptr %ptr) {
 define void @merge_vec_stores_of_constant_splat(ptr %ptr) {
 ; X86-LABEL: merge_vec_stores_of_constant_splat:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
-; X86-NEXT:    vmovaps %xmm0, 48(%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, 64(%eax)
+; X86-NEXT:    vmovaps %xmm0, 48(%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: merge_vec_stores_of_constant_splat:
@@ -1417,11 +1417,11 @@ define void @merge_vec_stores_of_constant_splat(ptr %ptr) {
 define void @merge_vec_stores_of_constants(ptr %ptr) {
 ; X86-LABEL: merge_vec_stores_of_constants:
 ; X86:       # %bb.0:
+; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [0,265,26,0]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovaps %xmm0, 64(%eax)
 ; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [25,51,45,0]
 ; X86-NEXT:    vmovaps %xmm0, 48(%eax)
-; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [0,265,26,0]
-; X86-NEXT:    vmovaps %xmm0, 64(%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: merge_vec_stores_of_constants:
@@ -1441,8 +1441,8 @@ define void @merge_vec_stores_of_constants(ptr %ptr) {
 define void @merge_vec_stores_of_constants_with_undefs(ptr %ptr) {
 ; X86-LABEL: merge_vec_stores_of_constants_with_undefs:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovups %ymm0, 48(%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -1500,8 +1500,8 @@ define void @almost_consecutive_stores(ptr %p) {
 ; X86-LABEL: almost_consecutive_stores:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb $0, (%eax)
 ; X86-NEXT:    movb $1, 42(%eax)
+; X86-NEXT:    movb $0, (%eax)
 ; X86-NEXT:    movw $770, 2(%eax) # imm = 0x302
 ; X86-NEXT:    retl
 ;
@@ -1564,8 +1564,8 @@ define void @merge_const_store_heterogeneous(i32 %count, ptr nocapture %p) nounw
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB23_2: # %.lr.ph
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
 ; X86-NEXT:    movl $134678021, 4(%ecx) # imm = 0x8070605
+; X86-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
 ; X86-NEXT:    addl $24, %ecx
 ; X86-NEXT:    decl %eax
 ; X86-NEXT:    jne .LBB23_2
@@ -1615,11 +1615,11 @@ define void @merge_heterogeneous(ptr nocapture %p, ptr nocapture %q) {
 ; X86-LABEL: merge_heterogeneous:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl 4(%eax), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %eax, 4(%edx)
+; X86-NEXT:    movl %ecx, (%edx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: merge_heterogeneous:
@@ -1676,9 +1676,9 @@ entry:
 define i32 @merge_store_alias(ptr %buff, ptr %other) {
 ; X86-LABEL: merge_store_alias:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $0, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl $0, 4(%ecx)
 ; X86-NEXT:    retl

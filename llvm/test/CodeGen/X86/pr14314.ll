@@ -9,18 +9,18 @@ define i64 @atomicSub(ptr %a, i64 %b) nounwind {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl (%esi), %eax
+; CHECK-NEXT:    movl 4(%esi), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; CHECK-NEXT:    movl (%ebp), %eax
-; CHECK-NEXT:    movl 4(%ebp), %edx
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %eax, %ebx
-; CHECK-NEXT:    subl %edi, %ebx
+; CHECK-NEXT:    subl %ebp, %ebx
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    sbbl %esi, %ecx
-; CHECK-NEXT:    lock cmpxchg8b (%ebp)
+; CHECK-NEXT:    sbbl %edi, %ecx
+; CHECK-NEXT:    lock cmpxchg8b (%esi)
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
 ; CHECK-NEXT:    popl %esi

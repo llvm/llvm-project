@@ -53,42 +53,35 @@ define void @store(PrimTy %x, ptr %p) nounwind {
 ;
 ; CHECK-X86-LABEL: store:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    pushl %eax
+; CHECK-X86-NEXT:    subl $12, %esp
+; CHECK-X86-NEXT:    movl 28(%esp), %eax
+; CHECK-X86-NEXT:    movl 32(%esp), %ecx
+; CHECK-X86-NEXT:    movl %eax, 12(%ecx)
+; CHECK-X86-NEXT:    movl 24(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 8(%ecx)
 ; CHECK-X86-NEXT:    movl 16(%esp), %eax
-; CHECK-X86-NEXT:    movl 20(%esp), %ecx
-; CHECK-X86-NEXT:    movl 24(%esp), %edx
-; CHECK-X86-NEXT:    movl 28(%esp), %esi
-; CHECK-X86-NEXT:    movl 32(%esp), %edi
-; CHECK-X86-NEXT:    movl %esi, 12(%edi)
-; CHECK-X86-NEXT:    movl %edx, 8(%edi)
-; CHECK-X86-NEXT:    movl %ecx, 4(%edi)
-; CHECK-X86-NEXT:    movl %eax, (%edi)
-; CHECK-X86-NEXT:    addl $4, %esp
-; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    popl %edi
+; CHECK-X86-NEXT:    movl 20(%esp), %edx
+; CHECK-X86-NEXT:    movl %edx, 4(%ecx)
+; CHECK-X86-NEXT:    movl %eax, (%ecx)
+; CHECK-X86-NEXT:    addl $12, %esp
 ; CHECK-X86-NEXT:    retl
 ;
 ; CHECK-MSVC32-LABEL: store:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %edi
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
+; CHECK-MSVC32-NEXT:    subl $16, %esp
+; CHECK-MSVC32-NEXT:    movl 16(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl 20(%ebp), %ecx
+; CHECK-MSVC32-NEXT:    movl 24(%ebp), %edx
+; CHECK-MSVC32-NEXT:    movl %ecx, 12(%edx)
+; CHECK-MSVC32-NEXT:    movl %eax, 8(%edx)
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
 ; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
-; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 20(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl 24(%ebp), %edi
-; CHECK-MSVC32-NEXT:    movl %esi, 12(%edi)
-; CHECK-MSVC32-NEXT:    movl %edx, 8(%edi)
-; CHECK-MSVC32-NEXT:    movl %ecx, 4(%edi)
-; CHECK-MSVC32-NEXT:    movl %eax, (%edi)
-; CHECK-MSVC32-NEXT:    leal -8(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
-; CHECK-MSVC32-NEXT:    popl %edi
+; CHECK-MSVC32-NEXT:    movl %ecx, 4(%edx)
+; CHECK-MSVC32-NEXT:    movl %eax, (%edx)
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   store PrimTy %x, ptr %p
@@ -134,42 +127,35 @@ define void @store_perturbed(i8 %_0, PrimTy %x, ptr %p) nounwind {
 ;
 ; CHECK-X86-LABEL: store_perturbed:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    pushl %eax
+; CHECK-X86-NEXT:    subl $12, %esp
+; CHECK-X86-NEXT:    movl 44(%esp), %eax
+; CHECK-X86-NEXT:    movl 48(%esp), %ecx
+; CHECK-X86-NEXT:    movl %eax, 12(%ecx)
+; CHECK-X86-NEXT:    movl 40(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 8(%ecx)
 ; CHECK-X86-NEXT:    movl 32(%esp), %eax
-; CHECK-X86-NEXT:    movl 36(%esp), %ecx
-; CHECK-X86-NEXT:    movl 40(%esp), %edx
-; CHECK-X86-NEXT:    movl 44(%esp), %esi
-; CHECK-X86-NEXT:    movl 48(%esp), %edi
-; CHECK-X86-NEXT:    movl %esi, 12(%edi)
-; CHECK-X86-NEXT:    movl %edx, 8(%edi)
-; CHECK-X86-NEXT:    movl %ecx, 4(%edi)
-; CHECK-X86-NEXT:    movl %eax, (%edi)
-; CHECK-X86-NEXT:    addl $4, %esp
-; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    popl %edi
+; CHECK-X86-NEXT:    movl 36(%esp), %edx
+; CHECK-X86-NEXT:    movl %edx, 4(%ecx)
+; CHECK-X86-NEXT:    movl %eax, (%ecx)
+; CHECK-X86-NEXT:    addl $12, %esp
 ; CHECK-X86-NEXT:    retl
 ;
 ; CHECK-MSVC32-LABEL: store_perturbed:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %edi
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
+; CHECK-MSVC32-NEXT:    subl $16, %esp
+; CHECK-MSVC32-NEXT:    movl 32(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl 36(%ebp), %ecx
+; CHECK-MSVC32-NEXT:    movl 40(%ebp), %edx
+; CHECK-MSVC32-NEXT:    movl %ecx, 12(%edx)
+; CHECK-MSVC32-NEXT:    movl %eax, 8(%edx)
 ; CHECK-MSVC32-NEXT:    movl 24(%ebp), %eax
 ; CHECK-MSVC32-NEXT:    movl 28(%ebp), %ecx
-; CHECK-MSVC32-NEXT:    movl 32(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 36(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl 40(%ebp), %edi
-; CHECK-MSVC32-NEXT:    movl %esi, 12(%edi)
-; CHECK-MSVC32-NEXT:    movl %edx, 8(%edi)
-; CHECK-MSVC32-NEXT:    movl %ecx, 4(%edi)
-; CHECK-MSVC32-NEXT:    movl %eax, (%edi)
-; CHECK-MSVC32-NEXT:    leal -8(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
-; CHECK-MSVC32-NEXT:    popl %edi
+; CHECK-MSVC32-NEXT:    movl %ecx, 4(%edx)
+; CHECK-MSVC32-NEXT:    movl %eax, (%edx)
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   store PrimTy %x, ptr %p
@@ -212,38 +198,30 @@ define PrimTy @return(ptr %p) nounwind {
 ;
 ; CHECK-X86-LABEL: return:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    movl 12(%esp), %eax
-; CHECK-X86-NEXT:    movl 16(%esp), %ecx
+; CHECK-X86-NEXT:    movl 4(%esp), %eax
+; CHECK-X86-NEXT:    movl 8(%esp), %ecx
+; CHECK-X86-NEXT:    movl 12(%ecx), %edx
+; CHECK-X86-NEXT:    movl %edx, 12(%eax)
+; CHECK-X86-NEXT:    movl 8(%ecx), %edx
+; CHECK-X86-NEXT:    movl %edx, 8(%eax)
 ; CHECK-X86-NEXT:    movl (%ecx), %edx
-; CHECK-X86-NEXT:    movl 4(%ecx), %esi
-; CHECK-X86-NEXT:    movl 8(%ecx), %edi
-; CHECK-X86-NEXT:    movl 12(%ecx), %ecx
-; CHECK-X86-NEXT:    movl %ecx, 12(%eax)
-; CHECK-X86-NEXT:    movl %edi, 8(%eax)
-; CHECK-X86-NEXT:    movl %esi, 4(%eax)
+; CHECK-X86-NEXT:    movl 4(%ecx), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %edx, (%eax)
-; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    popl %edi
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: return:
 ; CHECK-MSVC32:       # %bb.0:
-; CHECK-MSVC32-NEXT:    pushl %edi
-; CHECK-MSVC32-NEXT:    pushl %esi
-; CHECK-MSVC32-NEXT:    movl 12(%esp), %eax
-; CHECK-MSVC32-NEXT:    movl 16(%esp), %ecx
+; CHECK-MSVC32-NEXT:    movl 4(%esp), %eax
+; CHECK-MSVC32-NEXT:    movl 8(%esp), %ecx
+; CHECK-MSVC32-NEXT:    movl 12(%ecx), %edx
+; CHECK-MSVC32-NEXT:    movl %edx, 12(%eax)
+; CHECK-MSVC32-NEXT:    movl 8(%ecx), %edx
+; CHECK-MSVC32-NEXT:    movl %edx, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl (%ecx), %edx
-; CHECK-MSVC32-NEXT:    movl 4(%ecx), %esi
-; CHECK-MSVC32-NEXT:    movl 8(%ecx), %edi
-; CHECK-MSVC32-NEXT:    movl 12(%ecx), %ecx
-; CHECK-MSVC32-NEXT:    movl %ecx, 12(%eax)
-; CHECK-MSVC32-NEXT:    movl %edi, 8(%eax)
-; CHECK-MSVC32-NEXT:    movl %esi, 4(%eax)
+; CHECK-MSVC32-NEXT:    movl 4(%ecx), %ecx
+; CHECK-MSVC32-NEXT:    movl %ecx, 4(%eax)
 ; CHECK-MSVC32-NEXT:    movl %edx, (%eax)
-; CHECK-MSVC32-NEXT:    popl %esi
-; CHECK-MSVC32-NEXT:    popl %edi
 ; CHECK-MSVC32-NEXT:    retl
   %r = load PrimTy, ptr %p, align 16
   ret PrimTy %r
@@ -282,42 +260,35 @@ define PrimTy @first_arg(PrimTy %x) nounwind {
 ;
 ; CHECK-X86-LABEL: first_arg:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    pushl %eax
+; CHECK-X86-NEXT:    subl $12, %esp
 ; CHECK-X86-NEXT:    movl 16(%esp), %eax
+; CHECK-X86-NEXT:    movl 44(%esp), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 12(%eax)
+; CHECK-X86-NEXT:    movl 40(%esp), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-X86-NEXT:    movl 32(%esp), %ecx
 ; CHECK-X86-NEXT:    movl 36(%esp), %edx
-; CHECK-X86-NEXT:    movl 40(%esp), %esi
-; CHECK-X86-NEXT:    movl 44(%esp), %edi
-; CHECK-X86-NEXT:    movl %edi, 12(%eax)
-; CHECK-X86-NEXT:    movl %esi, 8(%eax)
 ; CHECK-X86-NEXT:    movl %edx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %ecx, (%eax)
-; CHECK-X86-NEXT:    addl $4, %esp
-; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    popl %edi
+; CHECK-X86-NEXT:    addl $12, %esp
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: first_arg:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %edi
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
+; CHECK-MSVC32-NEXT:    subl $16, %esp
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl 32(%ebp), %ecx
+; CHECK-MSVC32-NEXT:    movl 36(%ebp), %edx
+; CHECK-MSVC32-NEXT:    movl %edx, 12(%eax)
+; CHECK-MSVC32-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl 24(%ebp), %ecx
 ; CHECK-MSVC32-NEXT:    movl 28(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 32(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl 36(%ebp), %edi
-; CHECK-MSVC32-NEXT:    movl %edi, 12(%eax)
-; CHECK-MSVC32-NEXT:    movl %esi, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl %edx, 4(%eax)
 ; CHECK-MSVC32-NEXT:    movl %ecx, (%eax)
-; CHECK-MSVC32-NEXT:    leal -8(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
-; CHECK-MSVC32-NEXT:    popl %edi
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   ret PrimTy %x
@@ -362,42 +333,35 @@ define PrimTy @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, PrimTy %x) nounw
 ;
 ; CHECK-X86-LABEL: leading_args:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    pushl %eax
+; CHECK-X86-NEXT:    subl $12, %esp
 ; CHECK-X86-NEXT:    movl 16(%esp), %eax
+; CHECK-X86-NEXT:    movl 76(%esp), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 12(%eax)
+; CHECK-X86-NEXT:    movl 72(%esp), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-X86-NEXT:    movl 64(%esp), %ecx
 ; CHECK-X86-NEXT:    movl 68(%esp), %edx
-; CHECK-X86-NEXT:    movl 72(%esp), %esi
-; CHECK-X86-NEXT:    movl 76(%esp), %edi
-; CHECK-X86-NEXT:    movl %edi, 12(%eax)
-; CHECK-X86-NEXT:    movl %esi, 8(%eax)
 ; CHECK-X86-NEXT:    movl %edx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %ecx, (%eax)
-; CHECK-X86-NEXT:    addl $4, %esp
-; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    popl %edi
+; CHECK-X86-NEXT:    addl $12, %esp
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: leading_args:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %edi
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
+; CHECK-MSVC32-NEXT:    subl $16, %esp
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl 64(%ebp), %ecx
+; CHECK-MSVC32-NEXT:    movl 68(%ebp), %edx
+; CHECK-MSVC32-NEXT:    movl %edx, 12(%eax)
+; CHECK-MSVC32-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl 56(%ebp), %ecx
 ; CHECK-MSVC32-NEXT:    movl 60(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 64(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl 68(%ebp), %edi
-; CHECK-MSVC32-NEXT:    movl %edi, 12(%eax)
-; CHECK-MSVC32-NEXT:    movl %esi, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl %edx, 4(%eax)
 ; CHECK-MSVC32-NEXT:    movl %ecx, (%eax)
-; CHECK-MSVC32-NEXT:    leal -8(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
-; CHECK-MSVC32-NEXT:    popl %edi
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   ret PrimTy %x
@@ -442,42 +406,35 @@ define PrimTy @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, Pr
 ;
 ; CHECK-X86-LABEL: many_leading_args:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    pushl %eax
+; CHECK-X86-NEXT:    subl $12, %esp
 ; CHECK-X86-NEXT:    movl 16(%esp), %eax
+; CHECK-X86-NEXT:    movl 92(%esp), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 12(%eax)
+; CHECK-X86-NEXT:    movl 88(%esp), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-X86-NEXT:    movl 80(%esp), %ecx
 ; CHECK-X86-NEXT:    movl 84(%esp), %edx
-; CHECK-X86-NEXT:    movl 88(%esp), %esi
-; CHECK-X86-NEXT:    movl 92(%esp), %edi
-; CHECK-X86-NEXT:    movl %edi, 12(%eax)
-; CHECK-X86-NEXT:    movl %esi, 8(%eax)
 ; CHECK-X86-NEXT:    movl %edx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %ecx, (%eax)
-; CHECK-X86-NEXT:    addl $4, %esp
-; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    popl %edi
+; CHECK-X86-NEXT:    addl $12, %esp
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: many_leading_args:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %edi
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
+; CHECK-MSVC32-NEXT:    subl $16, %esp
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl 80(%ebp), %ecx
+; CHECK-MSVC32-NEXT:    movl 84(%ebp), %edx
+; CHECK-MSVC32-NEXT:    movl %edx, 12(%eax)
+; CHECK-MSVC32-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl 72(%ebp), %ecx
 ; CHECK-MSVC32-NEXT:    movl 76(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 80(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl 84(%ebp), %edi
-; CHECK-MSVC32-NEXT:    movl %edi, 12(%eax)
-; CHECK-MSVC32-NEXT:    movl %esi, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl %edx, 4(%eax)
 ; CHECK-MSVC32-NEXT:    movl %ecx, (%eax)
-; CHECK-MSVC32-NEXT:    leal -8(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
-; CHECK-MSVC32-NEXT:    popl %edi
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   ret PrimTy %x
@@ -520,42 +477,35 @@ define PrimTy @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy 
 ;
 ; CHECK-X86-LABEL: trailing_arg:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    pushl %eax
+; CHECK-X86-NEXT:    subl $12, %esp
 ; CHECK-X86-NEXT:    movl 16(%esp), %eax
+; CHECK-X86-NEXT:    movl 76(%esp), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 12(%eax)
+; CHECK-X86-NEXT:    movl 72(%esp), %ecx
+; CHECK-X86-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-X86-NEXT:    movl 64(%esp), %ecx
 ; CHECK-X86-NEXT:    movl 68(%esp), %edx
-; CHECK-X86-NEXT:    movl 72(%esp), %esi
-; CHECK-X86-NEXT:    movl 76(%esp), %edi
-; CHECK-X86-NEXT:    movl %edi, 12(%eax)
-; CHECK-X86-NEXT:    movl %esi, 8(%eax)
 ; CHECK-X86-NEXT:    movl %edx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %ecx, (%eax)
-; CHECK-X86-NEXT:    addl $4, %esp
-; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    popl %edi
+; CHECK-X86-NEXT:    addl $12, %esp
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: trailing_arg:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %edi
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
+; CHECK-MSVC32-NEXT:    subl $16, %esp
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl 64(%ebp), %ecx
+; CHECK-MSVC32-NEXT:    movl 68(%ebp), %edx
+; CHECK-MSVC32-NEXT:    movl %edx, 12(%eax)
+; CHECK-MSVC32-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl 56(%ebp), %ecx
 ; CHECK-MSVC32-NEXT:    movl 60(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 64(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl 68(%ebp), %edi
-; CHECK-MSVC32-NEXT:    movl %edi, 12(%eax)
-; CHECK-MSVC32-NEXT:    movl %esi, 8(%eax)
 ; CHECK-MSVC32-NEXT:    movl %edx, 4(%eax)
 ; CHECK-MSVC32-NEXT:    movl %ecx, (%eax)
-; CHECK-MSVC32-NEXT:    leal -8(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
-; CHECK-MSVC32-NEXT:    popl %edi
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   ret PrimTy %x
@@ -612,43 +562,39 @@ define void @call_first_arg(PrimTy %x) nounwind {
 ;
 ; CHECK-X86-LABEL: call_first_arg:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    subl $56, %esp
+; CHECK-X86-NEXT:    subl $60, %esp
+; CHECK-X86-NEXT:    movl 76(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 28(%esp)
+; CHECK-X86-NEXT:    movl 72(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 24(%esp)
+; CHECK-X86-NEXT:    movl 68(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 20(%esp)
 ; CHECK-X86-NEXT:    movl 64(%esp), %eax
-; CHECK-X86-NEXT:    movl 68(%esp), %ecx
-; CHECK-X86-NEXT:    movl 72(%esp), %edx
-; CHECK-X86-NEXT:    movl 76(%esp), %esi
-; CHECK-X86-NEXT:    movl %esi, 28(%esp)
-; CHECK-X86-NEXT:    movl %edx, 24(%esp)
-; CHECK-X86-NEXT:    movl %ecx, 20(%esp)
 ; CHECK-X86-NEXT:    movl %eax, 16(%esp)
 ; CHECK-X86-NEXT:    leal 32(%esp), %eax
 ; CHECK-X86-NEXT:    movl %eax, (%esp)
 ; CHECK-X86-NEXT:    calll first_arg@PLT
-; CHECK-X86-NEXT:    addl $52, %esp
-; CHECK-X86-NEXT:    popl %esi
+; CHECK-X86-NEXT:    addl $56, %esp
 ; CHECK-X86-NEXT:    retl
 ;
 ; CHECK-MSVC32-LABEL: call_first_arg:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
 ; CHECK-MSVC32-NEXT:    subl $64, %esp
+; CHECK-MSVC32-NEXT:    movl 20(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 28(%esp)
+; CHECK-MSVC32-NEXT:    movl 16(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 24(%esp)
+; CHECK-MSVC32-NEXT:    movl 12(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 20(%esp)
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
-; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
-; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 20(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl %esi, 28(%esp)
-; CHECK-MSVC32-NEXT:    movl %edx, 24(%esp)
-; CHECK-MSVC32-NEXT:    movl %ecx, 20(%esp)
 ; CHECK-MSVC32-NEXT:    movl %eax, 16(%esp)
 ; CHECK-MSVC32-NEXT:    leal 32(%esp), %eax
 ; CHECK-MSVC32-NEXT:    movl %eax, (%esp)
 ; CHECK-MSVC32-NEXT:    calll _first_arg
-; CHECK-MSVC32-NEXT:    leal -4(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   call PrimTy @first_arg(PrimTy %x)
@@ -738,15 +684,14 @@ define void @call_leading_args(PrimTy %x) nounwind {
 ;
 ; CHECK-X86-LABEL: call_leading_args:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    subl $88, %esp
+; CHECK-X86-NEXT:    subl $92, %esp
+; CHECK-X86-NEXT:    movl 108(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 60(%esp)
+; CHECK-X86-NEXT:    movl 104(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 56(%esp)
+; CHECK-X86-NEXT:    movl 100(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 52(%esp)
 ; CHECK-X86-NEXT:    movl 96(%esp), %eax
-; CHECK-X86-NEXT:    movl 100(%esp), %ecx
-; CHECK-X86-NEXT:    movl 104(%esp), %edx
-; CHECK-X86-NEXT:    movl 108(%esp), %esi
-; CHECK-X86-NEXT:    movl %esi, 60(%esp)
-; CHECK-X86-NEXT:    movl %edx, 56(%esp)
-; CHECK-X86-NEXT:    movl %ecx, 52(%esp)
 ; CHECK-X86-NEXT:    movl %eax, 48(%esp)
 ; CHECK-X86-NEXT:    leal 64(%esp), %eax
 ; CHECK-X86-NEXT:    movl %eax, (%esp)
@@ -759,24 +704,22 @@ define void @call_leading_args(PrimTy %x) nounwind {
 ; CHECK-X86-NEXT:    movl $0, 8(%esp)
 ; CHECK-X86-NEXT:    movl $0, 4(%esp)
 ; CHECK-X86-NEXT:    calll leading_args@PLT
-; CHECK-X86-NEXT:    addl $84, %esp
-; CHECK-X86-NEXT:    popl %esi
+; CHECK-X86-NEXT:    addl $88, %esp
 ; CHECK-X86-NEXT:    retl
 ;
 ; CHECK-MSVC32-LABEL: call_leading_args:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
 ; CHECK-MSVC32-NEXT:    subl $96, %esp
+; CHECK-MSVC32-NEXT:    movl 20(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 60(%esp)
+; CHECK-MSVC32-NEXT:    movl 16(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 56(%esp)
+; CHECK-MSVC32-NEXT:    movl 12(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 52(%esp)
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
-; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
-; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 20(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl %esi, 60(%esp)
-; CHECK-MSVC32-NEXT:    movl %edx, 56(%esp)
-; CHECK-MSVC32-NEXT:    movl %ecx, 52(%esp)
 ; CHECK-MSVC32-NEXT:    movl %eax, 48(%esp)
 ; CHECK-MSVC32-NEXT:    leal 64(%esp), %eax
 ; CHECK-MSVC32-NEXT:    movl %eax, (%esp)
@@ -789,8 +732,7 @@ define void @call_leading_args(PrimTy %x) nounwind {
 ; CHECK-MSVC32-NEXT:    movl $0, 8(%esp)
 ; CHECK-MSVC32-NEXT:    movl $0, 4(%esp)
 ; CHECK-MSVC32-NEXT:    calll _leading_args
-; CHECK-MSVC32-NEXT:    leal -4(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   call PrimTy @leading_args(i64 0, i64 0, i64 0, i64 0, PrimTy %x)
@@ -899,15 +841,14 @@ define void @call_many_leading_args(PrimTy %x) nounwind {
 ;
 ; CHECK-X86-LABEL: call_many_leading_args:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    subl $104, %esp
+; CHECK-X86-NEXT:    subl $108, %esp
+; CHECK-X86-NEXT:    movl 124(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 76(%esp)
+; CHECK-X86-NEXT:    movl 120(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 72(%esp)
+; CHECK-X86-NEXT:    movl 116(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 68(%esp)
 ; CHECK-X86-NEXT:    movl 112(%esp), %eax
-; CHECK-X86-NEXT:    movl 116(%esp), %ecx
-; CHECK-X86-NEXT:    movl 120(%esp), %edx
-; CHECK-X86-NEXT:    movl 124(%esp), %esi
-; CHECK-X86-NEXT:    movl %esi, 76(%esp)
-; CHECK-X86-NEXT:    movl %edx, 72(%esp)
-; CHECK-X86-NEXT:    movl %ecx, 68(%esp)
 ; CHECK-X86-NEXT:    movl %eax, 64(%esp)
 ; CHECK-X86-NEXT:    leal 80(%esp), %eax
 ; CHECK-X86-NEXT:    movl %eax, (%esp)
@@ -924,24 +865,22 @@ define void @call_many_leading_args(PrimTy %x) nounwind {
 ; CHECK-X86-NEXT:    movl $0, 8(%esp)
 ; CHECK-X86-NEXT:    movl $0, 4(%esp)
 ; CHECK-X86-NEXT:    calll many_leading_args@PLT
-; CHECK-X86-NEXT:    addl $100, %esp
-; CHECK-X86-NEXT:    popl %esi
+; CHECK-X86-NEXT:    addl $104, %esp
 ; CHECK-X86-NEXT:    retl
 ;
 ; CHECK-MSVC32-LABEL: call_many_leading_args:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
 ; CHECK-MSVC32-NEXT:    subl $112, %esp
+; CHECK-MSVC32-NEXT:    movl 20(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 76(%esp)
+; CHECK-MSVC32-NEXT:    movl 16(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 72(%esp)
+; CHECK-MSVC32-NEXT:    movl 12(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 68(%esp)
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
-; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
-; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 20(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl %esi, 76(%esp)
-; CHECK-MSVC32-NEXT:    movl %edx, 72(%esp)
-; CHECK-MSVC32-NEXT:    movl %ecx, 68(%esp)
 ; CHECK-MSVC32-NEXT:    movl %eax, 64(%esp)
 ; CHECK-MSVC32-NEXT:    leal 80(%esp), %eax
 ; CHECK-MSVC32-NEXT:    movl %eax, (%esp)
@@ -958,8 +897,7 @@ define void @call_many_leading_args(PrimTy %x) nounwind {
 ; CHECK-MSVC32-NEXT:    movl $0, 8(%esp)
 ; CHECK-MSVC32-NEXT:    movl $0, 4(%esp)
 ; CHECK-MSVC32-NEXT:    calll _many_leading_args
-; CHECK-MSVC32-NEXT:    leal -4(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   call PrimTy @many_leading_args(i64 0, i64 0, i64 0, i64 0, PrimTy Prim0, PrimTy %x)
@@ -1049,15 +987,14 @@ define void @call_trailing_arg(PrimTy %x) nounwind {
 ;
 ; CHECK-X86-LABEL: call_trailing_arg:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    subl $88, %esp
+; CHECK-X86-NEXT:    subl $92, %esp
+; CHECK-X86-NEXT:    movl 108(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 60(%esp)
+; CHECK-X86-NEXT:    movl 104(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 56(%esp)
+; CHECK-X86-NEXT:    movl 100(%esp), %eax
+; CHECK-X86-NEXT:    movl %eax, 52(%esp)
 ; CHECK-X86-NEXT:    movl 96(%esp), %eax
-; CHECK-X86-NEXT:    movl 100(%esp), %ecx
-; CHECK-X86-NEXT:    movl 104(%esp), %edx
-; CHECK-X86-NEXT:    movl 108(%esp), %esi
-; CHECK-X86-NEXT:    movl %esi, 60(%esp)
-; CHECK-X86-NEXT:    movl %edx, 56(%esp)
-; CHECK-X86-NEXT:    movl %ecx, 52(%esp)
 ; CHECK-X86-NEXT:    movl %eax, 48(%esp)
 ; CHECK-X86-NEXT:    leal 64(%esp), %eax
 ; CHECK-X86-NEXT:    movl %eax, (%esp)
@@ -1070,24 +1007,22 @@ define void @call_trailing_arg(PrimTy %x) nounwind {
 ; CHECK-X86-NEXT:    movl $0, 8(%esp)
 ; CHECK-X86-NEXT:    movl $0, 4(%esp)
 ; CHECK-X86-NEXT:    calll trailing_arg@PLT
-; CHECK-X86-NEXT:    addl $84, %esp
-; CHECK-X86-NEXT:    popl %esi
+; CHECK-X86-NEXT:    addl $88, %esp
 ; CHECK-X86-NEXT:    retl
 ;
 ; CHECK-MSVC32-LABEL: call_trailing_arg:
 ; CHECK-MSVC32:       # %bb.0:
 ; CHECK-MSVC32-NEXT:    pushl %ebp
 ; CHECK-MSVC32-NEXT:    movl %esp, %ebp
-; CHECK-MSVC32-NEXT:    pushl %esi
 ; CHECK-MSVC32-NEXT:    andl $-16, %esp
 ; CHECK-MSVC32-NEXT:    subl $96, %esp
+; CHECK-MSVC32-NEXT:    movl 20(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 60(%esp)
+; CHECK-MSVC32-NEXT:    movl 16(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 56(%esp)
+; CHECK-MSVC32-NEXT:    movl 12(%ebp), %eax
+; CHECK-MSVC32-NEXT:    movl %eax, 52(%esp)
 ; CHECK-MSVC32-NEXT:    movl 8(%ebp), %eax
-; CHECK-MSVC32-NEXT:    movl 12(%ebp), %ecx
-; CHECK-MSVC32-NEXT:    movl 16(%ebp), %edx
-; CHECK-MSVC32-NEXT:    movl 20(%ebp), %esi
-; CHECK-MSVC32-NEXT:    movl %esi, 60(%esp)
-; CHECK-MSVC32-NEXT:    movl %edx, 56(%esp)
-; CHECK-MSVC32-NEXT:    movl %ecx, 52(%esp)
 ; CHECK-MSVC32-NEXT:    movl %eax, 48(%esp)
 ; CHECK-MSVC32-NEXT:    leal 64(%esp), %eax
 ; CHECK-MSVC32-NEXT:    movl %eax, (%esp)
@@ -1100,8 +1035,7 @@ define void @call_trailing_arg(PrimTy %x) nounwind {
 ; CHECK-MSVC32-NEXT:    movl $0, 8(%esp)
 ; CHECK-MSVC32-NEXT:    movl $0, 4(%esp)
 ; CHECK-MSVC32-NEXT:    calll _trailing_arg
-; CHECK-MSVC32-NEXT:    leal -4(%ebp), %esp
-; CHECK-MSVC32-NEXT:    popl %esi
+; CHECK-MSVC32-NEXT:    movl %ebp, %esp
 ; CHECK-MSVC32-NEXT:    popl %ebp
 ; CHECK-MSVC32-NEXT:    retl
   call PrimTy @trailing_arg(i64 0, i64 0, i64 0, i64 0, PrimTy %x)

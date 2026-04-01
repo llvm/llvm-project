@@ -5,18 +5,18 @@
 define void @PR118934(i1 %b, ptr %f, ptr %k) {
 ; X86-LABEL: PR118934:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    addb %cl, %cl
+; X86-NEXT:    addb $-2, %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    andb $1, %dl
-; X86-NEXT:    addb %dl, %dl
-; X86-NEXT:    addb $-2, %dl
-; X86-NEXT:    movsbl %dl, %edx
-; X86-NEXT:    addl $-6, %edx
-; X86-NEXT:    addl $6, %edx
-; X86-NEXT:    movl %edx, (%ecx)
-; X86-NEXT:    addl %edx, %edx
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movsbl %cl, %ecx
+; X86-NEXT:    addl $-6, %ecx
+; X86-NEXT:    addl $6, %ecx
+; X86-NEXT:    movl %ecx, (%edx)
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    movl %ecx, (%eax)
 ;
 ; X64-LABEL: PR118934:
 ; X64:       # %bb.0: # %entry

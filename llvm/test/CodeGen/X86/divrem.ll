@@ -9,28 +9,27 @@ define void @si64(i64 %x, i64 %y, ptr %p, ptr %q) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    calll __divdi3
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __moddi3
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %edi, 4(%ecx)
-; X86-NEXT:    movl %esi, (%ecx)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, (%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %edx, 4(%ecx)
 ; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    calll __moddi3
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    movl %edx, 4(%esi)
+; X86-NEXT:    movl %eax, (%esi)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -56,15 +55,13 @@ define void @si64(i64 %x, i64 %y, ptr %p, ptr %q) nounwind {
 define void @si32(i32 %x, i32 %y, ptr %p, ptr %q) nounwind {
 ; X86-LABEL: si32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cltd
 ; X86-NEXT:    idivl {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %eax, (%esi)
-; X86-NEXT:    movl %edx, (%ecx)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: si32:
@@ -86,15 +83,13 @@ define void @si32(i32 %x, i32 %y, ptr %p, ptr %q) nounwind {
 define void @si16(i16 %x, i16 %y, ptr %p, ptr %q) nounwind {
 ; X86-LABEL: si16:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cwtd
 ; X86-NEXT:    idivw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    movw %dx, (%ecx)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movw %dx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: si16:
@@ -117,15 +112,13 @@ define void @si16(i16 %x, i16 %y, ptr %p, ptr %q) nounwind {
 define void @si8(i8 %x, i8 %y, ptr %p, ptr %q) nounwind {
 ; X86-LABEL: si8:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    idivb {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movsbl %ah, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movsbl %ah, %ebx
 ; X86-NEXT:    movb %al, (%edx)
-; X86-NEXT:    movb %bl, (%ecx)
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: si8:
@@ -150,28 +143,27 @@ define void @ui64(i64 %x, i64 %y, ptr %p, ptr %q) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    calll __udivdi3
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __umoddi3
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %edi, 4(%ecx)
-; X86-NEXT:    movl %esi, (%ecx)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, (%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %edx, 4(%ecx)
 ; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    calll __umoddi3
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    movl %edx, 4(%esi)
+; X86-NEXT:    movl %eax, (%esi)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -197,15 +189,13 @@ define void @ui64(i64 %x, i64 %y, ptr %p, ptr %q) nounwind {
 define void @ui32(i32 %x, i32 %y, ptr %p, ptr %q) nounwind {
 ; X86-LABEL: ui32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %eax, (%esi)
-; X86-NEXT:    movl %edx, (%ecx)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ui32:
@@ -227,15 +217,13 @@ define void @ui32(i32 %x, i32 %y, ptr %p, ptr %q) nounwind {
 define void @ui16(i16 %x, i16 %y, ptr %p, ptr %q) nounwind {
 ; X86-LABEL: ui16:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    movw %dx, (%ecx)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movw %dx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ui16:
@@ -258,15 +246,13 @@ define void @ui16(i16 %x, i16 %y, ptr %p, ptr %q) nounwind {
 define void @ui8(i8 %x, i8 %y, ptr %p, ptr %q) nounwind {
 ; X86-LABEL: ui8:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl %ah, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzbl %ah, %ebx
 ; X86-NEXT:    movb %al, (%edx)
-; X86-NEXT:    movb %bl, (%ecx)
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ui8:

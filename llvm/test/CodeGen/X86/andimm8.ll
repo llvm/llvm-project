@@ -25,13 +25,13 @@ define i64 @bra(i32 %zed) nounwind {
 define void @foo(i64 %zed, ptr %x) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x08]
-; X86-NEXT:    andl $-4, %ecx # encoding: [0x83,0xe1,0xfc]
-; X86-NEXT:    orl $2, %ecx # encoding: [0x83,0xc9,0x02]
-; X86-NEXT:    movl %edx, 4(%eax) # encoding: [0x89,0x50,0x04]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
+; X86-NEXT:    movl %ecx, 4(%edx) # encoding: [0x89,0x4a,0x04]
+; X86-NEXT:    andl $-4, %eax # encoding: [0x83,0xe0,0xfc]
+; X86-NEXT:    orl $2, %eax # encoding: [0x83,0xc8,0x02]
+; X86-NEXT:    movl %eax, (%edx) # encoding: [0x89,0x02]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: foo:

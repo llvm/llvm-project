@@ -108,11 +108,10 @@ define i1 @shifts_eqcmp_i64_i16(i64 %x) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movswl %ax, %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
@@ -133,11 +132,10 @@ define i1 @shifts_eqcmp_i64_i8(i64 %x) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsbl %al, %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;

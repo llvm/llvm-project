@@ -14,7 +14,6 @@ define void @test1(i32 %t) nounwind {
 ; NOSSE-NEXT:    pushl %ebp
 ; NOSSE-NEXT:    movl %esp, %ebp
 ; NOSSE-NEXT:    subl $32, %esp
-; NOSSE-NEXT:    movl 8(%ebp), %eax
 ; NOSSE-NEXT:    movl $0, -4(%ebp)
 ; NOSSE-NEXT:    movl $0, -8(%ebp)
 ; NOSSE-NEXT:    movl $0, -12(%ebp)
@@ -23,6 +22,7 @@ define void @test1(i32 %t) nounwind {
 ; NOSSE-NEXT:    movl $0, -24(%ebp)
 ; NOSSE-NEXT:    movl $0, -28(%ebp)
 ; NOSSE-NEXT:    movl $0, -32(%ebp)
+; NOSSE-NEXT:    movl 8(%ebp), %eax
 ; NOSSE-NEXT:    addl $3, %eax
 ; NOSSE-NEXT:    andl $-4, %eax
 ; NOSSE-NEXT:    calll __alloca
@@ -41,10 +41,10 @@ define void @test1(i32 %t) nounwind {
 ; SSE-NEXT:    andl $-16, %esp
 ; SSE-NEXT:    subl $48, %esp
 ; SSE-NEXT:    movl %esp, %esi
-; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movaps %xmm0, 16(%esi)
 ; SSE-NEXT:    movaps %xmm0, (%esi)
+; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    addl $3, %eax
 ; SSE-NEXT:    andl $-4, %eax
 ; SSE-NEXT:    calll __alloca
@@ -64,9 +64,9 @@ define void @test1(i32 %t) nounwind {
 ; AVX-NEXT:    andl $-32, %esp
 ; AVX-NEXT:    subl $64, %esp
 ; AVX-NEXT:    movl %esp, %esi
-; AVX-NEXT:    movl 8(%ebp), %eax
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %ymm0, (%esi)
+; AVX-NEXT:    movl 8(%ebp), %eax
 ; AVX-NEXT:    addl $3, %eax
 ; AVX-NEXT:    andl $-4, %eax
 ; AVX-NEXT:    calll __alloca
@@ -91,11 +91,11 @@ define void @test2(i32 %t) nounwind {
 ; NOSSE-NEXT:    pushl %ebp
 ; NOSSE-NEXT:    movl %esp, %ebp
 ; NOSSE-NEXT:    subl $16, %esp
-; NOSSE-NEXT:    movl 8(%ebp), %eax
 ; NOSSE-NEXT:    movl $0, -4(%ebp)
 ; NOSSE-NEXT:    movl $0, -8(%ebp)
 ; NOSSE-NEXT:    movl $0, -12(%ebp)
 ; NOSSE-NEXT:    movl $0, -16(%ebp)
+; NOSSE-NEXT:    movl 8(%ebp), %eax
 ; NOSSE-NEXT:    addl $3, %eax
 ; NOSSE-NEXT:    andl $-4, %eax
 ; NOSSE-NEXT:    calll __alloca
@@ -114,9 +114,9 @@ define void @test2(i32 %t) nounwind {
 ; SSE-NEXT:    andl $-16, %esp
 ; SSE-NEXT:    subl $32, %esp
 ; SSE-NEXT:    movl %esp, %esi
-; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movaps %xmm0, (%esi)
+; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    addl $3, %eax
 ; SSE-NEXT:    andl $-4, %eax
 ; SSE-NEXT:    calll __alloca
@@ -136,9 +136,9 @@ define void @test2(i32 %t) nounwind {
 ; AVX-NEXT:    andl $-16, %esp
 ; AVX-NEXT:    subl $32, %esp
 ; AVX-NEXT:    movl %esp, %esi
-; AVX-NEXT:    movl 8(%ebp), %eax
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, (%esi)
+; AVX-NEXT:    movl 8(%ebp), %eax
 ; AVX-NEXT:    addl $3, %eax
 ; AVX-NEXT:    andl $-4, %eax
 ; AVX-NEXT:    calll __alloca

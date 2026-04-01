@@ -31,8 +31,8 @@ define void @foo(ptr nocapture %ctx, i32 %n) local_unnamed_addr #0 {
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    leal 1(%ecx,%edx), %esi
-; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    movl %esi, 12(%eax)
+; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    leal 1(%ecx,%edx), %ecx
 ; X86-NEXT:    movl %ecx, 16(%eax)
 ; X86-NEXT:    popl %esi

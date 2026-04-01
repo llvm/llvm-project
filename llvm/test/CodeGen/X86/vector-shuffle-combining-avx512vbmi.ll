@@ -126,8 +126,8 @@ define <64 x i8> @combine_permi2q_pshufb_as_permi2d(<8 x i64> %a0, <8 x i64> %a1
 define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64> %a1, i64 %m) {
 ; X86-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [56,57,58,59,56,57,58,59,56,57,58,59,56,57,58,59,44,45,46,47,44,45,46,47,44,45,46,47,44,45,46,47,96,97,98,99,96,97,98,99,96,97,98,99,96,97,98,99,116,117,118,119,116,117,118,119,116,117,118,119,116,117,118,119]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpermi2b %zmm0, %zmm1, %zmm2 {%k1} {z}
 ; X86-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X86-NEXT:    retl
@@ -174,8 +174,8 @@ define <64 x i8> @combine_vpermi2var_v64i8_with_mask_commute(<64 x i8> %a0, <64 
 define <64 x i8> @combine_vpermi2var_constant_v64i8_with_mask(<64 x i8> %a0) {
 ; X86-LABEL: combine_vpermi2var_constant_v64i8_with_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63]
 ; X86-NEXT:    vpmovb2m %zmm0, %k1
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63]
 ; X86-NEXT:    vpermi2b {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
@@ -193,9 +193,9 @@ define <64 x i8> @combine_vpermi2var_constant_v64i8_with_mask(<64 x i8> %a0) {
 define <64 x i8> @combine_vpermi2var_constant_v64i8_with_mask_commute(<64 x i8> %a0) {
 ; X86-LABEL: combine_vpermi2var_constant_v64i8_with_mask_commute:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63]
 ; X86-NEXT:    vpmovb2m %zmm0, %k0
 ; X86-NEXT:    knotq %k0, %k1
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63]
 ; X86-NEXT:    vpermi2b {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;

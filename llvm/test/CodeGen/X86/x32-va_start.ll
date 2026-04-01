@@ -100,15 +100,14 @@ define i32 @foo(float %a, ptr nocapture readnone %fmt, ...) nounwind {
 ; X32BITABI-LABEL: foo:
 ; X32BITABI:       # %bb.0: # %entry
 ; X32BITABI-NEXT:    subl $28, %esp
-; X32BITABI-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; X32BITABI-NEXT:    movl %ecx, (%esp)
-; X32BITABI-NEXT:    cmpl $40, %ecx
+; X32BITABI-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X32BITABI-NEXT:    movl %eax, (%esp)
+; X32BITABI-NEXT:    cmpl $40, %eax
 ; X32BITABI-NEXT:    ja .LBB0_2
 ; X32BITABI-NEXT:  # %bb.1: # %vaarg.in_reg
-; X32BITABI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32BITABI-NEXT:    addl %ecx, %eax
-; X32BITABI-NEXT:    addl $8, %ecx
+; X32BITABI-NEXT:    leal 8(%eax), %ecx
 ; X32BITABI-NEXT:    movl %ecx, (%esp)
+; X32BITABI-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32BITABI-NEXT:    jmp .LBB0_3
 ; X32BITABI-NEXT:  .LBB0_2: # %vaarg.in_mem
 ; X32BITABI-NEXT:    movl {{[0-9]+}}(%esp), %eax

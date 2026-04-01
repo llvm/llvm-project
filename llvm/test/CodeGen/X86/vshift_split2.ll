@@ -6,10 +6,10 @@
 define void @update(<8 x i32> %val, ptr %dst) nounwind {
 ; CHECK-LABEL: update:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    psrad $2, %xmm0
 ; CHECK-NEXT:    psrad $4, %xmm1
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movdqa %xmm1, 16(%eax)
+; CHECK-NEXT:    psrad $2, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, (%eax)
 ; CHECK-NEXT:    retl
 entry:

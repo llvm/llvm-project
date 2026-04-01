@@ -9,20 +9,20 @@
 define i32 @PR15215_bad(<4 x i32> %input) nounwind {
 ; X86-LABEL: PR15215_bad:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
-; X86-NEXT:    shlb $3, %ah
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    shlb $2, %cl
-; X86-NEXT:    orb %ah, %cl
-; X86-NEXT:    addb %dl, %dl
+; X86-NEXT:    shlb $3, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andb $1, %al
-; X86-NEXT:    orb %dl, %al
-; X86-NEXT:    andb $3, %al
+; X86-NEXT:    shlb $2, %al
 ; X86-NEXT:    orb %cl, %al
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addb %cl, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    andb $1, %dl
+; X86-NEXT:    orb %cl, %dl
+; X86-NEXT:    andb $3, %dl
+; X86-NEXT:    orb %al, %dl
+; X86-NEXT:    movzbl %dl, %eax
 ; X86-NEXT:    andl $15, %eax
 ; X86-NEXT:    retl
 ;
@@ -62,19 +62,17 @@ entry:
 define i32 @PR15215_good(<4 x i32> %input) nounwind {
 ; X86-LABEL: PR15215_good:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    andl $1, %esi
-; X86-NEXT:    andl $1, %edx
-; X86-NEXT:    andl $1, %ecx
 ; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    leal (%esi,%edx,2), %edx
-; X86-NEXT:    leal (%edx,%ecx,4), %ecx
-; X86-NEXT:    leal (%ecx,%eax,8), %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    leal (%ecx,%eax,2), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    leal (%eax,%ecx,4), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    leal (%eax,%ecx,8), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR15215_good:

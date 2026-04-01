@@ -246,9 +246,9 @@ entry:
 define <2 x i64> @test_mm128_cvtneps2bf16_128_select(<2 x i64> %C, i8 zeroext %U, <4 x float> %A) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm128_cvtneps2bf16_128_select:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    vcvtneps2bf16 %xmm1, %xmm1 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc9]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovd %eax, %k1 # encoding: [0xc5,0xfb,0x92,0xc8]
-; X86-NEXT:    vcvtneps2bf16 %xmm1, %xmm1 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc9]
 ; X86-NEXT:    vmovdqu16 %xmm1, %xmm0 {%k1} # encoding: [0x62,0xf1,0xff,0x09,0x6f,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;

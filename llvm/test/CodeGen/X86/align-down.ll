@@ -84,9 +84,9 @@ define i32 @t2_commutative(i32 %ptr, i32 %alignment) nounwind {
 define i32 @t3_extrause0(i32 %ptr, i32 %alignment, ptr %mask_storage) nounwind {
 ; NOBMI-X86-LABEL: t3_extrause0:
 ; NOBMI-X86:       # %bb.0:
-; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOBMI-X86-NEXT:    decl %eax
+; NOBMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; NOBMI-X86-NEXT:    movl %eax, (%ecx)
 ; NOBMI-X86-NEXT:    notl %eax
 ; NOBMI-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -95,10 +95,10 @@ define i32 @t3_extrause0(i32 %ptr, i32 %alignment, ptr %mask_storage) nounwind {
 ; BMI-X86-LABEL: t3_extrause0:
 ; BMI-X86:       # %bb.0:
 ; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BMI-X86-NEXT:    decl %eax
 ; BMI-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; BMI-X86-NEXT:    decl %ecx
-; BMI-X86-NEXT:    movl %ecx, (%eax)
-; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %ecx, %eax
+; BMI-X86-NEXT:    movl %eax, (%ecx)
+; BMI-X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
 ; BMI-X86-NEXT:    retl
 ;
 ; NOBMI-X64-LABEL: t3_extrause0:
@@ -126,12 +126,12 @@ define i32 @n4_extrause1(i32 %ptr, i32 %alignment, ptr %bias_storage) nounwind {
 ; X86-LABEL: n4_extrause1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    decl %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl %eax, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    decl %edx
-; X86-NEXT:    andl %eax, %edx
-; X86-NEXT:    movl %edx, (%ecx)
-; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    movl %ecx, (%edx)
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: n4_extrause1:
@@ -151,17 +151,15 @@ define i32 @n4_extrause1(i32 %ptr, i32 %alignment, ptr %bias_storage) nounwind {
 define i32 @n5_extrause2(i32 %ptr, i32 %alignment, ptr %mask_storage, ptr %bias_storage) nounwind {
 ; X86-LABEL: n5_extrause2:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    decl %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl %eax, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    decl %esi
-; X86-NEXT:    movl %esi, (%edx)
-; X86-NEXT:    andl %eax, %esi
-; X86-NEXT:    movl %esi, (%ecx)
-; X86-NEXT:    subl %esi, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl %ecx, (%edx)
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: n5_extrause2:
@@ -186,10 +184,10 @@ define i32 @n5_extrause2(i32 %ptr, i32 %alignment, ptr %mask_storage, ptr %bias_
 define i32 @n6_different_ptrs(i32 %ptr0, i32 %ptr1, i32 %alignment) nounwind {
 ; X86-LABEL: n6_different_ptrs:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    decl %ecx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -208,10 +206,10 @@ define i32 @n6_different_ptrs(i32 %ptr0, i32 %ptr1, i32 %alignment) nounwind {
 define i32 @n7_different_ptrs_commutative(i32 %ptr0, i32 %ptr1, i32 %alignment) nounwind {
 ; X86-LABEL: n7_different_ptrs_commutative:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    decl %ecx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -266,9 +264,9 @@ define i32 @n8_not_lowbit_mask(i32 %ptr, i32 %alignment) nounwind {
 define i32 @n9_sub_is_not_commutative(i32 %ptr, i32 %alignment) nounwind {
 ; X86-LABEL: n9_sub_is_not_commutative:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    decl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl

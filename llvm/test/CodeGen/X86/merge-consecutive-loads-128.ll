@@ -23,9 +23,8 @@ define <2 x double> @merge_2f64_f64_23(ptr %ptr) nounwind uwtable noinline ssp {
 ; X86-SSE1-LABEL: merge_2f64_f64_23:
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    fldl 16(%eax)
 ; X86-SSE1-NEXT:    fldl 24(%eax)
-; X86-SSE1-NEXT:    fxch %st(1)
+; X86-SSE1-NEXT:    fldl 16(%eax)
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE41-LABEL: merge_2f64_f64_23:
@@ -55,26 +54,16 @@ define <2 x i64> @merge_2i64_i64_12(ptr %ptr) nounwind uwtable noinline ssp {
 ;
 ; X86-SSE1-LABEL: merge_2i64_i64_12:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    .cfi_offset %esi, -12
-; X86-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movl 20(%ecx), %edx
+; X86-SSE1-NEXT:    movl %edx, 12(%eax)
+; X86-SSE1-NEXT:    movl 16(%ecx), %edx
+; X86-SSE1-NEXT:    movl %edx, 8(%eax)
 ; X86-SSE1-NEXT:    movl 8(%ecx), %edx
-; X86-SSE1-NEXT:    movl 12(%ecx), %esi
-; X86-SSE1-NEXT:    movl 16(%ecx), %edi
-; X86-SSE1-NEXT:    movl 20(%ecx), %ecx
-; X86-SSE1-NEXT:    movl %ecx, 12(%eax)
-; X86-SSE1-NEXT:    movl %edi, 8(%eax)
-; X86-SSE1-NEXT:    movl %esi, 4(%eax)
+; X86-SSE1-NEXT:    movl 12(%ecx), %ecx
+; X86-SSE1-NEXT:    movl %ecx, 4(%eax)
 ; X86-SSE1-NEXT:    movl %edx, (%eax)
-; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    popl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE1-NEXT:    retl $4
 ;
 ; X86-SSE41-LABEL: merge_2i64_i64_12:
@@ -158,8 +147,8 @@ define <4 x float> @merge_4f32_f32_34uu(ptr %ptr) nounwind uwtable noinline ssp 
 ;
 ; X86-SSE1-LABEL: merge_4f32_f32_34uu:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    retl
 ;
@@ -240,8 +229,8 @@ define <4 x float> @merge_4f32_f32_45zz(ptr %ptr) nounwind uwtable noinline ssp 
 ;
 ; X86-SSE1-LABEL: merge_4f32_f32_45zz:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    retl
 ;
@@ -281,8 +270,8 @@ define <4 x float> @merge_4f32_f32_012u(ptr %ptr) nounwind uwtable noinline ssp 
 ;
 ; X86-SSE1-LABEL: merge_4f32_f32_012u:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -328,8 +317,8 @@ define <4 x float> @merge_4f32_f32_019u(ptr %ptr) nounwind uwtable noinline ssp 
 ;
 ; X86-SSE1-LABEL: merge_4f32_f32_019u:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -406,9 +395,9 @@ define <4 x i32> @merge_4i32_i32_23u5(ptr %ptr) nounwind uwtable noinline ssp {
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    movl 8(%ecx), %edx
 ; X86-SSE1-NEXT:    movl 12(%ecx), %esi
-; X86-SSE1-NEXT:    movl 20(%ecx), %ecx
 ; X86-SSE1-NEXT:    movl %esi, 4(%eax)
 ; X86-SSE1-NEXT:    movl %edx, (%eax)
+; X86-SSE1-NEXT:    movl 20(%ecx), %ecx
 ; X86-SSE1-NEXT:    movl %ecx, 12(%eax)
 ; X86-SSE1-NEXT:    popl %esi
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
@@ -458,9 +447,9 @@ define <4 x i32> @merge_4i32_i32_23u5_inc2(ptr %ptr) nounwind uwtable noinline s
 ; X86-SSE1-NEXT:    movl 12(%ecx), %esi
 ; X86-SSE1-NEXT:    leal 1(%edx), %edi
 ; X86-SSE1-NEXT:    movl %edi, 8(%ecx)
-; X86-SSE1-NEXT:    movl 20(%ecx), %ecx
 ; X86-SSE1-NEXT:    movl %esi, 4(%eax)
 ; X86-SSE1-NEXT:    movl %edx, (%eax)
+; X86-SSE1-NEXT:    movl 20(%ecx), %ecx
 ; X86-SSE1-NEXT:    movl %ecx, 12(%eax)
 ; X86-SSE1-NEXT:    popl %esi
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
@@ -515,9 +504,9 @@ define <4 x i32> @merge_4i32_i32_23u5_inc3(ptr %ptr) nounwind uwtable noinline s
 ; X86-SSE1-NEXT:    movl 12(%ecx), %esi
 ; X86-SSE1-NEXT:    leal 1(%esi), %edi
 ; X86-SSE1-NEXT:    movl %edi, 12(%ecx)
-; X86-SSE1-NEXT:    movl 20(%ecx), %ecx
 ; X86-SSE1-NEXT:    movl %esi, 4(%eax)
 ; X86-SSE1-NEXT:    movl %edx, (%eax)
+; X86-SSE1-NEXT:    movl 20(%ecx), %ecx
 ; X86-SSE1-NEXT:    movl %ecx, 12(%eax)
 ; X86-SSE1-NEXT:    popl %esi
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
@@ -771,25 +760,20 @@ define <4 x i32> @merge_v4i32_i32_3210(ptr %ptr) nounwind uwtable noinline ssp {
 ;
 ; X86-SSE1-LABEL: merge_v4i32_i32_3210:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    .cfi_offset %esi, -12
-; X86-SSE1-NEXT:    .cfi_offset %edi, -8
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    .cfi_offset %esi, -8
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movl 12(%ecx), %edx
-; X86-SSE1-NEXT:    movl 8(%ecx), %esi
-; X86-SSE1-NEXT:    movl (%ecx), %edi
-; X86-SSE1-NEXT:    movl 4(%ecx), %ecx
-; X86-SSE1-NEXT:    movl %edi, 12(%eax)
-; X86-SSE1-NEXT:    movl %ecx, 8(%eax)
-; X86-SSE1-NEXT:    movl %esi, 4(%eax)
-; X86-SSE1-NEXT:    movl %edx, (%eax)
+; X86-SSE1-NEXT:    movl (%ecx), %edx
+; X86-SSE1-NEXT:    movl 4(%ecx), %esi
+; X86-SSE1-NEXT:    movl %edx, 12(%eax)
+; X86-SSE1-NEXT:    movl %esi, 8(%eax)
+; X86-SSE1-NEXT:    movl 8(%ecx), %edx
+; X86-SSE1-NEXT:    movl %edx, 4(%eax)
+; X86-SSE1-NEXT:    movl 12(%ecx), %ecx
+; X86-SSE1-NEXT:    movl %ecx, (%eax)
 ; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    popl %edi
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE1-NEXT:    retl $4
 ;
@@ -827,26 +811,16 @@ define <8 x i16> @merge_8i16_i16_23u567u9(ptr %ptr) nounwind uwtable noinline ss
 ;
 ; X86-SSE1-LABEL: merge_8i16_i16_23u567u9:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    .cfi_offset %esi, -12
-; X86-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movzwl 14(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 10(%eax)
+; X86-SSE1-NEXT:    movzwl 18(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 14(%eax)
 ; X86-SSE1-NEXT:    movl 4(%ecx), %edx
-; X86-SSE1-NEXT:    movl 10(%ecx), %esi
-; X86-SSE1-NEXT:    movzwl 14(%ecx), %edi
-; X86-SSE1-NEXT:    movzwl 18(%ecx), %ecx
-; X86-SSE1-NEXT:    movw %di, 10(%eax)
-; X86-SSE1-NEXT:    movw %cx, 14(%eax)
-; X86-SSE1-NEXT:    movl %esi, 6(%eax)
+; X86-SSE1-NEXT:    movl 10(%ecx), %ecx
+; X86-SSE1-NEXT:    movl %ecx, 6(%eax)
 ; X86-SSE1-NEXT:    movl %edx, (%eax)
-; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    popl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE1-NEXT:    retl $4
 ;
 ; X86-SSE41-LABEL: merge_8i16_i16_23u567u9:
@@ -923,10 +897,10 @@ define <8 x i16> @merge_8i16_i16_45u7zzzz(ptr %ptr) nounwind uwtable noinline ss
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movl 8(%ecx), %edx
-; X86-SSE1-NEXT:    movzwl 14(%ecx), %ecx
-; X86-SSE1-NEXT:    movw %cx, 6(%eax)
-; X86-SSE1-NEXT:    movl %edx, (%eax)
+; X86-SSE1-NEXT:    movzwl 14(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 6(%eax)
+; X86-SSE1-NEXT:    movl 8(%ecx), %ecx
+; X86-SSE1-NEXT:    movl %ecx, (%eax)
 ; X86-SSE1-NEXT:    movl $0, 12(%eax)
 ; X86-SSE1-NEXT:    movl $0, 8(%eax)
 ; X86-SSE1-NEXT:    retl $4
@@ -975,51 +949,28 @@ define <8 x i16> @merge_8i16_i16_76543210(ptr %ptr) nounwind uwtable noinline ss
 ;
 ; X86-SSE1-LABEL: merge_8i16_i16_76543210:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %ebp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    pushl %ebx
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    pushl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 20
-; X86-SSE1-NEXT:    pushl %eax
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 24
-; X86-SSE1-NEXT:    .cfi_offset %esi, -20
-; X86-SSE1-NEXT:    .cfi_offset %edi, -16
-; X86-SSE1-NEXT:    .cfi_offset %ebx, -12
-; X86-SSE1-NEXT:    .cfi_offset %ebp, -8
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movzwl 14(%eax), %ecx
-; X86-SSE1-NEXT:    movw %cx, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-SSE1-NEXT:    movzwl 12(%eax), %ecx
-; X86-SSE1-NEXT:    movw %cx, (%esp) # 2-byte Spill
-; X86-SSE1-NEXT:    movzwl 10(%eax), %esi
-; X86-SSE1-NEXT:    movzwl 8(%eax), %edi
-; X86-SSE1-NEXT:    movzwl 6(%eax), %ebx
-; X86-SSE1-NEXT:    movzwl 4(%eax), %ebp
-; X86-SSE1-NEXT:    movzwl (%eax), %ecx
-; X86-SSE1-NEXT:    movzwl 2(%eax), %edx
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movw %cx, 14(%eax)
-; X86-SSE1-NEXT:    movw %dx, 12(%eax)
-; X86-SSE1-NEXT:    movw %bp, 10(%eax)
-; X86-SSE1-NEXT:    movw %bx, 8(%eax)
-; X86-SSE1-NEXT:    movw %di, 6(%eax)
-; X86-SSE1-NEXT:    movw %si, 4(%eax)
-; X86-SSE1-NEXT:    movzwl (%esp), %ecx # 2-byte Folded Reload
-; X86-SSE1-NEXT:    movw %cx, 2(%eax)
-; X86-SSE1-NEXT:    movzwl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 2-byte Folded Reload
-; X86-SSE1-NEXT:    movw %cx, (%eax)
-; X86-SSE1-NEXT:    addl $4, %esp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 20
-; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE1-NEXT:    popl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    popl %ebx
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    popl %ebp
+; X86-SSE1-NEXT:    .cfi_offset %esi, -8
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movzwl (%ecx), %edx
+; X86-SSE1-NEXT:    movzwl 2(%ecx), %esi
+; X86-SSE1-NEXT:    movw %dx, 14(%eax)
+; X86-SSE1-NEXT:    movw %si, 12(%eax)
+; X86-SSE1-NEXT:    movzwl 4(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 10(%eax)
+; X86-SSE1-NEXT:    movzwl 6(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 8(%eax)
+; X86-SSE1-NEXT:    movzwl 8(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 6(%eax)
+; X86-SSE1-NEXT:    movzwl 10(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 4(%eax)
+; X86-SSE1-NEXT:    movzwl 12(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 2(%eax)
+; X86-SSE1-NEXT:    movzwl 14(%ecx), %ecx
+; X86-SSE1-NEXT:    movw %cx, (%eax)
+; X86-SSE1-NEXT:    popl %esi
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE1-NEXT:    retl $4
 ;
@@ -1069,40 +1020,20 @@ define <16 x i8> @merge_16i8_i8_01u3456789ABCDuF(ptr %ptr) nounwind uwtable noin
 ;
 ; X86-SSE1-LABEL: merge_16i8_i8_01u3456789ABCDuF:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %ebp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    pushl %ebx
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    pushl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 20
-; X86-SSE1-NEXT:    .cfi_offset %esi, -20
-; X86-SSE1-NEXT:    .cfi_offset %edi, -16
-; X86-SSE1-NEXT:    .cfi_offset %ebx, -12
-; X86-SSE1-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movzwl (%ecx), %ebp
-; X86-SSE1-NEXT:    movl 3(%ecx), %esi
-; X86-SSE1-NEXT:    movl 7(%ecx), %edi
-; X86-SSE1-NEXT:    movzwl 11(%ecx), %ebx
 ; X86-SSE1-NEXT:    movzbl 13(%ecx), %edx
-; X86-SSE1-NEXT:    movzbl 15(%ecx), %ecx
 ; X86-SSE1-NEXT:    movb %dl, 13(%eax)
-; X86-SSE1-NEXT:    movb %cl, 15(%eax)
-; X86-SSE1-NEXT:    movw %bx, 11(%eax)
-; X86-SSE1-NEXT:    movl %edi, 7(%eax)
-; X86-SSE1-NEXT:    movl %esi, 3(%eax)
-; X86-SSE1-NEXT:    movw %bp, (%eax)
-; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE1-NEXT:    popl %edi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    popl %ebx
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    popl %ebp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    movzbl 15(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 15(%eax)
+; X86-SSE1-NEXT:    movzwl 11(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 11(%eax)
+; X86-SSE1-NEXT:    movl 7(%ecx), %edx
+; X86-SSE1-NEXT:    movl %edx, 7(%eax)
+; X86-SSE1-NEXT:    movl 3(%ecx), %edx
+; X86-SSE1-NEXT:    movl %edx, 3(%eax)
+; X86-SSE1-NEXT:    movzwl (%ecx), %ecx
+; X86-SSE1-NEXT:    movw %cx, (%eax)
 ; X86-SSE1-NEXT:    retl $4
 ;
 ; X86-SSE41-LABEL: merge_16i8_i8_01u3456789ABCDuF:
@@ -1169,10 +1100,10 @@ define <16 x i8> @merge_16i8_i8_01u3uuzzuuuuuzzz(ptr %ptr) nounwind uwtable noin
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movzwl (%ecx), %edx
-; X86-SSE1-NEXT:    movzbl 3(%ecx), %ecx
-; X86-SSE1-NEXT:    movb %cl, 3(%eax)
-; X86-SSE1-NEXT:    movw %dx, (%eax)
+; X86-SSE1-NEXT:    movzbl 3(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 3(%eax)
+; X86-SSE1-NEXT:    movzwl (%ecx), %ecx
+; X86-SSE1-NEXT:    movw %cx, (%eax)
 ; X86-SSE1-NEXT:    movb $0, 15(%eax)
 ; X86-SSE1-NEXT:    movw $0, 13(%eax)
 ; X86-SSE1-NEXT:    movw $0, 6(%eax)
@@ -1214,10 +1145,10 @@ define <16 x i8> @merge_16i8_i8_0123uu67uuuuuzzz(ptr %ptr) nounwind uwtable noin
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movl (%ecx), %edx
-; X86-SSE1-NEXT:    movzwl 6(%ecx), %ecx
-; X86-SSE1-NEXT:    movw %cx, 6(%eax)
-; X86-SSE1-NEXT:    movl %edx, (%eax)
+; X86-SSE1-NEXT:    movzwl 6(%ecx), %edx
+; X86-SSE1-NEXT:    movw %dx, 6(%eax)
+; X86-SSE1-NEXT:    movl (%ecx), %ecx
+; X86-SSE1-NEXT:    movl %ecx, (%eax)
 ; X86-SSE1-NEXT:    movb $0, 15(%eax)
 ; X86-SSE1-NEXT:    movw $0, 13(%eax)
 ; X86-SSE1-NEXT:    retl $4
@@ -1281,74 +1212,40 @@ define <16 x i8> @merge_16i8_i8_FEDCBA9876543210(ptr %ptr) nounwind uwtable noin
 ;
 ; X86-SSE1-LABEL: merge_16i8_i8_FEDCBA9876543210:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %ebx
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    subl $12, %esp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 24
-; X86-SSE1-NEXT:    .cfi_offset %esi, -12
-; X86-SSE1-NEXT:    .cfi_offset %ebx, -8
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE1-NEXT:    movzbl 15(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 14(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 13(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 12(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 11(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 10(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 9(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 8(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 7(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movzbl 6(%esi), %ecx
-; X86-SSE1-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-SSE1-NEXT:    movb 5(%esi), %bh
-; X86-SSE1-NEXT:    movb 4(%esi), %bl
-; X86-SSE1-NEXT:    movb 3(%esi), %dh
-; X86-SSE1-NEXT:    movb 2(%esi), %ch
-; X86-SSE1-NEXT:    movb (%esi), %cl
-; X86-SSE1-NEXT:    movb 1(%esi), %dl
-; X86-SSE1-NEXT:    movb %cl, 15(%eax)
-; X86-SSE1-NEXT:    movb %dl, 14(%eax)
-; X86-SSE1-NEXT:    movb %ch, 13(%eax)
-; X86-SSE1-NEXT:    movb %dh, 12(%eax)
-; X86-SSE1-NEXT:    movb %bl, 11(%eax)
-; X86-SSE1-NEXT:    movb %bh, 10(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 9(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 8(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 7(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 6(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 5(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 4(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 3(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 2(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-SSE1-NEXT:    movb %cl, 1(%eax)
-; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movzbl (%ecx), %edx
+; X86-SSE1-NEXT:    movb 1(%ecx), %dh
+; X86-SSE1-NEXT:    movb %dl, 15(%eax)
+; X86-SSE1-NEXT:    movb %dh, 14(%eax)
+; X86-SSE1-NEXT:    movzbl 2(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 13(%eax)
+; X86-SSE1-NEXT:    movzbl 3(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 12(%eax)
+; X86-SSE1-NEXT:    movzbl 4(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 11(%eax)
+; X86-SSE1-NEXT:    movzbl 5(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 10(%eax)
+; X86-SSE1-NEXT:    movzbl 6(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 9(%eax)
+; X86-SSE1-NEXT:    movzbl 7(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 8(%eax)
+; X86-SSE1-NEXT:    movzbl 8(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 7(%eax)
+; X86-SSE1-NEXT:    movzbl 9(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 6(%eax)
+; X86-SSE1-NEXT:    movzbl 10(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 5(%eax)
+; X86-SSE1-NEXT:    movzbl 11(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 4(%eax)
+; X86-SSE1-NEXT:    movzbl 12(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 3(%eax)
+; X86-SSE1-NEXT:    movzbl 13(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 2(%eax)
+; X86-SSE1-NEXT:    movzbl 14(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, 1(%eax)
+; X86-SSE1-NEXT:    movzbl 15(%ecx), %ecx
 ; X86-SSE1-NEXT:    movb %cl, (%eax)
-; X86-SSE1-NEXT:    addl $12, %esp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    popl %ebx
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE1-NEXT:    retl $4
 ;
 ; X86-SSE41-LABEL: merge_16i8_i8_FEDCBA9876543210:
@@ -1424,18 +1321,18 @@ define void @merge_4i32_i32_combine(ptr %dst, ptr %src) {
 ; X86-SSE1-LABEL: merge_4i32_i32_combine:
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; X86-SSE1-NEXT:    andps %xmm0, %xmm1
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movaps %xmm1, (%eax)
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE41-LABEL: merge_4i32_i32_combine:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE41-NEXT:    retl
  %1 = load i32, ptr %src
@@ -1586,8 +1483,8 @@ define <4 x float> @merge_4f32_f32_X0YY(ptr %ptr0, ptr %ptr1) nounwind uwtable n
 ; X86-SSE-LABEL: merge_4f32_f32_X0YY:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; X86-SSE-NEXT:    retl
@@ -1687,22 +1584,20 @@ define <4 x i32> @no_reverse_vzload(ptr %p0) nounwind {
 ;
 ; X86-SSE1-LABEL: no_reverse_vzload:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %ebx
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE1-NEXT:    xorl %ecx, %ecx
-; X86-SSE1-NEXT:    cmpl $0, (%edx)
-; X86-SSE1-NEXT:    setg %cl
-; X86-SSE1-NEXT:    negl %ecx
-; X86-SSE1-NEXT:    xorl %ebx, %ebx
-; X86-SSE1-NEXT:    cmpl $0, 4(%edx)
-; X86-SSE1-NEXT:    setg %bl
-; X86-SSE1-NEXT:    negl %ebx
-; X86-SSE1-NEXT:    movl %ebx, 4(%eax)
-; X86-SSE1-NEXT:    movl %ecx, (%eax)
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    xorl %edx, %edx
+; X86-SSE1-NEXT:    cmpl $0, 4(%ecx)
+; X86-SSE1-NEXT:    setg %dl
+; X86-SSE1-NEXT:    negl %edx
+; X86-SSE1-NEXT:    movl %edx, 4(%eax)
+; X86-SSE1-NEXT:    xorl %edx, %edx
+; X86-SSE1-NEXT:    cmpl $0, (%ecx)
+; X86-SSE1-NEXT:    setg %dl
+; X86-SSE1-NEXT:    negl %edx
+; X86-SSE1-NEXT:    movl %edx, (%eax)
 ; X86-SSE1-NEXT:    movl $0, 12(%eax)
 ; X86-SSE1-NEXT:    movl $0, 8(%eax)
-; X86-SSE1-NEXT:    popl %ebx
 ; X86-SSE1-NEXT:    retl $4
 ;
 ; X86-SSE41-LABEL: no_reverse_vzload:
@@ -1710,10 +1605,10 @@ define <4 x i32> @no_reverse_vzload(ptr %p0) nounwind {
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE41-NEXT:    movddup {{.*#+}} xmm1 = xmm0[0,0]
-; X86-SSE41-NEXT:    pxor %xmm2, %xmm2
 ; X86-SSE41-NEXT:    paddd %xmm1, %xmm1
-; X86-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; X86-SSE41-NEXT:    pcmpgtd %xmm1, %xmm0
+; X86-SSE41-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; X86-SSE41-NEXT:    pcmpgtd %xmm2, %xmm0
 ; X86-SSE41-NEXT:    retl
   %i0 = load <2 x i32>, ptr %p0, align 4
   %i1 = shufflevector <2 x i32> %i0, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

@@ -21,9 +21,9 @@ define float @test_powi_f32_i32(float %Val, i32 %x) nounwind {
 ; SDAG-X86-LABEL: test_powi_f32_i32:
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstps (%esp)
 ; SDAG-X86-NEXT:    calll __powisf2
 ; SDAG-X86-NEXT:    addl $12, %esp
@@ -76,9 +76,9 @@ define double @test_powi_f64_i32(double %Val, i32 %x) nounwind {
 ; SDAG-X86-LABEL: test_powi_f64_i32:
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstpl (%esp)
 ; SDAG-X86-NEXT:    calll __powidf2
 ; SDAG-X86-NEXT:    addl $12, %esp
@@ -134,9 +134,9 @@ define x86_fp80 @test_powi_f80_i32(x86_fp80 %Val, i32 %x) nounwind {
 ; SDAG-X86-LABEL: test_powi_f80_i32:
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    subl $28, %esp
-; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstpt (%esp)
 ; SDAG-X86-NEXT:    calll __powixf2
 ; SDAG-X86-NEXT:    addl $28, %esp

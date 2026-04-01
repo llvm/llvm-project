@@ -14,19 +14,19 @@ define void @test_extractelement_legalization_storereuse(<4 x i32> %a, ptr nocap
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    paddd (%edx), %xmm0
-; CHECK-NEXT:    movdqa %xmm0, (%edx)
-; CHECK-NEXT:    movl (%edx), %esi
-; CHECK-NEXT:    movl 4(%edx), %edi
-; CHECK-NEXT:    shll $4, %ecx
-; CHECK-NEXT:    movl 8(%edx), %ebx
-; CHECK-NEXT:    movl 12(%edx), %edx
-; CHECK-NEXT:    movl %esi, 12(%eax,%ecx)
-; CHECK-NEXT:    movl %edi, (%eax,%ecx)
-; CHECK-NEXT:    movl %ebx, 8(%eax,%ecx)
-; CHECK-NEXT:    movl %edx, 4(%eax,%ecx)
+; CHECK-NEXT:    paddd (%eax), %xmm0
+; CHECK-NEXT:    movdqa %xmm0, (%eax)
+; CHECK-NEXT:    movl 12(%eax), %ecx
+; CHECK-NEXT:    movl 8(%eax), %edx
+; CHECK-NEXT:    movl (%eax), %esi
+; CHECK-NEXT:    movl 4(%eax), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    shll $4, %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    movl %esi, 12(%ebx,%edi)
+; CHECK-NEXT:    movl %eax, (%ebx,%edi)
+; CHECK-NEXT:    movl %edx, 8(%ebx,%edi)
+; CHECK-NEXT:    movl %ecx, 4(%ebx,%edi)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx

@@ -48,9 +48,9 @@ define i32 @shl32i(i32 %x) nounwind uwtable readnone {
 define i32 @shl32p(ptr %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: shl32p:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; BMI2-NEXT:    shlxl %ecx, (%eax), %eax
+; BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; BMI2-NEXT:    shlxl %eax, (%ecx), %eax
 ; BMI2-NEXT:    retl
 ;
 ; BMI264-LABEL: shl32p:
@@ -230,9 +230,9 @@ define i32 @lshr32(i32 %x, i32 %shamt) nounwind uwtable readnone {
 define i32 @lshr32p(ptr %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: lshr32p:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; BMI2-NEXT:    shrxl %ecx, (%eax), %eax
+; BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; BMI2-NEXT:    shrxl %eax, (%ecx), %eax
 ; BMI2-NEXT:    retl
 ;
 ; BMI264-LABEL: lshr32p:
@@ -338,9 +338,9 @@ define i32 @ashr32(i32 %x, i32 %shamt) nounwind uwtable readnone {
 define i32 @ashr32p(ptr %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: ashr32p:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; BMI2-NEXT:    sarxl %ecx, (%eax), %eax
+; BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; BMI2-NEXT:    sarxl %eax, (%ecx), %eax
 ; BMI2-NEXT:    retl
 ;
 ; BMI264-LABEL: ashr32p:

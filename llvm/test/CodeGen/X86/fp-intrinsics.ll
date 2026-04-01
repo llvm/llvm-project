@@ -75,10 +75,10 @@ define double @f2(double %a) #0 {
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    subl $12, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
-; X86-SSE-NEXT:    subsd %xmm1, %xmm0
-; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE-NEXT:    subsd %xmm0, %xmm1
+; X86-SSE-NEXT:    movsd %xmm1, (%esp)
 ; X86-SSE-NEXT:    fldl (%esp)
 ; X86-SSE-NEXT:    wait
 ; X86-SSE-NEXT:    addl $12, %esp
@@ -1300,10 +1300,10 @@ define i32 @f20u(double %x) #0 {
 ;
 ; X86-SSE-LABEL: f20u:
 ; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm2 = [2.147483648E+9,0.0E+0]
 ; X86-SSE-NEXT:    comisd %xmm0, %xmm2
-; X86-SSE-NEXT:    xorpd %xmm1, %xmm1
 ; X86-SSE-NEXT:    ja .LBB24_2
 ; X86-SSE-NEXT:  # %bb.1: # %entry
 ; X86-SSE-NEXT:    movapd %xmm2, %xmm1
@@ -2477,9 +2477,9 @@ define double @uifdl(i64 %x) #0 {
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    subl $28, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 32
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    shrl $31, %eax
 ; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
@@ -2699,9 +2699,9 @@ define float @uiffl(i64 %x) #0 {
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    subl $20, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    shrl $31, %eax
 ; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)

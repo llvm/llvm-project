@@ -19,8 +19,8 @@ define i32 @test2(i8 %x) nounwind readnone {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $-32, %ecx
-; CHECK-NEXT:    orl $63, %eax
+; CHECK-NEXT:    orl $63, %ecx
+; CHECK-NEXT:    andl $-32, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retl
   %A = and i8 %x, -32
@@ -37,9 +37,8 @@ declare void @use(i32, i8)
 define void @test3(i8 %x) nounwind readnone {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $12, %esp
+; CHECK-NEXT:    subl $20, %esp
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    andl $-32, %eax
 ; CHECK-NEXT:    pushl %eax

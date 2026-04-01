@@ -4,30 +4,26 @@
 define void @test_convert_float2_ulong2(ptr nocapture %src, ptr nocapture %dest) nounwind {
 ; CHECK-LABEL: test_convert_float2_ulong2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    subl $20, %esp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl 168(%ecx), %edx
-; CHECK-NEXT:    movl 172(%ecx), %esi
-; CHECK-NEXT:    movl 160(%ecx), %edi
-; CHECK-NEXT:    movl 164(%ecx), %ecx
+; CHECK-NEXT:    movl 172(%eax), %ecx
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %edi, (%esp)
-; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl 168(%eax), %edx
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    shrl $31, %ecx
-; CHECK-NEXT:    fildll (%esp)
-; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
-; CHECK-NEXT:    shrl $31, %esi
 ; CHECK-NEXT:    fildll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%esi,4)
-; CHECK-NEXT:    fstps 84(%eax)
-; CHECK-NEXT:    fstps 80(%eax)
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
+; CHECK-NEXT:    movl 160(%eax), %ecx
+; CHECK-NEXT:    movl 164(%eax), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    fstps 84(%edx)
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %ecx, (%esp)
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    fildll (%esp)
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
+; CHECK-NEXT:    fstps 80(%edx)
 ; CHECK-NEXT:    addl $20, %esp
-; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
   %t0 = getelementptr <2 x i64>, ptr %src, i32 10
   %t1 = load <2 x i64>, ptr %t0, align 16

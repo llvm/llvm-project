@@ -15,9 +15,9 @@ define i32 @and_signbit_shl(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: and_signbit_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movzbl 6(%esp), %eax
 ; X86-NEXT:    shll $24, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
@@ -36,9 +36,9 @@ define i32 @and_nosignbit_shl(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: and_nosignbit_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movzbl 6(%esp), %eax
 ; X86-NEXT:    shll $24, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
@@ -58,10 +58,10 @@ define i32 @or_signbit_shl(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: or_signbit_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl 4(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
@@ -80,10 +80,10 @@ define i32 @or_nosignbit_shl(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: or_nosignbit_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl 4(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
@@ -103,10 +103,10 @@ define i32 @xor_signbit_shl(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: xor_signbit_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $16711680, %eax # imm = 0xFF0000
 ; X86-NEXT:    xorl 4(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
@@ -125,10 +125,10 @@ define i32 @xor_nosignbit_shl(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: xor_nosignbit_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $16711680, %eax # imm = 0xFF0000
 ; X86-NEXT:    xorl 4(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
@@ -148,10 +148,10 @@ define i32 @add_signbit_shl(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: add_signbit_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl 4(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    addl $-16777216, %eax # imm = 0xFF000000
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
@@ -170,10 +170,10 @@ define i32 @add_nosignbit_shl(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: add_nosignbit_shl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl 4(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    addl $-16777216, %eax # imm = 0xFF000000
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000
@@ -195,9 +195,9 @@ define i32 @and_signbit_lshr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: and_signbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movzwl 6(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
@@ -216,10 +216,10 @@ define i32 @and_nosignbit_lshr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: and_nosignbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $2147418112, %eax # imm = 0x7FFF0000
 ; X86-NEXT:    andl 4(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
@@ -239,10 +239,10 @@ define i32 @or_signbit_lshr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: or_signbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $-65536, %eax # imm = 0xFFFF0000
 ; X86-NEXT:    orl 4(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
@@ -261,10 +261,10 @@ define i32 @or_nosignbit_lshr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: or_nosignbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $2147418112, %eax # imm = 0x7FFF0000
 ; X86-NEXT:    orl 4(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
@@ -284,10 +284,10 @@ define i32 @xor_signbit_lshr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: xor_signbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $-65536, %eax # imm = 0xFFFF0000
 ; X86-NEXT:    xorl 4(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
@@ -306,10 +306,10 @@ define i32 @xor_nosignbit_lshr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: xor_nosignbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $2147418112, %eax # imm = 0x7FFF0000
 ; X86-NEXT:    xorl 4(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
@@ -329,10 +329,10 @@ define i32 @add_signbit_lshr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: add_signbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $-65536, %eax # imm = 0xFFFF0000
 ; X86-NEXT:    addl 4(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
@@ -351,10 +351,10 @@ define i32 @add_nosignbit_lshr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: add_nosignbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $2147418112, %eax # imm = 0x7FFF0000
 ; X86-NEXT:    addl 4(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000
@@ -376,9 +376,9 @@ define i32 @and_signbit_ashr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: and_signbit_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movswl 6(%esp), %eax
 ; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
@@ -397,10 +397,10 @@ define i32 @and_nosignbit_ashr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: and_nosignbit_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $2147418112, %eax # imm = 0x7FFF0000
 ; X86-NEXT:    andl 4(%esp), %eax
 ; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
@@ -420,10 +420,10 @@ define i32 @or_signbit_ashr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: or_signbit_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $-65536, %eax # imm = 0xFFFF0000
 ; X86-NEXT:    orl 4(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
@@ -442,10 +442,10 @@ define i32 @or_nosignbit_ashr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: or_nosignbit_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $2147418112, %eax # imm = 0x7FFF0000
 ; X86-NEXT:    orl 4(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = or i32 %x, 2147418112 ; 0x7FFF0000
@@ -465,10 +465,10 @@ define i32 @xor_signbit_ashr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: xor_signbit_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $-65536, %eax # imm = 0xFFFF0000
 ; X86-NEXT:    xorl 4(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 4294901760 ; 0xFFFF0000
@@ -487,10 +487,10 @@ define i32 @xor_nosignbit_ashr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: xor_nosignbit_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $2147418112, %eax # imm = 0x7FFF0000
 ; X86-NEXT:    xorl 4(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = xor i32 %x, 2147418112 ; 0x7FFF0000
@@ -510,10 +510,10 @@ define i32 @add_signbit_ashr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: add_signbit_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $-65536, %eax # imm = 0xFFFF0000
 ; X86-NEXT:    addl 4(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 4294901760 ; 0xFFFF0000
@@ -532,10 +532,10 @@ define i32 @add_nosignbit_ashr(i32 %x, ptr %dst) {
 ;
 ; X86-LABEL: add_nosignbit_ashr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl $2147418112, %eax # imm = 0x7FFF0000
 ; X86-NEXT:    addl 4(%esp), %eax
 ; X86-NEXT:    sarl $8, %eax
+; X86-NEXT:    movl 8(%esp), %ecx
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = add i32 %x, 2147418112 ; 0x7FFF0000

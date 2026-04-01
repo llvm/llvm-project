@@ -79,39 +79,39 @@ define void @t2(ptr nocapture %a, ptr nocapture %b) nounwind ssp {
 ; SSE2-Darwin-LABEL: t2:
 ; SSE2-Darwin:       ## %bb.0: ## %entry
 ; SSE2-Darwin-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-Darwin-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE2-Darwin-NEXT:    movaps (%ecx), %xmm0
+; SSE2-Darwin-NEXT:    movaps (%eax), %xmm0
+; SSE2-Darwin-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-Darwin-NEXT:    movaps %xmm0, (%eax)
 ; SSE2-Darwin-NEXT:    retl
 ;
 ; SSE2-Mingw32-LABEL: t2:
 ; SSE2-Mingw32:       # %bb.0: # %entry
 ; SSE2-Mingw32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-Mingw32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE2-Mingw32-NEXT:    movaps (%ecx), %xmm0
+; SSE2-Mingw32-NEXT:    movaps (%eax), %xmm0
+; SSE2-Mingw32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-Mingw32-NEXT:    movaps %xmm0, (%eax)
 ; SSE2-Mingw32-NEXT:    retl
 ;
 ; SSE1-LABEL: t2:
 ; SSE1:       ## %bb.0: ## %entry
 ; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE1-NEXT:    movaps (%ecx), %xmm0
+; SSE1-NEXT:    movaps (%eax), %xmm0
+; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE1-NEXT:    movaps %xmm0, (%eax)
 ; SSE1-NEXT:    retl
 ;
 ; NOSSE-LABEL: t2:
 ; NOSSE:       ## %bb.0: ## %entry
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; NOSSE-NEXT:    movl 12(%ecx), %edx
-; NOSSE-NEXT:    movl %edx, 12(%eax)
-; NOSSE-NEXT:    movl 8(%ecx), %edx
-; NOSSE-NEXT:    movl %edx, 8(%eax)
-; NOSSE-NEXT:    movl (%ecx), %edx
-; NOSSE-NEXT:    movl 4(%ecx), %ecx
-; NOSSE-NEXT:    movl %ecx, 4(%eax)
-; NOSSE-NEXT:    movl %edx, (%eax)
+; NOSSE-NEXT:    movl 12(%eax), %ecx
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOSSE-NEXT:    movl %ecx, 12(%edx)
+; NOSSE-NEXT:    movl 8(%eax), %ecx
+; NOSSE-NEXT:    movl %ecx, 8(%edx)
+; NOSSE-NEXT:    movl (%eax), %ecx
+; NOSSE-NEXT:    movl 4(%eax), %eax
+; NOSSE-NEXT:    movl %eax, 4(%edx)
+; NOSSE-NEXT:    movl %ecx, (%edx)
 ; NOSSE-NEXT:    retl
 ;
 ; X86-64-LABEL: t2:
@@ -134,9 +134,9 @@ define void @t3(ptr nocapture %a, ptr nocapture %b) nounwind ssp {
 ; SSE2-Darwin-LABEL: t3:
 ; SSE2-Darwin:       ## %bb.0: ## %entry
 ; SSE2-Darwin-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-Darwin-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE2-Darwin-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-Darwin-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE2-Darwin-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-Darwin-NEXT:    movsd %xmm1, 8(%eax)
 ; SSE2-Darwin-NEXT:    movsd %xmm0, (%eax)
 ; SSE2-Darwin-NEXT:    retl
@@ -144,9 +144,9 @@ define void @t3(ptr nocapture %a, ptr nocapture %b) nounwind ssp {
 ; SSE2-Mingw32-LABEL: t3:
 ; SSE2-Mingw32:       # %bb.0: # %entry
 ; SSE2-Mingw32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-Mingw32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE2-Mingw32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-Mingw32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE2-Mingw32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-Mingw32-NEXT:    movsd %xmm1, 8(%eax)
 ; SSE2-Mingw32-NEXT:    movsd %xmm0, (%eax)
 ; SSE2-Mingw32-NEXT:    retl
@@ -154,29 +154,29 @@ define void @t3(ptr nocapture %a, ptr nocapture %b) nounwind ssp {
 ; SSE1-LABEL: t3:
 ; SSE1:       ## %bb.0: ## %entry
 ; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE1-NEXT:    movl 12(%ecx), %edx
-; SSE1-NEXT:    movl %edx, 12(%eax)
-; SSE1-NEXT:    movl 8(%ecx), %edx
-; SSE1-NEXT:    movl %edx, 8(%eax)
-; SSE1-NEXT:    movl (%ecx), %edx
-; SSE1-NEXT:    movl 4(%ecx), %ecx
-; SSE1-NEXT:    movl %ecx, 4(%eax)
-; SSE1-NEXT:    movl %edx, (%eax)
+; SSE1-NEXT:    movl 12(%eax), %ecx
+; SSE1-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SSE1-NEXT:    movl %ecx, 12(%edx)
+; SSE1-NEXT:    movl 8(%eax), %ecx
+; SSE1-NEXT:    movl %ecx, 8(%edx)
+; SSE1-NEXT:    movl (%eax), %ecx
+; SSE1-NEXT:    movl 4(%eax), %eax
+; SSE1-NEXT:    movl %eax, 4(%edx)
+; SSE1-NEXT:    movl %ecx, (%edx)
 ; SSE1-NEXT:    retl
 ;
 ; NOSSE-LABEL: t3:
 ; NOSSE:       ## %bb.0: ## %entry
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; NOSSE-NEXT:    movl 12(%ecx), %edx
-; NOSSE-NEXT:    movl %edx, 12(%eax)
-; NOSSE-NEXT:    movl 8(%ecx), %edx
-; NOSSE-NEXT:    movl %edx, 8(%eax)
-; NOSSE-NEXT:    movl (%ecx), %edx
-; NOSSE-NEXT:    movl 4(%ecx), %ecx
-; NOSSE-NEXT:    movl %ecx, 4(%eax)
-; NOSSE-NEXT:    movl %edx, (%eax)
+; NOSSE-NEXT:    movl 12(%eax), %ecx
+; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOSSE-NEXT:    movl %ecx, 12(%edx)
+; NOSSE-NEXT:    movl 8(%eax), %ecx
+; NOSSE-NEXT:    movl %ecx, 8(%edx)
+; NOSSE-NEXT:    movl (%eax), %ecx
+; NOSSE-NEXT:    movl 4(%eax), %eax
+; NOSSE-NEXT:    movl %eax, 4(%edx)
+; NOSSE-NEXT:    movl %ecx, (%edx)
 ; NOSSE-NEXT:    retl
 ;
 ; X86-64-LABEL: t3:

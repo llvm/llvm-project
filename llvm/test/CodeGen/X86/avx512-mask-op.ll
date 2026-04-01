@@ -208,10 +208,10 @@ define i16 @mand16_mem(ptr %x, ptr %y) {
 ; X86-LABEL: mand16_mem:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    kmovw (%ecx), %k0
+; X86-NEXT:    kmovw (%eax), %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw (%eax), %k1
-; X86-NEXT:    korw %k1, %k0, %k0
+; X86-NEXT:    korw %k0, %k1, %k0
 ; X86-NEXT:    kmovd %k0, %eax
 ; X86-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
@@ -1122,10 +1122,10 @@ define <16 x i1> @test15(i32 %x, i32 %y)  {
 ;
 ; X86-LABEL: test15:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $21845, %eax ## imm = 0x5555
 ; X86-NEXT:    movl $1, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmovgl %eax, %ecx
 ; X86-NEXT:    kmovd %ecx, %k0
 ; X86-NEXT:    vpmovm2b %k0, %xmm0
@@ -1353,14 +1353,14 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; X86-LABEL: test17:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    setg %al
 ; X86-NEXT:    kshiftrq $6, %k0, %k1
 ; X86-NEXT:    kshiftlq $6, %k1, %k1
 ; X86-NEXT:    kshiftlq $59, %k0, %k0
 ; X86-NEXT:    kshiftrq $59, %k0, %k0
 ; X86-NEXT:    korq %k1, %k0, %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    setg %al
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    kshiftlq $63, %k1, %k1
 ; X86-NEXT:    kshiftrq $58, %k1, %k1
@@ -1457,18 +1457,18 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; X86-LABEL: test18:
 ; X86:       ## %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k0
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    kshiftrw $8, %k1, %k2
-; X86-NEXT:    kshiftrw $9, %k1, %k1
 ; X86-NEXT:    movb $-65, %al
-; X86-NEXT:    kmovd %eax, %k3
-; X86-NEXT:    kandb %k3, %k0, %k0
-; X86-NEXT:    kshiftlb $6, %k1, %k1
-; X86-NEXT:    korb %k1, %k0, %k0
+; X86-NEXT:    kmovd %eax, %k0
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    kandb %k0, %k1, %k0
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    kshiftrw $9, %k1, %k2
+; X86-NEXT:    kshiftlb $6, %k2, %k2
+; X86-NEXT:    korb %k2, %k0, %k0
 ; X86-NEXT:    kshiftlb $1, %k0, %k0
 ; X86-NEXT:    kshiftrb $1, %k0, %k0
-; X86-NEXT:    kshiftlb $7, %k2, %k1
+; X86-NEXT:    kshiftrw $8, %k1, %k1
+; X86-NEXT:    kshiftlb $7, %k1, %k1
 ; X86-NEXT:    korb %k1, %k0, %k0
 ; X86-NEXT:    vpmovm2w %k0, %xmm0
 ; X86-NEXT:    retl
@@ -1675,10 +1675,10 @@ define void @store_v1i1(<1 x i1> %c , ptr %ptr) {
 ; X86-LABEL: store_v1i1:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    knotw %k0, %k0
 ; X86-NEXT:    kshiftlb $7, %k0, %k0
 ; X86-NEXT:    kshiftrb $7, %k0, %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <1 x i1> %c, <i1 1>
@@ -1734,10 +1734,10 @@ define void @store_v2i1(<2 x i1> %c , ptr %ptr) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; X86-NEXT:    vpmovq2m %xmm0, %k0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    knotw %k0, %k0
 ; X86-NEXT:    kshiftlb $6, %k0, %k0
 ; X86-NEXT:    kshiftrb $6, %k0, %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <2 x i1> %c, <i1 1, i1 1>
@@ -1793,10 +1793,10 @@ define void @store_v4i1(<4 x i1> %c , ptr %ptr) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    vpslld $31, %xmm0, %xmm0
 ; X86-NEXT:    vpmovd2m %xmm0, %k0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    knotw %k0, %k0
 ; X86-NEXT:    kshiftlb $4, %k0, %k0
 ; X86-NEXT:    kshiftrb $4, %k0, %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <4 x i1> %c, <i1 1, i1 1, i1 1, i1 1>
@@ -1847,8 +1847,8 @@ define void @store_v8i1(<8 x i1> %c , ptr %ptr) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; X86-NEXT:    vpmovw2m %xmm0, %k0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    knotb %k0, %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <8 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
@@ -1897,8 +1897,8 @@ define void @store_v16i1(<16 x i1> %c , ptr %ptr) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; X86-NEXT:    vpmovb2m %xmm0, %k0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    knotw %k0, %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <16 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
@@ -1958,10 +1958,10 @@ define void @store_i16_i1(i16 %x, ptr%y) {
 ;
 ; X86-LABEL: store_i16_i1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    movb %cl, (%eax)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb %al, (%ecx)
 ; X86-NEXT:    retl
   %c = trunc i16 %x to i1
   store i1 %c, ptr %y
@@ -1977,10 +1977,10 @@ define void @store_i8_i1(i8 %x, ptr%y) {
 ;
 ; X86-LABEL: store_i8_i1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    movb %cl, (%eax)
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andb $1, %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb %al, (%ecx)
 ; X86-NEXT:    retl
   %c = trunc i8 %x to i1
   store i1 %c, ptr %y
@@ -2320,9 +2320,9 @@ define void @ktest_2(<32 x float> %in, ptr %base) {
 ; X86-NEXT:    vcmpgtps (%eax), %zmm0, %k1
 ; X86-NEXT:    vcmpgtps 64(%eax), %zmm1, %k2
 ; X86-NEXT:    kunpckwd %k1, %k2, %k0
+; X86-NEXT:    vmovups 4(%eax), %zmm2 {%k1} {z}
+; X86-NEXT:    vcmpltps %zmm2, %zmm0, %k1
 ; X86-NEXT:    vmovups 68(%eax), %zmm2 {%k2} {z}
-; X86-NEXT:    vmovups 4(%eax), %zmm3 {%k1} {z}
-; X86-NEXT:    vcmpltps %zmm3, %zmm0, %k1
 ; X86-NEXT:    vcmpltps %zmm2, %zmm1, %k2
 ; X86-NEXT:    kunpckwd %k1, %k2, %k1
 ; X86-NEXT:    kortestd %k1, %k0
@@ -2720,9 +2720,9 @@ define void @store_8i1_1(ptr %a, <8 x i16> %v) {
 ;
 ; X86-LABEL: store_8i1_1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; X86-NEXT:    vpmovw2m %xmm0, %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %v1 = trunc <8 x i16> %v to <8 x i1>
@@ -2879,9 +2879,9 @@ define void @store_32i1_1(ptr %a, <32 x i16> %v) {
 ;
 ; X86-LABEL: store_32i1_1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpsllw $15, %zmm0, %zmm0
 ; X86-NEXT:    vpmovw2m %zmm0, %k0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovd %k0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -4239,8 +4239,8 @@ define void @store_v128i1_constant(ptr %R) {
 ;
 ; X86-LABEL: store_v128i1_constant:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [4294963197,3758096251,4294959101,3221225403]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 entry:
@@ -4310,9 +4310,9 @@ define void @mask_not_cast(ptr, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>) {
 ;
 ; X86-LABEL: mask_not_cast:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpcmpnleud %zmm3, %zmm2, %k1
 ; X86-NEXT:    vptestmd %zmm0, %zmm1, %k1 {%k1}
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovdqu32 %zmm0, (%eax) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -4436,13 +4436,13 @@ define void @ktest_3(<8 x i32> %w, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ;
 ; X86-LABEL: ktest_3:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vptestnmd %ymm0, %ymm0, %k0
-; X86-NEXT:    vptestnmd %ymm1, %ymm1, %k1
-; X86-NEXT:    korb %k1, %k0, %k0
+; X86-NEXT:    vptestnmd %ymm3, %ymm3, %k0
 ; X86-NEXT:    vptestnmd %ymm2, %ymm2, %k1
-; X86-NEXT:    vptestnmd %ymm3, %ymm3, %k2
-; X86-NEXT:    korb %k2, %k1, %k1
-; X86-NEXT:    ktestb %k1, %k0
+; X86-NEXT:    korb %k0, %k1, %k0
+; X86-NEXT:    vptestnmd %ymm1, %ymm1, %k1
+; X86-NEXT:    vptestnmd %ymm0, %ymm0, %k2
+; X86-NEXT:    korb %k1, %k2, %k1
+; X86-NEXT:    ktestb %k0, %k1
 ; X86-NEXT:    je LBB74_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    vzeroupper
@@ -4564,13 +4564,13 @@ define void @ktest_4(<8 x i64> %w, <8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
 ;
 ; X86-LABEL: ktest_4:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vptestnmq %zmm0, %zmm0, %k0
-; X86-NEXT:    vptestnmq %zmm1, %zmm1, %k1
-; X86-NEXT:    korb %k1, %k0, %k0
+; X86-NEXT:    vptestnmq %zmm3, %zmm3, %k0
 ; X86-NEXT:    vptestnmq %zmm2, %zmm2, %k1
-; X86-NEXT:    vptestnmq %zmm3, %zmm3, %k2
-; X86-NEXT:    korb %k2, %k1, %k1
-; X86-NEXT:    ktestb %k1, %k0
+; X86-NEXT:    korb %k0, %k1, %k0
+; X86-NEXT:    vptestnmq %zmm1, %zmm1, %k1
+; X86-NEXT:    vptestnmq %zmm0, %zmm0, %k2
+; X86-NEXT:    korb %k1, %k2, %k1
+; X86-NEXT:    ktestb %k0, %k1
 ; X86-NEXT:    je LBB75_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    vzeroupper
@@ -4690,13 +4690,13 @@ define void @ktest_5(<16 x i32> %w, <16 x i32> %x, <16 x i32> %y, <16 x i32> %z)
 ;
 ; X86-LABEL: ktest_5:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vptestnmd %zmm0, %zmm0, %k0
-; X86-NEXT:    vptestnmd %zmm1, %zmm1, %k1
-; X86-NEXT:    korw %k1, %k0, %k0
+; X86-NEXT:    vptestnmd %zmm3, %zmm3, %k0
 ; X86-NEXT:    vptestnmd %zmm2, %zmm2, %k1
-; X86-NEXT:    vptestnmd %zmm3, %zmm3, %k2
-; X86-NEXT:    korw %k2, %k1, %k1
-; X86-NEXT:    ktestw %k1, %k0
+; X86-NEXT:    korw %k0, %k1, %k0
+; X86-NEXT:    vptestnmd %zmm1, %zmm1, %k1
+; X86-NEXT:    vptestnmd %zmm0, %zmm0, %k2
+; X86-NEXT:    korw %k1, %k2, %k1
+; X86-NEXT:    ktestw %k0, %k1
 ; X86-NEXT:    je LBB76_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    vzeroupper
@@ -4850,13 +4850,13 @@ define void @ktest_6(<32 x i16> %w, <32 x i16> %x, <32 x i16> %y, <32 x i16> %z)
 ;
 ; X86-LABEL: ktest_6:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vptestnmw %zmm0, %zmm0, %k0
-; X86-NEXT:    vptestnmw %zmm1, %zmm1, %k1
-; X86-NEXT:    kord %k1, %k0, %k0
+; X86-NEXT:    vptestnmw %zmm3, %zmm3, %k0
 ; X86-NEXT:    vptestnmw %zmm2, %zmm2, %k1
-; X86-NEXT:    vptestnmw %zmm3, %zmm3, %k2
-; X86-NEXT:    kord %k2, %k1, %k1
-; X86-NEXT:    ktestd %k1, %k0
+; X86-NEXT:    kord %k0, %k1, %k0
+; X86-NEXT:    vptestnmw %zmm1, %zmm1, %k1
+; X86-NEXT:    vptestnmw %zmm0, %zmm0, %k2
+; X86-NEXT:    kord %k1, %k2, %k1
+; X86-NEXT:    ktestd %k0, %k1
 ; X86-NEXT:    je LBB77_1
 ; X86-NEXT:  ## %bb.2: ## %exit
 ; X86-NEXT:    vzeroupper
@@ -5006,13 +5006,13 @@ define void @ktest_7(<64 x i8> %w, <64 x i8> %x, <64 x i8> %y, <64 x i8> %z) {
 ;
 ; X86-LABEL: ktest_7:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vptestnmb %zmm0, %zmm0, %k0
-; X86-NEXT:    vptestnmb %zmm1, %zmm1, %k1
-; X86-NEXT:    korq %k1, %k0, %k0
+; X86-NEXT:    vptestnmb %zmm3, %zmm3, %k0
 ; X86-NEXT:    vptestnmb %zmm2, %zmm2, %k1
-; X86-NEXT:    vptestnmb %zmm3, %zmm3, %k2
-; X86-NEXT:    korq %k2, %k1, %k1
-; X86-NEXT:    kandq %k1, %k0, %k0
+; X86-NEXT:    korq %k0, %k1, %k0
+; X86-NEXT:    vptestnmb %zmm1, %zmm1, %k1
+; X86-NEXT:    vptestnmb %zmm0, %zmm0, %k2
+; X86-NEXT:    korq %k1, %k2, %k1
+; X86-NEXT:    kandq %k0, %k1, %k0
 ; X86-NEXT:    kshiftrq $32, %k0, %k1
 ; X86-NEXT:    kortestd %k1, %k0
 ; X86-NEXT:    je LBB78_1
@@ -5104,17 +5104,17 @@ define <64 x i1> @mask64_insert(i32 %a) {
 ;
 ; X86-LABEL: mask64_insert:
 ; X86:       ## %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k0
 ; X86-NEXT:    movl $-131076, %eax ## imm = 0xFFFDFFFC
-; X86-NEXT:    kmovd %eax, %k1
+; X86-NEXT:    kmovd %eax, %k0
 ; X86-NEXT:    movl $-131075, %eax ## imm = 0xFFFDFFFD
-; X86-NEXT:    kmovd %eax, %k2
-; X86-NEXT:    kunpckdq %k1, %k2, %k1
-; X86-NEXT:    kshiftrq $1, %k1, %k1
-; X86-NEXT:    kshiftlq $1, %k1, %k1
-; X86-NEXT:    kshiftlq $63, %k0, %k0
-; X86-NEXT:    kshiftrq $63, %k0, %k0
-; X86-NEXT:    korq %k0, %k1, %k0
+; X86-NEXT:    kmovd %eax, %k1
+; X86-NEXT:    kunpckdq %k0, %k1, %k0
+; X86-NEXT:    kshiftrq $1, %k0, %k0
+; X86-NEXT:    kshiftlq $1, %k0, %k0
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    kshiftlq $63, %k1, %k1
+; X86-NEXT:    kshiftrq $63, %k1, %k1
+; X86-NEXT:    korq %k1, %k0, %k0
 ; X86-NEXT:    vpmovm2b %k0, %zmm0
 ; X86-NEXT:    retl
   %a_i = trunc i32 %a to i1
@@ -5242,7 +5242,7 @@ define <1 x i1> @usub_sat_v1i1(<1 x i1> %x, <1 x i1> %y) nounwind {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    kandnw %k1, %k0, %k0
+; X86-NEXT:    kandnw %k0, %k1, %k0
 ; X86-NEXT:    kmovd %k0, %eax
 ; X86-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
@@ -5311,7 +5311,7 @@ define <1 x i1> @ssub_sat_v1i1(<1 x i1> %x, <1 x i1> %y) nounwind {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    kandnw %k1, %k0, %k0
+; X86-NEXT:    kandnw %k0, %k1, %k0
 ; X86-NEXT:    kmovd %k0, %eax
 ; X86-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl

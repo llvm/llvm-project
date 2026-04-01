@@ -9,10 +9,10 @@ define void @cpuid(ptr %data) nounwind {
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl 32(%esi), %edx
+; CHECK-NEXT:    movl 28(%esi), %ecx
 ; CHECK-NEXT:    movl 20(%esi), %eax
 ; CHECK-NEXT:    movl 24(%esi), %ebx
-; CHECK-NEXT:    movl 28(%esi), %ecx
-; CHECK-NEXT:    movl 32(%esi), %edx
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    cpuid
 ; CHECK-NEXT:    ## InlineAsm End

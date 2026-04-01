@@ -12,12 +12,12 @@ declare  i48 @llvm.fptosi.sat.i48.f32 (float)
 define i24 @test_signed_i24_f32(float %f) nounwind {
 ; X86-LABEL: test_signed_i24_f32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl $-8388608, %ecx # imm = 0xFF800000
 ; X86-NEXT:    vcvttss2sis {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl $-8388607, %eax # imm = 0xFF800001
-; X86-NEXT:    movl $-8388608, %ecx # imm = 0xFF800000
 ; X86-NEXT:    cmovgel %eax, %ecx
-; X86-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
 ; X86-NEXT:    movl $8388607, %eax # imm = 0x7FFFFF
+; X86-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
 ; X86-NEXT:    cmovll %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -41,21 +41,21 @@ define i48 @test_signed_i48_f32(float %f) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vcvttps2qq %xmm1, %xmm1
-; X86-NEXT:    vmovd %xmm1, %esi
+; X86-NEXT:    vcvttps2qq %xmm0, %xmm0
+; X86-NEXT:    vmovd %xmm0, %esi
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    cmovbl %ecx, %esi
-; X86-NEXT:    vpextrd $1, %xmm1, %eax
+; X86-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-NEXT:    movl $-32768, %edi # imm = 0x8000
 ; X86-NEXT:    cmovael %eax, %edi
-; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movl $32767, %edx # imm = 0x7FFF
+; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    cmovbel %edi, %edx
 ; X86-NEXT:    movl $-1, %eax
 ; X86-NEXT:    cmovbel %esi, %eax
-; X86-NEXT:    vucomiss %xmm0, %xmm0
+; X86-NEXT:    vucomiss %xmm1, %xmm1
 ; X86-NEXT:    cmovpl %ecx, %eax
 ; X86-NEXT:    cmovpl %ecx, %edx
 ; X86-NEXT:    popl %esi
@@ -99,21 +99,21 @@ define i64 @test_signed_i64_f32(float %f) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vcvttps2qq %xmm1, %xmm1
-; X86-NEXT:    vmovd %xmm1, %esi
+; X86-NEXT:    vcvttps2qq %xmm0, %xmm0
+; X86-NEXT:    vmovd %xmm0, %esi
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    cmovbl %ecx, %esi
-; X86-NEXT:    vpextrd $1, %xmm1, %eax
+; X86-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-NEXT:    movl $-2147483648, %edi # imm = 0x80000000
 ; X86-NEXT:    cmovael %eax, %edi
-; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    cmovbel %edi, %edx
 ; X86-NEXT:    movl $-1, %eax
 ; X86-NEXT:    cmovbel %esi, %eax
-; X86-NEXT:    vucomiss %xmm0, %xmm0
+; X86-NEXT:    vucomiss %xmm1, %xmm1
 ; X86-NEXT:    cmovpl %ecx, %eax
 ; X86-NEXT:    cmovpl %ecx, %edx
 ; X86-NEXT:    popl %esi
@@ -138,12 +138,12 @@ declare  i48 @llvm.fptosi.sat.i48.f64 (double)
 define i24 @test_signed_i24_f64(double %f) nounwind {
 ; X86-LABEL: test_signed_i24_f64:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl $-8388608, %ecx # imm = 0xFF800000
 ; X86-NEXT:    vcvttsd2sis {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl $-8388607, %eax # imm = 0xFF800001
-; X86-NEXT:    movl $-8388608, %ecx # imm = 0xFF800000
 ; X86-NEXT:    cmovgel %eax, %ecx
-; X86-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
 ; X86-NEXT:    movl $8388607, %eax # imm = 0x7FFFFF
+; X86-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
 ; X86-NEXT:    cmovll %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -221,8 +221,8 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; X86-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86-NEXT:    movl $-2147483648, %edi # imm = 0x80000000
 ; X86-NEXT:    cmovael %eax, %edi
-; X86-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    cmovbel %edi, %edx
 ; X86-NEXT:    movl $-1, %eax
 ; X86-NEXT:    cmovbel %esi, %eax

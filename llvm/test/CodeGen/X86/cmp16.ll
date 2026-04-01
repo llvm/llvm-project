@@ -446,9 +446,9 @@ define i1 @cmp16_load_ne_load(ptr %p0, ptr %p1) {
 ; X86-GENERIC-LABEL: cmp16_load_ne_load:
 ; X86-GENERIC:       # %bb.0:
 ; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GENERIC-NEXT:    movzwl (%eax), %eax
 ; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-GENERIC-NEXT:    movzwl (%ecx), %ecx
-; X86-GENERIC-NEXT:    cmpw (%eax), %cx
+; X86-GENERIC-NEXT:    cmpw (%ecx), %ax
 ; X86-GENERIC-NEXT:    setne %al
 ; X86-GENERIC-NEXT:    retl
 ;
@@ -462,9 +462,9 @@ define i1 @cmp16_load_ne_load(ptr %p0, ptr %p1) {
 ; X86-FAST-LABEL: cmp16_load_ne_load:
 ; X86-FAST:       # %bb.0:
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FAST-NEXT:    movzwl (%eax), %eax
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-FAST-NEXT:    movzwl (%ecx), %ecx
-; X86-FAST-NEXT:    cmpw (%eax), %cx
+; X86-FAST-NEXT:    cmpw (%ecx), %ax
 ; X86-FAST-NEXT:    setne %al
 ; X86-FAST-NEXT:    retl
 ;
@@ -477,10 +477,10 @@ define i1 @cmp16_load_ne_load(ptr %p0, ptr %p1) {
 ;
 ; X86-ATOM-LABEL: cmp16_load_ne_load:
 ; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-ATOM-NEXT:    movzwl (%ecx), %ecx
-; X86-ATOM-NEXT:    cmpw (%eax), %cx
+; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-ATOM-NEXT:    movzwl (%eax), %eax
+; X86-ATOM-NEXT:    cmpw (%ecx), %ax
 ; X86-ATOM-NEXT:    setne %al
 ; X86-ATOM-NEXT:    retl
 ;

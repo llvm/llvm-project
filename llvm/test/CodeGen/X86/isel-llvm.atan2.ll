@@ -9,8 +9,8 @@ define float @use_atan2f32(float %a, float %b) nounwind {
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
 ; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstps (%esp)
 ; SDAG-X86-NEXT:    calll atan2f
 ; SDAG-X86-NEXT:    addl $12, %esp
@@ -46,8 +46,8 @@ define double @use_atan2f64(double %a, double %b) nounwind {
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    subl $28, %esp
 ; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstpl (%esp)
 ; SDAG-X86-NEXT:    calll atan2
 ; SDAG-X86-NEXT:    addl $28, %esp
@@ -93,8 +93,8 @@ define x86_fp80 @use_atan2f80(x86_fp80 %a, x86_fp80 %b) nounwind {
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    subl $28, %esp
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fstpt (%esp)
 ; SDAG-X86-NEXT:    calll atan2l
 ; SDAG-X86-NEXT:    addl $28, %esp

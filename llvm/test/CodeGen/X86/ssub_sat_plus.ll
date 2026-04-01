@@ -11,9 +11,9 @@ declare i64 @llvm.ssub.sat.i64(i64, i64)
 define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: func32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    cmpl %edx, %eax
 ; X86-NEXT:    setns %cl
@@ -74,9 +74,9 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounwind {
 ; X86-LABEL: func16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    imulw {{[0-9]+}}(%esp), %dx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    cmpw %dx, %ax
 ; X86-NEXT:    setns %cl
@@ -140,20 +140,20 @@ define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; X86-LABEL: func4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mulb {{[0-9]+}}(%esp)
 ; X86-NEXT:    shlb $4, %al
 ; X86-NEXT:    sarb $4, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    subb %al, %cl
-; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    movzbl %cl, %edx
+; X86-NEXT:    movl $7, %eax
 ; X86-NEXT:    cmpb $7, %cl
-; X86-NEXT:    movl $7, %ecx
-; X86-NEXT:    cmovll %eax, %ecx
-; X86-NEXT:    cmpb $-7, %cl
-; X86-NEXT:    movl $248, %eax
-; X86-NEXT:    cmovgel %ecx, %eax
-; X86-NEXT:    movsbl %al, %eax
+; X86-NEXT:    cmovll %edx, %eax
+; X86-NEXT:    movl $248, %ecx
+; X86-NEXT:    cmpb $-7, %al
+; X86-NEXT:    cmovgel %eax, %ecx
+; X86-NEXT:    movsbl %cl, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func4:

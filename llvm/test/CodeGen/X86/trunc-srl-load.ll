@@ -13,10 +13,10 @@ define i16 @extractSub64_16(ptr %word, i32 %idx) nounwind {
 ; X86-LABEL: extractSub64_16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $48, %eax
+; X86-NEXT:    shrl $3, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $48, %ecx
-; X86-NEXT:    shrl $3, %ecx
-; X86-NEXT:    movzwl (%eax,%ecx), %eax
+; X86-NEXT:    movzwl (%ecx,%eax), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractSub64_16:
@@ -39,10 +39,10 @@ define i16 @extractSub128_16(ptr %word, i32 %idx) nounwind {
 ; X86-LABEL: extractSub128_16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $112, %eax
+; X86-NEXT:    shrl $3, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $112, %ecx
-; X86-NEXT:    shrl $3, %ecx
-; X86-NEXT:    movzwl (%eax,%ecx), %eax
+; X86-NEXT:    movzwl (%ecx,%eax), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractSub128_16:
@@ -65,10 +65,10 @@ define i32 @extractSub128_32(ptr %word, i32 %idx) nounwind {
 ; X86-LABEL: extractSub128_32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $96, %eax
+; X86-NEXT:    shrl $3, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $96, %ecx
-; X86-NEXT:    shrl $3, %ecx
-; X86-NEXT:    movl (%eax,%ecx), %eax
+; X86-NEXT:    movl (%ecx,%eax), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractSub128_32:
@@ -91,11 +91,11 @@ define i64 @extractSub128_64(ptr %word, i32 %idx) nounwind {
 ; X86-LABEL: extractSub128_64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $64, %ecx
+; X86-NEXT:    shrl $3, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    andl $64, %edx
-; X86-NEXT:    shrl $3, %edx
-; X86-NEXT:    movl (%ecx,%edx), %eax
-; X86-NEXT:    movl 4(%ecx,%edx), %edx
+; X86-NEXT:    movl (%edx,%ecx), %eax
+; X86-NEXT:    movl 4(%edx,%ecx), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractSub128_64:
@@ -118,10 +118,10 @@ define i8 @extractSub512_8(ptr %word, i32 %idx) nounwind {
 ; X86-LABEL: extractSub512_8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl $3, %eax
+; X86-NEXT:    andl $63, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $3, %ecx
-; X86-NEXT:    andl $63, %ecx
-; X86-NEXT:    movzbl (%eax,%ecx), %eax
+; X86-NEXT:    movzbl (%ecx,%eax), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractSub512_8:
@@ -144,11 +144,11 @@ define i64 @extractSub512_64(ptr %word, i32 %idx) nounwind {
 ; X86-LABEL: extractSub512_64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shrl $3, %ecx
+; X86-NEXT:    andl $56, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrl $3, %edx
-; X86-NEXT:    andl $56, %edx
-; X86-NEXT:    movl (%ecx,%edx), %eax
-; X86-NEXT:    movl 4(%ecx,%edx), %edx
+; X86-NEXT:    movl (%edx,%ecx), %eax
+; X86-NEXT:    movl 4(%edx,%ecx), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractSub512_64:
@@ -170,25 +170,21 @@ define i64 @extractSub512_64(ptr %word, i32 %idx) nounwind {
 define i128 @extractSub512_128(ptr %word, i32 %idx) nounwind {
 ; X86-LABEL: extractSub512_128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shrl $3, %ecx
+; X86-NEXT:    andl $48, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrl $3, %edx
-; X86-NEXT:    andl $48, %edx
-; X86-NEXT:    movl (%ecx,%edx), %esi
-; X86-NEXT:    movl 4(%ecx,%edx), %edi
-; X86-NEXT:    movl 8(%ecx,%edx), %ebx
-; X86-NEXT:    movl 12(%ecx,%edx), %ecx
-; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %ebx, 8(%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl 12(%edx,%ecx), %esi
+; X86-NEXT:    movl %esi, 12(%eax)
+; X86-NEXT:    movl 8(%edx,%ecx), %esi
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl (%edx,%ecx), %esi
+; X86-NEXT:    movl 4(%edx,%ecx), %ecx
+; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: extractSub512_128:
@@ -211,12 +207,12 @@ define i128 @extractSub512_128(ptr %word, i32 %idx) nounwind {
 define i64 @extractSub4096_64(ptr %word, i32 %idx) nounwind {
 ; X86-LABEL: extractSub4096_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $4032, %edx # imm = 0xFC0
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrl $3, %edx
-; X86-NEXT:    movl (%ecx,%edx), %eax
-; X86-NEXT:    movl 4(%ecx,%edx), %edx
+; X86-NEXT:    movl $4032, %ecx # imm = 0xFC0
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shrl $3, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl (%edx,%ecx), %eax
+; X86-NEXT:    movl 4(%edx,%ecx), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractSub4096_64:

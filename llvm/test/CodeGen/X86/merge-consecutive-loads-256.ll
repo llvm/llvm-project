@@ -329,10 +329,10 @@ define <8 x float> @merge_8f32_2f32_23z5(ptr %ptr) nounwind uwtable noinline ssp
 ; X86-AVX-LABEL: merge_8f32_2f32_23z5:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovups 16(%eax), %xmm0
-; X86-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-AVX-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; X86-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-AVX-NEXT:    vmovups 16(%eax), %xmm1
+; X86-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds <2 x float>, ptr %ptr, i64 2
   %ptr1 = getelementptr inbounds <2 x float>, ptr %ptr, i64 3
@@ -912,10 +912,10 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(ptr %ptr) nounwind 
 ; X86-AVX-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movzwl (%eax), %ecx
 ; X86-AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpinsrw $4, 24(%eax), %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpinsrw $6, 28(%eax), %xmm0, %xmm0
+; X86-AVX-NEXT:    movzwl (%eax), %ecx
 ; X86-AVX-NEXT:    vpinsrw $7, 30(%eax), %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovd %ecx, %xmm1
 ; X86-AVX-NEXT:    vpinsrw $3, 6(%eax), %xmm1, %xmm1
@@ -958,8 +958,8 @@ define <2 x i8> @PR42846(ptr %j, <2 x i8> %k) {
 ;
 ; X86-AVX-LABEL: PR42846:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovdqa l, %ymm0
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vpextrw $0, %xmm0, (%eax)
 ; X86-AVX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X86-AVX-NEXT:    vzeroupper

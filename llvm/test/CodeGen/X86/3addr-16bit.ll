@@ -29,9 +29,8 @@ define zeroext i16 @test1(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    incl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal 1(%ecx), %eax
 ; X86-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
 ; X86-NEXT:    jne LBB0_2
 ; X86-NEXT:  ## %bb.1: ## %bb
@@ -82,9 +81,8 @@ define zeroext i16 @test2(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    decl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal -1(%ecx), %eax
 ; X86-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
 ; X86-NEXT:    jne LBB1_2
 ; X86-NEXT:  ## %bb.1: ## %bb
@@ -137,9 +135,8 @@ define zeroext i16 @test3(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    addl $2, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal 2(%ecx), %eax
 ; X86-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
 ; X86-NEXT:    jne LBB2_2
 ; X86-NEXT:  ## %bb.1: ## %bb
@@ -191,9 +188,8 @@ define zeroext i16 @test4(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    leal (%edx,%ecx), %eax
 ; X86-NEXT:    cmpw %cx, %dx
 ; X86-NEXT:    jne LBB3_2
 ; X86-NEXT:  ## %bb.1: ## %bb

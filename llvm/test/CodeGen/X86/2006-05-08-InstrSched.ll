@@ -8,16 +8,16 @@
 define void @test() {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl A, %eax
-; CHECK-NEXT:    movzwl 2(%eax), %eax
 ; CHECK-NEXT:    movzbl B, %ecx
-; CHECK-NEXT:    movl C, %edx
 ; CHECK-NEXT:    andb $16, %cl
-; CHECK-NEXT:    shll %cl, %edx
+; CHECK-NEXT:    movl C, %eax
+; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    movl A, %edx
+; CHECK-NEXT:    movzwl 2(%edx), %edx
 ; CHECK-NEXT:    xorb $16, %cl
-; CHECK-NEXT:    shrl %cl, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    movl %eax, C
+; CHECK-NEXT:    shrl %cl, %edx
+; CHECK-NEXT:    orl %eax, %edx
+; CHECK-NEXT:    movl %edx, C
 ; CHECK-NEXT:    retl
 	%tmp = load ptr, ptr @A		; <ptr> [#uses=1]
 	%tmp1 = getelementptr i16, ptr %tmp, i32 1		; <ptr> [#uses=1]

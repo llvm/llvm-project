@@ -213,19 +213,47 @@ define <8 x i16> @trunc_lshr_v4i64_demandedelts(<4 x i64> %a0) {
 }
 
 define <16 x i8> @shuffle_lshr_2v8i16(<8 x i16> %a0, <8 x i16> %a1) {
-; SSE-LABEL: shuffle_lshr_2v8i16:
-; SSE:       # %bb.0:
-; SSE-NEXT:    psrlw $15, %xmm0
-; SSE-NEXT:    psrlw $15, %xmm1
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; X86-SSE-LABEL: shuffle_lshr_2v8i16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    psrlw $15, %xmm1
+; X86-SSE-NEXT:    psrlw $15, %xmm0
+; X86-SSE-NEXT:    packuswb %xmm1, %xmm0
+; X86-SSE-NEXT:    retl
 ;
-; AVX-LABEL: shuffle_lshr_2v8i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlw $15, %xmm1, %xmm1
-; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; X64-SSE-LABEL: shuffle_lshr_2v8i16:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    psrlw $15, %xmm0
+; X64-SSE-NEXT:    psrlw $15, %xmm1
+; X64-SSE-NEXT:    packuswb %xmm1, %xmm0
+; X64-SSE-NEXT:    retq
+;
+; X86-AVX-LABEL: shuffle_lshr_2v8i16:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpsrlw $15, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: shuffle_lshr_2v8i16:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpsrlw $15, %xmm1, %xmm1
+; X64-AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX512-LABEL: shuffle_lshr_2v8i16:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    vpsrlw $15, %xmm1, %xmm1
+; X86-AVX512-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; X86-AVX512-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: shuffle_lshr_2v8i16:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpsrlw $15, %xmm1, %xmm1
+; X64-AVX512-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; X64-AVX512-NEXT:    retq
   %lshr0 = lshr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %lshr1 = lshr <8 x i16> %a1, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %bc0 = bitcast <8 x i16> %lshr0 to <16 x i8>
@@ -235,26 +263,61 @@ define <16 x i8> @shuffle_lshr_2v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 }
 
 define <8 x i16> @shuffle_lshr_2v4i32(<4 x i32> %a0, <4 x i32> %a1) {
-; SSE2-LABEL: shuffle_lshr_2v4i32:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrld $31, %xmm0
-; SSE2-NEXT:    psrld $31, %xmm1
-; SSE2-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-NEXT:    ret{{[l|q]}}
+; X86-SSE2-LABEL: shuffle_lshr_2v4i32:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    psrld $31, %xmm1
+; X86-SSE2-NEXT:    psrld $31, %xmm0
+; X86-SSE2-NEXT:    packssdw %xmm1, %xmm0
+; X86-SSE2-NEXT:    retl
 ;
-; SSE4-LABEL: shuffle_lshr_2v4i32:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    psrld $31, %xmm0
-; SSE4-NEXT:    psrld $31, %xmm1
-; SSE4-NEXT:    packusdw %xmm1, %xmm0
-; SSE4-NEXT:    ret{{[l|q]}}
+; X64-SSE2-LABEL: shuffle_lshr_2v4i32:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    psrld $31, %xmm0
+; X64-SSE2-NEXT:    psrld $31, %xmm1
+; X64-SSE2-NEXT:    packssdw %xmm1, %xmm0
+; X64-SSE2-NEXT:    retq
 ;
-; AVX-LABEL: shuffle_lshr_2v4i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrld $31, %xmm0, %xmm0
-; AVX-NEXT:    vpsrld $31, %xmm1, %xmm1
-; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; X86-SSE4-LABEL: shuffle_lshr_2v4i32:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    psrld $31, %xmm1
+; X86-SSE4-NEXT:    psrld $31, %xmm0
+; X86-SSE4-NEXT:    packusdw %xmm1, %xmm0
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: shuffle_lshr_2v4i32:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    psrld $31, %xmm0
+; X64-SSE4-NEXT:    psrld $31, %xmm1
+; X64-SSE4-NEXT:    packusdw %xmm1, %xmm0
+; X64-SSE4-NEXT:    retq
+;
+; X86-AVX-LABEL: shuffle_lshr_2v4i32:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpsrld $31, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpsrld $31, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: shuffle_lshr_2v4i32:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpsrld $31, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpsrld $31, %xmm1, %xmm1
+; X64-AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX512-LABEL: shuffle_lshr_2v4i32:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    vpsrld $31, %xmm1, %xmm1
+; X86-AVX512-NEXT:    vpsrld $31, %xmm0, %xmm0
+; X86-AVX512-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: shuffle_lshr_2v4i32:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vpsrld $31, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpsrld $31, %xmm1, %xmm1
+; X64-AVX512-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X64-AVX512-NEXT:    retq
   %lshr0 = lshr <4 x i32> %a0, <i32 31, i32 31, i32 31, i32 31>
   %lshr1 = lshr <4 x i32> %a1, <i32 31, i32 31, i32 31, i32 31>
   %bc0 = bitcast <4 x i32> %lshr0 to <8 x i16>
@@ -264,26 +327,61 @@ define <8 x i16> @shuffle_lshr_2v4i32(<4 x i32> %a0, <4 x i32> %a1) {
 }
 
 define <4 x i32> @shuffle_lshr_2v2i64(<2 x i64> %a0, <2 x i64> %a1) {
-; SSE2-LABEL: shuffle_lshr_2v2i64:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrlq $63, %xmm0
-; SSE2-NEXT:    psrlq $63, %xmm1
-; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    ret{{[l|q]}}
+; X86-SSE2-LABEL: shuffle_lshr_2v2i64:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    psrlq $63, %xmm1
+; X86-SSE2-NEXT:    psrlq $63, %xmm0
+; X86-SSE2-NEXT:    packuswb %xmm1, %xmm0
+; X86-SSE2-NEXT:    retl
 ;
-; SSE4-LABEL: shuffle_lshr_2v2i64:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    psrlq $63, %xmm0
-; SSE4-NEXT:    psrlq $63, %xmm1
-; SSE4-NEXT:    packusdw %xmm1, %xmm0
-; SSE4-NEXT:    ret{{[l|q]}}
+; X64-SSE2-LABEL: shuffle_lshr_2v2i64:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    psrlq $63, %xmm0
+; X64-SSE2-NEXT:    psrlq $63, %xmm1
+; X64-SSE2-NEXT:    packuswb %xmm1, %xmm0
+; X64-SSE2-NEXT:    retq
 ;
-; AVX-LABEL: shuffle_lshr_2v2i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlq $63, %xmm1, %xmm1
-; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; X86-SSE4-LABEL: shuffle_lshr_2v2i64:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    psrlq $63, %xmm1
+; X86-SSE4-NEXT:    psrlq $63, %xmm0
+; X86-SSE4-NEXT:    packusdw %xmm1, %xmm0
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: shuffle_lshr_2v2i64:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    psrlq $63, %xmm0
+; X64-SSE4-NEXT:    psrlq $63, %xmm1
+; X64-SSE4-NEXT:    packusdw %xmm1, %xmm0
+; X64-SSE4-NEXT:    retq
+;
+; X86-AVX-LABEL: shuffle_lshr_2v2i64:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpsrlq $63, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: shuffle_lshr_2v2i64:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpsrlq $63, %xmm1, %xmm1
+; X64-AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX512-LABEL: shuffle_lshr_2v2i64:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    vpsrlq $63, %xmm1, %xmm1
+; X86-AVX512-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; X86-AVX512-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: shuffle_lshr_2v2i64:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpsrlq $63, %xmm1, %xmm1
+; X64-AVX512-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X64-AVX512-NEXT:    retq
   %lshr0 = lshr <2 x i64> %a0, <i64 63, i64 63>
   %lshr1 = lshr <2 x i64> %a1, <i64 63, i64 63>
   %bc0 = bitcast <2 x i64> %lshr0 to <4 x i32>
@@ -293,26 +391,61 @@ define <4 x i32> @shuffle_lshr_2v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 }
 
 define <4 x float> @shuffle_lshr_2v2i64_bitcast(<2 x i64> %a0, <2 x i64> %a1) {
-; SSE2-LABEL: shuffle_lshr_2v2i64_bitcast:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrlq $63, %xmm0
-; SSE2-NEXT:    psrlq $63, %xmm1
-; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    ret{{[l|q]}}
+; X86-SSE2-LABEL: shuffle_lshr_2v2i64_bitcast:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    psrlq $63, %xmm1
+; X86-SSE2-NEXT:    psrlq $63, %xmm0
+; X86-SSE2-NEXT:    packuswb %xmm1, %xmm0
+; X86-SSE2-NEXT:    retl
 ;
-; SSE4-LABEL: shuffle_lshr_2v2i64_bitcast:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    psrlq $63, %xmm0
-; SSE4-NEXT:    psrlq $63, %xmm1
-; SSE4-NEXT:    packusdw %xmm1, %xmm0
-; SSE4-NEXT:    ret{{[l|q]}}
+; X64-SSE2-LABEL: shuffle_lshr_2v2i64_bitcast:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    psrlq $63, %xmm0
+; X64-SSE2-NEXT:    psrlq $63, %xmm1
+; X64-SSE2-NEXT:    packuswb %xmm1, %xmm0
+; X64-SSE2-NEXT:    retq
 ;
-; AVX-LABEL: shuffle_lshr_2v2i64_bitcast:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlq $63, %xmm1, %xmm1
-; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; X86-SSE4-LABEL: shuffle_lshr_2v2i64_bitcast:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    psrlq $63, %xmm1
+; X86-SSE4-NEXT:    psrlq $63, %xmm0
+; X86-SSE4-NEXT:    packusdw %xmm1, %xmm0
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: shuffle_lshr_2v2i64_bitcast:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    psrlq $63, %xmm0
+; X64-SSE4-NEXT:    psrlq $63, %xmm1
+; X64-SSE4-NEXT:    packusdw %xmm1, %xmm0
+; X64-SSE4-NEXT:    retq
+;
+; X86-AVX-LABEL: shuffle_lshr_2v2i64_bitcast:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpsrlq $63, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: shuffle_lshr_2v2i64_bitcast:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpsrlq $63, %xmm1, %xmm1
+; X64-AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX512-LABEL: shuffle_lshr_2v2i64_bitcast:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    vpsrlq $63, %xmm1, %xmm1
+; X86-AVX512-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; X86-AVX512-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: shuffle_lshr_2v2i64_bitcast:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vpsrlq $63, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpsrlq $63, %xmm1, %xmm1
+; X64-AVX512-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X64-AVX512-NEXT:    retq
   %lshr0 = lshr <2 x i64> %a0, <i64 63, i64 63>
   %lshr1 = lshr <2 x i64> %a1, <i64 63, i64 63>
   %bc0 = bitcast <2 x i64> %lshr0 to <4 x float>
@@ -394,19 +527,33 @@ define <16 x i8> @packuswb_icmp_zero_trunc_128(<8 x i16> %a0) {
 }
 
 define <32 x i8> @packuswb_icmp_zero_256(<16 x i16> %a0) {
-; SSE-LABEL: packuswb_icmp_zero_256:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqw %xmm2, %xmm1
-; SSE-NEXT:    psrlw $15, %xmm1
-; SSE-NEXT:    pcmpeqw %xmm2, %xmm0
-; SSE-NEXT:    psrlw $15, %xmm0
-; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    packuswb %xmm0, %xmm3
-; SSE-NEXT:    packuswb %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm3, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    ret{{[l|q]}}
+; X86-SSE-LABEL: packuswb_icmp_zero_256:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE-NEXT:    pcmpeqw %xmm2, %xmm0
+; X86-SSE-NEXT:    psrlw $15, %xmm0
+; X86-SSE-NEXT:    pxor %xmm3, %xmm3
+; X86-SSE-NEXT:    packuswb %xmm0, %xmm3
+; X86-SSE-NEXT:    pcmpeqw %xmm2, %xmm1
+; X86-SSE-NEXT:    psrlw $15, %xmm1
+; X86-SSE-NEXT:    packuswb %xmm1, %xmm2
+; X86-SSE-NEXT:    movdqa %xmm3, %xmm0
+; X86-SSE-NEXT:    movdqa %xmm2, %xmm1
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: packuswb_icmp_zero_256:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    pxor %xmm2, %xmm2
+; X64-SSE-NEXT:    pcmpeqw %xmm2, %xmm1
+; X64-SSE-NEXT:    psrlw $15, %xmm1
+; X64-SSE-NEXT:    pcmpeqw %xmm2, %xmm0
+; X64-SSE-NEXT:    psrlw $15, %xmm0
+; X64-SSE-NEXT:    pxor %xmm3, %xmm3
+; X64-SSE-NEXT:    packuswb %xmm0, %xmm3
+; X64-SSE-NEXT:    packuswb %xmm1, %xmm2
+; X64-SSE-NEXT:    movdqa %xmm3, %xmm0
+; X64-SSE-NEXT:    movdqa %xmm2, %xmm1
+; X64-SSE-NEXT:    retq
 ;
 ; X86-AVX1-LABEL: packuswb_icmp_zero_256:
 ; X86-AVX1:       # %bb.0:
@@ -459,32 +606,59 @@ define <32 x i8> @packuswb_icmp_zero_256(<16 x i16> %a0) {
 }
 
 define <32 x i8> @packuswb_icmp_zero_trunc_256(<16 x i16> %a0) {
-; SSE-LABEL: packuswb_icmp_zero_trunc_256:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqw %xmm2, %xmm1
-; SSE-NEXT:    psrlw $15, %xmm1
-; SSE-NEXT:    pcmpeqw %xmm2, %xmm0
-; SSE-NEXT:    psrlw $15, %xmm0
-; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    packuswb %xmm0, %xmm3
-; SSE-NEXT:    packuswb %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm3, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    ret{{[l|q]}}
+; X86-SSE-LABEL: packuswb_icmp_zero_trunc_256:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE-NEXT:    pcmpeqw %xmm2, %xmm0
+; X86-SSE-NEXT:    psrlw $15, %xmm0
+; X86-SSE-NEXT:    pxor %xmm3, %xmm3
+; X86-SSE-NEXT:    packuswb %xmm0, %xmm3
+; X86-SSE-NEXT:    pcmpeqw %xmm2, %xmm1
+; X86-SSE-NEXT:    psrlw $15, %xmm1
+; X86-SSE-NEXT:    packuswb %xmm1, %xmm2
+; X86-SSE-NEXT:    movdqa %xmm3, %xmm0
+; X86-SSE-NEXT:    movdqa %xmm2, %xmm1
+; X86-SSE-NEXT:    retl
 ;
-; AVX1-LABEL: packuswb_icmp_zero_trunc_256:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpsrlw $15, %xmm2, %xmm2
-; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    ret{{[l|q]}}
+; X64-SSE-LABEL: packuswb_icmp_zero_trunc_256:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    pxor %xmm2, %xmm2
+; X64-SSE-NEXT:    pcmpeqw %xmm2, %xmm1
+; X64-SSE-NEXT:    psrlw $15, %xmm1
+; X64-SSE-NEXT:    pcmpeqw %xmm2, %xmm0
+; X64-SSE-NEXT:    psrlw $15, %xmm0
+; X64-SSE-NEXT:    pxor %xmm3, %xmm3
+; X64-SSE-NEXT:    packuswb %xmm0, %xmm3
+; X64-SSE-NEXT:    packuswb %xmm1, %xmm2
+; X64-SSE-NEXT:    movdqa %xmm3, %xmm0
+; X64-SSE-NEXT:    movdqa %xmm2, %xmm1
+; X64-SSE-NEXT:    retq
+;
+; X86-AVX1-LABEL: packuswb_icmp_zero_trunc_256:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X86-AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X86-AVX1-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpsrlw $15, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpackuswb %xmm1, %xmm2, %xmm1
+; X86-AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpackuswb %xmm0, %xmm2, %xmm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    retl
+;
+; X64-AVX1-LABEL: packuswb_icmp_zero_trunc_256:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm2
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X64-AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
+; X64-AVX1-NEXT:    vpsrlw $15, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: packuswb_icmp_zero_trunc_256:
 ; AVX2:       # %bb.0:
@@ -547,14 +721,23 @@ define <32 x i8> @_mm256_packus_epi16_manual(<16 x i16> %a, <16 x i16> %b) nounw
 ; X64-SSE-NEXT:    packuswb %xmm3, %xmm1
 ; X64-SSE-NEXT:    retq
 ;
-; AVX1-LABEL: _mm256_packus_epi16_manual:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    ret{{[l|q]}}
+; X86-AVX1-LABEL: _mm256_packus_epi16_manual:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; X86-AVX1-NEXT:    vpackuswb %xmm2, %xmm3, %xmm2
+; X86-AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX1-NEXT:    retl
+;
+; X64-AVX1-LABEL: _mm256_packus_epi16_manual:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X64-AVX1-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: _mm256_packus_epi16_manual:
 ; AVX2:       # %bb.0:
@@ -579,10 +762,10 @@ define <64 x i8> @_mm512_packus_epi16_manual(<32 x i16> %a, <32 x i16> %b) nounw
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    packuswb 24(%ebp), %xmm0
 ; X86-SSE-NEXT:    packuswb 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    packuswb 56(%ebp), %xmm2
+; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    packuswb 72(%ebp), %xmm3
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
@@ -602,15 +785,15 @@ define <64 x i8> @_mm512_packus_epi16_manual(<32 x i16> %a, <32 x i16> %b) nounw
 ; X86-AVX1-NEXT:    movl %esp, %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
-; X86-AVX1-NEXT:    vpackuswb %xmm5, %xmm4, %xmm4
+; X86-AVX1-NEXT:    vpackuswb %xmm3, %xmm4, %xmm3
 ; X86-AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vpackuswb 8(%ebp), %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpackuswb 24(%ebp), %xmm3, %xmm2
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vpackuswb 8(%ebp), %xmm1, %xmm2
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; X86-AVX1-NEXT:    vpackuswb 24(%ebp), %xmm1, %xmm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
@@ -662,25 +845,25 @@ define <8 x i16> @_mm_packus_epi32_manual(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; X86-SSE2-LABEL: _mm_packus_epi32_manual:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm2
-; X86-SSE2-NEXT:    pand %xmm1, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm1
-; X86-SSE2-NEXT:    pand %xmm1, %xmm0
-; X86-SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535]
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm4
-; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm4
-; X86-SSE2-NEXT:    pand %xmm4, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm4
-; X86-SSE2-NEXT:    por %xmm4, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
-; X86-SSE2-NEXT:    pand %xmm1, %xmm2
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm1
-; X86-SSE2-NEXT:    por %xmm2, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm5
+; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
+; X86-SSE2-NEXT:    pand %xmm1, %xmm5
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,65535]
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; X86-SSE2-NEXT:    pcmpgtd %xmm5, %xmm1
+; X86-SSE2-NEXT:    pand %xmm1, %xmm5
+; X86-SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
+; X86-SSE2-NEXT:    pxor %xmm4, %xmm1
+; X86-SSE2-NEXT:    por %xmm5, %xmm1
 ; X86-SSE2-NEXT:    pslld $16, %xmm1
 ; X86-SSE2-NEXT:    psrad $16, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm5
+; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
+; X86-SSE2-NEXT:    pand %xmm5, %xmm0
+; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    pxor %xmm4, %xmm2
+; X86-SSE2-NEXT:    por %xmm2, %xmm0
 ; X86-SSE2-NEXT:    pslld $16, %xmm0
 ; X86-SSE2-NEXT:    psrad $16, %xmm0
 ; X86-SSE2-NEXT:    packssdw %xmm1, %xmm0
@@ -736,51 +919,51 @@ define <16 x i16> @_mm256_packus_epi32_manual(<8 x i32> %a, <8 x i32> %b) nounwi
 ; X86-SSE2-NEXT:    movl %esp, %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm4
-; X86-SSE2-NEXT:    pxor %xmm5, %xmm5
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm3
-; X86-SSE2-NEXT:    pcmpgtd %xmm5, %xmm3
-; X86-SSE2-NEXT:    pand %xmm2, %xmm3
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; X86-SSE2-NEXT:    pcmpgtd %xmm5, %xmm2
-; X86-SSE2-NEXT:    pand %xmm2, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm6
-; X86-SSE2-NEXT:    pcmpgtd %xmm5, %xmm6
-; X86-SSE2-NEXT:    pand %xmm4, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE2-NEXT:    pcmpgtd %xmm5, %xmm2
-; X86-SSE2-NEXT:    pand %xmm2, %xmm1
-; X86-SSE2-NEXT:    pcmpeqd %xmm5, %xmm5
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm2
-; X86-SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
-; X86-SSE2-NEXT:    pand %xmm2, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm5, %xmm2
-; X86-SSE2-NEXT:    por %xmm2, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm2
-; X86-SSE2-NEXT:    pcmpgtd %xmm6, %xmm2
+; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm6
 ; X86-SSE2-NEXT:    pand %xmm2, %xmm6
-; X86-SSE2-NEXT:    pxor %xmm5, %xmm2
-; X86-SSE2-NEXT:    por %xmm6, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm6
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,65535]
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm5
+; X86-SSE2-NEXT:    pcmpgtd %xmm6, %xmm5
+; X86-SSE2-NEXT:    pand %xmm5, %xmm6
+; X86-SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
+; X86-SSE2-NEXT:    pxor %xmm4, %xmm5
+; X86-SSE2-NEXT:    por %xmm6, %xmm5
+; X86-SSE2-NEXT:    pslld $16, %xmm5
+; X86-SSE2-NEXT:    psrad $16, %xmm5
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm6
+; X86-SSE2-NEXT:    pand %xmm6, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm6
 ; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm6
 ; X86-SSE2-NEXT:    pand %xmm6, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm5, %xmm6
+; X86-SSE2-NEXT:    pxor %xmm4, %xmm6
 ; X86-SSE2-NEXT:    por %xmm6, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
-; X86-SSE2-NEXT:    pand %xmm4, %xmm3
-; X86-SSE2-NEXT:    pxor %xmm5, %xmm4
-; X86-SSE2-NEXT:    por %xmm3, %xmm4
-; X86-SSE2-NEXT:    pslld $16, %xmm4
-; X86-SSE2-NEXT:    psrad $16, %xmm4
 ; X86-SSE2-NEXT:    pslld $16, %xmm0
 ; X86-SSE2-NEXT:    psrad $16, %xmm0
-; X86-SSE2-NEXT:    packssdw %xmm4, %xmm0
-; X86-SSE2-NEXT:    pslld $16, %xmm2
-; X86-SSE2-NEXT:    psrad $16, %xmm2
+; X86-SSE2-NEXT:    packssdw %xmm5, %xmm0
+; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm5
+; X86-SSE2-NEXT:    movdqa %xmm5, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm6
+; X86-SSE2-NEXT:    pand %xmm5, %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm5
+; X86-SSE2-NEXT:    pcmpgtd %xmm6, %xmm5
+; X86-SSE2-NEXT:    pand %xmm5, %xmm6
+; X86-SSE2-NEXT:    pxor %xmm4, %xmm5
+; X86-SSE2-NEXT:    por %xmm6, %xmm5
+; X86-SSE2-NEXT:    pslld $16, %xmm5
+; X86-SSE2-NEXT:    psrad $16, %xmm5
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm6
+; X86-SSE2-NEXT:    pand %xmm6, %xmm1
+; X86-SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
+; X86-SSE2-NEXT:    pand %xmm2, %xmm1
+; X86-SSE2-NEXT:    pxor %xmm4, %xmm2
+; X86-SSE2-NEXT:    por %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pslld $16, %xmm1
 ; X86-SSE2-NEXT:    psrad $16, %xmm1
-; X86-SSE2-NEXT:    packssdw %xmm2, %xmm1
+; X86-SSE2-NEXT:    packssdw %xmm5, %xmm1
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -851,14 +1034,23 @@ define <16 x i16> @_mm256_packus_epi32_manual(<8 x i32> %a, <8 x i32> %b) nounwi
 ; X64-SSE4-NEXT:    packusdw %xmm3, %xmm1
 ; X64-SSE4-NEXT:    retq
 ;
-; AVX1-LABEL: _mm256_packus_epi32_manual:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    ret{{[l|q]}}
+; X86-AVX1-LABEL: _mm256_packus_epi32_manual:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; X86-AVX1-NEXT:    vpackusdw %xmm2, %xmm3, %xmm2
+; X86-AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX1-NEXT:    retl
+;
+; X64-AVX1-LABEL: _mm256_packus_epi32_manual:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X64-AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: _mm256_packus_epi32_manual:
 ; AVX2:       # %bb.0:
@@ -882,114 +1074,98 @@ define <32 x i16> @_mm512_packus_epi32_manual(<16 x i32> %a, <16 x i32> %b) noun
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
-; X86-SSE2-NEXT:    subl $64, %esp
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm4
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; X86-SSE2-NEXT:    movdqa 56(%ebp), %xmm0
-; X86-SSE2-NEXT:    movdqa 40(%ebp), %xmm1
-; X86-SSE2-NEXT:    movdqa 24(%ebp), %xmm5
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
-; X86-SSE2-NEXT:    movdqa %xmm5, %xmm7
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm7
-; X86-SSE2-NEXT:    pand %xmm5, %xmm7
-; X86-SSE2-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm5
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
-; X86-SSE2-NEXT:    pand %xmm5, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm5
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
-; X86-SSE2-NEXT:    pand %xmm1, %xmm5
-; X86-SSE2-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-SSE2-NEXT:    movdqa %xmm6, %xmm1
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm1
-; X86-SSE2-NEXT:    pand %xmm1, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm1
-; X86-SSE2-NEXT:    pand %xmm0, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm0
-; X86-SSE2-NEXT:    pand %xmm0, %xmm4
-; X86-SSE2-NEXT:    movdqa %xmm4, (%esp) # 16-byte Spill
-; X86-SSE2-NEXT:    movdqa 72(%ebp), %xmm5
-; X86-SSE2-NEXT:    movdqa %xmm5, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm0
-; X86-SSE2-NEXT:    pand %xmm5, %xmm0
-; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm7
-; X86-SSE2-NEXT:    movdqa %xmm7, %xmm5
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
-; X86-SSE2-NEXT:    pand %xmm7, %xmm5
+; X86-SSE2-NEXT:    subl $16, %esp
+; X86-SSE2-NEXT:    pxor %xmm4, %xmm4
+; X86-SSE2-NEXT:    movdqa 24(%ebp), %xmm3
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm4, %xmm7
+; X86-SSE2-NEXT:    pand %xmm3, %xmm7
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
-; X86-SSE2-NEXT:    movdqa %xmm3, %xmm4
-; X86-SSE2-NEXT:    pcmpgtd %xmm5, %xmm4
-; X86-SSE2-NEXT:    pand %xmm4, %xmm5
-; X86-SSE2-NEXT:    pcmpeqd %xmm7, %xmm7
-; X86-SSE2-NEXT:    pxor %xmm7, %xmm4
-; X86-SSE2-NEXT:    por %xmm5, %xmm4
-; X86-SSE2-NEXT:    movdqa %xmm3, %xmm5
-; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm5
-; X86-SSE2-NEXT:    pand %xmm5, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm7, %xmm5
-; X86-SSE2-NEXT:    por %xmm0, %xmm5
-; X86-SSE2-NEXT:    movdqa %xmm3, %xmm0
-; X86-SSE2-NEXT:    movdqa (%esp), %xmm7 # 16-byte Reload
-; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm0
-; X86-SSE2-NEXT:    pand %xmm0, %xmm7
-; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    por %xmm0, %xmm7
-; X86-SSE2-NEXT:    movdqa %xmm7, (%esp) # 16-byte Spill
-; X86-SSE2-NEXT:    movdqa %xmm3, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; X86-SSE2-NEXT:    pand %xmm0, %xmm1
-; X86-SSE2-NEXT:    pcmpeqd %xmm7, %xmm7
-; X86-SSE2-NEXT:    pxor %xmm7, %xmm0
-; X86-SSE2-NEXT:    por %xmm1, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm3, %xmm1
-; X86-SSE2-NEXT:    pcmpgtd %xmm6, %xmm1
-; X86-SSE2-NEXT:    pand %xmm1, %xmm6
-; X86-SSE2-NEXT:    pxor %xmm7, %xmm1
-; X86-SSE2-NEXT:    por %xmm1, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm3, %xmm1
-; X86-SSE2-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
-; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm1
-; X86-SSE2-NEXT:    pand %xmm1, %xmm7
-; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm6
+; X86-SSE2-NEXT:    pand %xmm6, %xmm7
+; X86-SSE2-NEXT:    pcmpeqd %xmm5, %xmm5
+; X86-SSE2-NEXT:    pxor %xmm5, %xmm6
+; X86-SSE2-NEXT:    por %xmm7, %xmm6
+; X86-SSE2-NEXT:    pslld $16, %xmm6
+; X86-SSE2-NEXT:    psrad $16, %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm4, %xmm7
+; X86-SSE2-NEXT:    pand %xmm7, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm7
+; X86-SSE2-NEXT:    pand %xmm7, %xmm0
+; X86-SSE2-NEXT:    pxor %xmm5, %xmm7
+; X86-SSE2-NEXT:    por %xmm7, %xmm0
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    psrad $16, %xmm0
+; X86-SSE2-NEXT:    packssdw %xmm6, %xmm0
+; X86-SSE2-NEXT:    movdqa 40(%ebp), %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm6, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm4, %xmm7
+; X86-SSE2-NEXT:    pand %xmm6, %xmm7
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm6
+; X86-SSE2-NEXT:    pand %xmm6, %xmm7
+; X86-SSE2-NEXT:    pxor %xmm5, %xmm6
+; X86-SSE2-NEXT:    por %xmm7, %xmm6
+; X86-SSE2-NEXT:    pslld $16, %xmm6
+; X86-SSE2-NEXT:    psrad $16, %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm4, %xmm7
+; X86-SSE2-NEXT:    pand %xmm7, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm1, %xmm7
+; X86-SSE2-NEXT:    pand %xmm7, %xmm1
+; X86-SSE2-NEXT:    pxor %xmm5, %xmm7
 ; X86-SSE2-NEXT:    por %xmm7, %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm1
+; X86-SSE2-NEXT:    psrad $16, %xmm1
+; X86-SSE2-NEXT:    packssdw %xmm6, %xmm1
+; X86-SSE2-NEXT:    movdqa 56(%ebp), %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm6, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm4, %xmm7
+; X86-SSE2-NEXT:    pand %xmm6, %xmm7
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm6
+; X86-SSE2-NEXT:    pand %xmm6, %xmm7
+; X86-SSE2-NEXT:    pxor %xmm5, %xmm6
+; X86-SSE2-NEXT:    por %xmm7, %xmm6
+; X86-SSE2-NEXT:    pslld $16, %xmm6
+; X86-SSE2-NEXT:    psrad $16, %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm4, %xmm7
+; X86-SSE2-NEXT:    pand %xmm7, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; X86-SSE2-NEXT:    pcmpgtd %xmm2, %xmm7
 ; X86-SSE2-NEXT:    pand %xmm7, %xmm2
-; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm7
+; X86-SSE2-NEXT:    pxor %xmm5, %xmm7
 ; X86-SSE2-NEXT:    por %xmm7, %xmm2
-; X86-SSE2-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
-; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm3
-; X86-SSE2-NEXT:    pand %xmm3, %xmm7
-; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3
-; X86-SSE2-NEXT:    por %xmm7, %xmm3
-; X86-SSE2-NEXT:    pslld $16, %xmm3
-; X86-SSE2-NEXT:    psrad $16, %xmm3
 ; X86-SSE2-NEXT:    pslld $16, %xmm2
 ; X86-SSE2-NEXT:    psrad $16, %xmm2
-; X86-SSE2-NEXT:    packssdw %xmm3, %xmm2
-; X86-SSE2-NEXT:    pslld $16, %xmm1
-; X86-SSE2-NEXT:    psrad $16, %xmm1
+; X86-SSE2-NEXT:    packssdw %xmm6, %xmm2
+; X86-SSE2-NEXT:    movdqa 72(%ebp), %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm6, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm4, %xmm7
+; X86-SSE2-NEXT:    pand %xmm6, %xmm7
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm6
+; X86-SSE2-NEXT:    pand %xmm6, %xmm7
+; X86-SSE2-NEXT:    pxor %xmm5, %xmm6
+; X86-SSE2-NEXT:    por %xmm7, %xmm6
+; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm4
+; X86-SSE2-NEXT:    movdqa %xmm4, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm7
+; X86-SSE2-NEXT:    pand %xmm4, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm3
+; X86-SSE2-NEXT:    pand %xmm3, %xmm7
+; X86-SSE2-NEXT:    pxor %xmm5, %xmm3
+; X86-SSE2-NEXT:    por %xmm7, %xmm3
 ; X86-SSE2-NEXT:    pslld $16, %xmm6
 ; X86-SSE2-NEXT:    psrad $16, %xmm6
-; X86-SSE2-NEXT:    packssdw %xmm1, %xmm6
-; X86-SSE2-NEXT:    pslld $16, %xmm0
-; X86-SSE2-NEXT:    psrad $16, %xmm0
-; X86-SSE2-NEXT:    movdqa (%esp), %xmm3 # 16-byte Reload
 ; X86-SSE2-NEXT:    pslld $16, %xmm3
 ; X86-SSE2-NEXT:    psrad $16, %xmm3
-; X86-SSE2-NEXT:    packssdw %xmm0, %xmm3
-; X86-SSE2-NEXT:    pslld $16, %xmm5
-; X86-SSE2-NEXT:    psrad $16, %xmm5
-; X86-SSE2-NEXT:    pslld $16, %xmm4
-; X86-SSE2-NEXT:    psrad $16, %xmm4
-; X86-SSE2-NEXT:    packssdw %xmm5, %xmm4
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm6, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm3, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm3
+; X86-SSE2-NEXT:    packssdw %xmm6, %xmm3
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
@@ -1090,10 +1266,10 @@ define <32 x i16> @_mm512_packus_epi32_manual(<16 x i32> %a, <16 x i32> %b) noun
 ; X86-SSE4-NEXT:    movl %esp, %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
-; X86-SSE4-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE4-NEXT:    packusdw 24(%ebp), %xmm0
 ; X86-SSE4-NEXT:    packusdw 40(%ebp), %xmm1
 ; X86-SSE4-NEXT:    packusdw 56(%ebp), %xmm2
+; X86-SSE4-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE4-NEXT:    packusdw 72(%ebp), %xmm3
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
@@ -1113,15 +1289,15 @@ define <32 x i16> @_mm512_packus_epi32_manual(<16 x i32> %a, <16 x i32> %b) noun
 ; X86-AVX1-NEXT:    movl %esp, %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
-; X86-AVX1-NEXT:    vpackusdw %xmm5, %xmm4, %xmm4
+; X86-AVX1-NEXT:    vpackusdw %xmm3, %xmm4, %xmm3
 ; X86-AVX1-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vpackusdw 8(%ebp), %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpackusdw 24(%ebp), %xmm3, %xmm2
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vpackusdw 8(%ebp), %xmm1, %xmm2
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; X86-AVX1-NEXT:    vpackusdw 24(%ebp), %xmm1, %xmm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl

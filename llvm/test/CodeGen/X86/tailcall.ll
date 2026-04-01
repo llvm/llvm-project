@@ -64,18 +64,13 @@ define dso_local fastcc i32 @noret() nounwind {
 define dso_local fastcc void @void_test(i32, i32, i32, i32) {
 ; CHECK-LABEL: void_test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    jmp void_test # TAILCALL
   entry:
@@ -86,18 +81,13 @@ define dso_local fastcc void @void_test(i32, i32, i32, i32) {
 define dso_local fastcc i1 @i1test(i32, i32, i32, i32) {
 ; CHECK-LABEL: i1test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl $8, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    jmp i1test # TAILCALL
   entry:

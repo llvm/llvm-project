@@ -5,10 +5,10 @@
 define void @test(ptr %p, ptr %p2) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd %xmm0, (%eax)
+; CHECK-NEXT:    movsd %xmm0, (%ecx)
 ; CHECK-NEXT:    retl
   %val = load i64, ptr %p, align 8, !range !0
   store i64 %val, ptr %p2, align 8

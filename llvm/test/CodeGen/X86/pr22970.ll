@@ -5,10 +5,10 @@
 define i32 @PR22970_i32(ptr nocapture readonly, i32) {
 ; X86-LABEL: PR22970_i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $4095, %ecx # imm = 0xFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl 32(%eax,%ecx,4), %eax
+; X86-NEXT:    movl $4095, %eax # imm = 0xFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl 32(%ecx,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR22970_i32:
@@ -28,10 +28,10 @@ define i32 @PR22970_i32(ptr nocapture readonly, i32) {
 define i32 @PR22970_i64(ptr nocapture readonly, i64) {
 ; X86-LABEL: PR22970_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $4095, %ecx # imm = 0xFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl 32(%eax,%ecx,4), %eax
+; X86-NEXT:    movl $4095, %eax # imm = 0xFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl 32(%ecx,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR22970_i64:

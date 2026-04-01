@@ -8,9 +8,9 @@ define <8 x i32> @test(<8 x float> %a, <8 x float> %b) {
 ; X86-NEXT:    vaddps %ymm1, %ymm0, %ymm2
 ; X86-NEXT:    vmulps %ymm0, %ymm1, %ymm1
 ; X86-NEXT:    vsubps %ymm2, %ymm1, %ymm3
+; X86-NEXT:    vcmpltps %ymm3, %ymm2, %ymm2
 ; X86-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
-; X86-NEXT:    vcmpltps %ymm3, %ymm2, %ymm1
-; X86-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;

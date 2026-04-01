@@ -54,22 +54,22 @@ define float @canon_fp32_varargsf32(float %a) {
 define x86_fp80 @canon_fp32_varargsf80(x86_fp80 %a) {
 ; X87-LABEL: canon_fp32_varargsf80:
 ; X87:       # %bb.0:
-; X87-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X87-NEXT:    fld1
+; X87-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X87-NEXT:    fmulp %st, %st(1)
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: canon_fp32_varargsf80:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fld1
+; X86-SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fmulp %st, %st(1)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: canon_fp32_varargsf80:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    fld1
+; X86-AVX-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    fmulp %st, %st(1)
 ; X86-AVX-NEXT:    retl
 ;
@@ -173,25 +173,24 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    fxch %st(1)
-; X87-NEXT:    fucom %st(0)
-; X87-NEXT:    fnstsw %ax
-; X87-NEXT:    fld %st(1)
+; X87-NEXT:    fld %st(0)
 ; X87-NEXT:    ja .LBB3_2
 ; X87-NEXT:  # %bb.1: # %start
 ; X87-NEXT:    fstp %st(0)
-; X87-NEXT:    fldz
-; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fld %st(1)
 ; X87-NEXT:  .LBB3_2: # %start
-; X87-NEXT:    fstp %st(1)
+; X87-NEXT:    fxch %st(2)
+; X87-NEXT:    fucomp %st(0)
+; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
 ; X87-NEXT:    jp .LBB3_4
 ; X87-NEXT:  # %bb.3: # %start
-; X87-NEXT:    fstp %st(1)
-; X87-NEXT:    fldz
-; X87-NEXT:  .LBB3_4: # %start
 ; X87-NEXT:    fstp %st(0)
+; X87-NEXT:    fldz
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:  .LBB3_4: # %start
+; X87-NEXT:    fstp %st(1)
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fmulp %st, %st(1)
 ; X87-NEXT:    retl
@@ -207,12 +206,12 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; X86-SSE-NEXT:    subl $8, %esp
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X86-SSE-NEXT:    movapd %xmm0, %xmm2
-; X86-SSE-NEXT:    cmpunordsd %xmm0, %xmm2
+; X86-SSE-NEXT:    movapd %xmm1, %xmm2
+; X86-SSE-NEXT:    cmpunordsd %xmm1, %xmm2
 ; X86-SSE-NEXT:    movapd %xmm2, %xmm3
-; X86-SSE-NEXT:    andpd %xmm1, %xmm3
-; X86-SSE-NEXT:    maxsd %xmm0, %xmm1
-; X86-SSE-NEXT:    andnpd %xmm1, %xmm2
+; X86-SSE-NEXT:    andpd %xmm0, %xmm3
+; X86-SSE-NEXT:    maxsd %xmm1, %xmm0
+; X86-SSE-NEXT:    andnpd %xmm0, %xmm2
 ; X86-SSE-NEXT:    orpd %xmm3, %xmm2
 ; X86-SSE-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-SSE-NEXT:    movsd %xmm2, (%esp)
@@ -298,25 +297,24 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    fxch %st(1)
-; X87-NEXT:    fucom %st(0)
-; X87-NEXT:    fnstsw %ax
-; X87-NEXT:    fld %st(1)
+; X87-NEXT:    fld %st(0)
 ; X87-NEXT:    ja .LBB4_2
 ; X87-NEXT:  # %bb.1: # %start
 ; X87-NEXT:    fstp %st(0)
-; X87-NEXT:    fldz
-; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fld %st(1)
 ; X87-NEXT:  .LBB4_2: # %start
-; X87-NEXT:    fstp %st(1)
+; X87-NEXT:    fxch %st(2)
+; X87-NEXT:    fucomp %st(0)
+; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
 ; X87-NEXT:    jp .LBB4_4
 ; X87-NEXT:  # %bb.3: # %start
-; X87-NEXT:    fstp %st(1)
-; X87-NEXT:    fldz
-; X87-NEXT:  .LBB4_4: # %start
 ; X87-NEXT:    fstp %st(0)
+; X87-NEXT:    fldz
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:  .LBB4_4: # %start
+; X87-NEXT:    fstp %st(1)
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fmulp %st, %st(1)
 ; X87-NEXT:    retl
@@ -327,12 +325,12 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movaps %xmm0, %xmm2
-; X86-SSE-NEXT:    cmpunordss %xmm0, %xmm2
+; X86-SSE-NEXT:    movaps %xmm1, %xmm2
+; X86-SSE-NEXT:    cmpunordss %xmm1, %xmm2
 ; X86-SSE-NEXT:    movaps %xmm2, %xmm3
-; X86-SSE-NEXT:    andps %xmm1, %xmm3
-; X86-SSE-NEXT:    maxss %xmm0, %xmm1
-; X86-SSE-NEXT:    andnps %xmm1, %xmm2
+; X86-SSE-NEXT:    andps %xmm0, %xmm3
+; X86-SSE-NEXT:    maxss %xmm1, %xmm0
+; X86-SSE-NEXT:    andnps %xmm0, %xmm2
 ; X86-SSE-NEXT:    orps %xmm3, %xmm2
 ; X86-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-SSE-NEXT:    movss %xmm2, (%esp)
@@ -580,21 +578,18 @@ define void @canonicalize_undef(double addrspace(1)* %out) {
 define <4 x float> @canon_fp32_varargsv4f32(<4 x float> %a) {
 ; X87-LABEL: canon_fp32_varargsv4f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fld %st(0)
 ; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
-; X87-NEXT:    fld %st(2)
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
-; X87-NEXT:    fxch %st(3)
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fstps 12(%eax)
-; X87-NEXT:    fxch %st(2)
+; X87-NEXT:    fld %st(0)
+; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps 8(%eax)
-; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fld %st(0)
+; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps 4(%eax)
+; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps (%eax)
 ; X87-NEXT:    retl $4
 ;
@@ -636,21 +631,18 @@ define <4 x float> @canon_fp32_varargsv4f32(<4 x float> %a) {
 define <4 x double> @canon_fp64_varargsv4f64(<4 x double> %a) {
 ; X87-LABEL: canon_fp64_varargsv4f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fld %st(0)
 ; X87-NEXT:    fmull {{[0-9]+}}(%esp)
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fmull {{[0-9]+}}(%esp)
-; X87-NEXT:    fld %st(2)
-; X87-NEXT:    fmull {{[0-9]+}}(%esp)
-; X87-NEXT:    fxch %st(3)
-; X87-NEXT:    fmull {{[0-9]+}}(%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fstpl 24(%eax)
-; X87-NEXT:    fxch %st(2)
+; X87-NEXT:    fld %st(0)
+; X87-NEXT:    fmull {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstpl 16(%eax)
-; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fld %st(0)
+; X87-NEXT:    fmull {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstpl 8(%eax)
+; X87-NEXT:    fmull {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstpl (%eax)
 ; X87-NEXT:    retl $4
 ;
@@ -696,30 +688,30 @@ define <4 x double> @canon_fp64_varargsv4f64(<4 x double> %a) {
 define <2 x x86_fp80> @canon_fp80_varargsv2fp80(<2 x x86_fp80> %a) {
 ; X87-LABEL: canon_fp80_varargsv2fp80:
 ; X87:       # %bb.0:
-; X87-NEXT:    fldt {{[0-9]+}}(%esp)
-; X87-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X87-NEXT:    fld1
-; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fldt {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st(1), %st
+; X87-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X87-NEXT:    fmulp %st, %st(2)
 ; X87-NEXT:    fxch %st(1)
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: canon_fp80_varargsv2fp80:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fld1
-; X86-SSE-NEXT:    fmul %st, %st(1)
+; X86-SSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fmul %st(1), %st
+; X86-SSE-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fmulp %st, %st(2)
 ; X86-SSE-NEXT:    fxch %st(1)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: canon_fp80_varargsv2fp80:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    fld1
-; X86-AVX-NEXT:    fmul %st, %st(1)
+; X86-AVX-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-AVX-NEXT:    fmul %st(1), %st
+; X86-AVX-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    fmulp %st, %st(2)
 ; X86-AVX-NEXT:    fxch %st(1)
 ; X86-AVX-NEXT:    retl
@@ -753,18 +745,15 @@ define void @vec_canonicalize_var_v4f32(<4 x float> addrspace(1)* %out) #1 {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fld %st(0)
-; X87-NEXT:    fmuls (%eax)
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fmuls 4(%eax)
-; X87-NEXT:    fld %st(2)
-; X87-NEXT:    fmuls 8(%eax)
-; X87-NEXT:    fxch %st(3)
 ; X87-NEXT:    fmuls 12(%eax)
 ; X87-NEXT:    fstps 12(%eax)
-; X87-NEXT:    fxch %st(2)
+; X87-NEXT:    fld %st(0)
+; X87-NEXT:    fmuls 8(%eax)
 ; X87-NEXT:    fstps 8(%eax)
-; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fld %st(0)
+; X87-NEXT:    fmuls 4(%eax)
 ; X87-NEXT:    fstps 4(%eax)
+; X87-NEXT:    fmuls (%eax)
 ; X87-NEXT:    fstps (%eax)
 ; X87-NEXT:    retl
 ;
@@ -823,18 +812,15 @@ define void @vec_canonicalize_var_v4f64(<4 x double> addrspace(1)* %out) #1 {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fld %st(0)
-; X87-NEXT:    fmull (%eax)
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fmull 8(%eax)
-; X87-NEXT:    fld %st(2)
-; X87-NEXT:    fmull 16(%eax)
-; X87-NEXT:    fxch %st(3)
 ; X87-NEXT:    fmull 24(%eax)
 ; X87-NEXT:    fstpl 24(%eax)
-; X87-NEXT:    fxch %st(2)
+; X87-NEXT:    fld %st(0)
+; X87-NEXT:    fmull 16(%eax)
 ; X87-NEXT:    fstpl 16(%eax)
-; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fld %st(0)
+; X87-NEXT:    fmull 8(%eax)
 ; X87-NEXT:    fstpl 8(%eax)
+; X87-NEXT:    fmull (%eax)
 ; X87-NEXT:    fstpl (%eax)
 ; X87-NEXT:    retl
 ;
@@ -842,11 +828,11 @@ define void @vec_canonicalize_var_v4f64(<4 x double> addrspace(1)* %out) #1 {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,1.0E+0]
-; X86-SSE-NEXT:    movapd 16(%eax), %xmm1
+; X86-SSE-NEXT:    movapd (%eax), %xmm1
 ; X86-SSE-NEXT:    mulpd %xmm0, %xmm1
-; X86-SSE-NEXT:    mulpd (%eax), %xmm0
-; X86-SSE-NEXT:    movapd %xmm0, (%eax)
-; X86-SSE-NEXT:    movapd %xmm1, 16(%eax)
+; X86-SSE-NEXT:    movapd %xmm1, (%eax)
+; X86-SSE-NEXT:    mulpd 16(%eax), %xmm0
+; X86-SSE-NEXT:    movapd %xmm0, 16(%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: vec_canonicalize_var_v4f64:
@@ -902,19 +888,18 @@ define void @vec_canonicalize_x86_fp80(<4 x x86_fp80> addrspace(1)* %out) #1 {
 ; X87:       # %bb.0:
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fldt 30(%eax)
-; X87-NEXT:    fldt 20(%eax)
-; X87-NEXT:    fldt 10(%eax)
-; X87-NEXT:    fldt (%eax)
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fmul %st, %st(1)
-; X87-NEXT:    fmul %st, %st(2)
-; X87-NEXT:    fmul %st, %st(3)
-; X87-NEXT:    fmulp %st, %st(4)
-; X87-NEXT:    fxch %st(3)
-; X87-NEXT:    fstpt 30(%eax)
 ; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstpt 30(%eax)
+; X87-NEXT:    fldt 20(%eax)
+; X87-NEXT:    fmul %st(1), %st
 ; X87-NEXT:    fstpt 20(%eax)
+; X87-NEXT:    fldt 10(%eax)
+; X87-NEXT:    fmul %st(1), %st
 ; X87-NEXT:    fstpt 10(%eax)
+; X87-NEXT:    fldt (%eax)
+; X87-NEXT:    fmulp %st, %st(1)
 ; X87-NEXT:    fstpt (%eax)
 ; X87-NEXT:    retl
 ;
@@ -922,19 +907,18 @@ define void @vec_canonicalize_x86_fp80(<4 x x86_fp80> addrspace(1)* %out) #1 {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    fldt 30(%eax)
-; X86-SSE-NEXT:    fldt 20(%eax)
-; X86-SSE-NEXT:    fldt 10(%eax)
-; X86-SSE-NEXT:    fldt (%eax)
 ; X86-SSE-NEXT:    fld1
 ; X86-SSE-NEXT:    fmul %st, %st(1)
-; X86-SSE-NEXT:    fmul %st, %st(2)
-; X86-SSE-NEXT:    fmul %st, %st(3)
-; X86-SSE-NEXT:    fmulp %st, %st(4)
-; X86-SSE-NEXT:    fxch %st(3)
-; X86-SSE-NEXT:    fstpt 30(%eax)
 ; X86-SSE-NEXT:    fxch %st(1)
+; X86-SSE-NEXT:    fstpt 30(%eax)
+; X86-SSE-NEXT:    fldt 20(%eax)
+; X86-SSE-NEXT:    fmul %st(1), %st
 ; X86-SSE-NEXT:    fstpt 20(%eax)
+; X86-SSE-NEXT:    fldt 10(%eax)
+; X86-SSE-NEXT:    fmul %st(1), %st
 ; X86-SSE-NEXT:    fstpt 10(%eax)
+; X86-SSE-NEXT:    fldt (%eax)
+; X86-SSE-NEXT:    fmulp %st, %st(1)
 ; X86-SSE-NEXT:    fstpt (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -942,19 +926,18 @@ define void @vec_canonicalize_x86_fp80(<4 x x86_fp80> addrspace(1)* %out) #1 {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    fldt 30(%eax)
-; X86-AVX-NEXT:    fldt 20(%eax)
-; X86-AVX-NEXT:    fldt 10(%eax)
-; X86-AVX-NEXT:    fldt (%eax)
 ; X86-AVX-NEXT:    fld1
 ; X86-AVX-NEXT:    fmul %st, %st(1)
-; X86-AVX-NEXT:    fmul %st, %st(2)
-; X86-AVX-NEXT:    fmul %st, %st(3)
-; X86-AVX-NEXT:    fmulp %st, %st(4)
-; X86-AVX-NEXT:    fxch %st(3)
-; X86-AVX-NEXT:    fstpt 30(%eax)
 ; X86-AVX-NEXT:    fxch %st(1)
+; X86-AVX-NEXT:    fstpt 30(%eax)
+; X86-AVX-NEXT:    fldt 20(%eax)
+; X86-AVX-NEXT:    fmul %st(1), %st
 ; X86-AVX-NEXT:    fstpt 20(%eax)
+; X86-AVX-NEXT:    fldt 10(%eax)
+; X86-AVX-NEXT:    fmul %st(1), %st
 ; X86-AVX-NEXT:    fstpt 10(%eax)
+; X86-AVX-NEXT:    fldt (%eax)
+; X86-AVX-NEXT:    fmulp %st, %st(1)
 ; X86-AVX-NEXT:    fstpt (%eax)
 ; X86-AVX-NEXT:    retl
 ;

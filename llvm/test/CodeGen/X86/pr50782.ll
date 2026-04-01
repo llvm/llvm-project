@@ -23,7 +23,6 @@ define void @h(float %i) {
 ; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    movl %esp, %esi
 ; CHECK-NEXT:    .cfi_offset %esi, -12
-; CHECK-NEXT:    flds 8(%ebp)
 ; CHECK-NEXT:    movl _a, %ecx
 ; CHECK-NEXT:    leal 3(%ecx), %eax
 ; CHECK-NEXT:    andl $-4, %eax
@@ -31,6 +30,7 @@ define void @h(float %i) {
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    andl $-16, %eax
 ; CHECK-NEXT:    movl %eax, %esp
+; CHECK-NEXT:    flds 8(%ebp)
 ; CHECK-NEXT:    fsts 8(%esi) # 4-byte Folded Spill
 ; CHECK-NEXT:    fadds _b
 ; CHECK-NEXT:    fsts _d
@@ -49,8 +49,8 @@ define void @h(float %i) {
 ; CHECK-NEXT:  LBB0_2: # %for.cond1.preheader
 ; CHECK-NEXT:    movl _e, %ecx
 ; CHECK-NEXT:    movl %ecx, 12(%esi)
-; CHECK-NEXT:    fildl 12(%esi)
 ; CHECK-NEXT:    movl _c, %edx
+; CHECK-NEXT:    fildl 12(%esi)
 ; CHECK-NEXT:    jmp LBB0_3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_5: # %for.inc

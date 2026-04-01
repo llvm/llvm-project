@@ -5,9 +5,9 @@
 define <4 x i32> @test_sse(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) nounwind {
 ; DARWIN-LABEL: test_sse:
 ; DARWIN:       ## %bb.0:
+; DARWIN-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; DARWIN-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; DARWIN-NEXT:    vpaddd %xmm3, %xmm2, %xmm1
-; DARWIN-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; DARWIN-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; DARWIN-NEXT:    retl
 ;
 ; LINUX-LABEL: test_sse:
@@ -27,9 +27,9 @@ define <4 x i32> @test_sse(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %
 define <8 x i32> @test_avx(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) nounwind {
 ; DARWIN-LABEL: test_avx:
 ; DARWIN:       ## %bb.0:
+; DARWIN-NEXT:    vpaddd %ymm3, %ymm2, %ymm2
 ; DARWIN-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; DARWIN-NEXT:    vpaddd %ymm3, %ymm2, %ymm1
-; DARWIN-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; DARWIN-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; DARWIN-NEXT:    retl
 ;
 ; LINUX-LABEL: test_avx:
@@ -53,9 +53,9 @@ define <8 x i32> @test_avx(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %
 define <16 x i32> @test_avx512(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 x i32> %d) nounwind {
 ; DARWIN-LABEL: test_avx512:
 ; DARWIN:       ## %bb.0:
+; DARWIN-NEXT:    vpaddd %zmm3, %zmm2, %zmm2
 ; DARWIN-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; DARWIN-NEXT:    vpaddd %zmm3, %zmm2, %zmm1
-; DARWIN-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; DARWIN-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; DARWIN-NEXT:    retl
 ;
 ; LINUX-LABEL: test_avx512:
