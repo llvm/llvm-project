@@ -1370,6 +1370,9 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
 
+  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
+    return false;
+
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   const SCEV *SrcConst = Src->getStart();
   const SCEV *DstConst = Dst->getStart();
