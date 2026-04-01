@@ -575,6 +575,10 @@ Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
     if (!Compiler)
       Compiler.reset(new tools::gcc::Compiler(*this));
     return Compiler.get();
+  case Action::ObjcopyJobClass:
+    if (!Objcopy)
+      Objcopy.reset(new tools::ARM64XObjcopy(*this));
+    return Objcopy.get();
   default:
     return ToolChain::getTool(AC);
   }
