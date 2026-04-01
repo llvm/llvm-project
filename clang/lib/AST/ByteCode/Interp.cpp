@@ -882,9 +882,9 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
-    return false;
-  if (!Ptr.isDummy()) {
+  if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
+    if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
+      return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
