@@ -14,7 +14,6 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
-#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -486,10 +485,6 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
             MDK == ModuleDeclKind::PartitionInterface)
           Mod->EnforcedProfileDesignators.push_back(Desig.str());
       }
-    } else if (AL.isRegularKeywordAttribute()) {
-      Diag(AL.getLoc(), diag::err_keyword_not_module_attr) << AL;
-    } else {
-      Diag(AL.getLoc(), diag::err_attribute_not_module_attr) << AL;
     }
   }
 
@@ -1679,10 +1674,6 @@ void Sema::ActOnModuleImportAttrs(Decl *D,
 
       if (!Found)
         Diag(AL.getLoc(), diag::err_profiles_require_not_enforced) << Desig;
-    } else if (AL.isRegularKeywordAttribute()) {
-      Diag(AL.getLoc(), diag::err_keyword_not_import_attr) << AL;
-    } else {
-      Diag(AL.getLoc(), diag::err_attribute_not_import_attr) << AL;
     }
   }
 }
