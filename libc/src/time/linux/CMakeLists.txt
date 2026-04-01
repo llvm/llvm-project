@@ -1,9 +1,3 @@
-if(NOT TARGET libc.src.__support.OSUtil.osutil)
-  message(STATUS "libc.src.__support.OSUtil.osutil is not available. "
-                  "Skip libc.src.time.linux.* targets.")
-  return()
-endif()
-
 add_entrypoint_object(
   timespec_get
   SRCS
