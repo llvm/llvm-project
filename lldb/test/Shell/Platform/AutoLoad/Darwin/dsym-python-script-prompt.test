@@ -1,0 +1,47 @@
+# REQUIRES: python, system-darwin
+#
+# Tests the 'target.load-script-from-symbol-file warn' prompt in a non-interactive environment.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/TestModule.out.dSYM/Contents/Resources/Python
+# RUN: cp %t/dsym_script.py %t/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
+#
+## Tests that default reply is "N" in a non-interactive auto-confirm environment.
+#
+# RUN: %lldb \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'settings set auto-confirm true' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=DSYM_SCRIPT --check-prefix=CHECK-WARN
+
+## Tests that in a non-interactive no-auto-confirm environment we still don't load the.
+## script. But we do print a warning.
+#
+# RUN: %lldb -b \
+# RUN:   -o 'settings set auto-confirm false' \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=DSYM_SCRIPT --check-prefix=CHECK-WARN
+
+# CHECK-WARN: warning: '{{.*}}' contains a debug script. To run this script in this debug session:
+
+## Tests that the warning appears every time we prompt.
+## FIXME: do we want to limit the warning to once per session?
+#
+# RUN: %lldb -b \
+# RUN:   -o 'settings set auto-confirm true' \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'target create %t/TestModule.out' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-MULTIPLE
+
+# CHECK-MULTIPLE-COUNT-2: warning: '{{.*}}' contains a debug script. To run this script
+
+#--- main.c
+int main() { return 0; }
+
+#--- dsym_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT", file=sys.stderr)
