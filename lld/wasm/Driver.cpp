@@ -966,19 +966,18 @@ static void createPostLTOSymbols() {
 
   bool is64 = ctx.arg.is64.value_or(false);
 
-  auto stack_pointer_name = ctx.libcallThreadContext
-                                ? "__init_stack_pointer"
-                                : "__stack_pointer";
+  auto stack_pointer_name =
+      ctx.libcallThreadContext ? "__init_stack_pointer" : "__stack_pointer";
   if (ctx.isPic) {
     if (ctx.libcallThreadContext) {
-      ctx.sym.stackPointer =
-        createUndefinedGlobal(stack_pointer_name, ctx.arg.is64.value_or(false)
-                                                      ? &globalTypeI64
-                                                      : &globalTypeI32);
-    } 
-    else {
+      ctx.sym.stackPointer = createUndefinedGlobal(
+          stack_pointer_name,
+          ctx.arg.is64.value_or(false) ? &globalTypeI64 : &globalTypeI32);
+    } else {
       ctx.sym.stackPointer = createUndefinedGlobal(stack_pointer_name,
-        ctx.arg.is64.value_or(false) ? &mutableGlobalTypeI64 : &mutableGlobalTypeI32);
+                                                   ctx.arg.is64.value_or(false)
+                                                       ? &mutableGlobalTypeI64
+                                                       : &mutableGlobalTypeI32);
     }
     // For PIC code, we import two global variables (__memory_base and
     // __table_base) from the environment and use these as the offset at
@@ -992,8 +991,8 @@ static void createPostLTOSymbols() {
     ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    ctx.sym.stackPointer = createGlobalVariable(
-        stack_pointer_name, !ctx.libcallThreadContext);
+    ctx.sym.stackPointer =
+        createGlobalVariable(stack_pointer_name, !ctx.libcallThreadContext);
     ctx.sym.stackPointer->markLive();
   }
 
@@ -1369,17 +1368,15 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
       if (threadContextABI == ThreadContextABI::Undetermined) {
         threadContextABI = ThreadContextABI::Libcall;
       } else if (threadContextABI != ThreadContextABI::Libcall) {
-        error(
-            "thread context ABI mismatch: " + obj->getName() +
-            " uses libcall-thread-context but other files disallow it");
+        error("thread context ABI mismatch: " + obj->getName() +
+              " uses libcall-thread-context but other files disallow it");
       }
     } else {
       if (threadContextABI == ThreadContextABI::Undetermined) {
         threadContextABI = ThreadContextABI::Globals;
       } else if (threadContextABI != ThreadContextABI::Globals) {
-        error(
-            "thread context ABI mismatch: " + obj->getName() +
-            " disallows libcall-thread-context but other files use it");
+        error("thread context ABI mismatch: " + obj->getName() +
+              " disallows libcall-thread-context but other files use it");
       }
     }
   }

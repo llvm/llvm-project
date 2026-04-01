@@ -1358,7 +1358,7 @@ void Writer::createInitMemoryFunction() {
                   "i32.add");
         }
 
-        // When we initialize the TLS segment we also set the TLS base. 
+        // When we initialize the TLS segment we also set the TLS base.
         // This allows the runtime to use this
         // static copy of the TLS data for the first/main thread.
         if (ctx.arg.sharedMemory && s->isTLS()) {
@@ -1644,9 +1644,9 @@ void Writer::createInitTLSFunction() {
 
       if (ctx.libcallThreadContext) {
         writeU8(os, WASM_OPCODE_CALL, "call");
-        writeUleb128(os, ctx.sym.setTLSBase->getFunctionIndex(), "function index");
-      }
-      else {
+        writeUleb128(os, ctx.sym.setTLSBase->getFunctionIndex(),
+                     "function index");
+      } else {
         writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
         writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
       }

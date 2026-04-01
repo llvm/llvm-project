@@ -89,7 +89,7 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
 }
 
 static bool WantsLibcallThreadContext(const llvm::Triple &Triple,
-                                             const ArgList &Args) {
+                                      const ArgList &Args) {
   // If the target is WASIP3, then enable the
   // libcall-thread-context feature by default, unless explicitly
   // disabled.

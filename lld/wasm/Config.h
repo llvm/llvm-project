@@ -280,8 +280,9 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
-  // Whether to use library functions for the stack pointer and TLS base 
-  // instead of globals. This is currently used for WASIp3 cooperative threads support.
+  // Whether to use library functions for the stack pointer and TLS base
+  // instead of globals. This is currently used for WASIp3 cooperative threads
+  // support.
   bool libcallThreadContext = false;
 
   Ctx();

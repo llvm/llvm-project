@@ -239,8 +239,7 @@ void WebAssemblyFrameLowering::writeBackSP(
     MachineBasicBlock::iterator &InsertStore, const DebugLoc &DL) const {
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
-  if (MF.getSubtarget<WebAssemblySubtarget>()
-          .hasLibcallThreadContext()) {
+  if (MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext()) {
     const char *ES = "__wasm_set_stack_pointer";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::CALL))

@@ -286,13 +286,14 @@ public:
     } else if (!Features[WebAssembly::FeatureBulkMemory]) {
       StrippedTLS |= stripThreadLocals(M);
     }
-   
+
     if (StrippedAtomics && !StrippedTLS)
       stripThreadLocals(M);
     else if (StrippedTLS && !StrippedAtomics)
       stripAtomics(M);
 
-    recordFeatures(M, WasmTM->getTargetCPU(), Features, StrippedAtomics || StrippedTLS);
+    recordFeatures(M, WasmTM->getTargetCPU(), Features,
+                   StrippedAtomics || StrippedTLS);
 
     // Conservatively assume we have made some change
     return true;
@@ -418,8 +419,7 @@ private:
     // Mark libcall-thread-context as disallowed when not in use to
     // prevent linking object files with incompatible threading ABIs.
     // This is implicit for MVP since the feature is not supported at all.
-    if (CPU != "mvp" &&
-        !Features[WebAssembly::FeatureLibcallThreadContext]) {
+    if (CPU != "mvp" && !Features[WebAssembly::FeatureLibcallThreadContext]) {
       M.addModuleFlag(Module::ModFlagBehavior::Error,
                       "wasm-feature-libcall-thread-context",
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);
