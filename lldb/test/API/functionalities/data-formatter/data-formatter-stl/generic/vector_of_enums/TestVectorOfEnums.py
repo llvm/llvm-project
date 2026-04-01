@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestVectorOfEnums(TestBase):
-
     SHARED_BUILD_TESTCASE = False
 
     @add_test_categories(["libc++"])
