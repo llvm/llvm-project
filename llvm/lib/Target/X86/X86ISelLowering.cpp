@@ -30620,10 +30620,9 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(
-          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
-          static_cast<EVT>(MVT::v2i64).getTypeForEVT(*DAG.getContext()), Callee,
-          std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
+                    EVT(MVT::v2i64).getTypeForEVT(*DAG.getContext()), Callee,
+                    std::move(Args))
       .setInRegister()
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);
@@ -54221,7 +54220,8 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   }
 
   if (Value.getOpcode() == ISD::TRUNCATE && Value.getNode()->hasOneUse() &&
-      TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(), MemVT)) {
+      TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(), MemVT,
+                            Mst->getAlign(), Mst->getAddressSpace())) {
     return DAG.getMaskedStore(Mst->getChain(), DL, Value.getOperand(0),
                               Mst->getBasePtr(), Mst->getOffset(), Mask, MemVT,
                               Mst->getMemOperand(), Mst->getAddressingMode(),
@@ -54364,7 +54364,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
           (SrcVT == MVT::v2i32 && VT == MVT::v2i16) ||
           (SrcVT == MVT::v2i16 && VT == MVT::v2i8)) {
         MVT ExtVT = SrcVT == MVT::v4i16 ? MVT::v4i32 : MVT::v2i64;
-        if (TLI.isTruncStoreLegal(ExtVT, VT)) {
+        if (TLI.isTruncStoreLegal(ExtVT, VT, St->getAlign(),
+                                  St->getAddressSpace())) {
           SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, ExtVT, Src);
           return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
                                    VT, St->getMemOperand());
@@ -54506,7 +54507,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (!St->isTruncatingStore() && VT == MVT::v16i8 && !Subtarget.hasBWI() &&
       St->getValue().getOpcode() == ISD::TRUNCATE &&
       St->getValue().getOperand(0).getValueType() == MVT::v16i16 &&
-      TLI.isTruncStoreLegal(MVT::v16i32, MVT::v16i8) &&
+      TLI.isTruncStoreLegal(MVT::v16i32, MVT::v16i8, St->getAlign(),
+                            St->getAddressSpace()) &&
       St->getValue().hasOneUse() && !DCI.isBeforeLegalizeOps()) {
     SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v16i32,
                               St->getValue().getOperand(0));
@@ -54519,11 +54521,12 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       (StoredVal.getOpcode() == X86ISD::VTRUNCUS ||
        StoredVal.getOpcode() == X86ISD::VTRUNCS) &&
       StoredVal.hasOneUse() &&
-      TLI.isTruncStoreLegal(StoredVal.getOperand(0).getValueType(), VT)) {
+      TLI.isTruncStoreLegal(StoredVal.getOperand(0).getValueType(), VT,
+                            St->getAlign(), St->getAddressSpace())) {
     bool IsSigned = StoredVal.getOpcode() == X86ISD::VTRUNCS;
-    return EmitTruncSStore(IsSigned, St->getChain(),
-                           dl, StoredVal.getOperand(0), St->getBasePtr(),
-                           VT, St->getMemOperand(), DAG);
+    return EmitTruncSStore(IsSigned, St->getChain(), dl,
+                           StoredVal.getOperand(0), St->getBasePtr(), VT,
+                           St->getMemOperand(), DAG);
   }
 
   // Try to fold a extract_element(VTRUNC) pattern into a truncating store.
@@ -54548,7 +54551,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
         unsigned NumTruncBits = DstVT.getScalarSizeInBits() * NumSrcElts;
         MVT TruncVT = MVT::getVectorVT(DstVT.getScalarType(), NumSrcElts);
         if (NumTruncBits == VT.getSizeInBits() &&
-            TLI.isTruncStoreLegal(SrcVT, TruncVT)) {
+            TLI.isTruncStoreLegal(SrcVT, TruncVT, St->getAlign(),
+                                  St->getAddressSpace())) {
           return DAG.getTruncStore(St->getChain(), dl, Src, St->getBasePtr(),
                                    TruncVT, St->getMemOperand());
         }
@@ -54560,7 +54564,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // First, pack all of the elements in one place. Next, store to memory
   // in fewer chunks.
   if (St->isTruncatingStore() && VT.isVector()) {
-    if (TLI.isTruncStoreLegal(VT, StVT)) {
+    if (TLI.isTruncStoreLegal(VT, StVT, St->getAlign(),
+                              St->getAddressSpace())) {
       if (SDValue Val = detectSSatPattern(St->getValue(), St->getMemoryVT()))
         return EmitTruncSStore(true /* Signed saturation */, St->getChain(),
                                dl, Val, St->getBasePtr(),

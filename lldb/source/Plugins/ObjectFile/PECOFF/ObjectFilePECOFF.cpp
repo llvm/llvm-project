@@ -256,8 +256,7 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
 
 ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length) {
+    lldb::offset_t file_offset, lldb::offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData() ||
       !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return {};
