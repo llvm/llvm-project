@@ -5946,9 +5946,9 @@ void Process::GetStatus(Stream &strm) {
                   GetID(), exit_status, exit_status,
                   exit_description ? exit_description : "");
     } else {
-      if (state == eStateConnected) {
+      if (state == eStateConnected)
         strm.Printf("Connected to remote target.\n");
-      } else {
+      else if (!IsLiveDebugSession()) {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
         std::string cmd;
         GetCoreFileArgs().GetCommandString(cmd);
@@ -5958,7 +5958,8 @@ void Process::GetStatus(Stream &strm) {
         msg += ".\n";
         if (!cmd.empty())
           strm.Printf(msg.c_str(), cmd.c_str());
-      }
+      } else
+        strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
     }
   } else {
     strm.Printf("Process %" PRIu64 " is running.\n", GetID());

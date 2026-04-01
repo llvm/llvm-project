@@ -1172,8 +1172,7 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
     info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(),
                            add_exe_file_as_first_arg);
   }
-  if (!m_process_args.empty()) {
+  if (!m_process_args.empty())
     info.SetArguments(m_process_args, true);
-  }
   return true;
 }
