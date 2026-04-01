@@ -10432,9 +10432,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
     }
   } else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    // Unauthenticated GOT loads are incompatible with arm64e: the
+    // resulting indirect branch (blr) bypasses pointer authentication.
     bool UseGot = (getTargetMachine().getCodeModel() == CodeModel::Large &&
                    Subtarget->isTargetMachO()) ||
-                  MF.getFunction().getParent()->getRtLibUseGOT();
+                  (MF.getFunction().getParent()->getRtLibUseGOT() &&
+                   !Subtarget->getTargetTriple().isArm64e());
     const char *Sym = S->getSymbol();
     if (UseGot) {
       Callee = DAG.getTargetExternalSymbol(Sym, PtrVT, AArch64II::MO_GOT);

@@ -158,7 +158,10 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   }
 
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
-    if (F->hasFnAttribute(Attribute::NonLazyBind)) {
+    // NonLazyBind is incompatible with arm64e: it emits an unauthenticated
+    // indirect branch (blr) which bypasses pointer authentication.
+    if (F->hasFnAttribute(Attribute::NonLazyBind) &&
+        !MF.getTarget().getTargetTriple().isArm64e()) {
       LLT Ty = getLLTForType(*F->getType(), DL);
       Register Reg = MIRBuilder.buildGlobalValue(Ty, F).getReg(0);
       Info.Callee = MachineOperand::CreateReg(Reg, false);
