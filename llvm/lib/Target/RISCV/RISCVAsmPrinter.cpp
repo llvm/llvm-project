@@ -43,6 +43,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -82,6 +83,8 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void emitInstruction(const MachineInstr *MI) override;
+
+  uint64_t calculateStackSize(const MachineFunction &MF) override;
 
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 
@@ -356,6 +359,15 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst OutInst;
   lowerToMCInst(MI, OutInst);
   EmitToStreamer(*OutStreamer, OutInst);
+}
+
+uint64_t RISCVAsmPrinter::calculateStackSize(const MachineFunction &MF) {
+  uint64_t StackSize = AsmPrinter::calculateStackSize(MF);
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  if (!TFI->hasReservedCallFrame(MF)) {
+    StackSize += MF.getFrameInfo().getMaxCallFrameSize();
+  }
+  return StackSize;
 }
 
 bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
