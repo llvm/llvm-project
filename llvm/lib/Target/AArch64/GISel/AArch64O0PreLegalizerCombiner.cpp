@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
@@ -20,11 +21,15 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
+#include <memory>
 
 #define GET_GICOMBINER_DEPS
 #include "AArch64GenO0PreLegalizeGICombiner.inc"
@@ -34,10 +39,12 @@
 
 using namespace llvm;
 using namespace MIPatternMatch;
-namespace {
+
 #define GET_GICOMBINER_TYPES
 #include "AArch64GenO0PreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
+
+namespace {
 
 class AArch64O0PreLegalizerCombinerImpl : public Combiner {
 protected:
@@ -111,55 +118,12 @@ bool AArch64O0PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   return false;
 }
 
-// Pass boilerplate
-// ================
-
-class AArch64O0PreLegalizerCombiner : public MachineFunctionPass {
-public:
-  static char ID;
-
-  AArch64O0PreLegalizerCombiner();
-
-  StringRef getPassName() const override {
-    return "AArch64O0PreLegalizerCombiner";
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-  AArch64O0PreLegalizerCombinerImplRuleConfig RuleConfig;
-};
-} // end anonymous namespace
-
-void AArch64O0PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-  getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
-  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
-  AU.addRequired<LibcallLoweringInfoWrapper>();
-  MachineFunctionPass::getAnalysisUsage(AU);
-}
-
-AArch64O0PreLegalizerCombiner::AArch64O0PreLegalizerCombiner()
-    : MachineFunctionPass(ID) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
-}
-
-bool AArch64O0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasFailedISel())
-    return false;
-
+bool runCombiner(
+    MachineFunction &MF, GISelValueTracking *VT,
+    const LibcallLoweringInfo &Libcalls,
+    const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig) {
   const Function &F = MF.getFunction();
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
-  const LibcallLoweringInfo &Libcalls =
-      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
-          *F.getParent(), ST);
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, /*EnableOpt*/ false,
@@ -174,19 +138,115 @@ bool AArch64O0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char AArch64O0PreLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(AArch64O0PreLegalizerCombiner, DEBUG_TYPE,
+// Pass boilerplate
+// ================
+
+class AArch64O0PreLegalizerCombinerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AArch64O0PreLegalizerCombinerLegacy();
+
+  StringRef getPassName() const override {
+    return "AArch64O0PreLegalizerCombiner";
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+private:
+  AArch64O0PreLegalizerCombinerImplRuleConfig RuleConfig;
+};
+} // end anonymous namespace
+
+void AArch64O0PreLegalizerCombinerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
+  AU.setPreservesCFG();
+  getSelectionDAGFallbackAnalysisUsage(AU);
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
+  AU.addRequired<LibcallLoweringInfoWrapper>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+AArch64O0PreLegalizerCombinerLegacy::AArch64O0PreLegalizerCombinerLegacy()
+    : MachineFunctionPass(ID) {
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
+}
+
+bool AArch64O0PreLegalizerCombinerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (MF.getProperties().hasFailedISel())
+    return false;
+
+  const Function &F = MF.getFunction();
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  const LibcallLoweringInfo &Libcalls =
+      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+          *F.getParent(), ST);
+
+  return runCombiner(MF, VT, Libcalls, RuleConfig);
+}
+
+char AArch64O0PreLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(AArch64O0PreLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine AArch64 machine instrs before legalization",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
-INITIALIZE_PASS_END(AArch64O0PreLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(AArch64O0PreLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine AArch64 machine instrs before legalization", false,
                     false)
 
+AArch64O0PreLegalizerCombinerPass::AArch64O0PreLegalizerCombinerPass()
+    : RuleConfig(
+          std::make_unique<AArch64O0PreLegalizerCombinerImplRuleConfig>()) {
+  if (!RuleConfig->parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
+}
+
+AArch64O0PreLegalizerCombinerPass::AArch64O0PreLegalizerCombinerPass(
+    AArch64O0PreLegalizerCombinerPass &&) = default;
+
+AArch64O0PreLegalizerCombinerPass::~AArch64O0PreLegalizerCombinerPass() =
+    default;
+
+PreservedAnalyses
+AArch64O0PreLegalizerCombinerPass::run(MachineFunction &MF,
+                                       MachineFunctionAnalysisManager &MFAM) {
+  if (MF.getProperties().hasFailedISel())
+    return PreservedAnalyses::all();
+
+  GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  auto &MAMProxy =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
+  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+      MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(
+          *MF.getFunction().getParent());
+  if (!LibcallResult)
+    report_fatal_error("LibcallLoweringModuleAnalysis result not available");
+
+  const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
+
+  if (!runCombiner(MF, &VT, Libcalls, *RuleConfig))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<GISelValueTrackingAnalysis>();
+  return PA;
+}
+
 namespace llvm {
 FunctionPass *createAArch64O0PreLegalizerCombiner() {
-  return new AArch64O0PreLegalizerCombiner();
+  return new AArch64O0PreLegalizerCombinerLegacy();
 }
 } // end namespace llvm
