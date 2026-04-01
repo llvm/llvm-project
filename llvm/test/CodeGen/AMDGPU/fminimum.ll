@@ -485,12 +485,26 @@ define amdgpu_ps half @test_fminimum_f16_ss(half inreg %a, half inreg %b) {
 ; GFX1170-GISEL-FAKE16-NEXT:    v_minimum_f16 v0, s0, s1
 ; GFX1170-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: test_fminimum_f16_ss:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_minimum_f16 s0, s0, s1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: test_fminimum_f16_ss:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_minimum_f16 s0, s0, s1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-TRUE16-LABEL: test_fminimum_f16_ss:
+; GFX12-GISEL-TRUE16:       ; %bb.0:
+; GFX12-GISEL-TRUE16-NEXT:    s_minimum_f16 s0, s0, s1
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-FAKE16-LABEL: test_fminimum_f16_ss:
+; GFX12-GISEL-FAKE16:       ; %bb.0:
+; GFX12-GISEL-FAKE16-NEXT:    s_minimum_f16 s0, s0, s1
+; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %val = call half @llvm.minimum.f16(half %a, half %b)
   ret half %val
 }

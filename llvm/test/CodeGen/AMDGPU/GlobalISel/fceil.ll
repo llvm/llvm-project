@@ -62,7 +62,7 @@ define half @fceil_s16_s(half inreg %val) {
 ; GFX12-NEXT:    s_ceil_f16 s0, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.ceil.f16(half %val)
   ret half %result

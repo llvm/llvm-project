@@ -1121,14 +1121,16 @@ define <3 x i1> @isnan_v3bf16(<3 x bfloat> %x) nounwind {
 ; GFX11SELDAG-TRUE16:       ; %bb.0:
 ; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11SELDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GFX11SELDAG-TRUE16-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v1
+; GFX11SELDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
 ; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0.l
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v2.l
-; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v3.l
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v1.l
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11SELDAG-FAKE16-LABEL: isnan_v3bf16:
@@ -1223,15 +1225,18 @@ define <4 x i1> @isnan_v4bf16(<4 x bfloat> %x) nounwind {
 ; GFX11SELDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX11SELDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0.l
-; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
+; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX11SELDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v1.l
-; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v4.l
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v3.l
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v2.l
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v1.l
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v3.l
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
 ; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11SELDAG-FAKE16-LABEL: isnan_v4bf16:

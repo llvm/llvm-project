@@ -761,12 +761,19 @@ define amdgpu_ps half @s_constained_fsub_f16_fpexcept_strict(half inreg %x, half
 ; GFX11-GISEL-FAKE16-NEXT:    v_sub_f16_e64 v0, s2, s3
 ; GFX11-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_constained_fsub_f16_fpexcept_strict:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_sub_f16 s0, s2, s3
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: s_constained_fsub_f16_fpexcept_strict:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_sub_f16 s0, s2, s3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: s_constained_fsub_f16_fpexcept_strict:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_sub_f16 s0, s2, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-GISEL-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call half @llvm.experimental.constrained.fsub.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
 }

@@ -786,14 +786,25 @@ define amdgpu_ps half @test_xor3_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0x96
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-GISEL-LABEL: test_xor3_b16:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    v_xor3_b32 v0, v0, v1, v2
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-GISEL-FAKE16-LABEL: test_xor3_b16:
+; GFX1250-GISEL-FAKE16:       ; %bb.0:
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-FAKE16-NEXT:    v_xor3_b32 v0, v0, v1, v2
+; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-TRUE16-LABEL: test_xor3_b16:
+; GFX1250-GISEL-TRUE16:       ; %bb.0:
+; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-TRUE16-NEXT:    v_nop
+; GFX1250-GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-TRUE16-NEXT:    v_xor_b16 v0.l, v0.l, v1.l
+; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-TRUE16-NEXT:    v_xor_b16 v0.l, v0.l, v2.l
+; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %xor1 = xor i16 %a, %b
   %xor2 = xor i16 %xor1, %c
   %ret_cast = bitcast i16 %xor2 to half
@@ -829,14 +840,25 @@ define amdgpu_ps half @test_or3_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0xfe
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-GISEL-LABEL: test_or3_b16:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-GISEL-FAKE16-LABEL: test_or3_b16:
+; GFX1250-GISEL-FAKE16:       ; %bb.0:
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-FAKE16-NEXT:    v_or3_b32 v0, v0, v1, v2
+; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-TRUE16-LABEL: test_or3_b16:
+; GFX1250-GISEL-TRUE16:       ; %bb.0:
+; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-TRUE16-NEXT:    v_nop
+; GFX1250-GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
+; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v2.l
+; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %or1 = or i16 %a, %b
   %or2 = or i16 %or1, %c
   %ret_cast = bitcast i16 %or2 to half
@@ -872,14 +894,25 @@ define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0xec
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
-; GFX1250-GISEL-LABEL: test_and_or_b16:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, v2
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-GISEL-FAKE16-LABEL: test_and_or_b16:
+; GFX1250-GISEL-FAKE16:       ; %bb.0:
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-FAKE16-NEXT:    v_and_or_b32 v0, v0, v1, v2
+; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-TRUE16-LABEL: test_and_or_b16:
+; GFX1250-GISEL-TRUE16:       ; %bb.0:
+; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-TRUE16-NEXT:    v_nop
+; GFX1250-GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, v1.l
+; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v2.l
+; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %and1 = and i16 %a, %b
   %or1 = or i16 %and1, %c
   %ret_cast = bitcast i16 %or1 to half

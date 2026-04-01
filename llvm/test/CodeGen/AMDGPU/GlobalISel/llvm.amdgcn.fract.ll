@@ -13,7 +13,7 @@ define amdgpu_ps half @s_fract_f16(half inreg %src) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_add_f16 s0, s0, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-NEXT:    ; return to shader part epilog
   %fract = call half @llvm.amdgcn.fract.f16(half %src)
   %res = fadd half %fract, %fract

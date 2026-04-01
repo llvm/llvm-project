@@ -1931,9 +1931,9 @@ define half @v_fdiv_f16_arcp(half %x, half %y) {
 ; GFX11-TRUE16-LABEL: v_fdiv_f16_arcp:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
+; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_fdiv_f16_arcp:
@@ -1982,9 +1982,9 @@ define half @v_fdiv_f16_afn_nsz(half %x, half %y) {
 ; GFX11-TRUE16-LABEL: v_fdiv_f16_afn_nsz:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
+; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_fdiv_f16_afn_nsz:
