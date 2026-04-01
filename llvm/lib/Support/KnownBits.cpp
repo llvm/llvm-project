@@ -1209,6 +1209,20 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
     return Known;
   }
 
+  if (RHS.isConstant()) {
+    const APInt Divisor = RHS.getConstant();
+    if (Divisor.isOne())
+      return LHS;
+
+    if (Divisor.isPowerOf2()) {
+      unsigned Shift = Divisor.logBase2();
+      KnownBits Known = LHS;
+      Known.One.lshrInPlace(Shift);
+      Known.Zero.lshrInPlace(Shift);
+      return Known;
+    }
+  }
+
   // We can figure out the minimum number of upper zero bits by doing
   // MaxNumerator / MinDenominator. If the Numerator gets smaller or Denominator
   // gets larger, the number of upper zero bits increases.
