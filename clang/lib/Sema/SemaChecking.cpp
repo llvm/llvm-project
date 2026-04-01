@@ -1284,15 +1284,17 @@ void Sema::checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
   if (llvm::APSInt::compareValues(*CopyLen, *SrcBufSize) <= 0)
     return;
 
-  llvm::StringRef FuncName = "memory function";
-  if (const FunctionDecl *CalleeDecl = TheCall->getDirectCallee()) {
-    FuncName = CalleeDecl->getName();
-    // __builtin___memcpy_chk -> memcpy, __builtin_memcpy -> memcpy.
-    // The _chk variants have a different prefix so try that one first.
-    if (!(FuncName.consume_front("__builtin___") &&
-          FuncName.consume_back("_chk")))
-      FuncName.consume_front("__builtin_");
-  }
+  const FunctionDecl *CalleeDecl = TheCall->getDirectCallee();
+  assert(CalleeDecl && "expected builtin callee");
+  StringRef FuncName = CalleeDecl->getName();
+
+  // Need to strip affixes from function name, see memcpy for example:
+  // __builtin___memcpy_chk, __builtin_memcpy
+  // The _chk variants have a different prefix so try that one first.
+  if (!(FuncName.consume_front("__builtin___") &&
+        FuncName.consume_back("_chk")))
+    FuncName.consume_front("__builtin_");
+  assert(!FuncName.empty() && "expected non-empty function name");
 
   DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
                       PDiag(diag::warn_stringop_overread)
