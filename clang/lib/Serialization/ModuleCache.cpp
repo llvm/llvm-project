@@ -122,6 +122,9 @@ clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
 }
 
 std::error_code clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer) {
+  // This is a compiler-internal input/output, let's bypass the sandbox.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   StringRef Extension = llvm::sys::path::extension(Path);
   SmallString<128> ModelPath = StringRef(Path).drop_back(Extension.size());
   ModelPath += "-%%%%%%%%";
@@ -211,9 +214,6 @@ public:
   }
 
   std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer) override {
-    // This is a compiler-internal input/output, let's bypass the sandbox.
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-
     return writeImpl(Path, Buffer);
   }
 
