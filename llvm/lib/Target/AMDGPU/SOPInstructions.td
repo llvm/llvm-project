@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def GPRIdxMode : CustomOperand<i32>;
+def GPRIdxMode : CustomOperand;
 
 class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
                   list<dag> pattern=[]> :

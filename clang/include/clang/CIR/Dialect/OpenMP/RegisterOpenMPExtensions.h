@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
-#include <ext/hash_map>
+#ifndef CLANG_CIR_DIALECT_OPENMP_REGISTEROPENMPEXTENSIONS_H
+#define CLANG_CIR_DIALECT_OPENMP_REGISTEROPENMPEXTENSIONS_H
 
-int main(int, char**) {
-  __gnu_cxx::hash_map<const char*, std::string> m;
-  auto it = m.insert(std::make_pair("foo", "bar")).first;
-  return it->first == nullptr;
-}
+namespace mlir {
+class DialectRegistry;
+} // namespace mlir
+
+namespace cir::omp {
+
+void registerOpenMPExtensions(mlir::DialectRegistry &registry);
+
+} // namespace cir::omp
+
+#endif // CLANG_CIR_DIALECT_OPENMP_REGISTEROPENMPEXTENSIONS_H
