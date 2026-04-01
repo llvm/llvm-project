@@ -126,8 +126,8 @@ static fir::AliasAnalysis::Source getSourceForACCMappedValue(
   assert(accOp && "OpenACC mapping op required");
   // Private-like ops use SourceKind::Allocate.
   if (mlir::isa<mlir::acc::ReductionInitOp, mlir::acc::PrivateOp,
-                mlir::acc::FirstprivateOp,
-                mlir::acc::FirstprivateMapInitialOp>(accOp))
+                mlir::acc::FirstprivateOp, mlir::acc::FirstprivateMapInitialOp>(
+          accOp))
     return {{mappedValue, nullptr, originIsData},
             fir::AliasAnalysis::SourceKind::Allocate,
             mappedValue.getType(),
