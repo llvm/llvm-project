@@ -33,7 +33,6 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
                                        const std::string &message, uint32_t loc,
                                        uint16_t err_len)
     : ErrorInfo(make_error_code(std::errc::invalid_argument)) {
-  assert(err_len != 0);
   DiagnosticDetail::SourceLocation sloc = {
       FileSpec{}, /*line=*/1, static_cast<uint16_t>(loc + 1),
       err_len,    false,      /*in_user_input=*/true};
@@ -42,7 +41,9 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   std::string rendered_str;
   llvm::raw_string_ostream rendered_os(rendered_str);
   rendered_os << msg.str();
-  rendered_os << llvm::indent(loc + 1) << "^" << std::string(err_len - 1, '~');
+  rendered_os << llvm::indent(loc + 1) << "^";
+  if (err_len > 0)
+    rendered_os << std::string(err_len - 1, '~');
 
   m_detail.source_location = sloc;
   m_detail.severity = lldb::eSeverityError;
