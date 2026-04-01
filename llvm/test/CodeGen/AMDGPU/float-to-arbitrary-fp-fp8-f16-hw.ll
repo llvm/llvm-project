@@ -1084,10 +1084,11 @@ define <4 x i8> @to_fp8_v4f16(<4 x half> %x) {
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, v1
 ; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f16_e64 v0.l, v0
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
-; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
-; GFX1250-TRUE16-NEXT:    v_dual_lshrrev_b32 v1, 8, v0 :: v_dual_lshrrev_b32 v3, 24, v3
+; GFX1250-TRUE16-NEXT:    v_dual_lshlrev_b32 v3, 16, v2 :: v_dual_lshrrev_b32 v1, 8, v0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: to_fp8_v4f16:
@@ -1349,10 +1350,11 @@ define <4 x i8> @to_bf8_v4f16(<4 x half> %x) {
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, v1
 ; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f16_e64 v0.l, v0
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
-; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
-; GFX1250-TRUE16-NEXT:    v_dual_lshrrev_b32 v1, 8, v0 :: v_dual_lshrrev_b32 v3, 24, v3
+; GFX1250-TRUE16-NEXT:    v_dual_lshlrev_b32 v3, 16, v2 :: v_dual_lshrrev_b32 v1, 8, v0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: to_bf8_v4f16:
