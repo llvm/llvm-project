@@ -13,7 +13,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -114,6 +113,39 @@ static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
     }
   }
   return false;
+}
+
+/// Classify `mappedValue` when defined by OpenACC mapping op `accOp`.
+/// Private-like ops use `SourceKind::Allocate`; other data clauses use
+/// `getSourceFn` on the mapped host variable (`mlir::acc::getVar`).
+static fir::AliasAnalysis::Source getSourceForACCMappedValue(
+    mlir::Value mappedValue, mlir::Operation *accOp,
+    llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> getSourceFn,
+    bool originIsData,
+    fir::AliasAnalysis::Source::Attributes accumulatedAttrs) {
+  assert(accOp && "OpenACC mapping op required");
+  // Private-like ops use SourceKind::Allocate.
+  if (mlir::isa<mlir::acc::ReductionInitOp, mlir::acc::PrivateOp,
+                mlir::acc::FirstprivateOp,
+                mlir::acc::FirstprivateMapInitialOp>(accOp))
+    return {{mappedValue, nullptr, originIsData},
+            fir::AliasAnalysis::SourceKind::Allocate,
+            mappedValue.getType(),
+            accumulatedAttrs,
+            false,
+            false};
+
+  // Not private-like: classify using the corresponding host variable's source.
+  //
+  // Caveat: with discrete device memory, host and device copies do not alias
+  // even when this path makes them look related. Alias analysis here is usually
+  // about two values *inside* a compute region, not host-vs-device pointer
+  // queries, so using the host source remains a reasonable tradeoff for
+  // disambiguating in-region uses. Finer modeling would require extending
+  // AliasAnalysis::Source (with address space) and teaching AA to use it.
+  fir::AliasAnalysis::Source source = getSourceFn(mlir::acc::getVar(accOp));
+  source.attributes |= accumulatedAttrs;
+  return source;
 }
 
 namespace fir {
@@ -943,7 +975,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             followBoxData = true;
         })
         .Case<ACC_DATA_ENTRY_AND_INIT_OPS>([&](auto op) {
-          accSourceReturn = fir::acc::getSourceForACCValue(
+          accSourceReturn = getSourceForACCMappedValue(
               v, op.getOperation(),
               [&](mlir::Value x) {
                 return getSource(x, getLastInstantiationPoint);
@@ -974,7 +1006,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       ty = v.getType();
     } else if (mlir::Operation *accOp =
                    mlir::acc::getACCDataClauseOpForBlockArg(v)) {
-      return fir::acc::getSourceForACCValue(
+      return getSourceForACCMappedValue(
           v, accOp,
           [&](mlir::Value x) {
             return getSource(x, getLastInstantiationPoint);

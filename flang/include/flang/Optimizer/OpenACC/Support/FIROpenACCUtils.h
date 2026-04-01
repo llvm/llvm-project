@@ -13,7 +13,6 @@
 #ifndef FORTRAN_OPTIMIZER_OPENACC_SUPPORT_FIROPENACCUTILS_H
 #define FORTRAN_OPTIMIZER_OPENACC_SUPPORT_FIROPENACCUTILS_H
 
-#include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
@@ -22,19 +21,6 @@
 
 namespace fir {
 namespace acc {
-
-/// Memory source for `mappedValue` when it is produced by OpenACC mapping op
-/// `accOp` . Private-like ops return `SourceKind::Allocate`; other data clauses
-/// classify the host variable via `getSourceFn`.
-///
-/// `accumulatedAttrs` collects Fortran variable attributes from the path from
-/// the queried value to `accOp` (e.g. [hl]fir.declare); they are merged into
-/// the returned source so TARGET/POINTER/INTENT_IN are not dropped.
-fir::AliasAnalysis::Source getSourceForACCValue(
-    mlir::Value mappedValue, mlir::Operation *accOp,
-    llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> getSourceFn,
-    bool originIsData,
-    fir::AliasAnalysis::Source::Attributes accumulatedAttrs = {});
 
 /// Attempts to extract the variable name from a value by walking through
 /// FIR operations and looking for variable names.

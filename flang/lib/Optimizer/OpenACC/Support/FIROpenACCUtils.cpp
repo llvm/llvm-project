@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
-#include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -615,41 +614,6 @@ mlir::SymbolRefAttr fir::acc::createOrGetReductionRecipe(
   assert(success && "failed to generate combiner");
   mlir::acc::YieldOp::create(builder, loc, dest);
   return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
-}
-
-static bool isACCPrivateLikeOp(mlir::Operation *op) {
-  if (!op)
-    return false;
-  return mlir::isa<mlir::acc::ReductionInitOp, mlir::acc::PrivateOp,
-                   mlir::acc::FirstprivateOp,
-                   mlir::acc::FirstprivateMapInitialOp>(op);
-}
-
-fir::AliasAnalysis::Source fir::acc::getSourceForACCValue(
-    mlir::Value mappedValue, mlir::Operation *accOp,
-    llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> getSourceFn,
-    bool originIsData,
-    fir::AliasAnalysis::Source::Attributes accumulatedAttrs) {
-  assert(accOp && "OpenACC mapping op required");
-  if (isACCPrivateLikeOp(accOp))
-    return {{mappedValue, nullptr, originIsData},
-            fir::AliasAnalysis::SourceKind::Allocate,
-            mappedValue.getType(),
-            accumulatedAttrs,
-            false,
-            false};
-
-  // Not private-like: classify using the corresponding host variable's source.
-  //
-  // Caveat: with discrete device memory, host and device copies do not alias
-  // even when this path makes them look related. Alias analysis here is usually
-  // about two values *inside* a compute region, not host-vs-device pointer
-  // queries, so using the host source remains a reasonable tradeoff for
-  // disambiguating in-region uses. Finer modeling would require extending
-  // AliasAnalysis::Source (with address space) and teaching AA to use it.
-  fir::AliasAnalysis::Source source = getSourceFn(mlir::acc::getVar(accOp));
-  source.attributes |= accumulatedAttrs;
-  return source;
 }
 
 mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
