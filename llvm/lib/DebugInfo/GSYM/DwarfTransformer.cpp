@@ -739,7 +739,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
       GsymReader::openFile(GsymPath);
   if (!GsymOrErr)
     return GsymOrErr.takeError();
-  auto &Gsym = *GsymOrErr;
+  std::unique_ptr<GsymReader> &Gsym = *GsymOrErr;
 
   auto NumAddrs = Gsym->getNumAddresses();
   DILineInfoSpecifier DLIS(
