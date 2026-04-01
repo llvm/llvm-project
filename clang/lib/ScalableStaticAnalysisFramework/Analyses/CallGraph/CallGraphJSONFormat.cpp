@@ -9,6 +9,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Analyses/CallGraph/CallGraphSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
@@ -16,6 +17,13 @@
 using namespace llvm;
 using namespace clang;
 using namespace ssaf;
+
+static const char *FailedToReadObjectAtField =
+    "failed to read {0} from field '{1}': expected JSON {2}";
+static const char *FailedToReadObjectAtIndex =
+    "failed to read {0} from index '{1}': expected JSON {2}";
+static const char *ReadingFromField = "reading {0} from field '{1}'";
+static const char *ReadingFromIndex = "reading {0} from index '{1}'";
 
 static json::Object serialize(const EntitySummary &Summary,
                               JSONFormat::EntityIdToJSONFn ToJSON) {
@@ -49,77 +57,101 @@ deserialize(const json::Object &Obj, EntityIdTable &IdTable,
 
   auto PrettyName = Obj.getString("pretty_name");
   if (!PrettyName) {
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'pretty_name'");
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                FailedToReadObjectAtField, "PrettyName",
+                                "pretty_name", "string")
+        .build();
   }
   Result->PrettyName = PrettyName->str();
 
   const json::Array *CalleesArray = Obj.getArray("direct_callees");
   if (!CalleesArray) {
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'direct_callees'");
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                FailedToReadObjectAtField, "DirectCallees",
+                                "direct_callees", "array")
+        .build();
   }
   for (const auto &[Index, Value] : llvm::enumerate(*CalleesArray)) {
     const json::Object *CalleeObj = Value.getAsObject();
     if (!CalleeObj) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "direct_callees element at index %zu is not a JSON object", Index);
+      return ErrorBuilder::create(std::errc::invalid_argument,
+                                  FailedToReadObjectAtIndex, "EntityId", Index,
+                                  "object")
+          .context(ReadingFromField, "DirectCallees", "direct_callees")
+          .build();
     }
     auto ExpectedId = FromJSON(*CalleeObj);
     if (!ExpectedId) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "invalid entity id in direct_callees at index %zu: %s", Index,
-          toString(ExpectedId.takeError()).c_str());
+      return ErrorBuilder::wrap(ExpectedId.takeError())
+          .context(ReadingFromIndex, "EntityId", Index)
+          .context(ReadingFromField, "DirectCallees", "direct_callees")
+          .build();
     }
     Result->DirectCallees.insert(*ExpectedId);
   }
 
   const json::Array *VirtualCalleesArray = Obj.getArray("virtual_callees");
   if (!VirtualCalleesArray) {
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'virtual_callees'");
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                FailedToReadObjectAtField, "VirtualCallees",
+                                "virtual_callees", "array")
+        .build();
   }
   for (const auto &[Index, Value] : llvm::enumerate(*VirtualCalleesArray)) {
     const json::Object *CalleeObj = Value.getAsObject();
     if (!CalleeObj) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "virtual_callees element at index %zu is not a JSON object", Index);
+      return ErrorBuilder::create(std::errc::invalid_argument,
+                                  FailedToReadObjectAtIndex, "EntityId", Index,
+                                  "object")
+          .context(ReadingFromField, "VirtualCallees", "virtual_callees")
+          .build();
     }
     auto ExpectedId = FromJSON(*CalleeObj);
     if (!ExpectedId) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "invalid entity id in virtual_callees at index %zu: %s", Index,
-          toString(ExpectedId.takeError()).c_str());
+      return ErrorBuilder::wrap(ExpectedId.takeError())
+          .context(ReadingFromIndex, "EntityId", Index)
+          .context(ReadingFromField, "VirtualCallees", "virtual_callees")
+          .build();
     }
     Result->VirtualCallees.insert(*ExpectedId);
   }
 
   const json::Object *DefObj = Obj.getObject("def");
   if (!DefObj) {
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'def'");
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                FailedToReadObjectAtField, "SourceLocation",
+                                "def", "object")
+        .build();
   }
   auto File = DefObj->getString("file");
   if (!File) {
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'def.file'");
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                FailedToReadObjectAtField, "File", "file",
+                                "string")
+        .context(ReadingFromField, "SourceLocation", "def")
+        .build();
   }
   auto Line = DefObj->getInteger("line");
   if (!Line) {
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'def.line'");
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                FailedToReadObjectAtField, "Line", "line",
+                                "number")
+        .context(ReadingFromField, "SourceLocation", "def")
+        .build();
   }
   auto Col = DefObj->getInteger("col");
   if (!Col) {
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'def.col'");
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                FailedToReadObjectAtField, "Column", "col",
+                                "number")
+        .context(ReadingFromField, "SourceLocation", "def")
+        .build();
   }
-  Result->Definition = {File->str(), static_cast<unsigned>(*Line),
-                        static_cast<unsigned>(*Col)};
+  Result->Definition = {
+      File->str(),
+      static_cast<unsigned>(*Line),
+      static_cast<unsigned>(*Col),
+  };
 
   return std::move(Result);
 }
