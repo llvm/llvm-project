@@ -23,43 +23,28 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; SCALAR-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; SCALAR-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; SCALAR-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>, vp<[[VP0]]>
-; SCALAR-NEXT:    Successor(s): pred.load
+; SCALAR-NEXT:      EMIT branch-on-cond ir<%c>
+; SCALAR-NEXT:    Successor(s): pred.load.if, pred.load.continue
 ; SCALAR-EMPTY:
-; SCALAR-NEXT:    <xVFxUF> pred.load: {
-; SCALAR-NEXT:      pred.load.entry:
-; SCALAR-NEXT:        BRANCH-ON-MASK ir<%c>
-; SCALAR-NEXT:      Successor(s): pred.load.if, pred.load.continue
+; SCALAR-NEXT:    pred.load.if:
+; SCALAR-NEXT:      CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP4]]>
+; SCALAR-NEXT:      CLONE ir<%lv> = load ir<%gep>
+; SCALAR-NEXT:    Successor(s): pred.load.continue
 ; SCALAR-EMPTY:
-; SCALAR-NEXT:      pred.load.if:
-; SCALAR-NEXT:        CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP4]]>
-; SCALAR-NEXT:        CLONE ir<%lv> = load ir<%gep>
-; SCALAR-NEXT:      Successor(s): pred.load.continue
+; SCALAR-NEXT:    pred.load.continue:
+; SCALAR-NEXT:      EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ ir<%lv>, pred.load.if ]
+; SCALAR-NEXT:      EMIT branch-on-cond ir<%c>
+; SCALAR-NEXT:    Successor(s): pred.load.if, pred.load.continue
 ; SCALAR-EMPTY:
-; SCALAR-NEXT:      pred.load.continue:
-; SCALAR-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP6:%[0-9]+]]> = ir<%lv>
-; SCALAR-NEXT:      No successors
-; SCALAR-NEXT:    }
-; SCALAR-NEXT:    Successor(s): pred.load
+; SCALAR-NEXT:    pred.load.if:
+; SCALAR-NEXT:      CLONE ir<%gep>.1 = getelementptr ir<%ptr>, vp<[[VP5]]>
+; SCALAR-NEXT:      CLONE ir<%lv>.1 = load ir<%gep>.1
+; SCALAR-NEXT:    Successor(s): pred.load.continue
 ; SCALAR-EMPTY:
-; SCALAR-NEXT:    <xVFxUF> pred.load: {
-; SCALAR-NEXT:      pred.load.entry:
-; SCALAR-NEXT:        BRANCH-ON-MASK ir<%c>
-; SCALAR-NEXT:      Successor(s): pred.load.if, pred.load.continue
-; SCALAR-EMPTY:
-; SCALAR-NEXT:      pred.load.if:
-; SCALAR-NEXT:        CLONE ir<%gep>.1 = getelementptr ir<%ptr>, vp<[[VP5]]>
-; SCALAR-NEXT:        CLONE ir<%lv>.1 = load ir<%gep>.1
-; SCALAR-NEXT:      Successor(s): pred.load.continue
-; SCALAR-EMPTY:
-; SCALAR-NEXT:      pred.load.continue:
-; SCALAR-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP7:%[0-9]+]]> = ir<%lv>.1
-; SCALAR-NEXT:      No successors
-; SCALAR-NEXT:    }
-; SCALAR-NEXT:    Successor(s): if.then.0
-; SCALAR-EMPTY:
-; SCALAR-NEXT:    if.then.0:
-; SCALAR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%6>/ir<%c>
-; SCALAR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%7>/ir<%c>
+; SCALAR-NEXT:    pred.load.continue:
+; SCALAR-NEXT:      EMIT-SCALAR vp<[[VP9:%[0-9]+]]> = phi [ ir<poison>, pred.load.continue ], [ ir<%lv>.1, pred.load.if ]
+; SCALAR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%7>/ir<%c>
+; SCALAR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%9>/ir<%c>
 ; SCALAR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP4]]>
 ; SCALAR-NEXT:      CLONE ir<%gep.dst>.1 = getelementptr ir<%dst>, vp<[[VP5]]>
 ; SCALAR-NEXT:      CLONE store ir<%pred.val>, ir<%gep.dst>

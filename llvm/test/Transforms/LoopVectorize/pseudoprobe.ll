@@ -2,8 +2,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: nounwind uwtable
-define i32 @test1(ptr nocapture %a, ptr nocapture readonly %b) #0 {
+define i32 @test1(ptr nocapture %a, ptr nocapture readonly %b) {
 entry:
   call void @llvm.pseudoprobe(i64 3666282617048535130, i64 1, i32 0, i64 -1)
   br label %for.body
@@ -36,11 +35,7 @@ for.end:                                          ; preds = %for.body
 
 
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
-declare void @llvm.pseudoprobe(i64, i64, i32, i64) #1
-
-attributes #0 = { nounwind uwtable }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 
 !llvm.pseudo_probe_desc = !{!0}
 

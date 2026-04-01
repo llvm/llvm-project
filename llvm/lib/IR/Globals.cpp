@@ -38,8 +38,10 @@ static_assert(sizeof(GlobalValue) ==
                   sizeof(Constant) + 2 * sizeof(void *) + 2 * sizeof(unsigned),
               "unexpected GlobalValue size growth");
 
-// GlobalObject adds a comdat.
-static_assert(sizeof(GlobalObject) == sizeof(GlobalValue) + sizeof(void *),
+// GlobalObject adds a comdat and metadata index.
+static_assert(sizeof(GlobalObject) ==
+                  sizeof(GlobalValue) + sizeof(void *) +
+                      alignTo(sizeof(unsigned), alignof(void *)),
               "unexpected GlobalObject size growth");
 
 bool GlobalValue::isMaterializable() const {
