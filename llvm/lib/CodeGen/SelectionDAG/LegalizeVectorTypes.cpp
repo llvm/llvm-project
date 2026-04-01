@@ -6873,7 +6873,7 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
 // to ToMaskVT if needed with vector extension or truncation.
 SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
                                       EVT ToMaskVT) {
-  // Called from widenMaskTree for SETCC leaf nodes. Re-creates the SETCC with
+  // Called from convertMaskTree for SETCC leaf nodes. Re-creates the SETCC with
   // result type MaskVT, then sign-extends/truncates and pads to ToMaskVT.
   assert(isSETCCorConvertedSETCC(InMask) && "Unexpected mask argument.");
 
@@ -6955,7 +6955,7 @@ EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, SDValue &Op1, EVT ToVT) {
   return OpVT;
 }
 
-SDValue DAGTypeLegalizer::widenMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
+SDValue DAGTypeLegalizer::convertMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
   if (Depth >= DAG.MaxRecursionDepth)
     return SDValue();
 
@@ -6980,10 +6980,10 @@ SDValue DAGTypeLegalizer::widenMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
     // Logical operations (AND/OR/XOR): try picking the best fitting width out
     // of children's element widths.
     if (isLogicalMaskOp(Opcode)) {
-      SDValue Op0 = widenMaskTree(V.getOperand(0), ToVT, Depth + 1);
+      SDValue Op0 = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
       if (!Op0)
         return SDValue();
-      SDValue Op1 = widenMaskTree(V.getOperand(1), ToVT, Depth + 1);
+      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
       if (!Op1)
         return SDValue();
       EVT OpVT = unifyMaskTypes(Op0, Op1, ToVT);
@@ -6992,7 +6992,7 @@ SDValue DAGTypeLegalizer::widenMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
 
     // FREEZE: widen the operand and re-wrap.
     if (Opcode == ISD::FREEZE) {
-      SDValue Inner = widenMaskTree(V.getOperand(0), ToVT, Depth + 1);
+      SDValue Inner = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
       if (!Inner)
         return SDValue();
       return DAG.getNode(ISD::FREEZE, DL, Inner.getValueType(), Inner);
@@ -7001,7 +7001,7 @@ SDValue DAGTypeLegalizer::widenMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
     // Vector shuffle: try inferring the best fitting width from operands.
     if (Opcode == ISD::VECTOR_SHUFFLE) {
       auto *Shuf = cast<ShuffleVectorSDNode>(V);
-      SDValue Op0 = widenMaskTree(V.getOperand(0), ToVT, Depth + 1);
+      SDValue Op0 = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
       if (!Op0)
         return SDValue();
       if (V.getOperand(1).isUndef()) {
@@ -7009,7 +7009,7 @@ SDValue DAGTypeLegalizer::widenMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
         return DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT),
                                     Shuf->getMask());
       }
-      SDValue Op1 = widenMaskTree(V.getOperand(1), ToVT, Depth + 1);
+      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
       if (!Op1)
         return SDValue();
       EVT OpVT = unifyMaskTypes(Op0, Op1, ToVT);
@@ -7018,17 +7018,17 @@ SDValue DAGTypeLegalizer::widenMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
 
     // SELECT/VSELECT: try inferring the best fitting width from operands.
     if (Opcode == ISD::SELECT || Opcode == ISD::VSELECT) {
-      SDValue Op1 = widenMaskTree(V.getOperand(1), ToVT, Depth + 1);
+      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
       if (!Op1)
         return SDValue();
-      SDValue Op2 = widenMaskTree(V.getOperand(2), ToVT, Depth + 1);
+      SDValue Op2 = convertMaskTree(V.getOperand(2), ToVT, Depth + 1);
       if (!Op2)
         return SDValue();
       EVT OpVT = unifyMaskTypes(Op1, Op2, ToVT);
 
       SDValue Cond = V.getOperand(0);
       if (Opcode == ISD::VSELECT) {
-        Cond = widenMaskTree(Cond, ToVT, Depth + 1);
+        Cond = convertMaskTree(Cond, ToVT, Depth + 1);
         if (!Cond)
           return SDValue();
         Cond = adjustMaskToType(Cond, OpVT);
@@ -7110,7 +7110,7 @@ SDValue DAGTypeLegalizer::WidenVSELECTMask(SDNode *N) {
     ToMaskVT = ToMaskVT.changeVectorElementTypeToInteger();
 
   // Try to recursively widen the mask expression tree to the target type.
-  return widenMaskTree(Cond, ToMaskVT);
+  return convertMaskTree(Cond, ToMaskVT);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Select(SDNode *N) {
