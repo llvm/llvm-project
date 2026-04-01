@@ -683,14 +683,18 @@ findInlineAsmCandidates(Function &F, const TargetMachine *TM) {
         continue;
 
       InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
+      StringRef ConstraintStr = IA->getConstraintString();
+      bool HasRegMemConstraints = ConstraintStr.size() == 2 &&
+                                  ConstraintStr.contains("r") &&
+                                  ConstraintStr.contains("m");
+
       if (auto *CBR = dyn_cast<CallBrInst>(CB)) {
         bool NeedsSSA = !CBR->getType()->isVoidTy() && !CBR->use_empty();
-        bool NeedsConversion = isOptLevelNone && IA->getConstraintString().find(
-                                                     "rm") != std::string::npos;
+        bool NeedsConversion = isOptLevelNone && HasRegMemConstraints;
         if (NeedsSSA || NeedsConversion)
           InlineAsms.push_back(CBR);
       } else if (isOptLevelNone) {
-        if (IA->getConstraintString().find("rm") != std::string::npos)
+        if (HasRegMemConstraints)
           InlineAsms.push_back(CB);
       }
     }
