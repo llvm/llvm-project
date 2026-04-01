@@ -17431,22 +17431,13 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
                                                  const SelectionDAG &DAG) {
   assert(LHS.getValueType() == MVT::f64 && "Incorrect operand type!");
 
-  // FIXME: need computeKnownFPClass once available (issue #175571)
+  const KnownFPClass LHSFPClass = DAG.computeKnownFPClass(LHS, fcAllFlags);
+  const KnownFPClass RHSFPClass = DAG.computeKnownFPClass(RHS, fcAllFlags);
+  const KnownBits LHSKnownLo32 = DAG.computeKnownBits(LHS).trunc(32);
+  const KnownBits RHSKnownLo32 = DAG.computeKnownBits(RHS).trunc(32);
 
-  const KnownBits LHSKnown = DAG.computeKnownBits(LHS);
-  const KnownBits LHSMan = LHSKnown.extractBits(52, 0);
-  const KnownBits LHSExp = LHSKnown.extractBits(11, 52);
-  const KnownBits LHSSgn = LHSKnown.extractBits(1, 63);
-  const bool LHSMaybeNaN = !DAG.isKnownNeverNaN(LHS);
-
-  const KnownBits RHSKnown = DAG.computeKnownBits(RHS);
-  const KnownBits RHSMan = RHSKnown.extractBits(52, 0);
-  const KnownBits RHSExp = RHSKnown.extractBits(11, 52);
-  const KnownBits RHSSgn = RHSKnown.extractBits(1, 63);
-  const bool RHSMaybeNaN = !DAG.isKnownNeverNaN(RHS);
-
-  const KnownBits LHSKnownLo32 = LHSKnown.trunc(32);
-  const KnownBits RHSKnownLo32 = RHSKnown.trunc(32);
+  const bool LHSMaybeNaN = !LHSFPClass.isKnownNeverNaN();
+  const bool RHSMaybeNaN = !RHSFPClass.isKnownNeverNaN();
 
   switch (CC) {
   default:
@@ -17457,13 +17448,10 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   case ISD::SETONE:
   case ISD::SETUNE: {
     // Equality between +0 and -0 cannot be checked on upper 32 bits.
-    const bool LHSMaybeZero =
-        LHSExp.getMinValue().isZero() && LHSMan.getMinValue().isZero();
-    const bool RHSMaybeZero =
-        RHSExp.getMinValue().isZero() && RHSMan.getMinValue().isZero();
-    const bool MaybeDifferentSign =
-        KnownBits::ne(LHSSgn, RHSSgn).value_or(true);
-    if (LHSMaybeZero && RHSMaybeZero && MaybeDifferentSign)
+    if ((!LHSFPClass.isKnownNeverPosZero() &&
+         !RHSFPClass.isKnownNeverNegZero()) ||
+        (!LHSFPClass.isKnownNeverNegZero() &&
+         !RHSFPClass.isKnownNeverPosZero()))
       break;
 
     // OEQ should be false if either operand is NaN, so it suffices that at
@@ -17504,11 +17492,11 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   case ISD::SETGE:
   case ISD::SETOGE:
   case ISD::SETUGE: {
-    // Comparison may only be reduced to upper 32 bits if both operands are
-    // positive.
-    const bool LHSNeverNegative = LHSSgn.Zero.isOne();
-    const bool RHSNeverNegative = RHSSgn.Zero.isOne();
-    if (!LHSNeverNegative || !RHSNeverNegative)
+    // Comparison may only be reduced to upper 32 bits if both operands have
+    // zero sign bit.
+    const bool LHSSignBitZero = !LHSFPClass.SignBit.value_or(true);
+    const bool RHSSignBitZero = !RHSFPClass.SignBit.value_or(true);
+    if (!LHSSignBitZero || !RHSSignBitZero)
       break;
 
     // OLT should be false if either operand is NaN.
@@ -17554,11 +17542,11 @@ static ISD::CondCode tryReduceF64CompareToHiHalf(const ISD::CondCode CC,
   case ISD::SETGT:
   case ISD::SETOGT:
   case ISD::SETUGT: {
-    // Comparison may only be reduced to upper 32 bits if both operands are
-    // positive.
-    const bool LHSNeverNegative = LHSSgn.Zero.isOne();
-    const bool RHSNeverNegative = RHSSgn.Zero.isOne();
-    if (!LHSNeverNegative || !RHSNeverNegative)
+    // Comparison may only be reduced to upper 32 bits if both operands have
+    // zero sign bit.
+    const bool LHSSignBitZero = !LHSFPClass.SignBit.value_or(true);
+    const bool RHSSignBitZero = !RHSFPClass.SignBit.value_or(true);
+    if (!LHSSignBitZero || !RHSSignBitZero)
       break;
 
     // OLE should be false if either operand is NaN, but this cannot be
