@@ -1,4 +1,3 @@
-// REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK %s
 

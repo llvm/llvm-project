@@ -1,4 +1,3 @@
-// REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1250 -x hip -emit-llvm -fcuda-is-device %s -o - | FileCheck %s
 
 #define __device__ __attribute__((device))
