@@ -21,3 +21,53 @@ define i8 @iszero_constant_v4f32() nounwind {
   %r = bitcast <8 x i1> %f to i8
   ret i8 %r
 }
+
+define <vscale x 4 x i1> @splat_constant_is_pos_normal() {
+; CHECK-LABEL: splat_constant_is_pos_normal:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> splat (float 1.0), i32 128) ; 128 = pos_normal
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @splat_constant_isnan_false() {
+; CHECK-LABEL: splat_constant_isnan_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> splat (float 1.0), i32 3) ; 3 = nan
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 2 x i1> @splat_constant_f64_isinf_false() {
+; CHECK-LABEL: splat_constant_f64_isinf_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.is.fpclass.nxv2f64(<vscale x 2 x double> splat (double 1.0), i32 516) ; 516 = inf
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 4 x i1> @test_splat_dynamic_is_not_nan(float %x) {
+; CHECK-LABEL: test_splat_dynamic_is_not_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    fadd.s fa5, fa0, fa5
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa5
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %val   = fadd nnan float %x, 1.0
+  %ins   = insertelement <vscale x 4 x float> poison, float %val, i64 0
+  %splat = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %res   = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %splat, i32 1020)
+  ret <vscale x 4 x i1> %res
+}
