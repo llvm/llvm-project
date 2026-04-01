@@ -324,11 +324,20 @@ static bool noAliasBasedOnType(mlir::Value lhs, mlir::Value rhs) {
 /// [Component("a"), Component("y")] share a common prefix "a" and diverge
 /// at the second step.
 ///
-/// If the paths diverge at steps that are not both Component (e.g., one is
-/// a PointerDeref), or if either path continues through a PointerDeref or
-/// AllocDeref after the divergence, we conservatively return false because
-/// the runtime address after a dereference is not guaranteed to stay within
-/// the subobject.
+/// When either path continues through a PointerDeref or AllocDeref after
+/// the divergence point, the runtime address could potentially reach a
+/// sibling subobject only if that sibling is a valid pointer target.
+/// A subobject has TARGET when the root variable has the TARGET attribute
+/// (Fortran 2018 8.5.7), or when we arrived at the current level through
+/// a PointerDeref (the pointer target carries TARGET by definition).
+/// When neither condition holds, the pointer cannot be associated with a
+/// sibling subobject and the addresses are still disjoint.  Note that the
+/// source's POINTER attribute reflects the component traversed during the
+/// walk, not the root variable, so we check only TARGET on the source.
+///
+/// One exception: if BOTH sides end with a PointerDeref, the two pointers
+/// could independently be associated with the same third-party TARGET
+/// variable, so we conservatively return false.
 static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
                                     const fir::AliasAnalysis::Source &rhsSrc) {
   using PathStep = fir::AliasAnalysis::Source::PathStep;
@@ -339,14 +348,23 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
     if (lhsSteps[i].kind == PathStep::Kind::Component &&
         rhsSteps[i].kind == PathStep::Kind::Component &&
         lhsSteps[i].component != rhsSteps[i].component) {
-      auto hasDerefAfter = [](llvm::ArrayRef<PathStep> steps, size_t from) {
+      auto hasPtrDerefAfter = [](llvm::ArrayRef<PathStep> steps, size_t from) {
         for (size_t j = from; j < steps.size(); ++j)
-          if (steps[j].kind != PathStep::Kind::Component)
+          if (steps[j].kind == PathStep::Kind::PointerDeref)
             return true;
         return false;
       };
-      if (hasDerefAfter(lhsSteps, i + 1) || hasDerefAfter(rhsSteps, i + 1))
+      bool lhsHasPtrDeref = hasPtrDerefAfter(lhsSteps, i + 1);
+      bool rhsHasPtrDeref = hasPtrDerefAfter(rhsSteps, i + 1);
+      if (lhsHasPtrDeref && rhsHasPtrDeref)
         return false;
+      if (lhsHasPtrDeref || rhsHasPtrDeref) {
+        for (size_t j = 0; j < i; ++j)
+          if (lhsSteps[j].kind == PathStep::Kind::PointerDeref)
+            return false;
+        if (lhsSrc.isTarget() || rhsSrc.isTarget())
+          return false;
+      }
       return true;
     }
     if (lhsSteps[i] != rhsSteps[i])
