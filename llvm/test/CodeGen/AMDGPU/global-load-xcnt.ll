@@ -133,17 +133,16 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[14:15], 8
 ; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[16:17], 0
 ; GCN-SDAG-REAL16-NEXT:    s_wait_loadcnt 0x0
+; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v6, v6, v10
 ; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v7, v7, v11
-; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x1
-; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v0, v6, v10
 ; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v5, v5, v9
 ; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v4, v4, v8
 ; GCN-SDAG-REAL16-NEXT:    s_clause 0x2
 ; GCN-SDAG-REAL16-NEXT:    global_store_b16 v[12:13], v7, off
-; GCN-SDAG-REAL16-NEXT:    global_store_b32 v[14:15], v0, off
+; GCN-SDAG-REAL16-NEXT:    global_store_b32 v[14:15], v6, off
 ; GCN-SDAG-REAL16-NEXT:    global_store_b64 v[16:17], v[4:5], off
-; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x1
-; GCN-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x4
+; GCN-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.l, v6.h
 ; GCN-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GCN-GISEL-REAL16-LABEL: test_v7i16_load_store:

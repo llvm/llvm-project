@@ -36,7 +36,7 @@ define amdgpu_ps bfloat @fabs_bf16_ss(bfloat inreg %a) {
 ; GFX12-LABEL: fabs_bf16_ss:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fabs_bf16_ss:
@@ -46,7 +46,7 @@ define amdgpu_ps bfloat @fabs_bf16_ss(bfloat inreg %a) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call bfloat @llvm.fabs.bf16(bfloat %a)
   ret bfloat %result
