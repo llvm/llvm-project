@@ -21,8 +21,8 @@ void GlobalData::encode(FileWriter &O) const {
   O.writeU64(FileSize);
 }
 
-llvm::Expected<llvm::ArrayRef<uint8_t>>
-GlobalData::getBytes(DataExtractor &GsymData) const {
+llvm::Expected<StringRef>
+GlobalData::getStringRef(DataExtractor &GsymData) const {
   if (!GsymData.isValidOffsetForDataOfSize(FileOffset, FileSize))
     return createStringError(
         std::errc::invalid_argument,
@@ -30,8 +30,15 @@ GlobalData::getBytes(DataExtractor &GsymData) const {
         "(offset=%" PRIu64 ", size=%" PRIu64 ", bufsize=%" PRIu64 ")",
         static_cast<uint32_t>(Type), FileOffset, FileSize,
         static_cast<uint64_t>(GsymData.getData().size()));
-  return arrayRefFromStringRef(
-      GsymData.getData().substr(FileOffset, FileSize));
+  return GsymData.getData().substr(FileOffset, FileSize);
+}
+
+llvm::Expected<llvm::ArrayRef<uint8_t>>
+GlobalData::getBytes(DataExtractor &GsymData) const {
+  auto Str = getStringRef(GsymData);
+  if (!Str)
+    return Str.takeError();
+  return arrayRefFromStringRef(*Str);
 }
 
 llvm::Expected<GlobalData> GlobalData::decode(DataExtractor &GsymData,

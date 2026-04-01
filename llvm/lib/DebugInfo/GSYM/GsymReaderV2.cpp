@@ -159,17 +159,15 @@ llvm::Error GsymReaderV2::parse() {
   // Set up the data references for various GlobalData sections.
   // Handles both swapped and non-swapped cases.
   if (!Swap) {
-    auto AddrOffsetsOrErr = AddrOffsetsGD.getBytes(DE);
-    if (!AddrOffsetsOrErr)
-      return AddrOffsetsOrErr.takeError();
-    AddrOffsets = *AddrOffsetsOrErr;
+    llvm::Expected<llvm::ArrayRef<uint8_t>> Bytes = AddrOffsetsGD.getBytes(DE);
+    if (!Bytes)
+      return Bytes.takeError();
+    AddrOffsets = *Bytes;
 
-    auto AddrInfoOffsetsOrErr = AddrInfoOffsetsGD.getBytes(DE);
-    if (!AddrInfoOffsetsOrErr)
-      return AddrInfoOffsetsOrErr.takeError();
-    AddrInfoOffsets = *AddrInfoOffsetsOrErr;
-
-    StrTab.Data = Buf.substr(StringTableGD.FileOffset, StringTableGD.FileSize);
+    Bytes = AddrInfoOffsetsGD.getBytes(DE);
+    if (!Bytes)
+      return Bytes.takeError();
+    AddrInfoOffsets = *Bytes;
   } else {
     // Do the byte-swapping for the AddrOffsets section for byte size 1-8.
     {
@@ -199,8 +197,13 @@ llvm::Error GsymReaderV2::parse() {
       AddrInfoOffsets = ArrayRef<uint8_t>(Swap->AddrInfoOffsets);
     }
 
-    StrTab.Data = Buf.substr(StringTableGD.FileOffset, StringTableGD.FileSize);
   }
+
+  // String table bytes are endian-neutral, so no swap needed.
+  auto StrTabData = StringTableGD.getStringRef(DE);
+  if (!StrTabData)
+    return StrTabData.takeError();
+  StrTab.Data = *StrTabData;
 
   // Read file table using getStringOffset() for Dir/Base fields. This handles
   // both swap and non-swap paths since variable StrpSize prevents mmap-casting.

@@ -68,6 +68,14 @@ struct GlobalData {
   LLVM_ABI static llvm::Expected<GlobalData> decode(DataExtractor &GsymData,
                                                     uint64_t &Offset);
 
+  /// Get the data for this GlobalData section as a StringRef.
+  ///
+  /// \param GsymData The binary stream to read from.
+  /// \returns The data for this section or an error if the data is not fully
+  /// available.
+  LLVM_ABI llvm::Expected<StringRef>
+  getStringRef(DataExtractor &GsymData) const;
+
   /// Get the bytes for this GlobalData section from a GSYM data stream.
   ///
   /// \param GsymData The binary stream to read from.
