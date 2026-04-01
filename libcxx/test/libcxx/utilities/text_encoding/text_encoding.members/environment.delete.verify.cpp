@@ -22,7 +22,7 @@
 int main(int, char**) {
   // expected-error@+1 {{attempt to use a deleted function}}
   std::text_encoding::environment();
-  // expected-error@+1 {{attempt to use a deleted function}}
+  // expected-error@+1 {{call to deleted function 'environment_is'}}
   std::text_encoding::environment_is<std::text_encoding::UTF8>();
 
   return 0;

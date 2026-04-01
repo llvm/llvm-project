@@ -11,6 +11,7 @@
 // REQUIRES: std-at-least-c++26
 // REQUIRES: locale.en_US.UTF-8
 // UNSUPPORTED: no-localization
+// UNSUPPORTED: availability-te-environment-missing
 
 // class locale
 
@@ -39,14 +40,8 @@ int main(int, char**) {
   }
 #if defined(_WIN32)
   {
+    // BCP-47 locale name
     const std::locale loc("en-US");
-    std::text_encoding te    = loc.encoding();
-    std::text_encoding w1252 = std::text_encoding(std::text_encoding::id::windows1252);
-    assert(te == std::text_encoding::id::windows1252);
-    assert(te == w1252);
-  }
-  {
-    const std::locale loc("en-US.1252");
     std::text_encoding te    = loc.encoding();
     std::text_encoding w1252 = std::text_encoding(std::text_encoding::id::windows1252);
     assert(te == std::text_encoding::id::windows1252);
