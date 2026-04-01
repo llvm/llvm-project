@@ -47,9 +47,7 @@ import common  # noqa: E402  (after sys.path manipulation)
 # ---------------------------------------------------------------------------
 
 # Match check-prefix / check-prefixes flags in RUN lines.
-_CHECK_PREFIX_FLAG_RE = re.compile(
-    r"\s+(--?check-prefix(?:es)?[= ])(\S+)"
-)
+_CHECK_PREFIX_FLAG_RE = re.compile(r"\s+(--?check-prefix(?:es)?[= ])(\S+)")
 
 # Matches plain comment lines that act as separators (e.g. "//" or "//.").
 # suffix=None is used as a sentinel for these in check-line tuples.
@@ -65,6 +63,7 @@ _COVERAGE_COMMENT_RE = re.compile(
 # Parsing
 # ---------------------------------------------------------------------------
 
+
 def parse_coverage_comments(lines):
     """Re-compute prefix_name_map from coverage comment lines embedded in a file.
 
@@ -78,7 +77,7 @@ def parse_coverage_comments(lines):
         m = _COVERAGE_COMMENT_RE.match(line)
         if m:
             name = m.group(1)
-            indices = frozenset(int(s) for s in m.group(2).split(',') if s.strip())
+            indices = frozenset(int(s) for s in m.group(2).split(",") if s.strip())
             prefix_name_map[indices] = name
     return prefix_name_map or None
 
@@ -106,7 +105,7 @@ def collect_check_lines_for_run(lines, prefixes):
         m = common.CHECK_RE.match(line)
         matched = m is not None and m.group(1) in prefix_set
         if matched:
-            content = line[m.end(1):]
+            content = line[m.end(1) :]
             check_lines.append((content, False, i))
             line_numbers.add(i)
             after_check = True
@@ -128,10 +127,12 @@ def find_run_lines(test, lines):
     (accounting for backslash continuations).
     """
     common.debug("Scanning for RUN lines in test file:", test)
-    raw = [(i, m.group(1))
-           for i, l in enumerate(lines)
-           for m in (common.RUN_LINE_RE.match(l),)
-           if m]
+    raw = [
+        (i, m.group(1))
+        for i, l in enumerate(lines)
+        for m in (common.RUN_LINE_RE.match(l),)
+        if m
+    ]
     if not raw:
         return [], []
 
@@ -176,9 +177,11 @@ def auto_base_prefix(prefixes):
     base = base.rstrip("0123456789-")
     return base or "CHECK"
 
+
 # ---------------------------------------------------------------------------
 # Score / distance
 # ---------------------------------------------------------------------------
+
 
 def _seq_to_strs(seq):
     return [(";" if c else "*") + content for content, c, _ in seq]
@@ -190,9 +193,11 @@ def score(seq_a, seq_b):
     b = _seq_to_strs(seq_b)
     return sum(1 for _ in difflib.unified_diff(a, b))
 
+
 # ---------------------------------------------------------------------------
 # Zipper merge
 # ---------------------------------------------------------------------------
+
 
 def zipper_merge(seq_a, seq_b):
     """Merge two check-line sequences using SequenceMatcher.
@@ -214,8 +219,8 @@ def zipper_merge(seq_a, seq_b):
                 ca, ia, pa = seq_a[ai]
                 cb, ib, pb = seq_b[bi]
                 result.append((ca, ia, pa | pb))
-                assert(ca == cb)
-                assert(ia == ib)
+                assert ca == cb
+                assert ia == ib
         elif tag == "replace":
             for k in range(i1, i2):
                 result.append(seq_a[k])
@@ -229,9 +234,11 @@ def zipper_merge(seq_a, seq_b):
                 result.append(seq_b[k])
     return result
 
+
 # ---------------------------------------------------------------------------
 # Merge strategies
 # ---------------------------------------------------------------------------
+
 
 def concat(items):
     """Concatenate all sequences in order without merging."""
@@ -240,9 +247,11 @@ def concat(items):
         result.extend(seq)
     return result
 
+
 # ---------------------------------------------------------------------------
 # Hierarchical (single-linkage) merge
 # ---------------------------------------------------------------------------
+
 
 def hierarchical_merge(items, label):
     """Single-linkage agglomerative merge of all sequences.
@@ -269,23 +278,36 @@ def hierarchical_merge(items, label):
         items.pop(best_i)
         items.append(merged_seq)
         step += 1
-        common.debug(f"  {prefix}merge {step}/{total} (score {best_score})", end="\r", flush=True)
+        common.debug(
+            f"  {prefix}merge {step}/{total} (score {best_score})", end="\r", flush=True
+        )
     common.debug()
 
     return items[0]
 
+
 # ---------------------------------------------------------------------------
 # Prefix name assignment
 # ---------------------------------------------------------------------------
+
 
 def human_sort_key(s):
     """Sort key for alphanumeric strings, sorting digit runs by numeric value.
 
     E.g. "foo10" sorts after "foo9" rather than before it.
     """
-    return [(0, int(p)) if p.isdigit() else (1, p) for p in re.split(r'(\d+)', s) if p]
+    return [(0, int(p)) if p.isdigit() else (1, p) for p in re.split(r"(\d+)", s) if p]
 
-def assign_prefix_names(block_merges, all_rls_frozenset, base, rl_coverage, run_prefix_map, all_prefixes, split):
+
+def assign_prefix_names(
+    block_merges,
+    all_rls_frozenset,
+    base,
+    rl_coverage,
+    run_prefix_map,
+    all_prefixes,
+    split,
+):
     """Map each unique present_in set found in *block_merges* to a new prefix name.
 
     Each presence set is a frozenset of run-line strings.  *rl_coverage* maps
@@ -318,6 +340,7 @@ def assign_prefix_names(block_merges, all_rls_frozenset, base, rl_coverage, run_
                     # if the only key is CHECK, convert to CHECK-1
                     result = dict.fromkeys([base, str(rl + 1)])
                 return result
+
             suffix_sets = [_rl_suffixes_split(rl) for rl in sorted(pset)]
             # collect all unique suffixes in an ordered set
             all_unique = {}
@@ -348,6 +371,7 @@ def assign_prefix_names(block_merges, all_rls_frozenset, base, rl_coverage, run_
                     # if the only key is CHECK, convert to CHECK-1
                     result = dict.fromkeys([base, str(rl + 1)])
                 return result
+
             keys = {}
             for s in (_rl_suffixes_merge(rl) for rl in sorted(pset)):
                 keys.update(s)
@@ -367,9 +391,11 @@ def assign_prefix_names(block_merges, all_rls_frozenset, base, rl_coverage, run_
 
     return {pset: _pset_name(pset) for pset in presence_sets}
 
+
 # ---------------------------------------------------------------------------
 # RUN line rewriting
 # ---------------------------------------------------------------------------
+
 
 def new_prefixes_for_run(rl, prefix_name_map):
     """Return the sorted list of new prefix names that run line *rl* needs.
@@ -401,9 +427,11 @@ def rewrite_run_line(run_line, new_names, any_replaced=False):
     new_line = _CHECK_PREFIX_FLAG_RE.sub(_replace, run_line)
     return new_line, replaced
 
+
 # ---------------------------------------------------------------------------
 # File rewrite
 # ---------------------------------------------------------------------------
+
 
 def comment_char(lines):
     """Detect the comment character used in check lines."""
@@ -426,13 +454,18 @@ def emit_check_block(merged_seq, prefix_name_map, comment):
             out.append(content)
         else:
             name = prefix_name_map[pset]
-            out.append("{comment} {name}{content}".format(
-                comment=comment, name=name, content=content))
+            out.append(
+                "{comment} {name}{content}".format(
+                    comment=comment, name=name, content=content
+                )
+            )
     return out
+
 
 # ---------------------------------------------------------------------------
 # Main processing of a single file
 # ---------------------------------------------------------------------------
+
 
 def process_file(path, base_prefix_override=None, dry_run=False, split=False):
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
@@ -455,9 +488,9 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
         return
 
     # Map each run line to its FileCheck prefix(es)
-    run_prefix_list = []   # ordered unique run-line strings
-    _rl_to_idx = {}        # run_line_str -> int index into run_prefix_list
-    run_prefix_map = []    # list of prefix lists, indexed by rl_idx
+    run_prefix_list = []  # ordered unique run-line strings
+    _rl_to_idx = {}  # run_line_str -> int index into run_prefix_list
+    run_prefix_map = []  # list of prefix lists, indexed by rl_idx
     all_prefixes = set()
     for rl in run_lines_raw:
         _rl_to_idx[rl] = len(run_prefix_list)
@@ -491,13 +524,15 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
     block_merges = []
     for blk_idx, blk in enumerate(check_line_blocks):
         seqs_to_merge = [
-            [(content, is_plain, frozenset({rl_idx}))
-             for content, is_plain, lnum in seq
-             if lnum in blk]
+            [
+                (content, is_plain, frozenset({rl_idx}))
+                for content, is_plain, lnum in seq
+                if lnum in blk
+            ]
             for rl_idx, seq in enumerate(run_seqs)
         ]
         seqs_to_merge = [s for s in seqs_to_merge if s]
-        assert(seqs_to_merge)
+        assert seqs_to_merge
         label = f"block {blk_idx + 1}/{len(check_line_blocks)}"
         block_merges.append(
             concat(seqs_to_merge) if split else hierarchical_merge(seqs_to_merge, label)
@@ -517,7 +552,9 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
     if coverage:
         rl_coverage.update(coverage)
         all_prefixes.update(coverage.values())
-    prefix_name_map = assign_prefix_names(block_merges, all_rls_fs, base, rl_coverage, run_prefix_map, all_prefixes, split)
+    prefix_name_map = assign_prefix_names(
+        block_merges, all_rls_fs, base, rl_coverage, run_prefix_map, all_prefixes, split
+    )
 
     # Print summary
     common.debug(f"  Base prefix: {base!r}")
@@ -527,8 +564,10 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
         common.debug(f"    {name!r}  ← {{{members}}}")
     merged_lines = sum(len(blk) for blk in block_merges)
     original_lines = sum(len(seq) for seq in run_seqs)
-    common.debug(f"  Check lines: {original_lines} → {merged_lines} "
-          f"({100*merged_lines//original_lines if original_lines else 0}%)")
+    common.debug(
+        f"  Check lines: {original_lines} → {merged_lines} "
+        f"({100*merged_lines//original_lines if original_lines else 0}%)"
+    )
 
     # 6. Rewrite RUN lines
     # Build a map: original_line_index -> new line text
@@ -543,21 +582,32 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
             run_line_replacements[i] = new_line
         if not any_replaced:
             # No existing --check-prefix flag found; insert one after 'FileCheck'
-            flag = ("--check-prefix=" + new_names[0] if len(new_names) == 1
-                    else "--check-prefixes=" + ",".join(new_names))
+            flag = (
+                "--check-prefix=" + new_names[0]
+                if len(new_names) == 1
+                else "--check-prefixes=" + ",".join(new_names)
+            )
             if flag != "--check-prefix=CHECK":
                 for i in rl_range:
-                    new_line = re.sub(r'\bFileCheck\b', 'FileCheck ' + flag, lines[i], count=1)
+                    new_line = re.sub(
+                        r"\bFileCheck\b", "FileCheck " + flag, lines[i], count=1
+                    )
                     if new_line != lines[i]:
                         run_line_replacements[i] = new_line
                         break
                 else:
-                    common.warn(f"couldn't insert {flag!r} into RUN line", test_file=path)
+                    common.warn(
+                        f"couldn't insert {flag!r} into RUN line", test_file=path
+                    )
 
     # 7. Build new file content
     comment = comment_char(lines)
-    new_check_blocks = [emit_check_block(blk, prefix_name_map, comment) for blk in block_merges]
-    blk_start_map = {blk.start: new_check_blocks[i] for i, blk in enumerate(check_line_blocks)}
+    new_check_blocks = [
+        emit_check_block(blk, prefix_name_map, comment) for blk in block_merges
+    ]
+    blk_start_map = {
+        blk.start: new_check_blocks[i] for i, blk in enumerate(check_line_blocks)
+    }
 
     new_lines = []
     for i, line in enumerate(lines):
@@ -575,12 +625,13 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
     # the mapping of each new prefix name to the run-line indices that use it.
     if split:
         first_run = next(
-            (j for j, ln in enumerate(new_lines) if common.RUN_LINE_RE.match(ln)),
-            0
+            (j for j, ln in enumerate(new_lines) if common.RUN_LINE_RE.match(ln)), 0
         )
         coverage_comments = [
             f"{comment} --check-prefix={name}={', '.join(str(i) for i in sorted(pset))}\n"
-            for pset, name in sorted(rl_coverage.items(), key=lambda kv: human_sort_key(kv[1]))
+            for pset, name in sorted(
+                rl_coverage.items(), key=lambda kv: human_sort_key(kv[1])
+            )
         ]
         new_lines[first_run:first_run] = coverage_comments
 
@@ -593,9 +644,11 @@ def process_file(path, base_prefix_override=None, dry_run=False, split=False):
 
     common.debug(f"  Written: {path}")
 
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -630,8 +683,12 @@ def main():
             common.warn(f"{path!r} is not a file.")
             continue
         try:
-            process_file(path, base_prefix_override=args.base_prefix,
-                         dry_run=args.dry_run, split=args.split)
+            process_file(
+                path,
+                base_prefix_override=args.base_prefix,
+                dry_run=args.dry_run,
+                split=args.split,
+            )
         except Exception as exc:
             common.warn(f"Error processing {path!r}: {exc}")
             raise
