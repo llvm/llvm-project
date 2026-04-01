@@ -12,11 +12,13 @@
 #include <stdio.h>
 
 namespace LIBC_NAMESPACE_DECL {
+namespace testing {
 
 void write_to_stderr(cpp::string_view str) {
   fprintf(stderr, "%.*s", static_cast<int>(str.size()), str.data());
 }
 
+} // namespace testing
 } // namespace LIBC_NAMESPACE_DECL
 
 #else // !LIBC_TEST_USE_SYSTEM_PRINTF
@@ -31,7 +33,7 @@ namespace testing {
 // cpp::string_view specialization
 template <>
 TestLogger &TestLogger::operator<< <cpp::string_view>(cpp::string_view str) {
-  LIBC_NAMESPACE::write_to_stderr(str);
+  write_to_stderr(str);
   return *this;
 }
 
