@@ -952,11 +952,9 @@ bool llvm::canSinkOrHoistInst(Instruction &I,
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     return canHoistLoad(*LI, Deps, CurLoop, TargetExecutesOncePerLoop, Flags);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-    // Don't sink calls which can throw. When hoisting, may-throw calls are
-    // allowed because the caller verifies the instruction is guaranteed to
-    // execute via isSafeToExecuteUnconditionally. If it would throw, it would
-    // have thrown on the first loop iteration, so hoisting to the preheader is
-    // safe.
+    // Don't sink calls which can throw.
+    // Hoisting is fine if there aren't side effect between the throwing function and the preheader
+    // This is checked by the caller
     if (Flags.getIsSink() && CI->mayThrow())
       return false;
 

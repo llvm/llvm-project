@@ -467,9 +467,6 @@ LLVM_ABI void getLoopAnalysisUsage(AnalysisUsage &AU);
 /// true when moving out of loop and not true when moving into loops.
 /// If SinkAndHoistDependencies::ORE is set use it to emit optimization
 /// remarks.
-/// When hoisting (as indicated by LICMFlags), calls that may throw are allowed
-/// since the caller checks that the instruction is guaranteed to execute and
-/// that there are no memory writes before it.
 LLVM_ABI bool canSinkOrHoistInst(Instruction &I,
                                  const SinkAndHoistDependencies &Deps,
                                  Loop *CurLoop, bool TargetExecutesOncePerLoop,
