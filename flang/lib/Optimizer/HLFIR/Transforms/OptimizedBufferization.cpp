@@ -122,6 +122,60 @@ getEffectsBetween(mlir::Operation *start, mlir::Operation *end) {
   return ret;
 }
 
+/// return true if the assign operator and an effect users both user-annotated
+/// parallel with a matching access group.
+static bool
+isAnnotatedParallel(const mlir::MemoryEffects::EffectInstance &effect,
+                    hlfir::AssignOp assign) {
+  if (!mlir::isa<mlir::MemoryEffects::Read, mlir::MemoryEffects::Write>(
+          effect.getEffect()))
+    return false;
+  mlir::Value accessedVal = effect.getValue();
+  if (!accessedVal)
+    return false;
+
+  auto designateOp = accessedVal.getDefiningOp<hlfir::DesignateOp>();
+  if (!designateOp)
+    return false;
+
+  mlir::ArrayAttr accessGroups =
+      assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+          fir::getAccessGroupsAttrName());
+
+  if (!accessGroups)
+    return false;
+
+  auto hasMatchingAccessGroup = [](mlir::ArrayAttr &accessGroups,
+                                   mlir::ArrayAttr &useAccessGroup) {
+    for (mlir::Attribute attr : useAccessGroup.getValue()) {
+      if (any_of(accessGroups.getValue(),
+                 [&attr](const mlir::Attribute assignAttr) {
+                   return attr == assignAttr;
+                 }))
+        return true;
+    }
+    return false;
+  };
+
+  for (mlir::Operation *user : designateOp->getUsers()) {
+    std::optional<mlir::ArrayAttr> AG;
+    if (auto store = mlir::dyn_cast<fir::StoreOp>(user)) {
+      AG = store.getAccessGroups();
+    } else if (auto load = mlir::dyn_cast<fir::LoadOp>(user)) {
+      AG = load.getAccessGroups();
+    } else {
+      // TODO: explore other options that can use an address (calls?).
+      return false;
+    }
+    if (!AG)
+      return false;
+    if (hasMatchingAccessGroup(accessGroups, *AG))
+      continue;
+    return false;
+  }
+  return true;
+}
+
 /// If effect is a read or write on val, return whether it aliases.
 /// Otherwise return mlir::AliasResult::NoAlias
 static mlir::AliasResult
@@ -257,6 +311,16 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
 
       // this is safe in the elemental
       continue;
+    }
+
+    if (isAnnotatedParallel(effect, match.assign)) {
+      if (res.isMay()) {
+        LLVM_DEBUG(llvm::dbgs() << "assuming no read or write conflict due to "
+                                   "user parallel annotation\n");
+        continue;
+      }
+      LLVM_DEBUG(llvm::dbgs() << "ignoring parallel annotation for safety as "
+                                 "must/partial alias was detected.\n");
     }
 
     // don't allow any aliasing writes in the elemental

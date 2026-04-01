@@ -98,17 +98,15 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<
 // CHECK:             %[[CONVERT_4:.*]] = fir.convert %[[LOAD_4]] : (i32) -> i64
 // CHECK:             %[[SHAPE_0:.*]] = fir.shape %[[SELECT_0]] : (index) -> !fir.shape<1>
 // CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[LOAD_1]] (%[[CONVERT_2]]:%[[CONVERT_3]]:%[[CONSTANT_2]], %[[CONVERT_4]])  shape %[[SHAPE_0]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index, index, index, i64, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-// CHECK:             %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
-// CHECK:             ^bb0(%[[VAL_2:.*]]: index):
-// CHECK:               %[[DESIGNATE_1:.*]] = hlfir.designate %[[DESIGNATE_0]] (%[[VAL_2]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-// CHECK:               %[[LOAD_5:.*]] = fir.load %[[DESIGNATE_1]] {accessGroups = [#[[$ATTR_0]]]} : !fir.ref<f32>
-// CHECK:               %[[MULF_0:.*]] = arith.mulf %[[LOAD_5]], %[[CONSTANT_1]] fastmath<contract> : f32
-// CHECK:               hlfir.yield_element %[[MULF_0]] : f32
+// CHECK:             %[[LOAD_5:.*]] = fir.load %[[DECLARE_5]]#0 {accessGroups = [#[[$ATTR_0]]]} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+// CHECK:             %[[DESIGNATE_1:.*]] = hlfir.designate %[[LOAD_5]] (%[[CONVERT_2]]:%[[CONVERT_3]]:%[[CONSTANT_2]], %[[CONVERT_4]])  shape %[[SHAPE_0]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index, index, index, i64, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:             fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_2]] to %[[SELECT_0]] step %[[CONSTANT_2]] unordered {
+// CHECK:               %[[DESIGNATE_2:.*]] = hlfir.designate %[[DESIGNATE_0]] (%[[VAL_2]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// CHECK:               %[[LOAD_6:.*]] = fir.load %[[DESIGNATE_2]] {accessGroups = [#[[$ATTR_0]]]} : !fir.ref<f32>
+// CHECK:               %[[MULF_0:.*]] = arith.mulf %[[LOAD_6]], %[[CONSTANT_1]] fastmath<contract> : f32
+// CHECK:               %[[DESIGNATE_3:.*]] = hlfir.designate %[[DESIGNATE_1]] (%[[VAL_2]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// CHECK:               hlfir.assign %[[MULF_0]] to %[[DESIGNATE_3]] {access_groups = [#[[$ATTR_0]]]} : f32, !fir.ref<f32>
 // CHECK:             }
-// CHECK:             %[[LOAD_6:.*]] = fir.load %[[DECLARE_5]]#0 {accessGroups = [#[[$ATTR_0]]]} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
-// CHECK:             %[[DESIGNATE_2:.*]] = hlfir.designate %[[LOAD_6]] (%[[CONVERT_2]]:%[[CONVERT_3]]:%[[CONSTANT_2]], %[[CONVERT_4]])  shape %[[SHAPE_0]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index, index, index, i64, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-// CHECK:             hlfir.assign %[[ELEMENTAL_0]] to %[[DESIGNATE_2]] {access_groups = [#[[$ATTR_0]]]} : !hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
-// CHECK:             hlfir.destroy %[[ELEMENTAL_0]] : !hlfir.expr<?xf32>
 // CHECK:             %[[LOAD_7:.*]] = fir.load %[[DECLARE_0]]#0 {accessGroups = [#[[$ATTR_0]]]} : !fir.ref<i32>
 // CHECK:             %[[ADDI_1:.*]] = arith.addi %[[LOAD_7]], %[[CONVERT_1]] overflow<nsw> : i32
 // CHECK:             fir.result %[[ADDI_1]] : i32
