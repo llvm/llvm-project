@@ -20,8 +20,7 @@ define i32 @test_float16_eq(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB0_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB0_4;
-; CHECK-NEXT:    bra.uni $L__BB0_3;
-; CHECK-NEXT:  $L__BB0_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -64,8 +63,7 @@ define i32 @test_float16_ne(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB1_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB1_4;
-; CHECK-NEXT:    bra.uni $L__BB1_3;
-; CHECK-NEXT:  $L__BB1_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB1_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -108,8 +106,7 @@ define i32 @test_float16_oeq(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB2_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB2_4;
-; CHECK-NEXT:    bra.uni $L__BB2_3;
-; CHECK-NEXT:  $L__BB2_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB2_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -152,8 +149,7 @@ define i32 @test_float16_one(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB3_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB3_4;
-; CHECK-NEXT:    bra.uni $L__BB3_3;
-; CHECK-NEXT:  $L__BB3_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB3_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -196,8 +192,7 @@ define i32 @test_float16_ueq(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB4_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB4_4;
-; CHECK-NEXT:    bra.uni $L__BB4_3;
-; CHECK-NEXT:  $L__BB4_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB4_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -240,8 +235,7 @@ define i32 @test_float16_une(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB5_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB5_4;
-; CHECK-NEXT:    bra.uni $L__BB5_3;
-; CHECK-NEXT:  $L__BB5_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB5_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -284,8 +278,7 @@ define i32 @test_float16_olt(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB6_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB6_4;
-; CHECK-NEXT:    bra.uni $L__BB6_3;
-; CHECK-NEXT:  $L__BB6_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB6_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -328,8 +321,7 @@ define i32 @test_float16_ole(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB7_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB7_4;
-; CHECK-NEXT:    bra.uni $L__BB7_3;
-; CHECK-NEXT:  $L__BB7_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB7_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -372,8 +364,7 @@ define i32 @test_float16_ogt(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB8_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB8_4;
-; CHECK-NEXT:    bra.uni $L__BB8_3;
-; CHECK-NEXT:  $L__BB8_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB8_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -416,8 +407,7 @@ define i32 @test_float16_oge(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB9_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB9_4;
-; CHECK-NEXT:    bra.uni $L__BB9_3;
-; CHECK-NEXT:  $L__BB9_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB9_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -460,8 +450,7 @@ define i32 @test_float16_ult(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB10_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB10_4;
-; CHECK-NEXT:    bra.uni $L__BB10_3;
-; CHECK-NEXT:  $L__BB10_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB10_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -504,8 +493,7 @@ define i32 @test_float16_ule(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB11_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB11_4;
-; CHECK-NEXT:    bra.uni $L__BB11_3;
-; CHECK-NEXT:  $L__BB11_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB11_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -548,8 +536,7 @@ define i32 @test_float16_ugt(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB12_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB12_4;
-; CHECK-NEXT:    bra.uni $L__BB12_3;
-; CHECK-NEXT:  $L__BB12_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB12_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -592,8 +579,7 @@ define i32 @test_float16_uge(half %a, half %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB13_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB13_4;
-; CHECK-NEXT:    bra.uni $L__BB13_3;
-; CHECK-NEXT:  $L__BB13_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB13_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -631,12 +617,10 @@ define i32 @test_float16_ord(half %a, half %b) {
 ; CHECK-NEXT:    ld.param.b16 %rs1, [test_float16_ord_param_0];
 ; CHECK-NEXT:    setp.num.f16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    @%p1 bra $L__BB14_2;
-; CHECK-NEXT:    bra.uni $L__BB14_1;
+; CHECK-NEXT:    @!%p1 bra $L__BB14_1;
 ; CHECK-NEXT:  $L__BB14_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB14_4;
-; CHECK-NEXT:    bra.uni $L__BB14_3;
-; CHECK-NEXT:  $L__BB14_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB14_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -681,8 +665,7 @@ define i32 @test_float16_uno(half %a, half %b) {
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB15_2: // %merge1
-; CHECK-NEXT:    @!%p1 bra $L__BB15_4;
-; CHECK-NEXT:    bra.uni $L__BB15_3;
+; CHECK-NEXT:    @%p1 bra $L__BB15_3;
 ; CHECK-NEXT:  $L__BB15_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;

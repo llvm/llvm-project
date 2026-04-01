@@ -67,11 +67,13 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+  bool reverseBranchCondition(
+      SmallVectorImpl<MachineOperand> &Cond) const override;
   bool invertPredicateWithUsers(MachineInstr &MI,
                                 MachineRegisterInfo &MRI) const override;
 
 private:
-  bool invertPredicateBranchInstr(MachineInstr &MI) const;
+  bool invertPredicateBranchInstr(MachineBasicBlock &MBB) const;
   bool invertCompareInstr(MachineInstr &MI) const;
   bool isIntegerSetp(const MachineInstr &MI) const;
   bool isFloatSetp(const MachineInstr &MI) const;

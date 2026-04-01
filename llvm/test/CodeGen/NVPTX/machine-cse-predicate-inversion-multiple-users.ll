@@ -20,8 +20,7 @@ define i32 @test_multiple_users(i32 %a, i32 %b) {
 ; CHECK-NEXT:  $L__BB0_2: // %merge1
 ; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; CHECK-NEXT:    @!%p1 bra $L__BB0_4;
-; CHECK-NEXT:    bra.uni $L__BB0_3;
-; CHECK-NEXT:  $L__BB0_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r5, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
 ; CHECK-NEXT:    add.s32 %r4, %r5, %r1;

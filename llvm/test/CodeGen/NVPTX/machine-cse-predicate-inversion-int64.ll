@@ -22,8 +22,7 @@ define i32 @test_int64_eq(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB0_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB0_4;
-; CHECK-NEXT:    bra.uni $L__BB0_3;
-; CHECK-NEXT:  $L__BB0_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -66,8 +65,7 @@ define i32 @test_int64_ne(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB1_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB1_4;
-; CHECK-NEXT:    bra.uni $L__BB1_3;
-; CHECK-NEXT:  $L__BB1_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB1_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -110,8 +108,7 @@ define i32 @test_int64_slt(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB2_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB2_4;
-; CHECK-NEXT:    bra.uni $L__BB2_3;
-; CHECK-NEXT:  $L__BB2_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB2_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -154,8 +151,7 @@ define i32 @test_int64_sle(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB3_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB3_4;
-; CHECK-NEXT:    bra.uni $L__BB3_3;
-; CHECK-NEXT:  $L__BB3_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB3_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -198,8 +194,7 @@ define i32 @test_int64_sgt(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB4_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB4_4;
-; CHECK-NEXT:    bra.uni $L__BB4_3;
-; CHECK-NEXT:  $L__BB4_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB4_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -242,8 +237,7 @@ define i32 @test_int64_sge(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB5_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB5_4;
-; CHECK-NEXT:    bra.uni $L__BB5_3;
-; CHECK-NEXT:  $L__BB5_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB5_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -286,8 +280,7 @@ define i32 @test_int64_ult(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB6_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB6_4;
-; CHECK-NEXT:    bra.uni $L__BB6_3;
-; CHECK-NEXT:  $L__BB6_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB6_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -330,8 +323,7 @@ define i32 @test_int64_ule(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB7_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB7_4;
-; CHECK-NEXT:    bra.uni $L__BB7_3;
-; CHECK-NEXT:  $L__BB7_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB7_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -374,8 +366,7 @@ define i32 @test_int64_ugt(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB8_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB8_4;
-; CHECK-NEXT:    bra.uni $L__BB8_3;
-; CHECK-NEXT:  $L__BB8_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB8_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -418,8 +409,7 @@ define i32 @test_int64_uge(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB9_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB9_4;
-; CHECK-NEXT:    bra.uni $L__BB9_3;
-; CHECK-NEXT:  $L__BB9_3: // %else
+; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB9_4: // %merge2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
