@@ -189,9 +189,12 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
     return OutOfDate;
   } else {
     auto Buf = [&]() -> Expected<std::unique_ptr<llvm::MemoryBuffer>> {
+      // Implicit modules live in the module cache.
       if (FileName.getImplicitModuleSuffixLength())
         return ModCache.read(FileName, Size, ModTime);
 
+      // Explicit modules are treated as any other compiler input file, load
+      // them via FileManager.
       Expected<FileEntryRef> Entry =
           FileName == StringRef("-")
               ? FileMgr.getSTDIN()
