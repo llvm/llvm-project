@@ -893,8 +893,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
         ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO,
         ISD::VP_FRINT,       ISD::VP_FNEARBYINT,  ISD::VP_IS_FPCLASS,
-        ISD::VP_LRINT,       ISD::VP_LLRINT,      ISD::VP_REDUCE_FMINIMUM,
-        ISD::VP_REDUCE_FMAXIMUM};
+        ISD::VP_REDUCE_FMINIMUM, ISD::VP_REDUCE_FMAXIMUM};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -3626,8 +3625,6 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::STRICT_LRINT:
   case ISD::STRICT_LLRINT:
   case ISD::VP_FRINT:
-  case ISD::VP_LRINT:
-  case ISD::VP_LLRINT:
     return RISCVFPRndMode::DYN;
   }
 
@@ -7715,9 +7712,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   case ISD::VP_FMAXNUM:
     return RISCVISD::VFMAX_VL;
   case ISD::LRINT:
-  case ISD::VP_LRINT:
   case ISD::LLRINT:
-  case ISD::VP_LLRINT:
     return RISCVISD::VFCVT_RM_X_F_VL;
   }
   // clang-format on
@@ -9054,8 +9049,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_USUBSAT:
   case ISD::VP_SADDSAT:
   case ISD::VP_SSUBSAT:
-  case ISD::VP_LRINT:
-  case ISD::VP_LLRINT:
     return lowerVPOp(Op, DAG);
   case ISD::VP_AND:
   case ISD::VP_OR:
