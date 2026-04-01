@@ -108,9 +108,8 @@ clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
       llvm::sys::fs::openNativeFileForRead(FileName);
   if (!FD)
     return FD.takeError();
-  std::error_code EC;
   llvm::sys::fs::file_status Status;
-  if ((EC = llvm::sys::fs::status(*FD, Status)))
+  if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
     return llvm::errorCodeToError(EC);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
       llvm::MemoryBuffer::getOpenFile(*FD, FileName, Status.getSize(),
