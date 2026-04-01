@@ -20,14 +20,14 @@
 ;  A[-6*i + INT64_MAX]     |       | A[3*max_i - 2]         | A[1]
 ;  A[3*i - 2]              | A[1]  |                        | A[3*max_i - 2]
 ;
-; FIXME: There is a dependency between the two stores.
+; There is a dependency between the two stores.
 ;
 define void @exact_rdiv_delta_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'exact_rdiv_delta_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
@@ -35,7 +35,7 @@ define void @exact_rdiv_delta_ovfl(ptr %A) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-EXACT-RDIV-NEXT:    da analyze - none!
+; CHECK-EXACT-RDIV-NEXT:    da analyze - output [|<]!
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ;

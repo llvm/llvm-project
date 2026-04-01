@@ -90,9 +90,7 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0, 1), MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eYes,
-                                 ConstString("[abc]"),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 ConstString("[abc]")),
             },
             "unexpected /proc/{pid}/maps exec permission char"),
         // Single entry
@@ -102,9 +100,7 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x55a4512f7000, 0x55a451b68000),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString("[heap]"),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString("[heap]")),
             },
             ""),
         // Multiple entries
@@ -117,22 +113,16 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x7fc090021000, 0x7fc094000000),
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString(nullptr),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString(nullptr)),
                 MemoryRegionInfo(make_range(0x7fc094000000, 0x7fc094a00000),
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eYes,
-                                 MemoryRegionInfo::eYes, ConstString(nullptr),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString(nullptr)),
                 MemoryRegionInfo(
                     make_range(0xffffffffff600000, 0xffffffffff601000),
                     MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
                     MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
-                    MemoryRegionInfo::eYes, ConstString("[vsyscall]"),
-                    MemoryRegionInfo::eDontKnow, 0,
-                    MemoryRegionInfo::eDontKnow),
+                    MemoryRegionInfo::eYes, ConstString("[vsyscall]")),
             },
             "")));
 
@@ -156,9 +146,7 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x1111, 0x2222),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString("[foo]"),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString("[foo]")),
             },
             "malformed /proc/{pid}/smaps entry, missing dash between address "
             "range"),
@@ -176,9 +164,7 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x1111, 0x2222),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString("[foo]"),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString("[foo]")),
             },
             ""),
         // Single shared region parses, has no flags
@@ -188,9 +174,7 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x1111, 0x2222),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eYes,
-                                 MemoryRegionInfo::eYes, ConstString("[foo]"),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString("[foo]")),
             },
             ""),
         // Single region with flags, other lines ignored
@@ -203,10 +187,9 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x1111, 0x2222),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString("[foo]"),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eYes)
-                    .SetIsShadowStack(MemoryRegionInfo::eNo),
+                                 MemoryRegionInfo::eYes, ConstString("[foo]"))
+                    .SetIsShadowStack(MemoryRegionInfo::eNo)
+                    .SetMemoryTagged(MemoryRegionInfo::eYes),
             },
             ""),
         // Whitespace ignored
@@ -217,10 +200,9 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0, 0), MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eYes,
-                                 ConstString(nullptr),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eYes)
-                    .SetIsShadowStack(MemoryRegionInfo::eNo),
+                                 ConstString(nullptr))
+                    .SetIsShadowStack(MemoryRegionInfo::eNo)
+                    .SetMemoryTagged(MemoryRegionInfo::eYes),
             },
             ""),
         // VmFlags line means it has flag info, but nothing is set
@@ -231,10 +213,9 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0, 0), MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eYes,
-                                 ConstString(nullptr),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eNo)
-                    .SetIsShadowStack(MemoryRegionInfo::eNo),
+                                 ConstString(nullptr))
+                    .SetIsShadowStack(MemoryRegionInfo::eNo)
+                    .SetMemoryTagged(MemoryRegionInfo::eNo),
             },
             ""),
         // Handle some pages not having a flags line
@@ -248,16 +229,13 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x1111, 0x2222),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString("[foo]"),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString("[foo]")),
                 MemoryRegionInfo(make_range(0x3333, 0x4444),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString("[bar]"),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eYes)
-                    .SetIsShadowStack(MemoryRegionInfo::eNo),
+                                 MemoryRegionInfo::eYes, ConstString("[bar]"))
+                    .SetIsShadowStack(MemoryRegionInfo::eNo)
+                    .SetMemoryTagged(MemoryRegionInfo::eYes),
             },
             ""),
         // Handle no pages having a flags line (older kernels)
@@ -272,15 +250,11 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x1111, 0x2222),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString(nullptr),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString(nullptr)),
                 MemoryRegionInfo(make_range(0x3333, 0x4444),
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
-                                 MemoryRegionInfo::eYes, ConstString(nullptr),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eDontKnow),
+                                 MemoryRegionInfo::eYes, ConstString(nullptr)),
             },
             ""),
         // We must look for exact flag strings, ignoring substrings of longer
@@ -292,10 +266,9 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0, 0), MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eYes,
-                                 ConstString(nullptr),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eNo)
-                    .SetIsShadowStack(MemoryRegionInfo::eNo),
+                                 ConstString(nullptr))
+                    .SetIsShadowStack(MemoryRegionInfo::eNo)
+                    .SetMemoryTagged(MemoryRegionInfo::eNo),
             },
             ""),
         // "ss" means shadow stack.
@@ -306,10 +279,9 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0, 0), MemoryRegionInfo::eYes,
                                  MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
                                  MemoryRegionInfo::eNo, MemoryRegionInfo::eYes,
-                                 ConstString(nullptr),
-                                 MemoryRegionInfo::eDontKnow, 0,
-                                 MemoryRegionInfo::eNo)
-                    .SetIsShadowStack(MemoryRegionInfo::eYes),
+                                 ConstString(nullptr))
+                    .SetIsShadowStack(MemoryRegionInfo::eYes)
+                    .SetMemoryTagged(MemoryRegionInfo::eNo),
             },
             "")));
 
