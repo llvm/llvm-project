@@ -1752,7 +1752,7 @@ def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
 
 def FeatureVendorXCheriot
     : RISCVExtension<1, 0, "CHERIoT extension",
-    [FeatureStdExtC, FeatureStdExtE, FeatureStdExtM]>;
+    [FeatureStdExtZca, FeatureStdExtE, FeatureStdExtM]>;
 def HasCheriot
     : Predicate<"Subtarget->hasVendorXCheriot()">,
       AssemblerPredicate<(all_of FeatureVendorXCheriot), "'XCheriot' (CHERIoT Extension)">;
