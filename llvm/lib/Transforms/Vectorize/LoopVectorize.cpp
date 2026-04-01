@@ -1023,14 +1023,16 @@ public:
     assert(
         TheLoop->isInnermost() &&
         "cost-model should not be used for outer loops (in VPlan-native path)");
+
+    // If VF is scalar, then all instructions are trivially uniform.
+    if (VF.isScalar())
+      return true;
+
     // Pseudo probe needs to be duplicated for each unrolled iteration and
     // vector lane so that profiled loop trip count can be accurately
     // accumulated instead of being under counted.
     if (isa<PseudoProbeInst>(I))
       return false;
-
-    if (VF.isScalar())
-      return true;
 
     auto UniformsPerVF = Uniforms.find(VF);
     assert(UniformsPerVF != Uniforms.end() &&
