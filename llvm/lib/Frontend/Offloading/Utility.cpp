@@ -105,11 +105,9 @@ GlobalVariable *
 offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
                                 Constant *Addr, StringRef Name, uint64_t Size,
                                 uint32_t Flags, uint64_t Data,
-                                Constant *AuxAddr, StringRef SectionName) {
+                                Constant *AuxAddr) {
   const llvm::Triple &Triple = M.getTargetTriple();
-
-  if (SectionName.empty())
-    SectionName = getOffloadEntrySection(M);
+  StringRef SectionName = getOffloadEntrySection(M);
 
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
       M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
@@ -132,11 +130,9 @@ offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
 }
 
 std::pair<GlobalVariable *, GlobalVariable *>
-offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
+offloading::getOffloadEntryArray(Module &M) {
   const llvm::Triple &Triple = M.getTargetTriple();
-
-  if (SectionName.empty())
-    SectionName = getOffloadEntrySection(M);
+  StringRef SectionName = getOffloadEntrySection(M);
 
   auto *ZeroInitilaizer =
       ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
