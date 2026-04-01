@@ -670,10 +670,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchFunnelShift) {
       FShL, m_FShLLike(m_Specific(Op0), m_Specific(Op1), m_Specific(Op2))));
   EXPECT_TRUE(sd_match(
       FShR, m_FShRLike(m_Specific(Op0), m_Specific(Op1), m_Specific(Op2))));
-  EXPECT_FALSE(
-      sd_match(FShL, m_FShRLike(m_Specific(Op0), m_Specific(Op1), m_Value())));
-  EXPECT_FALSE(
-      sd_match(FShR, m_FShLLike(m_Specific(Op0), m_Specific(Op1), m_Value())));
+  EXPECT_FALSE(sd_match(FShL, m_FShRLike(m_Value(), m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(FShR, m_FShLLike(m_Value(), m_Value(), m_Value())));
 
   EXPECT_TRUE(sd_match(
       Rotl, m_FShLLike(m_Specific(Op0), m_Specific(Op0), m_Specific(Op2))));
@@ -710,6 +708,19 @@ TEST_F(SelectionDAGPatternMatchTest, matchFunnelShift) {
                                          m_SpecificInt(25))));
   EXPECT_FALSE(sd_match(BadOrFSh, m_FShLLike(m_Value(), m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(BadOrFSh, m_FShRLike(m_Value(), m_Value(), m_Value())));
+
+  auto Int1024VT = EVT::getIntegerVT(Context, 1024);
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  SDValue WideOp0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                        Register::index2VirtReg(4), Int1024VT);
+  SDValue WideOp1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                        Register::index2VirtReg(5), Int1024VT);
+  SDValue C0I8 = DAG->getConstant(0, DL, Int8VT);
+  SDValue WideShl = DAG->getNode(ISD::SHL, DL, Int1024VT, WideOp0, C0I8);
+  SDValue WideSrl = DAG->getNode(ISD::SRL, DL, Int1024VT, WideOp1, C0I8);
+  SDValue WideOr = DAG->getNode(ISD::OR, DL, Int1024VT, WideShl, WideSrl);
+  EXPECT_FALSE(sd_match(WideOr, m_FShLLike(m_Value(), m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(WideOr, m_FShRLike(m_Value(), m_Value(), m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
