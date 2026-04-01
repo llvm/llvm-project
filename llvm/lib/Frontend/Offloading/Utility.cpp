@@ -83,12 +83,20 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
   return {EntryInitializer, Str};
 }
 
+StringRef offloading::getOffloadEntrySection(Module &M) {
+  return M.getTargetTriple().isOSBinFormatMachO() ? "__LLVM,offload_entries"
+                                                  : "llvm_offload_entries";
+}
+
 GlobalVariable *
 offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
                                 Constant *Addr, StringRef Name, uint64_t Size,
                                 uint32_t Flags, uint64_t Data,
                                 Constant *AuxAddr, StringRef SectionName) {
   const llvm::Triple &Triple = M.getTargetTriple();
+
+  if (SectionName.empty())
+    SectionName = getOffloadEntrySection(M);
 
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
       M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
@@ -114,6 +122,9 @@ std::pair<GlobalVariable *, GlobalVariable *>
 offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
   const llvm::Triple &Triple = M.getTargetTriple();
 
+  if (SectionName.empty())
+    SectionName = getOffloadEntrySection(M);
+
   auto *ZeroInitilaizer =
       ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
   auto *EntryInit = Triple.isOSBinFormatCOFF() ? ZeroInitilaizer : nullptr;
@@ -121,13 +132,30 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
   auto Linkage = Triple.isOSBinFormatCOFF() ? GlobalValue::WeakODRLinkage
                                             : GlobalValue::ExternalLinkage;
 
-  auto *EntriesB =
-      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
-                         "__start_" + SectionName);
+  // Mach-O uses linker-defined section boundary symbols with a special naming
+  // convention: \1section$start$<segment>$<section> (the \1 prefix suppresses
+  // the leading underscore that Mach-O normally adds to C symbols).
+  // See SanitizerCoverage for the existing precedent:
+  //   llvm/lib/Transforms/Instrumentation/SanitizerCoverage.cpp
+  //   compiler-rt/lib/profile/InstrProfilingPlatformDarwin.c
+  std::string StartName, StopName;
+  if (Triple.isOSBinFormatMachO()) {
+    // Mach-O section name is "segment,section" — convert commas to '$' for
+    // the linker symbol convention.
+    std::string SymSection = SectionName.str();
+    std::replace(SymSection.begin(), SymSection.end(), ',', '$');
+    StartName = "\1section$start$" + SymSection;
+    StopName = "\1section$end$" + SymSection;
+  } else {
+    StartName = ("__start_" + SectionName).str();
+    StopName = ("__stop_" + SectionName).str();
+  }
+
+  auto *EntriesB = new GlobalVariable(M, EntryType, /*isConstant=*/true,
+                                      Linkage, EntryInit, StartName);
   EntriesB->setVisibility(GlobalValue::HiddenVisibility);
-  auto *EntriesE =
-      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
-                         "__stop_" + SectionName);
+  auto *EntriesE = new GlobalVariable(M, EntryType, /*isConstant=*/true,
+                                      Linkage, EntryInit, StopName);
   EntriesE->setVisibility(GlobalValue::HiddenVisibility);
 
   if (Triple.isOSBinFormatELF()) {
@@ -135,6 +163,15 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
     // be defined by the linker. This is done whenever a section name with a
     // valid C-identifier is present. We define a dummy variable here to force
     // the linker to always provide these symbols.
+    auto *DummyEntry = new GlobalVariable(
+        M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitilaizer, "__dummy." + SectionName);
+    DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
+    appendToCompilerUsed(M, DummyEntry);
+  } else if (Triple.isOSBinFormatMachO()) {
+    // Mach-O needs a dummy variable in the section (like ELF) to ensure the
+    // linker provides the section boundary symbols.
     auto *DummyEntry = new GlobalVariable(
         M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
         ZeroInitilaizer, "__dummy." + SectionName);
