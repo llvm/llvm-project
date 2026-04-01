@@ -58,7 +58,7 @@ STATISTIC(NumPhysCSEs,
           "Number of physreg referencing common subexpr eliminated");
 STATISTIC(NumCrossBBCSEs,
           "Number of cross-MBB physreg referencing CS eliminated");
-STATISTIC(NumCommutes, "Number of copies coalesced after commuting");
+STATISTIC(NumCommutes,  "Number of copies coalesced after commuting");
 
 // Threshold to avoid excessive cost to compute isProfitableToCSE.
 static cl::opt<int>
