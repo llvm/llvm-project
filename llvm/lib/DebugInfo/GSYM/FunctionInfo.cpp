@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
+#include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
@@ -116,13 +117,13 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   return std::move(FI);
 }
 
-uint64_t FunctionInfo::cacheEncoding(uint8_t StringOffsetSize) {
+uint64_t FunctionInfo::cacheEncoding(GsymCreator &GC) {
   EncodingCache.clear();
   if (!isValid())
     return 0;
   raw_svector_ostream OutStrm(EncodingCache);
   FileWriter FW(OutStrm, llvm::endianness::native);
-  FW.setStringOffsetSize(StringOffsetSize);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   llvm::Expected<uint64_t> Result = encode(FW);
   if (!Result) {
     EncodingCache.clear();
