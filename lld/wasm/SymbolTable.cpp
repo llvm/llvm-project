@@ -370,7 +370,8 @@ Symbol *SymbolTable::addSharedTag(StringRef name, uint32_t flags,
     return s;
   }
 
-  if (!isa<TagSymbol>(s)) {
+  auto *existingTag = dyn_cast<TagSymbol>(s);
+  if (!existingTag) {
     reportTypeError(s, file, WASM_SYMBOL_TYPE_TAG);
     return s;
   }
@@ -380,12 +381,11 @@ Symbol *SymbolTable::addSharedTag(StringRef name, uint32_t flags,
   }
 
   // undefined existing sym
-  auto *existingTag = cast<TagSymbol>(s);
   const WasmSignature *oldSig = existingTag->signature;
   if (oldSig && sig && *oldSig != *sig)
-    warn("Tag signature mismatch: " + name + "\n>>> defined as " +
-         toString(*oldSig) + " in " + toString(existingTag->getFile()) +
-         "\n>>> defined as " + toString(*sig) + " in " + toString(file));
+    error("Tag signature mismatch: " + name + "\n>>> defined as " +
+          toString(*oldSig) + " in " + toString(existingTag->getFile()) +
+          "\n>>> defined as " + toString(*sig) + " in " + toString(file));
   replaceSym(s);
   return s;
 }
