@@ -12607,6 +12607,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       return;
     }
     case Instruction::Store: {
+      assert(CurrentOrder.empty() &&
+             "Expected ordered store during tree building");
       if (State == TreeEntry::StridedVectorize) {
         TreeEntry *TE =
             newTreeEntry(VL, TreeEntry::StridedVectorize, Bundle, S,
@@ -12619,18 +12621,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
         return;
       }
-      bool Consecutive = CurrentOrder.empty();
-      if (!Consecutive)
-        fixupOrderingIndices(CurrentOrder);
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices, CurrentOrder);
-      if (Consecutive)
-        LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (StoreInst).\n";
-                   TE->dump());
-      else
-        LLVM_DEBUG(
-            dbgs() << "SLP: added a new TreeEntry (jumbled StoreInst).\n";
-            TE->dump());
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (StoreInst).\n";
+                 TE->dump());
       TE->setOperands(Operands);
       buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
       return;
