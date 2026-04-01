@@ -4152,7 +4152,10 @@ protected:
 };
 
 /// Support casting from VPRecipeBase -> VPPhiAccessors.
-template <> struct CastInfo<VPPhiAccessors, VPRecipeBase *> {
+template <>
+struct CastInfo<VPPhiAccessors, VPRecipeBase *>
+    : DefaultDoCastIfPossible<VPPhiAccessors *, VPRecipeBase *,
+                              CastInfo<VPPhiAccessors, VPRecipeBase *>> {
   // Used by isa.
   static inline bool isPossible(VPRecipeBase *R) {
     // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
@@ -4171,12 +4174,8 @@ template <> struct CastInfo<VPPhiAccessors, VPRecipeBase *> {
       return cast<VPHeaderPHIRecipe>(R);
     }
   }
-  /// Used by dyn_cast.
-  static inline VPPhiAccessors *doCastIfPossible(VPRecipeBase *R) {
-    if (!isPossible(R))
-      return nullptr;
-    return doCast(R);
-  }
+  /// Used by inherited doCastIfPossible to dyn_cast.
+  static inline VPPhiAccessors *castFailed() { return nullptr; }
 };
 
 template <>
