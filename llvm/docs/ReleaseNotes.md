@@ -121,6 +121,11 @@ Changes to the AArch64 Backend
 
 * The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
   requiring the `+d128` feature gating.
+* Added a new internal option `-aarch64-emit-debug-tls-location` to allow the
+  emission of `DW_AT_location` for thread-local variables. This is currently
+  disabled by default to maintain compatibility with Binutils and LLVM older
+  toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
+  type for TLS offsets.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -238,6 +243,7 @@ Changes to LLDB
 
 * ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
   have been deprecated. They always return 1, as before.
+* A new ``webinspector-wasm`` platform was added to list and attach to WebAssebly processes in Safari.
 
 ### FreeBSD
 

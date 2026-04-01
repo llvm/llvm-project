@@ -387,6 +387,13 @@ public:
     return !(*this == Other);
   }
 
+  bool operator<(const Triple &Other) const {
+    return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat,
+                    Data) < std::tie(Other.Arch, Other.SubArch, Other.Vendor,
+                                     Other.OS, Other.Environment,
+                                     Other.ObjectFormat, Other.Data);
+  }
+
   /// @}
   /// @name Normalization
   /// @{
@@ -1376,6 +1383,10 @@ public:
 
   /// The canonical type for the given LLVM architecture name (e.g., "x86").
   LLVM_ABI static ArchType getArchTypeForLLVMName(StringRef Str);
+
+  /// Parse anything recognized as an architecture for the first field of the
+  /// triple.
+  LLVM_ABI static ArchType parseArch(StringRef Str);
 
   /// @}
 

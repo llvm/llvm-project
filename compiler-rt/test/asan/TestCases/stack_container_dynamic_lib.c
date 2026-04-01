@@ -33,8 +33,7 @@ struct Stack {
 
 static void init(struct Stack *s) {
   s->size = 0;
-#if __has_feature(address_sanitizer) &&                                        \
-    !defined(__SANITIZER_DISABLE_CONTAINER_OVERFLOW__)
+#if __has_feature(address_sanitizer)
   // Mark entire storage as unaddressable initially
   __sanitizer_annotate_contiguous_container(s->data, s->data + 5, s->data + 5,
                                             s->data);
@@ -42,8 +41,7 @@ static void init(struct Stack *s) {
 }
 
 static void destroy(struct Stack *s) {
-#if __has_feature(address_sanitizer) &&                                        \
-    !defined(__SANITIZER_DISABLE_CONTAINER_OVERFLOW__)
+#if __has_feature(address_sanitizer)
   __sanitizer_annotate_contiguous_container(s->data, s->data + 5,
                                             s->data + s->size, s->data + 5);
 #endif
@@ -51,8 +49,7 @@ static void destroy(struct Stack *s) {
 
 static void push(struct Stack *s, int value) {
   assert(s->size < 5 && "Stack overflow");
-#if __has_feature(address_sanitizer) &&                                        \
-    !defined(__SANITIZER_DISABLE_CONTAINER_OVERFLOW__)
+#if __has_feature(address_sanitizer)
   __sanitizer_annotate_contiguous_container(
       s->data, s->data + 5, s->data + s->size, s->data + s->size + 1);
 #endif
@@ -62,8 +59,7 @@ static void push(struct Stack *s, int value) {
 static int pop(struct Stack *s) {
   assert(s->size > 0 && "Cannot pop from empty stack");
   int result = s->data[--s->size];
-#if __has_feature(address_sanitizer) &&                                        \
-    !defined(__SANITIZER_DISABLE_CONTAINER_OVERFLOW__)
+#if __has_feature(address_sanitizer)
   __sanitizer_annotate_contiguous_container(
       s->data, s->data + 5, s->data + s->size + 1, s->data + s->size);
 #endif
