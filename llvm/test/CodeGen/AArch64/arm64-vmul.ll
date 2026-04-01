@@ -1835,8 +1835,6 @@ define i64 @sqdmlal_lane_1d_v2i32(i64 %A, i32 %B, <2 x i32> %C) nounwind {
   %res = call i64 @llvm.aarch64.neon.sqadd.i64(i64 %A, i64 %prod)
   ret i64 %res
 }
-declare i64 @llvm.aarch64.neon.sqdmulls.scalar(i32, i32)
-declare i64 @llvm.aarch64.neon.sqadd.i64(i64, i64)
 
 define i64 @sqdmlsl_lane_1d_v2i32(i64 %A, i32 %B, <2 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: sqdmlsl_lane_1d_v2i32:
