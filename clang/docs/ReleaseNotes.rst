@@ -386,12 +386,12 @@ Bug Fixes in This Version
 - Fixed a crash in duplicate attribute checking caused by comparing constant arguments with different integer signedness. (#GH188259)
 - Fixed a crash when returning an initializer list from a void lambda or block.
   The compiler now emits a proper error message that correctly says "lambda"
-  instead of "block" when applicable. (`#GH188661 <https://github.com/llvm/llvm-project/issues/188661>`_).
-
+  instead of "block" when applicable. (GH188661)
+  
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix a crash when passing an unresolved overload set to ``__builtin_classify_type``. (#GH175589)
-- Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
+- Fixed a crash when calling ``__builtin_allow_sanitize_check`` with no arguments. (#GH183927)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
