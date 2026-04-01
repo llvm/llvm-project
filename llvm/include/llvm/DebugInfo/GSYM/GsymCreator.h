@@ -325,7 +325,7 @@ public:
   LLVM_ABI GsymCreator(bool Quiet = false);
   virtual ~GsymCreator() = default;
 
-  /// Get the size in bytes of string table references (strp offsets).
+  /// Get the size in bytes needed for encoding string offsets.
   ///
   /// \returns The size in bytes of each string table offset.
   virtual uint8_t getStringOffsetSize() const = 0;
@@ -349,9 +349,6 @@ public:
        std::optional<uint64_t> SegmentSize = std::nullopt) const;
 
   /// Encode a GSYM into the file writer stream at the current position.
-  ///
-  /// Version-specific because V1 and V2 have completely different file
-  /// layouts.
   ///
   /// \param O The stream to save the binary data to
   /// \returns An error object that indicates success or failure of the save.

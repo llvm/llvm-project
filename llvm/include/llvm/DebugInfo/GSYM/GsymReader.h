@@ -39,9 +39,7 @@ namespace gsym {
 /// and tables into version-specific SwappedData and then point the ArrayRefs
 /// to the swapped internal data.
 ///
-/// This base class contains all shared state and logic. Subclasses
-/// (GsymReaderV1, GsymReaderV2) implement version-specific parsing via
-/// parse() and header access via getHeader().
+/// This base class contains all shared state and logic.
 ///
 /// GsymReader objects must use one of the static functions to create an
 /// instance: GsymReader::openFile(...) and GsymReader::copyBuffer(...).
@@ -75,8 +73,7 @@ public:
   /// Get the string offset byte size for this GSYM file.
   virtual uint64_t getStringOffsetByteSize() const = 0;
 
-  /// Construct a GsymReader from a file on disk, auto-detecting the format
-  /// version.
+  /// Construct a GsymReader from a file on disk.
   ///
   /// \param Path The file path the GSYM file to read.
   /// \returns An expected unique_ptr to a GsymReader or an error object that
@@ -84,7 +81,7 @@ public:
   LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
   openFile(StringRef Path);
 
-  /// Construct a GsymReader from a buffer, auto-detecting the format version.
+  /// Construct a GsymReader from a buffer.
   ///
   /// \param Bytes A set of bytes that will be copied and owned by the
   /// returned object on success.
@@ -180,8 +177,6 @@ public:
   }
 
   /// Dump the entire Gsym data contained in this object.
-  ///
-  /// Version-specific because the header format differs between V1 and V2.
   ///
   /// \param  OS The output stream to dump to.
   virtual void dump(raw_ostream &OS) = 0;
