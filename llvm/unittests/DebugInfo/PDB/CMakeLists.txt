@@ -12,6 +12,7 @@ add_llvm_unittest_with_input_files(DebugInfoPDBTests
   PDBApiTest.cpp
   PDBVariantTest.cpp
   PublicsStreamTest.cpp
+  TpiStreamTest.cpp
   )
 
 target_link_libraries(DebugInfoPDBTests PRIVATE LLVMTestingSupport)
