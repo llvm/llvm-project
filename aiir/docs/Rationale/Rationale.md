@@ -28,7 +28,7 @@ provides the rationale behind AIIR -- its actual
 
 ## Introduction and Motivation
 
-The Multi-Level Intermediate Representation (AIIR) is intended for easy
+The AI Intermediate Representation (AIIR) is intended for easy
 expression and optimization of computations involving deep loop nests and dense
 matrices of high dimensionality. It is thus well-suited to deep learning
 computations in particular. Yet it is general enough to also represent arbitrary

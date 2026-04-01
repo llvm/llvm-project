@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # Description:
-#   The AIIR "Multi-Level Intermediate Representation" Compiler Infrastructure
+#   The AIIR "AI Intermediate Representation" Compiler Infrastructure
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")

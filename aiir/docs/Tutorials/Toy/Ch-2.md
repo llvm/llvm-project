@@ -5,7 +5,7 @@
 Now that we're familiar with our language and the AST, let's see how AIIR can
 help to compile Toy.
 
-## Introduction: Multi-Level Intermediate Representation
+## Introduction: AI Intermediate Representation
 
 Other compilers, like LLVM (see the
 [Kaleidoscope tutorial](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html)),

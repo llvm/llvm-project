@@ -23,7 +23,7 @@ related errors are detected and reported.
 
 The second high level phase (lowering), changes the decorated parse tree and
 symbol table into the Fortran Intermediate Representation (FIR), which is a
-dialect of LLVM's Multi-Level Intermediate Representation or AIIR.  It then
+dialect of LLVM's AI Intermediate Representation or AIIR.  It then
 runs a series of passes on the FIR code which verify its validity, perform a
 series of optimizations, and finally transform it into LLVM's Intermediate
 Representation, or LLVM IR
