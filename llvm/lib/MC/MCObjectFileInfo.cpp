@@ -1339,7 +1339,8 @@ MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
 }
 
 MCSection *
-MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
+MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName,
+                                            uint64_t FuncHash) const {
   if (!Ctx->getTargetTriple().supportsCOMDAT() || FuncName.empty())
     return PseudoProbeDescSection;
 
@@ -1347,23 +1348,28 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
   // for the linker to deduplicate. The duplication, must be from different
   // tranlation unit, can come from:
   //  1. Inline functions defined in header files;
-  //  2. ThinLTO imported funcions;
+  //  2. ThinLTO imported functions;
   //  3. Weak-linkage definitions.
-  // Use a concatenation of the section name and the function name as the
-  // group name so that descriptor-only groups won't be folded with groups of
-  // code.
+  // Use a concatenation of the section name, function name, and function hash
+  // as the group name so that descriptors with different hashes (due to user
+  // code not following ODR or compiler codegen inconsistencies) get separate
+  // COMDAT sections instead of being silently dropped (ELF) or causing linker
+  // errors (COFF). Duplicate GUIDs with mismatching hashes are detected
+  // during descriptor decoding and reported by llvm-profgen.
+  std::string HashSuffix = "." + Twine::utohexstr(FuncHash).str();
   auto ObjFileType = Ctx->getObjectFileType();
   if (ObjFileType == MCContext::IsELF) {
     auto *S = static_cast<MCSectionELF *>(PseudoProbeDescSection);
     auto Flags = S->getFlags() | ELF::SHF_GROUP;
-    return Ctx->getELFSection(S->getName(), S->getType(), Flags,
-                              S->getEntrySize(), S->getName() + "_" + FuncName,
-                              /*IsComdat=*/true);
+    return Ctx->getELFSection(
+        S->getName(), S->getType(), Flags, S->getEntrySize(),
+        S->getName() + "_" + FuncName + HashSuffix, /*IsComdat=*/true);
   } else if (ObjFileType == MCContext::IsCOFF) {
     auto *S = static_cast<MCSectionCOFF *>(PseudoProbeDescSection);
     unsigned Characteristics =
         S->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT;
-    std::string COMDATSymName = (S->getName() + "_" + FuncName).str();
+    std::string COMDATSymName =
+        (S->getName() + "_" + FuncName + HashSuffix).str();
     return Ctx->getCOFFSection(S->getName(), Characteristics, COMDATSymName,
                                COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH);
   }
