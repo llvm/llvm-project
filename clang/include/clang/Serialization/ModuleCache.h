@@ -13,10 +13,12 @@
 
 #include <ctime>
 #include <memory>
+#include <system_error>
 
 namespace llvm {
 class AdvisoryLock;
 class MemoryBuffer;
+class MemoryBufferRef;
 } // namespace llvm
 
 namespace clang {
@@ -54,7 +56,9 @@ public:
   virtual InMemoryModuleCache &getInMemoryModuleCache() = 0;
   virtual const InMemoryModuleCache &getInMemoryModuleCache() const = 0;
 
-  // TODO: Virtualize writing PCM files.
+  /// Write the PCM contents to the given path in the module cache.
+  virtual std::error_code write(StringRef Path,
+                                llvm::MemoryBufferRef Buffer) = 0;
 
   virtual Expected<std::unique_ptr<llvm::MemoryBuffer>>
   read(StringRef FileName, off_t &Size, time_t &ModTime) = 0;
@@ -70,6 +74,9 @@ std::shared_ptr<ModuleCache> createCrossProcessModuleCache();
 
 /// Shared implementation of `ModuleCache::maybePrune()`.
 void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter);
+
+/// Shared implementation of `ModuleCache::write()`.
+std::error_code writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer);
 
 /// Shared implementation of `ModuleCache::read()`.
 Expected<std::unique_ptr<llvm::MemoryBuffer>>
