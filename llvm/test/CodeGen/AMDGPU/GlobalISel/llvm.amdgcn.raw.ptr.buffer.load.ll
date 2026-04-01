@@ -684,8 +684,9 @@ define amdgpu_ps half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; GFX1250-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; GFX1250-NEXT:   [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_VBUFFER_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (f16) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]]
-  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
+  ; GFX1250-NEXT:   $vgpr0_lo16 = COPY [[COPY6]]
+  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0_lo16
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
 }
@@ -1007,8 +1008,9 @@ define amdgpu_ps half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_so
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.5:
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]]
-  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
+  ; GFX1250-NEXT:   $vgpr0_lo16 = COPY [[COPY10]]
+  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0_lo16
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
 }

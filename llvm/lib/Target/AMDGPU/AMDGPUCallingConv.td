@@ -18,6 +18,10 @@ class CCIfOrigTypeShaderCCIsSGPR<CCAction A>
   : CCIf<[{(!OrigTy->getScalarType()->isFloatTy() &&
             !OrigTy->getScalarType()->isHalfTy()) }], A>;
 
+class CCIfTrue16<CCAction A> :
+  CCIf<"State.getMachineFunction().getSubtarget<GCNSubtarget>().useRealTrue16Insts()", A>;
+class CCIfNotTrue16<CCAction A> :
+  CCIf<"!State.getMachineFunction().getSubtarget<GCNSubtarget>().useRealTrue16Insts()", A>;
 
 // Calling convention for SI
 def CC_SI_Gfx : CallingConv<[
@@ -30,8 +34,16 @@ def CC_SI_Gfx : CallingConv<[
     !foreach(i, !range(4, 30), !cast<Register>("SGPR"#i))  // SGPR4-29
   >>>,
 
-  CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
+  CCIfNotInReg<CCIfType<[f32, i32, v2i16, v2f16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
+  >>>,
+
+  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-31_LO16
+  >>>,
+
+  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
   >>>,
 
   CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1, bf16, v2bf16], CCAssignToStack<4, 4>>
@@ -41,8 +53,16 @@ def RetCC_SI_Gfx : CallingConv<[
   CCIfType<[i1], CCPromoteToType<i32>>,
   CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
 
-  CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
+  CCIfNotInReg<CCIfType<[f32, i32, v2i16, v2f16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
+  >>>,
+
+  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-31_LO16
+  >>>,
+
+  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
   >>>,
 ]>;
 
@@ -55,9 +75,17 @@ def CC_SI_SHADER : CallingConv<[
   >>>,
 
   // 32*4 + 4 is the minimum for a fetch shader consumer with 32 inputs.
-  CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
+  CCIfNotInReg<CCIfType<[f32, i32, v2i16, v2f16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
-  >>>
+  >>>,
+
+  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-135_LO16
+  >>>,
+
+  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
+  >>>,
 ]>;
 
 
@@ -68,9 +96,17 @@ def RetCC_SI_Shader : CallingConv<[
   >>>,
 
   // 32*4 + 4 is the minimum for a fetch shader with 32 outputs.
-  CCIfType<[f32, f16, v2f16, bf16, v2bf16, i32, i16, v2i16] , CCAssignToReg<
+  CCIfType<[f32, v2f16, v2bf16, i32, v2i16] , CCAssignToReg<
     !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
-  >>
+  >>,
+
+  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-135_LO16
+  >>>,
+
+  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
+  >>>,
 ]>;
 
 def CSR_AMDGPU_VGPRs : CalleeSavedRegs<
@@ -143,9 +179,18 @@ def CC_AMDGPU_Func : CallingConv<[
     !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
   >>>,
 
-  CCIfType<[i32, f32, i16, f16, v2i16, v2f16, i1, bf16, v2bf16], CCAssignToReg<
+  CCIfType<[i32, f32, v2i16, v2f16, i1, v2bf16], CCAssignToReg<
     !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
   >>,
+
+  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-31_LO16
+  >>>,
+
+  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
+  >>>,
+
   CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1, bf16, v2bf16], CCAssignToStack<4, 4>>
 ]>;
 
@@ -153,9 +198,17 @@ def CC_AMDGPU_Func : CallingConv<[
 def RetCC_AMDGPU_Func : CallingConv<[
   CCIfType<[i1], CCPromoteToType<i32>>,
   CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
-  CCIfType<[i32, f32, i16, f16, v2i16, v2f16, bf16, v2bf16], CCAssignToReg<
+  CCIfType<[i32, f32, v2i16, v2f16, v2bf16], CCAssignToReg<
     !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
   >>,
+
+  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-31_LO16
+  >>>,
+
+  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
+  >>>,
 ]>;
 
 def CC_AMDGPU : CallingConv<[

@@ -693,12 +693,12 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ;
   ; REAL16-LABEL: name: general_case_load_with_waterfall
   ; REAL16: bb.0 (%ir-block.0):
-  ; REAL16-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; REAL16-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3, $vgpr4, $vgpr5
   ; REAL16-NEXT: {{  $}}
   ; REAL16-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; REAL16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; REAL16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-  ; REAL16-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; REAL16-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY $vgpr2_lo16
   ; REAL16-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; REAL16-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
