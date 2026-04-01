@@ -1099,8 +1099,8 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
       // semantic analysis.
       assert(llvm::all_of(record->fields(),
                           [](const FieldDecl *f) {
-                            return !f->isUnnamedBitField() &&
-                                   !f->isAnonymousStructOrUnion();
+                            return f->isUnnamedBitField() ||
+                                   f->isAnonymousStructOrUnion();
                           }) &&
              "Only unnamed bitfields or anonymous class allowed");
       return;
