@@ -43,19 +43,19 @@ template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
   return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
-/// A match-wrapper around IsaPred: equips IsaPred with a match function.
+/// A match-wrapper around isa.
 template <typename... To> struct match_isapred {
   template <typename ArgTy> bool match(const ArgTy *V) const {
-    return IsaPred<To...>(V);
+    return isa<To...>(V);
   }
 };
 
-template <typename... To> inline match_isapred<To...> m_IsA() {
+template <typename... To> inline match_isapred<To...> m_Isa() {
   return match_isapred<To...>();
 }
 
 /// Match an arbitrary VPValue and ignore it.
-inline auto m_VPValue() { return m_IsA<VPValue>(); }
+inline auto m_VPValue() { return m_Isa<VPValue>(); }
 
 template <typename Class> struct bind_ty {
   Class *&VR;
@@ -598,14 +598,14 @@ m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
-/// A variant of m_IsA that also matches SubPattern.
+/// A variant of m_Isa that also matches SubPattern.
 template <typename... To, typename SubPattern>
-inline auto m_IsA(const SubPattern &P) {
-  return m_CombineAnd(m_IsA<To...>(), P);
+inline auto m_Isa(const SubPattern &P) {
+  return m_CombineAnd(m_Isa<To...>(), P);
 }
 
 template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
-  return m_IsA<VPWidenCastRecipe>(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
+  return m_Isa<VPWidenCastRecipe>(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
 }
 
 template <typename Op0_t>
@@ -865,7 +865,7 @@ inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
 
-inline auto m_CanonicalIV() { return m_IsA<VPCanonicalIVPHIRecipe>(); }
+inline auto m_CanonicalIV() { return m_Isa<VPCanonicalIVPHIRecipe>(); }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline auto m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1,
@@ -1058,7 +1058,7 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
 }
 
-inline auto m_LiveIn() { return m_IsA<VPIRValue, VPSymbolicValue>(); }
+inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
 /// and bind the source element type and operands.
