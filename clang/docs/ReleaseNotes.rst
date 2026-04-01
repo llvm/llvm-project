@@ -523,9 +523,12 @@ Windows Support
   19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
 
 - In MSVC compatibility mode, scalar and vector deleting destructors now call
-  ``__global_delete`` (a weak external) instead of directly referencing
-  ``::operator delete``. This matches MSVC's behavior and fixes ``LNK2001``
-  linker errors in environments where no global ``::operator delete`` exists.
+  ``__global_delete`` instead of directly referencing ``::operator delete``.
+  This matches MSVC's behavior and fixes ``LNK2001`` linker errors in
+  environments (such as kernel mode) where no global ``::operator delete``
+  exists. When the translation unit contains a ``::delete`` expression, a
+  ``__global_delete`` forwarding body that calls ``::operator delete`` is
+  emitted automatically.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

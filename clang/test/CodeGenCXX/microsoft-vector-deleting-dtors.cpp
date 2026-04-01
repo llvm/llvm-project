@@ -284,12 +284,20 @@ void kernelTest() {
 // CHECK-NEXT:   br label %dtor.continue
 
 // Test that when a class provides its own operator delete, the deleting
-// destructor calls __global_delete (a weak external with no-op fallback)
-// instead of directly referencing ::operator delete. This is critical for
-// environments like kernel mode where no global ::operator delete exists.
-// Verify __empty_global_delete is emitted as a no-op fallback.
+// destructor calls __global_delete (a weak external) instead of directly
+// referencing ::operator delete. This is critical for environments like
+// kernel mode where no global ::operator delete exists.
+// Verify __empty_global_delete traps (the code path is unreachable at runtime).
 // X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// X64-NEXT: call void @llvm.trap()
+// X64-NEXT: unreachable
+
+// Verify that when ::delete is used in the TU, a real __global_delete
+// forwarding body is emitted that calls through to the actual ::operator delete.
+// X64: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
 // X64-NEXT: ret void
+
 // X64-LABEL: define weak dso_local noundef ptr @"??_EKernelDerived@@UEAAPEAXI@Z"
 // Verify the array delete path in the VDD uses __global_delete.
 // X64: dtor.call_glob_delete_after_array_destroy:

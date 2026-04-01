@@ -992,6 +992,7 @@ void CodeGenModule::Release() {
   applyReplacements();
   emitMultiVersionFunctions();
   emitPFPFieldsWithEvaluatedOffset();
+  emitGlobalDeleteForwardingBodies();
 
   if (Context.getLangOpts().IncrementalExtensions &&
       GlobalTopLevelStmtBlockInFlight.first) {
@@ -8650,4 +8651,52 @@ void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
   // destructor definition is required. That helps to enforse its generation
   // even if destructor is only declared.
   addDeferredDeclToEmit(VectorDtorGD);
+}
+
+void CodeGenModule::addPendingGlobalDelete(
+    StringRef GlobalDeleteName, const FunctionDecl *OperatorDeleteFD) {
+  // Only add if we haven't seen this name before.
+  for (const auto &Entry : PendingMSVCGlobalDeletes)
+    if (Entry.first == GlobalDeleteName)
+      return;
+  PendingMSVCGlobalDeletes.emplace_back(GlobalDeleteName.str(),
+                                        OperatorDeleteFD);
+}
+
+void CodeGenModule::noteDirectGlobalDelete() { HasDirectGlobalDelete = true; }
+
+void CodeGenModule::emitGlobalDeleteForwardingBodies() {
+  // MSVC-compatible __global_delete forwarding bodies.
+  //
+  // Destructor helpers call __global_delete (a weak symbol defaulting to the
+  // trapping __empty_global_delete) instead of ::operator delete directly.
+  // When this TU contains a ::delete expression, we know ::operator delete
+  // must exist, so we emit a real __global_delete definition that forwards
+  // to it.
+  if (!HasDirectGlobalDelete)
+    return;
+
+  for (const auto &Entry : PendingMSVCGlobalDeletes) {
+    llvm::Function *GlobDelFn = getModule().getFunction(Entry.first);
+    if (!GlobDelFn || !GlobDelFn->isDeclaration())
+      continue;
+
+    const FunctionDecl *OperatorDeleteFD = Entry.second;
+    llvm::Constant *RealDeleteFn = GetAddrOfFunction(OperatorDeleteFD);
+
+    // Create the forwarding body: call ::operator delete with all args.
+    auto *BB =
+        llvm::BasicBlock::Create(getModule().getContext(), "", GlobDelFn);
+    llvm::SmallVector<llvm::Value *, 4> Args;
+    for (auto &Arg : GlobDelFn->args())
+      Args.push_back(&Arg);
+    llvm::CallInst::Create(GlobDelFn->getFunctionType(), RealDeleteFn, Args, "",
+                           BB);
+    llvm::ReturnInst::Create(getModule().getContext(), BB);
+
+    // Use LinkOnceODR so multiple TUs can emit this without conflicts.
+    GlobDelFn->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
+    GlobDelFn->setComdat(getModule().getOrInsertComdat(GlobDelFn->getName()));
+    SetLLVMFunctionAttributesForDefinition(OperatorDeleteFD, GlobDelFn);
+  }
 }

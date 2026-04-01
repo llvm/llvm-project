@@ -2072,6 +2072,12 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   const Expr *Arg = E->getArgument();
   Address Ptr = EmitPointerWithAlignment(Arg);
 
+  // If this delete expression uses global ::operator delete (not a
+  // class-specific one), note it so we emit __global_delete forwarding bodies.
+  if (!isa<CXXMethodDecl>(E->getOperatorDelete()) &&
+      CGM.getTarget().getCXXABI().isMicrosoft())
+    CGM.noteDirectGlobalDelete();
+
   // Null check the pointer.
   //
   // We could avoid this null check if we can determine that the object

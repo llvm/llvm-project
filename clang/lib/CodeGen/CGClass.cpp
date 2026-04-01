@@ -1412,10 +1412,14 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
 
 /// Get or create the MSVC-compatible __global_delete wrapper function.
 ///
-/// MSVC's scalar/vector deleting destructors call __global_delete (a weak
-/// external) instead of calling ::operator delete directly. This allows
-/// environments without a global ::operator delete (e.g., kernel mode) to
-/// gracefully fall back to a no-op __empty_global_delete.
+/// Destructor helpers call __global_delete instead of ::operator delete
+/// directly. __global_delete is a weak symbol that defaults to
+/// __empty_global_delete (a trap) via /ALTERNATENAME. When this TU contains
+/// a ::delete expression, a real forwarding body is emitted at end-of-file
+/// (see CodeGenModule::Release). If ::delete is never used anywhere in the
+/// program, the trap default wins - but that path is unreachable at runtime,
+/// so it only fires if something is seriously wrong (e.g., memory
+/// corruption). Both symbols are compiler-generated.
 static llvm::Constant *
 getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
                                    const FunctionDecl *GlobOD) {
@@ -1451,17 +1455,23 @@ getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
   if (llvm::Function *Existing = M.getFunction(GlobalDeleteName))
     return Existing;
 
-  // Create __empty_global_delete fallback.
+  // Create __empty_global_delete fallback (trap - this path is unreachable
+  // at runtime when ::delete is never used; see the doc comment above).
   llvm::Function *EmptyFn = llvm::Function::Create(
       FnTy, llvm::GlobalValue::LinkOnceODRLinkage, EmptyGlobalDeleteName, &M);
   EmptyFn->setComdat(M.getOrInsertComdat(EmptyGlobalDeleteName));
   EmptyFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   CGM.SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
   auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
-  llvm::ReturnInst::Create(LLVMCtx, BB);
+  llvm::Function *TrapFn =
+      llvm::Intrinsic::getOrInsertDeclaration(&M, llvm::Intrinsic::trap);
+  auto *TrapCall = llvm::CallInst::Create(TrapFn, {}, "", BB);
+  TrapCall->setDoesNotReturn();
+  TrapCall->setDoesNotThrow();
+  new llvm::UnreachableInst(LLVMCtx, BB);
 
-  // Emit /ALTERNATENAME linker directive: if __global_delete isn't provided
-  // (e.g., by the CRT), fall back to the no-op __empty_global_delete.
+  // Emit /ALTERNATENAME linker directive: if __global_delete isn't provided,
+  // fall back to the trapping __empty_global_delete.
   std::string AltOption =
       "/alternatename:" + GlobalDeleteName + "=" + EmptyGlobalDeleteName;
   auto *AltMD =
@@ -1474,6 +1484,11 @@ getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
 
   // Return the __global_delete wrapper function to call.
   auto GlobalDeleteCallee = M.getOrInsertFunction(GlobalDeleteName, FnTy);
+
+  // Register this variant so we can emit a real forwarding body at end-of-TU
+  // if this TU contains any direct use of global ::operator delete.
+  CGM.addPendingGlobalDelete(GlobalDeleteName, GlobOD);
+
   return cast<llvm::Function>(GlobalDeleteCallee.getCallee());
 }
 
@@ -1560,8 +1575,9 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
       CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
 
       CGF.EmitBlock(GlobDelete);
-      // Use __global_delete wrapper for the global array delete path,
-      // matching MSVC's weak external mechanism.
+      // Use __global_delete wrapper instead of directly calling
+      // ::operator delete to match MSVC's behavior. See the doc comment on
+      // getOrCreateMSVCGlobalDeleteWrapper for details.
       llvm::Constant *GlobalDeleteWrapper = getOrCreateMSVCGlobalDeleteWrapper(
           CGF.CGM, Dtor->getGlobalArrayOperatorDelete());
       CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
@@ -1823,9 +1839,8 @@ void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
     CGF.EmitBlock(GlobDelete);
 
     // Use __global_delete wrapper instead of directly calling
-    // ::operator delete. This matches MSVC's behavior: __global_delete is a
-    // weak external that falls back to __empty_global_delete (a no-op) when
-    // the CRT doesn't provide it (e.g., kernel-mode environments).
+    // ::operator delete to match MSVC's behavior. See the doc comment on
+    // getOrCreateMSVCGlobalDeleteWrapper for details.
     llvm::Constant *GlobalDeleteWrapper =
         getOrCreateMSVCGlobalDeleteWrapper(CGF.CGM, GlobOD);
     EmitDeleteAndGoToEnd(GlobOD, GlobalDeleteWrapper);
