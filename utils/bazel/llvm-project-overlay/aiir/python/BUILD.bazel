@@ -1,0 +1,1659 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Description:
+#   Python bindings for AIIR.
+#
+# We define separate filegroups for files in different directories so
+# that downstream users can mirror the tree in their own py_library() rules.
+
+load("//aiir:tblgen.bzl", "gentbl_filegroup", "td_library")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+##---------------------------------------------------------------------------##
+# Core IR modules.
+##---------------------------------------------------------------------------##
+
+filegroup(
+    name = "DialectCorePyFiles",
+    srcs = [
+        "aiir/dialects/_ods_common.py",
+        "aiir/dialects/ext.py",
+    ],
+)
+
+filegroup(
+    name = "ExecutionEnginePyFiles",
+    srcs = ["aiir/execution_engine.py"],
+)
+
+filegroup(
+    name = "ExecutionEnginePyIFiles",
+    srcs = ["aiir/_aiir_libs/_aiirExecutionEngine.pyi"],
+)
+
+filegroup(
+    name = "IRPyFiles",
+    srcs = ["aiir/ir.py"],
+)
+
+filegroup(
+    name = "ExtrasPyFiles",
+    srcs = glob([
+        "aiir/extras/*.py",
+    ]),
+)
+
+filegroup(
+    name = "AiirLibsPyFiles",
+    srcs = [
+        "aiir/_aiir_libs/__init__.py",
+    ],
+)
+
+filegroup(
+    name = "PassManagerPyFiles",
+    srcs = ["aiir/passmanager.py"],
+)
+
+filegroup(
+    name = "RewritePyFiles",
+    srcs = ["aiir/rewrite.py"],
+)
+
+filegroup(
+    name = "RuntimePyFiles",
+    srcs = glob([
+        "aiir/runtime/*.py",
+    ]),
+)
+
+##---------------------------------------------------------------------------##
+# Affine dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "AffineOpsPyTdFiles",
+    srcs = [
+        "aiir/dialects/AffineOps.td",
+    ],
+    deps = [
+        "//aiir:AffineOpsTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "AffineOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_affine_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=affine",
+        ],
+        "aiir/dialects/_affine_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=affine",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/AffineOps.td",
+    deps = [
+        ":AffineOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "AffineOpsPyFiles",
+    srcs = [
+        "aiir/dialects/affine.py",
+        ":AffineOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Builtin dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "BuiltinOpsPyTdFiles",
+    srcs = ["aiir/dialects/BuiltinOps.td"],
+    deps = [
+        "//aiir:BuiltinDialectTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "BuiltinOpsPyGen",
+    tbl_outs = {"aiir/dialects/_builtin_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=builtin",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/BuiltinOps.td",
+    deps = [
+        ":BuiltinOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "BuiltinOpsPyFiles",
+    srcs = [
+        "aiir/dialects/builtin.py",
+        ":BuiltinOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# AMDGPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "AMDGPUOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//aiir:AMDGPUTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "AMDGPUOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_amdgpu_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=amdgpu",
+        ],
+        "aiir/dialects/_amdgpu_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=amdgpu",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/AMDGPUOps.td",
+    deps = [":AMDGPUOpsPyTdFiles"],
+)
+
+filegroup(
+    name = "AMDGPUOpsPyFiles",
+    srcs = [
+        "aiir/dialects/amdgpu.py",
+        ":AMDGPUOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Linalg dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "LinalgOpsPyTdFiles",
+    srcs = ["aiir/dialects/LinalgOps.td"],
+    deps = [
+        "//aiir:LinalgOpsTdFiles",
+        "//aiir:LinalgStructuredOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "LinalgOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_linalg_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=linalg",
+        ],
+        "aiir/dialects/_linalg_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=linalg",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/LinalgOps.td",
+    deps = [":LinalgOpsPyTdFiles"],
+)
+
+filegroup(
+    name = "LinalgOpsPyFiles",
+    srcs = [":LinalgOpsPyGen"],
+)
+
+filegroup(
+    name = "LinalgOpsPackagePyFiles",
+    srcs = glob(["aiir/dialects/linalg/*.py"]),
+)
+
+filegroup(
+    name = "LinalgOpsPackageOpDSLPyFiles",
+    srcs = glob(["aiir/dialects/linalg/opdsl/*.py"]),
+)
+
+filegroup(
+    name = "LinalgOpsPackageOpDSLLangPyFiles",
+    srcs = glob(["aiir/dialects/linalg/opdsl/lang/*.py"]),
+)
+
+filegroup(
+    name = "LinalgOpsPackageOpDSLOpsPyFiles",
+    srcs = glob(["aiir/dialects/linalg/opdsl/ops/*.py"]),
+)
+
+filegroup(
+    name = "LinalgOpsPackagePassesPyFiles",
+    srcs = glob(["aiir/dialects/linalg/passes/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
+# LLVM dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "LLVMOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_llvm_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=llvm",
+        ],
+        "aiir/dialects/_llvm_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=llvm",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/LLVMOps.td",
+    deps = [
+        "//aiir:LLVMOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "LLVMOpsPyFiles",
+    srcs = [
+        "aiir/dialects/llvm.py",
+        ":LLVMOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Async dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "AsyncOpsPyGen",
+    tbl_outs = {"aiir/dialects/_async_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=async",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/AsyncOps.td",
+    deps = [
+        "//aiir:AsyncOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "AsyncOpsPyFiles",
+    srcs = [":AsyncOpsPyGen"],
+)
+
+filegroup(
+    name = "AsyncOpsPackagePyFiles",
+    srcs = glob(["aiir/dialects/async_dialect/*.py"]),
+)
+
+filegroup(
+    name = "AsyncOpsPackagePassesPyFiles",
+    srcs = glob(["aiir/dialects/async_dialect/passes/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
+# Arith dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "ArithOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_arith_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=arith",
+        ],
+        "aiir/dialects/_arith_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=arith",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/ArithOps.td",
+    deps = [
+        "//aiir:ArithOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ArithOpsPyFiles",
+    srcs = [
+        "aiir/dialects/arith.py",
+        ":ArithOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Bufferization dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "BufferizationOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//aiir:BufferizableOpInterfaceTdFiles",
+        "//aiir:BufferizationEnumsTdFiles",
+        "//aiir:BufferizationOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "BufferizationEnumPyGen",
+    tbl_outs = {"aiir/dialects/_bufferization_enum_gen.py": [
+        "-gen-python-enum-bindings",
+        "-bind-dialect=bufferization",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/BufferizationEnums.td",
+    deps = [
+        ":BufferizationOpsPyTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "BufferizationOpsPyGen",
+    tbl_outs = {"aiir/dialects/_bufferization_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=bufferization",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/BufferizationOps.td",
+    deps = [
+        ":BufferizationOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "BufferizationOpsPyFiles",
+    srcs = [
+        "aiir/dialects/bufferization.py",
+        ":BufferizationEnumPyGen",
+        ":BufferizationOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Complex dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "ComplexOpsPyGen",
+    tbl_outs = {"aiir/dialects/_complex_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=complex",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/ComplexOps.td",
+    deps = [
+        "//aiir:ComplexOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ComplexOpsPyFiles",
+    srcs = [
+        "aiir/dialects/complex.py",
+        ":ComplexOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# ControlFlow dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "ControlFlowOpsPyGen",
+    tbl_outs = {"aiir/dialects/_cf_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=cf",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/ControlFlowOps.td",
+    deps = [
+        "//aiir:ControlFlowOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ControlFlowOpsPyFiles",
+    srcs = [
+        "aiir/dialects/cf.py",
+        ":ControlFlowOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# EmitC dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "EmitCPyGen",
+    tbl_outs = {"aiir/dialects/_emitc_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=emitc",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/EmitC.td",
+    deps = [
+        "//aiir:EmitCTdFiles",
+    ],
+)
+
+filegroup(
+    name = "EmitCPyFiles",
+    srcs = [
+        "aiir/dialects/emitc.py",
+        ":EmitCPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Index dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "IndexOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_index_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=index",
+        ],
+        "aiir/dialects/_index_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=index",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/IndexOps.td",
+    deps = [
+        "//aiir:IndexOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "IndexOpsPyFiles",
+    srcs = [
+        "aiir/dialects/index.py",
+        ":IndexOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# X86 dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "X86PyGen",
+    tbl_outs = {
+        "aiir/dialects/_x86_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=x86",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/X86.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:X86TdFiles",
+    ],
+)
+
+filegroup(
+    name = "X86PyFiles",
+    srcs = [
+        "aiir/dialects/x86.py",
+        ":X86PyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# IRDL dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "IRDLOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_irdl_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=irdl",
+        ],
+        "aiir/dialects/_irdl_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=irdl",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/IRDLOps.td",
+    deps = [
+        "//aiir:IRDLTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "IRDLPyFiles",
+    srcs = [
+        "aiir/dialects/irdl.py",
+        ":IRDLOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Math dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "MathOpsPyGen",
+    tbl_outs = {"aiir/dialects/_math_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=math",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/MathOps.td",
+    deps = [
+        "//aiir:MathOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "MathOpsPyFiles",
+    srcs = [
+        "aiir/dialects/math.py",
+        ":MathOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# MemRef dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "MemRefOpsPyGen",
+    tbl_outs = {"aiir/dialects/_memref_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=memref",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/MemRefOps.td",
+    deps = [
+        "//aiir:MemRefOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "MemRefOpsPyFiles",
+    srcs = [
+        "aiir/dialects/memref.py",
+        ":MemRefOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# MLProgram dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "MLProgramOpsPyGen",
+    tbl_outs = {"aiir/dialects/_ml_program_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=ml_program",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/MLProgramOps.td",
+    deps = [
+        "//aiir:MLProgramOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "MLProgramOpsPyFiles",
+    srcs = [
+        "aiir/dialects/ml_program.py",
+        ":MLProgramOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# OpenACC dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "OpenACCOpsPyGen",
+    tbl_outs = {"aiir/dialects/_acc_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=acc",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/OpenACCOps.td",
+    deps = [
+        "//aiir:BuiltinDialectTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:OpenAccOpsTdFiles",
+        "//aiir:SideEffectInterfacesTdFiles",
+    ],
+)
+
+filegroup(
+    name = "OpenACCOpsPyFiles",
+    srcs = [
+        "aiir/dialects/openacc.py",
+        ":OpenACCOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# OpenMP dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "OpenMPOpsPyGen",
+    tbl_outs = {"aiir/dialects/_omp_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=omp",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/OpenMPOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:OpenMPOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "OpenMPOpsPyFiles",
+    srcs = [
+        "aiir/dialects/openmp.py",
+        ":OpenMPOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# PDL dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "PDLPyGen",
+    tbl_outs = {"aiir/dialects/_pdl_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=pdl",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/PDLOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:PDLDialectTdFiles",
+    ],
+)
+
+filegroup(
+    name = "PDLPyIFiles",
+    srcs = ["aiir/_aiir_libs/_aiir/dialects/pdl.pyi"],
+)
+
+filegroup(
+    name = "PDLPyFiles",
+    srcs = [
+        "aiir/dialects/pdl.py",
+        ":PDLPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Debug dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "DebugTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_transform_debug_extension_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=transform_debug_extension",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TransformDebugExtensionOps.td",
+    deps = [
+        "//aiir:TransformDebugExtensionTdFiles",
+    ],
+)
+
+filegroup(
+    name = "DebugPyFiles",
+    srcs = [
+        "aiir/dialects/transform/debug.py",
+        ":DebugTransformOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Tune dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "TuneTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_transform_tune_extension_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=transform_tune_extension",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TransformTuneExtensionOps.td",
+    deps = [
+        "//aiir:TransformTuneExtensionTdFiles",
+    ],
+)
+
+filegroup(
+    name = "TunePyFiles",
+    srcs = [
+        "aiir/dialects/transform/tune.py",
+        ":TuneTransformOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# PythonTest dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "PythonTestPyGen",
+    tbl_outs = {"aiir/dialects/_python_test_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=python_test",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "//aiir/test/python:python_test_ops.td",
+    deps = [
+        "//aiir:InferTypeOpInterfaceTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "PythonTestPyFiles",
+    srcs = [
+        "aiir/dialects/python_test.py",
+        ":PythonTestPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Quant dialect.
+##---------------------------------------------------------------------------##
+
+filegroup(
+    name = "QuantPyIFiles",
+    srcs = ["aiir/_aiir_libs/_aiir/dialects/quant.pyi"],
+)
+
+filegroup(
+    name = "QuantPyFiles",
+    srcs = ["aiir/dialects/quant.py"],
+)
+
+##---------------------------------------------------------------------------##
+# GPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "GPUOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//aiir:GPUOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "GPUOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_gpu_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=gpu",
+        ],
+        "aiir/dialects/_gpu_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=gpu",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/GPUOps.td",
+    deps = [":GPUOpsPyTdFiles"],
+)
+
+filegroup(
+    name = "GPUOpsPyFiles",
+    srcs = [":GPUOpsPyGen"],
+)
+
+filegroup(
+    name = "GPUOpsPackagePyFiles",
+    srcs = glob(["aiir/dialects/gpu/*.py"]),
+)
+
+filegroup(
+    name = "GPUOpsPackagePassesPyFiles",
+    srcs = glob(["aiir/dialects/gpu/passes/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
+# NVGPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "NVGPUOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//aiir:NVGPUOpsTdFiles",
+        "//aiir:NVGPUTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "NVGPUOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_nvgpu_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=nvgpu",
+        ],
+        "aiir/dialects/_nvgpu_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=nvgpu",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/NVGPUOps.td",
+    deps = [":NVGPUOpsPyTdFiles"],
+)
+
+filegroup(
+    name = "NVGPUOpsPyFiles",
+    srcs = [
+        "aiir/dialects/nvgpu.py",
+        ":NVGPUOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# NVVM dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "NVVMOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//aiir:NVVMOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "NVVMOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_nvvm_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=nvvm",
+        ],
+        "aiir/dialects/_nvvm_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=nvvm",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/NVVMOps.td",
+    deps = [":NVVMOpsPyTdFiles"],
+)
+
+filegroup(
+    name = "NVVMOpsPyFiles",
+    srcs = [
+        "aiir/dialects/nvvm.py",
+        ":NVVMOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# ROCDL dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "ROCDLOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:ROCDLOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "ROCDLOpsPyGen",
+    tbl_outs = {"aiir/dialects/_rocdl_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=rocdl",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/ROCDLOps.td",
+    deps = [
+        ":ROCDLOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ROCDLOpsPyFiles",
+    srcs = [
+        "aiir/dialects/rocdl.py",
+        ":ROCDLOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# SCF dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "SCFPyGen",
+    tbl_outs = {"aiir/dialects/_scf_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=scf",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/SCFOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:SCFTdFiles",
+    ],
+)
+
+filegroup(
+    name = "SCFPyFiles",
+    srcs = [
+        "aiir/dialects/scf.py",
+        ":SCFPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Shard dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "ShardOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_shard_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=shard",
+        ],
+        "aiir/dialects/_shard_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=shard",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/ShardOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:ShapeOpsTdFiles",
+        "//aiir:ShardTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ShardOpsPyFiles",
+    srcs = [
+        "aiir/dialects/shard.py",
+        ":ShardOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Shape dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "ShapeOpsPyGen",
+    tbl_outs = {"aiir/dialects/_shape_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=shape",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/ShapeOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:ShapeOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ShapeOpsPyFiles",
+    srcs = [
+        "aiir/dialects/shape.py",
+        ":ShapeOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Func dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "FuncPyTdFiles",
+    srcs = [
+    ],
+    deps = [
+        "//aiir:FuncTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "FuncPyGen",
+    tbl_outs = {"aiir/dialects/_func_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=func",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/FuncOps.td",
+    deps = [
+        "//aiir:FuncTdFiles",
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "FuncPyFiles",
+    srcs = [
+        "aiir/dialects/func.py",
+        ":FuncPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# SMT dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "SMTOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:SMTTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "SMTOpsPyGen",
+    tbl_outs = {
+        "aiir/dialects/_smt_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=smt",
+        ],
+        "aiir/dialects/_smt_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=smt",
+        ],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/SMTOps.td",
+    deps = [":SMTOpsPyTdFiles"],
+)
+
+filegroup(
+    name = "SMTOpsPyFiles",
+    srcs = [
+        "aiir/dialects/smt.py",
+        ":SMTOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# SparseTensor dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "SparseTensorOpsPyTdFiles",
+    srcs = [
+    ],
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:SparseTensorTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "SparseTensorEnumPyGen",
+    tbl_outs = {"aiir/dialects/_sparse_tensor_enum_gen.py": [
+        "-gen-python-enum-bindings",
+        "-bind-dialect=sparse_tensor",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/SparseTensorAttrDefs.td",
+    deps = [
+        ":SparseTensorOpsPyTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "SparseTensorOpsPyGen",
+    tbl_outs = {"aiir/dialects/_sparse_tensor_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=sparse_tensor",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/SparseTensorOps.td",
+    deps = [
+        ":SparseTensorOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "SparseTensorOpsPyFiles",
+    srcs = [
+        "aiir/dialects/sparse_tensor.py",
+        ":SparseTensorEnumPyGen",
+        ":SparseTensorOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# SPIRV dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "SPIRVOpsPyGen",
+    tbl_outs = {"aiir/dialects/_spirv_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=spirv",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/SPIRVOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:SPIRVOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "SPIRVOpsPyFiles",
+    srcs = [
+        "aiir/dialects/spirv.py",
+        ":SPIRVOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Tensor dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "TensorOpsPyTdFiles",
+    srcs = [
+    ],
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TensorOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "TensorOpsPyGen",
+    tbl_outs = {"aiir/dialects/_tensor_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=tensor",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TensorOps.td",
+    deps = [
+        ":TensorOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "TensorOpsPyFiles",
+    srcs = [
+        "aiir/dialects/tensor.py",
+        ":TensorOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Tosa dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "TosaOpsPyGen",
+    tbl_outs = {"aiir/dialects/_tosa_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=tosa",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TosaOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TosaDialectTdFiles",
+    ],
+)
+
+filegroup(
+    name = "TosaOpsPyFiles",
+    srcs = [
+        "aiir/dialects/tosa.py",
+        ":TosaOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Transform dialect and extensions.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "TransformEnumPyGen",
+    tbl_outs = {"aiir/dialects/_transform_enum_gen.py": [
+        "-gen-python-enum-bindings",
+        "-bind-dialect=transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TransformAttrs.td",
+    deps = [
+        "//aiir:CallInterfacesTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "TransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TransformOps.td",
+    deps = [
+        "//aiir:CallInterfacesTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "BufferizationTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_bufferization_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=bufferization_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/BufferizationTransformOps.td",
+    deps = [
+        "//aiir:BufferizationTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "X86TransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_x86_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=x86_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/X86TransformOps.td",
+    deps = [
+        "//aiir:X86TransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "GPUTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_gpu_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=gpu_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/GPUTransformOps.td",
+    deps = [
+        "//aiir:CallInterfacesTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:GPUTransformOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "StructureTransformEnumPyGen",
+    tbl_outs = {"aiir/dialects/_structured_transform_enum_gen.py": [
+        "-gen-python-enum-bindings",
+        "-bind-dialect=transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/LinalgStructuredTransformEnums.td",
+    deps = [
+        "//aiir:CallInterfacesTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:LinalgTransformOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "StructuredTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_structured_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=structured_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/LinalgStructuredTransformOps.td",
+    deps = [
+        "//aiir:CallInterfacesTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:LinalgTransformOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "LoopTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_loop_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=loop_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/SCFLoopTransformOps.td",
+    deps = [
+        "//aiir:CallInterfacesTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:SCFTransformOpsTdFiles",
+        "//aiir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "MemRefTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_memref_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=memref_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/MemRefTransformOps.td",
+    deps = [
+        "//aiir:MemRefTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "NVGPUTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_nvgpu_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=nvgpu_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/NVGPUTransformOps.td",
+    deps = [
+        "//aiir:NVGPUTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "PDLTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_transform_pdl_extension_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=transform_pdl_extension",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TransformPDLExtensionOps.td",
+    deps = [
+        "//aiir:CallInterfacesTdFiles",
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+        "//aiir:TransformPDLExtensionTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "SparseTensorTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_sparse_tensor_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=sparse_tensor_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/SparseTensorTransformOps.td",
+    deps = [
+        "//aiir:SparseTensorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "TensorTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_tensor_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=tensor_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TensorTransformOps.td",
+    deps = [
+        "//aiir:TensorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "VectorTransformEnumPyGen",
+    tbl_outs = {"aiir/dialects/_vector_transform_enum_gen.py": [
+        "-gen-python-enum-bindings",
+        "-bind-dialect=transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/VectorTransformsBase.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+        "//aiir:VectorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "VectorTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_vector_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=vector_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/VectorTransformOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+        "//aiir:VectorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "TransformSMTExtensionOpsPyGen",
+    tbl_outs = {"aiir/dialects/_transform_smt_extension_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=smt_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/TransformSMTExtensionOps.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:TransformDialectTdFiles",
+        "//aiir:TransformSMTExtensionOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "TransformOpsPyFiles",
+    srcs = [
+        ":BufferizationTransformOpsPyGen",
+        ":GPUTransformOpsPyGen",
+        ":LoopTransformOpsPyGen",
+        ":MemRefTransformOpsPyGen",
+        ":NVGPUTransformOpsPyGen",
+        ":PDLTransformOpsPyGen",
+        ":SparseTensorTransformOpsPyGen",
+        ":StructureTransformEnumPyGen",
+        ":StructuredTransformOpsPyGen",
+        ":TensorTransformOpsPyGen",
+        ":TransformEnumPyGen",
+        ":TransformOpsPyGen",
+        ":TransformSMTExtensionOpsPyGen",
+        ":VectorTransformEnumPyGen",
+        ":VectorTransformOpsPyGen",
+        ":X86TransformOpsPyGen",
+        ":XeGPUTransformOpsPyGen",
+    ],
+)
+
+filegroup(
+    name = "TransformOpsPackagePyFiles",
+    srcs = glob(["aiir/dialects/transform/*.py"]),
+)
+
+filegroup(
+    name = "TransformExtrasPackagePyFiles",
+    srcs = glob(["aiir/dialects/transform/extras/*.py"]),
+)
+
+filegroup(
+    name = "TransformInterpreterPackagePyFiles",
+    srcs = glob(["aiir/dialects/transform/interpreter/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
+# UB dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "UbOpsPyGen",
+    tbl_outs = {"aiir/dialects/_ub_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=ub",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/UBOps.td",
+    deps = [
+        "//aiir:UBDialectTdFiles",
+    ],
+)
+
+filegroup(
+    name = "UbPyFiles",
+    srcs = [
+        "aiir/dialects/ub.py",
+        ":UbOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Vector dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "VectorOpsPyGen",
+    tbl_outs = {"aiir/dialects/_vector_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=vector",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/VectorOps.td",
+    deps = [
+        "//aiir:ArithOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:VectorOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "VectorAttributesPyGen",
+    tbl_outs = {"aiir/dialects/_vector_enum_gen.py": [
+        "-gen-python-enum-bindings",
+        "-bind-dialect=vector",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/VectorAttributes.td",
+    deps = [
+        "//aiir:ArithOpsTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:VectorOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "VectorOpsPyFiles",
+    srcs = [
+        "aiir/dialects/vector.py",
+        ":VectorAttributesPyGen",
+        ":VectorOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# XEGPU dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "XeGPUTransformOpsPyGen",
+    tbl_outs = {"aiir/dialects/_xegpu_transform_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=xegpu_transform",
+    ]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/dialects/XeGPUTransformOps.td",
+    deps = [
+        "//aiir:XeGPUTransformOpsTdFiles",
+    ],
+)

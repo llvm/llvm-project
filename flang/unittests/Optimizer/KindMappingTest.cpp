@@ -15,9 +15,9 @@ namespace llvm {
 struct fltSemantics;
 } // namespace llvm
 
-namespace mlir {
-class MLIRContext;
-} // namespace mlir
+namespace aiir {
+class AIIRContext;
+} // namespace aiir
 
 using Bitsize = fir::KindMapping::Bitsize;
 using LLVMTypeID = fir::KindMapping::LLVMTypeID;
@@ -28,7 +28,7 @@ public:
   void TearDown() { delete defaultString; }
 
   KindMapping *defaultString{};
-  mlir::MLIRContext *context{};
+  aiir::AIIRContext *context{};
 };
 
 struct CommandLineStringTests : public testing::Test {
@@ -47,7 +47,7 @@ public:
 
   KindMapping *commandLineString{};
   KindMapping *clStringConflict{};
-  mlir::MLIRContext *context{};
+  aiir::AIIRContext *context{};
 };
 
 struct KindDefaultsTests : public testing::Test {
@@ -62,7 +62,7 @@ public:
     delete overrideDefaultKinds;
   }
 
-  mlir::MLIRContext *context{};
+  aiir::AIIRContext *context{};
   KindMapping *defaultDefaultKinds{};
   KindMapping *overrideDefaultKinds{};
 };
@@ -164,7 +164,7 @@ TEST_F(CommandLineStringTests, getIntegerBitsizeTest) {
 }
 
 TEST(KindMappingDeathTests, mapTest) {
-  mlir::MLIRContext *context{};
+  aiir::AIIRContext *context{};
   // Catch parsing errors
   ASSERT_DEATH(new KindMapping(context, "r10:Double,r20:Doubl"), "");
   ASSERT_DEATH(new KindMapping(context, "10:Double"), "");

@@ -6,8 +6,8 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-!RUN: %flang_fc1 -emit-llvm -fopenmp -mmlir --enable-delayed-privatization-staging=false -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-FPRIV
-!RUN: %flang_fc1 -emit-llvm -fopenmp -mmlir --enable-delayed-privatization-staging=true -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPRIV
+!RUN: %flang_fc1 -emit-llvm -fopenmp -maiir --enable-delayed-privatization-staging=false -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-FPRIV
+!RUN: %flang_fc1 -emit-llvm -fopenmp -maiir --enable-delayed-privatization-staging=true -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPRIV
 
 
 !===============================================================================

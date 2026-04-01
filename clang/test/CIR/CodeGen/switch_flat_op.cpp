@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: cir-opt --mlir-print-ir-before=cir-flatten-cfg --cir-flatten-cfg %t.cir -o %t.flattened.before.cir 2> %t.before
+// RUN: cir-opt --aiir-print-ir-before=cir-flatten-cfg --cir-flatten-cfg %t.cir -o %t.flattened.before.cir 2> %t.before
 // RUN: FileCheck --input-file=%t.before %s --check-prefix=BEFORE
-// RUN: cir-opt --mlir-print-ir-after=cir-flatten-cfg --cir-flatten-cfg %t.cir -o %t.flattened.after.cir 2> %t.after
+// RUN: cir-opt --aiir-print-ir-after=cir-flatten-cfg --cir-flatten-cfg %t.cir -o %t.flattened.after.cir 2> %t.after
 // RUN: FileCheck --input-file=%t.after %s --check-prefix=AFTER
 
 void swf(int a) {

@@ -14,9 +14,9 @@
 #ifndef FORTRAN_DIALECT_CUF_CUFDIALECT
 #define FORTRAN_DIALECT_CUF_CUFDIALECT
 
-include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/EnumAttr.td"
-include "mlir/IR/OpBase.td"
+include "aiir/IR/AttrTypeBase.td"
+include "aiir/IR/EnumAttr.td"
+include "aiir/IR/OpBase.td"
 
 def CUFDialect : Dialect {
   let name = "cuf";

@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -mmlir --enable-delayed-privatization-staging=false %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -mmlir --enable-delayed-privatization-staging=true %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -maiir --enable-delayed-privatization-staging=false %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -maiir --enable-delayed-privatization-staging=true %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
 
 subroutine defaultmap_allocatable_present()
     implicit none

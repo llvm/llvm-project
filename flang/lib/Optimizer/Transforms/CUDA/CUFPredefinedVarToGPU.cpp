@@ -8,30 +8,30 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/Dialect/LLVMIR/NVVMDialect.h"
+#include "aiir/Pass/Pass.h"
 
 namespace fir {
 #define GEN_PASS_DEF_CUFPREDEFINEDVARTOGPU
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
 template <typename OpTyX, typename OpTyY, typename OpTyZ>
-static void createForAllDimensions(mlir::OpBuilder &builder, mlir::Location loc,
-                                   mlir::Value c1,
-                                   SmallVectorImpl<mlir::Value> &values,
+static void createForAllDimensions(aiir::OpBuilder &builder, aiir::Location loc,
+                                   aiir::Value c1,
+                                   SmallVectorImpl<aiir::Value> &values,
                                    bool incrementByOne = false) {
   if (incrementByOne) {
     auto baseX = OpTyX::create(builder, loc, builder.getI32Type());
-    values.push_back(mlir::arith::AddIOp::create(builder, loc, baseX, c1));
+    values.push_back(aiir::arith::AddIOp::create(builder, loc, baseX, c1));
     auto baseY = OpTyY::create(builder, loc, builder.getI32Type());
-    values.push_back(mlir::arith::AddIOp::create(builder, loc, baseY, c1));
+    values.push_back(aiir::arith::AddIOp::create(builder, loc, baseY, c1));
     auto baseZ = OpTyZ::create(builder, loc, builder.getI32Type());
-    values.push_back(mlir::arith::AddIOp::create(builder, loc, baseZ, c1));
+    values.push_back(aiir::arith::AddIOp::create(builder, loc, baseZ, c1));
   } else {
     values.push_back(OpTyX::create(builder, loc, builder.getI32Type()));
     values.push_back(OpTyY::create(builder, loc, builder.getI32Type()));
@@ -55,19 +55,19 @@ std::string mangleBuiltin(llvm::StringRef varName) {
          varName.str();
 }
 
-static void processCoordinateOp(mlir::OpBuilder &builder, mlir::Location loc,
+static void processCoordinateOp(aiir::OpBuilder &builder, aiir::Location loc,
                                 fir::CoordinateOp coordOp, unsigned fieldIdx,
-                                mlir::Value &gpuValue) {
+                                aiir::Value &gpuValue) {
   std::optional<llvm::ArrayRef<int32_t>> fieldIndices =
       coordOp.getFieldIndices();
   assert(fieldIndices && fieldIndices->size() == 1 &&
          "expect only one coordinate");
   if (static_cast<unsigned>((*fieldIndices)[0]) == fieldIdx) {
     llvm::SmallVector<fir::LoadOp> opToErase;
-    for (mlir::OpOperand &coordUse : coordOp.getResult().getUses()) {
-      assert(mlir::isa<fir::LoadOp>(coordUse.getOwner()) &&
+    for (aiir::OpOperand &coordUse : coordOp.getResult().getUses()) {
+      assert(aiir::isa<fir::LoadOp>(coordUse.getOwner()) &&
              "only expect load op");
-      auto loadOp = mlir::dyn_cast<fir::LoadOp>(coordUse.getOwner());
+      auto loadOp = aiir::dyn_cast<fir::LoadOp>(coordUse.getOwner());
       loadOp.getResult().replaceAllUsesWith(gpuValue);
       opToErase.push_back(loadOp);
     }
@@ -77,14 +77,14 @@ static void processCoordinateOp(mlir::OpBuilder &builder, mlir::Location loc,
 }
 
 static void
-processDeclareOp(mlir::OpBuilder &builder, mlir::Location loc,
+processDeclareOp(aiir::OpBuilder &builder, aiir::Location loc,
                  fir::DeclareOp declareOp, llvm::StringRef builtinVar,
-                 llvm::SmallVectorImpl<mlir::Value> &gpuValues,
-                 llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete) {
+                 llvm::SmallVectorImpl<aiir::Value> &gpuValues,
+                 llvm::SmallVectorImpl<aiir::Operation *> &opsToDelete) {
   if (declareOp.getUniqName().str().compare(builtinVar) == 0) {
-    for (mlir::OpOperand &use : declareOp.getResult().getUses()) {
+    for (aiir::OpOperand &use : declareOp.getResult().getUses()) {
       fir::CoordinateOp coordOp =
-          mlir::dyn_cast<fir::CoordinateOp>(use.getOwner());
+          aiir::dyn_cast<fir::CoordinateOp>(use.getOwner());
       processCoordinateOp(builder, loc, coordOp, field_x, gpuValues[0]);
       processCoordinateOp(builder, loc, coordOp, field_y, gpuValues[1]);
       processCoordinateOp(builder, loc, coordOp, field_z, gpuValues[2]);
@@ -111,27 +111,27 @@ struct CUFPredefinedVarToGPU
           cudaProcAttr.getValue() == cuf::ProcAttribute::Global ||
           cudaProcAttr.getValue() == cuf::ProcAttribute::GridGlobal ||
           cudaProcAttr.getValue() == cuf::ProcAttribute::HostDevice) {
-        mlir::Location loc = funcOp.getLoc();
-        mlir::OpBuilder builder(funcOp.getContext());
+        aiir::Location loc = funcOp.getLoc();
+        aiir::OpBuilder builder(funcOp.getContext());
         builder.setInsertionPointToStart(&funcOp.getBody().front());
-        auto c1 = mlir::arith::ConstantOp::create(
+        auto c1 = aiir::arith::ConstantOp::create(
             builder, loc, builder.getI32Type(), builder.getI32IntegerAttr(1));
-        llvm::SmallVector<mlir::Value, 3> threadids, blockids, blockdims,
+        llvm::SmallVector<aiir::Value, 3> threadids, blockids, blockdims,
             griddims;
-        createForAllDimensions<mlir::NVVM::ThreadIdXOp, mlir::NVVM::ThreadIdYOp,
-                               mlir::NVVM::ThreadIdZOp>(
+        createForAllDimensions<aiir::NVVM::ThreadIdXOp, aiir::NVVM::ThreadIdYOp,
+                               aiir::NVVM::ThreadIdZOp>(
             builder, loc, c1, threadids, /*incrementByOne=*/true);
-        createForAllDimensions<mlir::NVVM::BlockIdXOp, mlir::NVVM::BlockIdYOp,
-                               mlir::NVVM::BlockIdZOp>(
+        createForAllDimensions<aiir::NVVM::BlockIdXOp, aiir::NVVM::BlockIdYOp,
+                               aiir::NVVM::BlockIdZOp>(
             builder, loc, c1, blockids, /*incrementByOne=*/true);
-        createForAllDimensions<mlir::NVVM::GridDimXOp, mlir::NVVM::GridDimYOp,
-                               mlir::NVVM::GridDimZOp>(builder, loc, c1,
+        createForAllDimensions<aiir::NVVM::GridDimXOp, aiir::NVVM::GridDimYOp,
+                               aiir::NVVM::GridDimZOp>(builder, loc, c1,
                                                        griddims);
-        createForAllDimensions<mlir::NVVM::BlockDimXOp, mlir::NVVM::BlockDimYOp,
-                               mlir::NVVM::BlockDimZOp>(builder, loc, c1,
+        createForAllDimensions<aiir::NVVM::BlockDimXOp, aiir::NVVM::BlockDimYOp,
+                               aiir::NVVM::BlockDimZOp>(builder, loc, c1,
                                                         blockdims);
 
-        llvm::SmallVector<mlir::Operation *> opsToDelete;
+        llvm::SmallVector<aiir::Operation *> opsToDelete;
         funcOp.walk([&](fir::DeclareOp declareOp) {
           processDeclareOp(builder, loc, declareOp, mangleBuiltin(threadidx),
                            threadids, opsToDelete);

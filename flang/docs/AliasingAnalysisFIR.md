@@ -8,10 +8,10 @@
 
 # Aliasing analysis in FIR
 
-This document describes the design of Alias Analysis for the FIR dialect, using the MLIR infrastructure. The intention is to use this analysis as a building block for more advanced analyses such as global code motion.
+This document describes the design of Alias Analysis for the FIR dialect, using the AIIR infrastructure. The intention is to use this analysis as a building block for more advanced analyses such as global code motion.
 
 The result will be
-1. A class, implementing the  [AliasAnalysis](https://github.com/llvm/llvm-project/blob/189900eb149bb55ae3787346f57c1ccbdc50fb3c/mlir/include/mlir/Analysis/AliasAnalysis.h#L232) interface. It will be able to answer two types of queries:
+1. A class, implementing the  [AliasAnalysis](https://github.com/llvm/llvm-project/blob/189900eb149bb55ae3787346f57c1ccbdc50fb3c/aiir/include/aiir/Analysis/AliasAnalysis.h#L232) interface. It will be able to answer two types of queries:
    - AliasResult Alias (Value lhs, Value rhs)
 
      Given two memory references, return their aliasing behavior
@@ -29,7 +29,7 @@ The result will be
 ### Memory side effect or side effect:
 1. Presence of MemoryEffectOpInterface
 
-   A side effect will be determined by the MemoryEffectOpInterface. The interface can inform for each operand of an MLIR operation, whether there is a side effect on it or not. The possible side effects are:
+   A side effect will be determined by the MemoryEffectOpInterface. The interface can inform for each operand of an AIIR operation, whether there is a side effect on it or not. The possible side effects are:
 
     - Allocate
     - Free

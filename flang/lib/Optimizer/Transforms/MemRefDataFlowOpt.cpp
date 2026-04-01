@@ -10,10 +10,10 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Dominance.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Transforms/Passes.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/Dominance.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -25,25 +25,25 @@ namespace fir {
 
 #define DEBUG_TYPE "fir-memref-dataflow-opt"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
 template <typename OpT>
-static std::vector<OpT> getSpecificUsers(mlir::Value v) {
+static std::vector<OpT> getSpecificUsers(aiir::Value v) {
   std::vector<OpT> ops;
-  for (mlir::Operation *user : v.getUsers())
+  for (aiir::Operation *user : v.getUsers())
     if (auto op = dyn_cast<OpT>(user))
       ops.push_back(op);
   return ops;
 }
 
-/// This is based on MLIR's MemRefDataFlowOpt which is specialized on AffineRead
+/// This is based on AIIR's MemRefDataFlowOpt which is specialized on AffineRead
 /// and AffineWrite interface
 template <typename ReadOp, typename WriteOp>
 class LoadStoreForwarding {
 public:
-  LoadStoreForwarding(mlir::DominanceInfo *di) : domInfo(di) {}
+  LoadStoreForwarding(aiir::DominanceInfo *di) : domInfo(di) {}
 
   // FIXME: This algorithm has a bug. It ignores escaping references between a
   // store and a load.
@@ -72,7 +72,7 @@ public:
         return rv;
       };
       if (!llvm::any_of(candidateSet, nearerThan)) {
-        nearestStore = mlir::cast<WriteOp>(candidate);
+        nearestStore = aiir::cast<WriteOp>(candidate);
         break;
       }
     }
@@ -95,15 +95,15 @@ public:
   }
 
 private:
-  mlir::DominanceInfo *domInfo;
+  aiir::DominanceInfo *domInfo;
 };
 
 class MemDataFlowOpt : public fir::impl::MemRefDataFlowOptBase<MemDataFlowOpt> {
 public:
   void runOnOperation() override {
-    mlir::func::FuncOp f = getOperation();
+    aiir::func::FuncOp f = getOperation();
 
-    auto *domInfo = &getAnalysis<mlir::DominanceInfo>();
+    auto *domInfo = &getAnalysis<aiir::DominanceInfo>();
     LoadStoreForwarding<fir::LoadOp, fir::StoreOp> lsf(domInfo);
     f.walk([&](fir::LoadOp loadOp) {
       auto maybeStore = lsf.findStoreToForward(
@@ -131,6 +131,6 @@ public:
 };
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::createMemDataFlowOptPass() {
+std::unique_ptr<aiir::Pass> fir::createMemDataFlowOptPass() {
   return std::make_unique<MemDataFlowOpt>();
 }

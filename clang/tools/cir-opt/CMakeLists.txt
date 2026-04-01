@@ -1,13 +1,13 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
+get_property(conversion_libs GLOBAL PROPERTY AIIR_CONVERSION_LIBS)
 
-include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
-include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
+include_directories(${LLVM_MAIN_SRC_DIR}/../aiir/include)
+include_directories(${CMAKE_BINARY_DIR}/tools/aiir/include)
 
 # GCC, unlike clang, issues a warning when one virtual function is overridden
 # in a derived class but one or more other virtual functions with the same
 # name and different signature from a base class are not overridden. This
-# leads to many warnings in the MLIR and ClangIR code when using the
+# leads to many warnings in the AIIR and ClangIR code when using the
 # OpenConversionPattern<>::matchAndRewrite() function in the ordinary way.
 # The "hiding" behavior is what we want, so we're just disabling the warning
 # here.
@@ -23,22 +23,22 @@ clang_target_link_libraries(cir-opt
   PRIVATE
   clangCIR
   clangCIRLoweringDirectToLLVM
-  MLIRCIR
-  MLIRCIRTransforms
+  AIIRCIR
+  AIIRCIRTransforms
 )
 
 target_link_libraries(cir-opt
   PRIVATE
   ${dialect_libs}
   ${conversion_libs}
-  MLIRAnalysis
-  MLIRDialect
-  MLIRIR
-  MLIRMemRefDialect
-  MLIROptLib
-  MLIRParser
-  MLIRPass
-  MLIRSideEffectInterfaces
-  MLIRTransforms
-  MLIRTransformUtils
+  AIIRAnalysis
+  AIIRDialect
+  AIIRIR
+  AIIRMemRefDialect
+  AIIROptLib
+  AIIRParser
+  AIIRPass
+  AIIRSideEffectInterfaces
+  AIIRTransforms
+  AIIRTransformUtils
 )

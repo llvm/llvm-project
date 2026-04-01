@@ -19,9 +19,9 @@ include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
-include "mlir/Dialect/Arith/IR/ArithBase.td"
-include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
-include "mlir/IR/BuiltinAttributes.td"
+include "aiir/Dialect/Arith/IR/ArithBase.td"
+include "aiir/Dialect/Arith/IR/ArithOpsInterfaces.td"
+include "aiir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
 // All operations automatically get a prefix of "hlfir.".
@@ -116,11 +116,11 @@ def hlfir_DeclareOp
     attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [OpBuilder<(ins "mlir::Value":$memref,
-      "llvm::StringRef":$uniq_name, CArg<"mlir::Value", "{}">:$shape,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::Value", "{}">:$dummy_scope,
-      CArg<"mlir::Value", "{}">:$storage,
+  let builders = [OpBuilder<(ins "aiir::Value":$memref,
+      "llvm::StringRef":$uniq_name, CArg<"aiir::Value", "{}">:$shape,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::Value", "{}">:$dummy_scope,
+      CArg<"aiir::Value", "{}">:$storage,
       CArg<"std::uint64_t", "0">:$storage_offset,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
       CArg<"cuf::DataAttributeAttr", "{}">:$data_attr,
@@ -130,22 +130,22 @@ def hlfir_DeclareOp
     /// Get the variable original base (same as input). It lacks
     /// any explicit lower bounds and the extents might not be retrievable
     /// from it. This matches what is used as a "base" in FIR.
-    mlir::Value getOriginalBase() {
+    aiir::Value getOriginalBase() {
       return getResult(1);
     }
 
     /// Override FortranVariableInterface default implementation
-    mlir::Value getBase() {
+    aiir::Value getBase() {
       return getResult(0);
     }
 
     /// Given a FIR memory type, and information about non default lower
     /// bounds, get the related HLFIR variable type.
-    static mlir::Type getHLFIRVariableType(mlir::Type type, bool hasLowerBounds);
+    static aiir::Type getHLFIRVariableType(aiir::Type type, bool hasLowerBounds);
 
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+    aiir::Value getViewSource(aiir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult) { return 0; }
   }];
 
   let hasVerifier = 1;
@@ -281,29 +281,29 @@ def hlfir_DesignateOp
   }];
 
   let extraClassDeclaration = [{
-    using Triplet = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
-    using Subscript = std::variant<mlir::Value, Triplet>;
+    using Triplet = std::tuple<aiir::Value, aiir::Value, aiir::Value>;
+    using Subscript = std::variant<aiir::Value, Triplet>;
     using Subscripts = llvm::SmallVector<Subscript, 8>;
     void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {
       this->setFortranAttrs(std::optional<fir::FortranVariableFlagsEnum>(flags));
     }
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+    aiir::Value getViewSource(aiir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult);
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$memref,
-      "llvm::StringRef":$component, "mlir::Value":$component_shape,
-      "llvm::ArrayRef<std::variant<mlir::Value, std::tuple<mlir::Value, mlir::Value, mlir::Value>>>":$subscripts,
-      CArg<"mlir::ValueRange", "{}">:$substring,
+    OpBuilder<(ins "aiir::Type":$result_type, "aiir::Value":$memref,
+      "llvm::StringRef":$component, "aiir::Value":$component_shape,
+      "llvm::ArrayRef<std::variant<aiir::Value, std::tuple<aiir::Value, aiir::Value, aiir::Value>>>":$subscripts,
+      CArg<"aiir::ValueRange", "{}">:$substring,
       CArg<"std::optional<bool>", "{}">:$complex_part,
-      CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::Value", "{}">:$shape, CArg<"aiir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
 
-    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$memref,
-      "mlir::ValueRange":$indices,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
+    OpBuilder<(ins "aiir::Type":$result_type, "aiir::Value":$memref,
+      "aiir::ValueRange":$indices,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>
     ];
 
@@ -373,7 +373,7 @@ def hlfir_ConcatOp : hlfir_Op<"concat",
      attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [OpBuilder<(ins "mlir::ValueRange":$strings,"mlir::Value":$len)>];
+  let builders = [OpBuilder<(ins "aiir::ValueRange":$strings,"aiir::Value":$len)>];
 
   let hasVerifier = 1;
 }
@@ -412,7 +412,7 @@ def hlfir_CharTrimOp
       $chr attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [OpBuilder<(ins "mlir::Value":$chr)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$chr)>];
 }
 
 def hlfir_IndexOp
@@ -513,7 +513,7 @@ def hlfir_MaxvalOp : hlfir_Op<"maxval", [AttrSizedOperandSegments,
     Optional<AnyIntegerType>:$dim,
     Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs AnyFortranValue);
@@ -540,7 +540,7 @@ def hlfir_MinvalOp : hlfir_Op<"minval", [AttrSizedOperandSegments,
     Optional<AnyIntegerType>:$dim,
     Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs AnyFortranValue);
@@ -566,7 +566,7 @@ def hlfir_MinlocOp : hlfir_Op<"minloc", [AttrSizedOperandSegments,
     Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
     Optional<Type<AnyLogicalLike.predicate>>:$back,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs AnyFortranValue);
@@ -592,7 +592,7 @@ def hlfir_MaxlocOp : hlfir_Op<"maxloc", [AttrSizedOperandSegments,
     Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
     Optional<Type<AnyLogicalLike.predicate>>:$back,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs AnyFortranValue);
@@ -618,7 +618,7 @@ def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
     Optional<AnyIntegerType>:$dim,
     Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs AnyFortranValue);
@@ -648,7 +648,7 @@ def hlfir_SetLengthOp : hlfir_Op<"set_length",
      attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$string,"aiir::Value":$len)>];
 }
 
 def hlfir_GetLengthOp : hlfir_Op<"get_length", [Pure]> {
@@ -683,7 +683,7 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
     Optional<AnyIntegerType>:$dim,
     Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs AnyFortranValue);
@@ -707,7 +707,7 @@ def hlfir_DotProductOp : hlfir_Op<"dot_product",
     AnyFortranNumericalOrLogicalArrayObject:$lhs,
     AnyFortranNumericalOrLogicalArrayObject:$rhs,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs AnyFortranValue);
@@ -731,7 +731,7 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
     AnyFortranNumericalOrLogicalArrayObject:$lhs,
     AnyFortranNumericalOrLogicalArrayObject:$rhs,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs hlfir_ExprType);
@@ -776,7 +776,7 @@ def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
     AnyFortranNumericalOrLogicalArrayObject:$lhs,
     AnyFortranNumericalOrLogicalArrayObject:$rhs,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::aiir::arith::FastMathFlags::none">:$fastmath
   );
 
   let results = (outs hlfir_ExprType);
@@ -894,13 +894,13 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$source, CArg<"llvm::StringRef", "{}">:$uniq_name,
-      CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
+    OpBuilder<(ins "aiir::Value":$source, CArg<"llvm::StringRef", "{}">:$uniq_name,
+      CArg<"aiir::Value", "{}">:$shape, CArg<"aiir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
-    OpBuilder<(ins "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
+    OpBuilder<(ins "aiir::Value":$memref, CArg<"aiir::Value", "{}">:$shape,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>];
 
   let extraClassDeclaration = [{
     void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {
@@ -908,7 +908,7 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
     }
 
     /// Override FortranVariableInterface default implementation
-    mlir::Value getBase() {
+    aiir::Value getBase() {
       return getResult(0);
     }
 
@@ -917,14 +917,14 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
     /// from it. This matches what is used as a "base" in FIR. All non
     /// polymorphic expressions FIR base is a simple raw address (they are
     /// contiguous in memory).
-    mlir::Value getFirBase() {
+    aiir::Value getFirBase() {
       return getResult(1);
     }
 
     /// Return the result value that indicates if the variable storage
     /// was allocated on the heap. At the HLFIR level, this may not be
     /// known yet, and lowering will need to conditionally free the storage.
-    mlir::Value getMustFreeStrorageFlag() {
+    aiir::Value getMustFreeStrorageFlag() {
       return getResult(2);
     }
   }];
@@ -975,7 +975,7 @@ def hlfir_AsExprOp
 
   let extraClassDeclaration = [{
     // Is this a "move" ?
-    bool isMove() { return getMustFree() != mlir::Value{}; }
+    bool isMove() { return getMustFree() != aiir::Value{}; }
   }];
 
   let assemblyFormat = [{
@@ -983,7 +983,7 @@ def hlfir_AsExprOp
   }];
 
 
-  let builders = [OpBuilder<(ins "mlir::Value":$var, CArg<"mlir::Value", "{}">:$must_free)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$var, CArg<"aiir::Value", "{}">:$must_free)>];
 }
 
 def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndResultType]> {
@@ -1008,28 +1008,28 @@ def hlfir_ElementalOpInterface : OpInterface<"ElementalOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/"Return the one based elemental indices.",
-      /*retTy=*/"mlir::Block::BlockArgListType",
+      /*retTy=*/"aiir::Block::BlockArgListType",
       /*methodName=*/"getIndices",
       /*args=*/(ins),
       /*methodBody=*/[{}]
     >,
     InterfaceMethod<
       /*desc=*/"Return the element entity being computed",
-      /*retTy=*/"mlir::Value",
+      /*retTy=*/"aiir::Value",
       /*methodName=*/"getElementEntity",
       /*args=*/(ins),
       /*methodBody=*/[{}]
     >,
     InterfaceMethod<
       /*desc=*/"Get element cleanup region, if any.",
-      /*retTy=*/"mlir::Region*",
+      /*retTy=*/"aiir::Region*",
       /*methodName=*/"getElementCleanup",
       /*args=*/(ins),
       /*methodBody=*/[{}]
     >,
     InterfaceMethod<
       /*desc=*/"Get elemental region.",
-      /*retTy=*/"mlir::Region&",
+      /*retTy=*/"aiir::Region&",
       /*methodName=*/"getElementalRegion",
       /*args=*/(ins),
       /*methodBody=*/[{}]
@@ -1048,7 +1048,7 @@ def hlfir_ElementalOpInterface : OpInterface<"ElementalOpInterface"> {
 
 def hlfir_ElementalOp : hlfir_Op<"elemental",
     // The ElementalOp, in general, causes an allocation of a temporary,
-    // so to guarantee proper behavior of MLIR optimization passes
+    // so to guarantee proper behavior of AIIR optimization passes
     // we explicitly set MemAlloc effect for it. On top of this,
     // the recursive memory effects also apply.
     [RecursiveMemoryEffects, MemoryEffects<[MemAlloc]>,
@@ -1109,17 +1109,17 @@ def hlfir_ElementalOp : hlfir_Op<"elemental",
     }];
 
   let extraClassDeclaration = [{
-      mlir::Block *getBody() { return &getRegion().front(); }
+      aiir::Block *getBody() { return &getRegion().front(); }
 
       /// Get the indices iterating over the shape.
-      mlir::Block::BlockArgListType getIndices() {
+      aiir::Block::BlockArgListType getIndices() {
        return getBody()->getArguments();
       }
       /// ElementalOpInterface implementation.
 
-      mlir::Region& getElementalRegion() { return getRegion(); }
-      mlir::Value getElementEntity();
-      mlir::Region* getElementCleanup() { return nullptr; }
+      aiir::Region& getElementalRegion() { return getRegion(); }
+      aiir::Value getElementEntity();
+      aiir::Region* getElementCleanup() { return nullptr; }
 
       /// Must this elemental be evaluated in order?
       bool isOrdered() { return !getUnordered(); }
@@ -1127,9 +1127,9 @@ def hlfir_ElementalOp : hlfir_Op<"elemental",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$shape,
-      CArg<"mlir::Value", "{}">:$mold,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
+    OpBuilder<(ins "aiir::Type":$result_type, "aiir::Value":$shape,
+      CArg<"aiir::Value", "{}">:$mold,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
       CArg<"bool", "false">:$isUnordered)>
   ];
 
@@ -1179,8 +1179,8 @@ def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$expr, "mlir::ValueRange":$indices,
-      "mlir::ValueRange":$typeparams)>
+    OpBuilder<(ins "aiir::Value":$expr, "aiir::ValueRange":$indices,
+      "aiir::ValueRange":$typeparams)>
   ];
 }
 
@@ -1202,8 +1202,8 @@ def hlfir_NullOp : hlfir_Op<"null", [NoMemoryEffect, fir_FortranVariableOpInterf
       return std::nullopt;
     }
     void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
-    mlir::Value getShape() const {return mlir::Value{};}
-    mlir::OperandRange getExplicitTypeParams() const {
+    aiir::Value getShape() const {return aiir::Value{};}
+    aiir::OperandRange getExplicitTypeParams() const {
       // Return an empty range.
       return {(*this)->getOperands().begin(), (*this)->getOperands().begin()};
     }
@@ -1288,18 +1288,18 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$var, "mlir::Value":$temp_box,
-          "mlir::Value":$var_is_present)>
+    OpBuilder<(ins "aiir::Value":$var, "aiir::Value":$temp_box,
+          "aiir::Value":$var_is_present)>
   ];
 
   let extraClassDeclaration = [{
     /// Get the resulting copied-in fir.box or fir.class.
-    mlir::Value getCopiedIn() {
+    aiir::Value getCopiedIn() {
       return getResult(0);
     }
 
     /// Get the result indicating if a copy was made.
-    mlir::Value getWasCopied() {
+    aiir::Value getWasCopied() {
       return getResult(1);
     }
   }];
@@ -1354,7 +1354,7 @@ def hlfir_ShapeOfOp : hlfir_Op<"shape_of", [Pure]> {
     $expr attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [OpBuilder<(ins "mlir::Value":$expr)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$expr)>];
   let hasFolder = 1;
 }
 
@@ -1376,13 +1376,13 @@ def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
     $shape attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [OpBuilder<(ins "mlir::Value":$shape, "unsigned":$dim)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$shape, "unsigned":$dim)>];
 }
 
 def hlfir_OrderedAssignmentTreeOpInterface : OpInterface<"OrderedAssignmentTreeOpInterface"> {
   let description = [{
     Interface for the operations representing Forall and Where constructs and
-    statements as an mlir::Region tree.
+    statements as an aiir::Region tree.
 
     These operations all have in common that they have "leaf" regions that contains
     some code that should be evaluated for "all active combinations of Forall
@@ -1416,12 +1416,12 @@ def hlfir_OrderedAssignmentTreeOpInterface : OpInterface<"OrderedAssignmentTreeO
       /*desc=*/"Get the OrderedAssignmentTreeOpInterface leaf regions that contain evaluation code",
       /*retTy=*/"void",
       /*methodName=*/"getLeafRegions",
-      /*args=*/(ins "llvm::SmallVectorImpl<mlir::Region*>&":$regions),
+      /*args=*/(ins "llvm::SmallVectorImpl<aiir::Region*>&":$regions),
       /*methodBody=*/[{}]
     >,
     InterfaceMethod<
       /*desc=*/"Get the region, if any, containing the list of sub-tree OrderedAssignmentTreeOpInterface nodes",
-      /*retTy=*/"mlir::Region*",
+      /*retTy=*/"aiir::Region*",
       /*methodName=*/"getSubTreeRegion",
       /*args=*/(ins),
       /*methodBody=*/[{}]
@@ -1432,14 +1432,14 @@ def hlfir_OrderedAssignmentTreeOpInterface : OpInterface<"OrderedAssignmentTreeO
     /// Interface verifier imlementation.
     llvm::LogicalResult verifyImpl();
 
-    mlir::Block* getSubTreeBlock() {
-      mlir::Region* region = getSubTreeRegion();
+    aiir::Block* getSubTreeBlock() {
+      aiir::Region* region = getSubTreeRegion();
       return region && !region->empty()? &region->front() : nullptr;
     }
   }];
 
   let verify = [{
-    return ::mlir::cast<::hlfir::OrderedAssignmentTreeOpInterface>($_op).verifyImpl();
+    return ::aiir::cast<::hlfir::OrderedAssignmentTreeOpInterface>($_op).verifyImpl();
   }];
 
   let cppNamespace = "hlfir";
@@ -1488,19 +1488,19 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTre
                          MaxSizedRegion<1>:$user_defined_assignment);
 
   let extraClassDeclaration = [{
-    mlir::Value getUserAssignmentRhs() {
+    aiir::Value getUserAssignmentRhs() {
       return getUserDefinedAssignment().getArguments()[0];
     }
-    mlir::Value getUserAssignmentLhs() {
+    aiir::Value getUserAssignmentLhs() {
       return getUserDefinedAssignment().getArguments()[1];
     }
-    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+    void getLeafRegions(llvm::SmallVectorImpl<aiir::Region*>& regions) {
       regions.push_back(&getRhsRegion());
       regions.push_back(&getLhsRegion());
       if (!getUserDefinedAssignment().empty())
         regions.push_back(&getUserDefinedAssignment());
     }
-    mlir::Region* getSubTreeRegion() { return nullptr; }
+    aiir::Region* getSubTreeRegion() { return nullptr; }
     bool isPointerAssignment();
     bool isPointerObjectAssignment();
     bool isProcedurePointerAssignment();
@@ -1594,9 +1594,9 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
                          MaxSizedRegion<1>:$cleanup);
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$shape,
-          CArg<"mlir::Value", "{}">:$mold,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
+    OpBuilder<(ins "aiir::Value":$shape,
+          CArg<"aiir::Value", "{}">:$mold,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
       CArg<"bool", "false">:$isUnordered)>
   ];
 
@@ -1607,7 +1607,7 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
     custom<YieldOpCleanup>($cleanup)}];
 
   let extraClassDeclaration = [{
-    mlir::Region::BlockArgListType getIndices() {
+    aiir::Region::BlockArgListType getIndices() {
       return getBody().getArguments();
     }
 
@@ -1618,9 +1618,9 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
 
     /// ElementalOpInterface implementation.
 
-    mlir::Region& getElementalRegion() { return getBody(); }
-    mlir::Value getElementEntity();
-    mlir::Region* getElementCleanup();
+    aiir::Region& getElementalRegion() { return getBody(); }
+    aiir::Value getElementEntity();
+    aiir::Region* getElementCleanup();
 
     /// Must this elemental be evaluated in order?
     bool isOrdered() { return !getUnordered(); }
@@ -1698,16 +1698,16 @@ def hlfir_ForallOp : hlfir_Op<"forall", [hlfir_OrderedAssignmentTreeOpInterface]
                          SizedRegion<1>:$body);
 
   let extraClassDeclaration = [{
-    mlir::Value getForallIndexValue() {
+    aiir::Value getForallIndexValue() {
       return getBody().getArguments()[0];
     }
-    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+    void getLeafRegions(llvm::SmallVectorImpl<aiir::Region*>& regions) {
       regions.push_back(&getLbRegion());
       regions.push_back(&getUbRegion());
       if (!getStepRegion().empty())
         regions.push_back(&getStepRegion());
     }
-    mlir::Region* getSubTreeRegion() { return &getBody(); }
+    aiir::Region* getSubTreeRegion() { return &getBody(); }
   }];
 
   let assemblyFormat = [{
@@ -1727,10 +1727,10 @@ class hlfir_AssignmentMaskOp<string mnemonic> : hlfir_Op<mnemonic,
                          SizedRegion<1>:$body);
 
   let extraClassDeclaration = [{
-    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+    void getLeafRegions(llvm::SmallVectorImpl<aiir::Region*>& regions) {
       regions.push_back(&getMaskRegion());
     }
-    mlir::Region* getSubTreeRegion() { return &getBody(); }
+    aiir::Region* getSubTreeRegion() { return &getBody(); }
   }];
 
   let assemblyFormat = [{
@@ -1843,11 +1843,11 @@ def hlfir_ElseWhereOp : hlfir_Op<"elsewhere", [Terminator,
                          SizedRegion<1>:$body);
 
   let extraClassDeclaration = [{
-    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+    void getLeafRegions(llvm::SmallVectorImpl<aiir::Region*>& regions) {
       if (!getMaskRegion().empty())
         regions.push_back(&getMaskRegion());
     }
-    mlir::Region* getSubTreeRegion() { return &getBody(); }
+    aiir::Region* getSubTreeRegion() { return &getBody(); }
   }];
 
   let assemblyFormat = [{
@@ -1891,14 +1891,14 @@ def hlfir_ForallIndexOp : hlfir_Op<"forall_index", [fir_FortranVariableOpInterfa
       return std::nullopt;
     }
     void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
-    mlir::Value getShape() const {return mlir::Value{};}
-    mlir::OperandRange getExplicitTypeParams() const {
+    aiir::Value getShape() const {return aiir::Value{};}
+    aiir::OperandRange getExplicitTypeParams() const {
       // Return an empty range.
       return {(*this)->getOperands().begin(), (*this)->getOperands().begin()};
     }
     /// Implement OrderedAssignmentTreeOpInterface interface.
-    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {}
-    mlir::Region* getSubTreeRegion() { return nullptr; }
+    void getLeafRegions(llvm::SmallVectorImpl<aiir::Region*>& regions) {}
+    aiir::Region* getSubTreeRegion() { return nullptr; }
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -1925,7 +1925,7 @@ def hlfir_CharExtremumOp : hlfir_Op<"char_extremum",
     $predicate `,` $strings attr-dict `:` functional-type(operands, results)
   }];
 
-  let builders = [OpBuilder<(ins "hlfir::CharExtremumPredicate":$predicate, "mlir::ValueRange":$strings)>];
+  let builders = [OpBuilder<(ins "hlfir::CharExtremumPredicate":$predicate, "aiir::ValueRange":$strings)>];
 
   let hasVerifier = 1;
 }
@@ -1975,14 +1975,14 @@ def hlfir_EvaluateInMemoryOp : hlfir_Op<"eval_in_mem", [AttrSizedOperandSegments
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$shape,
-      CArg<"mlir::ValueRange", "{}">:$typeparams)>
+    OpBuilder<(ins "aiir::Type":$result_type, "aiir::Value":$shape,
+      CArg<"aiir::ValueRange", "{}">:$typeparams)>
   ];
 
   let extraClassDeclaration = [{
       // Return block argument representing the memory where the expression
       // is evaluated.
-      mlir::Value getMemory() {return getBody().getArgument(0);}
+      aiir::Value getMemory() {return getBody().getArgument(0);}
   }];
 
   let hasVerifier = 1;

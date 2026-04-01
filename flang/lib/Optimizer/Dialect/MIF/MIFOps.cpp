@@ -11,45 +11,45 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
+#include "aiir/IR/Matchers.h"
+#include "aiir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
 
 //===----------------------------------------------------------------------===//
 // NumImagesOp
 //===----------------------------------------------------------------------===//
 
-void mif::NumImagesOp::build(mlir::OpBuilder &builder,
-                             mlir::OperationState &result,
-                             mlir::Value teamArg) {
+void mif::NumImagesOp::build(aiir::OpBuilder &builder,
+                             aiir::OperationState &result,
+                             aiir::Value teamArg) {
   bool isTeamNumber =
       teamArg && fir::unwrapPassByRefType(teamArg.getType()).isInteger();
   if (isTeamNumber)
-    build(builder, result, teamArg, /*team*/ mlir::Value{});
+    build(builder, result, teamArg, /*team*/ aiir::Value{});
   else
-    build(builder, result, /*team_number*/ mlir::Value{}, teamArg);
+    build(builder, result, /*team_number*/ aiir::Value{}, teamArg);
 }
 
 llvm::LogicalResult mif::NumImagesOp::verify() {
   if (getTeam() && getTeamNumber())
     return emitOpError(
         "team and team_number must not be provided at the same time");
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
 // ThisImageOp
 //===----------------------------------------------------------------------===//
 
-void mif::ThisImageOp::build(mlir::OpBuilder &builder,
-                             mlir::OperationState &result, mlir::Value coarray,
-                             mlir::Value team) {
-  build(builder, result, coarray, /*dim*/ mlir::Value{}, team);
+void mif::ThisImageOp::build(aiir::OpBuilder &builder,
+                             aiir::OperationState &result, aiir::Value coarray,
+                             aiir::Value team) {
+  build(builder, result, coarray, /*dim*/ aiir::Value{}, team);
 }
 
-void mif::ThisImageOp::build(mlir::OpBuilder &builder,
-                             mlir::OperationState &result, mlir::Value team) {
-  build(builder, result, /*coarray*/ mlir::Value{}, /*dim*/ mlir::Value{},
+void mif::ThisImageOp::build(aiir::OpBuilder &builder,
+                             aiir::OperationState &result, aiir::Value team) {
+  build(builder, result, /*coarray*/ aiir::Value{}, /*dim*/ aiir::Value{},
         team);
 }
 
@@ -57,7 +57,7 @@ llvm::LogicalResult mif::ThisImageOp::verify() {
   if (getDim() && !getCoarray())
     return emitOpError(
         "`dim` must be provied at the same time as the `coarray` argument.");
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -66,9 +66,9 @@ llvm::LogicalResult mif::ThisImageOp::verify() {
 
 llvm::LogicalResult mif::SyncImagesOp::verify() {
   if (getImageSet()) {
-    mlir::Type t = getImageSet().getType();
-    fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(t);
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+    aiir::Type t = getImageSet().getType();
+    fir::BoxType boxTy = aiir::dyn_cast<fir::BoxType>(t);
+    if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(
             boxTy.getElementOrSequenceType())) {
       if (seqTy.getDimension() != 0 && seqTy.getDimension() != 1)
         return emitOpError(
@@ -79,7 +79,7 @@ llvm::LogicalResult mif::SyncImagesOp::verify() {
       return emitOpError(
           "`image_set` must be a boxed scalar integer expression.");
   }
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -87,18 +87,18 @@ llvm::LogicalResult mif::SyncImagesOp::verify() {
 //===----------------------------------------------------------------------===//
 
 llvm::LogicalResult mif::CoBroadcastOp::verify() {
-  fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(getA().getType());
+  fir::BoxType boxTy = aiir::dyn_cast<fir::BoxType>(getA().getType());
 
   if (fir::isPolymorphicType(boxTy))
     return emitOpError("`A` cannot be polymorphic.");
   else if (auto recTy =
-               mlir::dyn_cast<fir::RecordType>(boxTy.getElementType())) {
+               aiir::dyn_cast<fir::RecordType>(boxTy.getElementType())) {
     for (auto component : recTy.getTypeList()) {
       if (fir::isPolymorphicType(component.second))
         TODO(getLoc(), "`A` with polymorphic subobject component.");
     }
   }
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -106,15 +106,15 @@ llvm::LogicalResult mif::CoBroadcastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 llvm::LogicalResult mif::CoMaxOp::verify() {
-  fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(getA().getType());
-  mlir::Type elemTy = boxTy.getElementOrSequenceType();
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(elemTy))
+  fir::BoxType boxTy = aiir::dyn_cast<fir::BoxType>(getA().getType());
+  aiir::Type elemTy = boxTy.getElementOrSequenceType();
+  if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(elemTy))
     elemTy = seqTy.getElementType();
 
   if (!fir::isa_real(elemTy) && !fir::isa_integer(elemTy) &&
       !fir::isa_char(elemTy))
     return emitOpError("`A` shall be of type integer, real or character.");
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -122,15 +122,15 @@ llvm::LogicalResult mif::CoMaxOp::verify() {
 //===----------------------------------------------------------------------===//
 
 llvm::LogicalResult mif::CoMinOp::verify() {
-  fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(getA().getType());
-  mlir::Type elemTy = boxTy.getElementOrSequenceType();
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(elemTy))
+  fir::BoxType boxTy = aiir::dyn_cast<fir::BoxType>(getA().getType());
+  aiir::Type elemTy = boxTy.getElementOrSequenceType();
+  if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(elemTy))
     elemTy = seqTy.getElementType();
 
   if (!fir::isa_real(elemTy) && !fir::isa_integer(elemTy) &&
       !fir::isa_char(elemTy))
     return emitOpError("`A` shall be of type integer, real or character.");
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -138,32 +138,32 @@ llvm::LogicalResult mif::CoMinOp::verify() {
 //===----------------------------------------------------------------------===//
 
 llvm::LogicalResult mif::CoSumOp::verify() {
-  fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(getA().getType());
-  mlir::Type elemTy = boxTy.getElementOrSequenceType();
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(elemTy))
+  fir::BoxType boxTy = aiir::dyn_cast<fir::BoxType>(getA().getType());
+  aiir::Type elemTy = boxTy.getElementOrSequenceType();
+  if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(elemTy))
     elemTy = seqTy.getElementType();
 
   if (!fir::isa_real(elemTy) && !fir::isa_integer(elemTy) &&
       !fir::isa_complex(elemTy))
     return emitOpError("`A` shall be of numeric type.");
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
 // ChangeTeamOp
 //===----------------------------------------------------------------------===//
 
-void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
-                              mlir::OperationState &result, mlir::Value team,
-                              llvm::ArrayRef<mlir::NamedAttribute> attributes) {
-  build(builder, result, team, /*stat*/ mlir::Value{}, /*errmsg*/ mlir::Value{},
+void mif::ChangeTeamOp::build(aiir::OpBuilder &builder,
+                              aiir::OperationState &result, aiir::Value team,
+                              llvm::ArrayRef<aiir::NamedAttribute> attributes) {
+  build(builder, result, team, /*stat*/ aiir::Value{}, /*errmsg*/ aiir::Value{},
         attributes);
 }
 
-void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
-                              mlir::OperationState &result, mlir::Value team,
-                              mlir::Value stat, mlir::Value errmsg,
-                              llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+void mif::ChangeTeamOp::build(aiir::OpBuilder &builder,
+                              aiir::OperationState &result, aiir::Value team,
+                              aiir::Value stat, aiir::Value errmsg,
+                              llvm::ArrayRef<aiir::NamedAttribute> attributes) {
   std::int32_t argStat = 0, argErrmsg = 0;
   result.addOperands(team);
   if (stat) {
@@ -175,29 +175,29 @@ void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
     argErrmsg++;
   }
 
-  mlir::Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new mlir::Block{});
+  aiir::Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new aiir::Block{});
 
   result.addAttribute(getOperandSegmentSizeAttr(),
                       builder.getDenseI32ArrayAttr({1, argStat, argErrmsg}));
   result.addAttributes(attributes);
 }
 
-static mlir::ParseResult parseChangeTeamOpBody(mlir::OpAsmParser &parser,
-                                               mlir::Region &body) {
+static aiir::ParseResult parseChangeTeamOpBody(aiir::OpAsmParser &parser,
+                                               aiir::Region &body) {
   if (parser.parseRegion(body))
-    return mlir::failure();
+    return aiir::failure();
 
-  mlir::Operation *terminator = body.back().getTerminator();
-  if (!terminator || !mlir::isa<mif::EndTeamOp>(terminator))
+  aiir::Operation *terminator = body.back().getTerminator();
+  if (!terminator || !aiir::isa<mif::EndTeamOp>(terminator))
     return parser.emitError(parser.getNameLoc(),
                             "missing mif.end_team terminator");
 
-  return mlir::success();
+  return aiir::success();
 }
 
-static void printChangeTeamOpBody(mlir::OpAsmPrinter &p, mif::ChangeTeamOp op,
-                                  mlir::Region &body) {
+static void printChangeTeamOpBody(aiir::OpAsmPrinter &p, mif::ChangeTeamOp op,
+                                  aiir::Region &body) {
   p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
 }

@@ -12,11 +12,11 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Diagnostics.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "aiir/Dialect/Affine/IR/AffineOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/Diagnostics.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
 
 namespace fir {
@@ -34,34 +34,34 @@ struct CharacterConversionOptions {
 };
 
 class CharacterConvertConversion
-    : public mlir::OpRewritePattern<fir::CharConvertOp> {
+    : public aiir::OpRewritePattern<fir::CharConvertOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(fir::CharConvertOp conv,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto kindMap = fir::getKindMapping(conv->getParentOfType<mlir::ModuleOp>());
+                  aiir::PatternRewriter &rewriter) const override {
+    auto kindMap = fir::getKindMapping(conv->getParentOfType<aiir::ModuleOp>());
     auto loc = conv.getLoc();
 
     LLVM_DEBUG(llvm::dbgs()
                << "running character conversion on " << conv << '\n');
 
     // Establish a loop that executes count iterations.
-    auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
-    auto one = mlir::arith::ConstantIndexOp::create(rewriter, loc, 1);
+    auto zero = aiir::arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto one = aiir::arith::ConstantIndexOp::create(rewriter, loc, 1);
     auto idxTy = rewriter.getIndexType();
     auto castCnt =
         fir::ConvertOp::create(rewriter, loc, idxTy, conv.getCount());
-    auto countm1 = mlir::arith::SubIOp::create(rewriter, loc, castCnt, one);
+    auto countm1 = aiir::arith::SubIOp::create(rewriter, loc, castCnt, one);
     auto loop = fir::DoLoopOp::create(rewriter, loc, zero, countm1, one);
     auto insPt = rewriter.saveInsertionPoint();
     rewriter.setInsertionPointToStart(loop.getBody());
 
     // For each code point in the `from` string, convert naively to the `to`
     // string code point. Conversion is done blindly on size only, not value.
-    auto getCharBits = [&](mlir::Type t) {
-      auto chrTy = mlir::cast<fir::CharacterType>(
+    auto getCharBits = [&](aiir::Type t) {
+      auto chrTy = aiir::cast<fir::CharacterType>(
           fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t)));
       return kindMap.getCharacterBitsize(chrTy.getFKind());
     };
@@ -83,19 +83,19 @@ public:
     };
     auto fromi =
         fir::CoordinateOp::create(rewriter, loc, getEleTy(fromBits), fromPtr,
-                                  mlir::ValueRange{loop.getInductionVar()});
+                                  aiir::ValueRange{loop.getInductionVar()});
     auto toi =
         fir::CoordinateOp::create(rewriter, loc, getEleTy(toBits), toPtr,
-                                  mlir::ValueRange{loop.getInductionVar()});
+                                  aiir::ValueRange{loop.getInductionVar()});
     auto load = fir::LoadOp::create(rewriter, loc, fromi);
-    mlir::Value icast =
+    aiir::Value icast =
         (fromBits >= toBits)
             ? fir::ConvertOp::create(rewriter, loc, toTy, load).getResult()
-            : mlir::arith::ExtUIOp::create(rewriter, loc, toTy, load)
+            : aiir::arith::ExtUIOp::create(rewriter, loc, toTy, load)
                   .getResult();
     rewriter.replaceOpWithNewOp<fir::StoreOp>(conv, icast, toi);
     rewriter.restoreInsertionPoint(insPt);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -112,18 +112,18 @@ public:
     if (clOpts.runtimeName.empty()) {
       auto *context = &getContext();
       auto *func = getOperation();
-      mlir::RewritePatternSet patterns(context);
+      aiir::RewritePatternSet patterns(context);
       patterns.insert<CharacterConvertConversion>(context);
-      mlir::ConversionTarget target(*context);
-      target.addLegalDialect<mlir::affine::AffineDialect, fir::FIROpsDialect,
-                             mlir::arith::ArithDialect,
-                             mlir::func::FuncDialect>();
+      aiir::ConversionTarget target(*context);
+      target.addLegalDialect<aiir::affine::AffineDialect, fir::FIROpsDialect,
+                             aiir::arith::ArithDialect,
+                             aiir::func::FuncDialect>();
 
       // apply the patterns
       target.addIllegalOp<fir::CharConvertOp>();
-      if (mlir::failed(mlir::applyPartialConversion(func, target,
+      if (aiir::failed(aiir::applyPartialConversion(func, target,
                                                     std::move(patterns)))) {
-        mlir::emitError(mlir::UnknownLoc::get(context),
+        aiir::emitError(aiir::UnknownLoc::get(context),
                         "error in rewriting character convert op");
         signalPassFailure();
       }

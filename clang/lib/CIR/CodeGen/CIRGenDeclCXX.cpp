@@ -42,9 +42,9 @@ void CIRGenFunction::emitCXXGuardedInit(const VarDecl &varDecl,
 
   // Mark the global as static local with the guard name. The emission of the
   // guard/acquire is done during LoweringPrepare.
-  auto guardAttr = mlir::StringAttr::get(&cgm.getMLIRContext(), guardName);
+  auto guardAttr = aiir::StringAttr::get(&cgm.getAIIRContext(), guardName);
   globalOp.setStaticLocalGuardAttr(
-      cir::StaticLocalGuardAttr::get(&cgm.getMLIRContext(), guardAttr));
+      cir::StaticLocalGuardAttr::get(&cgm.getAIIRContext(), guardAttr));
 
   // Emit the initializer and add a global destructor if appropriate.
   cgm.emitCXXGlobalVarDeclInit(&varDecl, globalOp, performInit);

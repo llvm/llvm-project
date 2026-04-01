@@ -1,0 +1,6 @@
+set(LLVM_TARGET_DEFINITIONS Ops.td)
+aiir_tablegen(Ops.h.inc -gen-op-decls)
+aiir_tablegen(Ops.cpp.inc -gen-op-defs)
+aiir_tablegen(Dialect.h.inc -gen-dialect-decls)
+aiir_tablegen(Dialect.cpp.inc -gen-dialect-defs)
+add_public_tablegen_target(ToyCh2OpsIncGen)

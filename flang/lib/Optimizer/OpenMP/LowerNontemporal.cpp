@@ -14,10 +14,10 @@
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace flangomp {
 #define GEN_PASS_DEF_LOWERNONTEMPORALPASS
@@ -31,8 +31,8 @@ class LowerNontemporalPass
     if (simdOp.getNontemporalVars().empty())
       return;
 
-    std::function<mlir::Value(mlir::Value)> getBaseOperand =
-        [&](mlir::Value operand) -> mlir::Value {
+    std::function<aiir::Value(aiir::Value)> getBaseOperand =
+        [&](aiir::Value operand) -> aiir::Value {
       auto *defOp = operand.getDefiningOp();
       while (defOp) {
         llvm::TypeSwitch<Operation *>(defOp)
@@ -52,7 +52,7 @@ class LowerNontemporalPass
 
     // walk through the operations and mark the load and store as nontemporal
     simdOp->walk([&](Operation *op) {
-      mlir::Value operand = nullptr;
+      aiir::Value operand = nullptr;
 
       if (auto loadOp = llvm::dyn_cast<fir::LoadOp>(op))
         operand = loadOp.getMemref();

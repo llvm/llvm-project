@@ -1,4 +1,4 @@
-//===- CIRAttrs.cpp - MLIR CIR Attributes ---------------------------------===//
+//===- CIRAttrs.cpp - AIIR CIR Attributes ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,69 +10,69 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "aiir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
-#include "mlir/IR/DialectImplementation.h"
+#include "aiir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 //===-----------------------------------------------------------------===//
 // RecordMembers
 //===-----------------------------------------------------------------===//
 
-static void printRecordMembers(mlir::AsmPrinter &p, mlir::ArrayAttr members);
-static mlir::ParseResult parseRecordMembers(mlir::AsmParser &parser,
-                                            mlir::ArrayAttr &members);
+static void printRecordMembers(aiir::AsmPrinter &p, aiir::ArrayAttr members);
+static aiir::ParseResult parseRecordMembers(aiir::AsmParser &parser,
+                                            aiir::ArrayAttr &members);
 
 //===-----------------------------------------------------------------===//
 // IntLiteral
 //===-----------------------------------------------------------------===//
 
-static void printIntLiteral(mlir::AsmPrinter &p, llvm::APInt value,
+static void printIntLiteral(aiir::AsmPrinter &p, llvm::APInt value,
                             cir::IntTypeInterface ty);
-static mlir::ParseResult parseIntLiteral(mlir::AsmParser &parser,
+static aiir::ParseResult parseIntLiteral(aiir::AsmParser &parser,
                                          llvm::APInt &value,
                                          cir::IntTypeInterface ty);
 //===-----------------------------------------------------------------===//
 // FloatLiteral
 //===-----------------------------------------------------------------===//
 
-static void printFloatLiteral(mlir::AsmPrinter &p, llvm::APFloat value,
-                              mlir::Type ty);
-static mlir::ParseResult
-parseFloatLiteral(mlir::AsmParser &parser,
-                  mlir::FailureOr<llvm::APFloat> &value,
+static void printFloatLiteral(aiir::AsmPrinter &p, llvm::APFloat value,
+                              aiir::Type ty);
+static aiir::ParseResult
+parseFloatLiteral(aiir::AsmParser &parser,
+                  aiir::FailureOr<llvm::APFloat> &value,
                   cir::FPTypeInterface fpType);
 
 //===----------------------------------------------------------------------===//
 // AddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
-mlir::ParseResult parseAddressSpaceValue(mlir::AsmParser &p,
+aiir::ParseResult parseAddressSpaceValue(aiir::AsmParser &p,
                                          cir::LangAddressSpace &addrSpace) {
   llvm::SMLoc loc = p.getCurrentLocation();
-  mlir::FailureOr<cir::LangAddressSpace> result =
-      mlir::FieldParser<cir::LangAddressSpace>::parse(p);
-  if (mlir::failed(result))
+  aiir::FailureOr<cir::LangAddressSpace> result =
+      aiir::FieldParser<cir::LangAddressSpace>::parse(p);
+  if (aiir::failed(result))
     return p.emitError(loc, "expected address space keyword");
   addrSpace = result.value();
-  return mlir::success();
+  return aiir::success();
 }
 
-void printAddressSpaceValue(mlir::AsmPrinter &p,
+void printAddressSpaceValue(aiir::AsmPrinter &p,
                             cir::LangAddressSpace addrSpace) {
   p << cir::stringifyEnum(addrSpace);
 }
 
-static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
-                                       mlir::IntegerAttr &value);
+static aiir::ParseResult parseConstPtr(aiir::AsmParser &parser,
+                                       aiir::IntegerAttr &value);
 
-static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
+static void printConstPtr(aiir::AsmPrinter &p, aiir::IntegerAttr value);
 
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
 //===----------------------------------------------------------------------===//
@@ -81,86 +81,86 @@ using namespace cir;
 //===----------------------------------------------------------------------===//
 
 bool LangAddressSpaceAttr::isValidLoad(
-    mlir::Type type, mlir::ptr::AtomicOrdering ordering,
-    std::optional<int64_t> alignment, const mlir::DataLayout *dataLayout,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type type, aiir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const aiir::DataLayout *dataLayout,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidLoad for LangAddressSpaceAttr NYI");
 }
 
 bool LangAddressSpaceAttr::isValidStore(
-    mlir::Type type, mlir::ptr::AtomicOrdering ordering,
-    std::optional<int64_t> alignment, const mlir::DataLayout *dataLayout,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type type, aiir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const aiir::DataLayout *dataLayout,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidStore for LangAddressSpaceAttr NYI");
 }
 
 bool LangAddressSpaceAttr::isValidAtomicOp(
-    mlir::ptr::AtomicBinOp op, mlir::Type type,
-    mlir::ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
-    const mlir::DataLayout *dataLayout,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::ptr::AtomicBinOp op, aiir::Type type,
+    aiir::ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const aiir::DataLayout *dataLayout,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidAtomicOp for LangAddressSpaceAttr NYI");
 }
 
 bool LangAddressSpaceAttr::isValidAtomicXchg(
-    mlir::Type type, mlir::ptr::AtomicOrdering successOrdering,
-    mlir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
-    const mlir::DataLayout *dataLayout,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type type, aiir::ptr::AtomicOrdering successOrdering,
+    aiir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const aiir::DataLayout *dataLayout,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidAtomicXchg for LangAddressSpaceAttr NYI");
 }
 
 bool LangAddressSpaceAttr::isValidAddrSpaceCast(
-    mlir::Type tgt, mlir::Type src,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type tgt, aiir::Type src,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidAddrSpaceCast for LangAddressSpaceAttr NYI");
 }
 
 bool LangAddressSpaceAttr::isValidPtrIntCast(
-    mlir::Type intLikeTy, mlir::Type ptrLikeTy,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type intLikeTy, aiir::Type ptrLikeTy,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidPtrIntCast for LangAddressSpaceAttr NYI");
 }
 
 bool TargetAddressSpaceAttr::isValidLoad(
-    mlir::Type type, mlir::ptr::AtomicOrdering ordering,
-    std::optional<int64_t> alignment, const mlir::DataLayout *dataLayout,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type type, aiir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const aiir::DataLayout *dataLayout,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidLoad for TargetAddressSpaceAttr NYI");
 }
 
 bool TargetAddressSpaceAttr::isValidStore(
-    mlir::Type type, mlir::ptr::AtomicOrdering ordering,
-    std::optional<int64_t> alignment, const mlir::DataLayout *dataLayout,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type type, aiir::ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const aiir::DataLayout *dataLayout,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidStore for TargetAddressSpaceAttr NYI");
 }
 
 bool TargetAddressSpaceAttr::isValidAtomicOp(
-    mlir::ptr::AtomicBinOp op, mlir::Type type,
-    mlir::ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
-    const mlir::DataLayout *dataLayout,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::ptr::AtomicBinOp op, aiir::Type type,
+    aiir::ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const aiir::DataLayout *dataLayout,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidAtomicOp for TargetAddressSpaceAttr NYI");
 }
 
 bool TargetAddressSpaceAttr::isValidAtomicXchg(
-    mlir::Type type, mlir::ptr::AtomicOrdering successOrdering,
-    mlir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
-    const mlir::DataLayout *dataLayout,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type type, aiir::ptr::AtomicOrdering successOrdering,
+    aiir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const aiir::DataLayout *dataLayout,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidAtomicXchg for TargetAddressSpaceAttr NYI");
 }
 
 bool TargetAddressSpaceAttr::isValidAddrSpaceCast(
-    mlir::Type tgt, mlir::Type src,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type tgt, aiir::Type src,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidAddrSpaceCast for TargetAddressSpaceAttr NYI");
 }
 
 bool TargetAddressSpaceAttr::isValidPtrIntCast(
-    mlir::Type intLikeTy, mlir::Type ptrLikeTy,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    aiir::Type intLikeTy, aiir::Type ptrLikeTy,
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError) const {
   llvm_unreachable("isValidPtrIntCast for TargetAddressSpaceAttr NYI");
 }
 
@@ -168,31 +168,31 @@ bool TargetAddressSpaceAttr::isValidPtrIntCast(
 // General CIR parsing / printing
 //===----------------------------------------------------------------------===//
 
-static void printRecordMembers(mlir::AsmPrinter &printer,
-                               mlir::ArrayAttr members) {
+static void printRecordMembers(aiir::AsmPrinter &printer,
+                               aiir::ArrayAttr members) {
   printer << '{';
   llvm::interleaveComma(members, printer);
   printer << '}';
 }
 
-static ParseResult parseRecordMembers(mlir::AsmParser &parser,
-                                      mlir::ArrayAttr &members) {
-  llvm::SmallVector<mlir::Attribute, 4> elts;
+static ParseResult parseRecordMembers(aiir::AsmParser &parser,
+                                      aiir::ArrayAttr &members) {
+  llvm::SmallVector<aiir::Attribute, 4> elts;
 
   auto delimiter = AsmParser::Delimiter::Braces;
   auto result = parser.parseCommaSeparatedList(delimiter, [&]() {
-    mlir::TypedAttr attr;
+    aiir::TypedAttr attr;
     if (parser.parseAttribute(attr).failed())
-      return mlir::failure();
+      return aiir::failure();
     elts.push_back(attr);
-    return mlir::success();
+    return aiir::success();
   });
 
   if (result.failed())
-    return mlir::failure();
+    return aiir::failure();
 
-  members = mlir::ArrayAttr::get(parser.getContext(), elts);
-  return mlir::success();
+  members = aiir::ArrayAttr::get(parser.getContext(), elts);
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -201,8 +201,8 @@ static ParseResult parseRecordMembers(mlir::AsmParser &parser,
 
 LogicalResult
 ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                        mlir::Type type, ArrayAttr members) {
-  auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
+                        aiir::Type type, ArrayAttr members) {
+  auto sTy = aiir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
     return emitError() << "expected !cir.record type";
 
@@ -211,7 +211,7 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
   unsigned attrIdx = 0;
   for (auto &member : sTy.getMembers()) {
-    auto m = mlir::cast<mlir::TypedAttr>(members[attrIdx]);
+    auto m = aiir::cast<aiir::TypedAttr>(members[attrIdx]);
     if (member != m.getType())
       return emitError() << "element at index " << attrIdx << " has type "
                          << m.getType()
@@ -244,7 +244,7 @@ LogicalResult OptInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 // TODO(CIR): Consider encoding the null value differently and use conditional
 // assembly format instead of custom parsing/printing.
-static ParseResult parseConstPtr(AsmParser &parser, mlir::IntegerAttr &value) {
+static ParseResult parseConstPtr(AsmParser &parser, aiir::IntegerAttr &value) {
 
   if (parser.parseOptionalKeyword("null").succeeded()) {
     value = parser.getBuilder().getI64IntegerAttr(0);
@@ -254,7 +254,7 @@ static ParseResult parseConstPtr(AsmParser &parser, mlir::IntegerAttr &value) {
   return parser.parseAttribute(value);
 }
 
-static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
+static void printConstPtr(AsmPrinter &p, aiir::IntegerAttr value) {
   if (!value.getInt())
     p << "null";
   else
@@ -266,7 +266,7 @@ static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
 //===----------------------------------------------------------------------===//
 
 template <typename IntT>
-static bool isTooLargeForType(const mlir::APInt &value, IntT expectedValue) {
+static bool isTooLargeForType(const aiir::APInt &value, IntT expectedValue) {
   if constexpr (std::is_signed_v<IntT>) {
     return value.getSExtValue() != expectedValue;
   } else {
@@ -275,7 +275,7 @@ static bool isTooLargeForType(const mlir::APInt &value, IntT expectedValue) {
 }
 
 template <typename IntT>
-static mlir::ParseResult parseIntLiteralImpl(mlir::AsmParser &p,
+static aiir::ParseResult parseIntLiteralImpl(aiir::AsmParser &p,
                                              llvm::APInt &value,
                                              cir::IntTypeInterface ty) {
   IntT ivalue;
@@ -283,7 +283,7 @@ static mlir::ParseResult parseIntLiteralImpl(mlir::AsmParser &p,
   if (p.parseInteger(ivalue))
     return p.emitError(p.getCurrentLocation(), "expected integer value");
 
-  value = mlir::APInt(ty.getWidth(), ivalue, isSigned, /*implicitTrunc=*/true);
+  value = aiir::APInt(ty.getWidth(), ivalue, isSigned, /*implicitTrunc=*/true);
   if (isTooLargeForType(value, ivalue))
     return p.emitError(p.getCurrentLocation(),
                        "integer value too large for the given type");
@@ -291,14 +291,14 @@ static mlir::ParseResult parseIntLiteralImpl(mlir::AsmParser &p,
   return success();
 }
 
-mlir::ParseResult parseIntLiteral(mlir::AsmParser &parser, llvm::APInt &value,
+aiir::ParseResult parseIntLiteral(aiir::AsmParser &parser, llvm::APInt &value,
                                   cir::IntTypeInterface ty) {
   if (ty.isSigned())
     return parseIntLiteralImpl<int64_t>(parser, value, ty);
   return parseIntLiteralImpl<uint64_t>(parser, value, ty);
 }
 
-void printIntLiteral(mlir::AsmPrinter &p, llvm::APInt value,
+void printIntLiteral(aiir::AsmPrinter &p, llvm::APInt value,
                      cir::IntTypeInterface ty) {
   if (ty.isSigned())
     p << value.getSExtValue();
@@ -337,7 +337,7 @@ static ParseResult parseFloatLiteral(AsmParser &parser,
 FPAttr FPAttr::getZero(Type type) {
   return get(type,
              APFloat::getZero(
-                 mlir::cast<cir::FPTypeInterface>(type).getFloatSemantics()));
+                 aiir::cast<cir::FPTypeInterface>(type).getFloatSemantics()));
 }
 
 LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
@@ -415,9 +415,9 @@ CmpThreeWayInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult
 ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                         cir::ComplexType type, mlir::TypedAttr real,
-                         mlir::TypedAttr imag) {
-  mlir::Type elemType = type.getElementType();
+                         cir::ComplexType type, aiir::TypedAttr real,
+                         aiir::TypedAttr imag) {
+  aiir::Type elemType = type.getElementType();
   if (real.getType() != elemType)
     return emitError()
            << "type of the real part does not match the complex type";
@@ -452,7 +452,7 @@ DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError()
            << "member index of a #cir.data_member attribute is out of range";
 
-  mlir::Type memberTy = recTy.getMembers()[memberIndexValue];
+  aiir::Type memberTy = recTy.getMembers()[memberIndexValue];
   if (memberTy != ty.getMemberTy())
     return emitError()
            << "member type of a #cir.data_member attribute must match the "
@@ -478,7 +478,7 @@ LogicalResult MethodAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
-  auto ty = mlir::cast<cir::MethodType>(odsType);
+  auto ty = aiir::cast<cir::MethodType>(odsType);
 
   if (parser.parseLess().failed())
     return {};
@@ -493,7 +493,7 @@ Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
   // Try to parse a flat symbol ref for a pointer to non-virtual member
   // function.
   FlatSymbolRefAttr symbol;
-  mlir::OptionalParseResult parseSymbolRefResult =
+  aiir::OptionalParseResult parseSymbolRefResult =
       parser.parseOptionalAttribute(symbol);
   if (parseSymbolRefResult.has_value()) {
     if (parseSymbolRefResult.value().failed())
@@ -541,12 +541,12 @@ LogicalResult
 ConstArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError, Type type,
                        Attribute elts, int trailingZerosNum) {
 
-  if (!(mlir::isa<ArrayAttr, StringAttr>(elts)))
+  if (!(aiir::isa<ArrayAttr, StringAttr>(elts)))
     return emitError() << "constant array expects ArrayAttr or StringAttr";
 
-  if (auto strAttr = mlir::dyn_cast<StringAttr>(elts)) {
-    const auto arrayTy = mlir::cast<ArrayType>(type);
-    const auto intTy = mlir::dyn_cast<IntType>(arrayTy.getElementType());
+  if (auto strAttr = aiir::dyn_cast<StringAttr>(elts)) {
+    const auto arrayTy = aiir::cast<ArrayType>(type);
+    const auto intTy = aiir::dyn_cast<IntType>(arrayTy.getElementType());
 
     // TODO: add CIR type for char.
     if (!intTy || intTy.getWidth() != 8)
@@ -556,9 +556,9 @@ ConstArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError, Type type,
     return success();
   }
 
-  assert(mlir::isa<ArrayAttr>(elts));
-  const auto arrayAttr = mlir::cast<mlir::ArrayAttr>(elts);
-  const auto arrayTy = mlir::cast<ArrayType>(type);
+  assert(aiir::isa<ArrayAttr>(elts));
+  const auto arrayAttr = aiir::cast<aiir::ArrayAttr>(elts);
+  const auto arrayTy = aiir::cast<ArrayType>(type);
 
   // Make sure both number of elements and subelement types match type.
   if (arrayAttr.size() > arrayTy.getSize())
@@ -571,8 +571,8 @@ ConstArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError, Type type,
 }
 
 Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
-  mlir::FailureOr<Type> resultTy;
-  mlir::FailureOr<Attribute> resultVal;
+  aiir::FailureOr<Type> resultTy;
+  aiir::FailureOr<Attribute> resultVal;
 
   // Parse literal '<'
   if (parser.parseLess())
@@ -589,7 +589,7 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
   }
 
   // ArrayAttrrs have per-element type, not the type of the array...
-  if (mlir::isa<ArrayAttr>(*resultVal)) {
+  if (aiir::isa<ArrayAttr>(*resultVal)) {
     // Array has implicit type: infer from const array type.
     if (parser.parseOptionalColon().failed()) {
       resultTy = type;
@@ -599,14 +599,14 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
         parser.emitError(
             parser.getCurrentLocation(),
             "failed to parse ConstArrayAttr parameter 'type' which is "
-            "to be a `::mlir::Type`");
+            "to be a `::aiir::Type`");
         return {};
       }
     }
   } else {
-    auto ta = mlir::cast<TypedAttr>(*resultVal);
+    auto ta = aiir::cast<TypedAttr>(*resultVal);
     resultTy = ta.getType();
-    if (mlir::isa<mlir::NoneType>(*resultTy)) {
+    if (aiir::isa<aiir::NoneType>(*resultTy)) {
       parser.emitError(parser.getCurrentLocation(),
                        "expected type declaration for string literal");
       return {};
@@ -617,12 +617,12 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseOptionalComma().succeeded()) {
     if (parser.parseOptionalKeyword("trailing_zeros").succeeded()) {
       unsigned typeSize =
-          mlir::cast<cir::ArrayType>(resultTy.value()).getSize();
-      mlir::Attribute elts = resultVal.value();
-      if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
+          aiir::cast<cir::ArrayType>(resultTy.value()).getSize();
+      aiir::Attribute elts = resultVal.value();
+      if (auto str = aiir::dyn_cast<aiir::StringAttr>(elts))
         zeros = typeSize - str.size();
       else
-        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
+        zeros = typeSize - aiir::cast<aiir::ArrayAttr>(elts).size();
     } else {
       return {};
     }
@@ -653,12 +653,12 @@ LogicalResult
 cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                              Type type, ArrayAttr elts) {
 
-  if (!mlir::isa<cir::VectorType>(type))
+  if (!aiir::isa<cir::VectorType>(type))
     return emitError() << "type of cir::ConstVectorAttr is not a "
                           "cir::VectorType: "
                        << type;
 
-  const auto vecType = mlir::cast<cir::VectorType>(type);
+  const auto vecType = aiir::cast<cir::VectorType>(type);
 
   if (vecType.getSize() != elts.size())
     return emitError()
@@ -672,7 +672,7 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
           // An earlier element didn't match
           return;
         }
-        auto typedElement = mlir::dyn_cast<TypedAttr>(element);
+        auto typedElement = aiir::dyn_cast<TypedAttr>(element);
         if (!typedElement ||
             typedElement.getType() != vecType.getElementType()) {
           elementTypeCheck = failure();
@@ -689,9 +689,9 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::VTableAttr::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type type,
-    mlir::ArrayAttr data) {
-  auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError, aiir::Type type,
+    aiir::ArrayAttr data) {
+  auto sTy = aiir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
     return emitError() << "expected !cir.record type result";
   if (sTy.getMembers().empty() || data.empty())
@@ -700,22 +700,22 @@ LogicalResult cir::VTableAttr::verify(
   if (cir::ConstRecordAttr::verify(emitError, type, data).failed())
     return failure();
 
-  for (const auto &element : data.getAsRange<mlir::Attribute>()) {
-    const auto &constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(element);
+  for (const auto &element : data.getAsRange<aiir::Attribute>()) {
+    const auto &constArrayAttr = aiir::dyn_cast<cir::ConstArrayAttr>(element);
     if (!constArrayAttr)
       return emitError() << "expected constant array subtype";
 
     LogicalResult eltTypeCheck = success();
-    auto arrayElts = mlir::cast<ArrayAttr>(constArrayAttr.getElts());
+    auto arrayElts = aiir::cast<ArrayAttr>(constArrayAttr.getElts());
     arrayElts.walkImmediateSubElements(
-        [&](mlir::Attribute attr) {
-          if (mlir::isa<ConstPtrAttr, GlobalViewAttr>(attr))
+        [&](aiir::Attribute attr) {
+          if (aiir::isa<ConstPtrAttr, GlobalViewAttr>(attr))
             return;
 
           eltTypeCheck = emitError()
                          << "expected GlobalViewAttr or ConstPtrAttr";
         },
-        [&](mlir::Type type) {});
+        [&](aiir::Type type) {});
     if (eltTypeCheck.failed())
       return eltTypeCheck;
   }
@@ -740,16 +740,16 @@ std::string DynamicCastInfoAttr::getAlias() const {
 
 LogicalResult DynamicCastInfoAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, cir::GlobalViewAttr srcRtti,
-    cir::GlobalViewAttr destRtti, mlir::FlatSymbolRefAttr runtimeFunc,
-    mlir::FlatSymbolRefAttr badCastFunc, cir::IntAttr offsetHint) {
-  auto isRttiPtr = [](mlir::Type ty) {
+    cir::GlobalViewAttr destRtti, aiir::FlatSymbolRefAttr runtimeFunc,
+    aiir::FlatSymbolRefAttr badCastFunc, cir::IntAttr offsetHint) {
+  auto isRttiPtr = [](aiir::Type ty) {
     // RTTI pointers are !cir.ptr<!u8i>.
 
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+    auto ptrTy = aiir::dyn_cast<cir::PointerType>(ty);
     if (!ptrTy)
       return false;
 
-    auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
+    auto pointeeIntTy = aiir::dyn_cast<cir::IntType>(ptrTy.getPointee());
     if (!pointeeIntTy)
       return false;
 

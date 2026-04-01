@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "mlir/IR/Interfaces.td"
+include "aiir/IR/Interfaces.td"
 
 def OperationMoveOpInterface : OpInterface<"OperationMoveOpInterface"> {
   let description = [{
@@ -28,8 +28,8 @@ def OperationMoveOpInterface : OpInterface<"OperationMoveOpInterface"> {
                      /*returnType=*/"bool",
                      /*methodName=*/"canMoveFromDescendant",
                      /*args=*/
-                     (ins "::mlir::Operation *":$descendant,
-                         "::mlir::Operation *":$candidate)>,
+                     (ins "::aiir::Operation *":$descendant,
+                         "::aiir::Operation *":$candidate)>,
                  InterfaceMethod<
                      /*desc=*/[{
         Returns true if it is allowed to move the given 'candidate'
@@ -39,6 +39,6 @@ def OperationMoveOpInterface : OpInterface<"OperationMoveOpInterface"> {
       }],
                      /*returnType=*/"bool",
                      /*methodName=*/"canMoveOutOf",
-                     /*args=*/(ins "::mlir::Operation *":$candidate)>,
+                     /*args=*/(ins "::aiir::Operation *":$candidate)>,
   ];
 }

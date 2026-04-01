@@ -13,7 +13,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenOpenACCHelpers.h"
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -22,13 +22,13 @@ using namespace clang::CIRGen;
 
 namespace {
 struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
-  mlir::acc::DeclareEnterOp enterOp;
+  aiir::acc::DeclareEnterOp enterOp;
 
-  OpenACCDeclareCleanup(mlir::acc::DeclareEnterOp enterOp) : enterOp(enterOp) {}
+  OpenACCDeclareCleanup(aiir::acc::DeclareEnterOp enterOp) : enterOp(enterOp) {}
 
   template <typename OutTy, typename InTy>
   void createOutOp(CIRGenFunction &cgf, InTy inOp) {
-    if constexpr (std::is_same_v<OutTy, mlir::acc::DeleteOp>) {
+    if constexpr (std::is_same_v<OutTy, aiir::acc::DeleteOp>) {
       auto outOp =
           OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp,
                         inOp.getStructured(), inOp.getImplicit(),
@@ -46,47 +46,47 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
   }
 
   void emit(CIRGenFunction &cgf, Flags flags) override {
-    auto exitOp = mlir::acc::DeclareExitOp::create(
+    auto exitOp = aiir::acc::DeclareExitOp::create(
         cgf.getBuilder(), enterOp.getLoc(), enterOp, {});
 
     // Some data clauses need to be referenced in 'exit', AND need to have an
     // operation after the exit.  Copy these from the enter operation.
-    for (mlir::Value val : enterOp.getDataClauseOperands()) {
-      if (auto copyin = val.getDefiningOp<mlir::acc::CopyinOp>()) {
+    for (aiir::Value val : enterOp.getDataClauseOperands()) {
+      if (auto copyin = val.getDefiningOp<aiir::acc::CopyinOp>()) {
         switch (copyin.getDataClause()) {
         default:
           llvm_unreachable(
               "OpenACC local declare clause copyin unexpected data clause");
           break;
-        case mlir::acc::DataClause::acc_copy:
-          createOutOp<mlir::acc::CopyoutOp>(cgf, copyin);
+        case aiir::acc::DataClause::acc_copy:
+          createOutOp<aiir::acc::CopyoutOp>(cgf, copyin);
           break;
-        case mlir::acc::DataClause::acc_copyin:
-          createOutOp<mlir::acc::DeleteOp>(cgf, copyin);
+        case aiir::acc::DataClause::acc_copyin:
+          createOutOp<aiir::acc::DeleteOp>(cgf, copyin);
           break;
         }
-      } else if (auto create = val.getDefiningOp<mlir::acc::CreateOp>()) {
+      } else if (auto create = val.getDefiningOp<aiir::acc::CreateOp>()) {
         switch (create.getDataClause()) {
         default:
           llvm_unreachable(
               "OpenACC local declare clause create unexpected data clause");
           break;
-        case mlir::acc::DataClause::acc_copyout:
-          createOutOp<mlir::acc::CopyoutOp>(cgf, create);
+        case aiir::acc::DataClause::acc_copyout:
+          createOutOp<aiir::acc::CopyoutOp>(cgf, create);
           break;
-        case mlir::acc::DataClause::acc_create:
-          createOutOp<mlir::acc::DeleteOp>(cgf, create);
+        case aiir::acc::DataClause::acc_create:
+          createOutOp<aiir::acc::DeleteOp>(cgf, create);
           break;
         }
-      } else if (auto present = val.getDefiningOp<mlir::acc::PresentOp>()) {
-        createOutOp<mlir::acc::DeleteOp>(cgf, present);
+      } else if (auto present = val.getDefiningOp<aiir::acc::PresentOp>()) {
+        createOutOp<aiir::acc::DeleteOp>(cgf, present);
       } else if (auto dev_res =
-                     val.getDefiningOp<mlir::acc::DeclareDeviceResidentOp>()) {
-        createOutOp<mlir::acc::DeleteOp>(cgf, dev_res);
-      } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
+                     val.getDefiningOp<aiir::acc::DeclareDeviceResidentOp>()) {
+        createOutOp<aiir::acc::DeleteOp>(cgf, dev_res);
+      } else if (val.getDefiningOp<aiir::acc::DeclareLinkOp>()) {
         // Link has no exit clauses, and shouldn't be copied.
         continue;
-      } else if (val.getDefiningOp<mlir::acc::DevicePtrOp>()) {
+      } else if (val.getDefiningOp<aiir::acc::DevicePtrOp>()) {
         // DevicePtr has no exit clauses, and shouldn't be copied.
         continue;
       } else {
@@ -107,9 +107,9 @@ void CIRGenModule::emitGlobalOpenACCDecl(const OpenACCConstructDecl *d) {
 }
 
 void CIRGenFunction::emitOpenACCDeclare(const OpenACCDeclareDecl &d) {
-  mlir::Location exprLoc = cgm.getLoc(d.getBeginLoc());
-  auto enterOp = mlir::acc::DeclareEnterOp::create(
-      builder, exprLoc, mlir::acc::DeclareTokenType::get(&cgm.getMLIRContext()),
+  aiir::Location exprLoc = cgm.getLoc(d.getBeginLoc());
+  auto enterOp = aiir::acc::DeclareEnterOp::create(
+      builder, exprLoc, aiir::acc::DeclareTokenType::get(&cgm.getAIIRContext()),
       {});
 
   emitOpenACCClauses(enterOp, OpenACCDirectiveKind::Declare, d.clauses());
@@ -143,9 +143,9 @@ void CIRGenModule::emitGlobalOpenACCDeclareDataOperands(
     OpenACCModifierKind modifiers, bool structured, bool implicit,
     bool requiresDtor) {
   // This is a template argument so that we don't have to include all of
-  // mlir::acc into CIRGenModule.
-  static_assert(std::is_same_v<DataClauseTy, mlir::acc::DataClause>);
-  mlir::Location exprLoc = getLoc(varOperand->getBeginLoc());
+  // aiir::acc into CIRGenModule.
+  static_assert(std::is_same_v<DataClauseTy, aiir::acc::DataClause>);
+  aiir::Location exprLoc = getLoc(varOperand->getBeginLoc());
   const Decl *refedDecl = getDeclareReferencedDecl(varOperand);
   StringRef varName = getMangledName(GlobalDecl{cast<VarDecl>(refedDecl)});
 
@@ -154,11 +154,11 @@ void CIRGenModule::emitGlobalOpenACCDeclareDataOperands(
   // the order of the clauses/vs-enter&exit in them makes combining these two
   // sections not particularly attractive, so we have a bit of repetition.
   {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    auto ctorOp = mlir::acc::GlobalConstructorOp::create(
+    aiir::OpBuilder::InsertionGuard guardCase(builder);
+    auto ctorOp = aiir::acc::GlobalConstructorOp::create(
         builder, exprLoc, (varName + "_acc_ctor").str());
     getModule().push_back(ctorOp);
-    mlir::Block *block = builder.createBlock(&ctorOp.getRegion(),
+    aiir::Block *block = builder.createBlock(&ctorOp.getRegion(),
                                              ctorOp.getRegion().end(), {}, {});
     builder.setInsertionPointToEnd(block);
     // These things are close enough to a function handling-wise we can just
@@ -178,22 +178,22 @@ void CIRGenModule::emitGlobalOpenACCDeclareDataOperands(
     beforeOp.setDataClause(dataClause);
     beforeOp.setModifiers(convertOpenACCModifiers(modifiers));
 
-    mlir::acc::DeclareEnterOp::create(
-        builder, exprLoc, mlir::acc::DeclareTokenType::get(&getMLIRContext()),
+    aiir::acc::DeclareEnterOp::create(
+        builder, exprLoc, aiir::acc::DeclareTokenType::get(&getAIIRContext()),
         beforeOp.getResult());
 
-    mlir::acc::TerminatorOp::create(builder, exprLoc);
+    aiir::acc::TerminatorOp::create(builder, exprLoc);
   }
 
   // copyin, create, and device_resident require a destructor, link does not. In
   // the case of the first three, they are all a 'getdeviceptr', followed by the
   // declare_exit, followed by a delete op in the destructor region.
   if (requiresDtor) {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    auto ctorOp = mlir::acc::GlobalDestructorOp::create(
+    aiir::OpBuilder::InsertionGuard guardCase(builder);
+    auto ctorOp = aiir::acc::GlobalDestructorOp::create(
         builder, exprLoc, (varName + "_acc_dtor").str());
     getModule().push_back(ctorOp);
-    mlir::Block *block = builder.createBlock(&ctorOp.getRegion(),
+    aiir::Block *block = builder.createBlock(&ctorOp.getRegion(),
                                              ctorOp.getRegion().end(), {}, {});
     builder.setInsertionPointToEnd(block);
 
@@ -206,19 +206,19 @@ void CIRGenModule::emitGlobalOpenACCDeclareDataOperands(
 
     CIRGenFunction::OpenACCDataOperandInfo inf =
         cgf.getOpenACCDataOperandInfo(varOperand);
-    auto getDevPtr = mlir::acc::GetDevicePtrOp::create(
+    auto getDevPtr = aiir::acc::GetDevicePtrOp::create(
         builder, exprLoc, inf.varValue, structured, implicit, inf.name,
         inf.bounds);
     getDevPtr.setDataClause(dataClause);
     getDevPtr.setModifiers(convertOpenACCModifiers(modifiers));
 
-    mlir::acc::DeclareExitOp::create(builder, exprLoc, /*token=*/mlir::Value{},
+    aiir::acc::DeclareExitOp::create(builder, exprLoc, /*token=*/aiir::Value{},
                                      getDevPtr.getResult());
-    auto deleteOp = mlir::acc::DeleteOp::create(
+    auto deleteOp = aiir::acc::DeleteOp::create(
         builder, exprLoc, getDevPtr, structured, implicit, inf.name, {});
     deleteOp.setDataClause(dataClause);
     deleteOp.setModifiers(convertOpenACCModifiers(modifiers));
-    mlir::acc::TerminatorOp::create(builder, exprLoc);
+    aiir::acc::TerminatorOp::create(builder, exprLoc);
   }
 }
 namespace {
@@ -244,16 +244,16 @@ public:
 
   void VisitCopyInClause(const OpenACCCopyInClause &clause) {
     for (const Expr *var : clause.getVarList())
-      cgm.emitGlobalOpenACCDeclareDataOperands<mlir::acc::CopyinOp>(
-          var, mlir::acc::DataClause::acc_copyin, clause.getModifierList(),
+      cgm.emitGlobalOpenACCDeclareDataOperands<aiir::acc::CopyinOp>(
+          var, aiir::acc::DataClause::acc_copyin, clause.getModifierList(),
           /*structured=*/true,
           /*implicit=*/false, /*requiresDtor=*/true);
   }
 
   void VisitCreateClause(const OpenACCCreateClause &clause) {
     for (const Expr *var : clause.getVarList())
-      cgm.emitGlobalOpenACCDeclareDataOperands<mlir::acc::CreateOp>(
-          var, mlir::acc::DataClause::acc_create, clause.getModifierList(),
+      cgm.emitGlobalOpenACCDeclareDataOperands<aiir::acc::CreateOp>(
+          var, aiir::acc::DataClause::acc_create, clause.getModifierList(),
           /*structured=*/true,
           /*implicit=*/false, /*requiresDtor=*/true);
   }
@@ -261,16 +261,16 @@ public:
   void VisitDeviceResidentClause(const OpenACCDeviceResidentClause &clause) {
     for (const Expr *var : clause.getVarList())
       cgm.emitGlobalOpenACCDeclareDataOperands<
-          mlir::acc::DeclareDeviceResidentOp>(
-          var, mlir::acc::DataClause::acc_declare_device_resident, {},
+          aiir::acc::DeclareDeviceResidentOp>(
+          var, aiir::acc::DataClause::acc_declare_device_resident, {},
           /*structured=*/true,
           /*implicit=*/false, /*requiresDtor=*/true);
   }
 
   void VisitLinkClause(const OpenACCLinkClause &clause) {
     for (const Expr *var : clause.getVarList())
-      cgm.emitGlobalOpenACCDeclareDataOperands<mlir::acc::DeclareLinkOp>(
-          var, mlir::acc::DataClause::acc_declare_link, {},
+      cgm.emitGlobalOpenACCDeclareDataOperands<aiir::acc::DeclareLinkOp>(
+          var, aiir::acc::DataClause::acc_declare_link, {},
           /*structured=*/true,
           /*implicit=*/false, /*requiresDtor=*/false);
   }
@@ -281,7 +281,7 @@ void CIRGenModule::emitGlobalOpenACCDeclareDecl(const OpenACCDeclareDecl *d) {
   // Declare creates 1 'acc_ctor' and 0-1 'acc_dtor' per clause, since it needs
   // a unique one on a per-variable basis. We can just use a clause emitter to
   // do all the work.
-  mlir::OpBuilder::InsertionGuard guardCase(builder);
+  aiir::OpBuilder::InsertionGuard guardCase(builder);
   OpenACCGlobalDeclareClauseEmitter em{*this};
   em.emitClauses(d->clauses());
 }
@@ -305,14 +305,14 @@ class OpenACCRoutineClauseEmitter final
     : public OpenACCClauseVisitor<OpenACCRoutineClauseEmitter> {
   CIRGenModule &cgm;
   CIRGen::CIRGenBuilderTy &builder;
-  mlir::acc::RoutineOp routineOp;
+  aiir::acc::RoutineOp routineOp;
   const clang::FunctionDecl *funcDecl;
-  llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;
+  llvm::SmallVector<aiir::acc::DeviceType> lastDeviceTypeValues;
 
 public:
   OpenACCRoutineClauseEmitter(CIRGenModule &cgm,
                               CIRGen::CIRGenBuilderTy &builder,
-                              mlir::acc::RoutineOp routineOp,
+                              aiir::acc::RoutineOp routineOp,
                               const clang::FunctionDecl *funcDecl)
       : cgm(cgm), builder(builder), routineOp(routineOp), funcDecl(funcDecl) {}
 
@@ -367,7 +367,7 @@ public:
 
   void VisitBindClause(const OpenACCBindClause &clause) {
     if (clause.isStringArgument()) {
-      mlir::StringAttr value =
+      aiir::StringAttr value =
           builder.getStringAttr(clause.getStringArgument()->getString());
 
       routineOp.addBindStrName(builder.getContext(), lastDeviceTypeValues,
@@ -379,7 +379,7 @@ public:
 
       routineOp.addBindIDName(
           builder.getContext(), lastDeviceTypeValues,
-          mlir::SymbolRefAttr::get(builder.getContext(), bindName));
+          aiir::SymbolRefAttr::get(builder.getContext(), bindName));
     }
   }
 };
@@ -388,11 +388,11 @@ public:
 void CIRGenModule::emitOpenACCRoutineDecl(
     const clang::FunctionDecl *funcDecl, cir::FuncOp func,
     SourceLocation pragmaLoc, ArrayRef<const OpenACCClause *> clauses) {
-  mlir::OpBuilder::InsertionGuard guardCase(builder);
+  aiir::OpBuilder::InsertionGuard guardCase(builder);
   // These need to appear at the global module.
   builder.setInsertionPointToEnd(&getModule().getBodyRegion().front());
 
-  mlir::Location routineLoc = getLoc(pragmaLoc);
+  aiir::Location routineLoc = getLoc(pragmaLoc);
 
   std::stringstream routineNameSS;
   // This follows the same naming format as Flang.
@@ -402,25 +402,25 @@ void CIRGenModule::emitOpenACCRoutineDecl(
   // There isn't a good constructor for RoutineOp that just takes a location +
   // name + function, so we use one that creates an otherwise RoutineOp and
   // count on the visitor/emitter to fill these in.
-  auto routineOp = mlir::acc::RoutineOp::create(
+  auto routineOp = aiir::acc::RoutineOp::create(
       builder, routineLoc, routineName,
-      mlir::SymbolRefAttr::get(builder.getContext(), func.getName()),
+      aiir::SymbolRefAttr::get(builder.getContext(), func.getName()),
       /*implicit=*/false);
 
   // We have to add a pointer going the other direction via an acc.routine_info,
   // from the func to the routine.
-  llvm::SmallVector<mlir::SymbolRefAttr> funcRoutines;
+  llvm::SmallVector<aiir::SymbolRefAttr> funcRoutines;
   if (auto routineInfo =
-          func.getOperation()->getAttrOfType<mlir::acc::RoutineInfoAttr>(
-              mlir::acc::getRoutineInfoAttrName()))
+          func.getOperation()->getAttrOfType<aiir::acc::RoutineInfoAttr>(
+              aiir::acc::getRoutineInfoAttrName()))
     funcRoutines.append(routineInfo.getAccRoutines().begin(),
                         routineInfo.getAccRoutines().end());
 
   funcRoutines.push_back(
-      mlir::SymbolRefAttr::get(builder.getContext(), routineName));
+      aiir::SymbolRefAttr::get(builder.getContext(), routineName));
   func.getOperation()->setAttr(
-      mlir::acc::getRoutineInfoAttrName(),
-      mlir::acc::RoutineInfoAttr::get(func.getContext(), funcRoutines));
+      aiir::acc::getRoutineInfoAttrName(),
+      aiir::acc::RoutineInfoAttr::get(func.getContext(), funcRoutines));
 
   OpenACCRoutineClauseEmitter emitter{*this, builder, routineOp, funcDecl};
   emitter.emitClauses(clauses);

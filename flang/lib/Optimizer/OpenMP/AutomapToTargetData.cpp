@@ -14,18 +14,18 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/Pass/Pass.h"
 
 namespace flangomp {
 #define GEN_PASS_DEF_AUTOMAPTOTARGETDATAPASS
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 class AutomapToTargetDataPass
@@ -34,19 +34,19 @@ class AutomapToTargetDataPass
 
   // Returns true if the variable has a dynamic size and therefore requires
   // bounds operations to describe its extents.
-  inline bool needsBoundsOps(mlir::Value var) {
-    assert(mlir::isa<mlir::omp::PointerLikeType>(var.getType()) &&
+  inline bool needsBoundsOps(aiir::Value var) {
+    assert(aiir::isa<aiir::omp::PointerLikeType>(var.getType()) &&
            "only pointer like types expected");
-    mlir::Type t = fir::unwrapRefType(var.getType());
-    if (mlir::Type inner = fir::dyn_cast_ptrOrBoxEleTy(t))
+    aiir::Type t = fir::unwrapRefType(var.getType());
+    if (aiir::Type inner = fir::dyn_cast_ptrOrBoxEleTy(t))
       return fir::hasDynamicSize(inner);
     return fir::hasDynamicSize(t);
   }
 
   // Generate MapBoundsOp operations for the variable if required.
-  inline void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
-                           llvm::SmallVectorImpl<mlir::Value> &boundsOps) {
-    mlir::Location loc = var.getLoc();
+  inline void genBoundsOps(fir::FirOpBuilder &builder, aiir::Value var,
+                           llvm::SmallVectorImpl<aiir::Value> &boundsOps) {
+    aiir::Location loc = var.getLoc();
     fir::factory::AddrAndBoundsInfo info =
         fir::factory::getDataOperandBaseAddr(builder, var,
                                              /*isOptional=*/false, loc);
@@ -54,9 +54,9 @@ class AutomapToTargetDataPass
         hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{info.addr},
                                         /*contiguousHint=*/true)
             .first;
-    llvm::SmallVector<mlir::Value> tmp =
-        fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                           mlir::omp::MapBoundsType>(
+    llvm::SmallVector<aiir::Value> tmp =
+        fir::factory::genImplicitBoundsOps<aiir::omp::MapBoundsOp,
+                                           aiir::omp::MapBoundsType>(
             builder, info, exv, /*dataExvIsAssumedSize=*/false, loc);
     llvm::append_range(boundsOps, tmp);
   }
@@ -114,7 +114,7 @@ class AutomapToTargetDataPass
         genBoundsOps(builder, memOp.getMemref(), bounds);
 
       omp::TargetEnterExitUpdateDataOperands clauses;
-      mlir::omp::MapInfoOp mapInfo = mlir::omp::MapInfoOp::create(
+      aiir::omp::MapInfoOp mapInfo = aiir::omp::MapInfoOp::create(
           builder, memOp.getLoc(), memOp.getMemref().getType(),
           memOp.getMemref(),
           TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
@@ -123,10 +123,10 @@ class AutomapToTargetDataPass
                                        : omp::ClauseMapFlags::del),
           builder.getAttr<omp::VariableCaptureKindAttr>(
               omp::VariableCaptureKind::ByCopy),
-          /*var_ptr_ptr=*/mlir::Value{},
+          /*var_ptr_ptr=*/aiir::Value{},
           /*members=*/SmallVector<Value>{},
           /*members_index=*/ArrayAttr{}, bounds,
-          /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
+          /*mapperId=*/aiir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
           builder.getBoolAttr(false));
       clauses.mapVars.push_back(mapInfo);
       isa<fir::StoreOp>(memOp)

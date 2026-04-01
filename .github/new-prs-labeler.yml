@@ -241,256 +241,256 @@ clang:codegen:
       - clang/lib/CodeGen/**
       - clang/include/clang/CodeGen/**
 
-mlir:
+aiir:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**
+      - aiir/**
 
-mlir:core:
+aiir:core:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/include/mlir/Support/**
-      - mlir/lib/Support/**
-      - mlir/include/mlir/Parser/**
-      - mlir/lib/Parser/**
-      - mlir/include/mlir/IR/**
-      - mlir/lib/IR/**
-      - mlir/include/mlir/Bytecode/**
-      - mlir/lib/Bytecode/**
-      - mlir/include/mlir/AsmParser/**
-      - mlir/lib/AsmParser/**
-      - mlir/include/mlir/Pass/**
-      - mlir/lib/Pass/**
-      - mlir/include/mlir/Tools/**
-      - mlir/lib/Tools/**
-      - mlir/include/mlir/Reducer/**
-      - mlir/lib/Reducer/**
-      - mlir/include/mlir/Transforms/**
-      - mlir/lib/Transforms/**
-      - mlir/include/mlir/Debug/**
-      - mlir/lib/Debug/**
-      - mlir/tools/**
+      - aiir/include/aiir/Support/**
+      - aiir/lib/Support/**
+      - aiir/include/aiir/Parser/**
+      - aiir/lib/Parser/**
+      - aiir/include/aiir/IR/**
+      - aiir/lib/IR/**
+      - aiir/include/aiir/Bytecode/**
+      - aiir/lib/Bytecode/**
+      - aiir/include/aiir/AsmParser/**
+      - aiir/lib/AsmParser/**
+      - aiir/include/aiir/Pass/**
+      - aiir/lib/Pass/**
+      - aiir/include/aiir/Tools/**
+      - aiir/lib/Tools/**
+      - aiir/include/aiir/Reducer/**
+      - aiir/lib/Reducer/**
+      - aiir/include/aiir/Transforms/**
+      - aiir/lib/Transforms/**
+      - aiir/include/aiir/Debug/**
+      - aiir/lib/Debug/**
+      - aiir/tools/**
 
-mlir:ods:
+aiir:ods:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/TableGen/**
-      - mlir/tblgen/**
-      - mlir/include/mlir/IR/*.td
+      - aiir/TableGen/**
+      - aiir/tblgen/**
+      - aiir/include/aiir/IR/*.td
 
-mlir:bindings:
+aiir:bindings:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/Bindings/**
+      - aiir/Bindings/**
 
-mlir:gpu:
+aiir:gpu:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/*GPU*/**
+      - aiir/**/*GPU*/**
 
-mlir:amdgpu:
+aiir:amdgpu:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/AMDGPU/**
+      - aiir/**/AMDGPU/**
 
-mlir:amx:
+aiir:amx:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/AMX/**
+      - aiir/**/AMX/**
 
-mlir:affine:
+aiir:affine:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Affine/**
+      - aiir/**/Affine/**
 
-mlir:arith:
+aiir:arith:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Arith/**
+      - aiir/**/Arith/**
 
-mlir:neon:
+aiir:neon:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/ArmNeon/**
+      - aiir/**/ArmNeon/**
 
-mlir:sme:
+aiir:sme:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/ArmSME/**
+      - aiir/**/ArmSME/**
 
-mlir:sve:
+aiir:sve:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/ArmSVE/**
+      - aiir/**/ArmSVE/**
 
-mlir:async:
+aiir:async:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Async/**
-      - mlir/**/Async/**
+      - aiir/**/Async/**
+      - aiir/**/Async/**
 
-mlir:bufferization:
+aiir:bufferization:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Bufferization/**
+      - aiir/**/Bufferization/**
 
-mlir:complex:
+aiir:complex:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Complex/**
+      - aiir/**/Complex/**
 
-mlir:cf:
+aiir:cf:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/ControlFlow/**
+      - aiir/**/ControlFlow/**
 
-mlir:dlti:
+aiir:dlti:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/DLTI/**
+      - aiir/**/DLTI/**
 
-mlir:emitc:
+aiir:emitc:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/*EmitC*/**
-      - mlir/lib/Target/Cpp/**
+      - aiir/**/*EmitC*/**
+      - aiir/lib/Target/Cpp/**
 
-mlir:func:
+aiir:func:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Func/**
+      - aiir/**/Func/**
 
-mlir:irdl:
+aiir:irdl:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/IRDL/**
+      - aiir/**/IRDL/**
 
-mlir:index:
+aiir:index:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Index/**
+      - aiir/**/Index/**
 
-mlir:llvm:
+aiir:llvm:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/LLVM*
-      - mlir/**/LLVM*/**
+      - aiir/**/LLVM*
+      - aiir/**/LLVM*/**
 
-mlir:linalg:
+aiir:linalg:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/*linalg/**
-      - mlir/**/*Linalg/**
+      - aiir/**/*linalg/**
+      - aiir/**/*Linalg/**
 
-mlir:mlprogram:
+aiir:mlprogram:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/MLProgram/**
+      - aiir/**/MLProgram/**
 
-mlir:math:
+aiir:math:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Math/**
+      - aiir/**/Math/**
 
-mlir:memref:
+aiir:memref:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/MemRef/**
+      - aiir/**/MemRef/**
 
-mlir:nvgpu:
+aiir:nvgpu:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/NVGPU/**
+      - aiir/**/NVGPU/**
 
-mlir:openacc:
+aiir:openacc:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/*OpenACC*
-      - mlir/**/*OpenACC*/**
+      - aiir/**/*OpenACC*
+      - aiir/**/*OpenACC*/**
 
-mlir:openmp:
+aiir:openmp:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/*OpenMP*
-      - mlir/**/*OpenMP*/**
+      - aiir/**/*OpenMP*
+      - aiir/**/*OpenMP*/**
 
-mlir:pdl:
+aiir:pdl:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/PDL/**
+      - aiir/**/PDL/**
 
-mlir:quant:
+aiir:quant:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Quant/**
+      - aiir/**/Quant/**
 
-mlir:scf:
+aiir:scf:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/SCF/**
+      - aiir/**/SCF/**
 
-mlir:spirv:
+aiir:spirv:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/SPIRV/**
-      - mlir/**/SPIRVTo*/**
-      - mlir/**/*ToSPIRV/**
-      - mlir/tools/mlir-spirv-cpu-runner/**
-      - mlir/tools/mlir-vulkan-runner/**
-      - mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp
+      - aiir/**/SPIRV/**
+      - aiir/**/SPIRVTo*/**
+      - aiir/**/*ToSPIRV/**
+      - aiir/tools/aiir-spirv-cpu-runner/**
+      - aiir/tools/aiir-vulkan-runner/**
+      - aiir/tools/aiir-tblgen/SPIRVUtilsGen.cpp
 
-mlir:shape:
+aiir:shape:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Shape/**
+      - aiir/**/Shape/**
 
-mlir:sparse:
+aiir:sparse:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/SparseTensor/**
+      - aiir/**/SparseTensor/**
 
-mlir:tensor:
+aiir:tensor:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Tensor/**
+      - aiir/**/Tensor/**
 
-mlir:tosa:
+aiir:tosa:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/*Tosa*/**
+      - aiir/**/*Tosa*/**
 
-mlir:ub:
+aiir:ub:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/UB/**
+      - aiir/**/UB/**
 
-mlir:vector:
+aiir:vector:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/*Vector/**
+      - aiir/**/*Vector/**
 
-mlir:execution-engine:
+aiir:execution-engine:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/ExecutionEngine/**
+      - aiir/**/ExecutionEngine/**
 
-mlir:presburger:
+aiir:presburger:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/*Presburger*/**
+      - aiir/**/*Presburger*/**
 
-mlir:python:
+aiir:python:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/python/**/*
-      - mlir/include/mlir/Bindings/Python/**
-      - mlir/lib/Bindings/Python/**
-      - mlir/tools/mlir-tblgen/*Python*
+      - aiir/python/**/*
+      - aiir/include/aiir/Bindings/Python/**
+      - aiir/lib/Bindings/Python/**
+      - aiir/tools/aiir-tblgen/*Python*
 
-mlir:vectorops:
+aiir:vectorops:
   - changed-files:
     - any-glob-to-any-file:
-      - mlir/**/Vector/**/*
+      - aiir/**/Vector/**/*
 
 coroutines:
   - changed-files:
@@ -739,8 +739,8 @@ openacc:
       - flang/lib/Lower/OpenACC.cpp
       - llvm/**/Frontend/OpenACC/**
       - llvm/unittests/Frontend/OpenACCTest.cpp
-      - mlir/test/Target/LLVMIR/openacc-llvm.mlir
-      - mlir/**/*OpenACC/**
+      - aiir/test/Target/LLVMIR/openacc-llvm.aiir
+      - aiir/**/*OpenACC/**
 
 flang:runtime:
   - changed-files:
@@ -815,8 +815,8 @@ flang:openmp:
       - flang/test/Fir/convert-to-llvm-openmp-and-fir.fir
       - flang/test/Lower/OpenMP/**
       - flang/test/Transforms/omp*
-      - mlir/**/*OpenMP*
-      - mlir/test/Target/LLVMIR/openmp*
+      - aiir/**/*OpenMP*
+      - aiir/test/Target/LLVMIR/openmp*
       - llvm/lib/Frontend/OpenMP/**
       - llvm/include/llvm/Frontend/OpenMP/**
       - llvm/unittests/Frontend/OpenMP*

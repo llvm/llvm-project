@@ -1,0 +1,73 @@
+add_aiir_interface(SymbolInterfaces)
+set(LLVM_TARGET_DEFINITIONS SymbolInterfaces.td)
+aiir_tablegen(SymbolInterfacesAttrInterface.h.inc -gen-attr-interface-decls)
+aiir_tablegen(SymbolInterfacesAttrInterface.cpp.inc -gen-attr-interface-defs)
+add_aiir_interface(RegionKindInterface)
+
+add_aiir_type_interface(QuantStorageTypeInterface)
+
+set(LLVM_TARGET_DEFINITIONS OpAsmInterface.td)
+aiir_tablegen(OpAsmAttrInterface.h.inc -gen-attr-interface-decls)
+aiir_tablegen(OpAsmAttrInterface.cpp.inc -gen-attr-interface-defs)
+aiir_tablegen(OpAsmOpInterface.h.inc -gen-op-interface-decls)
+aiir_tablegen(OpAsmOpInterface.cpp.inc -gen-op-interface-defs)
+aiir_tablegen(OpAsmTypeInterface.h.inc -gen-type-interface-decls)
+aiir_tablegen(OpAsmTypeInterface.cpp.inc -gen-type-interface-defs)
+add_aiir_generic_tablegen_target(AIIROpAsmInterfaceIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinAttributes.td)
+aiir_tablegen(BuiltinAttributes.h.inc -gen-attrdef-decls)
+aiir_tablegen(BuiltinAttributes.cpp.inc -gen-attrdef-defs)
+add_aiir_generic_tablegen_target(AIIRBuiltinAttributesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinAttributeInterfaces.td)
+aiir_tablegen(BuiltinAttributeInterfaces.h.inc -gen-attr-interface-decls)
+aiir_tablegen(BuiltinAttributeInterfaces.cpp.inc -gen-attr-interface-defs)
+add_aiir_generic_tablegen_target(AIIRBuiltinAttributeInterfacesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinDialect.td)
+aiir_tablegen(BuiltinDialect.h.inc -gen-dialect-decls)
+aiir_tablegen(BuiltinDialect.cpp.inc -gen-dialect-defs)
+add_aiir_generic_tablegen_target(AIIRBuiltinDialectIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinDialectBytecode.td)
+aiir_tablegen(BuiltinDialectBytecode.cpp.inc -gen-bytecode -bytecode-dialect="Builtin")
+add_aiir_generic_tablegen_target(AIIRBuiltinDialectBytecodeIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinLocationAttributes.td)
+aiir_tablegen(BuiltinLocationAttributes.h.inc -gen-attrdef-decls)
+aiir_tablegen(BuiltinLocationAttributes.cpp.inc -gen-attrdef-defs)
+add_aiir_generic_tablegen_target(AIIRBuiltinLocationAttributesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinOps.td)
+aiir_tablegen(BuiltinOps.h.inc -gen-op-decls)
+aiir_tablegen(BuiltinOps.cpp.inc -gen-op-defs)
+add_aiir_generic_tablegen_target(AIIRBuiltinOpsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinTypes.td)
+aiir_tablegen(BuiltinTypes.h.inc -gen-typedef-decls)
+aiir_tablegen(BuiltinTypes.cpp.inc -gen-typedef-defs)
+add_public_tablegen_target(AIIRBuiltinTypesIncGen)
+aiir_tablegen(BuiltinTypeConstraints.h.inc -gen-type-constraint-decls)
+aiir_tablegen(BuiltinTypeConstraints.cpp.inc -gen-type-constraint-defs)
+add_aiir_generic_tablegen_target(AIIRBuiltinTypeConstraintsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinTypeInterfaces.td)
+aiir_tablegen(BuiltinTypeInterfaces.h.inc -gen-type-interface-decls)
+aiir_tablegen(BuiltinTypeInterfaces.cpp.inc -gen-type-interface-defs)
+add_aiir_generic_tablegen_target(AIIRBuiltinTypeInterfacesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS TensorEncoding.td)
+aiir_tablegen(TensorEncInterfaces.h.inc -gen-attr-interface-decls)
+aiir_tablegen(TensorEncInterfaces.cpp.inc -gen-attr-interface-defs)
+add_aiir_generic_tablegen_target(AIIRTensorEncodingIncGen)
+
+set(LLVM_TARGET_DEFINITIONS OpAsmDialectInterface.td)
+aiir_tablegen(OpAsmDialectInterface.h.inc -gen-dialect-interface-decls)
+add_aiir_generic_tablegen_target(AIIROpAsmDialectInterfaceIncGen)
+
+add_aiir_doc(BuiltinAttributes BuiltinAttributes Dialects/ -gen-attrdef-doc)
+add_aiir_doc(BuiltinLocationAttributes BuiltinLocationAttributes Dialects/ -gen-attrdef-doc)
+add_aiir_doc(BuiltinOps BuiltinOps Dialects/ -gen-op-doc)
+add_aiir_doc(BuiltinTypes BuiltinTypes Dialects/ -gen-typedef-doc)
+add_aiir_doc(BuiltinTypes BuiltinTypeInterfaces Dialects/ -gen-type-interface-docs)

@@ -10,7 +10,7 @@ load(
 )
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:driver.bzl", "llvm_driver_cc_binary")
-load("//mlir:tblgen.bzl", "gentbl_cc_library")
+load("//aiir:tblgen.bzl", "gentbl_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],

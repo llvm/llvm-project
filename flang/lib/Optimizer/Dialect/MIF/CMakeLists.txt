@@ -14,10 +14,10 @@ add_flang_library(MIFDialect
   AsmPrinter
   Remarks
 
-  MLIR_DEPS
-  MLIRIR
+  AIIR_DEPS
+  AIIRIR
 
-  MLIR_LIBS
-  MLIRIR
-  MLIRTargetLLVMIRExport
+  AIIR_LIBS
+  AIIRIR
+  AIIRTargetLLVMIRExport
 )

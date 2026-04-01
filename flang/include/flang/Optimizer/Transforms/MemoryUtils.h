@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,7 +22,7 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 
-namespace mlir {
+namespace aiir {
 class RewriterBase;
 }
 
@@ -38,12 +38,12 @@ using MustRewriteCallBack = llvm::function_ref<bool(fir::AllocaOp)>;
 /// even if the MustRewriteCallBack previously returned true, in which case
 /// it should return a null value.
 /// The callback should not delete the alloca, the utility will do it.
-using AllocaRewriterCallBack = llvm::function_ref<mlir::Value(
-    mlir::OpBuilder &, fir::AllocaOp, bool allocaDominatesDeallocLocations)>;
+using AllocaRewriterCallBack = llvm::function_ref<aiir::Value(
+    aiir::OpBuilder &, fir::AllocaOp, bool allocaDominatesDeallocLocations)>;
 /// Type of callbacks that must generate deallocation of storage obtained via
 /// AllocaRewriterCallBack calls.
 using DeallocCallBack =
-    llvm::function_ref<void(mlir::Location, mlir::OpBuilder &, mlir::Value)>;
+    llvm::function_ref<void(aiir::Location, aiir::OpBuilder &, aiir::Value)>;
 
 /// Utility to replace fir.alloca by dynamic allocations inside \p parentOp.
 /// \p MustRewriteCallBack lets the user control which fir.alloca should be
@@ -53,7 +53,7 @@ using DeallocCallBack =
 /// to replace all fir.alloca as requested by the user. Causes of failures are
 /// the presence of unregistered operations, or OpenMP/ACC recipe operations
 /// that return memory allocated inside their region.
-bool replaceAllocas(mlir::RewriterBase &rewriter, mlir::Operation *parentOp,
+bool replaceAllocas(aiir::RewriterBase &rewriter, aiir::Operation *parentOp,
                     MustRewriteCallBack, AllocaRewriterCallBack,
                     DeallocCallBack);
 

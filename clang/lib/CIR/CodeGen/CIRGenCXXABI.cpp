@@ -67,7 +67,7 @@ cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
                                         /*isConstantVariable=*/false);
 }
 
-mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
+aiir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
   ImplicitParamDecl *vd = getThisDecl(cgf);
   Address addr = cgf.getAddrOfLocalVar(vd);
   return cir::LoadOp::create(cgf.getBuilder(), cgf.getLoc(vd->getLocation()),
@@ -75,7 +75,7 @@ mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
 }
 
 void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
-                                      mlir::Value thisPtr) {
+                                      aiir::Value thisPtr) {
   /// Initialize the 'this' slot.
   assert(getThisDecl(cgf) && "no 'this' variable for function");
   cgf.cxxabiThisValue = thisPtr;
@@ -101,6 +101,6 @@ void CIRGenCXXABI::emitReturnFromThunk(CIRGenFunction &cgf, RValue rv,
                                        QualType resultType) {
   assert(!cgf.hasAggregateEvaluationKind(resultType) &&
          "cannot handle aggregates");
-  mlir::Location loc = cgf.getBuilder().getUnknownLoc();
+  aiir::Location loc = cgf.getBuilder().getUnknownLoc();
   cgf.emitReturnOfRValue(loc, rv, resultType);
 }

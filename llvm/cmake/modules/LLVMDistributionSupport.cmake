@@ -117,7 +117,7 @@ endfunction()
 # - project: The project to produce the argument for. IMPORTANT: The casing of
 #   this argument should match the casing used by the project's Config.cmake
 #   file. The correct casing for the LLVM projects is Clang, Flang, LLD, LLVM,
-#   and MLIR.
+#   and AIIR.
 # - export_arg_var The variable with this name is set in the caller's scope to
 #   the EXPORT argument for the target for the project.
 # - UMBRELLA: The (optional) umbrella target that the target is a part of. For

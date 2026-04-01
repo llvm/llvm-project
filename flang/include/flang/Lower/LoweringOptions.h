@@ -8,7 +8,7 @@
 ///
 /// \file
 /// Options controlling lowering of front-end fragments to the FIR dialect
-/// of MLIR
+/// of AIIR
 ///
 //===----------------------------------------------------------------------===//
 

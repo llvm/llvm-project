@@ -6,219 +6,219 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/Debug.h"
 
-static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
+static inline aiir::Type getLlvmPtrType(aiir::AIIRContext *context,
                                         unsigned addressSpace = 0) {
-  return mlir::LLVM::LLVMPointerType::get(context, addressSpace);
+  return aiir::LLVM::LLVMPointerType::get(context, addressSpace);
 }
 
-static unsigned getTypeDescFieldId(mlir::Type ty) {
-  auto isArray = mlir::isa<fir::SequenceType>(fir::dyn_cast_ptrOrBoxEleTy(ty));
+static unsigned getTypeDescFieldId(aiir::Type ty) {
+  auto isArray = aiir::isa<fir::SequenceType>(fir::dyn_cast_ptrOrBoxEleTy(ty));
   return isArray ? kOptTypePtrPosInBox : kDimsPosInBox;
 }
 
 namespace fir {
 
 ConvertFIRToLLVMPattern::ConvertFIRToLLVMPattern(
-    llvm::StringRef rootOpName, mlir::MLIRContext *context,
+    llvm::StringRef rootOpName, aiir::AIIRContext *context,
     const fir::LLVMTypeConverter &typeConverter,
-    const fir::FIRToLLVMPassOptions &options, mlir::PatternBenefit benefit)
+    const fir::FIRToLLVMPassOptions &options, aiir::PatternBenefit benefit)
     : ConvertToLLVMPattern(rootOpName, context, typeConverter, benefit),
       options(options) {}
 
 // Convert FIR type to LLVM without turning fir.box<T> into memory
 // reference.
-mlir::Type
-ConvertFIRToLLVMPattern::convertObjectType(mlir::Type firType) const {
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(firType))
+aiir::Type
+ConvertFIRToLLVMPattern::convertObjectType(aiir::Type firType) const {
+  if (auto boxTy = aiir::dyn_cast<fir::BaseBoxType>(firType))
     return lowerTy().convertBoxTypeAsStruct(boxTy);
   return lowerTy().convertType(firType);
 }
 
-mlir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genI32Constant(
-    mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
+aiir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genI32Constant(
+    aiir::Location loc, aiir::ConversionPatternRewriter &rewriter,
     int value) const {
-  mlir::Type i32Ty = rewriter.getI32Type();
-  mlir::IntegerAttr attr = rewriter.getI32IntegerAttr(value);
-  return mlir::LLVM::ConstantOp::create(rewriter, loc, i32Ty, attr);
+  aiir::Type i32Ty = rewriter.getI32Type();
+  aiir::IntegerAttr attr = rewriter.getI32IntegerAttr(value);
+  return aiir::LLVM::ConstantOp::create(rewriter, loc, i32Ty, attr);
 }
 
-mlir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genConstantOffset(
-    mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
+aiir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genConstantOffset(
+    aiir::Location loc, aiir::ConversionPatternRewriter &rewriter,
     int offset) const {
-  mlir::Type ity = lowerTy().offsetType();
-  mlir::IntegerAttr cattr = rewriter.getI32IntegerAttr(offset);
-  return mlir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
+  aiir::Type ity = lowerTy().offsetType();
+  aiir::IntegerAttr cattr = rewriter.getI32IntegerAttr(offset);
+  return aiir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
 }
 
 /// Perform an extension or truncation as needed on an integer value. Lowering
 /// to the specific target may involve some sign-extending or truncation of
 /// values, particularly to fit them from abstract box types to the
 /// appropriate reified structures.
-mlir::Value ConvertFIRToLLVMPattern::integerCast(
-    mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
-    mlir::Type ty, mlir::Value val, bool fold) const {
+aiir::Value ConvertFIRToLLVMPattern::integerCast(
+    aiir::Location loc, aiir::ConversionPatternRewriter &rewriter,
+    aiir::Type ty, aiir::Value val, bool fold) const {
   auto valTy = val.getType();
   // If the value was not yet lowered, lower its type so that it can
   // be used in getPrimitiveTypeSizeInBits.
-  if (!mlir::isa<mlir::IntegerType>(valTy))
+  if (!aiir::isa<aiir::IntegerType>(valTy))
     valTy = convertType(valTy);
-  auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
-  auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
+  auto toSize = aiir::LLVM::getPrimitiveTypeSizeInBits(ty);
+  auto fromSize = aiir::LLVM::getPrimitiveTypeSizeInBits(valTy);
   if (fold) {
     if (toSize < fromSize)
-      return rewriter.createOrFold<mlir::LLVM::TruncOp>(loc, ty, val);
+      return rewriter.createOrFold<aiir::LLVM::TruncOp>(loc, ty, val);
     if (toSize > fromSize)
-      return rewriter.createOrFold<mlir::LLVM::SExtOp>(loc, ty, val);
+      return rewriter.createOrFold<aiir::LLVM::SExtOp>(loc, ty, val);
   } else {
     if (toSize < fromSize)
-      return mlir::LLVM::TruncOp::create(rewriter, loc, ty, val);
+      return aiir::LLVM::TruncOp::create(rewriter, loc, ty, val);
     if (toSize > fromSize)
-      return mlir::LLVM::SExtOp::create(rewriter, loc, ty, val);
+      return aiir::LLVM::SExtOp::create(rewriter, loc, ty, val);
   }
   return val;
 }
 
 fir::ConvertFIRToLLVMPattern::TypePair
-ConvertFIRToLLVMPattern::getBoxTypePair(mlir::Type firBoxTy) const {
-  mlir::Type llvmBoxTy =
-      lowerTy().convertBoxTypeAsStruct(mlir::cast<fir::BaseBoxType>(firBoxTy));
+ConvertFIRToLLVMPattern::getBoxTypePair(aiir::Type firBoxTy) const {
+  aiir::Type llvmBoxTy =
+      lowerTy().convertBoxTypeAsStruct(aiir::cast<fir::BaseBoxType>(firBoxTy));
   return TypePair{firBoxTy, llvmBoxTy};
 }
 
 /// Construct code sequence to extract the specific value from a `fir.box`.
-mlir::Value ConvertFIRToLLVMPattern::getValueFromBox(
-    mlir::Location loc, TypePair boxTy, mlir::Value box, mlir::Type resultTy,
-    mlir::ConversionPatternRewriter &rewriter, int boxValue) const {
-  if (mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType())) {
+aiir::Value ConvertFIRToLLVMPattern::getValueFromBox(
+    aiir::Location loc, TypePair boxTy, aiir::Value box, aiir::Type resultTy,
+    aiir::ConversionPatternRewriter &rewriter, int boxValue) const {
+  if (aiir::isa<aiir::LLVM::LLVMPointerType>(box.getType())) {
     auto pty = getLlvmPtrType(resultTy.getContext());
-    auto p = mlir::LLVM::GEPOp::create(
+    auto p = aiir::LLVM::GEPOp::create(
         rewriter, loc, pty, boxTy.llvm, box,
-        llvm::ArrayRef<mlir::LLVM::GEPArg>{0, boxValue});
+        llvm::ArrayRef<aiir::LLVM::GEPArg>{0, boxValue});
     auto fldTy = getBoxEleTy(boxTy.llvm, {boxValue});
-    auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, fldTy, p);
+    auto loadOp = aiir::LLVM::LoadOp::create(rewriter, loc, fldTy, p);
     auto castOp = integerCast(loc, rewriter, resultTy, loadOp);
     attachTBAATag(loadOp, boxTy.fir, nullptr, p);
     return castOp;
   }
-  return mlir::LLVM::ExtractValueOp::create(rewriter, loc, box, boxValue);
+  return aiir::LLVM::ExtractValueOp::create(rewriter, loc, box, boxValue);
 }
 
 /// Method to construct code sequence to get the triple for dimension `dim`
 /// from a box.
-llvm::SmallVector<mlir::Value, 3> ConvertFIRToLLVMPattern::getDimsFromBox(
-    mlir::Location loc, llvm::ArrayRef<mlir::Type> retTys, TypePair boxTy,
-    mlir::Value box, mlir::Value dim,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value l0 =
+llvm::SmallVector<aiir::Value, 3> ConvertFIRToLLVMPattern::getDimsFromBox(
+    aiir::Location loc, llvm::ArrayRef<aiir::Type> retTys, TypePair boxTy,
+    aiir::Value box, aiir::Value dim,
+    aiir::ConversionPatternRewriter &rewriter) const {
+  aiir::Value l0 =
       loadDimFieldFromBox(loc, boxTy, box, dim, 0, retTys[0], rewriter);
-  mlir::Value l1 =
+  aiir::Value l1 =
       loadDimFieldFromBox(loc, boxTy, box, dim, 1, retTys[1], rewriter);
-  mlir::Value l2 =
+  aiir::Value l2 =
       loadDimFieldFromBox(loc, boxTy, box, dim, 2, retTys[2], rewriter);
   return {l0, l1, l2};
 }
 
-llvm::SmallVector<mlir::Value, 3> ConvertFIRToLLVMPattern::getDimsFromBox(
-    mlir::Location loc, llvm::ArrayRef<mlir::Type> retTys, TypePair boxTy,
-    mlir::Value box, int dim, mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value l0 =
+llvm::SmallVector<aiir::Value, 3> ConvertFIRToLLVMPattern::getDimsFromBox(
+    aiir::Location loc, llvm::ArrayRef<aiir::Type> retTys, TypePair boxTy,
+    aiir::Value box, int dim, aiir::ConversionPatternRewriter &rewriter) const {
+  aiir::Value l0 =
       getDimFieldFromBox(loc, boxTy, box, dim, 0, retTys[0], rewriter);
-  mlir::Value l1 =
+  aiir::Value l1 =
       getDimFieldFromBox(loc, boxTy, box, dim, 1, retTys[1], rewriter);
-  mlir::Value l2 =
+  aiir::Value l2 =
       getDimFieldFromBox(loc, boxTy, box, dim, 2, retTys[2], rewriter);
   return {l0, l1, l2};
 }
 
-mlir::Value ConvertFIRToLLVMPattern::loadDimFieldFromBox(
-    mlir::Location loc, TypePair boxTy, mlir::Value box, mlir::Value dim,
-    int off, mlir::Type ty, mlir::ConversionPatternRewriter &rewriter) const {
-  assert(mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType()) &&
+aiir::Value ConvertFIRToLLVMPattern::loadDimFieldFromBox(
+    aiir::Location loc, TypePair boxTy, aiir::Value box, aiir::Value dim,
+    int off, aiir::Type ty, aiir::ConversionPatternRewriter &rewriter) const {
+  assert(aiir::isa<aiir::LLVM::LLVMPointerType>(box.getType()) &&
          "descriptor inquiry with runtime dim can only be done on descriptor "
          "in memory");
-  mlir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
+  aiir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
                                static_cast<int>(kDimsPosInBox), dim, off);
-  auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, ty, p);
+  auto loadOp = aiir::LLVM::LoadOp::create(rewriter, loc, ty, p);
   attachTBAATag(loadOp, boxTy.fir, nullptr, p);
   return loadOp;
 }
 
-mlir::Value ConvertFIRToLLVMPattern::getDimFieldFromBox(
-    mlir::Location loc, TypePair boxTy, mlir::Value box, int dim, int off,
-    mlir::Type ty, mlir::ConversionPatternRewriter &rewriter) const {
-  if (mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType())) {
-    mlir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
+aiir::Value ConvertFIRToLLVMPattern::getDimFieldFromBox(
+    aiir::Location loc, TypePair boxTy, aiir::Value box, int dim, int off,
+    aiir::Type ty, aiir::ConversionPatternRewriter &rewriter) const {
+  if (aiir::isa<aiir::LLVM::LLVMPointerType>(box.getType())) {
+    aiir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
                                  static_cast<int>(kDimsPosInBox), dim, off);
-    auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, ty, p);
+    auto loadOp = aiir::LLVM::LoadOp::create(rewriter, loc, ty, p);
     attachTBAATag(loadOp, boxTy.fir, nullptr, p);
     return loadOp;
   }
-  return mlir::LLVM::ExtractValueOp::create(
+  return aiir::LLVM::ExtractValueOp::create(
       rewriter, loc, box,
       llvm::ArrayRef<std::int64_t>{kDimsPosInBox, dim, off});
 }
 
-mlir::Value ConvertFIRToLLVMPattern::getStrideFromBox(
-    mlir::Location loc, TypePair boxTy, mlir::Value box, unsigned dim,
-    mlir::ConversionPatternRewriter &rewriter) const {
+aiir::Value ConvertFIRToLLVMPattern::getStrideFromBox(
+    aiir::Location loc, TypePair boxTy, aiir::Value box, unsigned dim,
+    aiir::ConversionPatternRewriter &rewriter) const {
   auto idxTy = lowerTy().indexType();
   return getDimFieldFromBox(loc, boxTy, box, dim, kDimStridePos, idxTy,
                             rewriter);
 }
 
 /// Read base address from a fir.box. Returned address has type ty.
-mlir::Value ConvertFIRToLLVMPattern::getBaseAddrFromBox(
-    mlir::Location loc, TypePair boxTy, mlir::Value box,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resultTy = ::getLlvmPtrType(boxTy.llvm.getContext());
+aiir::Value ConvertFIRToLLVMPattern::getBaseAddrFromBox(
+    aiir::Location loc, TypePair boxTy, aiir::Value box,
+    aiir::ConversionPatternRewriter &rewriter) const {
+  aiir::Type resultTy = ::getLlvmPtrType(boxTy.llvm.getContext());
   return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kAddrPosInBox);
 }
 
-mlir::Value ConvertFIRToLLVMPattern::getElementSizeFromBox(
-    mlir::Location loc, mlir::Type resultTy, TypePair boxTy, mlir::Value box,
-    mlir::ConversionPatternRewriter &rewriter) const {
+aiir::Value ConvertFIRToLLVMPattern::getElementSizeFromBox(
+    aiir::Location loc, aiir::Type resultTy, TypePair boxTy, aiir::Value box,
+    aiir::ConversionPatternRewriter &rewriter) const {
   return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kElemLenPosInBox);
 }
 
 /// Read base address from a fir.box. Returned address has type ty.
-mlir::Value ConvertFIRToLLVMPattern::getRankFromBox(
-    mlir::Location loc, TypePair boxTy, mlir::Value box,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resultTy = getBoxEleTy(boxTy.llvm, {kRankPosInBox});
+aiir::Value ConvertFIRToLLVMPattern::getRankFromBox(
+    aiir::Location loc, TypePair boxTy, aiir::Value box,
+    aiir::ConversionPatternRewriter &rewriter) const {
+  aiir::Type resultTy = getBoxEleTy(boxTy.llvm, {kRankPosInBox});
   return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kRankPosInBox);
 }
 
 /// Read the extra field from a fir.box.
-mlir::Value ConvertFIRToLLVMPattern::getExtraFromBox(
-    mlir::Location loc, TypePair boxTy, mlir::Value box,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resultTy = getBoxEleTy(boxTy.llvm, {kExtraPosInBox});
+aiir::Value ConvertFIRToLLVMPattern::getExtraFromBox(
+    aiir::Location loc, TypePair boxTy, aiir::Value box,
+    aiir::ConversionPatternRewriter &rewriter) const {
+  aiir::Type resultTy = getBoxEleTy(boxTy.llvm, {kExtraPosInBox});
   return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kExtraPosInBox);
 }
 
 // Get the element type given an LLVM type that is of the form
 // (array|struct|vector)+ and the provided indexes.
-mlir::Type ConvertFIRToLLVMPattern::getBoxEleTy(
-    mlir::Type type, llvm::ArrayRef<std::int64_t> indexes) const {
+aiir::Type ConvertFIRToLLVMPattern::getBoxEleTy(
+    aiir::Type type, llvm::ArrayRef<std::int64_t> indexes) const {
   for (unsigned i : indexes) {
-    if (auto t = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(type)) {
+    if (auto t = aiir::dyn_cast<aiir::LLVM::LLVMStructType>(type)) {
       assert(!t.isOpaque() && i < t.getBody().size());
       type = t.getBody()[i];
-    } else if (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(type)) {
+    } else if (auto t = aiir::dyn_cast<aiir::LLVM::LLVMArrayType>(type)) {
       type = t.getElementType();
-    } else if (auto t = mlir::dyn_cast<mlir::VectorType>(type)) {
+    } else if (auto t = aiir::dyn_cast<aiir::VectorType>(type)) {
       type = t.getElementType();
     } else {
-      fir::emitFatalError(mlir::UnknownLoc::get(type.getContext()),
+      fir::emitFatalError(aiir::UnknownLoc::get(type.getContext()),
                           "request for invalid box element type");
     }
   }
@@ -226,65 +226,65 @@ mlir::Type ConvertFIRToLLVMPattern::getBoxEleTy(
 }
 
 // Return LLVM type of the object described by a fir.box of \p boxType.
-mlir::Type ConvertFIRToLLVMPattern::getLlvmObjectTypeFromBoxType(
-    mlir::Type boxType) const {
-  mlir::Type objectType = fir::dyn_cast_ptrOrBoxEleTy(boxType);
+aiir::Type ConvertFIRToLLVMPattern::getLlvmObjectTypeFromBoxType(
+    aiir::Type boxType) const {
+  aiir::Type objectType = fir::dyn_cast_ptrOrBoxEleTy(boxType);
   assert(objectType && "boxType must be a box type");
   return this->convertType(objectType);
 }
 
 /// Read the address of the type descriptor from a box.
-mlir::Value ConvertFIRToLLVMPattern::loadTypeDescAddress(
-    mlir::Location loc, TypePair boxTy, mlir::Value box,
-    mlir::ConversionPatternRewriter &rewriter) const {
+aiir::Value ConvertFIRToLLVMPattern::loadTypeDescAddress(
+    aiir::Location loc, TypePair boxTy, aiir::Value box,
+    aiir::ConversionPatternRewriter &rewriter) const {
   unsigned typeDescFieldId = getTypeDescFieldId(boxTy.fir);
-  mlir::Type tdescType = lowerTy().convertTypeDescType(rewriter.getContext());
+  aiir::Type tdescType = lowerTy().convertTypeDescType(rewriter.getContext());
   return getValueFromBox(loc, boxTy, box, tdescType, rewriter, typeDescFieldId);
 }
 
 // Load the attribute from the \p box and perform a check against \p maskValue
 // The final comparison is implemented as `(attribute & maskValue) != 0`.
-mlir::Value ConvertFIRToLLVMPattern::genBoxAttributeCheck(
-    mlir::Location loc, TypePair boxTy, mlir::Value box,
-    mlir::ConversionPatternRewriter &rewriter, unsigned maskValue) const {
-  mlir::Type attrTy = rewriter.getI32Type();
-  mlir::Value attribute =
+aiir::Value ConvertFIRToLLVMPattern::genBoxAttributeCheck(
+    aiir::Location loc, TypePair boxTy, aiir::Value box,
+    aiir::ConversionPatternRewriter &rewriter, unsigned maskValue) const {
+  aiir::Type attrTy = rewriter.getI32Type();
+  aiir::Value attribute =
       getValueFromBox(loc, boxTy, box, attrTy, rewriter, kAttributePosInBox);
-  mlir::LLVM::ConstantOp attrMask = genConstantOffset(loc, rewriter, maskValue);
+  aiir::LLVM::ConstantOp attrMask = genConstantOffset(loc, rewriter, maskValue);
   auto maskRes =
-      mlir::LLVM::AndOp::create(rewriter, loc, attrTy, attribute, attrMask);
-  mlir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
-  return mlir::LLVM::ICmpOp::create(rewriter, loc,
-                                    mlir::LLVM::ICmpPredicate::ne, maskRes, c0);
+      aiir::LLVM::AndOp::create(rewriter, loc, attrTy, attribute, attrMask);
+  aiir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
+  return aiir::LLVM::ICmpOp::create(rewriter, loc,
+                                    aiir::LLVM::ICmpPredicate::ne, maskRes, c0);
 }
 
-mlir::Value ConvertFIRToLLVMPattern::computeBoxSize(
-    mlir::Location loc, TypePair boxTy, mlir::Value box,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  auto firBoxType = mlir::dyn_cast<fir::BaseBoxType>(boxTy.fir);
+aiir::Value ConvertFIRToLLVMPattern::computeBoxSize(
+    aiir::Location loc, TypePair boxTy, aiir::Value box,
+    aiir::ConversionPatternRewriter &rewriter) const {
+  auto firBoxType = aiir::dyn_cast<fir::BaseBoxType>(boxTy.fir);
   assert(firBoxType && "must be a BaseBoxType");
-  const mlir::DataLayout &dl = lowerTy().getDataLayout();
+  const aiir::DataLayout &dl = lowerTy().getDataLayout();
   if (!firBoxType.isAssumedRank())
     return genConstantOffset(loc, rewriter, dl.getTypeSize(boxTy.llvm));
   fir::BaseBoxType firScalarBoxType = firBoxType.getBoxTypeWithNewShape(0);
-  mlir::Type llvmScalarBoxType =
+  aiir::Type llvmScalarBoxType =
       lowerTy().convertBoxTypeAsStruct(firScalarBoxType);
   llvm::TypeSize scalarBoxSizeCst = dl.getTypeSize(llvmScalarBoxType);
-  mlir::Value scalarBoxSize =
+  aiir::Value scalarBoxSize =
       genConstantOffset(loc, rewriter, scalarBoxSizeCst);
-  mlir::Value rawRank = getRankFromBox(loc, boxTy, box, rewriter);
-  mlir::Value rank =
+  aiir::Value rawRank = getRankFromBox(loc, boxTy, box, rewriter);
+  aiir::Value rank =
       integerCast(loc, rewriter, scalarBoxSize.getType(), rawRank);
-  mlir::Type llvmDimsType = getBoxEleTy(boxTy.llvm, {kDimsPosInBox, 1});
+  aiir::Type llvmDimsType = getBoxEleTy(boxTy.llvm, {kDimsPosInBox, 1});
   llvm::TypeSize sizePerDimCst = dl.getTypeSize(llvmDimsType);
   assert((scalarBoxSizeCst + sizePerDimCst ==
           dl.getTypeSize(lowerTy().convertBoxTypeAsStruct(
               firBoxType.getBoxTypeWithNewShape(1)))) &&
          "descriptor layout requires adding padding for dim field");
-  mlir::Value sizePerDim = genConstantOffset(loc, rewriter, sizePerDimCst);
-  mlir::Value dimsSize = mlir::LLVM::MulOp::create(
+  aiir::Value sizePerDim = genConstantOffset(loc, rewriter, sizePerDimCst);
+  aiir::Value dimsSize = aiir::LLVM::MulOp::create(
       rewriter, loc, sizePerDim.getType(), sizePerDim, rank);
-  mlir::Value size = mlir::LLVM::AddOp::create(
+  aiir::Value size = aiir::LLVM::AddOp::create(
       rewriter, loc, scalarBoxSize.getType(), scalarBoxSize, dimsSize);
   return size;
 }
@@ -295,13 +295,13 @@ mlir::Value ConvertFIRToLLVMPattern::computeBoxSize(
 // 2. An OpenMP or OpenACC Op with one or more regions holding executable code.
 // 3. A LLVMFuncOp
 // 4. The first ancestor that is one of the above.
-mlir::Block *ConvertFIRToLLVMPattern::getBlockForAllocaInsert(
-    mlir::Operation *op, mlir::Region *parentRegion) const {
-  if (auto iface = mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(op))
+aiir::Block *ConvertFIRToLLVMPattern::getBlockForAllocaInsert(
+    aiir::Operation *op, aiir::Region *parentRegion) const {
+  if (auto iface = aiir::dyn_cast<aiir::omp::OutlineableOpenMPOpInterface>(op))
     return iface.getAllocaBlock();
-  if (auto recipeIface = mlir::dyn_cast<mlir::accomp::RecipeInterface>(op))
+  if (auto recipeIface = aiir::dyn_cast<aiir::accomp::RecipeInterface>(op))
     return recipeIface.getAllocaBlock(*parentRegion);
-  if (auto llvmFuncOp = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(op))
+  if (auto llvmFuncOp = aiir::dyn_cast<aiir::LLVM::LLVMFuncOp>(op))
     return &llvmFuncOp.front();
 
   return getBlockForAllocaInsert(op->getParentOp(), parentRegion);
@@ -313,19 +313,19 @@ mlir::Block *ConvertFIRToLLVMPattern::getBlockForAllocaInsert(
 // program address space we perform a cast. In the case of most architectures
 // the program and allocation address space will be the default of 0 and no
 // cast will be emitted.
-mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
-    mlir::Location loc, mlir::Type llvmObjectTy, unsigned alignment,
-    mlir::ConversionPatternRewriter &rewriter) const {
+aiir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
+    aiir::Location loc, aiir::Type llvmObjectTy, unsigned alignment,
+    aiir::ConversionPatternRewriter &rewriter) const {
   auto thisPt = rewriter.saveInsertionPoint();
-  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-  mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
-  mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp, parentRegion);
+  aiir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  aiir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
+  aiir::Block *insertBlock = getBlockForAllocaInsert(parentOp, parentRegion);
   rewriter.setInsertionPointToStart(insertBlock);
   auto size = genI32Constant(loc, rewriter, 1);
   unsigned allocaAs = getAllocaAddressSpace(rewriter);
   unsigned programAs = getProgramAddressSpace(rewriter);
 
-  mlir::Value al = mlir::LLVM::AllocaOp::create(
+  aiir::Value al = aiir::LLVM::AllocaOp::create(
       rewriter, loc, ::getLlvmPtrType(llvmObjectTy.getContext(), allocaAs),
       llvmObjectTy, size, alignment);
 
@@ -335,7 +335,7 @@ mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
   // the numeric value 5 (private), and the program address space is 0
   // (generic).
   if (allocaAs != programAs) {
-    al = mlir::LLVM::AddrSpaceCastOp::create(
+    al = aiir::LLVM::AddrSpaceCastOp::create(
         rewriter, loc, ::getLlvmPtrType(llvmObjectTy.getContext(), programAs),
         al);
   }
@@ -345,47 +345,47 @@ mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
 }
 
 unsigned ConvertFIRToLLVMPattern::getAllocaAddressSpace(
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+    aiir::ConversionPatternRewriter &rewriter) const {
+  aiir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   assert(parentOp != nullptr &&
          "expected insertion block to have parent operation");
-  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
-                    ? mlir::cast<mlir::ModuleOp>(parentOp)
-                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  auto module = aiir::isa<aiir::ModuleOp>(parentOp)
+                    ? aiir::cast<aiir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<aiir::ModuleOp>();
   if (module)
-    if (mlir::Attribute addrSpace =
-            mlir::DataLayout(module).getAllocaMemorySpace())
-      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+    if (aiir::Attribute addrSpace =
+            aiir::DataLayout(module).getAllocaMemorySpace())
+      return llvm::cast<aiir::IntegerAttr>(addrSpace).getUInt();
   return defaultAddressSpace;
 }
 
 unsigned ConvertFIRToLLVMPattern::getProgramAddressSpace(
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+    aiir::ConversionPatternRewriter &rewriter) const {
+  aiir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   assert(parentOp != nullptr &&
          "expected insertion block to have parent operation");
-  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
-                    ? mlir::cast<mlir::ModuleOp>(parentOp)
-                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  auto module = aiir::isa<aiir::ModuleOp>(parentOp)
+                    ? aiir::cast<aiir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<aiir::ModuleOp>();
   if (module)
-    if (mlir::Attribute addrSpace =
-            mlir::DataLayout(module).getProgramMemorySpace())
-      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+    if (aiir::Attribute addrSpace =
+            aiir::DataLayout(module).getProgramMemorySpace())
+      return llvm::cast<aiir::IntegerAttr>(addrSpace).getUInt();
   return defaultAddressSpace;
 }
 
 unsigned ConvertFIRToLLVMPattern::getGlobalAddressSpace(
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+    aiir::ConversionPatternRewriter &rewriter) const {
+  aiir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   assert(parentOp != nullptr &&
          "expected insertion block to have parent operation");
-  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
-                    ? mlir::cast<mlir::ModuleOp>(parentOp)
-                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  auto module = aiir::isa<aiir::ModuleOp>(parentOp)
+                    ? aiir::cast<aiir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<aiir::ModuleOp>();
   if (module)
-    if (mlir::Attribute addrSpace =
-            mlir::DataLayout(module).getGlobalMemorySpace())
-      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+    if (aiir::Attribute addrSpace =
+            aiir::DataLayout(module).getGlobalMemorySpace())
+      return llvm::cast<aiir::IntegerAttr>(addrSpace).getUInt();
   return defaultAddressSpace;
 }
 

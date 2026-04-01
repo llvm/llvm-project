@@ -25,14 +25,14 @@
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Conversion/LLVMCommon/Pattern.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/Dialect/GPU/IR/GPUDialect.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/Matchers.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/DialectConversion.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace fir {
 #define GEN_PASS_DEF_CUFOPCONVERSION
@@ -40,20 +40,20 @@ namespace fir {
 } // namespace fir
 
 using namespace fir;
-using namespace mlir;
+using namespace aiir;
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::cuda;
 
 namespace {
 
-static bool inDeviceContext(mlir::Operation *op) {
+static bool inDeviceContext(aiir::Operation *op) {
   if (op->getParentOfType<cuf::KernelOp>())
     return true;
-  if (op->getParentOfType<mlir::acc::OffloadRegionOpInterface>())
+  if (op->getParentOfType<aiir::acc::OffloadRegionOpInterface>())
     return true;
-  if (auto funcOp = op->getParentOfType<mlir::gpu::GPUFuncOp>())
+  if (auto funcOp = op->getParentOfType<aiir::gpu::GPUFuncOp>())
     return true;
-  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+  if (auto funcOp = op->getParentOfType<aiir::func::FuncOp>()) {
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                 cuf::getProcAttrName())) {
@@ -64,24 +64,24 @@ static bool inDeviceContext(mlir::Operation *op) {
   return false;
 }
 
-static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
-                                   mlir::Location loc, mlir::Type toTy,
-                                   mlir::Value val) {
+static aiir::Value createConvertOp(aiir::PatternRewriter &rewriter,
+                                   aiir::Location loc, aiir::Type toTy,
+                                   aiir::Value val) {
   if (val.getType() != toTy)
     return fir::ConvertOp::create(rewriter, loc, toTy, val);
   return val;
 }
 
-struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
+struct DeclareOpConversion : public aiir::OpRewritePattern<fir::DeclareOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  DeclareOpConversion(mlir::MLIRContext *context,
-                      const mlir::SymbolTable &symtab)
+  DeclareOpConversion(aiir::AIIRContext *context,
+                      const aiir::SymbolTable &symtab)
       : OpRewritePattern(context), symTab{symtab} {}
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(fir::DeclareOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     if (op.getResult().getUsers().empty())
       return success();
     if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
@@ -92,7 +92,7 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
               addrOfOp.getSymbol().getRootReference().getValue())) {
         if (cuf::isRegisteredDeviceGlobal(global)) {
           rewriter.setInsertionPointAfter(addrOfOp);
-          mlir::Value devAddr = cuf::DeviceAddressOp::create(
+          aiir::Value devAddr = cuf::DeviceAddressOp::create(
               rewriter, op.getLoc(), addrOfOp.getType(), addrOfOp.getSymbol());
           rewriter.startOpModification(op);
           op.getMemrefMutable().assign(devAddr);
@@ -105,7 +105,7 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
   }
 
 private:
-  const mlir::SymbolTable &symTab;
+  const aiir::SymbolTable &symTab;
 };
 
 static bool isDstGlobal(cuf::DataTransferOp op) {
@@ -118,26 +118,26 @@ static bool isDstGlobal(cuf::DataTransferOp op) {
   return false;
 }
 
-static mlir::Value getShapeFromDecl(mlir::Value src) {
+static aiir::Value getShapeFromDecl(aiir::Value src) {
   if (auto declareOp = src.getDefiningOp<fir::DeclareOp>())
     return declareOp.getShape();
   if (auto declareOp = src.getDefiningOp<hlfir::DeclareOp>())
     return declareOp.getShape();
-  return mlir::Value{};
+  return aiir::Value{};
 }
 
-static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
+static aiir::Value emboxSrc(aiir::PatternRewriter &rewriter,
                             cuf::DataTransferOp op,
-                            const mlir::SymbolTable &symtab,
-                            mlir::Type dstEleTy = nullptr) {
-  auto mod = op->getParentOfType<mlir::ModuleOp>();
-  mlir::Location loc = op.getLoc();
+                            const aiir::SymbolTable &symtab,
+                            aiir::Type dstEleTy = nullptr) {
+  auto mod = op->getParentOfType<aiir::ModuleOp>();
+  aiir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, mod);
-  mlir::Value addr;
-  mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
+  aiir::Value addr;
+  aiir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
   if (fir::isa_trivial(srcTy) &&
-      mlir::matchPattern(op.getSrc().getDefiningOp(), mlir::m_Constant())) {
-    mlir::Value src = op.getSrc();
+      aiir::matchPattern(op.getSrc().getDefiningOp(), aiir::m_Constant())) {
+    aiir::Value src = op.getSrc();
     if (srcTy.isInteger(1)) {
       // i1 is not a supported type in the descriptor and it is actually coming
       // from a LOGICAL constant. Use the destination type to avoid mismatch.
@@ -162,55 +162,55 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
   } else {
     addr = op.getSrc();
   }
-  llvm::SmallVector<mlir::Value> lenParams;
-  mlir::Type boxTy = fir::BoxType::get(srcTy);
-  mlir::Value box =
+  llvm::SmallVector<aiir::Value> lenParams;
+  aiir::Type boxTy = fir::BoxType::get(srcTy);
+  aiir::Value box =
       builder.createBox(loc, boxTy, addr, getShapeFromDecl(op.getSrc()),
                         /*slice=*/nullptr, lenParams,
                         /*tdesc=*/nullptr);
-  mlir::Value src = builder.createTemporary(loc, box.getType());
+  aiir::Value src = builder.createTemporary(loc, box.getType());
   fir::StoreOp::create(builder, loc, box, src);
   return src;
 }
 
-static mlir::Value emboxDst(mlir::PatternRewriter &rewriter,
+static aiir::Value emboxDst(aiir::PatternRewriter &rewriter,
                             cuf::DataTransferOp op,
-                            const mlir::SymbolTable &symtab) {
-  auto mod = op->getParentOfType<mlir::ModuleOp>();
-  mlir::Location loc = op.getLoc();
+                            const aiir::SymbolTable &symtab) {
+  auto mod = op->getParentOfType<aiir::ModuleOp>();
+  aiir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, mod);
-  mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
-  mlir::Value dstAddr = op.getDst();
-  mlir::Type dstBoxTy = fir::BoxType::get(dstTy);
-  llvm::SmallVector<mlir::Value> lenParams;
-  mlir::Value dstBox =
+  aiir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
+  aiir::Value dstAddr = op.getDst();
+  aiir::Type dstBoxTy = fir::BoxType::get(dstTy);
+  llvm::SmallVector<aiir::Value> lenParams;
+  aiir::Value dstBox =
       builder.createBox(loc, dstBoxTy, dstAddr, getShapeFromDecl(op.getDst()),
                         /*slice=*/nullptr, lenParams,
                         /*tdesc=*/nullptr);
-  mlir::Value dst = builder.createTemporary(loc, dstBox.getType());
+  aiir::Value dst = builder.createTemporary(loc, dstBox.getType());
   fir::StoreOp::create(builder, loc, dstBox, dst);
   return dst;
 }
 
 struct CUFDataTransferOpConversion
-    : public mlir::OpRewritePattern<cuf::DataTransferOp> {
+    : public aiir::OpRewritePattern<cuf::DataTransferOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  CUFDataTransferOpConversion(mlir::MLIRContext *context,
-                              const mlir::SymbolTable &symtab,
-                              mlir::DataLayout *dl,
+  CUFDataTransferOpConversion(aiir::AIIRContext *context,
+                              const aiir::SymbolTable &symtab,
+                              aiir::DataLayout *dl,
                               const fir::LLVMTypeConverter *typeConverter)
       : OpRewritePattern(context), symtab{symtab}, dl{dl},
         typeConverter{typeConverter} {}
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(cuf::DataTransferOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
 
-    mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
-    mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
+    aiir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
+    aiir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
 
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
     unsigned mode = 0;
     if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
       mode = kHostToDevice;
@@ -219,107 +219,107 @@ struct CUFDataTransferOpConversion
     } else if (op.getTransferKind() == cuf::DataTransferKind::DeviceDevice) {
       mode = kDeviceToDevice;
     } else {
-      mlir::emitError(loc, "unsupported transfer kind\n");
+      aiir::emitError(loc, "unsupported transfer kind\n");
     }
 
-    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    auto mod = op->getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
     fir::KindMapping kindMap{fir::getKindMapping(mod)};
-    mlir::Value modeValue =
+    aiir::Value modeValue =
         builder.createIntegerConstant(loc, builder.getI32Type(), mode);
 
     // Convert data transfer without any descriptor.
-    if (!mlir::isa<fir::BaseBoxType>(srcTy) &&
-        !mlir::isa<fir::BaseBoxType>(dstTy)) {
+    if (!aiir::isa<fir::BaseBoxType>(srcTy) &&
+        !aiir::isa<fir::BaseBoxType>(dstTy)) {
 
       if (fir::isa_trivial(srcTy) && !fir::isa_trivial(dstTy)) {
         // Initialization of an array from a scalar value should be implemented
         // via a kernel launch. Use the flang runtime via the Assign function
         // until we have more infrastructure.
-        mlir::Type dstEleTy = fir::unwrapInnerType(fir::unwrapRefType(dstTy));
-        mlir::Value src = emboxSrc(rewriter, op, symtab, dstEleTy);
-        mlir::Value dst = emboxDst(rewriter, op, symtab);
-        mlir::func::FuncOp func =
+        aiir::Type dstEleTy = fir::unwrapInnerType(fir::unwrapRefType(dstTy));
+        aiir::Value src = emboxSrc(rewriter, op, symtab, dstEleTy);
+        aiir::Value dst = emboxDst(rewriter, op, symtab);
+        aiir::func::FuncOp func =
             fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
                 loc, builder);
         auto fTy = func.getFunctionType();
-        mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-        mlir::Value sourceLine =
+        aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+        aiir::Value sourceLine =
             fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-        llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+        llvm::SmallVector<aiir::Value> args{fir::runtime::createArguments(
             builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
         fir::CallOp::create(builder, loc, func, args);
         rewriter.eraseOp(op);
-        return mlir::success();
+        return aiir::success();
       }
 
-      mlir::Type i64Ty = builder.getI64Type();
-      mlir::Value nbElement =
+      aiir::Type i64Ty = builder.getI64Type();
+      aiir::Value nbElement =
           cuf::computeElementCount(rewriter, loc, op.getShape(), dstTy, i64Ty);
       unsigned width = 0;
       if (fir::isa_derived(fir::unwrapSequenceType(dstTy))) {
-        mlir::Type structTy =
+        aiir::Type structTy =
             typeConverter->convertType(fir::unwrapSequenceType(dstTy));
         width = dl->getTypeSizeInBits(structTy) / 8;
       } else {
         width = cuf::computeElementByteSize(loc, dstTy, kindMap);
       }
-      mlir::Value widthValue = mlir::arith::ConstantOp::create(
+      aiir::Value widthValue = aiir::arith::ConstantOp::create(
           rewriter, loc, i64Ty, rewriter.getIntegerAttr(i64Ty, width));
-      mlir::Value bytes = nbElement ? mlir::arith::MulIOp::create(
+      aiir::Value bytes = nbElement ? aiir::arith::MulIOp::create(
                                           rewriter, loc, nbElement, widthValue)
                                     : widthValue;
 
-      mlir::func::FuncOp func =
+      aiir::func::FuncOp func =
           fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferPtrPtr)>(loc,
                                                                        builder);
       auto fTy = func.getFunctionType();
-      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-      mlir::Value sourceLine =
+      aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+      aiir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
 
-      mlir::Value dst = op.getDst();
-      mlir::Value src = op.getSrc();
+      aiir::Value dst = op.getDst();
+      aiir::Value src = op.getSrc();
       // Materialize the src if constant.
-      if (matchPattern(src.getDefiningOp(), mlir::m_Constant())) {
-        mlir::Value temp = builder.createTemporary(loc, srcTy);
+      if (matchPattern(src.getDefiningOp(), aiir::m_Constant())) {
+        aiir::Value temp = builder.createTemporary(loc, srcTy);
         fir::StoreOp::create(builder, loc, src, temp);
         src = temp;
       }
-      llvm::SmallVector<mlir::Value> args{
+      llvm::SmallVector<aiir::Value> args{
           fir::runtime::createArguments(builder, loc, fTy, dst, src, bytes,
                                         modeValue, sourceFile, sourceLine)};
       fir::CallOp::create(builder, loc, func, args);
       rewriter.eraseOp(op);
-      return mlir::success();
+      return aiir::success();
     }
 
-    auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
-      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
+    auto materializeBoxIfNeeded = [&](aiir::Value val) -> aiir::Value {
+      if (aiir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
         // Materialize the box to memory to be able to call the runtime.
-        mlir::Value box = builder.createTemporary(loc, val.getType());
+        aiir::Value box = builder.createTemporary(loc, val.getType());
         fir::StoreOp::create(builder, loc, val, box);
         return box;
       }
-      if (mlir::isa<fir::BaseBoxType>(val.getType()))
-        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(val.getDefiningOp()))
+      if (aiir::isa<fir::BaseBoxType>(val.getType()))
+        if (auto loadOp = aiir::dyn_cast<fir::LoadOp>(val.getDefiningOp()))
           return loadOp.getMemref();
       return val;
     };
 
     // Conversion of data transfer involving at least one descriptor.
-    if (auto dstBoxTy = mlir::dyn_cast<fir::BaseBoxType>(dstTy)) {
+    if (auto dstBoxTy = aiir::dyn_cast<fir::BaseBoxType>(dstTy)) {
       // Transfer to a descriptor.
-      mlir::func::FuncOp func =
+      aiir::func::FuncOp func =
           isDstGlobal(op)
               ? fir::runtime::getRuntimeFunc<mkRTKey(
                     CUFDataTransferGlobalDescDesc)>(loc, builder)
               : fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferDescDesc)>(
                     loc, builder);
-      mlir::Value dst = op.getDst();
-      mlir::Value src = op.getSrc();
-      if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
-        mlir::Type dstEleTy = fir::unwrapInnerType(dstBoxTy.getEleTy());
+      aiir::Value dst = op.getDst();
+      aiir::Value src = op.getSrc();
+      if (!aiir::isa<fir::BaseBoxType>(srcTy)) {
+        aiir::Type dstEleTy = fir::unwrapInnerType(dstBoxTy.getEleTy());
         src = emboxSrc(rewriter, op, symtab, dstEleTy);
         if (fir::isa_trivial(srcTy))
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
@@ -330,97 +330,97 @@ struct CUFDataTransferOpConversion
       dst = materializeBoxIfNeeded(dst);
 
       auto fTy = func.getFunctionType();
-      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-      mlir::Value sourceLine =
+      aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+      aiir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      llvm::SmallVector<aiir::Value> args{fir::runtime::createArguments(
           builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
       fir::CallOp::create(builder, loc, func, args);
       rewriter.eraseOp(op);
     } else {
       // Transfer from a descriptor.
-      mlir::Value dst = emboxDst(rewriter, op, symtab);
-      mlir::Value src = materializeBoxIfNeeded(op.getSrc());
+      aiir::Value dst = emboxDst(rewriter, op, symtab);
+      aiir::Value src = materializeBoxIfNeeded(op.getSrc());
 
-      mlir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
+      aiir::func::FuncOp func = fir::runtime::getRuntimeFunc<mkRTKey(
           CUFDataTransferDescDescNoRealloc)>(loc, builder);
 
       auto fTy = func.getFunctionType();
-      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-      mlir::Value sourceLine =
+      aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+      aiir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      llvm::SmallVector<aiir::Value> args{fir::runtime::createArguments(
           builder, loc, fTy, dst, src, modeValue, sourceFile, sourceLine)};
       fir::CallOp::create(builder, loc, func, args);
       rewriter.eraseOp(op);
     }
-    return mlir::success();
+    return aiir::success();
   }
 
 private:
-  const mlir::SymbolTable &symtab;
-  mlir::DataLayout *dl;
+  const aiir::SymbolTable &symtab;
+  aiir::DataLayout *dl;
   const fir::LLVMTypeConverter *typeConverter;
 };
 
 struct CUFLaunchOpConversion
-    : public mlir::OpRewritePattern<cuf::KernelLaunchOp> {
+    : public aiir::OpRewritePattern<cuf::KernelLaunchOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  CUFLaunchOpConversion(mlir::MLIRContext *context,
-                        const mlir::SymbolTable &symTab)
+  CUFLaunchOpConversion(aiir::AIIRContext *context,
+                        const aiir::SymbolTable &symTab)
       : OpRewritePattern(context), symTab{symTab} {}
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(cuf::KernelLaunchOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    mlir::Location loc = op.getLoc();
-    auto idxTy = mlir::IndexType::get(op.getContext());
-    mlir::Value zero = mlir::arith::ConstantOp::create(
+                  aiir::PatternRewriter &rewriter) const override {
+    aiir::Location loc = op.getLoc();
+    auto idxTy = aiir::IndexType::get(op.getContext());
+    aiir::Value zero = aiir::arith::ConstantOp::create(
         rewriter, loc, rewriter.getIntegerType(32),
         rewriter.getI32IntegerAttr(0));
     auto gridSizeX =
-        mlir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getGridX());
+        aiir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getGridX());
     auto gridSizeY =
-        mlir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getGridY());
+        aiir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getGridY());
     auto gridSizeZ =
-        mlir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getGridZ());
+        aiir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getGridZ());
     auto blockSizeX =
-        mlir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getBlockX());
+        aiir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getBlockX());
     auto blockSizeY =
-        mlir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getBlockY());
+        aiir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getBlockY());
     auto blockSizeZ =
-        mlir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getBlockZ());
-    auto kernelName = mlir::SymbolRefAttr::get(
+        aiir::arith::IndexCastOp::create(rewriter, loc, idxTy, op.getBlockZ());
+    auto kernelName = aiir::SymbolRefAttr::get(
         rewriter.getStringAttr(cudaDeviceModuleName),
-        {mlir::SymbolRefAttr::get(
+        {aiir::SymbolRefAttr::get(
             rewriter.getContext(),
             op.getCallee().getLeafReference().getValue())});
-    mlir::Value clusterDimX, clusterDimY, clusterDimZ;
+    aiir::Value clusterDimX, clusterDimY, clusterDimZ;
     cuf::ProcAttributeAttr procAttr;
-    if (auto funcOp = symTab.lookup<mlir::func::FuncOp>(
+    if (auto funcOp = symTab.lookup<aiir::func::FuncOp>(
             op.getCallee().getLeafReference())) {
       if (auto clusterDimsAttr = funcOp->getAttrOfType<cuf::ClusterDimsAttr>(
               cuf::getClusterDimsAttrName())) {
-        clusterDimX = mlir::arith::ConstantIndexOp::create(
+        clusterDimX = aiir::arith::ConstantIndexOp::create(
             rewriter, loc, clusterDimsAttr.getX().getInt());
-        clusterDimY = mlir::arith::ConstantIndexOp::create(
+        clusterDimY = aiir::arith::ConstantIndexOp::create(
             rewriter, loc, clusterDimsAttr.getY().getInt());
-        clusterDimZ = mlir::arith::ConstantIndexOp::create(
+        clusterDimZ = aiir::arith::ConstantIndexOp::create(
             rewriter, loc, clusterDimsAttr.getZ().getInt());
       }
       procAttr =
           funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
     }
-    llvm::SmallVector<mlir::Value> args;
-    for (mlir::Value arg : op.getArgs()) {
+    llvm::SmallVector<aiir::Value> args;
+    for (aiir::Value arg : op.getArgs()) {
       // If the argument is a global descriptor, make sure we pass the device
       // copy of this descriptor and not the host one.
-      if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(arg.getType()))) {
+      if (aiir::isa<fir::BaseBoxType>(fir::unwrapRefType(arg.getType()))) {
         if (auto declareOp =
-                mlir::dyn_cast_or_null<fir::DeclareOp>(arg.getDefiningOp())) {
-          if (auto addrOfOp = mlir::dyn_cast_or_null<fir::AddrOfOp>(
+                aiir::dyn_cast_or_null<fir::DeclareOp>(arg.getDefiningOp())) {
+          if (auto addrOfOp = aiir::dyn_cast_or_null<fir::AddrOfOp>(
                   declareOp.getMemref().getDefiningOp())) {
             if (auto global = symTab.lookup<fir::GlobalOp>(
                     addrOfOp.getSymbol().getRootReference().getValue())) {
@@ -436,11 +436,11 @@ public:
       }
       args.push_back(arg);
     }
-    mlir::Value dynamicShmemSize = op.getBytes() ? op.getBytes() : zero;
-    auto gpuLaunchOp = mlir::gpu::LaunchFuncOp::create(
+    aiir::Value dynamicShmemSize = op.getBytes() ? op.getBytes() : zero;
+    auto gpuLaunchOp = aiir::gpu::LaunchFuncOp::create(
         rewriter, loc, kernelName,
-        mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
-        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ},
+        aiir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
+        aiir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ},
         dynamicShmemSize, args);
     if (clusterDimX && clusterDimY && clusterDimZ) {
       gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
@@ -448,9 +448,9 @@ public:
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
     }
     if (op.getStream()) {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      aiir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPoint(gpuLaunchOp);
-      mlir::Value stream =
+      aiir::Value stream =
           cuf::StreamCastOp::create(rewriter, loc, op.getStream());
       gpuLaunchOp.getAsyncDependenciesMutable().append(stream);
     }
@@ -462,34 +462,34 @@ public:
                            cuf::ProcAttributeAttr::get(
                                op.getContext(), cuf::ProcAttribute::Global));
     rewriter.replaceOp(op, gpuLaunchOp);
-    return mlir::success();
+    return aiir::success();
   }
 
 private:
-  const mlir::SymbolTable &symTab;
+  const aiir::SymbolTable &symTab;
 };
 
 struct CUFSyncDescriptorOpConversion
-    : public mlir::OpRewritePattern<cuf::SyncDescriptorOp> {
+    : public aiir::OpRewritePattern<cuf::SyncDescriptorOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(cuf::SyncDescriptorOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
     auto globalOp = mod.lookupSymbol<fir::GlobalOp>(op.getGlobalName());
     if (!globalOp)
-      return mlir::failure();
+      return aiir::failure();
 
     auto hostAddr = fir::AddrOfOp::create(
         builder, loc, fir::ReferenceType::get(globalOp.getType()),
         op.getGlobalName());
     fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc, hostAddr);
     op.erase();
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -499,28 +499,28 @@ class CUFOpConversion : public fir::impl::CUFOpConversionBase<CUFOpConversion> {
 public:
   void runOnOperation() override {
     auto *ctx = &getContext();
-    mlir::RewritePatternSet patterns(ctx);
-    mlir::ConversionTarget target(*ctx);
+    aiir::RewritePatternSet patterns(ctx);
+    aiir::ConversionTarget target(*ctx);
 
-    mlir::Operation *op = getOperation();
-    mlir::ModuleOp module = mlir::dyn_cast<mlir::ModuleOp>(op);
+    aiir::Operation *op = getOperation();
+    aiir::ModuleOp module = aiir::dyn_cast<aiir::ModuleOp>(op);
     if (!module)
       return signalPassFailure();
-    mlir::SymbolTable symtab(module);
+    aiir::SymbolTable symtab(module);
 
-    std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
+    std::optional<aiir::DataLayout> dl = fir::support::getOrSetAIIRDataLayout(
         module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
-                           mlir::gpu::GPUDialect>();
+    target.addLegalDialect<fir::FIROpsDialect, aiir::arith::ArithDialect,
+                           aiir::gpu::GPUDialect>();
     target.addLegalOp<cuf::StreamCastOp>();
     target.addLegalOp<cuf::DeviceAddressOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
-    if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
+    if (aiir::failed(aiir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(ctx),
+      aiir::emitError(aiir::UnknownLoc::get(ctx),
                       "error in CUF op conversion\n");
       signalPassFailure();
     }
@@ -533,7 +533,7 @@ public:
       if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
         if (auto global = symtab.lookup<fir::GlobalOp>(
                 addrOfOp.getSymbol().getRootReference().getValue())) {
-          if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(global.getType())))
+          if (aiir::isa<fir::BaseBoxType>(fir::unwrapRefType(global.getType())))
             return true;
           if (cuf::isRegisteredDeviceGlobal(global))
             return false;
@@ -544,9 +544,9 @@ public:
 
     patterns.clear();
     cuf::populateFIRCUFConversionPatterns(symtab, patterns);
-    if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
+    if (aiir::failed(aiir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(ctx),
+      aiir::emitError(aiir::UnknownLoc::get(ctx),
                       "error in CUF op conversion\n");
       signalPassFailure();
     }
@@ -555,15 +555,15 @@ public:
 } // namespace
 
 void cuf::populateCUFToFIRConversionPatterns(
-    const fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
-    const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns) {
+    const fir::LLVMTypeConverter &converter, aiir::DataLayout &dl,
+    const aiir::SymbolTable &symtab, aiir::RewritePatternSet &patterns) {
   patterns.insert<CUFSyncDescriptorOpConversion>(patterns.getContext());
   patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
                                                &dl, &converter);
   patterns.insert<CUFLaunchOpConversion>(patterns.getContext(), symtab);
 }
 
-void cuf::populateFIRCUFConversionPatterns(const mlir::SymbolTable &symtab,
-                                           mlir::RewritePatternSet &patterns) {
+void cuf::populateFIRCUFConversionPatterns(const aiir::SymbolTable &symtab,
+                                           aiir::RewritePatternSet &patterns) {
   patterns.insert<DeclareOpConversion>(patterns.getContext(), symtab);
 }

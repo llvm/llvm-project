@@ -14,7 +14,7 @@
 #define FORTRAN_DIALECT_CUF_CUFATTRS
 
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
-include "mlir/IR/EnumAttr.td"
+include "aiir/IR/EnumAttr.td"
 
 class cuf_Attr<string name> : AttrDef<CUFDialect, name>;
 
@@ -61,9 +61,9 @@ def cuf_LaunchBoundsAttr : cuf_Attr<"LaunchBounds"> {
   let mnemonic = "launch_bounds";
 
   let parameters = (ins
-    "mlir::IntegerAttr":$maxTPB,
-    "mlir::IntegerAttr":$minBPM,
-    OptionalParameter<"mlir::IntegerAttr">:$upperBoundClusterSize
+    "aiir::IntegerAttr":$maxTPB,
+    "aiir::IntegerAttr":$minBPM,
+    OptionalParameter<"aiir::IntegerAttr">:$upperBoundClusterSize
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -73,9 +73,9 @@ def cuf_ClusterDimsAttr : cuf_Attr<"ClusterDims"> {
   let mnemonic = "cluster_dims";
 
   let parameters = (ins
-    "mlir::IntegerAttr":$x,
-    "mlir::IntegerAttr":$y,
-    "mlir::IntegerAttr":$z
+    "aiir::IntegerAttr":$x,
+    "aiir::IntegerAttr":$y,
+    "aiir::IntegerAttr":$z
   );
 
   let assemblyFormat = "`<` struct(params) `>`";

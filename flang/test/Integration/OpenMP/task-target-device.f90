@@ -10,7 +10,7 @@
 !RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-llvm -fopenmp -fopenmp-version=50 -fopenmp-is-target-device %s -o - | FileCheck %s
 
 ! This tests the fix for https://github.com/llvm/llvm-project/issues/84606
-! We are only interested in ensuring that the -mlir-to-llmvir pass doesn't crash.
+! We are only interested in ensuring that the -aiir-to-llmvir pass doesn't crash.
 
 ! CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}QQmain{{.*}}({{.*}})
 program main

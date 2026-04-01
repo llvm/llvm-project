@@ -3,7 +3,7 @@
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 ! RUN: bbc -fopenmp -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck %s
 
-! This test checks the lowering of requires into MLIR
+! This test checks the lowering of requires into AIIR
 
 !CHECK:      module attributes {
 !CHECK-SAME: omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>

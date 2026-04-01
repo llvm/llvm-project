@@ -22,24 +22,24 @@ unsigned CIRCXXABI::getPtrSizeInBits() const {
   return lm.getTarget().getPointerWidth(clang::LangAS::Default);
 }
 
-void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
-                                const mlir::DataLayout &dataLayout,
+void CIRCXXABI::readArrayCookie(aiir::Location loc, aiir::Value elementPtr,
+                                const aiir::DataLayout &dataLayout,
                                 CIRBaseBuilderTy &builder,
-                                mlir::Value &numElements, mlir::Value &allocPtr,
+                                aiir::Value &numElements, aiir::Value &allocPtr,
                                 clang::CharUnits &cookieSize) const {
   auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
   auto ptrDiffTy = builder.getSIntNTy(getPtrSizeInBits());
   auto voidPtrTy = builder.getVoidPtrTy();
 
-  auto ptrTy = mlir::cast<cir::PointerType>(elementPtr.getType());
+  auto ptrTy = aiir::cast<cir::PointerType>(elementPtr.getType());
   cookieSize = getArrayCookieSizeImpl(ptrTy.getPointee(), dataLayout);
 
-  mlir::Value bytePtr = cir::CastOp::create(builder, loc, u8PtrTy,
+  aiir::Value bytePtr = cir::CastOp::create(builder, loc, u8PtrTy,
                                             cir::CastKind::bitcast, elementPtr);
 
-  mlir::Value negCookieSize = cir::ConstantOp::create(
+  aiir::Value negCookieSize = cir::ConstantOp::create(
       builder, loc, cir::IntAttr::get(ptrDiffTy, -cookieSize.getQuantity()));
-  mlir::Value allocBytePtr =
+  aiir::Value allocBytePtr =
       cir::PtrStrideOp::create(builder, loc, u8PtrTy, bytePtr, negCookieSize);
 
   allocPtr = cir::CastOp::create(builder, loc, voidPtrTy,

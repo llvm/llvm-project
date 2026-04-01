@@ -13,9 +13,9 @@
 #ifndef CLANG_CIR_INTERFACES_CIROPINTERFACES_TD
 #define CLANG_CIR_INTERFACES_CIROPINTERFACES_TD
 
-include "mlir/IR/OpBase.td"
-include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Interfaces/CallInterfaces.td"
+include "aiir/IR/OpBase.td"
+include "aiir/IR/SymbolInterfaces.td"
+include "aiir/Interfaces/CallInterfaces.td"
 
 let cppNamespace = "::cir" in {
   // The CIRCallOpInterface must be used instead of CallOpInterface when looking
@@ -29,7 +29,7 @@ let cppNamespace = "::cir" in {
       InterfaceMethod<
           "Return the operand at index 'i', accounts for indirect call or "
           "exception info",
-          "mlir::Value", "getArgOperand",
+          "aiir::Value", "getArgOperand",
           (ins "unsigned":$i)>,
       InterfaceMethod<
           "Return the number of operands, accounts for indirect call or "
@@ -172,17 +172,17 @@ let cppNamespace = "::cir" in {
 
     let methods = [
       InterfaceMethod<"Return the left-hand side operand.",
-        "mlir::Value", "getLhs", (ins), [{}],
+        "aiir::Value", "getLhs", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getLhs();
         }]>,
       InterfaceMethod<"Return the right-hand side operand.",
-        "mlir::Value", "getRhs", (ins), [{}],
+        "aiir::Value", "getRhs", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getRhs();
         }]>,
       InterfaceMethod<"Return the result value.",
-        "mlir::Value", "getResult", (ins), [{}],
+        "aiir::Value", "getResult", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getResult();
         }]>,
@@ -198,12 +198,12 @@ let cppNamespace = "::cir" in {
 
     let methods = [
       InterfaceMethod<"Return the input operand.",
-        "mlir::Value", "getInput", (ins), [{}],
+        "aiir::Value", "getInput", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getInput();
         }]>,
       InterfaceMethod<"Return the result value.",
-        "mlir::Value", "getResult", (ins), [{}],
+        "aiir::Value", "getResult", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getResult();
         }]>,

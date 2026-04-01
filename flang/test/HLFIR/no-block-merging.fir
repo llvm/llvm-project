@@ -1,4 +1,4 @@
-// Test that the HLFIR pipeline does not call MLIR canonicalizer with block
+// Test that the HLFIR pipeline does not call AIIR canonicalizer with block
 // merging enabled (moving fir.shape to block argument would cause failures
 // when translating the FIR to LLVM).
 // RUN: %flang_fc1 %s -flang-experimental-hlfir -emit-llvm -O2 -o - | FileCheck %s

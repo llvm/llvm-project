@@ -23,7 +23,7 @@ The Status column uses the letters **Y**, **P**, **N** for the implementation st
 - **P** : Partial. When the implementation is incomplete for a few cases
 - **N** : No. When the implementation is absent
 
-There is no distinction made between support in the Parser/Semantics and the MLIR or Lowering stages.
+There is no distinction made between support in the Parser/Semantics and the AIIR or Lowering stages.
 
 Note: The two major missing features in Flang at present are coarrays and parameterized derived types (PDTs) with length type parameters.
 

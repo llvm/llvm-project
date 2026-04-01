@@ -20,17 +20,17 @@ class LLVMContext;
 class Module;
 } // namespace llvm
 
-namespace mlir {
+namespace aiir {
 class ModuleOp;
-} // namespace mlir
+} // namespace aiir
 
 namespace cir {
 
 namespace direct {
 std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule,
+lowerDirectlyFromCIRToLLVMIR(aiir::ModuleOp aiirModule,
                              llvm::LLVMContext &llvmCtx,
-                             llvm::StringRef mlirSaveTempsOutFile = {});
+                             llvm::StringRef aiirSaveTempsOutFile = {});
 } // namespace direct
 } // namespace cir
 

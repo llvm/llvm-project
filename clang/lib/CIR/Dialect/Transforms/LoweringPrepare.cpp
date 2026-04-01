@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/IRMapping.h"
+#include "aiir/IR/Attributes.h"
+#include "aiir/IR/IRMapping.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
@@ -28,19 +28,19 @@
 
 #include <memory>
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
-namespace mlir {
+namespace aiir {
 #define GEN_PASS_DEF_LOWERINGPREPARE
 #include "clang/CIR/Dialect/Passes.h.inc"
-} // namespace mlir
+} // namespace aiir
 
-static SmallString<128> getTransformedFileName(mlir::ModuleOp mlirModule) {
+static SmallString<128> getTransformedFileName(aiir::ModuleOp aiirModule) {
   SmallString<128> fileName;
 
-  if (mlirModule.getSymName())
-    fileName = llvm::sys::path::filename(mlirModule.getSymName()->str());
+  if (aiirModule.getSymName())
+    fileName = llvm::sys::path::filename(aiirModule.getSymName()->str());
 
   if (fileName.empty())
     fileName = "<null>";
@@ -57,12 +57,12 @@ static SmallString<128> getTransformedFileName(mlir::ModuleOp mlirModule) {
 
 /// Return the FuncOp called by `callOp`.
 static cir::FuncOp getCalledFunction(cir::CallOp callOp) {
-  mlir::SymbolRefAttr sym = llvm::dyn_cast_if_present<mlir::SymbolRefAttr>(
+  aiir::SymbolRefAttr sym = llvm::dyn_cast_if_present<aiir::SymbolRefAttr>(
       callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<cir::FuncOp>(
-      mlir::SymbolTable::lookupNearestSymbolFrom(callOp, sym));
+      aiir::SymbolTable::lookupNearestSymbolFrom(callOp, sym));
 }
 
 namespace {
@@ -71,7 +71,7 @@ struct LoweringPreparePass
   LoweringPreparePass() = default;
   void runOnOperation() override;
 
-  void runOnOp(mlir::Operation *op);
+  void runOnOp(aiir::Operation *op);
   void lowerCastOp(cir::CastOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
@@ -88,7 +88,7 @@ struct LoweringPreparePass
 
   /// Handle the dtor region by registering destructor with __cxa_atexit
   cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
-                                  mlir::Region &dtorRegion,
+                                  aiir::Region &dtorRegion,
                                   cir::CallOp &dtorCall);
 
   /// Build a module init function that calls all the dynamic initializers.
@@ -98,13 +98,13 @@ struct LoweringPreparePass
   void buildGlobalCtorDtorList();
 
   cir::FuncOp buildRuntimeFunction(
-      mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
+      aiir::OpBuilder &builder, llvm::StringRef name, aiir::Location loc,
       cir::FuncType type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
 
   cir::GlobalOp buildRuntimeVariable(
-      mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-      mlir::Type type,
+      aiir::OpBuilder &builder, llvm::StringRef name, aiir::Location loc,
+      aiir::Type type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
       cir::VisibilityKind visibility = cir::VisibilityKind::Default);
 
@@ -119,7 +119,7 @@ struct LoweringPreparePass
 
   /// Create a guard global variable for a static local.
   cir::GlobalOp createGuardGlobalOp(CIRBaseBuilderTy &builder,
-                                    mlir::Location loc, llvm::StringRef name,
+                                    aiir::Location loc, llvm::StringRef name,
                                     cir::IntType guardTy,
                                     cir::GlobalLinkageKind linkage);
 
@@ -183,7 +183,7 @@ struct LoweringPreparePass
   clang::ASTContext *astCtx;
 
   /// Tracks current module.
-  mlir::ModuleOp mlirModule;
+  aiir::ModuleOp aiirModule;
 
   /// Tracks existing dynamic initializers.
   llvm::StringMap<uint32_t> dynamicInitializerNames;
@@ -217,7 +217,7 @@ struct LoweringPreparePass
   /// following OG's ItaniumCXXABI::EmitGuardedInit skeleton.
   void emitCXXGuardedInitIf(CIRBaseBuilderTy &builder, cir::GlobalOp globalOp,
                             cir::ASTVarDeclInterface varDecl,
-                            mlir::Value guardPtr, cir::PointerType guardPtrTy,
+                            aiir::Value guardPtr, cir::PointerType guardPtrTy,
                             bool threadsafe) {
     auto loc = globalOp->getLoc();
 
@@ -241,11 +241,11 @@ struct LoweringPreparePass
     if (threadsafe) {
       // Call __cxa_guard_acquire.
       cir::CallOp acquireCall = builder.createCallOp(
-          loc, getGuardAcquireFn(guardPtrTy), mlir::ValueRange{guardPtr});
-      mlir::Value acquireResult = acquireCall.getResult();
+          loc, getGuardAcquireFn(guardPtrTy), aiir::ValueRange{guardPtr});
+      aiir::Value acquireResult = acquireCall.getResult();
 
       auto acquireZero = builder.getConstantInt(
-          loc, mlir::cast<cir::IntType>(acquireResult.getType()), 0);
+          loc, aiir::cast<cir::IntType>(acquireResult.getType()), 0);
       auto shouldInit = builder.createCompare(loc, cir::CmpOpKind::ne,
                                               acquireResult, acquireZero);
 
@@ -253,8 +253,8 @@ struct LoweringPreparePass
       // Pass an empty callback to avoid auto-creating a yield terminator.
       auto ifOp =
           cir::IfOp::create(builder, loc, shouldInit, /*withElseRegion=*/false,
-                            [](mlir::OpBuilder &, mlir::Location) {});
-      mlir::OpBuilder::InsertionGuard insertGuard(builder);
+                            [](aiir::OpBuilder &, aiir::Location) {});
+      aiir::OpBuilder::InsertionGuard insertGuard(builder);
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
       // Call __cxa_guard_abort along the exceptional edge.
@@ -266,8 +266,8 @@ struct LoweringPreparePass
       assert(!ctorRegion.empty() && "This should never be empty here.");
       if (!ctorRegion.hasOneBlock())
         llvm_unreachable("Multiple blocks NYI");
-      mlir::Block &block = ctorRegion.front();
-      mlir::Block *insertBlock = builder.getInsertionBlock();
+      aiir::Block &block = ctorRegion.front();
+      aiir::Block *insertBlock = builder.getInsertionBlock();
       insertBlock->getOperations().splice(insertBlock->end(),
                                           block.getOperations(), block.begin(),
                                           std::prev(block.end()));
@@ -280,7 +280,7 @@ struct LoweringPreparePass
 
       // Call __cxa_guard_release. This cannot throw.
       builder.createCallOp(loc, getGuardReleaseFn(guardPtrTy),
-                           mlir::ValueRange{guardPtr});
+                           aiir::ValueRange{guardPtr});
 
       builder.createYield(loc);
     } else if (!varDecl.isLocalVarDecl()) {
@@ -308,18 +308,18 @@ struct LoweringPreparePass
 } // namespace
 
 cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
-    mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-    mlir::Type type, cir::GlobalLinkageKind linkage,
+    aiir::OpBuilder &builder, llvm::StringRef name, aiir::Location loc,
+    aiir::Type type, cir::GlobalLinkageKind linkage,
     cir::VisibilityKind visibility) {
   cir::GlobalOp g = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupNearestSymbolFrom(
-          mlirModule, mlir::StringAttr::get(mlirModule->getContext(), name)));
+      aiir::SymbolTable::lookupNearestSymbolFrom(
+          aiirModule, aiir::StringAttr::get(aiirModule->getContext(), name)));
   if (!g) {
     g = cir::GlobalOp::create(builder, loc, name, type);
     g.setLinkageAttr(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
-    mlir::SymbolTable::setSymbolVisibility(
-        g, mlir::SymbolTable::Visibility::Private);
+    aiir::SymbolTable::setSymbolVisibility(
+        g, aiir::SymbolTable::Visibility::Private);
     g.setGlobalVisibilityAttr(
         cir::VisibilityAttr::get(builder.getContext(), visibility));
   }
@@ -327,77 +327,77 @@ cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
 }
 
 cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
-    mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
+    aiir::OpBuilder &builder, llvm::StringRef name, aiir::Location loc,
     cir::FuncType type, cir::GlobalLinkageKind linkage) {
   cir::FuncOp f = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
-      mlirModule, StringAttr::get(mlirModule->getContext(), name)));
+      aiirModule, StringAttr::get(aiirModule->getContext(), name)));
   if (!f) {
     f = cir::FuncOp::create(builder, loc, name, type);
     f.setLinkageAttr(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
-    mlir::SymbolTable::setSymbolVisibility(
-        f, mlir::SymbolTable::Visibility::Private);
+    aiir::SymbolTable::setSymbolVisibility(
+        f, aiir::SymbolTable::Visibility::Private);
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
   }
   return f;
 }
 
-static mlir::Value lowerScalarToComplexCast(mlir::MLIRContext &ctx,
+static aiir::Value lowerScalarToComplexCast(aiir::AIIRContext &ctx,
                                             cir::CastOp op) {
   cir::CIRBaseBuilderTy builder(ctx);
   builder.setInsertionPoint(op);
 
-  mlir::Value src = op.getSrc();
-  mlir::Value imag = builder.getNullValue(src.getType(), op.getLoc());
+  aiir::Value src = op.getSrc();
+  aiir::Value imag = builder.getNullValue(src.getType(), op.getLoc());
   return builder.createComplexCreate(op.getLoc(), src, imag);
 }
 
-static mlir::Value lowerComplexToScalarCast(mlir::MLIRContext &ctx,
+static aiir::Value lowerComplexToScalarCast(aiir::AIIRContext &ctx,
                                             cir::CastOp op,
                                             cir::CastKind elemToBoolKind) {
   cir::CIRBaseBuilderTy builder(ctx);
   builder.setInsertionPoint(op);
 
-  mlir::Value src = op.getSrc();
-  if (!mlir::isa<cir::BoolType>(op.getType()))
+  aiir::Value src = op.getSrc();
+  if (!aiir::isa<cir::BoolType>(op.getType()))
     return builder.createComplexReal(op.getLoc(), src);
 
   // Complex cast to bool: (bool)(a+bi) => (bool)a || (bool)b
-  mlir::Value srcReal = builder.createComplexReal(op.getLoc(), src);
-  mlir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
+  aiir::Value srcReal = builder.createComplexReal(op.getLoc(), src);
+  aiir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
 
   cir::BoolType boolTy = builder.getBoolTy();
-  mlir::Value srcRealToBool =
+  aiir::Value srcRealToBool =
       builder.createCast(op.getLoc(), elemToBoolKind, srcReal, boolTy);
-  mlir::Value srcImagToBool =
+  aiir::Value srcImagToBool =
       builder.createCast(op.getLoc(), elemToBoolKind, srcImag, boolTy);
   return builder.createLogicalOr(op.getLoc(), srcRealToBool, srcImagToBool);
 }
 
-static mlir::Value lowerComplexToComplexCast(mlir::MLIRContext &ctx,
+static aiir::Value lowerComplexToComplexCast(aiir::AIIRContext &ctx,
                                              cir::CastOp op,
                                              cir::CastKind scalarCastKind) {
   CIRBaseBuilderTy builder(ctx);
   builder.setInsertionPoint(op);
 
-  mlir::Value src = op.getSrc();
+  aiir::Value src = op.getSrc();
   auto dstComplexElemTy =
-      mlir::cast<cir::ComplexType>(op.getType()).getElementType();
+      aiir::cast<cir::ComplexType>(op.getType()).getElementType();
 
-  mlir::Value srcReal = builder.createComplexReal(op.getLoc(), src);
-  mlir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
+  aiir::Value srcReal = builder.createComplexReal(op.getLoc(), src);
+  aiir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
 
-  mlir::Value dstReal = builder.createCast(op.getLoc(), scalarCastKind, srcReal,
+  aiir::Value dstReal = builder.createCast(op.getLoc(), scalarCastKind, srcReal,
                                            dstComplexElemTy);
-  mlir::Value dstImag = builder.createCast(op.getLoc(), scalarCastKind, srcImag,
+  aiir::Value dstImag = builder.createCast(op.getLoc(), scalarCastKind, srcImag,
                                            dstComplexElemTy);
   return builder.createComplexCreate(op.getLoc(), dstReal, dstImag);
 }
 
 void LoweringPreparePass::lowerCastOp(cir::CastOp op) {
-  mlir::MLIRContext &ctx = getContext();
-  mlir::Value loweredValue = [&]() -> mlir::Value {
+  aiir::AIIRContext &ctx = getContext();
+  aiir::Value loweredValue = [&]() -> aiir::Value {
     switch (op.getKind()) {
     case cir::CastKind::float_to_complex:
     case cir::CastKind::int_to_complex:
@@ -428,17 +428,17 @@ void LoweringPreparePass::lowerCastOp(cir::CastOp op) {
   }
 }
 
-static mlir::Value buildComplexBinOpLibCall(
+static aiir::Value buildComplexBinOpLibCall(
     LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
     llvm::StringRef (*libFuncNameGetter)(llvm::APFloat::Semantics),
-    mlir::Location loc, cir::ComplexType ty, mlir::Value lhsReal,
-    mlir::Value lhsImag, mlir::Value rhsReal, mlir::Value rhsImag) {
+    aiir::Location loc, cir::ComplexType ty, aiir::Value lhsReal,
+    aiir::Value lhsImag, aiir::Value rhsReal, aiir::Value rhsImag) {
   cir::FPTypeInterface elementTy =
-      mlir::cast<cir::FPTypeInterface>(ty.getElementType());
+      aiir::cast<cir::FPTypeInterface>(ty.getElementType());
 
   llvm::StringRef libFuncName = libFuncNameGetter(
       llvm::APFloat::SemanticsToEnum(elementTy.getFloatSemantics()));
-  llvm::SmallVector<mlir::Type, 4> libFuncInputTypes(4, elementTy);
+  llvm::SmallVector<aiir::Type, 4> libFuncInputTypes(4, elementTy);
 
   cir::FuncType libFuncTy = cir::FuncType::get(libFuncInputTypes, ty);
 
@@ -446,8 +446,8 @@ static mlir::Value buildComplexBinOpLibCall(
   // multiplication and division when needed
   cir::FuncOp libFunc;
   {
-    mlir::OpBuilder::InsertionGuard ipGuard{builder};
-    builder.setInsertionPointToStart(pass.mlirModule.getBody());
+    aiir::OpBuilder::InsertionGuard ipGuard{builder};
+    builder.setInsertionPointToStart(pass.aiirModule.getBody());
     libFunc = pass.buildRuntimeFunction(builder, libFuncName, loc, libFuncTy);
   }
 
@@ -476,35 +476,35 @@ getComplexDivLibCallName(llvm::APFloat::Semantics semantics) {
   }
 }
 
-static mlir::Value
-buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
-                         mlir::Value lhsReal, mlir::Value lhsImag,
-                         mlir::Value rhsReal, mlir::Value rhsImag) {
+static aiir::Value
+buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, aiir::Location loc,
+                         aiir::Value lhsReal, aiir::Value lhsImag,
+                         aiir::Value rhsReal, aiir::Value rhsImag) {
   // (a+bi) / (c+di) = ((ac+bd)/(cc+dd)) + ((bc-ad)/(cc+dd))i
-  mlir::Value &a = lhsReal;
-  mlir::Value &b = lhsImag;
-  mlir::Value &c = rhsReal;
-  mlir::Value &d = rhsImag;
+  aiir::Value &a = lhsReal;
+  aiir::Value &b = lhsImag;
+  aiir::Value &c = rhsReal;
+  aiir::Value &d = rhsImag;
 
-  mlir::Value ac = builder.createMul(loc, a, c);     // a*c
-  mlir::Value bd = builder.createMul(loc, b, d);     // b*d
-  mlir::Value cc = builder.createMul(loc, c, c);     // c*c
-  mlir::Value dd = builder.createMul(loc, d, d);     // d*d
-  mlir::Value acbd = builder.createAdd(loc, ac, bd); // ac+bd
-  mlir::Value ccdd = builder.createAdd(loc, cc, dd); // cc+dd
-  mlir::Value resultReal = builder.createDiv(loc, acbd, ccdd);
+  aiir::Value ac = builder.createMul(loc, a, c);     // a*c
+  aiir::Value bd = builder.createMul(loc, b, d);     // b*d
+  aiir::Value cc = builder.createMul(loc, c, c);     // c*c
+  aiir::Value dd = builder.createMul(loc, d, d);     // d*d
+  aiir::Value acbd = builder.createAdd(loc, ac, bd); // ac+bd
+  aiir::Value ccdd = builder.createAdd(loc, cc, dd); // cc+dd
+  aiir::Value resultReal = builder.createDiv(loc, acbd, ccdd);
 
-  mlir::Value bc = builder.createMul(loc, b, c);     // b*c
-  mlir::Value ad = builder.createMul(loc, a, d);     // a*d
-  mlir::Value bcad = builder.createSub(loc, bc, ad); // bc-ad
-  mlir::Value resultImag = builder.createDiv(loc, bcad, ccdd);
+  aiir::Value bc = builder.createMul(loc, b, c);     // b*c
+  aiir::Value ad = builder.createMul(loc, a, d);     // a*d
+  aiir::Value bcad = builder.createSub(loc, bc, ad); // bc-ad
+  aiir::Value resultImag = builder.createDiv(loc, bcad, ccdd);
   return builder.createComplexCreate(loc, resultReal, resultImag);
 }
 
-static mlir::Value
-buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
-                              mlir::Value lhsReal, mlir::Value lhsImag,
-                              mlir::Value rhsReal, mlir::Value rhsImag) {
+static aiir::Value
+buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, aiir::Location loc,
+                              aiir::Value lhsReal, aiir::Value lhsImag,
+                              aiir::Value rhsReal, aiir::Value rhsImag) {
   // Implements Smith's algorithm for complex division.
   // SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
 
@@ -525,42 +525,42 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   //     e = (a*r + b) / tmp
   //     f = (b*r - a) / tmp
 
-  mlir::Value &a = lhsReal;
-  mlir::Value &b = lhsImag;
-  mlir::Value &c = rhsReal;
-  mlir::Value &d = rhsImag;
+  aiir::Value &a = lhsReal;
+  aiir::Value &b = lhsImag;
+  aiir::Value &c = rhsReal;
+  aiir::Value &d = rhsImag;
 
-  auto trueBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createDiv(loc, d, c);    // r := d / c
-    mlir::Value rd = builder.createMul(loc, r, d);   // r*d
-    mlir::Value tmp = builder.createAdd(loc, c, rd); // tmp := c + r*d
+  auto trueBranchBuilder = [&](aiir::OpBuilder &, aiir::Location) {
+    aiir::Value r = builder.createDiv(loc, d, c);    // r := d / c
+    aiir::Value rd = builder.createMul(loc, r, d);   // r*d
+    aiir::Value tmp = builder.createAdd(loc, c, rd); // tmp := c + r*d
 
-    mlir::Value br = builder.createMul(loc, b, r);   // b*r
-    mlir::Value abr = builder.createAdd(loc, a, br); // a + b*r
-    mlir::Value e = builder.createDiv(loc, abr, tmp);
+    aiir::Value br = builder.createMul(loc, b, r);   // b*r
+    aiir::Value abr = builder.createAdd(loc, a, br); // a + b*r
+    aiir::Value e = builder.createDiv(loc, abr, tmp);
 
-    mlir::Value ar = builder.createMul(loc, a, r);   // a*r
-    mlir::Value bar = builder.createSub(loc, b, ar); // b - a*r
-    mlir::Value f = builder.createDiv(loc, bar, tmp);
+    aiir::Value ar = builder.createMul(loc, a, r);   // a*r
+    aiir::Value bar = builder.createSub(loc, b, ar); // b - a*r
+    aiir::Value f = builder.createDiv(loc, bar, tmp);
 
-    mlir::Value result = builder.createComplexCreate(loc, e, f);
+    aiir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
   };
 
-  auto falseBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createDiv(loc, c, d);    // r := c / d
-    mlir::Value rc = builder.createMul(loc, r, c);   // r*c
-    mlir::Value tmp = builder.createAdd(loc, d, rc); // tmp := d + r*c
+  auto falseBranchBuilder = [&](aiir::OpBuilder &, aiir::Location) {
+    aiir::Value r = builder.createDiv(loc, c, d);    // r := c / d
+    aiir::Value rc = builder.createMul(loc, r, c);   // r*c
+    aiir::Value tmp = builder.createAdd(loc, d, rc); // tmp := d + r*c
 
-    mlir::Value ar = builder.createMul(loc, a, r);   // a*r
-    mlir::Value arb = builder.createAdd(loc, ar, b); // a*r + b
-    mlir::Value e = builder.createDiv(loc, arb, tmp);
+    aiir::Value ar = builder.createMul(loc, a, r);   // a*r
+    aiir::Value arb = builder.createAdd(loc, ar, b); // a*r + b
+    aiir::Value e = builder.createDiv(loc, arb, tmp);
 
-    mlir::Value br = builder.createMul(loc, b, r);   // b*r
-    mlir::Value bra = builder.createSub(loc, br, a); // b*r - a
-    mlir::Value f = builder.createDiv(loc, bra, tmp);
+    aiir::Value br = builder.createMul(loc, b, r);   // b*r
+    aiir::Value bra = builder.createSub(loc, br, a); // b*r - a
+    aiir::Value f = builder.createDiv(loc, bra, tmp);
 
-    mlir::Value result = builder.createComplexCreate(loc, e, f);
+    aiir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
   };
 
@@ -574,45 +574,45 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   return ternary.getResult();
 }
 
-static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
-    mlir::MLIRContext &context, clang::ASTContext &cc,
-    CIRBaseBuilderTy &builder, mlir::Type elementType) {
+static aiir::Type higherPrecisionElementTypeForComplexArithmetic(
+    aiir::AIIRContext &context, clang::ASTContext &cc,
+    CIRBaseBuilderTy &builder, aiir::Type elementType) {
 
-  auto getHigherPrecisionFPType = [&context](mlir::Type type) -> mlir::Type {
-    if (mlir::isa<cir::FP16Type>(type))
+  auto getHigherPrecisionFPType = [&context](aiir::Type type) -> aiir::Type {
+    if (aiir::isa<cir::FP16Type>(type))
       return cir::SingleType::get(&context);
 
-    if (mlir::isa<cir::SingleType>(type) || mlir::isa<cir::BF16Type>(type))
+    if (aiir::isa<cir::SingleType>(type) || aiir::isa<cir::BF16Type>(type))
       return cir::DoubleType::get(&context);
 
-    if (mlir::isa<cir::DoubleType>(type))
+    if (aiir::isa<cir::DoubleType>(type))
       return cir::LongDoubleType::get(&context, type);
 
     return type;
   };
 
   auto getFloatTypeSemantics =
-      [&cc](mlir::Type type) -> const llvm::fltSemantics & {
+      [&cc](aiir::Type type) -> const llvm::fltSemantics & {
     const clang::TargetInfo &info = cc.getTargetInfo();
-    if (mlir::isa<cir::FP16Type>(type))
+    if (aiir::isa<cir::FP16Type>(type))
       return info.getHalfFormat();
 
-    if (mlir::isa<cir::BF16Type>(type))
+    if (aiir::isa<cir::BF16Type>(type))
       return info.getBFloat16Format();
 
-    if (mlir::isa<cir::SingleType>(type))
+    if (aiir::isa<cir::SingleType>(type))
       return info.getFloatFormat();
 
-    if (mlir::isa<cir::DoubleType>(type))
+    if (aiir::isa<cir::DoubleType>(type))
       return info.getDoubleFormat();
 
-    if (mlir::isa<cir::LongDoubleType>(type)) {
+    if (aiir::isa<cir::LongDoubleType>(type)) {
       if (cc.getLangOpts().OpenMP && cc.getLangOpts().OpenMPIsTargetDevice)
         llvm_unreachable("NYI Float type semantics with OpenMP");
       return info.getLongDoubleFormat();
     }
 
-    if (mlir::isa<cir::FP128Type>(type)) {
+    if (aiir::isa<cir::FP128Type>(type)) {
       if (cc.getLangOpts().OpenMP && cc.getLangOpts().OpenMPIsTargetDevice)
         llvm_unreachable("NYI Float type semantics with OpenMP");
       return info.getFloat128Format();
@@ -621,7 +621,7 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
     llvm_unreachable("Unsupported float type semantics");
   };
 
-  const mlir::Type higherElementType = getHigherPrecisionFPType(elementType);
+  const aiir::Type higherElementType = getHigherPrecisionFPType(elementType);
   const llvm::fltSemantics &elementTypeSemantics =
       getFloatTypeSemantics(elementType);
   const llvm::fltSemantics &higherElementTypeSemantics =
@@ -644,13 +644,13 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
   return {};
 }
 
-static mlir::Value
+static aiir::Value
 lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
-                mlir::Location loc, cir::ComplexDivOp op, mlir::Value lhsReal,
-                mlir::Value lhsImag, mlir::Value rhsReal, mlir::Value rhsImag,
-                mlir::MLIRContext &mlirCx, clang::ASTContext &cc) {
+                aiir::Location loc, cir::ComplexDivOp op, aiir::Value lhsReal,
+                aiir::Value lhsImag, aiir::Value rhsReal, aiir::Value rhsImag,
+                aiir::AIIRContext &aiirCx, clang::ASTContext &cc) {
   cir::ComplexType complexTy = op.getType();
-  if (mlir::isa<cir::FPTypeInterface>(complexTy.getElementType())) {
+  if (aiir::isa<cir::FPTypeInterface>(complexTy.getElementType())) {
     cir::ComplexRangeKind range = op.getRange();
     if (range == cir::ComplexRangeKind::Improved)
       return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
@@ -662,9 +662,9 @@ lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
                                       rhsImag);
 
     if (range == cir::ComplexRangeKind::Promoted) {
-      mlir::Type originalElementType = complexTy.getElementType();
-      mlir::Type higherPrecisionElementType =
-          higherPrecisionElementTypeForComplexArithmetic(mlirCx, cc, builder,
+      aiir::Type originalElementType = complexTy.getElementType();
+      aiir::Type higherPrecisionElementType =
+          higherPrecisionElementTypeForComplexArithmetic(aiirCx, cc, builder,
                                                          originalElementType);
 
       if (!higherPrecisionElementType)
@@ -681,15 +681,15 @@ lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
       rhsImag = builder.createCast(floatingCastKind, rhsImag,
                                    higherPrecisionElementType);
 
-      mlir::Value algebraicResult = buildAlgebraicComplexDiv(
+      aiir::Value algebraicResult = buildAlgebraicComplexDiv(
           builder, loc, lhsReal, lhsImag, rhsReal, rhsImag);
 
-      mlir::Value resultReal = builder.createComplexReal(loc, algebraicResult);
-      mlir::Value resultImag = builder.createComplexImag(loc, algebraicResult);
+      aiir::Value resultReal = builder.createComplexReal(loc, algebraicResult);
+      aiir::Value resultImag = builder.createComplexImag(loc, algebraicResult);
 
-      mlir::Value finalReal =
+      aiir::Value finalReal =
           builder.createCast(floatingCastKind, resultReal, originalElementType);
-      mlir::Value finalImag =
+      aiir::Value finalImag =
           builder.createCast(floatingCastKind, resultImag, originalElementType);
       return builder.createComplexCreate(loc, finalReal, finalImag);
     }
@@ -702,15 +702,15 @@ lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
 void LoweringPreparePass::lowerComplexDivOp(cir::ComplexDivOp op) {
   cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
-  mlir::Location loc = op.getLoc();
-  mlir::TypedValue<cir::ComplexType> lhs = op.getLhs();
-  mlir::TypedValue<cir::ComplexType> rhs = op.getRhs();
-  mlir::Value lhsReal = builder.createComplexReal(loc, lhs);
-  mlir::Value lhsImag = builder.createComplexImag(loc, lhs);
-  mlir::Value rhsReal = builder.createComplexReal(loc, rhs);
-  mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
+  aiir::Location loc = op.getLoc();
+  aiir::TypedValue<cir::ComplexType> lhs = op.getLhs();
+  aiir::TypedValue<cir::ComplexType> rhs = op.getRhs();
+  aiir::Value lhsReal = builder.createComplexReal(loc, lhs);
+  aiir::Value lhsImag = builder.createComplexImag(loc, lhs);
+  aiir::Value rhsReal = builder.createComplexReal(loc, rhs);
+  aiir::Value rhsImag = builder.createComplexImag(loc, rhs);
 
-  mlir::Value loweredResult =
+  aiir::Value loweredResult =
       lowerComplexDiv(*this, builder, loc, op, lhsReal, lhsImag, rhsReal,
                       rhsImag, getContext(), *astCtx);
   op.replaceAllUsesWith(loweredResult);
@@ -737,24 +737,24 @@ getComplexMulLibCallName(llvm::APFloat::Semantics semantics) {
   }
 }
 
-static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
+static aiir::Value lowerComplexMul(LoweringPreparePass &pass,
                                    CIRBaseBuilderTy &builder,
-                                   mlir::Location loc, cir::ComplexMulOp op,
-                                   mlir::Value lhsReal, mlir::Value lhsImag,
-                                   mlir::Value rhsReal, mlir::Value rhsImag) {
+                                   aiir::Location loc, cir::ComplexMulOp op,
+                                   aiir::Value lhsReal, aiir::Value lhsImag,
+                                   aiir::Value rhsReal, aiir::Value rhsImag) {
   // (a+bi) * (c+di) = (ac-bd) + (ad+bc)i
-  mlir::Value resultRealLhs = builder.createMul(loc, lhsReal, rhsReal); // ac
-  mlir::Value resultRealRhs = builder.createMul(loc, lhsImag, rhsImag); // bd
-  mlir::Value resultImagLhs = builder.createMul(loc, lhsReal, rhsImag); // ad
-  mlir::Value resultImagRhs = builder.createMul(loc, lhsImag, rhsReal); // bc
-  mlir::Value resultReal = builder.createSub(loc, resultRealLhs, resultRealRhs);
-  mlir::Value resultImag = builder.createAdd(loc, resultImagLhs, resultImagRhs);
-  mlir::Value algebraicResult =
+  aiir::Value resultRealLhs = builder.createMul(loc, lhsReal, rhsReal); // ac
+  aiir::Value resultRealRhs = builder.createMul(loc, lhsImag, rhsImag); // bd
+  aiir::Value resultImagLhs = builder.createMul(loc, lhsReal, rhsImag); // ad
+  aiir::Value resultImagRhs = builder.createMul(loc, lhsImag, rhsReal); // bc
+  aiir::Value resultReal = builder.createSub(loc, resultRealLhs, resultRealRhs);
+  aiir::Value resultImag = builder.createAdd(loc, resultImagLhs, resultImagRhs);
+  aiir::Value algebraicResult =
       builder.createComplexCreate(loc, resultReal, resultImag);
 
   cir::ComplexType complexTy = op.getType();
   cir::ComplexRangeKind rangeKind = op.getRange();
-  if (mlir::isa<cir::IntType>(complexTy.getElementType()) ||
+  if (aiir::isa<cir::IntType>(complexTy.getElementType()) ||
       rangeKind == cir::ComplexRangeKind::Basic ||
       rangeKind == cir::ComplexRangeKind::Improved ||
       rangeKind == cir::ComplexRangeKind::Promoted)
@@ -765,20 +765,20 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
   // Check whether the real part and the imaginary part of the result are both
   // NaN. If so, emit a library call to compute the multiplication instead.
   // We check a value against NaN by comparing the value against itself.
-  mlir::Value resultRealIsNaN = builder.createIsNaN(loc, resultReal);
-  mlir::Value resultImagIsNaN = builder.createIsNaN(loc, resultImag);
-  mlir::Value resultRealAndImagAreNaN =
+  aiir::Value resultRealIsNaN = builder.createIsNaN(loc, resultReal);
+  aiir::Value resultImagIsNaN = builder.createIsNaN(loc, resultImag);
+  aiir::Value resultRealAndImagAreNaN =
       builder.createLogicalAnd(loc, resultRealIsNaN, resultImagIsNaN);
 
   return cir::TernaryOp::create(
              builder, loc, resultRealAndImagAreNaN,
-             [&](mlir::OpBuilder &, mlir::Location) {
-               mlir::Value libCallResult = buildComplexBinOpLibCall(
+             [&](aiir::OpBuilder &, aiir::Location) {
+               aiir::Value libCallResult = buildComplexBinOpLibCall(
                    pass, builder, &getComplexMulLibCallName, loc, complexTy,
                    lhsReal, lhsImag, rhsReal, rhsImag);
                builder.createYield(loc, libCallResult);
              },
-             [&](mlir::OpBuilder &, mlir::Location) {
+             [&](aiir::OpBuilder &, aiir::Location) {
                builder.createYield(loc, algebraicResult);
              })
       .getResult();
@@ -787,35 +787,35 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
 void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
   cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
-  mlir::Location loc = op.getLoc();
-  mlir::TypedValue<cir::ComplexType> lhs = op.getLhs();
-  mlir::TypedValue<cir::ComplexType> rhs = op.getRhs();
-  mlir::Value lhsReal = builder.createComplexReal(loc, lhs);
-  mlir::Value lhsImag = builder.createComplexImag(loc, lhs);
-  mlir::Value rhsReal = builder.createComplexReal(loc, rhs);
-  mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
-  mlir::Value loweredResult = lowerComplexMul(*this, builder, loc, op, lhsReal,
+  aiir::Location loc = op.getLoc();
+  aiir::TypedValue<cir::ComplexType> lhs = op.getLhs();
+  aiir::TypedValue<cir::ComplexType> rhs = op.getRhs();
+  aiir::Value lhsReal = builder.createComplexReal(loc, lhs);
+  aiir::Value lhsImag = builder.createComplexImag(loc, lhs);
+  aiir::Value rhsReal = builder.createComplexReal(loc, rhs);
+  aiir::Value rhsImag = builder.createComplexImag(loc, rhs);
+  aiir::Value loweredResult = lowerComplexMul(*this, builder, loc, op, lhsReal,
                                               lhsImag, rhsReal, rhsImag);
   op.replaceAllUsesWith(loweredResult);
   op.erase();
 }
 
 void LoweringPreparePass::lowerUnaryOp(cir::UnaryOpInterface op) {
-  if (!mlir::isa<cir::ComplexType>(op.getResult().getType()))
+  if (!aiir::isa<cir::ComplexType>(op.getResult().getType()))
     return;
 
-  mlir::Location loc = op->getLoc();
+  aiir::Location loc = op->getLoc();
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
 
-  mlir::Value operand = op.getInput();
-  mlir::Value operandReal = builder.createComplexReal(loc, operand);
-  mlir::Value operandImag = builder.createComplexImag(loc, operand);
+  aiir::Value operand = op.getInput();
+  aiir::Value operandReal = builder.createComplexReal(loc, operand);
+  aiir::Value operandImag = builder.createComplexImag(loc, operand);
 
-  mlir::Value resultReal = operandReal;
-  mlir::Value resultImag = operandImag;
+  aiir::Value resultReal = operandReal;
+  aiir::Value resultImag = operandImag;
 
-  llvm::TypeSwitch<mlir::Operation *>(op)
+  llvm::TypeSwitch<aiir::Operation *>(op)
       .Case<cir::IncOp>(
           [&](auto) { resultReal = builder.createInc(loc, operandReal); })
       .Case<cir::DecOp>(
@@ -828,16 +828,16 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOpInterface op) {
           [&](auto) { resultImag = builder.createMinus(loc, operandImag); })
       .Default([](auto) { llvm_unreachable("unhandled unary complex op"); });
 
-  mlir::Value result = builder.createComplexCreate(loc, resultReal, resultImag);
-  op->replaceAllUsesWith(mlir::ValueRange{result});
+  aiir::Value result = builder.createComplexCreate(loc, resultReal, resultImag);
+  op->replaceAllUsesWith(aiir::ValueRange{result});
   op->erase();
 }
 
 cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
                                                      cir::GlobalOp op,
-                                                     mlir::Region &dtorRegion,
+                                                     aiir::Region &dtorRegion,
                                                      cir::CallOp &dtorCall) {
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  aiir::OpBuilder::InsertionGuard guard(builder);
   assert(!cir::MissingFeatures::astVarDeclInterface());
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
@@ -845,12 +845,12 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   auto voidPtrTy = cir::PointerType::get(voidTy);
 
   // Look for operations in dtorBlock
-  mlir::Block &dtorBlock = dtorRegion.front();
+  aiir::Block &dtorBlock = dtorRegion.front();
 
   // The first operation should be a get_global to retrieve the address
   // of the global variable we're destroying.
   auto opIt = dtorBlock.getOperations().begin();
-  cir::GetGlobalOp ggop = mlir::cast<cir::GetGlobalOp>(*opIt);
+  cir::GetGlobalOp ggop = aiir::cast<cir::GetGlobalOp>(*opIt);
 
   // The simple case is just a call to a destructor, like this:
   //
@@ -862,8 +862,8 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   // as its only operand, and the only other operation is a yield, then we can
   // just return the called function.
   if (dtorBlock.getOperations().size() == 3) {
-    auto callOp = mlir::dyn_cast<cir::CallOp>(&*(++opIt));
-    auto yieldOp = mlir::dyn_cast<cir::YieldOp>(&*(++opIt));
+    auto callOp = aiir::dyn_cast<cir::CallOp>(&*(++opIt));
+    auto yieldOp = aiir::dyn_cast<cir::YieldOp>(&*(++opIt));
     if (yieldOp && callOp && callOp.getNumOperands() == 1 &&
         callOp.getArgOperand(0) == ggop) {
       dtorCall = callOp;
@@ -885,7 +885,7 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   cir::FuncOp dtorFunc =
       buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                            cir::GlobalLinkageKind::InternalLinkage);
-  mlir::Block *entryBB = dtorFunc.addEntryBlock();
+  aiir::Block *entryBB = dtorFunc.addEntryBlock();
 
   // Move everything from the dtor region into the helper function.
   entryBB->getOperations().splice(entryBB->begin(), dtorBlock.getOperations(),
@@ -893,18 +893,18 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
 
   // Before erasing this, clone it back into the dtor region
   cir::GetGlobalOp dtorGGop =
-      mlir::cast<cir::GetGlobalOp>(entryBB->getOperations().front());
+      aiir::cast<cir::GetGlobalOp>(entryBB->getOperations().front());
   builder.setInsertionPointToStart(&dtorBlock);
   builder.clone(*dtorGGop.getOperation());
 
   // Replace all uses of the help function's get_global with the function
   // argument.
-  mlir::Value dtorArg = entryBB->getArgument(0);
+  aiir::Value dtorArg = entryBB->getArgument(0);
   dtorGGop.replaceAllUsesWith(dtorArg);
   dtorGGop.erase();
 
   // Replace the yield in the final block with a return
-  mlir::Block &finalBlock = dtorFunc.getBody().back();
+  aiir::Block &finalBlock = dtorFunc.getBody().back();
   auto yieldOp = cast<cir::YieldOp>(finalBlock.getTerminator());
   builder.setInsertionPoint(yieldOp);
   cir::ReturnOp::create(builder, yieldOp->getLoc());
@@ -913,16 +913,16 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   // Create a call to the helper function, passing the original get_global op
   // as the argument.
   cir::GetGlobalOp origGGop =
-      mlir::cast<cir::GetGlobalOp>(dtorBlock.getOperations().front());
+      aiir::cast<cir::GetGlobalOp>(dtorBlock.getOperations().front());
   builder.setInsertionPointAfter(origGGop);
-  mlir::Value ggopResult = origGGop.getResult();
+  aiir::Value ggopResult = origGGop.getResult();
   dtorCall = builder.createCallOp(op.getLoc(), dtorFunc, ggopResult);
 
   // Add a yield after the call.
   auto finalYield = cir::YieldOp::create(builder, op.getLoc());
 
   // Erase everything after the yield.
-  dtorBlock.getOperations().erase(std::next(mlir::Block::iterator(finalYield)),
+  dtorBlock.getOperations().erase(std::next(aiir::Block::iterator(finalYield)),
                                   dtorBlock.end());
   dtorRegion.getBlocks().erase(std::next(dtorRegion.begin()), dtorRegion.end());
 
@@ -948,21 +948,21 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
                                   cir::GlobalLinkageKind::InternalLinkage);
 
   // Move over the initialzation code of the ctor region.
-  mlir::Block *entryBB = f.addEntryBlock();
+  aiir::Block *entryBB = f.addEntryBlock();
   if (!op.getCtorRegion().empty()) {
-    mlir::Block &block = op.getCtorRegion().front();
+    aiir::Block &block = op.getCtorRegion().front();
     entryBB->getOperations().splice(entryBB->begin(), block.getOperations(),
                                     block.begin(), std::prev(block.end()));
   }
 
   // Register the destructor call with __cxa_atexit
-  mlir::Region &dtorRegion = op.getDtorRegion();
+  aiir::Region &dtorRegion = op.getDtorRegion();
   if (!dtorRegion.empty()) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
     assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
     // Create a variable that binds the atexit to this shared object.
-    builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
+    builder.setInsertionPointToStart(&aiirModule.getBodyRegion().front());
     cir::GlobalOp handle = buildRuntimeVariable(
         builder, "__dso_handle", op.getLoc(), builder.getI8Type(),
         cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
@@ -990,7 +990,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
     // Replace the dtor (or helper) call with a call to
     //   __cxa_atexit(&dtor, &var, &__dso_handle)
     builder.setInsertionPointAfter(dtorCall);
-    mlir::Value args[3];
+    aiir::Value args[3];
     auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
     // dtorPtrTy
     args[0] = cir::GetGlobalOp::create(builder, dtorCall.getLoc(), dtorPtrTy,
@@ -1004,7 +1004,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
                                        handle.getSymName());
     builder.createCallOp(dtorCall.getLoc(), fnAtExit, args);
     dtorCall->erase();
-    mlir::Block &dtorBlock = dtorRegion.front();
+    aiir::Block &dtorBlock = dtorRegion.front();
     entryBB->getOperations().splice(entryBB->end(), dtorBlock.getOperations(),
                                     dtorBlock.begin(),
                                     std::prev(dtorBlock.end()));
@@ -1012,13 +1012,13 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
 
   // Replace cir.yield with cir.return
   builder.setInsertionPointToEnd(entryBB);
-  mlir::Operation *yieldOp = nullptr;
+  aiir::Operation *yieldOp = nullptr;
   if (!op.getCtorRegion().empty()) {
-    mlir::Block &block = op.getCtorRegion().front();
+    aiir::Block &block = op.getCtorRegion().front();
     yieldOp = &block.getOperations().back();
   } else {
     assert(!dtorRegion.empty());
-    mlir::Block &block = dtorRegion.front();
+    aiir::Block &block = dtorRegion.front();
     yieldOp = &block.getOperations().back();
   }
 
@@ -1031,9 +1031,9 @@ cir::FuncOp
 LoweringPreparePass::getGuardAcquireFn(cir::PointerType guardPtrTy) {
   // int __cxa_guard_acquire(__guard *guard_object);
   CIRBaseBuilderTy builder(getContext());
-  mlir::OpBuilder::InsertionGuard ipGuard{builder};
-  builder.setInsertionPointToStart(mlirModule.getBody());
-  mlir::Location loc = mlirModule.getLoc();
+  aiir::OpBuilder::InsertionGuard ipGuard{builder};
+  builder.setInsertionPointToStart(aiirModule.getBody());
+  aiir::Location loc = aiirModule.getLoc();
   cir::IntType intTy = cir::IntType::get(&getContext(), 32, /*isSigned=*/true);
   auto fnType = cir::FuncType::get({guardPtrTy}, intTy);
   return buildRuntimeFunction(builder, "__cxa_guard_acquire", loc, fnType);
@@ -1043,24 +1043,24 @@ cir::FuncOp
 LoweringPreparePass::getGuardReleaseFn(cir::PointerType guardPtrTy) {
   // void __cxa_guard_release(__guard *guard_object);
   CIRBaseBuilderTy builder(getContext());
-  mlir::OpBuilder::InsertionGuard ipGuard{builder};
-  builder.setInsertionPointToStart(mlirModule.getBody());
-  mlir::Location loc = mlirModule.getLoc();
+  aiir::OpBuilder::InsertionGuard ipGuard{builder};
+  builder.setInsertionPointToStart(aiirModule.getBody());
+  aiir::Location loc = aiirModule.getLoc();
   cir::VoidType voidTy = cir::VoidType::get(&getContext());
   auto fnType = cir::FuncType::get({guardPtrTy}, voidTy);
   return buildRuntimeFunction(builder, "__cxa_guard_release", loc, fnType);
 }
 
 cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
-    CIRBaseBuilderTy &builder, mlir::Location loc, llvm::StringRef name,
+    CIRBaseBuilderTy &builder, aiir::Location loc, llvm::StringRef name,
     cir::IntType guardTy, cir::GlobalLinkageKind linkage) {
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(mlirModule.getBody());
+  aiir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(aiirModule.getBody());
   cir::GlobalOp g = cir::GlobalOp::create(builder, loc, name, guardTy);
   g.setLinkageAttr(
       cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
-  mlir::SymbolTable::setSymbolVisibility(
-      g, mlir::SymbolTable::Visibility::Private);
+  aiir::SymbolTable::setSymbolVisibility(
+      g, aiir::SymbolTable::Visibility::Private);
   return g;
 }
 
@@ -1073,10 +1073,10 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   cir::ASTVarDeclInterface varDecl = astOption.value();
 
   builder.setInsertionPointAfter(getGlobalOp);
-  mlir::Block *getGlobalOpBlock = builder.getInsertionBlock();
+  aiir::Block *getGlobalOpBlock = builder.getInsertionBlock();
 
   // Remove the terminator temporarily - we'll add it back at the end.
-  mlir::Operation *ret = getGlobalOpBlock->getTerminator();
+  aiir::Operation *ret = getGlobalOpBlock->getTerminator();
   ret->remove();
   builder.setInsertionPointAfter(getGlobalOp);
 
@@ -1123,7 +1123,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   }
   cir::IntType guardTy =
       cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
-  cir::CIRDataLayout dataLayout(mlirModule);
+  cir::CIRDataLayout dataLayout(aiirModule);
   clang::CharUnits guardAlignment =
       clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
   auto guardPtrTy = cir::PointerType::get(guardTy);
@@ -1137,7 +1137,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     return;
   }
 
-  mlir::Value guardPtr = builder.createGetGlobal(guard, /*threadLocal*/ false);
+  aiir::Value guardPtr = builder.createGetGlobal(guard, /*threadLocal*/ false);
 
   // Test whether the variable has completed initialization.
   //
@@ -1165,8 +1165,8 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   if (!threadsafe || maxInlineWidthInBits) {
     // Load the first byte of the guard variable.
     auto bytePtrTy = cir::PointerType::get(builder.getSIntNTy(8));
-    mlir::Value bytePtr = builder.createBitcast(guardPtr, bytePtrTy);
-    mlir::Value guardLoad = builder.createAlignedLoad(
+    aiir::Value bytePtr = builder.createBitcast(guardPtr, bytePtrTy);
+    aiir::Value guardLoad = builder.createAlignedLoad(
         getGlobalOp.getLoc(), bytePtr, guardAlignment.getAsAlign().value());
 
     // Itanium ABI:
@@ -1176,7 +1176,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     //
     // In LLVM, we do this by marking the load Acquire.
     if (threadsafe) {
-      auto loadOp = mlir::cast<cir::LoadOp>(guardLoad.getDefiningOp());
+      auto loadOp = aiir::cast<cir::LoadOp>(guardLoad.getDefiningOp());
       loadOp.setMemOrder(cir::MemOrder::Acquire);
       loadOp.setSyncScope(cir::SyncScopeKind::System);
     }
@@ -1209,14 +1209,14 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
 
     // Check if the first byte of the guard variable is zero.
     auto zero = builder.getConstantInt(
-        getGlobalOp.getLoc(), mlir::cast<cir::IntType>(guardLoad.getType()), 0);
+        getGlobalOp.getLoc(), aiir::cast<cir::IntType>(guardLoad.getType()), 0);
     auto needsInit = builder.createCompare(getGlobalOp.getLoc(),
                                            cir::CmpOpKind::eq, guardLoad, zero);
 
     // Build the guarded initialization inside an if block.
     cir::IfOp::create(builder, globalOp.getLoc(), needsInit,
                       /*withElseRegion=*/false,
-                      [&](mlir::OpBuilder &, mlir::Location) {
+                      [&](aiir::OpBuilder &, aiir::Location) {
                         emitCXXGuardedInitIf(builder, globalOp, varDecl,
                                              guardPtr, guardPtrTy, threadsafe);
                       });
@@ -1236,8 +1236,8 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
   if (op.getStaticLocalGuard())
     return;
 
-  mlir::Region &ctorRegion = op.getCtorRegion();
-  mlir::Region &dtorRegion = op.getDtorRegion();
+  aiir::Region &ctorRegion = op.getCtorRegion();
+  aiir::Region &dtorRegion = op.getDtorRegion();
 
   if (!ctorRegion.empty() || !dtorRegion.empty()) {
     // Build a variable initialization function and move the initialzation code
@@ -1259,23 +1259,23 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
 
-  mlir::Location loc = op->getLoc();
+  aiir::Location loc = op->getLoc();
   cir::CmpThreeWayInfoAttr cmpInfo = op.getInfo();
 
-  mlir::Value ltRes =
+  aiir::Value ltRes =
       builder.getConstantInt(loc, op.getType(), cmpInfo.getLt());
-  mlir::Value eqRes =
+  aiir::Value eqRes =
       builder.getConstantInt(loc, op.getType(), cmpInfo.getEq());
-  mlir::Value gtRes =
+  aiir::Value gtRes =
       builder.getConstantInt(loc, op.getType(), cmpInfo.getGt());
 
-  mlir::Value transformedResult;
+  aiir::Value transformedResult;
   if (cmpInfo.getOrdering() != CmpOrdering::Partial) {
     // Total ordering
-    mlir::Value lt =
+    aiir::Value lt =
         builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
-    mlir::Value selectOnLt = builder.createSelect(loc, lt, ltRes, gtRes);
-    mlir::Value eq =
+    aiir::Value selectOnLt = builder.createSelect(loc, lt, ltRes, gtRes);
+    aiir::Value eq =
         builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
     transformedResult = builder.createSelect(loc, eq, eqRes, selectOnLt);
   } else {
@@ -1283,13 +1283,13 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
     cir::ConstantOp unorderedRes = builder.getConstantInt(
         loc, op.getType(), cmpInfo.getUnordered().value());
 
-    mlir::Value eq =
+    aiir::Value eq =
         builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
-    mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
-    mlir::Value gt =
+    aiir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
+    aiir::Value gt =
         builder.createCompare(loc, CmpOpKind::gt, op.getLhs(), op.getRhs());
-    mlir::Value selectOnGt = builder.createSelect(loc, gt, gtRes, selectOnEq);
-    mlir::Value lt =
+    aiir::Value selectOnGt = builder.createSelect(loc, gt, gtRes, selectOnEq);
+    aiir::Value lt =
         builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
     transformedResult = builder.createSelect(loc, lt, ltRes, selectOnGt);
   }
@@ -1299,10 +1299,10 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
 }
 
 template <typename AttributeTy>
-static llvm::SmallVector<mlir::Attribute>
-prepareCtorDtorAttrList(mlir::MLIRContext *context,
+static llvm::SmallVector<aiir::Attribute>
+prepareCtorDtorAttrList(aiir::AIIRContext *context,
                         llvm::ArrayRef<std::pair<std::string, uint32_t>> list) {
-  llvm::SmallVector<mlir::Attribute> attrs;
+  llvm::SmallVector<aiir::Attribute> attrs;
   for (const auto &[name, priority] : list)
     attrs.push_back(AttributeTy::get(context, name, priority));
   return attrs;
@@ -1310,20 +1310,20 @@ prepareCtorDtorAttrList(mlir::MLIRContext *context,
 
 void LoweringPreparePass::buildGlobalCtorDtorList() {
   if (!globalCtorList.empty()) {
-    llvm::SmallVector<mlir::Attribute> globalCtors =
+    llvm::SmallVector<aiir::Attribute> globalCtors =
         prepareCtorDtorAttrList<cir::GlobalCtorAttr>(&getContext(),
                                                      globalCtorList);
 
-    mlirModule->setAttr(cir::CIRDialect::getGlobalCtorsAttrName(),
-                        mlir::ArrayAttr::get(&getContext(), globalCtors));
+    aiirModule->setAttr(cir::CIRDialect::getGlobalCtorsAttrName(),
+                        aiir::ArrayAttr::get(&getContext(), globalCtors));
   }
 
   if (!globalDtorList.empty()) {
-    llvm::SmallVector<mlir::Attribute> globalDtors =
+    llvm::SmallVector<aiir::Attribute> globalDtors =
         prepareCtorDtorAttrList<cir::GlobalDtorAttr>(&getContext(),
                                                      globalDtorList);
-    mlirModule->setAttr(cir::CIRDialect::getGlobalDtorsAttrName(),
-                        mlir::ArrayAttr::get(&getContext(), globalDtors));
+    aiirModule->setAttr(cir::CIRDialect::getGlobalDtorsAttrName(),
+                        aiir::ArrayAttr::get(&getContext(), globalDtors));
   }
 }
 
@@ -1350,14 +1350,14 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
         .mangleModuleInitializer(astCtx->getCurrentNamedModule(), out);
   } else {
     fnName += "_GLOBAL__sub_I_";
-    fnName += getTransformedFileName(mlirModule);
+    fnName += getTransformedFileName(aiirModule);
   }
 
   CIRBaseBuilderTy builder(getContext());
-  builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
+  builder.setInsertionPointToEnd(&aiirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
   cir::FuncOp f =
-      buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
+      buildRuntimeFunction(builder, fnName, aiirModule.getLoc(), fnType,
                            cir::GlobalLinkageKind::ExternalLinkage);
   builder.setInsertionPointToStart(f.addEntryBlock());
   for (cir::FuncOp &f : dynamicInitializers)
@@ -1372,12 +1372,12 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
 
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                                        clang::ASTContext *astCtx,
-                                       mlir::Operation *op, mlir::Type eltTy,
-                                       mlir::Value addr,
-                                       mlir::Value numElements,
+                                       aiir::Operation *op, aiir::Type eltTy,
+                                       aiir::Value addr,
+                                       aiir::Value numElements,
                                        uint64_t arrayLen, bool isCtor) {
   // Generate loop to call into ctor/dtor for every element.
-  mlir::Location loc = op->getLoc();
+  aiir::Location loc = op->getLoc();
   bool isDynamic = numElements != nullptr;
 
   // TODO: instead of getting the size from the AST context, create alias for
@@ -1385,40 +1385,40 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   const unsigned sizeTypeSize =
       astCtx->getTypeSize(astCtx->getSignedSizeType());
 
-  mlir::Value begin, end;
+  aiir::Value begin, end;
   if (isDynamic) {
     assert(!isCtor && "Unexpected dynamic ctor loop");
-    mlir::Value one = builder.getUnsignedInt(loc, 1, sizeTypeSize);
-    mlir::Value endOffsetVal = builder.createSub(loc, numElements, one);
+    aiir::Value one = builder.getUnsignedInt(loc, 1, sizeTypeSize);
+    aiir::Value endOffsetVal = builder.createSub(loc, numElements, one);
     begin = addr;
     end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
   } else {
     // Static: emit endOffset const first, then array_to_ptrdecay, matching
     // the expected IR ordering.
     uint64_t endOffset = isCtor ? arrayLen : arrayLen - 1;
-    mlir::Value endOffsetVal =
+    aiir::Value endOffsetVal =
         builder.getUnsignedInt(loc, endOffset, sizeTypeSize);
     begin = cir::CastOp::create(builder, loc, eltTy,
                                 cir::CastKind::array_to_ptrdecay, addr);
     end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
   }
 
-  mlir::Value start = isCtor ? begin : end;
-  mlir::Value stop = isCtor ? end : begin;
+  aiir::Value start = isCtor ? begin : end;
+  aiir::Value stop = isCtor ? end : begin;
 
   // For dynamic destructors, guard against zero elements.
   // This places the destructor loop emitted below inside the if block.
   cir::IfOp ifOp;
   if (isDynamic) {
-    mlir::Value isEmpty =
+    aiir::Value isEmpty =
         cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, start, stop);
     ifOp = cir::IfOp::create(builder, loc, isEmpty,
                              /*withElseRegion=*/false,
-                             [&](mlir::OpBuilder &, mlir::Location) {});
+                             [&](aiir::OpBuilder &, aiir::Location) {});
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
 
-  mlir::Value tmpAddr = builder.createAlloca(
+  aiir::Value tmpAddr = builder.createAlloca(
       loc, /*addr type*/ builder.getPointerTo(eltTy),
       /*var type*/ eltTy, "__array_idx", builder.getAlignmentAttr(1));
   builder.createStore(loc, start, tmpAddr);
@@ -1426,30 +1426,30 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   builder.createDoWhile(
       loc,
       /*condBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
+      [&](aiir::OpBuilder &b, aiir::Location loc) {
         auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
         auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
                                       currentElement, stop);
         builder.createCondition(cmp);
       },
       /*bodyBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
+      [&](aiir::OpBuilder &b, aiir::Location loc) {
         auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
 
         // Clone the region body (ctor/dtor call and any setup ops like
         // per-element zero-init) into the loop, remapping the block argument
         // to the current element pointer.
-        mlir::Block *oldBlock = &op->getRegion(0).front();
-        mlir::BlockArgument oldArg = oldBlock->getArgument(0);
-        mlir::IRMapping map;
+        aiir::Block *oldBlock = &op->getRegion(0).front();
+        aiir::BlockArgument oldArg = oldBlock->getArgument(0);
+        aiir::IRMapping map;
         map.map(oldArg, currentElement);
-        for (mlir::Operation &regionOp : *oldBlock) {
-          if (!mlir::isa<cir::YieldOp>(&regionOp))
+        for (aiir::Operation &regionOp : *oldBlock) {
+          if (!aiir::isa<cir::YieldOp>(&regionOp))
             builder.clone(regionOp, map);
         }
 
         // Array elements get constructed in order but destructed in reverse.
-        mlir::Value stride;
+        aiir::Value stride;
         if (isCtor)
           stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
         else
@@ -1473,7 +1473,7 @@ void LoweringPreparePass::lowerArrayDtor(cir::ArrayDtor op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
 
-  mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
+  aiir::Type eltTy = op->getRegion(0).getArgument(0).getType();
 
   if (op.getNumElements()) {
     lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
@@ -1484,7 +1484,7 @@ void LoweringPreparePass::lowerArrayDtor(cir::ArrayDtor op) {
 
   assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
-      mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
+      aiir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
                              /*numElements=*/nullptr, arrayLen,
                              /*isCtor=*/false);
@@ -1494,10 +1494,10 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
   cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
 
-  mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
+  aiir::Type eltTy = op->getRegion(0).getArgument(0).getType();
   assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
-      mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
+      aiir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
                              /*numElements=*/nullptr, arrayLen,
                              /*isCtor=*/true);
@@ -1513,9 +1513,9 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
       funcOp.isCxxTrivialMemberFunction()) {
     // Replace the trivial copy constructor call with a `CopyOp`
     CIRBaseBuilderTy builder(getContext());
-    mlir::ValueRange operands = op.getOperands();
-    mlir::Value dest = operands[0];
-    mlir::Value src = operands[1];
+    aiir::ValueRange operands = op.getOperands();
+    aiir::Value dest = operands[0];
+    aiir::Value src = operands[1];
     builder.setInsertionPoint(op);
     builder.createCopy(dest, src);
     op.erase();
@@ -1528,8 +1528,8 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   if (!constOp)
     return;
 
-  mlir::Type ty = constOp.getType();
-  if (!mlir::isa<cir::ArrayType, cir::RecordType>(ty))
+  aiir::Type ty = constOp.getType();
+  if (!aiir::isa<cir::ArrayType, cir::RecordType>(ty))
     return;
 
   // Only transform stores to local variables (backed by cir.alloca).
@@ -1539,7 +1539,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   if (!alloca)
     return;
 
-  mlir::TypedAttr constant = constOp.getValue();
+  aiir::TypedAttr constant = constOp.getValue();
 
   // OG implements several optimization tiers for constant aggregate
   // initialization. For now we always create a global constant + memcpy
@@ -1565,20 +1565,20 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   CIRBaseBuilderTy builder(getContext());
 
   // Use InsertionGuard to create the global at module level.
-  builder.setInsertionPointToStart(mlirModule.getBody());
+  builder.setInsertionPointToStart(aiirModule.getBody());
 
   // If a global with this name already exists (e.g. CIRGen materializes
   // constexpr locals as globals when their address is taken), reuse it.
-  if (!mlir::SymbolTable::lookupSymbolIn(
-          mlirModule, mlir::StringAttr::get(&getContext(), name))) {
+  if (!aiir::SymbolTable::lookupSymbolIn(
+          aiirModule, aiir::StringAttr::get(&getContext(), name))) {
     auto gv = cir::GlobalOp::create(
         builder, op.getLoc(), name, ty,
         /*isConstant=*/true,
         cir::LangAddressSpaceAttr::get(&getContext(),
                                        cir::LangAddressSpace::Default),
         cir::GlobalLinkageKind::PrivateLinkage);
-    mlir::SymbolTable::setSymbolVisibility(
-        gv, mlir::SymbolTable::Visibility::Private);
+    aiir::SymbolTable::setSymbolVisibility(
+        gv, aiir::SymbolTable::Visibility::Private);
     gv.setInitialValueAttr(constant);
   }
 
@@ -1586,7 +1586,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   builder.setInsertionPoint(op);
 
   auto ptrTy = cir::PointerType::get(ty);
-  mlir::Value globalPtr =
+  aiir::Value globalPtr =
       cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, name);
 
   // Replace store with copy.
@@ -1600,27 +1600,27 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
     constOp.erase();
 }
 
-void LoweringPreparePass::runOnOp(mlir::Operation *op) {
+void LoweringPreparePass::runOnOp(aiir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
     lowerArrayDtor(arrayDtor);
-  } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
+  } else if (auto cast = aiir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
-  } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op)) {
+  } else if (auto complexDiv = aiir::dyn_cast<cir::ComplexDivOp>(op)) {
     lowerComplexDivOp(complexDiv);
-  } else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op)) {
+  } else if (auto complexMul = aiir::dyn_cast<cir::ComplexMulOp>(op)) {
     lowerComplexMulOp(complexMul);
-  } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
+  } else if (auto glob = aiir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
-  } else if (auto getGlobal = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
+  } else if (auto getGlobal = aiir::dyn_cast<cir::GetGlobalOp>(op)) {
     // Handle static local variables with guard variables.
     // Only process GetGlobalOps inside function bodies, not in GlobalOp
     // regions.
     if (getGlobal.getStaticLocal() &&
         getGlobal->getParentOfType<cir::FuncOp>()) {
-      auto globalOp = mlir::dyn_cast_or_null<cir::GlobalOp>(
-          mlir::SymbolTable::lookupNearestSymbolFrom(getGlobal,
+      auto globalOp = aiir::dyn_cast_or_null<cir::GlobalOp>(
+          aiir::SymbolTable::lookupNearestSymbolFrom(getGlobal,
                                                      getGlobal.getNameAttr()));
       // Only process if the GlobalOp has static_local and the ctor region is
       // not empty. After handleStaticLocal processes a static local, the ctor
@@ -1630,7 +1630,7 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
           !globalOp.getCtorRegion().empty())
         handleStaticLocal(globalOp, getGlobal);
     }
-  } else if (auto unaryOp = mlir::dyn_cast<cir::UnaryOpInterface>(op)) {
+  } else if (auto unaryOp = aiir::dyn_cast<cir::UnaryOpInterface>(op)) {
     lowerUnaryOp(unaryOp);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
@@ -1647,14 +1647,14 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
 }
 
 void LoweringPreparePass::runOnOperation() {
-  mlir::Operation *op = getOperation();
-  if (isa<::mlir::ModuleOp>(op))
-    mlirModule = cast<::mlir::ModuleOp>(op);
+  aiir::Operation *op = getOperation();
+  if (isa<::aiir::ModuleOp>(op))
+    aiirModule = cast<::aiir::ModuleOp>(op);
 
-  llvm::SmallVector<mlir::Operation *> opsToTransform;
+  llvm::SmallVector<aiir::Operation *> opsToTransform;
 
-  op->walk([&](mlir::Operation *op) {
-    if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
+  op->walk([&](aiir::Operation *op) {
+    if (aiir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
                   cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
@@ -1662,19 +1662,19 @@ void LoweringPreparePass::runOnOperation() {
       opsToTransform.push_back(op);
   });
 
-  for (mlir::Operation *o : opsToTransform)
+  for (aiir::Operation *o : opsToTransform)
     runOnOp(o);
 
   buildCXXGlobalInitFunc();
   buildGlobalCtorDtorList();
 }
 
-std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
+std::unique_ptr<Pass> aiir::createLoweringPreparePass() {
   return std::make_unique<LoweringPreparePass>();
 }
 
 std::unique_ptr<Pass>
-mlir::createLoweringPreparePass(clang::ASTContext *astCtx) {
+aiir::createLoweringPreparePass(clang::ASTContext *astCtx) {
   auto pass = std::make_unique<LoweringPreparePass>();
   pass->setASTContext(astCtx);
   return std::move(pass);

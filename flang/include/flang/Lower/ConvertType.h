@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Conversion of front-end TYPE, KIND, ATTRIBUTE (TKA) information to FIR/MLIR.
+/// Conversion of front-end TYPE, KIND, ATTRIBUTE (TKA) information to FIR/AIIR.
 /// This is meant to be the single point of truth (SPOT) for all type
 /// conversions when lowering to FIR.  This implements all lowering of parse
 /// tree TKA to the FIR type system. If one is converting front-end types and
@@ -23,13 +23,13 @@
 
 #include "flang/Evaluate/type.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "aiir/IR/BuiltinTypes.h"
 
-namespace mlir {
+namespace aiir {
 class Location;
-class MLIRContext;
+class AIIRContext;
 class Type;
-} // namespace mlir
+} // namespace aiir
 
 namespace Fortran {
 namespace common {
@@ -65,35 +65,35 @@ using SymbolRef = common::Reference<const semantics::Symbol>;
 using LenParameterTy = std::int64_t;
 
 /// Get a FIR type based on a category and kind.
-mlir::Type getFIRType(mlir::MLIRContext *ctxt, common::TypeCategory tc,
+aiir::Type getFIRType(aiir::AIIRContext *ctxt, common::TypeCategory tc,
                       int kind, llvm::ArrayRef<LenParameterTy>);
 
 /// Get a FIR type for a derived type
-mlir::Type
+aiir::Type
 translateDerivedTypeToFIRType(Fortran::lower::AbstractConverter &,
                               const Fortran::semantics::DerivedTypeSpec &);
 
-/// Translate a SomeExpr to an mlir::Type.
-mlir::Type translateSomeExprToFIRType(Fortran::lower::AbstractConverter &,
+/// Translate a SomeExpr to an aiir::Type.
+aiir::Type translateSomeExprToFIRType(Fortran::lower::AbstractConverter &,
                                       const SomeExpr &expr);
 
-/// Translate a Fortran::semantics::Symbol to an mlir::Type.
-mlir::Type translateSymbolToFIRType(Fortran::lower::AbstractConverter &,
+/// Translate a Fortran::semantics::Symbol to an aiir::Type.
+aiir::Type translateSymbolToFIRType(Fortran::lower::AbstractConverter &,
                                     const SymbolRef symbol);
 
-/// Translate a Fortran::lower::pft::Variable to an mlir::Type.
-mlir::Type translateVariableToFIRType(Fortran::lower::AbstractConverter &,
+/// Translate a Fortran::lower::pft::Variable to an aiir::Type.
+aiir::Type translateVariableToFIRType(Fortran::lower::AbstractConverter &,
                                       const pft::Variable &variable);
 
-/// Translate a REAL of KIND to the mlir::Type.
-mlir::Type convertReal(mlir::MLIRContext *ctxt, int KIND);
+/// Translate a REAL of KIND to the aiir::Type.
+aiir::Type convertReal(aiir::AIIRContext *ctxt, int KIND);
 
 bool isDerivedTypeWithLenParameters(const semantics::Symbol &);
 
 template <typename T>
 class TypeBuilder {
 public:
-  static mlir::Type genType(Fortran::lower::AbstractConverter &,
+  static aiir::Type genType(Fortran::lower::AbstractConverter &,
                             const Fortran::evaluate::FunctionRef<T> &);
 };
 using namespace evaluate;

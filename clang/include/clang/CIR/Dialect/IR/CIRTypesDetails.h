@@ -13,8 +13,8 @@
 #ifndef CIR_DIALECT_IR_CIRTYPESDETAILS_H
 #define CIR_DIALECT_IR_CIRTYPESDETAILS_H
 
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Support/LogicalResult.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/Support/LogicalResult.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/ADT/Hashing.h"
 
@@ -26,30 +26,30 @@ namespace detail {
 //===----------------------------------------------------------------------===//
 
 /// Type storage for CIR record types.
-struct RecordTypeStorage : public mlir::TypeStorage {
+struct RecordTypeStorage : public aiir::TypeStorage {
   struct KeyTy {
-    llvm::ArrayRef<mlir::Type> members;
-    mlir::StringAttr name;
+    llvm::ArrayRef<aiir::Type> members;
+    aiir::StringAttr name;
     bool incomplete;
     bool packed;
     bool padded;
     RecordType::RecordKind kind;
 
-    KeyTy(llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
+    KeyTy(llvm::ArrayRef<aiir::Type> members, aiir::StringAttr name,
           bool incomplete, bool packed, bool padded,
           RecordType::RecordKind kind)
         : members(members), name(name), incomplete(incomplete), packed(packed),
           padded(padded), kind(kind) {}
   };
 
-  llvm::ArrayRef<mlir::Type> members;
-  mlir::StringAttr name;
+  llvm::ArrayRef<aiir::Type> members;
+  aiir::StringAttr name;
   bool incomplete;
   bool packed;
   bool padded;
   RecordType::RecordKind kind;
 
-  RecordTypeStorage(llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
+  RecordTypeStorage(llvm::ArrayRef<aiir::Type> members, aiir::StringAttr name,
                     bool incomplete, bool packed, bool padded,
                     RecordType::RecordKind kind)
       : members(members), name(name), incomplete(incomplete), packed(packed),
@@ -76,7 +76,7 @@ struct RecordTypeStorage : public mlir::TypeStorage {
                               key.padded, key.kind);
   }
 
-  static RecordTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+  static RecordTypeStorage *construct(aiir::TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
     return new (allocator.allocate<RecordTypeStorage>())
         RecordTypeStorage(allocator.copyInto(key.members), key.name,
@@ -89,8 +89,8 @@ struct RecordTypeStorage : public mlir::TypeStorage {
   /// mutations. Anonymous records are always complete and cannot be mutated.
   /// This method does not fail if a mutation of a complete record does not
   /// change the record.
-  llvm::LogicalResult mutate(mlir::TypeStorageAllocator &allocator,
-                             llvm::ArrayRef<mlir::Type> members, bool packed,
+  llvm::LogicalResult mutate(aiir::TypeStorageAllocator &allocator,
+                             llvm::ArrayRef<aiir::Type> members, bool packed,
                              bool padded) {
     // Anonymous records cannot mutate.
     if (!name)
@@ -98,7 +98,7 @@ struct RecordTypeStorage : public mlir::TypeStorage {
 
     // Mutation of complete records are allowed if they change nothing.
     if (!incomplete)
-      return mlir::success((this->members == members) &&
+      return aiir::success((this->members == members) &&
                            (this->packed == packed) &&
                            (this->padded == padded));
 

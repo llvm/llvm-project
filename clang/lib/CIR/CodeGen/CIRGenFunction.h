@@ -42,11 +42,11 @@ namespace {
 class ScalarExprEmitter;
 } // namespace
 
-namespace mlir {
+namespace aiir {
 namespace acc {
 class LoopOp;
 } // namespace acc
-} // namespace mlir
+} // namespace aiir
 
 namespace clang::CIRGen {
 
@@ -71,7 +71,7 @@ public:
   unsigned nextCleanupDestIndex = 1;
 
   /// The compiler-generated variable that holds the return value.
-  std::optional<mlir::Value> fnRetAlloca;
+  std::optional<aiir::Value> fnRetAlloca;
 
   // Holds coroutine data if the current function is a coroutine. We use a
   // wrapper to manage its lifetime, so that we don't have to define CGCoroData
@@ -96,7 +96,7 @@ public:
 
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
-  llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
+  llvm::DenseMap<const VarDecl *, aiir::Value> nrvoFlags;
 
   llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
       lambdaCaptureFields;
@@ -105,14 +105,14 @@ public:
   /// CXXThisDecl - When generating code for a C++ member function,
   /// this will hold the implicit 'this' declaration.
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
-  mlir::Value cxxabiThisValue = nullptr;
-  mlir::Value cxxThisValue = nullptr;
+  aiir::Value cxxabiThisValue = nullptr;
+  aiir::Value cxxThisValue = nullptr;
   clang::CharUnits cxxThisAlignment;
 
   /// When generating code for a constructor or destructor, this will hold the
   /// implicit argument (e.g. VTT).
   ImplicitParamDecl *cxxStructorImplicitParamDecl{};
-  mlir::Value cxxStructorImplicitParamValue{};
+  aiir::Value cxxStructorImplicitParamValue{};
 
   /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
   /// expression.
@@ -127,7 +127,7 @@ public:
   /// The current function or global initializer that is generated code for.
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
   /// global initializers.
-  mlir::Operation *curFn = nullptr;
+  aiir::Operation *curFn = nullptr;
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
@@ -138,7 +138,7 @@ public:
   DeclMapTy localDeclMap;
 
   /// The type of the condition for the emitting switch statement.
-  llvm::SmallVector<mlir::Type, 2> condTypeStack;
+  llvm::SmallVector<aiir::Type, 2> condTypeStack;
 
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
@@ -147,9 +147,9 @@ public:
   CIRGenModule &getCIRGenModule() { return cgm; }
   const CIRGenModule &getCIRGenModule() const { return cgm; }
 
-  mlir::Block *getCurFunctionEntryBlock() {
+  aiir::Block *getCurFunctionEntryBlock() {
     // We currently assume this isn't called for a global initializer.
-    auto fn = mlir::cast<cir::FuncOp>(curFn);
+    auto fn = aiir::cast<cir::FuncOp>(curFn);
     return &fn.getRegion().front();
   }
 
@@ -176,7 +176,7 @@ public:
   /// added to the mapping. When the processing of a function is terminated,
   /// the scope is destroyed and the mappings created in this scope are
   /// dropped.
-  using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
+  using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, aiir::Value>;
   SymTableTy symbolTable;
 
   /// Whether a cir.stacksave operation has been added. Used to avoid
@@ -191,23 +191,23 @@ public:
   /// should emit cleanups.
   bool curFuncIsThunk = false;
 
-  mlir::Type convertTypeForMem(QualType t);
+  aiir::Type convertTypeForMem(QualType t);
 
-  mlir::Type convertType(clang::QualType t);
-  mlir::Type convertType(const TypeDecl *t) {
+  aiir::Type convertType(clang::QualType t);
+  aiir::Type convertType(const TypeDecl *t) {
     return convertType(getContext().getTypeDeclType(t));
   }
 
-  /// Get integer from a mlir::Value that is an int constant or a constant op.
-  static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
+  /// Get integer from a aiir::Value that is an int constant or a constant op.
+  static int64_t getSExtIntValueFromConstOp(aiir::Value val) {
     auto constOp = val.getDefiningOp<cir::ConstantOp>();
     assert(constOp && "getSExtIntValueFromConstOp call with non ConstantOp");
     return constOp.getIntValue().getSExtValue();
   }
 
-  /// Get zero-extended integer from a mlir::Value that is an int constant or a
+  /// Get zero-extended integer from a aiir::Value that is an int constant or a
   /// constant op.
-  static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
+  static int64_t getZExtIntValueFromConstOp(aiir::Value val) {
     auto constOp = val.getDefiningOp<cir::ConstantOp>();
     assert(constOp && "getZExtIntValueFromConstOp call with non ConstantOp");
     return constOp.getIntValue().getZExtValue();
@@ -231,7 +231,7 @@ public:
   CIRGenTypes &getTypes() const { return cgm.getTypes(); }
 
   const TargetInfo &getTarget() const { return cgm.getTarget(); }
-  mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
+  aiir::AIIRContext &getAIIRContext() { return cgm.getAIIRContext(); }
 
   const TargetCIRGenInfo &getTargetHooks() const {
     return cgm.getTargetCIRGenInfo();
@@ -251,7 +251,7 @@ public:
   // multiple VLA types can share the same size expression.
   // FIXME: Maybe this could be a stack of maps that is pushed/popped as we
   // enter/leave scopes.
-  llvm::DenseMap<const Expr *, mlir::Value> vlaSizeMap;
+  llvm::DenseMap<const Expr *, aiir::Value> vlaSizeMap;
 
 public:
   /// A non-RAII class containing all the information about a bound
@@ -341,12 +341,12 @@ public:
     OpaqueValueMapping(CIRGenFunction &cgf,
                        const AbstractConditionalOperator *op)
         : cgf(cgf) {
-      if (mlir::isa<ConditionalOperator>(op))
+      if (aiir::isa<ConditionalOperator>(op))
         // Leave Data empty.
         return;
 
       const BinaryConditionalOperator *e =
-          mlir::cast<BinaryConditionalOperator>(op);
+          aiir::cast<BinaryConditionalOperator>(op);
       data = OpaqueValueMappingData::bind(cgf, e->getOpaqueValue(),
                                           e->getCommon());
     }
@@ -386,14 +386,14 @@ public:
 private:
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  void declare(mlir::Value addrVal, const clang::Decl *var, clang::QualType ty,
-               mlir::Location loc, clang::CharUnits alignment,
+  void declare(aiir::Value addrVal, const clang::Decl *var, clang::QualType ty,
+               aiir::Location loc, clang::CharUnits alignment,
                bool isParam = false);
 
 public:
-  mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
+  aiir::Value createDummyValue(aiir::Location loc, clang::QualType qt);
 
-  void emitNullInitialization(mlir::Location loc, Address destPtr, QualType ty);
+  void emitNullInitialization(aiir::Location loc, Address destPtr, QualType ty);
 
 private:
   // Track current variable initialization (if there's one)
@@ -418,13 +418,13 @@ private:
 public:
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
-  std::optional<mlir::Location> currSrcLoc;
+  std::optional<aiir::Location> currSrcLoc;
   class SourceLocRAIIObject {
     CIRGenFunction &cgf;
-    std::optional<mlir::Location> oldLoc;
+    std::optional<aiir::Location> oldLoc;
 
   public:
-    SourceLocRAIIObject(CIRGenFunction &cgf, mlir::Location value) : cgf(cgf) {
+    SourceLocRAIIObject(CIRGenFunction &cgf, aiir::Location value) : cgf(cgf) {
       if (cgf.currSrcLoc)
         oldLoc = cgf.currSrcLoc;
       cgf.currSrcLoc = value;
@@ -437,7 +437,7 @@ public:
   };
 
   using SymTableScopeTy =
-      llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
+      llvm::ScopedHashTableScope<const clang::Decl *, aiir::Value>;
 
   /// Hold counters for incrementally naming temporaries
   unsigned counterRefTmp = 0;
@@ -445,10 +445,10 @@ public:
   std::string getCounterRefTmpAsString();
   std::string getCounterAggTmpAsString();
 
-  /// Helpers to convert Clang's SourceLocation to a MLIR Location.
-  mlir::Location getLoc(clang::SourceLocation srcLoc);
-  mlir::Location getLoc(clang::SourceRange srcLoc);
-  mlir::Location getLoc(mlir::Location lhs, mlir::Location rhs);
+  /// Helpers to convert Clang's SourceLocation to a AIIR Location.
+  aiir::Location getLoc(clang::SourceLocation srcLoc);
+  aiir::Location getLoc(clang::SourceRange srcLoc);
+  aiir::Location getLoc(aiir::Location lhs, aiir::Location rhs);
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
@@ -504,17 +504,17 @@ public:
   };
 
   struct VlaSizePair {
-    mlir::Value numElts;
+    aiir::Value numElts;
     QualType type;
 
-    VlaSizePair(mlir::Value num, QualType ty) : numElts(num), type(ty) {}
+    VlaSizePair(aiir::Value num, QualType ty) : numElts(num), type(ty) {}
   };
 
   /// Return the number of elements for a single dimension
   /// for the given array type.
   VlaSizePair getVLAElements1D(const VariableArrayType *vla);
 
-  /// Returns an MLIR::Value+QualType pair that corresponds to the size,
+  /// Returns an AIIR::Value+QualType pair that corresponds to the size,
   /// in non-variably-sized elements, of a variable length array type,
   /// plus that largest non-variably-sized element type.  Assumes that
   /// the type has already been emitted with emitVariablyModifiedType.
@@ -523,7 +523,7 @@ public:
 
   Address getAsNaturalAddressOf(Address addr, QualType pointeeTy);
 
-  mlir::Value getAsNaturalPointerTo(Address addr, QualType pointeeType) {
+  aiir::Value getAsNaturalPointerTo(Address addr, QualType pointeeType) {
     return getAsNaturalAddressOf(addr, pointeeType).getBasePointer();
   }
 
@@ -547,20 +547,20 @@ public:
   /// that we can just remove the code.
   bool containsLabel(const clang::Stmt *s, bool ignoreCaseStmts = false);
 
-  Address emitExtVectorElementLValue(LValue lv, mlir::Location loc);
+  Address emitExtVectorElementLValue(LValue lv, aiir::Location loc);
 
   class ConstantEmission {
-    // Cannot use mlir::TypedAttr directly here because of bit availability.
-    llvm::PointerIntPair<mlir::Attribute, 1, bool> valueAndIsReference;
-    ConstantEmission(mlir::TypedAttr c, bool isReference)
+    // Cannot use aiir::TypedAttr directly here because of bit availability.
+    llvm::PointerIntPair<aiir::Attribute, 1, bool> valueAndIsReference;
+    ConstantEmission(aiir::TypedAttr c, bool isReference)
         : valueAndIsReference(c, isReference) {}
 
   public:
     ConstantEmission() {}
-    static ConstantEmission forReference(mlir::TypedAttr c) {
+    static ConstantEmission forReference(aiir::TypedAttr c) {
       return ConstantEmission(c, true);
     }
-    static ConstantEmission forValue(mlir::TypedAttr c) {
+    static ConstantEmission forValue(aiir::TypedAttr c) {
       return ConstantEmission(c, false);
     }
 
@@ -576,9 +576,9 @@ public:
       return {};
     }
 
-    mlir::TypedAttr getValue() const {
+    aiir::TypedAttr getValue() const {
       assert(!isReference());
-      return mlir::cast<mlir::TypedAttr>(valueAndIsReference.getPointer());
+      return aiir::cast<aiir::TypedAttr>(valueAndIsReference.getPointer());
     }
   };
 
@@ -605,7 +605,7 @@ public:
     /// have the same sort of alloca initialization.
     bool emittedAsOffload = false;
 
-    mlir::Value nrvoFlag{};
+    aiir::Value nrvoFlag{};
 
     struct Invalid {};
     AutoVarEmission(Invalid) : variable(nullptr), addr(Address::invalid()) {}
@@ -645,14 +645,14 @@ public:
   /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
   /// is emitted at the end of the function, once all block destinations have
   /// been resolved.
-  mlir::Block *indirectGotoBlock = nullptr;
+  aiir::Block *indirectGotoBlock = nullptr;
 
   void resolveBlockAddresses();
   void finishIndirectBranch();
 
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
-  mlir::Value evaluateExprAsBool(const clang::Expr *e);
+  aiir::Value evaluateExprAsBool(const clang::Expr *e);
 
   cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
                                               cir::GlobalOp gv,
@@ -760,7 +760,7 @@ public:
                          const clang::CXXRecordDecl *vtableClass,
                          VisitedVirtualBasesSetTy &vbases, VPtrsVector &vptrs);
   /// Return the Value of the vtable pointer member pointed to by thisAddr.
-  mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
+  aiir::Value getVTablePtr(aiir::Location loc, Address thisAddr,
                            const clang::CXXRecordDecl *vtableClass);
 
   /// Returns whether we should perform a type checked load when loading a
@@ -810,7 +810,7 @@ public:
 
   public:
     CIRGenFunction &cgf;
-    mlir::Value oldCXXThisValue;
+    aiir::Value oldCXXThisValue;
     clang::CharUnits oldCXXThisAlignment;
     SourceLocExprScopeGuard sourceLocScope;
   };
@@ -820,14 +820,14 @@ public:
         : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
   };
 
-  LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
-  LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
+  LValue makeNaturalAlignPointeeAddrLValue(aiir::Value v, clang::QualType t);
+  LValue makeNaturalAlignAddrLValue(aiir::Value val, QualType ty);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
   /// been signed, and the returned Address will have the pointer authentication
   /// information needed to authenticate the signed pointer.
-  Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
+  Address makeNaturalAddressForPointer(aiir::Value ptr, QualType t,
                                        CharUnits alignment,
                                        bool forPointeeType = false,
                                        LValueBaseInfo *baseInfo = nullptr) {
@@ -842,7 +842,7 @@ public:
       bool nullCheckValue, SourceLocation loc);
 
   Address getAddressOfDerivedClass(
-      mlir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
+      aiir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
       llvm::iterator_range<CastExpr::path_const_iterator> path,
       bool nullCheckValue);
 
@@ -850,7 +850,7 @@ public:
   /// constructor/destructor with virtual bases.
   /// FIXME: VTTs are Itanium ABI-specific, so the definition should move
   /// to ItaniumCXXABI.cpp together with all the references to VTT.
-  mlir::Value getVTTParameter(GlobalDecl gd, bool forVirtualBase,
+  aiir::Value getVTTParameter(GlobalDecl gd, bool forVirtualBase,
                               bool delegating);
 
   LValue makeAddrLValue(Address addr, QualType ty,
@@ -862,9 +862,9 @@ public:
     return LValue::makeAddr(addr, ty, baseInfo);
   }
 
-  void initializeVTablePointers(mlir::Location loc,
+  void initializeVTablePointers(aiir::Location loc,
                                 const clang::CXXRecordDecl *rd);
-  void initializeVTablePointer(mlir::Location loc, const VPtr &vptr);
+  void initializeVTablePointer(aiir::Location loc, const VPtr &vptr);
 
   AggValueSlot::Overlap_t getOverlapForFieldInit(const FieldDecl *fd);
 
@@ -877,7 +877,7 @@ public:
   }
 
   Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
-                                   mlir::Type fieldType, unsigned index);
+                                   aiir::Type fieldType, unsigned index);
 
   /// Given an opaque value expression, return its LValue mapping if it exists,
   /// otherwise create one.
@@ -889,8 +889,8 @@ public:
 
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
-  /// FIXME(cir): this should return a mlir::Value!
-  mlir::Value loadCXXThis() {
+  /// FIXME(cir): this should return a aiir::Value!
+  aiir::Value loadCXXThis() {
     assert(cxxThisValue && "no 'this' value for this function");
     return cxxThisValue;
   }
@@ -899,13 +899,13 @@ public:
   /// Load the VTT parameter to base constructors/destructors have virtual
   /// bases. FIXME: Every place that calls LoadCXXVTT is something that needs to
   /// be abstracted properly.
-  mlir::Value loadCXXVTT() {
+  aiir::Value loadCXXVTT() {
     assert(cxxStructorImplicitParamValue && "no VTT value for this function");
     return cxxStructorImplicitParamValue;
   }
 
   /// Convert the given pointer to a complete class to the given direct base.
-  Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
+  Address getAddressOfDirectBaseInCompleteClass(aiir::Location loc,
                                                 Address value,
                                                 const CXXRecordDecl *derived,
                                                 const CXXRecordDecl *base,
@@ -926,7 +926,7 @@ public:
                                                 bool isVirtual);
 
   /// Get an appropriate 'undef' rvalue for the given type.
-  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
+  /// TODO: What's the equivalent for AIIR? Currently we're only using this for
   /// void types so it just returns RValue::get(nullptr) but it'll need
   /// addressed later.
   RValue getUndefRValue(clang::QualType ty);
@@ -939,7 +939,7 @@ public:
 
   /// Emit the function prologue: declare function arguments in the symbol
   /// table.
-  void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
+  void emitFunctionProlog(const FunctionArgList &args, aiir::Block *entryBB,
                           const FunctionDecl *fd, SourceLocation bodyBeginLoc);
 
   /// Emit code for the start of a function.
@@ -958,7 +958,7 @@ public:
   }
 
   void addCatchHandlerAttr(const CXXCatchStmt *catchStmt,
-                           SmallVector<mlir::Attribute> &handlerAttrs);
+                           SmallVector<aiir::Attribute> &handlerAttrs);
 
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
@@ -969,7 +969,7 @@ public:
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
   void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
-                        ArrayRef<mlir::Value *> valuesToReload = {});
+                        ArrayRef<aiir::Value *> valuesToReload = {});
   void popCleanupBlock();
 
   /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
@@ -980,7 +980,7 @@ public:
   ///   all paths of execution between the current IP and the
   ///   the point at which the cleanup comes into scope.
   void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
-                              mlir::Operation *dominatingIP);
+                              aiir::Operation *dominatingIP);
 
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
@@ -1030,7 +1030,7 @@ public:
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
-    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
+    void forceCleanup(ArrayRef<aiir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
       cgf.popCleanupBlocks(cleanupStackDepth, valuesToReload);
@@ -1056,12 +1056,12 @@ public:
   private:
     // Block containing cleanup code for things initialized in this
     // lexical context (scope).
-    mlir::Block *cleanupBlock = nullptr;
+    aiir::Block *cleanupBlock = nullptr;
 
     // Points to the scope entry block. This is useful, for instance, for
     // helping to insert allocas before finalizing any recursive CodeGen from
     // switches.
-    mlir::Block *entryBlock;
+    aiir::Block *entryBlock;
 
     LexicalScope *parentScope = nullptr;
 
@@ -1086,15 +1086,15 @@ public:
     Kind scopeKind = Kind::Regular;
 
     // The scope return value.
-    mlir::Value retVal = nullptr;
+    aiir::Value retVal = nullptr;
 
-    mlir::Location beginLoc;
-    mlir::Location endLoc;
+    aiir::Location beginLoc;
+    aiir::Location endLoc;
 
   public:
     unsigned depth = 0;
 
-    LexicalScope(CIRGenFunction &cgf, mlir::Location loc, mlir::Block *eb)
+    LexicalScope(CIRGenFunction &cgf, aiir::Location loc, aiir::Block *eb)
         : RunCleanupsScope(cgf), entryBlock(eb), parentScope(cgf.curLexScope),
           beginLoc(loc), endLoc(loc) {
 
@@ -1103,14 +1103,14 @@ public:
       if (parentScope)
         ++depth;
 
-      if (const auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(loc)) {
+      if (const auto fusedLoc = aiir::dyn_cast<aiir::FusedLoc>(loc)) {
         assert(fusedLoc.getLocations().size() == 2 && "too many locations");
         beginLoc = fusedLoc.getLocations()[0];
         endLoc = fusedLoc.getLocations()[1];
       }
     }
 
-    void setRetVal(mlir::Value v) { retVal = v; }
+    void setRetVal(aiir::Value v) { retVal = v; }
 
     void cleanup();
     void restore() { cgf.curLexScope = parentScope; }
@@ -1145,7 +1145,7 @@ public:
     }
 
     // Lazy create cleanup block or return what's available.
-    mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
+    aiir::Block *getOrCreateCleanupBlock(aiir::OpBuilder &builder) {
       if (cleanupBlock)
         return cleanupBlock;
       cleanupBlock = createCleanupBlock(builder);
@@ -1157,14 +1157,14 @@ public:
       return tryOp;
     }
 
-    mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
+    aiir::Block *getCleanupBlock(aiir::OpBuilder &builder) {
       return cleanupBlock;
     }
 
-    mlir::Block *createCleanupBlock(mlir::OpBuilder &builder) {
+    aiir::Block *createCleanupBlock(aiir::OpBuilder &builder) {
       // Create the cleanup block but dont hook it up around just yet.
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      mlir::Region *r = builder.getBlock() ? builder.getBlock()->getParent()
+      aiir::OpBuilder::InsertionGuard guard(builder);
+      aiir::Region *r = builder.getBlock() ? builder.getBlock()->getParent()
                                            : &cgf.curFn->getRegion(0);
       cleanupBlock = builder.createBlock(r);
       return cleanupBlock;
@@ -1179,68 +1179,68 @@ public:
     // have their own scopes but are distinct regions nonetheless.
 
     // TODO: This implementation should change once we have support for early
-    //       exits in MLIR structured control flow (llvm-project#161575)
-    llvm::SmallVector<mlir::Block *> retBlocks;
-    llvm::DenseMap<mlir::Block *, mlir::Location> retLocs;
+    //       exits in AIIR structured control flow (llvm-project#161575)
+    llvm::SmallVector<aiir::Block *> retBlocks;
+    llvm::DenseMap<aiir::Block *, aiir::Location> retLocs;
     llvm::DenseMap<cir::CaseOp, unsigned> retBlockInCaseIndex;
     std::optional<unsigned> normalRetBlockIndex;
 
     // There's usually only one ret block per scope, but this needs to be
     // get or create because of potential unreachable return statements, note
     // that for those, all source location maps to the first one found.
-    mlir::Block *createRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
+    aiir::Block *createRetBlock(CIRGenFunction &cgf, aiir::Location loc) {
       assert((isa_and_nonnull<cir::CaseOp>(
                   cgf.builder.getBlock()->getParentOp()) ||
               retBlocks.size() == 0) &&
              "only switches can hold more than one ret block");
 
       // Create the return block but don't hook it up just yet.
-      mlir::OpBuilder::InsertionGuard guard(cgf.builder);
+      aiir::OpBuilder::InsertionGuard guard(cgf.builder);
       auto *b = cgf.builder.createBlock(cgf.builder.getBlock()->getParent());
       retBlocks.push_back(b);
       updateRetLoc(b, loc);
       return b;
     }
 
-    cir::ReturnOp emitReturn(mlir::Location loc);
+    cir::ReturnOp emitReturn(aiir::Location loc);
     void emitImplicitReturn();
 
   public:
-    llvm::ArrayRef<mlir::Block *> getRetBlocks() { return retBlocks; }
-    mlir::Location getRetLoc(mlir::Block *b) { return retLocs.at(b); }
-    void updateRetLoc(mlir::Block *b, mlir::Location loc) {
+    llvm::ArrayRef<aiir::Block *> getRetBlocks() { return retBlocks; }
+    aiir::Location getRetLoc(aiir::Block *b) { return retLocs.at(b); }
+    void updateRetLoc(aiir::Block *b, aiir::Location loc) {
       retLocs.insert_or_assign(b, loc);
     }
 
-    mlir::Block *getOrCreateRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
+    aiir::Block *getOrCreateRetBlock(CIRGenFunction &cgf, aiir::Location loc) {
       // Check if we're inside a case region
-      if (auto caseOp = mlir::dyn_cast_if_present<cir::CaseOp>(
+      if (auto caseOp = aiir::dyn_cast_if_present<cir::CaseOp>(
               cgf.builder.getBlock()->getParentOp())) {
         auto iter = retBlockInCaseIndex.find(caseOp);
         if (iter != retBlockInCaseIndex.end()) {
           // Reuse existing return block
-          mlir::Block *ret = retBlocks[iter->second];
+          aiir::Block *ret = retBlocks[iter->second];
           updateRetLoc(ret, loc);
           return ret;
         }
         // Create new return block
-        mlir::Block *ret = createRetBlock(cgf, loc);
+        aiir::Block *ret = createRetBlock(cgf, loc);
         retBlockInCaseIndex[caseOp] = retBlocks.size() - 1;
         return ret;
       }
 
       if (normalRetBlockIndex) {
-        mlir::Block *ret = retBlocks[*normalRetBlockIndex];
+        aiir::Block *ret = retBlocks[*normalRetBlockIndex];
         updateRetLoc(ret, loc);
         return ret;
       }
 
-      mlir::Block *ret = createRetBlock(cgf, loc);
+      aiir::Block *ret = createRetBlock(cgf, loc);
       normalRetBlockIndex = retBlocks.size() - 1;
       return ret;
     }
 
-    mlir::Block *getEntryBlock() { return entryBlock; }
+    aiir::Block *getEntryBlock() { return entryBlock; }
   };
 
   LexicalScope *curLexScope = nullptr;
@@ -1274,32 +1274,32 @@ public:
   /// ----------------------
 public:
   bool getAArch64SVEProcessedOperands(unsigned builtinID, const CallExpr *expr,
-                                      SmallVectorImpl<mlir::Value> &ops,
+                                      SmallVectorImpl<aiir::Value> &ops,
                                       clang::SVETypeFlags typeFlags);
-  mlir::Value emitSVEPredicateCast(mlir::Value pred, unsigned minNumElts,
-                                   mlir::Location loc);
-  std::optional<mlir::Value>
+  aiir::Value emitSVEPredicateCast(aiir::Value pred, unsigned minNumElts,
+                                   aiir::Location loc);
+  std::optional<aiir::Value>
   emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                          ReturnValueSlot returnValue,
                          llvm::Triple::ArchType arch);
-  std::optional<mlir::Value> emitAArch64SMEBuiltinExpr(unsigned builtinID,
+  std::optional<aiir::Value> emitAArch64SMEBuiltinExpr(unsigned builtinID,
                                                        const CallExpr *expr);
-  std::optional<mlir::Value> emitAArch64SVEBuiltinExpr(unsigned builtinID,
+  std::optional<aiir::Value> emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                                        const CallExpr *expr);
 
-  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
+  aiir::Value emitAlignmentAssumption(aiir::Value ptrValue, QualType ty,
                                       SourceLocation loc,
                                       SourceLocation assumptionLoc,
                                       int64_t alignment,
-                                      mlir::Value offsetValue = nullptr);
+                                      aiir::Value offsetValue = nullptr);
 
-  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, const Expr *expr,
+  aiir::Value emitAlignmentAssumption(aiir::Value ptrValue, const Expr *expr,
                                       SourceLocation assumptionLoc,
                                       int64_t alignment,
-                                      mlir::Value offsetValue = nullptr);
+                                      aiir::Value offsetValue = nullptr);
 
 private:
-  void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
+  void emitAndUpdateRetAlloca(clang::QualType type, aiir::Location loc,
                               clang::CharUnits alignment);
 
   CIRGenCallee emitDirectCallee(const GlobalDecl &gd);
@@ -1309,16 +1309,16 @@ public:
                                  llvm::StringRef fieldName,
                                  unsigned fieldIndex);
 
-  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
-                         mlir::Location loc, clang::CharUnits alignment,
+  aiir::Value emitAlloca(llvm::StringRef name, aiir::Type ty,
+                         aiir::Location loc, clang::CharUnits alignment,
                          bool insertIntoFnEntryBlock,
-                         mlir::Value arraySize = nullptr);
-  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
-                         mlir::Location loc, clang::CharUnits alignment,
-                         mlir::OpBuilder::InsertPoint ip,
-                         mlir::Value arraySize = nullptr);
+                         aiir::Value arraySize = nullptr);
+  aiir::Value emitAlloca(llvm::StringRef name, aiir::Type ty,
+                         aiir::Location loc, clang::CharUnits alignment,
+                         aiir::OpBuilder::InsertPoint ip,
+                         aiir::Value arraySize = nullptr);
 
-  void emitAggregateStore(mlir::Value value, Address dest);
+  void emitAggregateStore(aiir::Value value, Address dest);
 
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
@@ -1356,11 +1356,11 @@ public:
 
   void emitAnyExprToExn(const Expr *e, Address addr);
 
-  void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
+  void emitArrayDestroy(aiir::Value begin, aiir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
 
-  mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
+  aiir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
@@ -1369,14 +1369,14 @@ public:
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
-  std::pair<mlir::Value, mlir::Type>
+  std::pair<aiir::Value, aiir::Type>
   emitAsmInputLValue(const TargetInfo::ConstraintInfo &info, LValue inputValue,
                      QualType inputType, std::string &constraintString,
                      SourceLocation loc);
-  std::pair<mlir::Value, mlir::Type>
+  std::pair<aiir::Value, aiir::Type>
   emitAsmInput(const TargetInfo::ConstraintInfo &info, const Expr *inputExpr,
                std::string &constraintString);
-  mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
+  aiir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
@@ -1387,10 +1387,10 @@ public:
       const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
 
-  mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
+  aiir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
-                                    mlir::OpBuilder::InsertPoint ip = {});
+                                    aiir::OpBuilder::InsertPoint ip = {});
 
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
@@ -1409,12 +1409,12 @@ public:
 
   void maybeEmitDeferredVarDeclInit(const VarDecl *vd);
 
-  void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
+  void emitBaseInitializer(aiir::Location loc, const CXXRecordDecl *classDecl,
                            CXXCtorInitializer *baseInit);
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
-  mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+  aiir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
   RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
                          const clang::CallExpr *e, ReturnValueSlot returnValue);
@@ -1431,24 +1431,24 @@ public:
   /// \param emittedE Optional pre-emitted pointer value. If non-null, we'll
   ///   call `cir.objsize` on this value rather than emitting e.
   /// \param isDynamic If true, allows runtime evaluation via dynamic mode
-  mlir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
-                                    cir::IntType resType, mlir::Value emittedE,
+  aiir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
+                                    cir::IntType resType, aiir::Value emittedE,
                                     bool isDynamic);
 
-  mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
+  aiir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
                                               unsigned type,
                                               cir::IntType resType,
-                                              mlir::Value emittedE,
+                                              aiir::Value emittedE,
                                               bool isDynamic);
 
-  int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
+  int64_t getAccessedFieldNo(unsigned idx, aiir::ArrayAttr elts);
 
   void instantiateIndirectGotoBlock();
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  aiir::Location loc);
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args,
@@ -1477,26 +1477,26 @@ public:
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
-  mlir::LogicalResult emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
-                                             mlir::ArrayAttr value,
+  aiir::LogicalResult emitCaseDefaultCascade(const T *stmt, aiir::Type condType,
+                                             aiir::ArrayAttr value,
                                              cir::CaseOpKind kind,
                                              bool buildingTopLevelCase);
 
   LValue emitCXXTypeidLValue(const CXXTypeidExpr *e);
 
-  mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
-                                   mlir::Type condType,
+  aiir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
+                                   aiir::Type condType,
                                    bool buildingTopLevelCase);
 
   LValue emitCastLValue(const CastExpr *e);
 
   /// Emits an argument for a call to a `__builtin_assume`. If the builtin
   /// sanitizer is enabled, a runtime check is also emitted.
-  mlir::Value emitCheckedArgForAssume(const Expr *e);
+  aiir::Value emitCheckedArgForAssume(const Expr *e);
 
   /// Emit a conversion from the specified complex type to the specified
   /// destination type, where the destination type is an LLVM scalar type.
-  mlir::Value emitComplexToScalarConversion(mlir::Value src, QualType srcTy,
+  aiir::Value emitComplexToScalarConversion(aiir::Value src, QualType srcTy,
                                             QualType dstTy, SourceLocation loc);
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
@@ -1504,21 +1504,21 @@ public:
 
   void emitConstructorBody(FunctionArgList &args);
 
-  mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
-  cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
-  cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
-  cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
-                                       mlir::Value coroframeAddr);
+  aiir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
+  cir::CallOp emitCoroEndBuiltinCall(aiir::Location loc, aiir::Value nullPtr);
+  cir::CallOp emitCoroIDBuiltinCall(aiir::Location loc, aiir::Value nullPtr);
+  cir::CallOp emitCoroAllocBuiltinCall(aiir::Location loc);
+  cir::CallOp emitCoroBeginBuiltinCall(aiir::Location loc,
+                                       aiir::Value coroframeAddr);
   RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
   void emitDestructorBody(FunctionArgList &args);
 
-  mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+  aiir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 
-  mlir::LogicalResult emitCoreturnStmt(const CoreturnStmt &s);
+  aiir::LogicalResult emitCoreturnStmt(const CoreturnStmt &s);
 
   void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
                             AggValueSlot dest);
@@ -1529,7 +1529,7 @@ public:
                                   bool newPointerIsChecked,
                                   bool zeroInitialize = false);
   void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
-                                  mlir::Value numElements, Address arrayBase,
+                                  aiir::Value numElements, Address arrayBase,
                                   const CXXConstructExpr *e,
                                   bool newPointerIsChecked,
                                   bool zeroInitialize);
@@ -1550,24 +1550,24 @@ public:
                              Address thisAddr, QualType thisTy);
 
   RValue emitCXXDestructorCall(GlobalDecl dtor, const CIRGenCallee &callee,
-                               mlir::Value thisVal, QualType thisTy,
-                               mlir::Value implicitParam,
+                               aiir::Value thisVal, QualType thisTy,
+                               aiir::Value implicitParam,
                                QualType implicitParamTy, const CallExpr *e);
 
-  mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
+  aiir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
 
   RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
                                ReturnValueSlot returnValue);
 
   Address emitCXXMemberDataPointerAddress(
-      const Expr *e, Address base, mlir::Value memberPtr,
+      const Expr *e, Address base, aiir::Value memberPtr,
       const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo);
 
   RValue emitCXXMemberOrOperatorCall(
       const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
-      ReturnValueSlot returnValue, mlir::Value thisPtr,
-      mlir::Value implicitParam, clang::QualType implicitParamTy,
+      ReturnValueSlot returnValue, aiir::Value thisPtr,
+      aiir::Value implicitParam, clang::QualType implicitParamTy,
       const clang::CallExpr *ce, CallArgList *rtlArgs);
 
   RValue emitCXXMemberOrOperatorMemberCallExpr(
@@ -1579,12 +1579,12 @@ public:
   RValue emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
                                       ReturnValueSlot returnValue);
 
-  mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
+  aiir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
   void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
-                               mlir::Type elementTy, Address beginPtr,
-                               mlir::Value numElements,
-                               mlir::Value allocSizeWithoutCookie);
+                               aiir::Type elementTy, Address beginPtr,
+                               aiir::Value numElements,
+                               aiir::Value allocSizeWithoutCookie);
 
   /// Create a check for a function parameter that may potentially be
   /// declared as non-null.
@@ -1609,7 +1609,7 @@ public:
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
-  mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
+  aiir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
@@ -1621,13 +1621,13 @@ public:
   void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
                                         const FunctionArgList &args);
 
-  void emitDeleteCall(const FunctionDecl *deleteFD, mlir::Value ptr,
+  void emitDeleteCall(const FunctionDecl *deleteFD, aiir::Value ptr,
                       QualType deleteTy);
 
-  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
+  aiir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
-  mlir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
-  mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
+  aiir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
+  aiir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
@@ -1642,11 +1642,11 @@ public:
   void emitExprAsInit(const clang::Expr *init, const clang::ValueDecl *d,
                       LValue lvalue, bool capturedByInit = false);
 
-  mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
+  aiir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
-  mlir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
+  aiir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
 
-  mlir::LogicalResult emitIndirectGotoStmt(const IndirectGotoStmt &s);
+  aiir::LogicalResult emitIndirectGotoStmt(const IndirectGotoStmt &s);
 
   void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
 
@@ -1655,38 +1655,38 @@ public:
 
   LValue emitPredefinedLValue(const PredefinedExpr *e);
 
-  mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
+  aiir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
 
-  mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
+  aiir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
-  mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
+  aiir::Value emitPromotedValue(aiir::Value result, QualType promotionType);
 
-  void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
+  void emitReturnOfRValue(aiir::Location loc, RValue rv, QualType ty);
 
-  mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
-                              llvm::ArrayRef<mlir::Value> args = {},
-                              mlir::NamedAttrList attrs = {});
+  aiir::Value emitRuntimeCall(aiir::Location loc, cir::FuncOp callee,
+                              llvm::ArrayRef<aiir::Value> args = {},
+                              aiir::NamedAttrList attrs = {});
 
-  void emitInvariantStart(CharUnits size, mlir::Value addr, mlir::Location loc);
+  void emitInvariantStart(CharUnits size, aiir::Value addr, aiir::Location loc);
 
   /// Emit the computation of the specified expression of scalar type.
-  mlir::Value emitScalarExpr(const clang::Expr *e,
+  aiir::Value emitScalarExpr(const clang::Expr *e,
                              bool ignoreResultAssign = false);
 
-  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv);
+  aiir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv);
 
   /// Build a debug stoppoint if we are emitting debug info.
   void emitStopPoint(const Stmt *s);
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
-  mlir::LogicalResult emitStmt(const clang::Stmt *s, bool useCurrentScope,
+  aiir::LogicalResult emitStmt(const clang::Stmt *s, bool useCurrentScope,
                                llvm::ArrayRef<const Attr *> attrs = {});
 
-  mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
+  aiir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
 
-  mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+  aiir::LogicalResult emitForStmt(const clang::ForStmt &s);
 
   void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
                                   CallArgList &callArgs);
@@ -1700,32 +1700,32 @@ public:
                          bool ignoreResult = false);
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
-  mlir::Value emitComplexExpr(const Expr *e);
+  aiir::Value emitComplexExpr(const Expr *e);
 
   void emitComplexExprIntoLValue(const Expr *e, LValue dest, bool isInit);
 
-  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv);
+  aiir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv);
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
   LValue emitComplexCompoundAssignmentLValue(const CompoundAssignOperator *e);
   LValue emitScalarCompoundAssignWithComplex(const CompoundAssignOperator *e,
-                                             mlir::Value &result);
+                                             aiir::Value &result);
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitCompoundStmt(const clang::CompoundStmt &s, Address *lastValue = nullptr,
                    AggValueSlot slot = AggValueSlot::ignored());
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitCompoundStmtWithoutScope(const clang::CompoundStmt &s,
                                Address *lastValue = nullptr,
                                AggValueSlot slot = AggValueSlot::ignored());
 
   void emitDecl(const clang::Decl &d, bool evaluateConditionDecl = false);
-  mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
+  aiir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
-  mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
-                                      mlir::Type condType,
+  aiir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
+                                      aiir::Type condType,
                                       bool buildingTopLevelCase);
 
   void emitDelegateCXXConstructorCall(const clang::CXXConstructorDecl *ctor,
@@ -1745,26 +1745,26 @@ public:
   /// In the future, we may apply code generation simplifications here,
   /// similar to those used in classic LLVM  codegen
   /// See `EmitBranchOnBoolExpr` for inspiration.
-  mlir::LogicalResult emitIfOnBoolExpr(const clang::Expr *cond,
+  aiir::LogicalResult emitIfOnBoolExpr(const clang::Expr *cond,
                                        const clang::Stmt *thenS,
                                        const clang::Stmt *elseS);
   cir::IfOp emitIfOnBoolExpr(const clang::Expr *cond,
                              BuilderCallbackRef thenBuilder,
-                             mlir::Location thenLoc,
+                             aiir::Location thenLoc,
                              BuilderCallbackRef elseBuilder,
-                             std::optional<mlir::Location> elseLoc = {});
+                             std::optional<aiir::Location> elseLoc = {});
 
-  mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
+  aiir::Value emitOpOnBoolExpr(aiir::Location loc, const clang::Expr *cond);
 
   LValue emitPointerToDataMemberBinaryExpr(const BinaryOperator *e);
 
-  mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
-  mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
+  aiir::LogicalResult emitLabel(const clang::LabelDecl &d);
+  aiir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
   void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
 
-  mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
+  aiir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,
   /// ignoring the result.
@@ -1773,7 +1773,7 @@ public:
   RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
 
   /// Load a complex number from the specified l-value.
-  mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
+  aiir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
 
   RValue emitLoadOfExtVectorElementLValue(LValue lv);
 
@@ -1782,17 +1782,17 @@ public:
   /// returning the rvalue.
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
-  Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
+  Address emitLoadOfReference(LValue refLVal, aiir::Location loc,
                               LValueBaseInfo *pointeeBaseInfo);
-  LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
+  LValue emitLoadOfReferenceLValue(Address refAddr, aiir::Location loc,
                                    QualType refTy, AlignmentSource source);
 
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.  The l-value must be a simple
   /// l-value.
-  mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
-  mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
+  aiir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
+  aiir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
                                SourceLocation loc, LValueBaseInfo baseInfo);
 
   /// Emit code to compute a designator that specifies the location
@@ -1804,7 +1804,7 @@ public:
 
   LValue emitLValueForLambdaField(const FieldDecl *field);
   LValue emitLValueForLambdaField(const FieldDecl *field,
-                                  mlir::Value thisValue);
+                                  aiir::Value thisValue);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
@@ -1818,11 +1818,11 @@ public:
   LValue emitMemberExpr(const MemberExpr *e);
 
   /// Emit a musttail call for a thunk with a potentially different ABI.
-  void emitMustTailThunk(GlobalDecl gd, mlir::Value adjustedThisPtr,
+  void emitMustTailThunk(GlobalDecl gd, aiir::Value adjustedThisPtr,
                          cir::FuncOp callee);
 
   /// Emit a call to an AMDGPU builtin function.
-  std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
+  std::optional<aiir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
                                                    const CallExpr *expr);
 
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
@@ -1845,22 +1845,22 @@ public:
   /// Emits a reference binding to the passed in expression.
   RValue emitReferenceBindingToExpr(const Expr *e);
 
-  mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
+  aiir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
   RValue emitRotate(const CallExpr *e, bool isRotateLeft);
 
-  mlir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
+  aiir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
-  mlir::Value emitScalarConversion(mlir::Value src, clang::QualType srcType,
+  aiir::Value emitScalarConversion(aiir::Value src, clang::QualType srcType,
                                    clang::QualType dstType,
                                    clang::SourceLocation loc);
 
-  void emitScalarInit(const clang::Expr *init, mlir::Location loc,
+  void emitScalarInit(const clang::Expr *init, aiir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
 
-  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
+  aiir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
                                           const Expr *argExpr);
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
@@ -1870,30 +1870,30 @@ public:
   void emitCXXGuardedInit(const VarDecl &varDecl, cir::GlobalOp globalOp,
                           bool performInit);
 
-  void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
+  void emitStoreOfComplex(aiir::Location loc, aiir::Value v, LValue dest,
                           bool isInit);
 
-  void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
+  void emitStoreOfScalar(aiir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, LValueBaseInfo baseInfo,
                          bool isInit = false, bool isNontemporal = false);
-  void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
+  void emitStoreOfScalar(aiir::Value value, LValue lvalue, bool isInit);
 
   /// Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
   /// is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
-  mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
+  aiir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
   LValue emitStringLiteralLValue(const StringLiteral *e,
                                  llvm::StringRef name = ".str");
 
-  mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
-  mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
+  aiir::LogicalResult emitSwitchBody(const clang::Stmt *s);
+  aiir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
                                      bool buildingTopLevelCase);
-  mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
+  aiir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
-  std::optional<mlir::Value>
+  std::optional<aiir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
                         ReturnValueSlot &returnValue);
 
@@ -1901,11 +1901,11 @@ public:
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
-  mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+  aiir::Value emitToMemory(aiir::Value value, clang::QualType ty);
 
   /// EmitFromMemory - Change a scalar value from its memory
   /// representation to its value representation.
-  mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
+  aiir::Value emitFromMemory(aiir::Value value, clang::QualType ty);
 
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.
@@ -1915,11 +1915,11 @@ public:
   /// ensure these operations get emitted successfully, you need to create a new
   /// dummy block and set the insertion point there before continuing from the
   /// trap operation.
-  void emitTrap(mlir::Location loc, bool createNewBlock);
+  void emitTrap(aiir::Location loc, bool createNewBlock);
 
   LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
 
-  mlir::Value emitUnPromotedValue(mlir::Value result, QualType unPromotionType);
+  aiir::Value emitUnPromotedValue(aiir::Value result, QualType unPromotionType);
 
   /// Emit a reached-unreachable diagnostic if \p loc is valid and runtime
   /// checking is enabled. Otherwise, just emit an unreachable instruction.
@@ -1937,28 +1937,28 @@ public:
 
   void emitVariablyModifiedType(QualType ty);
 
-  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+  aiir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
-  std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
+  std::optional<aiir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
 
-  std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
+  std::optional<aiir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.
-  void emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+  void emitNullabilityCheck(LValue lhs, aiir::Value rhs,
                             clang::SourceLocation loc);
 
   /// An object to manage conditionally-evaluated expressions.
   class ConditionalEvaluation {
     CIRGenFunction &cgf;
-    mlir::OpBuilder::InsertPoint insertPt;
+    aiir::OpBuilder::InsertPoint insertPt;
 
   public:
     ConditionalEvaluation(CIRGenFunction &cgf)
         : cgf(cgf), insertPt(cgf.builder.saveInsertionPoint()) {}
-    ConditionalEvaluation(CIRGenFunction &cgf, mlir::OpBuilder::InsertPoint ip)
+    ConditionalEvaluation(CIRGenFunction &cgf, aiir::OpBuilder::InsertPoint ip)
         : cgf(cgf), insertPt(ip) {}
 
     void beginEvaluation() {
@@ -1976,27 +1976,27 @@ public:
     /// Returns the insertion point which will be executed prior to each
     /// evaluation of the conditional code. In LLVM OG, this method
     /// is called getStartingBlock.
-    mlir::OpBuilder::InsertPoint getInsertPoint() const { return insertPt; }
+    aiir::OpBuilder::InsertPoint getInsertPoint() const { return insertPt; }
   };
 
   struct ConditionalInfo {
     std::optional<LValue> lhs{}, rhs{};
-    mlir::Value result{};
+    aiir::Value result{};
   };
 
   // Return true if we're currently emitting one branch or the other of a
   // conditional expression.
   bool isInConditionalBranch() const { return outermostConditional != nullptr; }
 
-  void setBeforeOutermostConditional(mlir::Value value, Address addr) {
+  void setBeforeOutermostConditional(aiir::Value value, Address addr) {
     assert(isInConditionalBranch());
     {
-      mlir::OpBuilder::InsertionGuard guard(builder);
+      aiir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
       builder.createStore(
           value.getLoc(), value, addr, /*isVolatile=*/false,
-          mlir::IntegerAttr::get(
-              mlir::IntegerType::get(value.getContext(), 64),
+          aiir::IntegerAttr::get(
+              aiir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
     }
   }
@@ -2030,7 +2030,7 @@ public:
   ConditionalInfo emitConditionalBlocks(const AbstractConditionalOperator *e,
                                         const FuncTy &branchGenFunc);
 
-  mlir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
+  aiir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, aiir::Location loc,
                                     const clang::Stmt *thenS,
                                     const clang::Stmt *elseS);
 
@@ -2042,13 +2042,13 @@ public:
   ///
   /// \param vaList A reference to the \c va_list as emitted by either
   /// \c emitVAListRef or \c emitMSVAListRef.
-  void emitVAStart(mlir::Value vaList);
+  void emitVAStart(aiir::Value vaList);
 
   /// Emits the end of a CIR variable-argument operation (`cir.va_start`)
   ///
   /// \param vaList A reference to the \c va_list as emitted by either
   /// \c emitVAListRef or \c emitMSVAListRef.
-  void emitVAEnd(mlir::Value vaList);
+  void emitVAEnd(aiir::Value vaList);
 
   /// Generate code to get an argument from the passed in pointer
   /// and update it accordingly.
@@ -2059,44 +2059,44 @@ public:
   /// either \c emitVAListRef or \c emitMSVAListRef.
   ///
   /// \returns SSA value with the argument.
-  mlir::Value emitVAArg(VAArgExpr *ve);
+  aiir::Value emitVAArg(VAArgExpr *ve);
 
   /// ----------------------
   /// CIR build helpers
   /// -----------------
 public:
-  cir::AllocaOp createTempAlloca(mlir::Type ty, mlir::Location loc,
+  cir::AllocaOp createTempAlloca(aiir::Type ty, aiir::Location loc,
                                  const Twine &name = "tmp",
-                                 mlir::Value arraySize = nullptr,
+                                 aiir::Value arraySize = nullptr,
                                  bool insertIntoFnEntryBlock = false);
-  cir::AllocaOp createTempAlloca(mlir::Type ty, mlir::Location loc,
+  cir::AllocaOp createTempAlloca(aiir::Type ty, aiir::Location loc,
                                  const Twine &name = "tmp",
-                                 mlir::OpBuilder::InsertPoint ip = {},
-                                 mlir::Value arraySize = nullptr);
-  Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
+                                 aiir::OpBuilder::InsertPoint ip = {},
+                                 aiir::Value arraySize = nullptr);
+  Address createTempAlloca(aiir::Type ty, CharUnits align, aiir::Location loc,
                            const Twine &name = "tmp",
-                           mlir::Value arraySize = nullptr,
+                           aiir::Value arraySize = nullptr,
                            Address *alloca = nullptr,
-                           mlir::OpBuilder::InsertPoint ip = {});
-  Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
-                                      mlir::Location loc,
+                           aiir::OpBuilder::InsertPoint ip = {});
+  Address createTempAllocaWithoutCast(aiir::Type ty, CharUnits align,
+                                      aiir::Location loc,
                                       const Twine &name = "tmp",
-                                      mlir::Value arraySize = nullptr,
-                                      mlir::OpBuilder::InsertPoint ip = {});
-  Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
+                                      aiir::Value arraySize = nullptr,
+                                      aiir::OpBuilder::InsertPoint ip = {});
+  Address createDefaultAlignTempAlloca(aiir::Type ty, aiir::Location loc,
                                        const Twine &name);
 
   /// Create a temporary memory object of the given type, with
   /// appropriate alignmen and cast it to the default address space. Returns
   /// the original alloca instruction by \p Alloca if it is not nullptr.
-  Address createMemTemp(QualType t, mlir::Location loc,
+  Address createMemTemp(QualType t, aiir::Location loc,
                         const Twine &name = "tmp", Address *alloca = nullptr,
-                        mlir::OpBuilder::InsertPoint ip = {});
-  Address createMemTemp(QualType t, CharUnits align, mlir::Location loc,
+                        aiir::OpBuilder::InsertPoint ip = {});
+  Address createMemTemp(QualType t, CharUnits align, aiir::Location loc,
                         const Twine &name = "tmp", Address *alloca = nullptr,
-                        mlir::OpBuilder::InsertPoint ip = {});
+                        aiir::OpBuilder::InsertPoint ip = {});
 
-  mlir::Value performAddrSpaceCast(mlir::Value v, mlir::Type destTy) const {
+  aiir::Value performAddrSpaceCast(aiir::Value v, aiir::Type destTy) const {
     if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
       cgm.errorNYI("Global op addrspace cast");
     return builder.createAddrSpaceCast(v, destTy);
@@ -2106,126 +2106,126 @@ public:
   //                         OpenMP Emission
   //===--------------------------------------------------------------------===//
 public:
-  mlir::LogicalResult emitOMPScopeDirective(const OMPScopeDirective &s);
-  mlir::LogicalResult emitOMPErrorDirective(const OMPErrorDirective &s);
-  mlir::LogicalResult emitOMPParallelDirective(const OMPParallelDirective &s);
-  mlir::LogicalResult emitOMPTaskwaitDirective(const OMPTaskwaitDirective &s);
-  mlir::LogicalResult emitOMPTaskyieldDirective(const OMPTaskyieldDirective &s);
-  mlir::LogicalResult emitOMPBarrierDirective(const OMPBarrierDirective &s);
-  mlir::LogicalResult emitOMPMetaDirective(const OMPMetaDirective &s);
-  mlir::LogicalResult emitOMPCanonicalLoop(const OMPCanonicalLoop &s);
-  mlir::LogicalResult emitOMPSimdDirective(const OMPSimdDirective &s);
-  mlir::LogicalResult emitOMPTileDirective(const OMPTileDirective &s);
-  mlir::LogicalResult emitOMPUnrollDirective(const OMPUnrollDirective &s);
-  mlir::LogicalResult emitOMPFuseDirective(const OMPFuseDirective &s);
-  mlir::LogicalResult emitOMPForDirective(const OMPForDirective &s);
-  mlir::LogicalResult emitOMPForSimdDirective(const OMPForSimdDirective &s);
-  mlir::LogicalResult emitOMPSectionsDirective(const OMPSectionsDirective &s);
-  mlir::LogicalResult emitOMPSectionDirective(const OMPSectionDirective &s);
-  mlir::LogicalResult emitOMPSingleDirective(const OMPSingleDirective &s);
-  mlir::LogicalResult emitOMPMasterDirective(const OMPMasterDirective &s);
-  mlir::LogicalResult emitOMPCriticalDirective(const OMPCriticalDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOMPScopeDirective(const OMPScopeDirective &s);
+  aiir::LogicalResult emitOMPErrorDirective(const OMPErrorDirective &s);
+  aiir::LogicalResult emitOMPParallelDirective(const OMPParallelDirective &s);
+  aiir::LogicalResult emitOMPTaskwaitDirective(const OMPTaskwaitDirective &s);
+  aiir::LogicalResult emitOMPTaskyieldDirective(const OMPTaskyieldDirective &s);
+  aiir::LogicalResult emitOMPBarrierDirective(const OMPBarrierDirective &s);
+  aiir::LogicalResult emitOMPMetaDirective(const OMPMetaDirective &s);
+  aiir::LogicalResult emitOMPCanonicalLoop(const OMPCanonicalLoop &s);
+  aiir::LogicalResult emitOMPSimdDirective(const OMPSimdDirective &s);
+  aiir::LogicalResult emitOMPTileDirective(const OMPTileDirective &s);
+  aiir::LogicalResult emitOMPUnrollDirective(const OMPUnrollDirective &s);
+  aiir::LogicalResult emitOMPFuseDirective(const OMPFuseDirective &s);
+  aiir::LogicalResult emitOMPForDirective(const OMPForDirective &s);
+  aiir::LogicalResult emitOMPForSimdDirective(const OMPForSimdDirective &s);
+  aiir::LogicalResult emitOMPSectionsDirective(const OMPSectionsDirective &s);
+  aiir::LogicalResult emitOMPSectionDirective(const OMPSectionDirective &s);
+  aiir::LogicalResult emitOMPSingleDirective(const OMPSingleDirective &s);
+  aiir::LogicalResult emitOMPMasterDirective(const OMPMasterDirective &s);
+  aiir::LogicalResult emitOMPCriticalDirective(const OMPCriticalDirective &s);
+  aiir::LogicalResult
   emitOMPParallelForDirective(const OMPParallelForDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPParallelForSimdDirective(const OMPParallelForSimdDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPParallelMasterDirective(const OMPParallelMasterDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPParallelSectionsDirective(const OMPParallelSectionsDirective &s);
-  mlir::LogicalResult emitOMPTaskDirective(const OMPTaskDirective &s);
-  mlir::LogicalResult emitOMPTaskgroupDirective(const OMPTaskgroupDirective &s);
-  mlir::LogicalResult emitOMPFlushDirective(const OMPFlushDirective &s);
-  mlir::LogicalResult emitOMPDepobjDirective(const OMPDepobjDirective &s);
-  mlir::LogicalResult emitOMPScanDirective(const OMPScanDirective &s);
-  mlir::LogicalResult emitOMPOrderedDirective(const OMPOrderedDirective &s);
-  mlir::LogicalResult emitOMPAtomicDirective(const OMPAtomicDirective &s);
-  mlir::LogicalResult emitOMPTargetDirective(const OMPTargetDirective &s);
-  mlir::LogicalResult emitOMPTeamsDirective(const OMPTeamsDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOMPTaskDirective(const OMPTaskDirective &s);
+  aiir::LogicalResult emitOMPTaskgroupDirective(const OMPTaskgroupDirective &s);
+  aiir::LogicalResult emitOMPFlushDirective(const OMPFlushDirective &s);
+  aiir::LogicalResult emitOMPDepobjDirective(const OMPDepobjDirective &s);
+  aiir::LogicalResult emitOMPScanDirective(const OMPScanDirective &s);
+  aiir::LogicalResult emitOMPOrderedDirective(const OMPOrderedDirective &s);
+  aiir::LogicalResult emitOMPAtomicDirective(const OMPAtomicDirective &s);
+  aiir::LogicalResult emitOMPTargetDirective(const OMPTargetDirective &s);
+  aiir::LogicalResult emitOMPTeamsDirective(const OMPTeamsDirective &s);
+  aiir::LogicalResult
   emitOMPCancellationPointDirective(const OMPCancellationPointDirective &s);
-  mlir::LogicalResult emitOMPCancelDirective(const OMPCancelDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOMPCancelDirective(const OMPCancelDirective &s);
+  aiir::LogicalResult
   emitOMPTargetDataDirective(const OMPTargetDataDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTargetEnterDataDirective(const OMPTargetEnterDataDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTargetExitDataDirective(const OMPTargetExitDataDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTargetParallelDirective(const OMPTargetParallelDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTargetParallelForDirective(const OMPTargetParallelForDirective &s);
-  mlir::LogicalResult emitOMPTaskLoopDirective(const OMPTaskLoopDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOMPTaskLoopDirective(const OMPTaskLoopDirective &s);
+  aiir::LogicalResult
   emitOMPTaskLoopSimdDirective(const OMPTaskLoopSimdDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPMaskedTaskLoopDirective(const OMPMaskedTaskLoopDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPMaskedTaskLoopSimdDirective(const OMPMaskedTaskLoopSimdDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPMasterTaskLoopDirective(const OMPMasterTaskLoopDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPMasterTaskLoopSimdDirective(const OMPMasterTaskLoopSimdDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPParallelGenericLoopDirective(const OMPParallelGenericLoopDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &s);
-  mlir::LogicalResult emitOMPParallelMaskedTaskLoopDirective(
+  aiir::LogicalResult emitOMPParallelMaskedTaskLoopDirective(
       const OMPParallelMaskedTaskLoopDirective &s);
-  mlir::LogicalResult emitOMPParallelMaskedTaskLoopSimdDirective(
+  aiir::LogicalResult emitOMPParallelMaskedTaskLoopSimdDirective(
       const OMPParallelMaskedTaskLoopSimdDirective &s);
-  mlir::LogicalResult emitOMPParallelMasterTaskLoopDirective(
+  aiir::LogicalResult emitOMPParallelMasterTaskLoopDirective(
       const OMPParallelMasterTaskLoopDirective &s);
-  mlir::LogicalResult emitOMPParallelMasterTaskLoopSimdDirective(
+  aiir::LogicalResult emitOMPParallelMasterTaskLoopSimdDirective(
       const OMPParallelMasterTaskLoopSimdDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPDistributeDirective(const OMPDistributeDirective &s);
-  mlir::LogicalResult emitOMPDistributeParallelForDirective(
+  aiir::LogicalResult emitOMPDistributeParallelForDirective(
       const OMPDistributeParallelForDirective &s);
-  mlir::LogicalResult emitOMPDistributeParallelForSimdDirective(
+  aiir::LogicalResult emitOMPDistributeParallelForSimdDirective(
       const OMPDistributeParallelForSimdDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &s);
-  mlir::LogicalResult emitOMPTargetParallelGenericLoopDirective(
+  aiir::LogicalResult emitOMPTargetParallelGenericLoopDirective(
       const OMPTargetParallelGenericLoopDirective &s);
-  mlir::LogicalResult emitOMPTargetParallelForSimdDirective(
+  aiir::LogicalResult emitOMPTargetParallelForSimdDirective(
       const OMPTargetParallelForSimdDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTargetSimdDirective(const OMPTargetSimdDirective &s);
-  mlir::LogicalResult emitOMPTargetTeamsGenericLoopDirective(
+  aiir::LogicalResult emitOMPTargetTeamsGenericLoopDirective(
       const OMPTargetTeamsGenericLoopDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTargetUpdateDirective(const OMPTargetUpdateDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTeamsDistributeDirective(const OMPTeamsDistributeDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTeamsDistributeSimdDirective(const OMPTeamsDistributeSimdDirective &s);
-  mlir::LogicalResult emitOMPTeamsDistributeParallelForSimdDirective(
+  aiir::LogicalResult emitOMPTeamsDistributeParallelForSimdDirective(
       const OMPTeamsDistributeParallelForSimdDirective &s);
-  mlir::LogicalResult emitOMPTeamsDistributeParallelForDirective(
+  aiir::LogicalResult emitOMPTeamsDistributeParallelForDirective(
       const OMPTeamsDistributeParallelForDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOMPTargetTeamsDirective(const OMPTargetTeamsDirective &s);
-  mlir::LogicalResult emitOMPTargetTeamsDistributeDirective(
+  aiir::LogicalResult emitOMPTargetTeamsDistributeDirective(
       const OMPTargetTeamsDistributeDirective &s);
-  mlir::LogicalResult emitOMPTargetTeamsDistributeParallelForDirective(
+  aiir::LogicalResult emitOMPTargetTeamsDistributeParallelForDirective(
       const OMPTargetTeamsDistributeParallelForDirective &s);
-  mlir::LogicalResult emitOMPTargetTeamsDistributeParallelForSimdDirective(
+  aiir::LogicalResult emitOMPTargetTeamsDistributeParallelForSimdDirective(
       const OMPTargetTeamsDistributeParallelForSimdDirective &s);
-  mlir::LogicalResult emitOMPTargetTeamsDistributeSimdDirective(
+  aiir::LogicalResult emitOMPTargetTeamsDistributeSimdDirective(
       const OMPTargetTeamsDistributeSimdDirective &s);
-  mlir::LogicalResult emitOMPInteropDirective(const OMPInteropDirective &s);
-  mlir::LogicalResult emitOMPDispatchDirective(const OMPDispatchDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOMPInteropDirective(const OMPInteropDirective &s);
+  aiir::LogicalResult emitOMPDispatchDirective(const OMPDispatchDirective &s);
+  aiir::LogicalResult
   emitOMPGenericLoopDirective(const OMPGenericLoopDirective &s);
-  mlir::LogicalResult emitOMPReverseDirective(const OMPReverseDirective &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOMPReverseDirective(const OMPReverseDirective &s);
+  aiir::LogicalResult
   emitOMPInterchangeDirective(const OMPInterchangeDirective &s);
-  mlir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);
-  mlir::LogicalResult emitOMPMaskedDirective(const OMPMaskedDirective &s);
-  mlir::LogicalResult emitOMPStripeDirective(const OMPStripeDirective &s);
+  aiir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);
+  aiir::LogicalResult emitOMPMaskedDirective(const OMPMaskedDirective &s);
+  aiir::LogicalResult emitOMPStripeDirective(const OMPStripeDirective &s);
 
   void emitOMPThreadPrivateDecl(const OMPThreadPrivateDecl &d);
   void emitOMPGroupPrivateDecl(const OMPGroupPrivateDecl &d);
@@ -2244,28 +2244,28 @@ private:
   //===--------------------------------------------------------------------===//
 private:
   template <typename Op>
-  Op emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
+  Op emitOpenACCOp(aiir::Location start, OpenACCDirectiveKind dirKind,
                    llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
-  mlir::LogicalResult
-  emitOpenACCOpAssociatedStmt(mlir::Location start, mlir::Location end,
+  aiir::LogicalResult
+  emitOpenACCOpAssociatedStmt(aiir::Location start, aiir::Location end,
                               OpenACCDirectiveKind dirKind,
                               llvm::ArrayRef<const OpenACCClause *> clauses,
                               const Stmt *associatedStmt);
 
   template <typename Op, typename TermOp>
-  mlir::LogicalResult emitOpenACCOpCombinedConstruct(
-      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+  aiir::LogicalResult emitOpenACCOpCombinedConstruct(
+      aiir::Location start, aiir::Location end, OpenACCDirectiveKind dirKind,
       llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *loopStmt);
 
   template <typename Op>
   void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
                           ArrayRef<const OpenACCClause *> clauses);
   // The second template argument doesn't need to be a template, since it should
-  // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
-  // it a template argument as this way we can avoid including the OpenACC MLIR
+  // always be an aiir::acc::LoopOp, but as this is a template anyway, we make
+  // it a template argument as this way we can avoid including the OpenACC AIIR
   // headers here. We will count on linker failures/explicit instantiation to
   // ensure we don't mess this up, but it is only called from 1 place, and
   // instantiated 3x.
@@ -2277,18 +2277,18 @@ private:
   // The OpenACC LoopOp requires that we have auto, seq, or independent on all
   // LoopOp operations for the 'none' device type case. This function checks if
   // the LoopOp has one, else it updates it to have one.
-  void updateLoopOpParallelism(mlir::acc::LoopOp &op, bool isOrphan,
+  void updateLoopOpParallelism(aiir::acc::LoopOp &op, bool isOrphan,
                                OpenACCDirectiveKind dk);
 
   // The OpenACC 'cache' construct actually applies to the 'loop' if present. So
   // keep track of the 'loop' so that we can add the cache vars to it correctly.
-  mlir::acc::LoopOp *activeLoopOp = nullptr;
+  aiir::acc::LoopOp *activeLoopOp = nullptr;
 
   struct ActiveOpenACCLoopRAII {
     CIRGenFunction &cgf;
-    mlir::acc::LoopOp *oldLoopOp;
+    aiir::acc::LoopOp *oldLoopOp;
 
-    ActiveOpenACCLoopRAII(CIRGenFunction &cgf, mlir::acc::LoopOp *newOp)
+    ActiveOpenACCLoopRAII(CIRGenFunction &cgf, aiir::acc::LoopOp *newOp)
         : cgf(cgf), oldLoopOp(cgf.activeLoopOp) {
       cgf.activeLoopOp = newOp;
     }
@@ -2297,21 +2297,21 @@ private:
 
   // Keep track of the last place we inserted a 'recipe' so that we can insert
   // the next one in lexical order.
-  mlir::OpBuilder::InsertPoint lastRecipeLocation;
+  aiir::OpBuilder::InsertPoint lastRecipeLocation;
 
 public:
   // Helper type used to store the list of important information for a 'data'
   // clause variable, or a 'cache' variable reference.
   struct OpenACCDataOperandInfo {
-    mlir::Location beginLoc;
-    mlir::Value varValue;
+    aiir::Location beginLoc;
+    aiir::Value varValue;
     std::string name;
     // The type of the original variable reference: that is, after 'bounds' have
     // removed pointers/array types/etc. So in the case of int arr[5], and a
     // private(arr[1]), 'origType' is 'int', but 'baseType' is 'int[5]'.
     QualType origType;
     QualType baseType;
-    llvm::SmallVector<mlir::Value> bounds;
+    llvm::SmallVector<aiir::Value> bounds;
     // The list of types that we found when going through the bounds, which we
     // can use to properly set the alloca section.
     llvm::SmallVector<QualType> boundTypes;
@@ -2322,40 +2322,40 @@ public:
   OpenACCDataOperandInfo getOpenACCDataOperandInfo(const Expr *e);
   // Helper function to emit the integer expressions as required by an OpenACC
   // clause/construct.
-  mlir::Value emitOpenACCIntExpr(const Expr *intExpr);
-  // Helper function to emit an integer constant as an mlir int type, used for
+  aiir::Value emitOpenACCIntExpr(const Expr *intExpr);
+  // Helper function to emit an integer constant as an aiir int type, used for
   // constants in OpenACC constructs/clauses.
-  mlir::Value createOpenACCConstantInt(mlir::Location loc, unsigned width,
+  aiir::Value createOpenACCConstantInt(aiir::Location loc, unsigned width,
                                        int64_t value);
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
-  mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);
+  aiir::LogicalResult
   emitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &s);
-  mlir::LogicalResult emitOpenACCDataConstruct(const OpenACCDataConstruct &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOpenACCDataConstruct(const OpenACCDataConstruct &s);
+  aiir::LogicalResult
   emitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &s);
-  mlir::LogicalResult emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s);
-  mlir::LogicalResult emitOpenACCInitConstruct(const OpenACCInitConstruct &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s);
+  aiir::LogicalResult emitOpenACCInitConstruct(const OpenACCInitConstruct &s);
+  aiir::LogicalResult
   emitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &s);
-  mlir::LogicalResult emitOpenACCSetConstruct(const OpenACCSetConstruct &s);
-  mlir::LogicalResult
+  aiir::LogicalResult emitOpenACCSetConstruct(const OpenACCSetConstruct &s);
+  aiir::LogicalResult
   emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s);
-  mlir::LogicalResult
+  aiir::LogicalResult
   emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s);
-  mlir::LogicalResult emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s);
+  aiir::LogicalResult emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s);
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
 
   /// Create a temporary memory object for the given aggregate type.
-  AggValueSlot createAggTemp(QualType ty, mlir::Location loc,
+  AggValueSlot createAggTemp(QualType ty, aiir::Location loc,
                              const Twine &name = "tmp",
                              Address *alloca = nullptr) {
     assert(!cir::MissingFeatures::aggValueSlot());

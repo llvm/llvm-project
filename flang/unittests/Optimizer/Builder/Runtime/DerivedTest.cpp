@@ -12,18 +12,18 @@
 
 TEST_F(RuntimeCallTest, genDerivedTypeInitialize) {
   auto loc = firBuilder->getUnknownLoc();
-  mlir::Type seqTy =
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
-  mlir::Value box = fir::UndefOp::create(*firBuilder, loc, seqTy);
+  aiir::Value box = fir::UndefOp::create(*firBuilder, loc, seqTy);
   fir::runtime::genDerivedTypeInitialize(*firBuilder, loc, box);
   checkCallOpFromResultBox(box, "_FortranAInitialize", 1);
 }
 
 TEST_F(RuntimeCallTest, genDerivedTypeDestroy) {
   auto loc = firBuilder->getUnknownLoc();
-  mlir::Type seqTy =
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
-  mlir::Value box = fir::UndefOp::create(*firBuilder, loc, seqTy);
+  aiir::Value box = fir::UndefOp::create(*firBuilder, loc, seqTy);
   fir::runtime::genDerivedTypeDestroy(*firBuilder, loc, box);
   checkCallOpFromResultBox(box, "_FortranADestroy", 1, /*addLocArg=*/false);
 }

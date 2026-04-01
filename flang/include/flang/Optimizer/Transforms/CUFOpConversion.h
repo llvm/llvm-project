@@ -9,29 +9,29 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_CUFOPCONVERSION_H_
 #define FORTRAN_OPTIMIZER_TRANSFORMS_CUFOPCONVERSION_H_
 
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassRegistry.h"
 
 namespace fir {
 class LLVMTypeConverter;
 }
 
-namespace mlir {
+namespace aiir {
 class DataLayout;
 class SymbolTable;
-} // namespace mlir
+} // namespace aiir
 
 namespace cuf {
 
 /// Patterns that convert CUF operations to runtime calls.
 void populateCUFToFIRConversionPatterns(const fir::LLVMTypeConverter &converter,
-                                        mlir::DataLayout &dl,
-                                        const mlir::SymbolTable &symtab,
-                                        mlir::RewritePatternSet &patterns);
+                                        aiir::DataLayout &dl,
+                                        const aiir::SymbolTable &symtab,
+                                        aiir::RewritePatternSet &patterns);
 
 /// Patterns that updates fir operations in presence of CUF.
-void populateFIRCUFConversionPatterns(const mlir::SymbolTable &symtab,
-                                      mlir::RewritePatternSet &patterns);
+void populateFIRCUFConversionPatterns(const aiir::SymbolTable &symtab,
+                                      aiir::RewritePatternSet &patterns);
 
 } // namespace cuf
 

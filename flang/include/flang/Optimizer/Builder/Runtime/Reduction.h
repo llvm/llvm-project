@@ -16,7 +16,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_REDUCTION_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_REDUCTION_H
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
 
 namespace fir {
 class ExtendedValue;
@@ -28,224 +28,224 @@ namespace fir::runtime {
 /// Generate call to `AllDim` runtime routine.
 /// This calls the descriptor based runtime call implementation of the `all`
 /// intrinsic.
-void genAllDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value resultBox, mlir::Value maskBox,
-                      mlir::Value dim);
+void genAllDescriptor(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value resultBox, aiir::Value maskBox,
+                      aiir::Value dim);
 
 /// Generate call to `AnyDim` runtime routine.
 /// This calls the descriptor based runtime call implementation of the `any`
 /// intrinsic.
-void genAnyDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value resultBox, mlir::Value maskBox,
-                      mlir::Value dim);
+void genAnyDescriptor(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value resultBox, aiir::Value maskBox,
+                      aiir::Value dim);
 
 /// Generate call to `ParityDim` runtime routine.
 /// This calls the descriptor based runtime call implementation of the `parity`
 /// intrinsic.
-void genParityDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
-                         mlir::Value resultBox, mlir::Value maskBox,
-                         mlir::Value dim);
+void genParityDescriptor(fir::FirOpBuilder &builder, aiir::Location loc,
+                         aiir::Value resultBox, aiir::Value maskBox,
+                         aiir::Value dim);
 
 /// Generate call to `All` runtime routine. This version of `all` is specialized
 /// for rank 1 mask arguments.
 /// This calls the version that returns a scalar logical value.
-mlir::Value genAll(fir::FirOpBuilder &builder, mlir::Location loc,
-                   mlir::Value maskBox, mlir::Value dim);
+aiir::Value genAll(fir::FirOpBuilder &builder, aiir::Location loc,
+                   aiir::Value maskBox, aiir::Value dim);
 
 /// Generate call to `Any` runtime routine. This version of `any` is specialized
 /// for rank 1 mask arguments.
 /// This calls the version that returns a scalar logical value.
-mlir::Value genAny(fir::FirOpBuilder &builder, mlir::Location loc,
-                   mlir::Value maskBox, mlir::Value dim);
+aiir::Value genAny(fir::FirOpBuilder &builder, aiir::Location loc,
+                   aiir::Value maskBox, aiir::Value dim);
 
 /// Generate call to `Count` runtime routine. This routine is a specialized
 /// version when mask is a rank one array or the dim argument is not
 /// specified by the user.
-mlir::Value genCount(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value maskBox, mlir::Value dim);
+aiir::Value genCount(fir::FirOpBuilder &builder, aiir::Location loc,
+                     aiir::Value maskBox, aiir::Value dim);
 
 /// Generate call to general `CountDim` runtime routine. This routine has a
 /// descriptor result.
-void genCountDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                 mlir::Value resultBox, mlir::Value maskBox, mlir::Value dim,
-                 mlir::Value kind);
+void genCountDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                 aiir::Value resultBox, aiir::Value maskBox, aiir::Value dim,
+                 aiir::Value kind);
 
 /// Generate call to `DotProduct` intrinsic runtime routine.
-mlir::Value genDotProduct(fir::FirOpBuilder &builder, mlir::Location loc,
-                          mlir::Value vectorABox, mlir::Value vectorBBox,
-                          mlir::Value resultBox);
+aiir::Value genDotProduct(fir::FirOpBuilder &builder, aiir::Location loc,
+                          aiir::Value vectorABox, aiir::Value vectorBBox,
+                          aiir::Value resultBox);
 
 /// Generate call to `Findloc` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-void genFindloc(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value resultBox, mlir::Value arrayBox, mlir::Value val,
-                mlir::Value maskBox, mlir::Value kind, mlir::Value back);
+void genFindloc(fir::FirOpBuilder &builder, aiir::Location loc,
+                aiir::Value resultBox, aiir::Value arrayBox, aiir::Value val,
+                aiir::Value maskBox, aiir::Value kind, aiir::Value back);
 
 /// Generate call to `FindlocDim` intrinsic runtime routine. This is the version
 /// that takes a dim argument.
-void genFindlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value val,
-                   mlir::Value dim, mlir::Value maskBox, mlir::Value kind,
-                   mlir::Value back);
+void genFindlocDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                   aiir::Value resultBox, aiir::Value arrayBox, aiir::Value val,
+                   aiir::Value dim, aiir::Value maskBox, aiir::Value kind,
+                   aiir::Value back);
 
 /// Generate call to `Maxloc` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-void genMaxloc(fir::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value resultBox, mlir::Value arrayBox, mlir::Value maskBox,
-               mlir::Value kind, mlir::Value back);
+void genMaxloc(fir::FirOpBuilder &builder, aiir::Location loc,
+               aiir::Value resultBox, aiir::Value arrayBox, aiir::Value maskBox,
+               aiir::Value kind, aiir::Value back);
 
 /// Generate call to `MaxlocDim` intrinsic runtime routine. This is the version
 /// that takes a dim argument.
-void genMaxlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                  mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-                  mlir::Value maskBox, mlir::Value kind, mlir::Value back);
+void genMaxlocDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                  aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+                  aiir::Value maskBox, aiir::Value kind, aiir::Value back);
 
 /// Generate call to `Minloc` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-void genMinloc(fir::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value resultBox, mlir::Value arrayBox, mlir::Value maskBox,
-               mlir::Value kind, mlir::Value back);
+void genMinloc(fir::FirOpBuilder &builder, aiir::Location loc,
+               aiir::Value resultBox, aiir::Value arrayBox, aiir::Value maskBox,
+               aiir::Value kind, aiir::Value back);
 
 /// Generate call to `MinlocDim` intrinsic runtime routine. This is the version
 /// that takes a dim argument.
-void genMinlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                  mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-                  mlir::Value maskBox, mlir::Value kind, mlir::Value back);
+void genMinlocDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                  aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+                  aiir::Value maskBox, aiir::Value kind, aiir::Value back);
 
 /// Generate call to `Maxval` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-mlir::Value genMaxval(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value arrayBox, mlir::Value maskBox);
+aiir::Value genMaxval(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value arrayBox, aiir::Value maskBox);
 
 /// Generate call to `MaxvalCharacter` intrinsic runtime routine. This is the
 /// version hat that handles 1 dimensional character arrays  with no DIM
 /// argument.
-void genMaxvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
-                   mlir::Value resultBox, mlir::Value arrayBox,
-                   mlir::Value maskBox);
+void genMaxvalChar(fir::FirOpBuilder &builder, aiir::Location loc,
+                   aiir::Value resultBox, aiir::Value arrayBox,
+                   aiir::Value maskBox);
 
 /// Generate call to `MaxvalDim` intrinsic runtime routine. This is the version
 /// that takes arrays of any rank with a dim argument specified.
-void genMaxvalDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                  mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-                  mlir::Value maskBox);
+void genMaxvalDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                  aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+                  aiir::Value maskBox);
 
 /// Generate call to `Minval` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-mlir::Value genMinval(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value arrayBox, mlir::Value maskBox);
+aiir::Value genMinval(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value arrayBox, aiir::Value maskBox);
 
 /// Generate call to `MinvalCharacter` intrinsic runtime routine. This is the
 /// version that handles 1 dimensional character arrays with no DIM
 /// argument.
-void genMinvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
-                   mlir::Value resultBox, mlir::Value arrayBox,
-                   mlir::Value maskBox);
+void genMinvalChar(fir::FirOpBuilder &builder, aiir::Location loc,
+                   aiir::Value resultBox, aiir::Value arrayBox,
+                   aiir::Value maskBox);
 
 /// Generate call to `MinvalDim` intrinsic runtime routine. This is the version
 /// that takes arrays of any rank with a dim argument specified.
-void genMinvalDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                  mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-                  mlir::Value maskBox);
+void genMinvalDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                  aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+                  aiir::Value maskBox);
 
 /// Generate call to `Norm2` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-mlir::Value genNorm2(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value arrayBox);
+aiir::Value genNorm2(fir::FirOpBuilder &builder, aiir::Location loc,
+                     aiir::Value arrayBox);
 
 /// Generate call to `Norm2Dim` intrinsic runtime routine. This is the version
 /// that takes a dim argument.
-void genNorm2Dim(fir::FirOpBuilder &builder, mlir::Location loc,
-                 mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim);
+void genNorm2Dim(fir::FirOpBuilder &builder, aiir::Location loc,
+                 aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim);
 
 /// Generate call to `Parity` runtime routine. This version of `parity` is
 /// specialized for rank 1 mask arguments.
 /// This calls the version that returns a scalar logical value.
-mlir::Value genParity(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value maskBox, mlir::Value dim);
+aiir::Value genParity(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value maskBox, aiir::Value dim);
 
 /// Generate call to `Product` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-mlir::Value genProduct(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value arrayBox, mlir::Value maskBox,
-                       mlir::Value resultBox);
+aiir::Value genProduct(fir::FirOpBuilder &builder, aiir::Location loc,
+                       aiir::Value arrayBox, aiir::Value maskBox,
+                       aiir::Value resultBox);
 
 /// Generate call to `ProductDim` intrinsic runtime routine. This is the version
 /// that takes arrays of any rank with a dim argument specified.
-void genProductDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-                   mlir::Value maskBox);
+void genProductDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                   aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+                   aiir::Value maskBox);
 
 /// Generate call to `Sum` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-mlir::Value genSum(fir::FirOpBuilder &builder, mlir::Location loc,
-                   mlir::Value arrayBox, mlir::Value maskBox,
-                   mlir::Value resultBox);
+aiir::Value genSum(fir::FirOpBuilder &builder, aiir::Location loc,
+                   aiir::Value arrayBox, aiir::Value maskBox,
+                   aiir::Value resultBox);
 
 /// Generate call to `SumDim` intrinsic runtime routine. This is the version
 /// that takes arrays of any rank with a dim argument specified.
-void genSumDim(fir::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-               mlir::Value maskBox);
+void genSumDim(fir::FirOpBuilder &builder, aiir::Location loc,
+               aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+               aiir::Value maskBox);
 
 /// Generate call to `IAll` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-mlir::Value genIAll(fir::FirOpBuilder &builder, mlir::Location loc,
-                    mlir::Value arrayBox, mlir::Value maskBox,
-                    mlir::Value resultBox);
+aiir::Value genIAll(fir::FirOpBuilder &builder, aiir::Location loc,
+                    aiir::Value arrayBox, aiir::Value maskBox,
+                    aiir::Value resultBox);
 
 /// Generate call to `IAllDim` intrinsic runtime routine. This is the version
 /// that takes arrays of any rank with a dim argument specified.
-void genIAllDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-                mlir::Value maskBox);
+void genIAllDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+                aiir::Value maskBox);
 
 /// Generate call to `IAny` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-mlir::Value genIAny(fir::FirOpBuilder &builder, mlir::Location loc,
-                    mlir::Value arrayBox, mlir::Value maskBox,
-                    mlir::Value resultBox);
+aiir::Value genIAny(fir::FirOpBuilder &builder, aiir::Location loc,
+                    aiir::Value arrayBox, aiir::Value maskBox,
+                    aiir::Value resultBox);
 
 /// Generate call to `IAnyDim` intrinsic runtime routine. This is the version
 /// that takes arrays of any rank with a dim argument specified.
-void genIAnyDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-                mlir::Value maskBox);
+void genIAnyDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+                aiir::Value maskBox);
 
 /// Generate call to `IParity` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
-mlir::Value genIParity(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value arrayBox, mlir::Value maskBox,
-                       mlir::Value resultBox);
+aiir::Value genIParity(fir::FirOpBuilder &builder, aiir::Location loc,
+                       aiir::Value arrayBox, aiir::Value maskBox,
+                       aiir::Value resultBox);
 
 /// Generate call to `IParityDim` intrinsic runtime routine. This is the version
 /// that takes arrays of any rank with a dim argument specified.
-void genIParityDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
-                   mlir::Value maskBox);
+void genIParityDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                   aiir::Value resultBox, aiir::Value arrayBox, aiir::Value dim,
+                   aiir::Value maskBox);
 
 /// Generate call to `Reduce` intrinsic runtime routine. This is the version
 /// that does not take a dim argument and store the result in the provided
 /// result value. This is used for COMPLEX, CHARACTER and DERIVED TYPES.
-void genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value arrayBox, mlir::Value operation, mlir::Value maskBox,
-               mlir::Value identity, mlir::Value ordered, mlir::Value resultBox,
+void genReduce(fir::FirOpBuilder &builder, aiir::Location loc,
+               aiir::Value arrayBox, aiir::Value operation, aiir::Value maskBox,
+               aiir::Value identity, aiir::Value ordered, aiir::Value resultBox,
                bool argByRef);
 
 /// Generate call to `Reduce` intrinsic runtime routine. This is the version
 /// that does not take a dim argument and return a scalare result. This is used
 /// for REAL, INTEGER and LOGICAL TYPES.
-mlir::Value genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value arrayBox, mlir::Value operation,
-                      mlir::Value maskBox, mlir::Value identity,
-                      mlir::Value ordered, bool argByRef);
+aiir::Value genReduce(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value arrayBox, aiir::Value operation,
+                      aiir::Value maskBox, aiir::Value identity,
+                      aiir::Value ordered, bool argByRef);
 
 /// Generate call to `Reduce` intrinsic runtime routine. This is the version
 /// that takes arrays of any rank with a dim argument specified.
-void genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
-                  mlir::Value arrayBox, mlir::Value operation, mlir::Value dim,
-                  mlir::Value maskBox, mlir::Value identity,
-                  mlir::Value ordered, mlir::Value resultBox, bool argByRef);
+void genReduceDim(fir::FirOpBuilder &builder, aiir::Location loc,
+                  aiir::Value arrayBox, aiir::Value operation, aiir::Value dim,
+                  aiir::Value maskBox, aiir::Value identity,
+                  aiir::Value ordered, aiir::Value resultBox, bool argByRef);
 
 } // namespace fir::runtime
 

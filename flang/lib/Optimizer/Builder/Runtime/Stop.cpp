@@ -14,32 +14,32 @@
 
 using namespace Fortran::runtime;
 
-void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value status) {
+void fir::runtime::genExit(fir::FirOpBuilder &builder, aiir::Location loc,
+                           aiir::Value status) {
   auto exitFunc = fir::runtime::getRuntimeFunc<mkRTKey(Exit)>(loc, builder);
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, exitFunc.getFunctionType(), status);
   fir::CallOp::create(builder, loc, exitFunc, args);
 }
 
-void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
-  mlir::func::FuncOp abortFunc =
+void fir::runtime::genAbort(fir::FirOpBuilder &builder, aiir::Location loc) {
+  aiir::func::FuncOp abortFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Abort)>(loc, builder);
-  fir::CallOp::create(builder, loc, abortFunc, mlir::ValueRange{});
+  fir::CallOp::create(builder, loc, abortFunc, aiir::ValueRange{});
 }
 
 void fir::runtime::genReportFatalUserError(fir::FirOpBuilder &builder,
-                                           mlir::Location loc,
+                                           aiir::Location loc,
                                            llvm::StringRef message) {
-  mlir::func::FuncOp crashFunc =
+  aiir::func::FuncOp crashFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(ReportFatalUserError)>(loc, builder);
-  mlir::FunctionType funcTy = crashFunc.getFunctionType();
-  mlir::Value msgVal = fir::getBase(
+  aiir::FunctionType funcTy = crashFunc.getFunctionType();
+  aiir::Value msgVal = fir::getBase(
       fir::factory::createStringLiteral(builder, loc, message.str() + '\0'));
-  mlir::Value sourceLine =
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, funcTy, msgVal, sourceFile, sourceLine);
   fir::CallOp::create(builder, loc, crashFunc, args);
 }

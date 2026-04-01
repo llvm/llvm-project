@@ -49,7 +49,7 @@ treated.
 
 Currently, Flang will lower these descriptor types in the OpenMP lowering (lower/OpenMP.cpp) similarly
 to all other map types, generating an omp.MapInfoOp containing relevant information required for lowering
-the OpenMP dialect to LLVM-IR during the final stages of the MLIR lowering. However, after
+the OpenMP dialect to LLVM-IR during the final stages of the AIIR lowering. However, after
 the lowering to FIR/HLFIR has been performed an OpenMP dialect specific pass for Fortran,
 `MapInfoFinalizationPass` (Optimizer/OpenMP/MapInfoFinalization.cpp) will expand the
 `omp.MapInfoOp`'s containing descriptors (which currently will be a `BoxType` or `BoxAddrOp`) into multiple

@@ -9,10 +9,10 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_DERIVED_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_DERIVED_H
 
-namespace mlir {
+namespace aiir {
 class Value;
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -23,42 +23,42 @@ namespace fir::runtime {
 
 /// Generate call to derived type initialization runtime routine to
 /// default initialize \p box.
-void genDerivedTypeInitialize(fir::FirOpBuilder &builder, mlir::Location loc,
-                              mlir::Value box);
+void genDerivedTypeInitialize(fir::FirOpBuilder &builder, aiir::Location loc,
+                              aiir::Value box);
 
 /// Generate call to derived type clone initialization runtime routine to
 /// initialize \p newBox from \p box.
 void genDerivedTypeInitializeClone(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value newBox,
-                                   mlir::Value box);
+                                   aiir::Location loc, aiir::Value newBox,
+                                   aiir::Value box);
 
 /// Generate call to derived type destruction runtime routine to
 /// destroy \p box.
-void genDerivedTypeDestroy(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value box);
+void genDerivedTypeDestroy(fir::FirOpBuilder &builder, aiir::Location loc,
+                           aiir::Value box);
 
 /// Generate call to derived type finalization runtime routine
 /// to finalize \p box.
-void genDerivedTypeFinalize(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Value box);
+void genDerivedTypeFinalize(fir::FirOpBuilder &builder, aiir::Location loc,
+                            aiir::Value box);
 
 /// Generate call to derived type destruction runtime routine to
 /// destroy \p box without finalization
 void genDerivedTypeDestroyWithoutFinalization(fir::FirOpBuilder &builder,
-                                              mlir::Location loc,
-                                              mlir::Value box);
+                                              aiir::Location loc,
+                                              aiir::Value box);
 
 /// Generate call to `PointerNullifyDerived` runtime function to nullify
 /// and set the correct dynamic type to a boxed derived type.
-void genNullifyDerivedType(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value box, fir::RecordType derivedType,
+void genNullifyDerivedType(fir::FirOpBuilder &builder, aiir::Location loc,
+                           aiir::Value box, fir::RecordType derivedType,
                            unsigned rank = 0);
 
-mlir::Value genSameTypeAs(fir::FirOpBuilder &builder, mlir::Location loc,
-                          mlir::Value a, mlir::Value b);
+aiir::Value genSameTypeAs(fir::FirOpBuilder &builder, aiir::Location loc,
+                          aiir::Value a, aiir::Value b);
 
-mlir::Value genExtendsTypeOf(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value a, mlir::Value b);
+aiir::Value genExtendsTypeOf(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value a, aiir::Value b);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_DERIVED_H

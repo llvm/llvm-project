@@ -13,13 +13,13 @@
 #ifndef CLANG_CIR_DIALECT_PASSES_H
 #define CLANG_CIR_DIALECT_PASSES_H
 
-#include "mlir/Pass/Pass.h"
+#include "aiir/Pass/Pass.h"
 
 namespace clang {
 class ASTContext;
 }
 
-namespace mlir {
+namespace aiir {
 
 std::unique_ptr<Pass> createCIRCanonicalizePass();
 std::unique_ptr<Pass> createCIRFlattenCFGPass();
@@ -34,18 +34,18 @@ std::unique_ptr<Pass> createGotoSolverPass();
 std::unique_ptr<Pass> createIdiomRecognizerPass();
 std::unique_ptr<Pass> createIdiomRecognizerPass(clang::ASTContext *astCtx);
 
-void populateCIRPreLoweringPasses(mlir::OpPassManager &pm);
+void populateCIRPreLoweringPasses(aiir::OpPassManager &pm);
 
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
 
-void registerCIRDialectTranslation(mlir::MLIRContext &context);
+void registerCIRDialectTranslation(aiir::AIIRContext &context);
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "clang/CIR/Dialect/Passes.h.inc"
 
-} // namespace mlir
+} // namespace aiir
 
 #endif // CLANG_CIR_DIALECT_PASSES_H

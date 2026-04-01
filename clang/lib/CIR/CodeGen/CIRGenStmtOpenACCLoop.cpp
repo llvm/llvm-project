@@ -15,19 +15,19 @@
 
 #include "clang/AST/StmtOpenACC.h"
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
-using namespace mlir::acc;
+using namespace aiir::acc;
 
-void CIRGenFunction::updateLoopOpParallelism(mlir::acc::LoopOp &op,
+void CIRGenFunction::updateLoopOpParallelism(aiir::acc::LoopOp &op,
                                              bool isOrphan,
                                              OpenACCDirectiveKind dk) {
   // Check that at least one of auto, independent, or seq is present
   // for the device-independent default clauses.
-  if (op.hasParallelismFlag(mlir::acc::DeviceType::None))
+  if (op.hasParallelismFlag(aiir::acc::DeviceType::None))
     return;
 
   switch (dk) {
@@ -52,12 +52,12 @@ void CIRGenFunction::updateLoopOpParallelism(mlir::acc::LoopOp &op,
   };
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  mlir::Location end = getLoc(s.getSourceRange().getEnd());
-  llvm::SmallVector<mlir::Type> retTy;
-  llvm::SmallVector<mlir::Value> operands;
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location end = getLoc(s.getSourceRange().getEnd());
+  llvm::SmallVector<aiir::Type> retTy;
+  llvm::SmallVector<aiir::Value> operands;
   auto op = LoopOp::create(builder, start, retTy, operands);
 
   // TODO(OpenACC): In the future we are going to need to come up with a
@@ -122,17 +122,17 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   updateLoopOpParallelism(op, s.isOrphanedLoopConstruct(),
                           s.getParentComputeConstructKind());
 
-  mlir::LogicalResult stmtRes = mlir::success();
+  aiir::LogicalResult stmtRes = aiir::success();
   // Emit body.
   {
-    mlir::Block &block = op.getRegion().emplaceBlock();
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    aiir::Block &block = op.getRegion().emplaceBlock();
+    aiir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPointToEnd(&block);
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
     ActiveOpenACCLoopRAII activeLoop{*this, &op};
 
     stmtRes = emitStmt(s.getLoop(), /*useCurrentScope=*/true);
-    mlir::acc::YieldOp::create(builder, end);
+    aiir::acc::YieldOp::create(builder, end);
   }
 
   return stmtRes;

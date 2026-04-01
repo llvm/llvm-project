@@ -6,49 +6,49 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares helper functions for lowering from CIR to LLVM or MLIR.
+// This file declares helper functions for lowering from CIR to LLVM or AIIR.
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_CIR_LOWERINGHELPERS_H
 #define LLVM_CLANG_CIR_LOWERINGHELPERS_H
 
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
-mlir::DenseElementsAttr
-convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr, mlir::Type type);
+aiir::DenseElementsAttr
+convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr, aiir::Type type);
 
-template <typename StorageTy> StorageTy getZeroInitFromType(mlir::Type ty);
-template <> mlir::APInt getZeroInitFromType(mlir::Type ty);
-template <> mlir::APFloat getZeroInitFromType(mlir::Type ty);
+template <typename StorageTy> StorageTy getZeroInitFromType(aiir::Type ty);
+template <> aiir::APInt getZeroInitFromType(aiir::Type ty);
+template <> aiir::APFloat getZeroInitFromType(aiir::Type ty);
 
 template <typename AttrTy, typename StorageTy>
 void convertToDenseElementsAttrImpl(cir::ConstArrayAttr attr,
                                     llvm::SmallVectorImpl<StorageTy> &values);
 
 template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr
+aiir::DenseElementsAttr
 convertToDenseElementsAttr(cir::ConstArrayAttr attr,
                            const llvm::SmallVectorImpl<int64_t> &dims,
-                           mlir::Type type);
+                           aiir::Type type);
 
-std::optional<mlir::Attribute>
+std::optional<aiir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
-                    const mlir::TypeConverter *converter);
+                    const aiir::TypeConverter *converter);
 
-mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
-                          mlir::Type typ, const llvm::APInt &val);
+aiir::Value getConstAPInt(aiir::OpBuilder &bld, aiir::Location loc,
+                          aiir::Type typ, const llvm::APInt &val);
 
-mlir::Value getConst(mlir::OpBuilder &bld, mlir::Location loc, mlir::Type typ,
+aiir::Value getConst(aiir::OpBuilder &bld, aiir::Location loc, aiir::Type typ,
                      unsigned val);
 
-mlir::Value createShL(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
+aiir::Value createShL(aiir::OpBuilder &bld, aiir::Value lhs, unsigned rhs);
 
-mlir::Value createAShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
+aiir::Value createAShR(aiir::OpBuilder &bld, aiir::Value lhs, unsigned rhs);
 
-mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
+aiir::Value createAnd(aiir::OpBuilder &bld, aiir::Value lhs,
                       const llvm::APInt &rhs);
 
-mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
+aiir::Value createLShR(aiir::OpBuilder &bld, aiir::Value lhs, unsigned rhs);
 #endif

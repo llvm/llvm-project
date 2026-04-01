@@ -1,4 +1,4 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
 
 add_flang_library(FlangOpenMPTransforms
   AutomapToTargetData.cpp
@@ -29,16 +29,16 @@ add_flang_library(FlangOpenMPTransforms
   HLFIRDialect
   FortranUtils
 
-  MLIR_DEPS
+  AIIR_DEPS
   ${dialect_libs}
 
-  MLIR_LIBS
-  MLIRFuncDialect
-  MLIROpenMPDialect
-  MLIROpenMPTransforms
-  MLIRIR
-  MLIRPass
-  MLIRTransformUtils
+  AIIR_LIBS
+  AIIRFuncDialect
+  AIIROpenMPDialect
+  AIIROpenMPTransforms
+  AIIRIR
+  AIIRPass
+  AIIRTransformUtils
   ${dialect_libs}
 )
 

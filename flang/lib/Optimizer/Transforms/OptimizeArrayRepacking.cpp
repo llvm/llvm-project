@@ -19,7 +19,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace fir {
 #define GEN_PASS_DEF_OPTIMIZEARRAYREPACKING
@@ -36,62 +36,62 @@ public:
 };
 
 /// Relinks all uses of redundant fir.pack_array to the source.
-class PackingOfContiguous : public mlir::OpRewritePattern<fir::PackArrayOp> {
+class PackingOfContiguous : public aiir::OpRewritePattern<fir::PackArrayOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
-  mlir::LogicalResult matchAndRewrite(fir::PackArrayOp,
-                                      mlir::PatternRewriter &) const override;
+  aiir::LogicalResult matchAndRewrite(fir::PackArrayOp,
+                                      aiir::PatternRewriter &) const override;
 };
 
 /// Erases fir.unpack_array with have the matching temp and original
 /// operands.
-class NoopUnpacking : public mlir::OpRewritePattern<fir::UnpackArrayOp> {
+class NoopUnpacking : public aiir::OpRewritePattern<fir::UnpackArrayOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
-  mlir::LogicalResult matchAndRewrite(fir::UnpackArrayOp,
-                                      mlir::PatternRewriter &) const override;
+  aiir::LogicalResult matchAndRewrite(fir::UnpackArrayOp,
+                                      aiir::PatternRewriter &) const override;
 };
 } // namespace
 
-mlir::LogicalResult
+aiir::LogicalResult
 PackingOfContiguous::matchAndRewrite(fir::PackArrayOp op,
-                                     mlir::PatternRewriter &rewriter) const {
-  mlir::Value box = op.getArray();
+                                     aiir::PatternRewriter &rewriter) const {
+  aiir::Value box = op.getArray();
   if (hlfir::isSimplyContiguous(box, !op.getInnermost())) {
     rewriter.replaceOp(op, box);
-    return mlir::success();
+    return aiir::success();
   }
-  return mlir::failure();
+  return aiir::failure();
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 NoopUnpacking::matchAndRewrite(fir::UnpackArrayOp op,
-                               mlir::PatternRewriter &rewriter) const {
+                               aiir::PatternRewriter &rewriter) const {
   if (op.getTemp() == op.getOriginal()) {
     rewriter.eraseOp(op);
-    return mlir::success();
+    return aiir::success();
   }
-  return mlir::failure();
+  return aiir::failure();
 }
 
 void OptimizeArrayRepackingPass::runOnOperation() {
-  mlir::func::FuncOp funcOp = getOperation();
-  mlir::MLIRContext *context = &getContext();
-  mlir::RewritePatternSet patterns(context);
-  mlir::GreedyRewriteConfig config;
+  aiir::func::FuncOp funcOp = getOperation();
+  aiir::AIIRContext *context = &getContext();
+  aiir::RewritePatternSet patterns(context);
+  aiir::GreedyRewriteConfig config;
   config
-      .setRegionSimplificationLevel(mlir::GreedySimplifyRegionLevel::Disabled)
+      .setRegionSimplificationLevel(aiir::GreedySimplifyRegionLevel::Disabled)
       // Traverse the operations top-down, so that fir.pack_array
       // operations are optimized before their using fir.pack_array
       // operations. This way the rewrite may converge faster.
       .setUseTopDownTraversal();
   patterns.insert<PackingOfContiguous>(context);
   patterns.insert<NoopUnpacking>(context);
-  if (mlir::failed(
-          mlir::applyPatternsGreedily(funcOp, std::move(patterns), config))) {
+  if (aiir::failed(
+          aiir::applyPatternsGreedily(funcOp, std::move(patterns), config))) {
     // Failure may happen if the rewriter does not converge soon enough.
     // That is not an error, so just report a diagnostic under debug.
-    LLVM_DEBUG(mlir::emitError(funcOp.getLoc(),
+    LLVM_DEBUG(aiir::emitError(funcOp.getLoc(),
                                "failure in array repacking optimization"));
   }
 }

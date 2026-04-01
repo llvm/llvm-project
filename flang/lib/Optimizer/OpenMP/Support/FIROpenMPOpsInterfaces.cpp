@@ -12,7 +12,7 @@
 
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace {
 /// Helper template that must be specialized for each operation.
@@ -23,14 +23,14 @@ struct OperationMoveModel {
   // operation from the 'descendant' operation into operation 'op'.
   // If 'candidate' is nullptr, then the caller is querying whether
   // any operation from any descendant can be moved into 'op' operation.
-  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
-                             mlir::Operation *candidate) const;
+  bool canMoveFromDescendant(aiir::Operation *op, aiir::Operation *descendant,
+                             aiir::Operation *candidate) const;
 
   // Returns true if it is allowed to move the given 'candidate'
   // operation out of operation 'op'. If 'candidate' is nullptr,
   // then the caller is querying whether any operation can be moved
   // out of 'op' operation.
-  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const;
+  bool canMoveOutOf(aiir::Operation *op, aiir::Operation *candidate) const;
 };
 
 // Helpers to check if T is one of Ts.
@@ -52,13 +52,13 @@ struct OperationMoveModel<
     typename std::enable_if<is_any_omp_op_v<OP, OMP_LOOP_WRAPPER_OPS>>::type>
     : public fir::OperationMoveOpInterface::ExternalModel<
           OperationMoveModel<OP>, OP> {
-  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
-                             mlir::Operation *candidate) const {
+  bool canMoveFromDescendant(aiir::Operation *op, aiir::Operation *descendant,
+                             aiir::Operation *candidate) const {
     // Operations cannot be moved from descendants of LoopWrapperInterface
     // operation into the LoopWrapperInterface operation.
     return false;
   }
-  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const {
+  bool canMoveOutOf(aiir::Operation *op, aiir::Operation *candidate) const {
     // The LoopWrapperInterface operations are only supposed to contain
     // a loop operation, and it is probably okay to move operations
     // from the descendant loop operation out of the LoopWrapperInterface
@@ -73,13 +73,13 @@ struct OperationMoveModel<
     OP, typename std::enable_if<is_any_omp_op_v<OP, OMP_OUTLINEABLE_OPS>>::type>
     : public fir::OperationMoveOpInterface::ExternalModel<
           OperationMoveModel<OP>, OP> {
-  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
-                             mlir::Operation *candidate) const {
+  bool canMoveFromDescendant(aiir::Operation *op, aiir::Operation *descendant,
+                             aiir::Operation *candidate) const {
     // Operations can be moved from descendants of OutlineableOpenMPOpInterface
     // operation into the OutlineableOpenMPOpInterface operation.
     return true;
   }
-  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const {
+  bool canMoveOutOf(aiir::Operation *op, aiir::Operation *candidate) const {
     // Operations cannot be moved out of OutlineableOpenMPOpInterface operation.
     return false;
   }
@@ -88,14 +88,14 @@ struct OperationMoveModel<
 // Helper to call attachInterface<OperationMoveModel> for all Ts
 // (types of operations).
 template <typename... Ts>
-void attachInterfaces(mlir::MLIRContext *ctx) {
+void attachInterfaces(aiir::AIIRContext *ctx) {
   (Ts::template attachInterface<OperationMoveModel<Ts>>(*ctx), ...);
 }
 } // anonymous namespace
 
-void fir::omp::registerOpInterfacesExtensions(mlir::DialectRegistry &registry) {
+void fir::omp::registerOpInterfacesExtensions(aiir::DialectRegistry &registry) {
   registry.addExtension(
-      +[](mlir::MLIRContext *ctx, mlir::omp::OpenMPDialect *dialect) {
+      +[](aiir::AIIRContext *ctx, aiir::omp::OpenMPDialect *dialect) {
         attachInterfaces<OMP_LOOP_WRAPPER_OPS>(ctx);
         attachInterfaces<OMP_OUTLINEABLE_OPS>(ctx);
       });

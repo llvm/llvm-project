@@ -1,4 +1,4 @@
-// Test codegen of constant insert_on_range without symbol reference into mlir.constant.
+// Test codegen of constant insert_on_range without symbol reference into aiir.constant.
 // RUN: fir-opt --cg-rewrite --split-input-file --fir-to-llvm-ir %s | FileCheck %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little", "dlti.mangling_mode" = "e", "dlti.stack_alignment" = 128 : i64>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
@@ -15,8 +15,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
   }
 }
 
-//CHECK-LABEL: llvm.mlir.global external @derived_array()
-//CHECK:    %[[CST:.*]] = llvm.mlir.constant([
+//CHECK-LABEL: llvm.aiir.global external @derived_array()
+//CHECK:    %[[CST:.*]] = llvm.aiir.constant([
 //CHECK-SAME:  [
 //CHECK-SAME:    [#llvm.zero, 8, 20240719 : i32, 1 : i8, 28 : i8, 2 : i8, 0 : i8,
 //CHECK-SAME:      [

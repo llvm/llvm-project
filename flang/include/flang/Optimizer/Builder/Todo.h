@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,7 @@
 // developed.
 
 #undef TODO
-// Use TODO_NOLOC if no mlir location is available to indicate the line in
+// Use TODO_NOLOC if no aiir location is available to indicate the line in
 // Fortran source file that requires an unimplemented feature.
 #undef TODO_NOLOC
 
@@ -51,18 +51,18 @@
   TODO_NOLOCDEFN(ToDoMsg, __FILE__, __LINE__, GENTRACE)
 
 #undef TODO_DEFN
-#define TODO_DEFN(MlirLoc, ToDoMsg, ToDoFile, ToDoLine, GenTrace)              \
+#define TODO_DEFN(AiirLoc, ToDoMsg, ToDoFile, ToDoLine, GenTrace)              \
   do {                                                                         \
-    fir::emitFatalError(MlirLoc,                                               \
+    fir::emitFatalError(AiirLoc,                                               \
                         llvm::Twine(ToDoFile ":" TODOQUOTE(                    \
                             ToDoLine) ": not yet implemented: ") +             \
                             llvm::Twine(ToDoMsg),                              \
                         GenTrace);                                             \
   } while (false)
 
-#define TODO(MlirLoc, ToDoMsg)                                                 \
-  TODO_DEFN(MlirLoc, ToDoMsg, __FILE__, __LINE__, false)
-#define TODO_TRACE(MlirLoc, ToDoMsg)                                           \
-  TODO_DEFN(MlirLoc, ToDoMsg, __FILE__, __LINE__, GEN_TRACE)
+#define TODO(AiirLoc, ToDoMsg)                                                 \
+  TODO_DEFN(AiirLoc, ToDoMsg, __FILE__, __LINE__, false)
+#define TODO_TRACE(AiirLoc, ToDoMsg)                                           \
+  TODO_DEFN(AiirLoc, ToDoMsg, __FILE__, __LINE__, GEN_TRACE)
 
 #endif // FORTRAN_LOWER_TODO_H

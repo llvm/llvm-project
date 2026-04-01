@@ -14,8 +14,8 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/OpenACC/Analysis/FIROpenACCSupportAnalysis.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
-#include "mlir/Analysis/AliasAnalysis.h"
-#include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "aiir/Analysis/AliasAnalysis.h"
+#include "aiir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 
 namespace fir {
 namespace acc {
@@ -37,11 +37,11 @@ class ACCInitializeFIRAnalysesPass
 public:
   void runOnOperation() override {
     // Initialize OpenACCSupport with FIR-specific implementation.
-    auto &openACCSupport = getAnalysis<mlir::acc::OpenACCSupport>();
+    auto &openACCSupport = getAnalysis<aiir::acc::OpenACCSupport>();
     openACCSupport.setImplementation(fir::acc::FIROpenACCSupportAnalysis());
 
     // Initialize AliasAnalysis with FIR-specific implementation.
-    auto &aliasAnalysis = getAnalysis<mlir::AliasAnalysis>();
+    auto &aliasAnalysis = getAnalysis<aiir::AliasAnalysis>();
     aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis());
 
     // Mark all analyses as preserved since this pass only initializes them
@@ -51,6 +51,6 @@ public:
 
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::acc::createACCInitializeFIRAnalysesPass() {
+std::unique_ptr<aiir::Pass> fir::acc::createACCInitializeFIRAnalysesPass() {
   return std::make_unique<ACCInitializeFIRAnalysesPass>();
 }

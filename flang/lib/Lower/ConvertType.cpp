@@ -18,8 +18,8 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -32,22 +32,22 @@ using Fortran::common::VectorElementCategory;
 // Intrinsic type translation helpers
 //===--------------------------------------------------------------------===//
 
-static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
+static aiir::Type genRealType(aiir::AIIRContext *context, int kind) {
   if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Real, kind)) {
     switch (kind) {
     case 2:
-      return mlir::Float16Type::get(context);
+      return aiir::Float16Type::get(context);
     case 3:
-      return mlir::BFloat16Type::get(context);
+      return aiir::BFloat16Type::get(context);
     case 4:
-      return mlir::Float32Type::get(context);
+      return aiir::Float32Type::get(context);
     case 8:
-      return mlir::Float64Type::get(context);
+      return aiir::Float64Type::get(context);
     case 10:
-      return mlir::Float80Type::get(context);
+      return aiir::Float80Type::get(context);
     case 16:
-      return mlir::Float128Type::get(context);
+      return aiir::Float128Type::get(context);
     }
   }
   llvm_unreachable("REAL type translation not implemented");
@@ -58,39 +58,39 @@ int getIntegerBits() {
   return Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
                                  KIND>::Scalar::bits;
 }
-static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
+static aiir::Type genIntegerType(aiir::AIIRContext *context, int kind,
                                  bool isUnsigned = false) {
   if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Integer, kind)) {
-    mlir::IntegerType::SignednessSemantics signedness =
-        (isUnsigned ? mlir::IntegerType::SignednessSemantics::Unsigned
-                    : mlir::IntegerType::SignednessSemantics::Signless);
+    aiir::IntegerType::SignednessSemantics signedness =
+        (isUnsigned ? aiir::IntegerType::SignednessSemantics::Unsigned
+                    : aiir::IntegerType::SignednessSemantics::Signless);
 
     switch (kind) {
     case 1:
-      return mlir::IntegerType::get(context, getIntegerBits<1>(), signedness);
+      return aiir::IntegerType::get(context, getIntegerBits<1>(), signedness);
     case 2:
-      return mlir::IntegerType::get(context, getIntegerBits<2>(), signedness);
+      return aiir::IntegerType::get(context, getIntegerBits<2>(), signedness);
     case 4:
-      return mlir::IntegerType::get(context, getIntegerBits<4>(), signedness);
+      return aiir::IntegerType::get(context, getIntegerBits<4>(), signedness);
     case 8:
-      return mlir::IntegerType::get(context, getIntegerBits<8>(), signedness);
+      return aiir::IntegerType::get(context, getIntegerBits<8>(), signedness);
     case 16:
-      return mlir::IntegerType::get(context, getIntegerBits<16>(), signedness);
+      return aiir::IntegerType::get(context, getIntegerBits<16>(), signedness);
     }
   }
   llvm_unreachable("INTEGER or UNSIGNED kind not translated");
 }
 
-static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
+static aiir::Type genLogicalType(aiir::AIIRContext *context, int KIND) {
   if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Logical, KIND))
     return fir::LogicalType::get(context, KIND);
   return {};
 }
 
-static mlir::Type genCharacterType(
-    mlir::MLIRContext *context, int KIND,
+static aiir::Type genCharacterType(
+    aiir::AIIRContext *context, int KIND,
     Fortran::lower::LenParameterTy len = fir::CharacterType::unknownLen()) {
   if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Character, KIND))
@@ -98,12 +98,12 @@ static mlir::Type genCharacterType(
   return {};
 }
 
-static mlir::Type genComplexType(mlir::MLIRContext *context, int KIND) {
-  return mlir::ComplexType::get(genRealType(context, KIND));
+static aiir::Type genComplexType(aiir::AIIRContext *context, int KIND) {
+  return aiir::ComplexType::get(genRealType(context, KIND));
 }
 
-static mlir::Type
-genFIRType(mlir::MLIRContext *context, Fortran::common::TypeCategory tc,
+static aiir::Type
+genFIRType(aiir::AIIRContext *context, Fortran::common::TypeCategory tc,
            int kind,
            llvm::ArrayRef<Fortran::lower::LenParameterTy> lenParameters) {
   switch (tc) {
@@ -136,28 +136,28 @@ genFIRType(mlir::MLIRContext *context, Fortran::common::TypeCategory tc,
 /// ALLOCATABLE or POINTER are reflected in the fir type.
 /// It uses evaluate::DynamicType and evaluate::Shape when possible to
 /// avoid re-implementing type/shape analysis here.
-/// Do not use the FirOpBuilder from the AbstractConverter to get fir/mlir types
+/// Do not use the FirOpBuilder from the AbstractConverter to get fir/aiir types
 /// since it is not guaranteed to exist yet when we lower types.
 namespace {
 struct TypeBuilderImpl {
 
   TypeBuilderImpl(Fortran::lower::AbstractConverter &converter)
       : derivedTypeInConstruction{converter.getTypeConstructionStack()},
-        converter{converter}, context{&converter.getMLIRContext()} {}
+        converter{converter}, context{&converter.getAIIRContext()} {}
 
   template <typename A>
-  mlir::Type genExprType(const A &expr) {
+  aiir::Type genExprType(const A &expr) {
     std::optional<Fortran::evaluate::DynamicType> dynamicType = expr.GetType();
     if (!dynamicType)
       return genTypelessExprType(expr);
     Fortran::common::TypeCategory category = dynamicType->category();
 
-    mlir::Type baseType;
+    aiir::Type baseType;
     bool isPolymorphic = (dynamicType->IsPolymorphic() ||
                           dynamicType->IsUnlimitedPolymorphic()) &&
                          !dynamicType->IsAssumedType();
     if (dynamicType->IsUnlimitedPolymorphic()) {
-      baseType = mlir::NoneType::get(context);
+      baseType = aiir::NoneType::get(context);
     } else if (category == Fortran::common::TypeCategory::Derived) {
       baseType = genDerivedType(dynamicType->GetDerivedTypeSpec());
     } else {
@@ -209,27 +209,27 @@ struct TypeBuilderImpl {
   }
 
   template <typename A>
-  mlir::Type genTypelessExprType(const A &expr) {
+  aiir::Type genTypelessExprType(const A &expr) {
     fir::emitFatalError(converter.getCurrentLocation(), "not a typeless expr");
   }
 
-  mlir::Type genTypelessExprType(const Fortran::lower::SomeExpr &expr) {
+  aiir::Type genTypelessExprType(const Fortran::lower::SomeExpr &expr) {
     return Fortran::common::visit(
         Fortran::common::visitors{
-            [&](const Fortran::evaluate::BOZLiteralConstant &) -> mlir::Type {
-              return mlir::NoneType::get(context);
+            [&](const Fortran::evaluate::BOZLiteralConstant &) -> aiir::Type {
+              return aiir::NoneType::get(context);
             },
-            [&](const Fortran::evaluate::NullPointer &) -> mlir::Type {
-              return fir::ReferenceType::get(mlir::NoneType::get(context));
+            [&](const Fortran::evaluate::NullPointer &) -> aiir::Type {
+              return fir::ReferenceType::get(aiir::NoneType::get(context));
             },
             [&](const Fortran::evaluate::ProcedureDesignator &proc)
-                -> mlir::Type {
+                -> aiir::Type {
               return Fortran::lower::translateSignature(proc, converter);
             },
-            [&](const Fortran::evaluate::ProcedureRef &) -> mlir::Type {
-              return mlir::NoneType::get(context);
+            [&](const Fortran::evaluate::ProcedureRef &) -> aiir::Type {
+              return aiir::NoneType::get(context);
             },
-            [](const auto &x) -> mlir::Type {
+            [](const auto &x) -> aiir::Type {
               using T = std::decay_t<decltype(x)>;
               static_assert(!Fortran::common::HasMember<
                                 T, Fortran::evaluate::TypelessExpression>,
@@ -240,10 +240,10 @@ struct TypeBuilderImpl {
         expr.u);
   }
 
-  mlir::Type genSymbolType(const Fortran::semantics::Symbol &symbol,
+  aiir::Type genSymbolType(const Fortran::semantics::Symbol &symbol,
                            bool isAlloc = false, bool isPtr = false) {
-    mlir::Location loc = converter.genLocation(symbol.name());
-    mlir::Type ty;
+    aiir::Location loc = converter.genLocation(symbol.name());
+    aiir::Type ty;
     // If the symbol is not the same as the ultimate one (i.e, it is host or use
     // associated), all the symbol properties are the ones of the ultimate
     // symbol but the volatile and asynchronous attributes that may differ. To
@@ -266,7 +266,7 @@ struct TypeBuilderImpl {
         translateLenParameters(params, tySpec->category(), ultimate);
         ty = genFIRType(context, tySpec->category(), kind, params);
       } else if (type->IsUnlimitedPolymorphic()) {
-        ty = mlir::NoneType::get(context);
+        ty = aiir::NoneType::get(context);
       } else if (const Fortran::semantics::DerivedTypeSpec *tySpec =
                      type->AsDerived()) {
         ty = genDerivedType(*tySpec);
@@ -324,7 +324,7 @@ struct TypeBuilderImpl {
     return false;
   }
 
-  mlir::Type genVectorType(const Fortran::semantics::DerivedTypeSpec &tySpec) {
+  aiir::Type genVectorType(const Fortran::semantics::DerivedTypeSpec &tySpec) {
     assert(tySpec.scope() && "Missing scope for Vector type");
     auto vectorSize{tySpec.scope()->size()};
     switch (tySpec.category()) {
@@ -368,22 +368,22 @@ struct TypeBuilderImpl {
     case (Fortran::semantics::DerivedTypeSpec::Category::PairVector):
     case (Fortran::semantics::DerivedTypeSpec::Category::QuadVector):
       return fir::VectorType::get(vectorSize * 8,
-                                  mlir::IntegerType::get(context, 1));
+                                  aiir::IntegerType::get(context, 1));
     case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
       Fortran::common::die("Vector element type not implemented");
     }
   }
 
-  mlir::Type genDerivedType(const Fortran::semantics::DerivedTypeSpec &tySpec) {
-    std::vector<std::pair<std::string, mlir::Type>> ps;
-    std::vector<std::pair<std::string, mlir::Type>> cs;
+  aiir::Type genDerivedType(const Fortran::semantics::DerivedTypeSpec &tySpec) {
+    std::vector<std::pair<std::string, aiir::Type>> ps;
+    std::vector<std::pair<std::string, aiir::Type>> cs;
     if (tySpec.IsVectorType()) {
       return genVectorType(tySpec);
     }
 
     const Fortran::semantics::Symbol &typeSymbol = tySpec.typeSymbol();
     const Fortran::semantics::Scope &derivedScope = DEREF(tySpec.GetScope());
-    if (mlir::Type ty = getTypeIfDerivedAlreadyInConstruction(derivedScope))
+    if (aiir::Type ty = getTypeIfDerivedAlreadyInConstruction(derivedScope))
       return ty;
 
     auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
@@ -420,16 +420,16 @@ struct TypeBuilderImpl {
         assert(scopeIter != derivedScope.cend() &&
                "failed to find derived type component symbol");
         const Fortran::semantics::Symbol &component = scopeIter->second.get();
-        mlir::Type ty = genSymbolType(component);
+        aiir::Type ty = genSymbolType(component);
         if (rec.isPacked()) {
           auto compSize{component.size()};
           auto compOffset{component.offset()};
 
           if (prev_offset < compOffset) {
             size_t pad{compOffset - prev_offset};
-            mlir::Type i8Ty{mlir::IntegerType::get(context, 8)};
+            aiir::Type i8Ty{aiir::IntegerType::get(context, 8)};
             fir::SequenceType::Shape shape{static_cast<int64_t>(pad)};
-            mlir::Type padTy{fir::SequenceType::get(shape, i8Ty)};
+            aiir::Type padTy{fir::SequenceType::get(shape, i8Ty)};
             prev_offset += pad;
             cs.emplace_back("__padding" + std::to_string(padCounter++), padTy);
           }
@@ -445,9 +445,9 @@ struct TypeBuilderImpl {
             auto compEnd{component.offset() + component.size()};
             if (compEnd < derivedScope.size()) {
               size_t pad{derivedScope.size() - compEnd};
-              mlir::Type i8Ty{mlir::IntegerType::get(context, 8)};
+              aiir::Type i8Ty{aiir::IntegerType::get(context, 8)};
               fir::SequenceType::Shape shape{static_cast<int64_t>(pad)};
-              mlir::Type padTy{fir::SequenceType::get(shape, i8Ty)};
+              aiir::Type padTy{fir::SequenceType::get(shape, i8Ty)};
               cs.emplace_back("__padding" + std::to_string(padCounter++),
                               padTy);
             }
@@ -472,7 +472,7 @@ struct TypeBuilderImpl {
                "derived type components with non default lower bounds");
         if (IsProcedure(component))
           TODO(converter.genLocation(component.name()), "procedure components");
-        mlir::Type ty = genSymbolType(component);
+        aiir::Type ty = genSymbolType(component);
         // Do not add the parent component (component of the parents are
         // added and should be sufficient, the parent component would
         // duplicate the fields). Note that genSymbolType must be called above
@@ -484,7 +484,7 @@ struct TypeBuilderImpl {
       }
     }
 
-    mlir::Location loc = converter.genLocation(typeSymbol.name());
+    aiir::Location loc = converter.genLocation(typeSymbol.name());
     // (2) The LEN type parameters.
     for (const auto &param :
          Fortran::semantics::OrderParameterDeclarations(typeSymbol))
@@ -595,14 +595,14 @@ struct TypeBuilderImpl {
     return fir::SequenceType::getUnknownExtent();
   }
 
-  mlir::Type genVariableType(const Fortran::lower::pft::Variable &var) {
+  aiir::Type genVariableType(const Fortran::lower::pft::Variable &var) {
     return genSymbolType(var.getSymbol(), var.isHeapAlloc(), var.isPointer());
   }
 
   /// Derived type can be recursive. That is, pointer components of a derived
   /// type `t` have type `t`. This helper returns `t` if it is already being
   /// lowered to avoid infinite loops.
-  mlir::Type getTypeIfDerivedAlreadyInConstruction(
+  aiir::Type getTypeIfDerivedAlreadyInConstruction(
       const Fortran::semantics::Scope &derivedScope) const {
     return derivedTypeInConstruction.lookup(&derivedScope);
   }
@@ -612,40 +612,40 @@ struct TypeBuilderImpl {
   /// shallow (<10), so a SmallVector is sufficient.
   Fortran::lower::TypeConstructionStack &derivedTypeInConstruction;
   Fortran::lower::AbstractConverter &converter;
-  mlir::MLIRContext *context;
+  aiir::AIIRContext *context;
 };
 } // namespace
 
-mlir::Type Fortran::lower::getFIRType(mlir::MLIRContext *context,
+aiir::Type Fortran::lower::getFIRType(aiir::AIIRContext *context,
                                       Fortran::common::TypeCategory tc,
                                       int kind,
                                       llvm::ArrayRef<LenParameterTy> params) {
   return genFIRType(context, tc, kind, params);
 }
 
-mlir::Type Fortran::lower::translateDerivedTypeToFIRType(
+aiir::Type Fortran::lower::translateDerivedTypeToFIRType(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::DerivedTypeSpec &tySpec) {
   return TypeBuilderImpl{converter}.genDerivedType(tySpec);
 }
 
-mlir::Type Fortran::lower::translateSomeExprToFIRType(
+aiir::Type Fortran::lower::translateSomeExprToFIRType(
     Fortran::lower::AbstractConverter &converter, const SomeExpr &expr) {
   return TypeBuilderImpl{converter}.genExprType(expr);
 }
 
-mlir::Type Fortran::lower::translateSymbolToFIRType(
+aiir::Type Fortran::lower::translateSymbolToFIRType(
     Fortran::lower::AbstractConverter &converter, const SymbolRef symbol) {
   return TypeBuilderImpl{converter}.genSymbolType(symbol);
 }
 
-mlir::Type Fortran::lower::translateVariableToFIRType(
+aiir::Type Fortran::lower::translateVariableToFIRType(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::pft::Variable &var) {
   return TypeBuilderImpl{converter}.genVariableType(var);
 }
 
-mlir::Type Fortran::lower::convertReal(mlir::MLIRContext *context, int kind) {
+aiir::Type Fortran::lower::convertReal(aiir::AIIRContext *context, int kind) {
   return genRealType(context, kind);
 }
 
@@ -659,7 +659,7 @@ bool Fortran::lower::isDerivedTypeWithLenParameters(
 }
 
 template <typename T>
-mlir::Type Fortran::lower::TypeBuilder<T>::genType(
+aiir::Type Fortran::lower::TypeBuilder<T>::genType(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::FunctionRef<T> &funcRef) {
   return TypeBuilderImpl{converter}.genExprType(funcRef);

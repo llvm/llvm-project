@@ -1,0 +1,10 @@
+add_aiir_unittest(AIIRPassTests
+  AnalysisManagerTest.cpp
+  PassManagerTest.cpp
+  PassPipelineParserTest.cpp
+)
+aiir_target_link_libraries(AIIRPassTests
+  PRIVATE
+  AIIRDebug
+  AIIRFuncDialect
+  AIIRPass)

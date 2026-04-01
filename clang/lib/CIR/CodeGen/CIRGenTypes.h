@@ -32,7 +32,7 @@ class QualType;
 class Type;
 } // namespace clang
 
-namespace mlir {
+namespace aiir {
 class Type;
 }
 
@@ -72,7 +72,7 @@ class CIRGenTypes {
   llvm::SmallVector<const clang::RecordDecl *, 8> deferredRecords;
 
   /// Heper for convertType.
-  mlir::Type convertFunctionTypeInternal(clang::QualType ft);
+  aiir::Type convertFunctionTypeInternal(clang::QualType ft);
 
 public:
   CIRGenTypes(CIRGenModule &cgm);
@@ -91,12 +91,12 @@ public:
   clang::CanQualType deriveThisType(const clang::CXXRecordDecl *rd,
                                     const clang::CXXMethodDecl *md);
 
-  /// This map of clang::Type to mlir::Type (which includes CIR type) is a
+  /// This map of clang::Type to aiir::Type (which includes CIR type) is a
   /// cache of types that have already been processed.
-  using TypeCacheTy = llvm::DenseMap<const clang::Type *, mlir::Type>;
+  using TypeCacheTy = llvm::DenseMap<const clang::Type *, aiir::Type>;
   TypeCacheTy typeCache;
 
-  mlir::MLIRContext &getMLIRContext() const;
+  aiir::AIIRContext &getAIIRContext() const;
   clang::ASTContext &getASTContext() const { return astContext; }
 
   bool isRecordLayoutComplete(const clang::Type *ty) const;
@@ -107,10 +107,10 @@ public:
 
   const ABIInfo &getABIInfo() const { return theABIInfo; }
 
-  /// Convert a Clang type into a mlir::Type.
-  mlir::Type convertType(clang::QualType type);
+  /// Convert a Clang type into a aiir::Type.
+  aiir::Type convertType(clang::QualType type);
 
-  mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
+  aiir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
 
   std::unique_ptr<CIRGenRecordLayout>
   computeRecordLayout(const clang::RecordDecl *rd, cir::RecordType *ty);
@@ -120,12 +120,12 @@ public:
 
   const CIRGenRecordLayout &getCIRGenRecordLayout(const clang::RecordDecl *rd);
 
-  /// Convert type T into an mlir::Type. This differs from convertType in that
+  /// Convert type T into an aiir::Type. This differs from convertType in that
   /// it is used to convert to the memory representation for a type. For
   /// example, the scalar representation for bool is i1, but the memory
   /// representation is usually i8 or i32, depending on the target.
-  // TODO: convert this comment to account for MLIR's equivalence
-  mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
+  // TODO: convert this comment to account for AIIR's equivalence
+  aiir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 
   /// Get the CIR function type for \arg Info.
   cir::FuncType getFunctionType(const CIRGenFunctionInfo &info);

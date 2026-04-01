@@ -13,21 +13,21 @@
 #ifndef CLANG_CIR_DIALECT_OPENACC_CIROPENACCTYPEINTERFACES_H
 #define CLANG_CIR_DIALECT_OPENACC_CIROPENACCTYPEINTERFACES_H
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
 namespace cir::acc {
 
 template <typename T>
 struct OpenACCPointerLikeModel
-    : public mlir::acc::PointerLikeType::ExternalModel<
+    : public aiir::acc::PointerLikeType::ExternalModel<
           OpenACCPointerLikeModel<T>, T> {
-  mlir::Type getElementType(mlir::Type pointer) const {
-    return mlir::cast<T>(pointer).getPointee();
+  aiir::Type getElementType(aiir::Type pointer) const {
+    return aiir::cast<T>(pointer).getPointee();
   }
-  mlir::acc::VariableTypeCategory
-  getPointeeTypeCategory(mlir::Type pointer,
-                         mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
-                         mlir::Type varType) const;
+  aiir::acc::VariableTypeCategory
+  getPointeeTypeCategory(aiir::Type pointer,
+                         aiir::TypedValue<aiir::acc::PointerLikeType> varPtr,
+                         aiir::Type varType) const;
 };
 
 } // namespace cir::acc

@@ -75,7 +75,7 @@ build:generic_clang --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 # Use `-Wall` for Clang.
 build:generic_clang --copt=-Wall --host_copt=-Wall
 
-# The Clang available on MacOS has a warning that isn't clean on MLIR code. The
+# The Clang available on MacOS has a warning that isn't clean on AIIR code. The
 # warning doesn't show up with more recent Clangs, so just disable for now.
 build:generic_clang --cxxopt=-Wno-range-loop-analysis --host_cxxopt=-Wno-range-loop-analysis
 

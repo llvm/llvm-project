@@ -60,7 +60,7 @@ config.suffixes = [
     ".F08",
     ".ll",
     ".fir",
-    ".mlir",
+    ".aiir",
 ]
 
 llvm_config.use_default_substitutions()

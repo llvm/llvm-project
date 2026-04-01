@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
 
 add_clang_library(clangCIRLoweringCommon
   CIRPasses.cpp
@@ -12,10 +12,10 @@ add_clang_library(clangCIRLoweringCommon
   LINK_LIBS
   clangCIR
   ${dialect_libs}
-  MLIRCIR
-  MLIRCIRTransforms
-  MLIRTransforms
-  MLIRSupport
+  AIIRCIR
+  AIIRCIRTransforms
+  AIIRTransforms
+  AIIRSupport
   )
 
 add_subdirectory(DirectToLLVM)

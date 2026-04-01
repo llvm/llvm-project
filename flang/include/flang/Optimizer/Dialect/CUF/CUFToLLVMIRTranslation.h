@@ -13,16 +13,16 @@
 #ifndef FLANG_OPTIMIZER_DIALECT_CUF_GPUTOLLVMIRTRANSLATION_H_
 #define FLANG_OPTIMIZER_DIALECT_CUF_GPUTOLLVMIRTRANSLATION_H_
 
-namespace mlir {
+namespace aiir {
 class DialectRegistry;
-class MLIRContext;
-} // namespace mlir
+class AIIRContext;
+} // namespace aiir
 
 namespace cuf {
 
 /// Register the CUF dialect and the translation from it to the LLVM IR in
 /// the given registry.
-void registerCUFDialectTranslation(mlir::DialectRegistry &registry);
+void registerCUFDialectTranslation(aiir::DialectRegistry &registry);
 
 } // namespace cuf
 

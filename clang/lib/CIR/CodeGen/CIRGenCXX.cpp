@@ -25,13 +25,13 @@ using namespace clang::CIRGen;
 /// Emit code to cause the variable at the given address to be considered as
 /// constant from this point onwards.
 static void emitDeclInvariant(CIRGenFunction &cgf, const VarDecl *d) {
-  mlir::Value addr = cgf.cgm.getAddrOfGlobalVar(d);
+  aiir::Value addr = cgf.cgm.getAddrOfGlobalVar(d);
   cgf.emitInvariantStart(cgf.getContext().getTypeSizeInChars(d->getType()),
                          addr, cgf.getLoc(d->getSourceRange()));
 }
 
-void CIRGenFunction::emitInvariantStart(CharUnits size, mlir::Value addr,
-                                        mlir::Location loc) {
+void CIRGenFunction::emitInvariantStart(CharUnits size, aiir::Value addr,
+                                        aiir::Location loc) {
   // Do not emit the intrinsic if we're not optimizing.
   if (!cgm.getCodeGenOpts().OptimizationLevel)
     return;
@@ -40,7 +40,7 @@ void CIRGenFunction::emitInvariantStart(CharUnits size, mlir::Value addr,
 
   // Create the size constant as i64
   uint64_t width = size.getQuantity();
-  mlir::Value sizeValue = builder.getConstInt(loc, builder.getSInt64Ty(),
+  aiir::Value sizeValue = builder.getConstInt(loc, builder.getSInt64Ty(),
                                               static_cast<int64_t>(width));
 
   // Create the intrinsic call. The llvm.invariant.start intrinsic returns a
@@ -48,7 +48,7 @@ void CIRGenFunction::emitInvariantStart(CharUnits size, mlir::Value addr,
   // automatically handled when the intrinsic is lowered to LLVM IR.
   cir::LLVMIntrinsicCallOp::create(
       builder, loc, builder.getStringAttr("invariant.start"), addr.getType(),
-      mlir::ValueRange{sizeValue, addr});
+      aiir::ValueRange{sizeValue, addr});
 }
 
 static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
@@ -63,8 +63,8 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   // Set up the ctor region.
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::Block *block = builder.createBlock(&globalOp.getCtorRegion());
+  aiir::OpBuilder::InsertionGuard guard(builder);
+  aiir::Block *block = builder.createBlock(&globalOp.getCtorRegion());
   CIRGenFunction::LexicalScope lexScope{cgf, globalOp.getLoc(),
                                         builder.getInsertionBlock()};
   lexScope.setAsGlobalInit();
@@ -130,8 +130,8 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   // Prepare the dtor region.
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::Block *block = builder.createBlock(&addr.getDtorRegion());
+  aiir::OpBuilder::InsertionGuard guard(builder);
+  aiir::Block *block = builder.createBlock(&addr.getDtorRegion());
   CIRGenFunction::LexicalScope lexScope{cgf, addr.getLoc(),
                                         builder.getInsertionBlock()};
   lexScope.setAsGlobalInit();
@@ -166,8 +166,8 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     auto gd = GlobalDecl(dtor, Dtor_Complete);
     fnOp = cgm.getAddrAndTypeOfCXXStructor(gd).second;
     builder.createCallOp(cgf.getLoc(vd->getSourceRange()),
-                         mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
-                         mlir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
+                         aiir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
+                         aiir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
     assert(fnOp && "expected cir.func");
     // TODO(cir): This doesn't do anything but check for unhandled conditions.
     // What it is meant to do should really be happening in LoweringPrepare.
@@ -181,7 +181,7 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // FIXME(cir): We should create a new operation here to explicitly get the
     // address of the global into whose dtor region we are emiiting the destroy.
     // The same applies to code above where it is calling getAddrOfGlobalVar.
-    mlir::Value globalVal = builder.createGetGlobal(addr);
+    aiir::Value globalVal = builder.createGetGlobal(addr);
     CharUnits alignment = cgf.getContext().getDeclAlign(vd);
     Address globalAddr{globalVal, cgf.convertTypeForMem(type), alignment};
     cgf.emitDestroy(globalAddr, type, cgf.getDestroyer(dtorKind));
@@ -207,13 +207,13 @@ cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl gd) {
   CIRGenFunction cgf{*this, builder};
   curCGF = &cgf;
   {
-    mlir::OpBuilder::InsertionGuard guard(builder);
+    aiir::OpBuilder::InsertionGuard guard(builder);
     cgf.generateCode(gd, fn, funcType);
   }
   curCGF = nullptr;
 
   setNonAliasAttributes(gd, fn);
-  setCIRFunctionAttributesForDefinition(mlir::cast<FunctionDecl>(gd.getDecl()),
+  setCIRFunctionAttributesForDefinition(aiir::cast<FunctionDecl>(gd.getDecl()),
                                         fn);
   return fn;
 }
@@ -257,7 +257,7 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
                                             getLoc(varDecl->getLocation())};
 
-  addr.setAstAttr(cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
+  addr.setAstAttr(cir::ASTVarDeclAttr::get(&getAIIRContext(), varDecl));
 
   if (!ty->isReferenceType()) {
     assert(!cir::MissingFeatures::openMP());
@@ -273,12 +273,12 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
       // initialization but before the yield.
       if (isConstantStorage) {
         CIRGenBuilderTy &builder = cgf.getBuilder();
-        mlir::OpBuilder::InsertionGuard guard(builder);
+        aiir::OpBuilder::InsertionGuard guard(builder);
         // Set insertion point to end of ctor region (before yield)
         if (!addr.getCtorRegion().empty()) {
-          mlir::Block *block = &addr.getCtorRegion().back();
+          aiir::Block *block = &addr.getCtorRegion().back();
           // Find the yield op and insert before it
-          mlir::Operation *yieldOp = block->getTerminator();
+          aiir::Operation *yieldOp = block->getTerminator();
           if (yieldOp) {
             builder.setInsertionPoint(yieldOp);
             emitDeclInvariant(cgf, varDecl);
@@ -294,26 +294,26 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
     return;
   }
 
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  aiir::OpBuilder::InsertionGuard guard(builder);
   auto *block = builder.createBlock(&addr.getCtorRegion());
   CIRGenFunction::LexicalScope scope{*curCGF, addr.getLoc(),
                                      builder.getInsertionBlock()};
   scope.setAsGlobalInit();
   builder.setInsertionPointToStart(block);
-  mlir::Value getGlobal = builder.createGetGlobal(addr);
+  aiir::Value getGlobal = builder.createGetGlobal(addr);
 
   Address declAddr(getGlobal, getASTContext().getDeclAlign(varDecl));
   assert(performInit && "cannot have a constant initializer which needs "
                         "destruction for reference");
   RValue rv = cgf.emitReferenceBindingToExpr(varDecl->getInit());
   {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    mlir::Operation *rvalDefOp = rv.getValue().getDefiningOp();
+    aiir::OpBuilder::InsertionGuard guard(builder);
+    aiir::Operation *rvalDefOp = rv.getValue().getDefiningOp();
     if (rvalDefOp && rvalDefOp->getBlock()) {
-      mlir::Block *rvalSrcBlock = rvalDefOp->getBlock();
+      aiir::Block *rvalSrcBlock = rvalDefOp->getBlock();
 
       if (!rvalSrcBlock->empty() && isa<cir::YieldOp>(rvalSrcBlock->back())) {
-        mlir::Operation &front = rvalSrcBlock->front();
+        aiir::Operation &front = rvalSrcBlock->front();
         getGlobal.getDefiningOp()->moveBefore(&front);
         builder.setInsertionPoint(cast<cir::YieldOp>(rvalSrcBlock->back()));
       }

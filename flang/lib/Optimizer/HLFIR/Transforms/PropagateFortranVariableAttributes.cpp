@@ -40,18 +40,18 @@ public:
 
 class Propagator {
 public:
-  void process(mlir::Operation *op);
+  void process(aiir::Operation *op);
 
 private:
-  static bool isContiguous(mlir::Operation *op) {
+  static bool isContiguous(aiir::Operation *op) {
     // Treat data allocations as contiguous, so that we can propagate
     // the continuity from them. Allocations of fir.box must not be treated
     // as contiguous.
-    if (mlir::isa<fir::AllocaOp, fir::AllocMemOp>(op) &&
-        !mlir::isa<fir::BaseBoxType>(
+    if (aiir::isa<fir::AllocaOp, fir::AllocMemOp>(op) &&
+        !aiir::isa<fir::BaseBoxType>(
             fir::unwrapRefType(op->getResult(0).getType())))
       return true;
-    auto varOp = mlir::dyn_cast<fir::FortranVariableOpInterface>(op);
+    auto varOp = aiir::dyn_cast<fir::FortranVariableOpInterface>(op);
     if (!varOp)
       return false;
     return hlfir::Entity{varOp}.isSimplyContiguous();
@@ -69,29 +69,29 @@ void Propagator::setContiguousAttr(fir::FortranVariableOpInterface op) {
   op.setFortranAttrs(attrs);
 }
 
-void Propagator::process(mlir::Operation *op) {
+void Propagator::process(aiir::Operation *op) {
   if (!isContiguous(op))
     return;
-  llvm::SmallVector<mlir::Operation *> workList{op};
+  llvm::SmallVector<aiir::Operation *> workList{op};
   while (!workList.empty()) {
-    mlir::Operation *current = workList.pop_back_val();
+    aiir::Operation *current = workList.pop_back_val();
     LLVM_DEBUG(llvm::dbgs() << "Propagating continuity from operation:\n"
                             << *current << "\n");
 
-    for (mlir::OpOperand &use : current->getUses()) {
-      mlir::Operation *useOp = use.getOwner();
-      if (auto varOp = mlir::dyn_cast<fir::FortranVariableOpInterface>(useOp)) {
+    for (aiir::OpOperand &use : current->getUses()) {
+      aiir::Operation *useOp = use.getOwner();
+      if (auto varOp = aiir::dyn_cast<fir::FortranVariableOpInterface>(useOp)) {
         // If the user is not currently contiguous, set the contiguous
         // attribute and skip it. The propagation will pick it up later.
-        mlir::Value memref;
-        mlir::TypeSwitch<mlir::Operation *, void>(useOp)
+        aiir::Value memref;
+        aiir::TypeSwitch<aiir::Operation *, void>(useOp)
             .Case<hlfir::DeclareOp, hlfir::DesignateOp>(
                 [&](auto op) { memref = op.getMemref(); })
             .Default([&](auto op) {});
 
         if (memref == use.get() && !isContiguous(varOp)) {
           // Make additional checks for hlfir.designate.
-          if (auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(useOp))
+          if (auto designateOp = aiir::dyn_cast<hlfir::DesignateOp>(useOp))
             if (!hlfir::designatePreservesContinuity(designateOp))
               continue;
 
@@ -99,7 +99,7 @@ void Propagator::process(mlir::Operation *op) {
         }
         continue;
       }
-      mlir::TypeSwitch<mlir::Operation *, void>(useOp)
+      aiir::TypeSwitch<aiir::Operation *, void>(useOp)
           .Case(
               [&](fir::ConvertOp op) { workList.push_back(op.getOperation()); })
           .Case([&](fir::EmboxOp op) {
@@ -115,12 +115,12 @@ void Propagator::process(mlir::Operation *op) {
 }
 
 void PropagateFortranVariableAttributes::runOnOperation() {
-  mlir::Operation *rootOp = getOperation();
-  mlir::MLIRContext *context = &getContext();
-  mlir::RewritePatternSet patterns(context);
+  aiir::Operation *rootOp = getOperation();
+  aiir::AIIRContext *context = &getContext();
+  aiir::RewritePatternSet patterns(context);
   Propagator propagator;
-  rootOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+  rootOp->walk<aiir::WalkOrder::PreOrder>([&](aiir::Operation *op) {
     propagator.process(op);
-    return mlir::WalkResult::advance();
+    return aiir::WalkResult::advance();
   });
 }

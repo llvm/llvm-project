@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,CMPLX,CMPLX-PRECISE,%if flang-supports-f128-math %{F128%} %else %{F64%}
 ! RUN: %flang_fc1 -emit-hlfir -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-hlfir -mllvm --force-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
+! RUN: %flang_fc1 -emit-hlfir -mllvm --force-aiir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
 ! RUN: %flang_fc1 -fapprox-func -emit-hlfir %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-APPROX"
 
 ! Test abs intrinsic for various types (int, float, complex)

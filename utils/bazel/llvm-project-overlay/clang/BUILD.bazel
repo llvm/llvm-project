@@ -17,7 +17,7 @@ load("//:workspace_root.bzl", "workspace_root")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
 load("//llvm:driver.bzl", "llvm_driver_cc_binary")
-load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("//aiir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],

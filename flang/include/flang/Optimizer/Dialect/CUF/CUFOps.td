@@ -19,10 +19,10 @@ include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
-include "mlir/Dialect/GPU/IR/GPUBase.td"
-include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Interfaces/LoopLikeInterface.td"
-include "mlir/IR/BuiltinAttributes.td"
+include "aiir/Dialect/GPU/IR/GPUBase.td"
+include "aiir/Dialect/LLVMIR/LLVMOpBase.td"
+include "aiir/Interfaces/LoopLikeInterface.td"
+include "aiir/IR/BuiltinAttributes.td"
 
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
@@ -57,12 +57,12 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
+    OpBuilder<(ins "aiir::Type":$inType, "llvm::StringRef":$uniqName,
       "llvm::StringRef":$bindcName,
       "cuf::DataAttributeAttr":$cudaAttr,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>];
 
   let hasVerifier = 1;
 }
@@ -216,15 +216,15 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
   }];
 
   let extraClassDeclaration = [{
-    mlir::CallInterfaceCallable getCallableForCallee() {
+    aiir::CallInterfaceCallable getCallableForCallee() {
       return getCalleeAttr();
     }
 
-    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
+    void setCalleeFromCallable(aiir::CallInterfaceCallable callee) {
       (*this)->setAttr(getCalleeAttrName(),
-                       llvm::cast<mlir::SymbolRefAttr>(callee));
+                       llvm::cast<aiir::SymbolRefAttr>(callee));
     }
-    mlir::FunctionType getFunctionType();
+    aiir::FunctionType getFunctionType();
 
     unsigned getNbNoArgOperand() {
       unsigned nbNoArgOperand = 5; // grids and blocks values are always present.
@@ -236,8 +236,8 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     operand_range getArgOperands() {
       return {operand_begin() + getNbNoArgOperand(), operand_end()};
     }
-    mlir::MutableOperandRange getArgOperandsMutable() {
-      return mlir::MutableOperandRange(
+    aiir::MutableOperandRange getArgOperandsMutable() {
+      return aiir::MutableOperandRange(
           *this, getNbNoArgOperand(), getArgs().size() - 1);
     }
   }];
@@ -282,7 +282,7 @@ def cuf_KernelOp
   let extraClassDeclaration = [{
     /// Get Number of variadic operands
     unsigned getNumOperands(unsigned idx) {
-      auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
+      auto segments = (*this)->getAttrOfType<aiir::DenseI32ArrayAttr>(
         getOperandSegmentSizeAttr());
       return static_cast<unsigned>(segments[idx]);
     }
@@ -328,8 +328,8 @@ def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    mlir::StringAttr getKernelName();
-    mlir::StringAttr getKernelModuleName();
+    aiir::StringAttr getKernelName();
+    aiir::StringAttr getKernelModuleName();
   }];
 }
 
@@ -367,11 +367,11 @@ def cuf_SharedMemoryOp
         (`,` $shape^ `:` type($shape) )?  (`align` $alignment^ )? attr-dict `->` qualified(type($ptr))
   }];
 
-  let builders = [OpBuilder<(ins "mlir::Type":$inType,
+  let builders = [OpBuilder<(ins "aiir::Type":$inType,
       "llvm::StringRef":$uniqName, "llvm::StringRef":$bindcName,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>];
 }
 
 def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {

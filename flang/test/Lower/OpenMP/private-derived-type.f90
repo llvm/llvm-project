@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=true -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --enable-delayed-privatization-staging=true -o - %s | FileCheck %s
 ! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging=true -o - %s | FileCheck %s
 
 subroutine s4

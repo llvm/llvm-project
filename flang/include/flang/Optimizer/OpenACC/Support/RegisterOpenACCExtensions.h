@@ -9,21 +9,21 @@
 #ifndef FLANG_OPTIMIZER_OPENACC_REGISTEROPENACCEXTENSIONS_H_
 #define FLANG_OPTIMIZER_OPENACC_REGISTEROPENACCEXTENSIONS_H_
 
-namespace mlir {
+namespace aiir {
 class DialectRegistry;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir::acc {
 
-void registerOpenACCExtensions(mlir::DialectRegistry &registry);
+void registerOpenACCExtensions(aiir::DialectRegistry &registry);
 
 /// Register external models for FIR attributes related to OpenACC.
-void registerAttrsExtensions(mlir::DialectRegistry &registry);
+void registerAttrsExtensions(aiir::DialectRegistry &registry);
 
 /// Register all dialects whose operations may be created
 /// by the transformational attributes.
 void registerTransformationalAttrsDependentDialects(
-    mlir::DialectRegistry &registry);
+    aiir::DialectRegistry &registry);
 
 } // namespace fir::acc
 

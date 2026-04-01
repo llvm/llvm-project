@@ -13,28 +13,28 @@
 
 using namespace Fortran::runtime;
 
-mlir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
-                                       mlir::Location loc, mlir::Value to,
-                                       mlir::Value from, mlir::Value hasStat,
-                                       mlir::Value errMsg) {
-  mlir::func::FuncOp func{
+aiir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
+                                       aiir::Location loc, aiir::Value to,
+                                       aiir::Value from, aiir::Value hasStat,
+                                       aiir::Value errMsg) {
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(MoveAlloc)>(loc, builder)};
-  mlir::FunctionType fTy{func.getFunctionType()};
-  mlir::Value sourceFile{fir::factory::locationToFilename(builder, loc)};
-  mlir::Value sourceLine{
+  aiir::FunctionType fTy{func.getFunctionType()};
+  aiir::Value sourceFile{fir::factory::locationToFilename(builder, loc)};
+  aiir::Value sourceLine{
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(6))};
-  mlir::Value declaredTypeDesc;
+  aiir::Value declaredTypeDesc;
   if (fir::isPolymorphicType(from.getType()) &&
       !fir::isUnlimitedPolymorphicType(from.getType())) {
     fir::ClassType clTy =
-        mlir::dyn_cast<fir::ClassType>(fir::dyn_cast_ptrEleTy(from.getType()));
-    mlir::Type derivedType = fir::unwrapInnerType(clTy.getEleTy());
+        aiir::dyn_cast<fir::ClassType>(fir::dyn_cast_ptrEleTy(from.getType()));
+    aiir::Type derivedType = fir::unwrapInnerType(clTy.getEleTy());
     declaredTypeDesc =
-        fir::TypeDescOp::create(builder, loc, mlir::TypeAttr::get(derivedType));
+        fir::TypeDescOp::create(builder, loc, aiir::TypeAttr::get(derivedType));
   } else {
     declaredTypeDesc = builder.createNullConstant(loc);
   }
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, to, from, declaredTypeDesc, hasStat, errMsg,
       sourceFile, sourceLine)};
 
@@ -42,52 +42,52 @@ mlir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
 }
 
 void fir::runtime::genAllocatableApplyMold(fir::FirOpBuilder &builder,
-                                           mlir::Location loc, mlir::Value desc,
-                                           mlir::Value mold, int rank) {
-  mlir::func::FuncOp func{
+                                           aiir::Location loc, aiir::Value desc,
+                                           aiir::Value mold, int rank) {
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(loc,
                                                                   builder)};
-  mlir::FunctionType fTy = func.getFunctionType();
-  mlir::Value rankVal =
+  aiir::FunctionType fTy = func.getFunctionType();
+  aiir::Value rankVal =
       builder.createIntegerConstant(loc, fTy.getInput(2), rank);
-  llvm::SmallVector<mlir::Value> args{
+  llvm::SmallVector<aiir::Value> args{
       fir::runtime::createArguments(builder, loc, fTy, desc, mold, rankVal)};
   fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genAllocatableSetBounds(fir::FirOpBuilder &builder,
-                                           mlir::Location loc, mlir::Value desc,
-                                           mlir::Value dimIndex,
-                                           mlir::Value lowerBound,
-                                           mlir::Value upperBound) {
-  mlir::func::FuncOp func{
+                                           aiir::Location loc, aiir::Value desc,
+                                           aiir::Value dimIndex,
+                                           aiir::Value lowerBound,
+                                           aiir::Value upperBound) {
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(AllocatableSetBounds)>(loc,
                                                                   builder)};
-  mlir::FunctionType fTy{func.getFunctionType()};
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+  aiir::FunctionType fTy{func.getFunctionType()};
+  llvm::SmallVector<aiir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, desc, dimIndex, lowerBound, upperBound)};
   fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
-                                          mlir::Location loc, mlir::Value desc,
-                                          mlir::Value hasStat,
-                                          mlir::Value errMsg) {
-  mlir::func::FuncOp func{
+                                          aiir::Location loc, aiir::Value desc,
+                                          aiir::Value hasStat,
+                                          aiir::Value errMsg) {
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc, builder)};
-  mlir::FunctionType fTy{func.getFunctionType()};
-  mlir::Value asyncObject = builder.createNullConstant(loc);
-  mlir::Value sourceFile{fir::factory::locationToFilename(builder, loc)};
-  mlir::Value sourceLine{
+  aiir::FunctionType fTy{func.getFunctionType()};
+  aiir::Value asyncObject = builder.createNullConstant(loc);
+  aiir::Value sourceFile{fir::factory::locationToFilename(builder, loc)};
+  aiir::Value sourceLine{
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(5))};
   if (!hasStat)
     hasStat = builder.createBool(loc, false);
   if (!errMsg) {
-    mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+    aiir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
     errMsg = fir::AbsentOp::create(builder, loc, boxNoneTy).getResult();
   }
-  mlir::Value deviceInit = builder.createBool(loc, false);
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+  aiir::Value deviceInit = builder.createBool(loc, false);
+  llvm::SmallVector<aiir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, desc, asyncObject, hasStat, errMsg, sourceFile,
       sourceLine, deviceInit)};
   fir::CallOp::create(builder, loc, func, args);

@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a translation between the MLIR CUF dialect and LLVM IR.
+// This file implements a translation between the AIIR CUF dialect and LLVM IR.
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/CUF/CUFToLLVMIRTranslation.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Runtime/entry-names.h"
-#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
-#include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "aiir/Target/LLVMIR/LLVMTranslationInterface.h"
+#include "aiir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FormatVariadic.h"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
@@ -40,7 +40,7 @@ LogicalResult registerModule(cuf::RegisterModuleOp op,
       llvm::FunctionType::get(ptrTy, ArrayRef<llvm::Type *>({ptrTy}), false));
   auto *handle = builder.CreateCall(fct, {binary});
   moduleTranslation.mapValue(op->getResults().front()) = handle;
-  return mlir::success();
+  return aiir::success();
 }
 
 llvm::Value *getOrCreateFunctionName(llvm::Module *module,
@@ -77,7 +77,7 @@ LogicalResult registerKernel(cuf::RegisterKernelOp op,
                            getOrCreateFunctionName(
                                module, builder, op.getKernelModuleName().str(),
                                op.getKernelName().str())});
-  return mlir::success();
+  return aiir::success();
 }
 
 class CUFDialectLLVMIRTranslationInterface
@@ -105,7 +105,7 @@ public:
 
 void cuf::registerCUFDialectTranslation(DialectRegistry &registry) {
   registry.insert<cuf::CUFDialect>();
-  registry.addExtension(+[](MLIRContext *ctx, cuf::CUFDialect *dialect) {
+  registry.addExtension(+[](AIIRContext *ctx, cuf::CUFDialect *dialect) {
     dialect->addInterfaces<CUFDialectLLVMIRTranslationInterface>();
   });
 }

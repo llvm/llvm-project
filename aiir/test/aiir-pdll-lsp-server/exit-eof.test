@@ -1,0 +1,7 @@
+// RUN: not aiir-pdll-lsp-server < %s 2> %t.err
+// RUN: FileCheck %s < %t.err
+//
+// No LSP messages here, just let aiir-pdll-lsp-server see the end-of-file
+// CHECK: Transport error:
+// (Typically "Transport error: Input/output error" but platform-dependent).
+

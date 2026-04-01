@@ -16,8 +16,8 @@
 extern "C" {
 
 // These functions use intptr_t instead of CUDA's unsigned int to match
-// the type of MLIR's index type. This avoids the need for casts in the
-// generated MLIR code.
+// the type of AIIR's index type. This avoids the need for casts in the
+// generated AIIR code.
 
 void RTDEF(CUFLaunchKernel)(const void *kernelName, intptr_t gridX,
     intptr_t gridY, intptr_t gridZ, intptr_t blockX, intptr_t blockY,

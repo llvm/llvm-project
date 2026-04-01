@@ -11,8 +11,8 @@
 
 #include "flang/Semantics/symbol.h"
 
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/Value.h"
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -21,7 +21,7 @@ namespace Fortran::common::openmp {
 /// arguments associated to a single clause.
 struct EntryBlockArgsEntry {
   llvm::ArrayRef<const Fortran::semantics::Symbol *> syms;
-  llvm::ArrayRef<mlir::Value> vars;
+  llvm::ArrayRef<aiir::Value> vars;
 
   bool isValid() const {
     // This check allows specifying a smaller number of symbols than values
@@ -35,7 +35,7 @@ struct EntryBlockArgsEntry {
 /// arguments associated to all clauses that can define them.
 struct EntryBlockArgs {
   EntryBlockArgsEntry hasDeviceAddr;
-  llvm::ArrayRef<mlir::Value> hostEvalVars;
+  llvm::ArrayRef<aiir::Value> hostEvalVars;
   EntryBlockArgsEntry inReduction;
   EntryBlockArgsEntry map;
   EntryBlockArgsEntry priv;
@@ -57,7 +57,7 @@ struct EntryBlockArgs {
   }
 
   auto getVars() const {
-    return llvm::concat<const mlir::Value>(hasDeviceAddr.vars, hostEvalVars,
+    return llvm::concat<const aiir::Value>(hasDeviceAddr.vars, hostEvalVars,
         inReduction.vars, map.vars, priv.vars, reduction.vars,
         taskReduction.vars, useDeviceAddr.vars, useDevicePtr.vars);
   }
@@ -66,12 +66,12 @@ struct EntryBlockArgs {
 /// Create an entry block for the given region, including the clause-defined
 /// arguments specified.
 ///
-/// \param [in] builder - MLIR operation builder.
+/// \param [in] builder - AIIR operation builder.
 /// \param [in]    args - entry block arguments information for the given
 ///                       operation.
 /// \param [in]  region - Empty region in which to create the entry block.
-mlir::Block *genEntryBlock(
-    mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
+aiir::Block *genEntryBlock(
+    aiir::OpBuilder &builder, const EntryBlockArgs &args, aiir::Region &region);
 } // namespace Fortran::common::openmp
 
 #endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_

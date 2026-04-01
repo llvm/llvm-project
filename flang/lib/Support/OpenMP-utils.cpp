@@ -8,16 +8,16 @@
 
 #include "flang/Support/OpenMP-utils.h"
 
-#include "mlir/IR/OpDefinition.h"
+#include "aiir/IR/OpDefinition.h"
 
 namespace Fortran::common::openmp {
-mlir::Block *genEntryBlock(mlir::OpBuilder &builder, const EntryBlockArgs &args,
-    mlir::Region &region) {
+aiir::Block *genEntryBlock(aiir::OpBuilder &builder, const EntryBlockArgs &args,
+    aiir::Region &region) {
   assert(args.isValid() && "invalid args");
   assert(region.empty() && "non-empty region");
 
-  llvm::SmallVector<mlir::Type> types;
-  llvm::SmallVector<mlir::Location> locs;
+  llvm::SmallVector<aiir::Type> types;
+  llvm::SmallVector<aiir::Location> locs;
   unsigned numVars = args.hasDeviceAddr.vars.size() + args.hostEvalVars.size() +
       args.inReduction.vars.size() + args.map.vars.size() +
       args.priv.vars.size() + args.reduction.vars.size() +
@@ -26,11 +26,11 @@ mlir::Block *genEntryBlock(mlir::OpBuilder &builder, const EntryBlockArgs &args,
   types.reserve(numVars);
   locs.reserve(numVars);
 
-  auto extractTypeLoc = [&types, &locs](llvm::ArrayRef<mlir::Value> vals) {
+  auto extractTypeLoc = [&types, &locs](llvm::ArrayRef<aiir::Value> vals) {
     llvm::transform(vals, std::back_inserter(types),
-        [](mlir::Value v) { return v.getType(); });
+        [](aiir::Value v) { return v.getType(); });
     llvm::transform(vals, std::back_inserter(locs),
-        [](mlir::Value v) { return v.getLoc(); });
+        [](aiir::Value v) { return v.getLoc(); });
   };
 
   // Populate block arguments in clause name alphabetical order to match

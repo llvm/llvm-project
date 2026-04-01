@@ -12,7 +12,7 @@
 
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "aiir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -84,7 +84,7 @@ Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupOneLevelUpSymbol(
   return SymbolBox::None{};
 }
 
-mlir::Value
+aiir::Value
 Fortran::lower::SymMap::lookupImpliedDo(Fortran::lower::SymMap::AcDoVar var) {
   for (auto [marker, binding] : llvm::reverse(impliedDoStack))
     if (var == marker)

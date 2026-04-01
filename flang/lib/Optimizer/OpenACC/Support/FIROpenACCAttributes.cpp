@@ -14,7 +14,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
 namespace fir::acc {
 class FortranSafeTempArrayCopyAttrImpl
@@ -23,15 +23,15 @@ class FortranSafeTempArrayCopyAttrImpl
 public:
   // SafeTempArrayCopyAttrInterface interface methods.
   static bool isDynamicallySafe() { return false; }
-  static mlir::Value genDynamicCheck(mlir::Location loc,
+  static aiir::Value genDynamicCheck(aiir::Location loc,
                                      fir::FirOpBuilder &builder,
-                                     mlir::Value array) {
+                                     aiir::Value array) {
     TODO(loc, "fir::acc::FortranSafeTempArrayCopyAttrImpl::genDynamicCheck()");
     return nullptr;
   }
-  static void registerTempDeallocation(mlir::Location loc,
+  static void registerTempDeallocation(aiir::Location loc,
                                        fir::FirOpBuilder &builder,
-                                       mlir::Value array, mlir::Value temp) {
+                                       aiir::Value array, aiir::Value temp) {
     TODO(loc, "fir::acc::FortranSafeTempArrayCopyAttrImpl::"
               "registerTempDeallocation()");
   }
@@ -39,28 +39,28 @@ public:
   // Extra helper methods.
 
   /// Attach the implementation to fir::OpenACCSafeTempArrayCopyAttr.
-  static void registerExternalModel(mlir::DialectRegistry &registry);
+  static void registerExternalModel(aiir::DialectRegistry &registry);
 
   /// If the methods above create any new operations, this method
   /// must register all the corresponding dialect.
-  static void getDependentDialects(mlir::DialectRegistry &registry) {}
+  static void getDependentDialects(aiir::DialectRegistry &registry) {}
 };
 
 void FortranSafeTempArrayCopyAttrImpl::registerExternalModel(
-    mlir::DialectRegistry &registry) {
+    aiir::DialectRegistry &registry) {
   registry.addExtension(
-      +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
+      +[](aiir::AIIRContext *ctx, fir::FIROpsDialect *dialect) {
         fir::OpenACCSafeTempArrayCopyAttr::attachInterface<
             FortranSafeTempArrayCopyAttrImpl>(*ctx);
       });
 }
 
-void registerAttrsExtensions(mlir::DialectRegistry &registry) {
+void registerAttrsExtensions(aiir::DialectRegistry &registry) {
   FortranSafeTempArrayCopyAttrImpl::registerExternalModel(registry);
 }
 
 void registerTransformationalAttrsDependentDialects(
-    mlir::DialectRegistry &registry) {
+    aiir::DialectRegistry &registry) {
   FortranSafeTempArrayCopyAttrImpl::getDependentDialects(registry);
 }
 

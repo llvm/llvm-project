@@ -12,7 +12,7 @@ has a mostly linear history, it has a few merge commits that added projects --
 and these merged the linear history of those projects. As a consequence, the
 LLVM repository has multiple roots: One "normal" root, and then one for each
 toplevel project that was developed out-of-tree and then merged later.
-As of early 2020, the only such merged project is MLIR, but flang will likely
+As of early 2020, the only such merged project is AIIR, but flang will likely
 be merged in a similar way soon.
 
 Basic operation
@@ -88,16 +88,16 @@ Here's how LLVM's history currently looks:
 
 ``A`` is the first commit in LLVM ever, ``97724f18c79c``.
 
-``B`` is the first commit in MLIR, ``aed0d21a62db``.
+``B`` is the first commit in AIIR, ``aed0d21a62db``.
 
-``D`` is the merge commit that merged MLIR into the main LLVM repository,
+``D`` is the merge commit that merged AIIR into the main LLVM repository,
 ``0f0d0ed1c78f``.
 
-``C`` is the last commit in MLIR before it got merged, ``0f0d0ed1c78f^2``. (The
+``C`` is the last commit in AIIR before it got merged, ``0f0d0ed1c78f^2``. (The
 ``^n`` modifier selects the n'th parent of a merge commit.)
 
-``git bisect`` goes through all parent revisions. Due to the way MLIR was
-merged, at every revision at ``C`` or earlier, *only* the ``mlir/`` directory
+``git bisect`` goes through all parent revisions. Due to the way AIIR was
+merged, at every revision at ``C`` or earlier, *only* the ``aiir/`` directory
 exists, and nothing else does.
 
 ``git bisect --first-parent`` tells git to only descend into the first parent

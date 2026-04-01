@@ -26,7 +26,7 @@
 void Fortran::lower::genSyncAllStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncAllStmt &stmt) {
-  mlir::Location loc = converter.getCurrentLocation();
+  aiir::Location loc = converter.getCurrentLocation();
   converter.checkCoarrayEnabled();
 
   // Handle STAT and ERRMSG values
@@ -40,7 +40,7 @@ void Fortran::lower::genSyncAllStatement(
 void Fortran::lower::genSyncImagesStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncImagesStmt &stmt) {
-  mlir::Location loc = converter.getCurrentLocation();
+  aiir::Location loc = converter.getCurrentLocation();
   converter.checkCoarrayEnabled();
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -53,7 +53,7 @@ void Fortran::lower::genSyncImagesStatement(
   // == 0. Note further that SYNC IMAGES(*) is not semantically equivalent to
   // SYNC ALL.
   Fortran::lower::StatementContext stmtCtx;
-  mlir::Value imageSet;
+  aiir::Value imageSet;
   const Fortran::parser::SyncImagesStmt::ImageSet &imgSet =
       std::get<Fortran::parser::SyncImagesStmt::ImageSet>(stmt.t);
   std::visit(Fortran::common::visitors{
@@ -64,7 +64,7 @@ void Fortran::lower::genSyncImagesStatement(
                  },
                  [&](const Fortran::parser::Star &) {
                    // Image set is not set.
-                   imageSet = mlir::Value{};
+                   imageSet = aiir::Value{};
                  }},
              imgSet.u);
 
@@ -74,7 +74,7 @@ void Fortran::lower::genSyncImagesStatement(
 void Fortran::lower::genSyncMemoryStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncMemoryStmt &stmt) {
-  mlir::Location loc = converter.getCurrentLocation();
+  aiir::Location loc = converter.getCurrentLocation();
   converter.checkCoarrayEnabled();
 
   // Handle STAT and ERRMSG values
@@ -88,7 +88,7 @@ void Fortran::lower::genSyncMemoryStatement(
 void Fortran::lower::genSyncTeamStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncTeamStmt &stmt) {
-  mlir::Location loc = converter.getCurrentLocation();
+  aiir::Location loc = converter.getCurrentLocation();
   converter.checkCoarrayEnabled();
 
   // Handle TEAM
@@ -96,7 +96,7 @@ void Fortran::lower::genSyncTeamStatement(
   const Fortran::parser::TeamValue &teamValue =
       std::get<Fortran::parser::TeamValue>(stmt.t);
   const SomeExpr *teamExpr = Fortran::semantics::GetExpr(teamValue);
-  mlir::Value team =
+  aiir::Value team =
       fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
 
   // Handle STAT and ERRMSG values
@@ -123,11 +123,11 @@ mif::ChangeTeamOp
 Fortran::lower::genChangeTeamStmt(Fortran::lower::AbstractConverter &converter,
                                   Fortran::lower::pft::Evaluation &,
                                   const Fortran::parser::ChangeTeamStmt &stmt) {
-  mlir::Location loc = converter.getCurrentLocation();
+  aiir::Location loc = converter.getCurrentLocation();
   converter.checkCoarrayEnabled();
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  mlir::Value errMsgAddr, statAddr, team;
+  aiir::Value errMsgAddr, statAddr, team;
   // Handle STAT and ERRMSG values
   Fortran::lower::StatementContext stmtCtx;
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
@@ -171,10 +171,10 @@ void Fortran::lower::genEndChangeTeamStmt(
     Fortran::lower::pft::Evaluation &,
     const Fortran::parser::EndChangeTeamStmt &stmt) {
   converter.checkCoarrayEnabled();
-  mlir::Location loc = converter.getCurrentLocation();
+  aiir::Location loc = converter.getCurrentLocation();
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  mlir::Value errMsgAddr, statAddr;
+  aiir::Value errMsgAddr, statAddr;
   // Handle STAT and ERRMSG values
   Fortran::lower::StatementContext stmtCtx;
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
@@ -203,10 +203,10 @@ void Fortran::lower::genFormTeamStatement(
     Fortran::lower::pft::Evaluation &,
     const Fortran::parser::FormTeamStmt &stmt) {
   converter.checkCoarrayEnabled();
-  mlir::Location loc = converter.getCurrentLocation();
+  aiir::Location loc = converter.getCurrentLocation();
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  mlir::Value errMsgAddr, statAddr, newIndex, teamNumber, team;
+  aiir::Value errMsgAddr, statAddr, newIndex, teamNumber, team;
   // Handle NEW_INDEX, STAT and ERRMSG
   std::list<Fortran::parser::StatOrErrmsg> statOrErrList{};
   Fortran::lower::StatementContext stmtCtx;

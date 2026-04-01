@@ -124,7 +124,7 @@ high-level representation and subsequent lowering are correct.
 Mixing With Other Dialects
 ==========================
 
-Mixing of dialects is a central design feature of MLIR. The CIR dialect is
+Mixing of dialects is a central design feature of AIIR. The CIR dialect is
 currently more self-contained than most dialects, but even now we generate
 the ACC (OpenACCC) dialect in combination with CIR, and when support for OpenMP
 and CUDA are added, similar mixing will occur.
@@ -134,16 +134,16 @@ the optimization phase to enable features such as data dependence analysis, even
 if we will eventually be lowering it to LLVM IR.
 
 Therefore, any plan for generating LLVM IR from CIR must be integrated with the
-general MLIR lowering design, which typically involves lowering to the LLVM
+general AIIR lowering design, which typically involves lowering to the LLVM
 dialect, which is then transformed to LLVM IR.
 
-Other Consumers of CIR and MLIR
+Other Consumers of CIR and AIIR
 ===============================
 
 We must also consider that we will not always be lowering CIR to LLVM IR. CIR,
 usually mixed with other dialects, will also be directed to offload targets
 and other code generators through interfaces that are opaque to Clang, such as
-SPIR-V and MLIR core dialects. We must still produce semantically correct CIR
+SPIR-V and AIIR core dialects. We must still produce semantically correct CIR
 for these consumers.
 
 Long Term Vision
@@ -202,7 +202,7 @@ implementation is being completely redesigned to allow general reuse, not just b
 CIR, but also by other front ends.
 
 The CIR calling convention lowering will make use of the general purpose C
-calling convention library that is being created, but it should create an MLIR
+calling convention library that is being created, but it should create an AIIR
 transform pass on top of that library that is general enough to be used by other
 dialects, such as FIR, that also need the same calling convention handling.
 

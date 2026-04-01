@@ -243,7 +243,7 @@ Memory effects are conservative, assuming that a copy and deallocation may happe
 
 ### New attribute interface
 
-The `fir::SafeTempArrayCopyAttrInterface` attribute interface provides means to generate programming model specific predicates saying whether repacking is safe or not at the point where it needs to be done. For example the OpenMP MLIR dialect may provide an attribute implementing this interface to generate a runtime check at the point of packing array `x` inside subroutine `repacking`. A conservative implementation might look like this:
+The `fir::SafeTempArrayCopyAttrInterface` attribute interface provides means to generate programming model specific predicates saying whether repacking is safe or not at the point where it needs to be done. For example the OpenMP AIIR dialect may provide an attribute implementing this interface to generate a runtime check at the point of packing array `x` inside subroutine `repacking`. A conservative implementation might look like this:
 
 ```C
   repacking_is_safe = omp_get_num_team() == 1 && omp_get_num_threads() == 1;
@@ -251,7 +251,7 @@ The `fir::SafeTempArrayCopyAttrInterface` attribute interface provides means to 
 
 The attribute interface will be used during lowering of `fir.pack_array` to generate the predicate and make the packing conditional and safe. This will allow applying repacking correctly in programs compiled with `-fopenmp`, and get the benefits of repacking in the serial parts of those programs.
 
-Similarly, the OpenACC MLIR dialect may provide such an attribute to check if a device copy has been created for an array that is about to be packed, and prevent the repacking for cases like this:
+Similarly, the OpenACC AIIR dialect may provide such an attribute to check if a device copy has been created for an array that is about to be packed, and prevent the repacking for cases like this:
 
 ```Fortran
 program main

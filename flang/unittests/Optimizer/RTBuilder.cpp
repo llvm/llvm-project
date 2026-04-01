@@ -21,17 +21,17 @@
 c_float_complex_t c99_cacosf(c_float_complex_t);
 
 TEST(RTBuilderTest, ComplexRuntimeInterface) {
-  mlir::DialectRegistry registry;
+  aiir::DialectRegistry registry;
   fir::support::registerDialects(registry);
-  mlir::MLIRContext ctx(registry);
+  aiir::AIIRContext ctx(registry);
   fir::support::loadDialects(ctx);
-  mlir::Type c99_cacosf_signature{
+  aiir::Type c99_cacosf_signature{
       fir::runtime::RuntimeTableKey<decltype(c99_cacosf)>::getTypeModel()(
           &ctx)};
-  auto c99_cacosf_funcTy = mlir::cast<mlir::FunctionType>(c99_cacosf_signature);
+  auto c99_cacosf_funcTy = aiir::cast<aiir::FunctionType>(c99_cacosf_signature);
   EXPECT_EQ(c99_cacosf_funcTy.getNumInputs(), 1u);
   EXPECT_EQ(c99_cacosf_funcTy.getNumResults(), 1u);
-  auto cplx_ty = mlir::ComplexType::get(mlir::Float32Type::get(&ctx));
+  auto cplx_ty = aiir::ComplexType::get(aiir::Float32Type::get(&ctx));
   EXPECT_EQ(c99_cacosf_funcTy.getInput(0), cplx_ty);
   EXPECT_EQ(c99_cacosf_funcTy.getResult(0), cplx_ty);
 }

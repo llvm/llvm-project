@@ -10,45 +10,45 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/support.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
 
 using namespace Fortran::runtime;
 
 template <>
 constexpr fir::runtime::TypeBuilderFunc
 fir::runtime::getModel<Fortran::runtime::LowerBoundModifier>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(
+  return [](aiir::AIIRContext *context) -> aiir::Type {
+    return aiir::IntegerType::get(
         context, sizeof(Fortran::runtime::LowerBoundModifier) * 8);
   };
 }
 
 void fir::runtime::genCopyAndUpdateDescriptor(fir::FirOpBuilder &builder,
-                                              mlir::Location loc,
-                                              mlir::Value to, mlir::Value from,
-                                              mlir::Value newDynamicType,
-                                              mlir::Value newAttribute,
-                                              mlir::Value newLowerBounds) {
-  mlir::func::FuncOp func =
+                                              aiir::Location loc,
+                                              aiir::Value to, aiir::Value from,
+                                              aiir::Value newDynamicType,
+                                              aiir::Value newAttribute,
+                                              aiir::Value newLowerBounds) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(CopyAndUpdateDescriptor)>(loc,
                                                                      builder);
   auto fTy = func.getFunctionType();
   auto args =
       fir::runtime::createArguments(builder, loc, fTy, to, from, newDynamicType,
                                     newAttribute, newLowerBounds);
-  llvm::StringRef noCapture = mlir::LLVM::LLVMDialect::getNoCaptureAttrName();
+  llvm::StringRef noCapture = aiir::LLVM::LLVMDialect::getNoCaptureAttrName();
   if (!func.getArgAttr(0, noCapture)) {
-    mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
+    aiir::UnitAttr unitAttr = aiir::UnitAttr::get(func.getContext());
     func.setArgAttr(0, noCapture, unitAttr);
     func.setArgAttr(1, noCapture, unitAttr);
   }
   fir::CallOp::create(builder, loc, func, args);
 }
 
-mlir::Value fir::runtime::genIsAssumedSize(fir::FirOpBuilder &builder,
-                                           mlir::Location loc,
-                                           mlir::Value box) {
-  mlir::func::FuncOp func =
+aiir::Value fir::runtime::genIsAssumedSize(fir::FirOpBuilder &builder,
+                                           aiir::Location loc,
+                                           aiir::Value box) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(IsAssumedSize)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, box);

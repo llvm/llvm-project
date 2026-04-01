@@ -65,7 +65,7 @@ void TypeSwitchCaseTypesCheck::check(const MatchFinder::MatchResult &Result) {
     // parameter type. We only emit a warning without a fixit because we cannot
     // reliably determine the deduced type of `auto`. The actual type depends on
     // how `dyn_cast<CaseT>` behaves for the `TypeSwitch` value type, which
-    // varies (e.g., pointer types return pointers, but MLIR handle types may
+    // varies (e.g., pointer types return pointers, but AIIR handle types may
     // return by value).
     diag(Call->getExprLoc(),
          "lambda parameter needlessly uses 'auto', use explicit type instead");

@@ -1,4 +1,4 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s -o - | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s -o - | FileCheck %s
 
 module {
   func.func @_QMhelperPmod_sub(%arg0: !fir.ref<i32> {fir.bindc_name = "a"} ) {

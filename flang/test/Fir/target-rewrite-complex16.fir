@@ -34,9 +34,9 @@ func.func @multipleparamscomplex16(%z1 : complex<f128>, %z2 : complex<f128>, %z3
 }
 
 // Test that we rewrite the signature of and calls to a func.function that accepts
-// and returns MLIR complex<f128>.
-func.func private @mlircomplexf128(%z1: complex<f128>, %z2: complex<f128>) -> complex<f128> {
-  %0 = fir.call @mlircomplexf128(%z1, %z2) : (complex<f128>, complex<f128>) -> complex<f128>
+// and returns AIIR complex<f128>.
+func.func private @aiircomplexf128(%z1: complex<f128>, %z2: complex<f128>) -> complex<f128> {
+  %0 = fir.call @aiircomplexf128(%z1, %z2) : (complex<f128>, complex<f128>) -> complex<f128>
   return %0 : complex<f128>
 }
 
@@ -103,7 +103,7 @@ func.func @addrof() {
 // CHECK:           return
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @mlircomplexf128(
+// CHECK-LABEL:   func.func private @aiircomplexf128(
 // CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.sret = tuple<f128, f128>}, %[[VAL_1:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}, %[[VAL_2:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}) {
 // CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<tuple<f128, f128>>) -> !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<complex<f128>>
@@ -117,7 +117,7 @@ func.func @addrof() {
 // CHECK:           %[[VAL_11:.*]] = fir.alloca complex<f128>
 // CHECK:           fir.store %[[VAL_4]] to %[[VAL_11]] : !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<complex<f128>>) -> !fir.ref<tuple<f128, f128>>
-// CHECK:           fir.call @mlircomplexf128(%[[VAL_8]], %[[VAL_10]], %[[VAL_12]]) : (!fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.sret = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}) -> ()
+// CHECK:           fir.call @aiircomplexf128(%[[VAL_8]], %[[VAL_10]], %[[VAL_12]]) : (!fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.sret = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}) -> ()
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<tuple<f128, f128>>) -> !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<complex<f128>>
 // CHECK:           llvm.intr.stackrestore %[[VAL_7]] : !llvm.ptr

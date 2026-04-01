@@ -9,7 +9,7 @@
 #define FORTRAN_LOWER_OPENMP_DECOMPOSER_H
 
 #include "flang/Lower/OpenMP/Clauses.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/IR/BuiltinOps.h"
 #include "llvm/Frontend/OpenMP/ConstructDecompositionT.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/Compiler.h"
@@ -39,7 +39,7 @@ LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 // the subset of applicable clauses (plus implicit clauses, if any).
 // From that create a work queue where each work item corresponds to
 // the sub-construct with its clauses.
-ConstructQueue buildConstructQueue(mlir::ModuleOp modOp,
+ConstructQueue buildConstructQueue(aiir::ModuleOp modOp,
                                    semantics::SemanticsContext &semaCtx,
                                    lower::pft::Evaluation &eval,
                                    const parser::CharBlock &source,

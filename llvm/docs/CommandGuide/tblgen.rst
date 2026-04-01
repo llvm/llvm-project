@@ -12,7 +12,7 @@ SYNOPSIS
 
 :program:`llvm-tblgen` [*options*] [*filename*]
 
-:program:`mlir-tblgen` [*options*] [*filename*]
+:program:`aiir-tblgen` [*options*] [*filename*]
 
 DESCRIPTION
 -----------
@@ -605,7 +605,7 @@ llvm-tblgen Options
  Print expanded sets for testing DAG exprs.
 
 
-mlir-tblgen Options
+aiir-tblgen Options
 ~~~~~~~~~~~~~~~~~~~
 
 .. option:: -gen-avail-interface-decls

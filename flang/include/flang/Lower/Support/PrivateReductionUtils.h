@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_LOWER_OPENMP_PRIVATEREDUCTIONUTILS_H
 #define FORTRAN_LOWER_OPENMP_PRIVATEREDUCTIONUTILS_H
 
-#include "mlir/IR/Location.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Location.h"
+#include "aiir/IR/Value.h"
 
-namespace mlir {
+namespace aiir {
 class Region;
-} // namespace mlir
+} // namespace aiir
 
 namespace Fortran {
 namespace semantics {
@@ -53,10 +53,10 @@ inline bool isReduction(DeclOperationKind kind) {
 /// initialization (for privatization). `kind` should be set to indicate
 /// what kind of operation definition this initialization belongs to.
 void populateByRefInitAndCleanupRegions(
-    AbstractConverter &converter, mlir::Location loc, mlir::Type argType,
-    mlir::Value scalarInitValue, mlir::Block *initBlock,
-    mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
-    mlir::Region &cleanupRegion, DeclOperationKind kind,
+    AbstractConverter &converter, aiir::Location loc, aiir::Type argType,
+    aiir::Value scalarInitValue, aiir::Block *initBlock,
+    aiir::Value allocatedPrivVarArg, aiir::Value moldArg,
+    aiir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym = nullptr,
     bool cannotHaveNonDefaultLowerBounds = false, bool isDoConcurrent = false);
 
@@ -66,8 +66,8 @@ void populateByRefInitAndCleanupRegions(
 /// `useDefaultLowerBounds` can be set to force the returned fir::ShapeShiftOp
 /// to have default lower bounds, which is useful to iterate through array
 /// elements without having to adjust each index.
-fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value box,
+fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, aiir::Location loc,
+                                aiir::Value box,
                                 bool cannotHaveNonDefaultLowerBounds = false,
                                 bool useDefaultLowerBounds = false);
 

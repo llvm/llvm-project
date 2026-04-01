@@ -1,6 +1,6 @@
 // Test the case when AddDebugInfo pass cannot easily compute
 // position of a dummy argument in the arguments list of the function.
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s | FileCheck %s
 
 // Only enabled on x86_64
 // REQUIRES: x86-registered-target

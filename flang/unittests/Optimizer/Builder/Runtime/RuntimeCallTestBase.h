@@ -19,14 +19,14 @@ public:
   void SetUp() override {
     fir::support::loadDialects(context);
 
-    mlir::OpBuilder builder(&context);
+    aiir::OpBuilder builder(&context);
     auto loc = builder.getUnknownLoc();
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    moduleOp = mlir::ModuleOp::create(builder, loc);
+    moduleOp = aiir::ModuleOp::create(builder, loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func = mlir::func::FuncOp::create(builder, loc,
+    aiir::func::FuncOp func = aiir::func::FuncOp::create(builder, loc,
         "runtime_unit_tests_func", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
@@ -46,13 +46,13 @@ public:
     f80Ty = firBuilder->getF80Type();
     f128Ty = firBuilder->getF128Type();
 
-    c4Ty = mlir::ComplexType::get(f32Ty);
-    c8Ty = mlir::ComplexType::get(f64Ty);
-    c10Ty = mlir::ComplexType::get(f80Ty);
-    c16Ty = mlir::ComplexType::get(f128Ty);
+    c4Ty = aiir::ComplexType::get(f32Ty);
+    c8Ty = aiir::ComplexType::get(f64Ty);
+    c10Ty = aiir::ComplexType::get(f80Ty);
+    c16Ty = aiir::ComplexType::get(f128Ty);
 
     seqTy10 = fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
-    boxTy = fir::BoxType::get(mlir::NoneType::get(firBuilder->getContext()));
+    boxTy = fir::BoxType::get(aiir::NoneType::get(firBuilder->getContext()));
 
     char1Ty = fir::CharacterType::getSingleton(builder.getContext(), 1);
     char2Ty = fir::CharacterType::getSingleton(builder.getContext(), 2);
@@ -64,47 +64,47 @@ public:
     logical8Ty = fir::LogicalType::get(builder.getContext(), 8);
   }
 
-  mlir::MLIRContext context;
-  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
+  aiir::AIIRContext context;
+  aiir::OwningOpRef<aiir::ModuleOp> moduleOp;
   std::unique_ptr<fir::KindMapping> kindMap;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 
   // Commonly used types
-  mlir::Type i1Ty;
-  mlir::Type i8Ty;
-  mlir::Type i16Ty;
-  mlir::Type i32Ty;
-  mlir::Type i64Ty;
-  mlir::Type i128Ty;
-  mlir::Type f32Ty;
-  mlir::Type f64Ty;
-  mlir::Type f80Ty;
-  mlir::Type f128Ty;
-  mlir::Type c4Ty;
-  mlir::Type c8Ty;
-  mlir::Type c10Ty;
-  mlir::Type c16Ty;
-  mlir::Type seqTy10;
-  mlir::Type boxTy;
-  mlir::Type char1Ty;
-  mlir::Type char2Ty;
-  mlir::Type char4Ty;
-  mlir::Type logical1Ty;
-  mlir::Type logical2Ty;
-  mlir::Type logical4Ty;
-  mlir::Type logical8Ty;
+  aiir::Type i1Ty;
+  aiir::Type i8Ty;
+  aiir::Type i16Ty;
+  aiir::Type i32Ty;
+  aiir::Type i64Ty;
+  aiir::Type i128Ty;
+  aiir::Type f32Ty;
+  aiir::Type f64Ty;
+  aiir::Type f80Ty;
+  aiir::Type f128Ty;
+  aiir::Type c4Ty;
+  aiir::Type c8Ty;
+  aiir::Type c10Ty;
+  aiir::Type c16Ty;
+  aiir::Type seqTy10;
+  aiir::Type boxTy;
+  aiir::Type char1Ty;
+  aiir::Type char2Ty;
+  aiir::Type char4Ty;
+  aiir::Type logical1Ty;
+  aiir::Type logical2Ty;
+  aiir::Type logical4Ty;
+  aiir::Type logical8Ty;
 };
 
 /// Check that the \p op is a `fir::CallOp` operation and its name matches
 /// \p fctName and the number of arguments is equal to \p nbArgs.
 /// Most runtime calls have two additional location arguments added. These are
 /// added in this check when \p addLocArgs is true.
-static inline void checkCallOp(mlir::Operation *op, llvm::StringRef fctName,
+static inline void checkCallOp(aiir::Operation *op, llvm::StringRef fctName,
     unsigned nbArgs, bool addLocArgs = true) {
-  EXPECT_TRUE(mlir::isa<fir::CallOp>(*op));
-  auto callOp = mlir::dyn_cast<fir::CallOp>(*op);
+  EXPECT_TRUE(aiir::isa<fir::CallOp>(*op));
+  auto callOp = aiir::dyn_cast<fir::CallOp>(*op);
   EXPECT_TRUE(callOp.getCallee().has_value());
-  mlir::SymbolRefAttr callee = *callOp.getCallee();
+  aiir::SymbolRefAttr callee = *callOp.getCallee();
   EXPECT_EQ(fctName, callee.getRootReference().getValue());
   // sourceFile and sourceLine are added arguments.
   if (addLocArgs)
@@ -129,13 +129,13 @@ static inline void checkCallOp(mlir::Operation *op, llvm::StringRef fctName,
 /// %arg = fir.convert %result : (i32) -> i16
 /// %0 = fir.call @foo(%arg) : (i16) -> i1
 /// ```
-static inline void checkCallOpFromResultBox(mlir::Value result,
+static inline void checkCallOpFromResultBox(aiir::Value result,
     llvm::StringRef fctName, unsigned nbArgs, bool addLocArgs = true) {
   EXPECT_TRUE(result.hasOneUse());
   const auto &u = result.user_begin();
-  if (mlir::isa<fir::CallOp>(*u))
+  if (aiir::isa<fir::CallOp>(*u))
     return checkCallOp(*u, fctName, nbArgs, addLocArgs);
-  auto convOp = mlir::dyn_cast<fir::ConvertOp>(*u);
+  auto convOp = aiir::dyn_cast<fir::ConvertOp>(*u);
   EXPECT_NE(nullptr, convOp);
   checkCallOpFromResultBox(convOp.getResult(), fctName, nbArgs, addLocArgs);
 }
@@ -147,10 +147,10 @@ static inline void checkCallOpFromResultBox(mlir::Value result,
 /// This results in exiting the test as soon as the first correct instance of
 /// `fir::CallOp` is found).
 static inline void checkBlockForCallOp(
-    mlir::Block *block, llvm::StringRef fctName, unsigned nbArgs) {
-  assert(block && "mlir::Block given is a nullptr");
+    aiir::Block *block, llvm::StringRef fctName, unsigned nbArgs) {
+  assert(block && "aiir::Block given is a nullptr");
   for (auto &op : block->getOperations()) {
-    if (auto callOp = mlir::dyn_cast<fir::CallOp>(op)) {
+    if (auto callOp = aiir::dyn_cast<fir::CallOp>(op)) {
       if (fctName == callOp.getCallee()->getRootReference().getValue()) {
         EXPECT_EQ(nbArgs, callOp.getArgs().size());
         return;

@@ -10,15 +10,15 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "array-section-analyzer"
 
 using namespace fir;
 
-ArraySectionAnalyzer::SectionDesc::SectionDesc(mlir::Value lb, mlir::Value ub,
-                                               mlir::Value stride)
+ArraySectionAnalyzer::SectionDesc::SectionDesc(aiir::Value lb, aiir::Value ub,
+                                               aiir::Value stride)
     : lb(lb), ub(ub), stride(stride) {
   assert(lb && "lower bound or index must be specified");
   normalize();
@@ -41,16 +41,16 @@ bool ArraySectionAnalyzer::SectionDesc::operator==(
 }
 
 ArraySectionAnalyzer::SectionDesc
-ArraySectionAnalyzer::readSectionDesc(mlir::Operation::operand_iterator &it,
+ArraySectionAnalyzer::readSectionDesc(aiir::Operation::operand_iterator &it,
                                       bool isTriplet) {
   if (isTriplet)
     return {*it++, *it++, *it++};
   return {*it++, nullptr, nullptr};
 }
 
-std::pair<mlir::Value, mlir::Value>
+std::pair<aiir::Value, aiir::Value>
 ArraySectionAnalyzer::getOrderedBounds(const SectionDesc &desc) {
-  mlir::Value stride = desc.stride;
+  aiir::Value stride = desc.stride;
   // Null stride means stride=1.
   if (!stride)
     return {desc.lb, desc.ub};
@@ -87,7 +87,7 @@ bool ArraySectionAnalyzer::areIdenticalSections(const SectionDesc &desc1,
 }
 
 ArraySectionAnalyzer::SlicesOverlapKind
-ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2) {
+ArraySectionAnalyzer::analyze(aiir::Value ref1, aiir::Value ref2) {
   if (ref1 == ref2)
     return SlicesOverlapKind::DefinitelyIdentical;
 
@@ -177,15 +177,15 @@ ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2) {
   return SlicesOverlapKind::Unknown;
 }
 
-bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
-  auto removeConvert = [](mlir::Value v) -> mlir::Operation * {
+bool ArraySectionAnalyzer::isLess(aiir::Value v1, aiir::Value v2) {
+  auto removeConvert = [](aiir::Value v) -> aiir::Operation * {
     auto *op = v.getDefiningOp();
-    while (auto conv = mlir::dyn_cast_or_null<fir::ConvertOp>(op))
+    while (auto conv = aiir::dyn_cast_or_null<fir::ConvertOp>(op))
       op = conv.getValue().getDefiningOp();
     return op;
   };
 
-  auto isPositiveConstant = [](mlir::Value v) -> bool {
+  auto isPositiveConstant = [](aiir::Value v) -> bool {
     if (auto val = fir::getIntIfConstant(v))
       return *val > 0;
     return false;
@@ -205,13 +205,13 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
   //   v2 = v1 + C
   //   v2 = C + v1
   //   v1 = v2 - C
-  if (auto addi = mlir::dyn_cast<mlir::arith::AddIOp>(op2))
+  if (auto addi = aiir::dyn_cast<aiir::arith::AddIOp>(op2))
     if ((addi.getLhs().getDefiningOp() == op1 &&
          isPositiveConstant(addi.getRhs())) ||
         (addi.getRhs().getDefiningOp() == op1 &&
          isPositiveConstant(addi.getLhs())))
       return true;
-  if (auto subi = mlir::dyn_cast<mlir::arith::SubIOp>(op1))
+  if (auto subi = aiir::dyn_cast<aiir::arith::SubIOp>(op1))
     if (subi.getLhs().getDefiningOp() == op2 &&
         isPositiveConstant(subi.getRhs()))
       return true;
@@ -222,14 +222,14 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
 /// It recognizes the computations used to transform the one-based indices
 /// into the array's lb-based indices, and returns the one-based indices
 /// in these cases.
-static llvm::SmallVector<mlir::Value>
+static llvm::SmallVector<aiir::Value>
 getDesignatorIndices(hlfir::DesignateOp designate) {
-  mlir::Value memref = designate.getMemref();
+  aiir::Value memref = designate.getMemref();
 
   // If the object is a box, then the indices may be adjusted
   // according to the box's lower bound(s). Scan through
   // the computations to try to find the one-based indices.
-  if (mlir::isa<fir::BaseBoxType>(memref.getType())) {
+  if (aiir::isa<fir::BaseBoxType>(memref.getType())) {
     // Look for the following pattern:
     //   %13 = fir.load %12 : !fir.ref<!fir.box<...>
     //   %14:3 = fir.box_dims %13, %c0 : (!fir.box<...>, index) -> ...
@@ -239,17 +239,17 @@ getDesignatorIndices(hlfir::DesignateOp designate) {
     //
     // %arg2 is a one-based index.
 
-    auto isNormalizedLb = [memref](mlir::Value v, unsigned dim) {
+    auto isNormalizedLb = [memref](aiir::Value v, unsigned dim) {
       // Return true, if v and dim are such that:
       //   %14:3 = fir.box_dims %13, %dim : (!fir.box<...>, index) -> ...
       //   %17 = arith.subi %14#0, %c1 : index
       //   %19 = hlfir.designate %13 (...)  : (!fir.box<...>, index) -> ...
       if (auto subOp =
-              mlir::dyn_cast_or_null<mlir::arith::SubIOp>(v.getDefiningOp())) {
+              aiir::dyn_cast_or_null<aiir::arith::SubIOp>(v.getDefiningOp())) {
         auto cst = fir::getIntIfConstant(subOp.getRhs());
         if (!cst || *cst != 1)
           return false;
-        if (auto dimsOp = mlir::dyn_cast_or_null<fir::BoxDimsOp>(
+        if (auto dimsOp = aiir::dyn_cast_or_null<fir::BoxDimsOp>(
                 subOp.getLhs().getDefiningOp())) {
           if (memref != dimsOp.getVal() ||
               dimsOp.getResult(0) != subOp.getLhs())
@@ -261,9 +261,9 @@ getDesignatorIndices(hlfir::DesignateOp designate) {
       return false;
     };
 
-    llvm::SmallVector<mlir::Value> newIndices;
+    llvm::SmallVector<aiir::Value> newIndices;
     for (auto index : llvm::enumerate(designate.getIndices())) {
-      if (auto addOp = mlir::dyn_cast_or_null<mlir::arith::AddIOp>(
+      if (auto addOp = aiir::dyn_cast_or_null<aiir::arith::AddIOp>(
               index.value().getDefiningOp())) {
         for (unsigned opNum = 0; opNum < 2; ++opNum)
           if (isNormalizedLb(addOp->getOperand(opNum), index.index())) {

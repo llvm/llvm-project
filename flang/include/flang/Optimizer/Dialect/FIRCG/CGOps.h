@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,7 +15,7 @@
 
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h.inc"

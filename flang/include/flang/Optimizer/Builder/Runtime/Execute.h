@@ -9,10 +9,10 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_EXECUTE_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_EXECUTE_H
 
-namespace mlir {
+namespace aiir {
 class Value;
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -24,12 +24,12 @@ namespace fir::runtime {
 /// the GET_EXECUTE_ARGUMENT intrinsic.
 /// \p wait must be bool that can be absent.
 /// \p exitstat, \p cmdstat and \p cmdmsg must be fir.box that can be
-/// absent (but not null mlir values). The status exitstat and cmdstat are
+/// absent (but not null aiir values). The status exitstat and cmdstat are
 /// returned, along with the message cmdmsg.
-void genExecuteCommandLine(fir::FirOpBuilder &, mlir::Location,
-                           mlir::Value command, mlir::Value wait,
-                           mlir::Value exitstat, mlir::Value cmdstat,
-                           mlir::Value cmdmsg);
+void genExecuteCommandLine(fir::FirOpBuilder &, aiir::Location,
+                           aiir::Value command, aiir::Value wait,
+                           aiir::Value exitstat, aiir::Value cmdstat,
+                           aiir::Value cmdmsg);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_EXECUTE_H

@@ -17,13 +17,13 @@ func.func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
   return
 }
 
-// CHECK-COMDAT: llvm.mlir.global linkonce constant @_QMtest_dinitEXdtXtseq() comdat(@__llvm_comdat::@_QMtest_dinitEXdtXtseq) {addr_space = 0 : i32} : i8
-// CHECK-NO-COMDAT: llvm.mlir.global linkonce constant @_QMtest_dinitEXdtXtseq() {addr_space = 0 : i32} : i8
+// CHECK-COMDAT: llvm.aiir.global linkonce constant @_QMtest_dinitEXdtXtseq() comdat(@__llvm_comdat::@_QMtest_dinitEXdtXtseq) {addr_space = 0 : i32} : i8
+// CHECK-NO-COMDAT: llvm.aiir.global linkonce constant @_QMtest_dinitEXdtXtseq() {addr_space = 0 : i32} : i8
 // CHECK-LABEL: llvm.func @embox1
-// CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(42 : i32) : i32
-// CHECK:         %[[VERSION:.*]] = llvm.mlir.constant(20240719 : i32) : i32
+// CHECK:         %[[TYPE_CODE:.*]] = llvm.aiir.constant(42 : i32) : i32
+// CHECK:         %[[VERSION:.*]] = llvm.aiir.constant(20240719 : i32) : i32
 // CHECK:         %{{.*}} = llvm.insertvalue %[[VERSION]], %{{.*}}[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)> 
 // CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I8]], %{{.*}}[4] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
-// CHECK:         %[[TDESC:.*]] = llvm.mlir.addressof @_QMtest_dinitEXdtXtseq : !llvm.ptr
+// CHECK:         %[[TDESC:.*]] = llvm.aiir.addressof @_QMtest_dinitEXdtXtseq : !llvm.ptr
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TDESC]], %{{.*}}[7] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>

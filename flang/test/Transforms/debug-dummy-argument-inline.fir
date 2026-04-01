@@ -1,6 +1,6 @@
 // Tests that inlined calls arguments are not mistaken for the arguments of the
 // procedure where the calls were inlined.
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s -o - | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s -o - | FileCheck %s
 
 // CHECK: #di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "i", file = #di_file, line = 6, arg = 1, type = #di_basic_type>
 // CHECK: #di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "i", file = #di_file, line = 1, type = #di_basic_type>

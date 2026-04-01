@@ -1,0 +1,3 @@
+add_aiir_interface(AtomicInterfaces)
+
+add_aiir_interface(OpenACCMPOpsInterfaces)

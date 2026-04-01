@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Allow the user to set the FIR intrinsic type kind value to LLVM type
 /// mappings.  Note that these are not mappings from kind values to any
-/// other MLIR dialect, only to LLVM IR. The default values follow the f18
+/// other AIIR dialect, only to LLVM IR. The default values follow the f18
 /// front-end kind mappings.
 
 using Bitsize = fir::KindMapping::Bitsize;
@@ -127,21 +127,21 @@ static const llvm::fltSemantics &getFloatSemanticsOfKind(KindTy kind,
 /// COMPLEX), ('i', INTEGER), ('l', LOGICAL), and ('r', REAL).
 static MatchResult parseCode(char &code, const char *&ptr, const char *endPtr) {
   if (ptr >= endPtr)
-    return mlir::failure();
+    return aiir::failure();
   if (*ptr != 'a' && *ptr != 'c' && *ptr != 'i' && *ptr != 'l' && *ptr != 'r')
-    return mlir::failure();
+    return aiir::failure();
   code = *ptr++;
-  return mlir::success();
+  return aiir::success();
 }
 
 /// Same as `parseCode` but adds the ('d', DOUBLE PRECISION) code.
 static MatchResult parseDefCode(char &code, const char *&ptr,
                                 const char *endPtr) {
   if (ptr >= endPtr)
-    return mlir::failure();
+    return aiir::failure();
   if (*ptr == 'd') {
     code = *ptr++;
-    return mlir::success();
+    return aiir::success();
   }
   return parseCode(code, ptr, endPtr);
 }
@@ -149,9 +149,9 @@ static MatchResult parseDefCode(char &code, const char *&ptr,
 template <char ch>
 static MatchResult parseSingleChar(const char *&ptr, const char *endPtr) {
   if (ptr >= endPtr || *ptr != ch)
-    return mlir::failure();
+    return aiir::failure();
   ++ptr;
-  return mlir::success();
+  return aiir::success();
 }
 
 static MatchResult parseColon(const char *&ptr, const char *endPtr) {
@@ -169,13 +169,13 @@ static MatchResult parseInt(unsigned &result, const char *&ptr,
   while (ptr < endPtr && *ptr >= '0' && *ptr <= '9')
     ptr++;
   if (beg == ptr)
-    return mlir::failure();
+    return aiir::failure();
   llvm::StringRef ref(beg, ptr - beg);
   int temp;
   if (ref.consumeInteger(10, temp))
-    return mlir::failure();
+    return aiir::failure();
   result = temp;
-  return mlir::success();
+  return aiir::success();
 }
 
 static llvm::LogicalResult matchString(const char *&ptr, const char *endPtr,
@@ -183,71 +183,71 @@ static llvm::LogicalResult matchString(const char *&ptr, const char *endPtr,
   llvm::StringRef s(ptr, endPtr - ptr);
   if (s.starts_with(literal)) {
     ptr += literal.size();
-    return mlir::success();
+    return aiir::success();
   }
-  return mlir::failure();
+  return aiir::failure();
 }
 
 /// Recognize and parse the various floating-point keywords. These follow the
 /// LLVM naming convention.
 static MatchResult parseTypeID(LLVMTypeID &result, const char *&ptr,
                                const char *endPtr) {
-  if (mlir::succeeded(matchString(ptr, endPtr, kwHalf))) {
+  if (aiir::succeeded(matchString(ptr, endPtr, kwHalf))) {
     result = LLVMTypeID::HalfTyID;
-    return mlir::success();
+    return aiir::success();
   }
-  if (mlir::succeeded(matchString(ptr, endPtr, kwBFloat))) {
+  if (aiir::succeeded(matchString(ptr, endPtr, kwBFloat))) {
     result = LLVMTypeID::BFloatTyID;
-    return mlir::success();
+    return aiir::success();
   }
-  if (mlir::succeeded(matchString(ptr, endPtr, kwFloat))) {
+  if (aiir::succeeded(matchString(ptr, endPtr, kwFloat))) {
     result = LLVMTypeID::FloatTyID;
-    return mlir::success();
+    return aiir::success();
   }
-  if (mlir::succeeded(matchString(ptr, endPtr, kwDouble))) {
+  if (aiir::succeeded(matchString(ptr, endPtr, kwDouble))) {
     result = LLVMTypeID::DoubleTyID;
-    return mlir::success();
+    return aiir::success();
   }
-  if (mlir::succeeded(matchString(ptr, endPtr, kwX86FP80))) {
+  if (aiir::succeeded(matchString(ptr, endPtr, kwX86FP80))) {
     result = LLVMTypeID::X86_FP80TyID;
-    return mlir::success();
+    return aiir::success();
   }
-  if (mlir::succeeded(matchString(ptr, endPtr, kwFP128))) {
+  if (aiir::succeeded(matchString(ptr, endPtr, kwFP128))) {
     result = LLVMTypeID::FP128TyID;
-    return mlir::success();
+    return aiir::success();
   }
-  if (mlir::succeeded(matchString(ptr, endPtr, kwPPCFP128))) {
+  if (aiir::succeeded(matchString(ptr, endPtr, kwPPCFP128))) {
     result = LLVMTypeID::PPC_FP128TyID;
-    return mlir::success();
+    return aiir::success();
   }
-  return mlir::failure();
+  return aiir::failure();
 }
 
-fir::KindMapping::KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
+fir::KindMapping::KindMapping(aiir::AIIRContext *context, llvm::StringRef map,
                               llvm::ArrayRef<KindTy> defs)
     : context{context} {
-  if (mlir::failed(setDefaultKinds(defs)))
+  if (aiir::failed(setDefaultKinds(defs)))
     llvm::report_fatal_error("bad default kinds");
-  if (mlir::failed(parse(map)))
+  if (aiir::failed(parse(map)))
     llvm::report_fatal_error("could not parse kind map");
 }
 
-fir::KindMapping::KindMapping(mlir::MLIRContext *context,
+fir::KindMapping::KindMapping(aiir::AIIRContext *context,
                               llvm::ArrayRef<KindTy> defs)
     : KindMapping{context, clKindMapping, defs} {}
 
-fir::KindMapping::KindMapping(mlir::MLIRContext *context)
+fir::KindMapping::KindMapping(aiir::AIIRContext *context)
     : KindMapping{context, clKindMapping, clDefaultKinds} {}
 
 MatchResult fir::KindMapping::badMapString(const llvm::Twine &ptr) {
-  auto unknown = mlir::UnknownLoc::get(context);
-  mlir::emitError(unknown, ptr);
-  return mlir::failure();
+  auto unknown = aiir::UnknownLoc::get(context);
+  aiir::emitError(unknown, ptr);
+  return aiir::failure();
 }
 
 MatchResult fir::KindMapping::parse(llvm::StringRef kindMap) {
   if (kindMap.empty())
-    return mlir::success();
+    return aiir::success();
   const char *srcPtr = kindMap.begin();
   const char *endPtr = kindMap.end();
   while (true) {
@@ -273,7 +273,7 @@ MatchResult fir::KindMapping::parse(llvm::StringRef kindMap) {
   }
   if (srcPtr > endPtr)
     return badMapString(srcPtr);
-  return mlir::success();
+  return aiir::success();
 }
 
 Bitsize fir::KindMapping::getCharacterBitsize(KindTy kind) const {
@@ -363,10 +363,10 @@ fir::KindMapping::setDefaultKinds(llvm::ArrayRef<KindTy> defs) {
     defaultMap.insert({'i', genericKind});
     defaultMap.insert({'l', genericKind});
     defaultMap.insert({'r', genericKind});
-    return mlir::success();
+    return aiir::success();
   }
   if (defs.size() != 6)
-    return mlir::failure();
+    return aiir::failure();
 
   // defaults determined after command-line processing
   defaultMap.insert({'a', defs[0]});
@@ -375,7 +375,7 @@ fir::KindMapping::setDefaultKinds(llvm::ArrayRef<KindTy> defs) {
   defaultMap.insert({'i', defs[3]});
   defaultMap.insert({'l', defs[4]});
   defaultMap.insert({'r', defs[5]});
-  return mlir::success();
+  return aiir::success();
 }
 
 std::string fir::KindMapping::defaultsToString() const {

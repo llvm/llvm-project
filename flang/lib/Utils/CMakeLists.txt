@@ -21,9 +21,9 @@ add_flang_library(FortranUtils
   FortranSupport
   HLFIRDialect
  
-  MLIR_LIBS
-  MLIRSupport
-  MLIROpenMPDialect
-  MLIRTransformUtils
-  MLIRArithDialect
+  AIIR_LIBS
+  AIIRSupport
+  AIIROpenMPDialect
+  AIIRTransformUtils
+  AIIRArithDialect
 )

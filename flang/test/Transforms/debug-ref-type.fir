@@ -1,4 +1,4 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s | FileCheck %s
 
 module {
   func.func private @_FortranAioBeginExternalListOutput(i8) -> !fir.ref<i8> loc(#loc1)

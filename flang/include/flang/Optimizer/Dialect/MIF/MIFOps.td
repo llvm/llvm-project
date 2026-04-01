@@ -64,7 +64,7 @@ def mif_NumImagesOp : mif_Op<"num_images", [AttrSizedOperandSegments]> {
                        Optional<AnyRefOrBoxType>:$team);
   let results = (outs I32:$res);
 
-  let builders = [OpBuilder<(ins CArg<"mlir::Value", "{}">:$teamArg)>];
+  let builders = [OpBuilder<(ins CArg<"aiir::Value", "{}">:$teamArg)>];
 
   let hasVerifier = 1;
   let assemblyFormat = [{
@@ -105,8 +105,8 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
       Optional<AnyInteger>:$dim, Optional<AnyRefOrBoxType>:$team);
   let results = (outs I32:$res);
 
-  let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$team)>,
-                  OpBuilder<(ins "mlir::Value":$team)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$coarray, "aiir::Value":$team)>,
+                  OpBuilder<(ins "aiir::Value":$team)>];
 
   let hasVerifier = 1;
   let assemblyFormat = [{
@@ -124,7 +124,7 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
 //   "image control statement" (F23 11.7.1). This means they end a Fortran 
 //   "segment" and start another (F23 11.7.2), which affects the memory 
 //   consistency semantics of surrounding accesses in the multi-image execution. 
-//   For now we've modeled this by *deliberately* omitting mlir::MemoryEffects
+//   For now we've modeled this by *deliberately* omitting aiir::MemoryEffects
 //   on these operations, to ensure analysis treats these ops conservatively.
 //===----------------------------------------------------------------------===//
 
@@ -370,15 +370,15 @@ def mif_ChangeTeamOp : region_Op<"change_team", [AttrSizedOperandSegments]> {
 
   let skipDefaultBuilders = 1;
   let builders =
-      [OpBuilder<(ins "mlir::Value":$team,
-           CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-       OpBuilder<(ins "mlir::Value":$team, "mlir::Value":$stat,
-           "mlir::Value":$errmsg,
-           CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+      [OpBuilder<(ins "aiir::Value":$team,
+           CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+       OpBuilder<(ins "aiir::Value":$team, "aiir::Value":$stat,
+           "aiir::Value":$errmsg,
+           CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>];
 
   let extraClassDeclaration = [{
     /// Get the body of the CHANGE TEAM construct 
-    mlir::Block *getBody() { return &getRegion().front(); }
+    aiir::Block *getBody() { return &getRegion().front(); }
   }];
 
   let assemblyFormat = [{

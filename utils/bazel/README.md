@@ -92,7 +92,7 @@ any temporary files. Anecdotally, 1GB should be sufficient.
 
 # Coverage
 
-The LLVM, MLIR, and Clang subprojects have configurations for Linux (Clang and
+The LLVM, AIIR, and Clang subprojects have configurations for Linux (Clang and
 GCC), Mac (Clang and GCC), and Windows (MSVC). Configuration options that are
 platform-specific are selected for in defines. Many are also hardcoded to the
 values currently used by all supported configurations. If there is a

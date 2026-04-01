@@ -9,10 +9,10 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_SUPPORT_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_SUPPORT_H
 
-namespace mlir {
+namespace aiir {
 class Value;
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -21,15 +21,15 @@ class FirOpBuilder;
 namespace fir::runtime {
 
 /// Generate call to `CopyAndUpdateDescriptor` runtime routine.
-void genCopyAndUpdateDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value to, mlir::Value from,
-                                mlir::Value newDynamicType,
-                                mlir::Value newAttribute,
-                                mlir::Value newLowerBounds);
+void genCopyAndUpdateDescriptor(fir::FirOpBuilder &builder, aiir::Location loc,
+                                aiir::Value to, aiir::Value from,
+                                aiir::Value newDynamicType,
+                                aiir::Value newAttribute,
+                                aiir::Value newLowerBounds);
 
 /// Generate call to `IsAssumedSize` runtime routine.
-mlir::Value genIsAssumedSize(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value box);
+aiir::Value genIsAssumedSize(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value box);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_SUPPORT_H

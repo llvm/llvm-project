@@ -24,17 +24,17 @@
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Dominance.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/Dominance.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/Interfaces/SideEffectInterfaces.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Support/LLVM.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <iterator>
 #include <memory>
-#include <mlir/Analysis/AliasAnalysis.h>
+#include <aiir/Analysis/AliasAnalysis.h>
 #include <optional>
 
 namespace hlfir {
@@ -79,10 +79,10 @@ namespace {
 /// that strict and say that all reads must be at the elemental index (it is
 /// probably safe to read from higher indices if lowering to an ordered loop).
 class ElementalAssignBufferization
-    : public mlir::OpRewritePattern<hlfir::ElementalOp> {
+    : public aiir::OpRewritePattern<hlfir::ElementalOp> {
 private:
   struct MatchInfo {
-    mlir::Value array;
+    aiir::Value array;
     hlfir::AssignOp assign;
     hlfir::DestroyOp destroy;
   };
@@ -90,30 +90,30 @@ private:
   static std::optional<MatchInfo> findMatch(hlfir::ElementalOp elemental);
 
 public:
-  using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
+  using aiir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental,
-                  mlir::PatternRewriter &rewriter) const override;
+                  aiir::PatternRewriter &rewriter) const override;
 };
 
 /// recursively collect all effects between start and end (including start, not
 /// including end) start must properly dominate end, start and end must be in
 /// the same block. If any operations with unknown effects are found,
 /// std::nullopt is returned
-static std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
-getEffectsBetween(mlir::Operation *start, mlir::Operation *end) {
-  mlir::SmallVector<mlir::MemoryEffects::EffectInstance> ret;
+static std::optional<aiir::SmallVector<aiir::MemoryEffects::EffectInstance>>
+getEffectsBetween(aiir::Operation *start, aiir::Operation *end) {
+  aiir::SmallVector<aiir::MemoryEffects::EffectInstance> ret;
   if (start == end)
     return ret;
   assert(start->getBlock() && end->getBlock() && "TODO: block arguments");
   assert(start->getBlock() == end->getBlock());
-  assert(mlir::DominanceInfo{}.properlyDominates(start, end));
+  assert(aiir::DominanceInfo{}.properlyDominates(start, end));
 
-  mlir::Operation *nextOp = start;
+  aiir::Operation *nextOp = start;
   while (nextOp && nextOp != end) {
-    std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
-        effects = mlir::getEffectsRecursively(nextOp);
+    std::optional<aiir::SmallVector<aiir::MemoryEffects::EffectInstance>>
+        effects = aiir::getEffectsRecursively(nextOp);
     if (!effects)
       return std::nullopt;
     ret.append(*effects);
@@ -123,24 +123,24 @@ getEffectsBetween(mlir::Operation *start, mlir::Operation *end) {
 }
 
 /// If effect is a read or write on val, return whether it aliases.
-/// Otherwise return mlir::AliasResult::NoAlias
-static mlir::AliasResult
-containsReadOrWriteEffectOn(const mlir::MemoryEffects::EffectInstance &effect,
-                            mlir::Value val) {
+/// Otherwise return aiir::AliasResult::NoAlias
+static aiir::AliasResult
+containsReadOrWriteEffectOn(const aiir::MemoryEffects::EffectInstance &effect,
+                            aiir::Value val) {
   fir::AliasAnalysis aliasAnalysis;
 
-  if (mlir::isa<mlir::MemoryEffects::Read, mlir::MemoryEffects::Write>(
+  if (aiir::isa<aiir::MemoryEffects::Read, aiir::MemoryEffects::Write>(
           effect.getEffect())) {
-    mlir::Value accessedVal = effect.getValue();
-    if (mlir::isa<fir::DebuggingResource>(effect.getResource()))
-      return mlir::AliasResult::NoAlias;
+    aiir::Value accessedVal = effect.getValue();
+    if (aiir::isa<fir::DebuggingResource>(effect.getResource()))
+      return aiir::AliasResult::NoAlias;
     if (!accessedVal)
-      return mlir::AliasResult::MayAlias;
+      return aiir::AliasResult::MayAlias;
     if (accessedVal == val)
-      return mlir::AliasResult::MustAlias;
+      return aiir::AliasResult::MustAlias;
 
     // if the accessed value might alias val
-    mlir::AliasResult res = aliasAnalysis.alias(val, accessedVal);
+    aiir::AliasResult res = aliasAnalysis.alias(val, accessedVal);
     if (!res.isNo())
       return res;
 
@@ -150,7 +150,7 @@ containsReadOrWriteEffectOn(const mlir::MemoryEffects::EffectInstance &effect,
     // %val = fir.load $ref
     if (auto designate = accessedVal.getDefiningOp<hlfir::DesignateOp>()) {
       if (designate.getMemref() == val)
-        return mlir::AliasResult::MustAlias;
+        return aiir::AliasResult::MustAlias;
 
       // if the designate is into an array that might alias val
       res = aliasAnalysis.alias(val, designate.getMemref());
@@ -158,12 +158,12 @@ containsReadOrWriteEffectOn(const mlir::MemoryEffects::EffectInstance &effect,
         return res;
     }
   }
-  return mlir::AliasResult::NoAlias;
+  return aiir::AliasResult::NoAlias;
 }
 
 std::optional<ElementalAssignBufferization::MatchInfo>
 ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
-  mlir::Operation::user_range users = elemental->getUsers();
+  aiir::Operation::user_range users = elemental->getUsers();
   // the only uses of the elemental should be the assignment and the destroy
   if (std::distance(users.begin(), users.end()) != 2) {
     LLVM_DEBUG(llvm::dbgs() << "Too many uses of the elemental\n");
@@ -178,8 +178,8 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   }
 
   MatchInfo match;
-  for (mlir::Operation *user : users)
-    mlir::TypeSwitch<mlir::Operation *, void>(user)
+  for (aiir::Operation *user : users)
+    aiir::TypeSwitch<aiir::Operation *, void>(user)
         .Case([&](hlfir::AssignOp op) { match.assign = op; })
         .Case([&](hlfir::DestroyOp op) { match.destroy = op; });
 
@@ -192,7 +192,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // TODO: this could be extended to also allow hlfir.expr by first bufferizing
   // the incoming expression
   match.array = match.assign.getLhs();
-  mlir::Type arrayType = mlir::dyn_cast<fir::SequenceType>(
+  aiir::Type arrayType = aiir::dyn_cast<fir::SequenceType>(
       fir::unwrapPassByRefType(match.array.getType()));
   if (!arrayType) {
     LLVM_DEBUG(llvm::dbgs() << "AssignOp's result is not an array\n");
@@ -202,7 +202,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // require that the array elements are trivial
   // TODO: this is just to make the pass easier to think about. Not an inherent
   // limitation
-  mlir::Type eleTy = hlfir::getFortranElementType(arrayType);
+  aiir::Type eleTy = hlfir::getFortranElementType(arrayType);
   if (!fir::isa_trivial(eleTy)) {
     LLVM_DEBUG(llvm::dbgs() << "AssignOp's data type is not trivial\n");
     return std::nullopt;
@@ -230,14 +230,14 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
 
   // keep track of any values written to in the elemental, as these can't be
   // read from or written to between the elemental and the assignment
-  mlir::SmallVector<mlir::Value, 1> notToBeAccessedBeforeAssign;
+  aiir::SmallVector<aiir::Value, 1> notToBeAccessedBeforeAssign;
   // likewise, values read in the elemental cannot be written to between the
   // elemental and the assign
-  mlir::SmallVector<mlir::Value, 1> notToBeWrittenBeforeAssign;
+  aiir::SmallVector<aiir::Value, 1> notToBeWrittenBeforeAssign;
 
   // 1) side effects in the elemental body - it isn't sufficient to just look
   // for ordered elementals because we also cannot support out of order reads
-  std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
+  std::optional<aiir::SmallVector<aiir::MemoryEffects::EffectInstance>>
       effects = getEffectsBetween(&elemental.getBody()->front(),
                                   elemental.getBody()->getTerminator());
   if (!effects) {
@@ -245,13 +245,13 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
                << "operation with unknown effects inside elemental\n");
     return std::nullopt;
   }
-  for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
-    mlir::AliasResult res = containsReadOrWriteEffectOn(effect, match.array);
+  for (const aiir::MemoryEffects::EffectInstance &effect : *effects) {
+    aiir::AliasResult res = containsReadOrWriteEffectOn(effect, match.array);
     if (res.isNo()) {
       if (effect.getValue()) {
-        if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect()))
+        if (aiir::isa<aiir::MemoryEffects::Write>(effect.getEffect()))
           notToBeAccessedBeforeAssign.push_back(effect.getValue());
-        else if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect()))
+        else if (aiir::isa<aiir::MemoryEffects::Read>(effect.getEffect()))
           notToBeWrittenBeforeAssign.push_back(effect.getValue());
       }
 
@@ -260,7 +260,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
     }
 
     // don't allow any aliasing writes in the elemental
-    if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect())) {
+    if (aiir::isa<aiir::MemoryEffects::Write>(effect.getEffect())) {
       LLVM_DEBUG(llvm::dbgs() << "write inside the elemental body\n");
       return std::nullopt;
     }
@@ -317,11 +317,11 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
         << "operation with unknown effects between elemental and assign\n");
     return std::nullopt;
   }
-  for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
+  for (const aiir::MemoryEffects::EffectInstance &effect : *effects) {
     // not safe to access anything written in the elemental as this write
     // will be moved to the assignment
-    for (mlir::Value val : notToBeAccessedBeforeAssign) {
-      mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
+    for (aiir::Value val : notToBeAccessedBeforeAssign) {
+      aiir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
       if (!res.isNo()) {
         LLVM_DEBUG(llvm::dbgs()
                    << "disallowed side-effect: " << effect.getValue() << " for "
@@ -331,10 +331,10 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
     }
     // Anything that is read inside the elemental can only be safely read
     // between the elemental and the assignment.
-    for (mlir::Value val : notToBeWrittenBeforeAssign) {
-      mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
+    for (aiir::Value val : notToBeWrittenBeforeAssign) {
+      aiir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
       if (!res.isNo() &&
-          !mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect())) {
+          !aiir::isa<aiir::MemoryEffects::Read>(effect.getEffect())) {
         LLVM_DEBUG(llvm::dbgs()
                    << "disallowed non-read side-effect: " << effect.getValue()
                    << " for " << elemental.getLoc() << "\n");
@@ -347,13 +347,13 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
 }
 
 llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
-    hlfir::ElementalOp elemental, mlir::PatternRewriter &rewriter) const {
+    hlfir::ElementalOp elemental, aiir::PatternRewriter &rewriter) const {
   std::optional<MatchInfo> match = findMatch(elemental);
   if (!match)
     return rewriter.notifyMatchFailure(
         elemental, "cannot prove safety of ElementalAssignBufferization");
 
-  mlir::Location loc = elemental->getLoc();
+  aiir::Location loc = elemental->getLoc();
   fir::FirOpBuilder builder(rewriter, elemental.getOperation());
   auto rhsExtents = hlfir::getIndexExtents(loc, builder, elemental.getShape());
 
@@ -361,10 +361,10 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   builder.setInsertionPoint(match->assign);
   hlfir::Entity lhs{match->array};
   lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-  mlir::Value lhsShape = hlfir::genShape(loc, builder, lhs);
-  llvm::SmallVector<mlir::Value> lhsExtents =
+  aiir::Value lhsShape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<aiir::Value> lhsExtents =
       hlfir::getIndexExtents(loc, builder, lhsShape);
-  llvm::SmallVector<mlir::Value> extents =
+  llvm::SmallVector<aiir::Value> extents =
       fir::factory::deduceOptimalExtents(rhsExtents, lhsExtents);
 
   // Generate a loop nest looping around the hlfir.elemental shape and clone
@@ -385,14 +385,14 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
       builder, loc, elementValue, arrayElement, /*realloc=*/false,
       /*keep_lhs_length_if_realloc=*/false, match->assign.getTemporaryLhs());
   if (auto accessGroups =
-          match->assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+          match->assign.getOperation()->getAttrOfType<aiir::ArrayAttr>(
               fir::getAccessGroupsAttrName()))
     newAssign->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
 
   rewriter.eraseOp(match->assign);
   rewriter.eraseOp(match->destroy);
   rewriter.eraseOp(elemental);
-  return mlir::success();
+  return aiir::success();
 }
 
 /// Expand hlfir.assign of a scalar RHS to array LHS into a loop nest
@@ -407,23 +407,23 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
 ///     }
 ///   }
 class BroadcastAssignBufferization
-    : public mlir::OpRewritePattern<hlfir::AssignOp> {
+    : public aiir::OpRewritePattern<hlfir::AssignOp> {
 private:
 public:
-  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
+  using aiir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
-                  mlir::PatternRewriter &rewriter) const override;
+                  aiir::PatternRewriter &rewriter) const override;
 };
 
 llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
-    hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
+    hlfir::AssignOp assign, aiir::PatternRewriter &rewriter) const {
   // Since RHS is a scalar and LHS is an array, LHS must be allocated
   // in a conforming Fortran program, and LHS cannot be reallocated
   // as a result of the assignment. So we can ignore isAllocatableAssignment
   // and do the transformation always.
-  mlir::Value rhs = assign.getRhs();
+  aiir::Value rhs = assign.getRhs();
   if (!fir::isa_trivial(rhs.getType()))
     return rewriter.notifyMatchFailure(
         assign, "AssignOp's RHS is not a trivial scalar");
@@ -433,43 +433,43 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     return rewriter.notifyMatchFailure(assign,
                                        "AssignOp's LHS is not an array");
 
-  mlir::Type eleTy = lhs.getFortranElementType();
+  aiir::Type eleTy = lhs.getFortranElementType();
   if (!fir::isa_trivial(eleTy))
     return rewriter.notifyMatchFailure(
         assign, "AssignOp's LHS data type is not trivial");
 
-  mlir::Location loc = assign->getLoc();
+  aiir::Location loc = assign->getLoc();
   fir::FirOpBuilder builder(rewriter, assign.getOperation());
   builder.setInsertionPoint(assign);
   lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-  mlir::Value shape = hlfir::genShape(loc, builder, lhs);
-  llvm::SmallVector<mlir::Value> extents =
+  aiir::Value shape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<aiir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
 
-  mlir::ArrayAttr accessGroups;
-  if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+  aiir::ArrayAttr accessGroups;
+  if (auto attrs = assign.getOperation()->getAttrOfType<aiir::ArrayAttr>(
           fir::getAccessGroupsAttrName()))
     accessGroups = attrs;
 
   if (lhs.isSimplyContiguous() && extents.size() > 1) {
     // Flatten the array to use a single assign loop, that can be better
     // optimized.
-    mlir::Value n = extents[0];
+    aiir::Value n = extents[0];
     for (size_t i = 1; i < extents.size(); ++i)
-      n = mlir::arith::MulIOp::create(builder, loc, n, extents[i]);
-    llvm::SmallVector<mlir::Value> flatExtents = {n};
+      n = aiir::arith::MulIOp::create(builder, loc, n, extents[i]);
+    llvm::SmallVector<aiir::Value> flatExtents = {n};
 
-    mlir::Type flatArrayType;
-    mlir::Value flatArray = lhs.getBase();
-    if (mlir::isa<fir::BoxType>(lhs.getType())) {
+    aiir::Type flatArrayType;
+    aiir::Value flatArray = lhs.getBase();
+    if (aiir::isa<fir::BoxType>(lhs.getType())) {
       shape = builder.genShape(loc, flatExtents);
       flatArrayType = fir::BoxType::get(fir::SequenceType::get(eleTy, 1));
       flatArray = fir::ReboxOp::create(builder, loc, flatArrayType, flatArray,
-                                       shape, /*slice=*/mlir::Value{});
+                                       shape, /*slice=*/aiir::Value{});
     } else {
       // Array references must have fixed shape, when used in assignments.
       auto seqTy =
-          mlir::cast<fir::SequenceType>(fir::unwrapRefType(lhs.getType()));
+          aiir::cast<fir::SequenceType>(fir::unwrapRefType(lhs.getType()));
       llvm::ArrayRef<int64_t> fixedShape = seqTy.getShape();
       int64_t flatExtent = 1;
       for (int64_t extent : fixedShape)
@@ -484,7 +484,7 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
                            flangomp::shouldUseWorkshareLowering(assign));
     builder.setInsertionPointToStart(loopNest.body);
 
-    mlir::Value arrayElement =
+    aiir::Value arrayElement =
         hlfir::DesignateOp::create(builder, loc, fir::ReferenceType::get(eleTy),
                                    flatArray, loopNest.oneBasedIndices);
     auto newAssign = hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
@@ -503,59 +503,59 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   }
 
   rewriter.eraseOp(assign);
-  return mlir::success();
+  return aiir::success();
 }
 
 class EvaluateIntoMemoryAssignBufferization
-    : public mlir::OpRewritePattern<hlfir::EvaluateInMemoryOp> {
+    : public aiir::OpRewritePattern<hlfir::EvaluateInMemoryOp> {
 
 public:
-  using mlir::OpRewritePattern<hlfir::EvaluateInMemoryOp>::OpRewritePattern;
+  using aiir::OpRewritePattern<hlfir::EvaluateInMemoryOp>::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::EvaluateInMemoryOp,
-                  mlir::PatternRewriter &rewriter) const override;
+                  aiir::PatternRewriter &rewriter) const override;
 };
 
 static llvm::LogicalResult
 tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
-                          mlir::PatternRewriter &rewriter) {
-  mlir::Location loc = evalInMem.getLoc();
+                          aiir::PatternRewriter &rewriter) {
+  aiir::Location loc = evalInMem.getLoc();
   hlfir::DestroyOp destroy;
   hlfir::AssignOp assign;
   for (auto user : llvm::enumerate(evalInMem->getUsers())) {
     if (user.index() > 2)
-      return mlir::failure();
-    mlir::TypeSwitch<mlir::Operation *, void>(user.value())
+      return aiir::failure();
+    aiir::TypeSwitch<aiir::Operation *, void>(user.value())
         .Case([&](hlfir::AssignOp op) { assign = op; })
         .Case([&](hlfir::DestroyOp op) { destroy = op; });
   }
   if (!assign || !destroy || destroy.mustFinalizeExpr() ||
       assign.isAllocatableAssignment())
-    return mlir::failure();
+    return aiir::failure();
 
   hlfir::Entity lhs{assign.getLhs()};
   // EvaluateInMemoryOp memory is contiguous, so in general, it can only be
   // replace by the LHS if the LHS is contiguous.
   if (!lhs.isSimplyContiguous())
-    return mlir::failure();
+    return aiir::failure();
   // Character assignment may involves truncation/padding, so the LHS
   // cannot be used to evaluate RHS in place without proving the LHS and
   // RHS lengths are the same.
   if (lhs.isCharacter())
-    return mlir::failure();
+    return aiir::failure();
   fir::AliasAnalysis aliasAnalysis;
   // The region must not read or write the LHS.
-  // Note that getModRef is used instead of mlir::MemoryEffects because
+  // Note that getModRef is used instead of aiir::MemoryEffects because
   // EvaluateInMemoryOp is typically expected to hold fir.calls and that
-  // Fortran calls cannot be modeled in a useful way with mlir::MemoryEffects:
+  // Fortran calls cannot be modeled in a useful way with aiir::MemoryEffects:
   // it is hard/impossible to list all the read/written SSA values in a call,
   // but it is often possible to tell that an SSA value cannot be accessed,
   // hence getModRef is needed here and below. Also note that getModRef uses
-  // mlir::MemoryEffects for operations that do not have special handling in
+  // aiir::MemoryEffects for operations that do not have special handling in
   // getModRef.
   if (aliasAnalysis.getModRef(evalInMem.getBody(), lhs).isModOrRef())
-    return mlir::failure();
+    return aiir::failure();
   // Any variables affected between the hlfir.evalInMem and assignment must not
   // be read or written inside the region since it will be moved at the
   // assignment insertion point.
@@ -564,40 +564,40 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
     LLVM_DEBUG(
         llvm::dbgs()
         << "operation with unknown effects between eval_in_mem and assign\n");
-    return mlir::failure();
+    return aiir::failure();
   }
-  for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
-    mlir::Value affected = effect.getValue();
+  for (const aiir::MemoryEffects::EffectInstance &effect : *effects) {
+    aiir::Value affected = effect.getValue();
     if (!affected ||
         aliasAnalysis.getModRef(evalInMem.getBody(), affected).isModOrRef())
-      return mlir::failure();
+      return aiir::failure();
   }
 
   rewriter.setInsertionPoint(assign);
   fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
-  mlir::Value rawLhs = hlfir::genVariableRawAddress(loc, builder, lhs);
+  aiir::Value rawLhs = hlfir::genVariableRawAddress(loc, builder, lhs);
   hlfir::computeEvaluateOpIn(loc, builder, evalInMem, rawLhs);
   rewriter.eraseOp(assign);
   rewriter.eraseOp(destroy);
   rewriter.eraseOp(evalInMem);
-  return mlir::success();
+  return aiir::success();
 }
 
 llvm::LogicalResult EvaluateIntoMemoryAssignBufferization::matchAndRewrite(
     hlfir::EvaluateInMemoryOp evalInMem,
-    mlir::PatternRewriter &rewriter) const {
-  if (mlir::succeeded(tryUsingAssignLhsDirectly(evalInMem, rewriter)))
-    return mlir::success();
+    aiir::PatternRewriter &rewriter) const {
+  if (aiir::succeeded(tryUsingAssignLhsDirectly(evalInMem, rewriter)))
+    return aiir::success();
   // Rewrite to temp + as_expr here so that the assign + as_expr pattern can
   // kick-in for simple types and at least implement the assignment inline
   // instead of call Assign runtime.
   fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
-  mlir::Location loc = evalInMem.getLoc();
+  aiir::Location loc = evalInMem.getLoc();
   auto [temp, isHeapAllocated] = hlfir::computeEvaluateOpInNewTemp(
       loc, builder, evalInMem, evalInMem.getShape(), evalInMem.getTypeparams());
   rewriter.replaceOpWithNewOp<hlfir::AsExprOp>(
       evalInMem, temp, /*mustFree=*/builder.createBool(loc, isHeapAllocated));
-  return mlir::success();
+  return aiir::success();
 }
 
 class OptimizedBufferizationPass
@@ -605,14 +605,14 @@ class OptimizedBufferizationPass
           OptimizedBufferizationPass> {
 public:
   void runOnOperation() override {
-    mlir::MLIRContext *context = &getContext();
+    aiir::AIIRContext *context = &getContext();
 
-    mlir::GreedyRewriteConfig config;
+    aiir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
     config.setRegionSimplificationLevel(
-        mlir::GreedySimplifyRegionLevel::Disabled);
+        aiir::GreedySimplifyRegionLevel::Disabled);
 
-    mlir::RewritePatternSet patterns(context);
+    aiir::RewritePatternSet patterns(context);
     // TODO: right now the patterns are non-conflicting,
     // but it might be better to run this pass on hlfir.assign
     // operations and decide which transformation to apply
@@ -623,9 +623,9 @@ public:
     patterns.insert<BroadcastAssignBufferization>(context);
     patterns.insert<EvaluateIntoMemoryAssignBufferization>(context);
 
-    if (mlir::failed(mlir::applyPatternsGreedily(
+    if (aiir::failed(aiir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
-      mlir::emitError(getOperation()->getLoc(),
+      aiir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR optimized bufferization");
       signalPassFailure();
     }

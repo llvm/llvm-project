@@ -1,0 +1,2 @@
+add_aiir_interface(MaskableOpInterface)
+add_aiir_interface(MaskingOpInterface)

@@ -15,7 +15,7 @@
 #define CLANG_LIB_CODEGEN_CIRGENCALL_H
 
 #include "CIRGenValue.h"
-#include "mlir/IR/Operation.h"
+#include "aiir/IR/Operation.h"
 #include "clang/AST/GlobalDecl.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -82,14 +82,14 @@ class CIRGenCallee {
 public:
   CIRGenCallee() : kindOrFunctionPtr(SpecialKind::Invalid) {}
 
-  CIRGenCallee(const CIRGenCalleeInfo &abstractInfo, mlir::Operation *funcPtr)
+  CIRGenCallee(const CIRGenCalleeInfo &abstractInfo, aiir::Operation *funcPtr)
       : kindOrFunctionPtr(SpecialKind(reinterpret_cast<uintptr_t>(funcPtr))),
         abstractInfo(abstractInfo) {
     assert(funcPtr && "configuring callee without function pointer");
   }
 
   static CIRGenCallee
-  forDirect(mlir::Operation *funcPtr,
+  forDirect(aiir::Operation *funcPtr,
             const CIRGenCalleeInfo &abstractInfo = CIRGenCalleeInfo()) {
     return CIRGenCallee(abstractInfo, funcPtr);
   }
@@ -144,9 +144,9 @@ public:
     return abstractInfo;
   }
 
-  mlir::Operation *getFunctionPointer() const {
+  aiir::Operation *getFunctionPointer() const {
     assert(isOrdinary());
-    return reinterpret_cast<mlir::Operation *>(kindOrFunctionPtr);
+    return reinterpret_cast<aiir::Operation *>(kindOrFunctionPtr);
   }
 
   bool isVirtual() const { return kindOrFunctionPtr == SpecialKind::Virtual; }
@@ -182,7 +182,7 @@ public:
     return virtualInfo.fTy;
   }
 
-  void setFunctionPointer(mlir::Operation *functionPtr) {
+  void setFunctionPointer(aiir::Operation *functionPtr) {
     assert(isOrdinary());
     kindOrFunctionPtr = SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
   }
@@ -217,7 +217,7 @@ public:
 
   /// \returns an independent RValue. If the CallArg contains an LValue,
   /// a temporary copy is returned.
-  RValue getRValue(CIRGenFunction &cgf, mlir::Location loc) const;
+  RValue getRValue(CIRGenFunction &cgf, aiir::Location loc) const;
 
   LValue getKnownLValue() const {
     assert(hasLV && !isUsed);
@@ -231,7 +231,7 @@ public:
 
   bool isAggregate() const { return hasLV || rv.isAggregate(); }
 
-  void copyInto(CIRGenFunction &cgf, Address addr, mlir::Location loc) const;
+  void copyInto(CIRGenFunction &cgf, Address addr, aiir::Location loc) const;
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {

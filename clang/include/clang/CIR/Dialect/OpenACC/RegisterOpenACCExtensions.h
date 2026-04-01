@@ -9,13 +9,13 @@
 #ifndef CLANG_CIR_DIALECT_OPENACC_REGISTEROPENACCEXTENSIONS_H
 #define CLANG_CIR_DIALECT_OPENACC_REGISTEROPENACCEXTENSIONS_H
 
-namespace mlir {
+namespace aiir {
 class DialectRegistry;
-} // namespace mlir
+} // namespace aiir
 
 namespace cir::acc {
 
-void registerOpenACCExtensions(mlir::DialectRegistry &registry);
+void registerOpenACCExtensions(aiir::DialectRegistry &registry);
 
 } // namespace cir::acc
 

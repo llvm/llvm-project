@@ -1,0 +1,94 @@
+// RUN: aiir-pdll %s -I %S -I %S/../../../../include -split-input-file -x cpp | FileCheck %s
+
+// Check that we generate a wrapper pattern for each PDL pattern. Also
+// add in a pattern awkwardly named the same as our generated patterns to
+// check that we handle overlap.
+
+// CHECK: struct GeneratedPDLLPattern0 : ::aiir::PDLPatternModule {
+// CHECK:  template <typename... ConfigsT>
+// CHECK:  : ::aiir::PDLPatternModule(::aiir::parseSourceString<::aiir::ModuleOp>(
+// CHECK:  R"aiir(
+// CHECK:    pdl.pattern
+// CHECK:      operation "test.op"
+// CHECK:  )aiir", context), std::forward<ConfigsT>(configs)...)
+
+// CHECK: struct NamedPattern : ::aiir::PDLPatternModule {
+// CHECK:  : ::aiir::PDLPatternModule(::aiir::parseSourceString<::aiir::ModuleOp>(
+// CHECK:  R"aiir(
+// CHECK:    pdl.pattern
+// CHECK:      operation "test.op2"
+// CHECK:  )aiir", context), std::forward<ConfigsT>(configs)...)
+
+// CHECK: struct GeneratedPDLLPattern1 : ::aiir::PDLPatternModule {
+
+// CHECK: struct GeneratedPDLLPattern2 : ::aiir::PDLPatternModule {
+// CHECK:  : ::aiir::PDLPatternModule(::aiir::parseSourceString<::aiir::ModuleOp>(
+// CHECK:  R"aiir(
+// CHECK:    pdl.pattern
+// CHECK:      operation "test.op3"
+// CHECK:  )aiir", context), std::forward<ConfigsT>(configs)...)
+
+// CHECK{LITERAL}: [[maybe_unused]] static void populateGeneratedPDLLPatterns(::aiir::RewritePatternSet &patterns, ConfigsT &&...configs) {
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern0>(patterns.getContext(), configs...);
+// CHECK-NEXT:   patterns.add<NamedPattern>(patterns.getContext(), configs...);
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern1>(patterns.getContext(), configs...);
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern2>(patterns.getContext(), configs...);
+// CHECK-NEXT: }
+
+Pattern => erase op<test.op>;
+Pattern NamedPattern => erase op<test.op2>;
+Pattern GeneratedPDLLPattern1 => erase op<>;
+Pattern => erase op<test.op3>;
+
+// -----
+
+// Check the generation of native constraints and rewrites.
+
+#include "include/ods.td"
+
+// CHECK:      static ::llvm::LogicalResult TestCstPDLFn(::aiir::PatternRewriter &rewriter,
+// CHECK-SAME:     ::aiir::Attribute attr, ::aiir::Operation * op, ::aiir::Type type,
+// CHECK-SAME:     ::aiir::Value value, ::aiir::TypeRange typeRange, ::aiir::ValueRange valueRange) {
+// CHECK-NEXT:   return success();
+// CHECK: }
+
+// CHECK-NOT: TestUnusedCst
+
+// CHECK: static void TestRewritePDLFn(::aiir::PatternRewriter &rewriter,
+// CHECK-SAME:     ::aiir::Attribute attr, ::aiir::Operation * op, ::aiir::Type type,
+// CHECK-SAME:     ::aiir::Value value, ::aiir::TypeRange typeRange, ::aiir::ValueRange valueRange) {
+// CHECK: foo;
+// CHECK: }
+
+// CHECK: TestAttrInterface TestRewriteODSPDLFn(::aiir::PatternRewriter &rewriter, TestAttrInterface attr) {
+// CHECK: static ::aiir::Attribute TestRewriteSinglePDLFn(::aiir::PatternRewriter &rewriter) {
+// CHECK: std::tuple<::aiir::Attribute, ::aiir::Type> TestRewriteTuplePDLFn(::aiir::PatternRewriter &rewriter) {
+
+// CHECK-NOT: TestUnusedRewrite
+
+// CHECK: struct TestCstAndRewrite : ::aiir::PDLPatternModule {
+// CHECK:   registerConstraintFunction("TestCst", TestCstPDLFn);
+// CHECK:   registerRewriteFunction("TestRewrite", TestRewritePDLFn);
+
+Constraint TestCst(attr: Attr, op: Op, type: Type, value: Value, typeRange: TypeRange, valueRange: ValueRange) [{
+  return success();
+}];
+Constraint TestUnusedCst() [{ return success(); }];
+
+Rewrite TestRewrite(attr: Attr, op: Op, type: Type, value: Value, typeRange: TypeRange, valueRange: ValueRange) [{ foo; }];
+Rewrite TestRewriteODS(attr: TestAttrInterface) -> TestAttrInterface [{}];
+Rewrite TestRewriteSingle() -> Attr [{}];
+Rewrite TestRewriteTuple() -> (Attr, Type) [{}];
+Rewrite TestUnusedRewrite(op: Op) [{}];
+
+Pattern TestCstAndRewrite {
+  let root = op<>(operand: Value, operands: ValueRange) -> (type: Type, types: TypeRange);
+  TestCst(attr<"true">, root, type, operand, types, operands);
+  rewrite root with {
+    TestRewrite(attr<"true">, root, type, operand, types, operands);
+    TestRewriteODS(attr<"true">);
+    TestRewriteSingle();
+    TestRewriteTuple();
+    erase root;
+  };
+}

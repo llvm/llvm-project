@@ -17,10 +17,10 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "aiir/IR/BuiltinOps.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -30,13 +30,13 @@ namespace flangomp {
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 
-using namespace mlir;
+using namespace aiir;
 
 /// This function triggers TODO errors and halts compilation if it detects
 /// patterns representing unimplemented features.
 ///
 /// It exclusively checks situations that cannot be detected after all of the
-/// MLIR pipeline has ran (i.e. at the MLIR to LLVM IR translation stage, where
+/// AIIR pipeline has ran (i.e. at the AIIR to LLVM IR translation stage, where
 /// the preferred location for these types of checks is), and it only checks for
 /// features that have not been implemented for target offload, but are
 /// supported on host execution.
@@ -53,7 +53,7 @@ checkDeviceImplementationStatus(omp::OffloadModuleInterface offloadModule) {
       return WalkResult::advance();
 
     auto seqTy =
-        mlir::dyn_cast<fir::SequenceType>(*redOp.getByrefElementType());
+        aiir::dyn_cast<fir::SequenceType>(*redOp.getByrefElementType());
 
     bool isByRefReductionSupported =
         !seqTy || !fir::sequenceWithNonConstantShape(seqTy);
@@ -110,7 +110,7 @@ public:
   FunctionFilteringPass() = default;
 
   void runOnOperation() override {
-    MLIRContext *context = &getContext();
+    AIIRContext *context = &getContext();
     OpBuilder opBuilder(context);
     auto op = dyn_cast<omp::OffloadModuleInterface>(getOperation());
     if (!op || !op.getIsTargetDevice())
@@ -136,21 +136,21 @@ public:
 
       // Filtering a function here means deleting it if it doesn't contain a
       // target region. Else we explicitly set the omp.declare_target
-      // attribute. The second stage of function filtering at the MLIR to LLVM
+      // attribute. The second stage of function filtering at the AIIR to LLVM
       // IR translation level will remove functions that contain the target
       // region from the generated llvm IR.
       if (declareType == omp::DeclareTargetDeviceType::host) {
         SymbolTable::UseRange funcUses = *funcOp.getSymbolUses(op);
         for (SymbolTable::SymbolUse use : funcUses) {
           Operation *callOp = use.getUser();
-          if (auto internalFunc = mlir::dyn_cast<func::FuncOp>(callOp)) {
+          if (auto internalFunc = aiir::dyn_cast<func::FuncOp>(callOp)) {
             // Do not delete internal procedures holding the symbol of their
             // Fortran host procedure as attribute.
             internalFunc->removeAttr(fir::getHostSymbolAttrName());
-            // Set public visibility so that the function is not deleted by MLIR
+            // Set public visibility so that the function is not deleted by AIIR
             // because unused. Changing it is OK here because the function will
             // be deleted anyway in the second filtering phase.
-            internalFunc.setVisibility(mlir::SymbolTable::Visibility::Public);
+            internalFunc.setVisibility(aiir::SymbolTable::Visibility::Public);
             continue;
           }
           // If the callOp has users then replace them with Undef values.
@@ -193,7 +193,7 @@ private:
   /// operations, to remove host-only operations that are not used by device
   /// codegen.
   ///
-  /// It is based on the expected form of the MLIR module as produced by Flang
+  /// It is based on the expected form of the AIIR module as produced by Flang
   /// lowering and it performs the following mutations:
   ///   - Replace all values returned by the function with \c fir.undefined.
   ///   - \c omp.target operations are moved to the end of the function. If they
@@ -441,7 +441,7 @@ private:
         // !fir.ref<i1>, as they aren't reference types. Since they can appear
         // representing some `target firstprivate` clauses, we need to create
         // a special case here based on creating a placeholder fir.emboxchar op.
-        MLIRContext *ctx = &getContext();
+        AIIRContext *ctx = &getContext();
         fir::KindTy kind = boxCharType.getKind();
         auto placeholder = fir::AllocaOp::create(
             builder, loc, fir::CharacterType::getSingleton(ctx, kind));

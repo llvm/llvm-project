@@ -35,7 +35,7 @@ struct CustomLoweringCtor {
   std::vector<Param> Params;
 };
 
-// Adapted from mlir/lib/TableGen/Operator.cpp
+// Adapted from aiir/lib/TableGen/Operator.cpp
 // Returns the C++ class name of the operation, which is the name of the
 // operation with the dialect prefix removed and the first underscore removed.
 // If the operation name starts with an underscore, the underscore is considered
@@ -105,23 +105,23 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
   llvm::raw_string_ostream Code(CodeBuffer);
 
   Code << "class " << PatternName
-       << " : public mlir::OpConversionPattern<cir::" << OpName << "> {\n";
-  Code << "  [[maybe_unused]] mlir::DataLayout *dataLayout;\n";
+       << " : public aiir::OpConversionPattern<cir::" << OpName << "> {\n";
+  Code << "  [[maybe_unused]] aiir::DataLayout *dataLayout;\n";
   Code << "  [[maybe_unused]] cir::LowerModule *lowerModule;\n";
   Code << "\n";
 
   Code << "public:\n";
   Code << "  " << PatternName
-       << "(mlir::MLIRContext *context, const mlir::TypeConverter "
-          "&typeConverter, mlir::DataLayout &dataLayout, cir::LowerModule "
+       << "(aiir::AIIRContext *context, const aiir::TypeConverter "
+          "&typeConverter, aiir::DataLayout &dataLayout, cir::LowerModule "
           "&lowerModule)\n";
   Code << "    : OpConversionPattern<cir::" << OpName
        << ">(typeConverter, context), dataLayout(&dataLayout), "
           "lowerModule(&lowerModule) {}\n";
   Code << "\n";
 
-  Code << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
-       << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
+  Code << "  aiir::LogicalResult matchAndRewrite(cir::" << OpName
+       << " op, OpAdaptor adaptor, aiir::ConversionPatternRewriter &rewriter) "
           "const override;\n";
 
   Code << "};\n";
@@ -139,8 +139,8 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
   llvm::raw_string_ostream Code(CodeBuffer);
 
   Code << "class " << PatternName
-       << " : public mlir::OpConversionPattern<cir::" << OpName << "> {\n";
-  Code << "  [[maybe_unused]] mlir::DataLayout const &dataLayout;\n";
+       << " : public aiir::OpConversionPattern<cir::" << OpName << "> {\n";
+  Code << "  [[maybe_unused]] aiir::DataLayout const &dataLayout;\n";
 
   if (CustomCtor) {
     for (const CustomLoweringCtor::Param &P : CustomCtor->Params)
@@ -150,13 +150,13 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
   Code << "\n";
 
   Code << "public:\n";
-  Code << "  using mlir::OpConversionPattern<cir::" << OpName
+  Code << "  using aiir::OpConversionPattern<cir::" << OpName
        << ">::OpConversionPattern;\n";
 
   // Constructor
   Code << "  " << PatternName
-       << "(const mlir::TypeConverter &typeConverter, "
-          "mlir::MLIRContext *context, const mlir::DataLayout &dataLayout";
+       << "(const aiir::TypeConverter &typeConverter, "
+          "aiir::AIIRContext *context, const aiir::DataLayout &dataLayout";
 
   if (CustomCtor)
     emitCustomParamList(Code, CustomCtor->Params);
@@ -176,8 +176,8 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   Code << "  }\n\n";
 
-  Code << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
-       << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
+  Code << "  aiir::LogicalResult matchAndRewrite(cir::" << OpName
+       << " op, OpAdaptor adaptor, aiir::ConversionPatternRewriter &rewriter) "
           "const override;\n";
 
   if (!ExtraDecl.empty()) {

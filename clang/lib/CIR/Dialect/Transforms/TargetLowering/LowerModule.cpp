@@ -13,7 +13,7 @@
 
 #include "LowerModule.h"
 #include "CIRCXXABI.h"
-#include "mlir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinAttributes.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -51,7 +51,7 @@ createTargetLoweringInfo(LowerModule &lm) {
 
 LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
-                         mlir::ModuleOp &module,
+                         aiir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target)
     : module(module), target(std::move(target)), abi(createCXXABI(*this)) {}
 
@@ -62,7 +62,7 @@ const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
 }
 
 // TODO: not to create it every time
-std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
+std::unique_ptr<LowerModule> createLowerModule(aiir::ModuleOp module) {
   // If the triple is not present, e.g. CIR modules parsed from text, we
   // cannot init LowerModule properly.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
@@ -70,7 +70,7 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     return nullptr;
 
   // Fetch target information.
-  llvm::Triple triple(mlir::cast<mlir::StringAttr>(
+  llvm::Triple triple(aiir::cast<aiir::StringAttr>(
                           module->getAttr(cir::CIRDialect::getTripleAttrName()))
                           .getValue());
   clang::TargetOptions targetOptions;
@@ -88,7 +88,7 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   assert(!cir::MissingFeatures::lowerModuleCodeGenOpts());
   clang::CodeGenOptions codeGenOpts;
 
-  if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
+  if (auto optInfo = aiir::cast_if_present<cir::OptInfoAttr>(
           module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();

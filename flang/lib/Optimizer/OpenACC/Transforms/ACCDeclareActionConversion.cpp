@@ -58,11 +58,11 @@
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/LazySymbolTable.h"
 #include "flang/Runtime/entry-names.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/Value.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -78,7 +78,7 @@ namespace acc {
 } // namespace acc
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
@@ -152,9 +152,9 @@ public:
             continue;
 
           if (auto funcOp = dyn_cast<func::FuncOp>(funcDef))
-            if (!funcOp->hasAttr(mlir::acc::getDeclareActionAttrName()))
-              funcOp->setAttr(mlir::acc::getDeclareActionAttrName(),
-                              mlir::UnitAttr::get(funcOp.getContext()));
+            if (!funcOp->hasAttr(aiir::acc::getDeclareActionAttrName()))
+              funcOp->setAttr(aiir::acc::getDeclareActionAttrName(),
+                              aiir::UnitAttr::get(funcOp.getContext()));
 
           if (action == declareAction.getPreAlloc() ||
               action == declareAction.getPreDealloc())

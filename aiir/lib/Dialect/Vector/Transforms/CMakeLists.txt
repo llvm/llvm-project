@@ -1,0 +1,57 @@
+add_aiir_dialect_library(AIIRVectorTransforms
+  BufferizableOpInterfaceImpl.cpp
+  LowerVectorBitCast.cpp
+  LowerVectorBroadcast.cpp
+  LowerVectorContract.cpp
+  LowerVectorGather.cpp
+  LowerVectorInterleave.cpp
+  LowerVectorMask.cpp
+  LowerVectorMultiReduction.cpp
+  LowerVectorScan.cpp
+  LowerVectorShapeCast.cpp
+  LowerVectorShuffle.cpp
+  LowerVectorStep.cpp
+  LowerVectorToFromElementsToShuffleTree.cpp
+  LowerVectorTransfer.cpp
+  LowerVectorTranspose.cpp
+  SubsetOpInterfaceImpl.cpp
+  VectorDistribute.cpp
+  VectorDropLeadUnitDim.cpp
+  VectorEmulateMaskedLoadStore.cpp
+  VectorEmulateNarrowType.cpp
+  VectorInsertExtractStridedSliceRewritePatterns.cpp
+  VectorLinearize.cpp
+  VectorTransferOpTransforms.cpp
+  VectorTransferSplitRewritePatterns.cpp
+  VectorTransforms.cpp
+  VectorUnroll.cpp
+  VectorMaskElimination.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${AIIR_MAIN_INCLUDE_DIR}/aiir/Dialect/Vector/Transforms
+
+  DEPENDS
+  AIIRVectorTransformsIncGen
+
+  LINK_LIBS PUBLIC
+  AIIRAffineDialect
+  AIIRAffineAnalysis
+  AIIRAffineUtils
+  AIIRArithDialect
+  AIIRDialectUtils
+  AIIRGPUDialect
+  AIIRGPUUtils
+  AIIRIR
+  AIIRLinalgDialect
+  AIIRMemRefDialect
+  AIIRMemRefTransforms
+  AIIRMemRefUtils
+  AIIRSCFDialect
+  AIIRSideEffectInterfaces
+  AIIRSubsetOpInterface
+  AIIRTensorDialect
+  AIIRTransforms
+  AIIRVectorDialect
+  AIIRVectorInterfaces
+  AIIRVectorUtils
+  )

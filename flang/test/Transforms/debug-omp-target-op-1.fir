@@ -1,5 +1,5 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
-// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --aiir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QQmain() attributes {fir.bindc_name = "test"} {

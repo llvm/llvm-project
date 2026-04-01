@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -22,10 +22,10 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include <optional>
 
-namespace mlir {
+namespace aiir {
 class Location;
 class Value;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class AllocMemOp;
@@ -42,7 +42,7 @@ class StatementContext;
 class SymMap;
 
 /// Create an extended expression value.
-fir::ExtendedValue createSomeExtendedExpression(mlir::Location loc,
+fir::ExtendedValue createSomeExtendedExpression(aiir::Location loc,
                                                 AbstractConverter &converter,
                                                 const SomeExpr &expr,
                                                 SymMap &symMap,
@@ -51,14 +51,14 @@ fir::ExtendedValue createSomeExtendedExpression(mlir::Location loc,
 /// Create the IR for the expression \p expr in an initialization context.
 /// Expressions that appear in initializers may not allocate temporaries, do not
 /// have a stack, etc.
-fir::ExtendedValue createSomeInitializerExpression(mlir::Location loc,
+fir::ExtendedValue createSomeInitializerExpression(aiir::Location loc,
                                                    AbstractConverter &converter,
                                                    const SomeExpr &expr,
                                                    SymMap &symMap,
                                                    StatementContext &stmtCtx);
 
 /// Create an extended expression address.
-fir::ExtendedValue createSomeExtendedAddress(mlir::Location loc,
+fir::ExtendedValue createSomeExtendedAddress(aiir::Location loc,
                                              AbstractConverter &converter,
                                              const SomeExpr &expr,
                                              SymMap &symMap,
@@ -67,7 +67,7 @@ fir::ExtendedValue createSomeExtendedAddress(mlir::Location loc,
 /// Create an address in an initializer context. Must be a constant or a symbol
 /// to be resolved at link-time. Expressions that appear in initializers may not
 /// allocate temporaries, do not have a stack, etc.
-fir::ExtendedValue createInitializerAddress(mlir::Location loc,
+fir::ExtendedValue createInitializerAddress(aiir::Location loc,
                                             AbstractConverter &converter,
                                             const SomeExpr &expr,
                                             SymMap &symMap,
@@ -75,7 +75,7 @@ fir::ExtendedValue createInitializerAddress(mlir::Location loc,
 
 /// Create the address of the box.
 /// \p expr must be the designator of an allocatable/pointer entity.
-fir::MutableBoxValue createMutableBox(mlir::Location loc,
+fir::MutableBoxValue createMutableBox(aiir::Location loc,
                                       AbstractConverter &converter,
                                       const SomeExpr &expr, SymMap &symMap);
 
@@ -92,7 +92,7 @@ fir::ExtendedValue updateBoxForParentComponent(AbstractConverter &converter,
 /// described the variable storage. Otherwise, the created fir::BoxValue
 /// describes a temporary storage containing \p expr evaluation, and clean-up
 /// for the temporary is added to the provided StatementContext \p stmtCtx.
-fir::ExtendedValue createBoxValue(mlir::Location loc,
+fir::ExtendedValue createBoxValue(aiir::Location loc,
                                   AbstractConverter &converter,
                                   const SomeExpr &expr, SymMap &symMap,
                                   StatementContext &stmtCtx);
@@ -183,8 +183,8 @@ void createAllocatableArrayAssignment(AbstractConverter &converter,
 void createArrayOfPointerAssignment(
     AbstractConverter &converter, const SomeExpr &lhs, const SomeExpr &rhs,
     ExplicitIterSpace &explicitIterSpace, ImplicitIterSpace &implicitIterSpace,
-    const llvm::SmallVector<mlir::Value> &lbounds,
-    std::optional<llvm::SmallVector<mlir::Value>> ubounds, SymMap &symMap,
+    const llvm::SmallVector<aiir::Value> &lbounds,
+    std::optional<llvm::SmallVector<aiir::Value>> ubounds, SymMap &symMap,
     StatementContext &stmtCtx);
 
 /// Lower an array expression with "parallel" semantics. Such a rhs expression
@@ -204,7 +204,7 @@ fir::ExtendedValue createSomeArrayTempValue(AbstractConverter &converter,
 /// `{rank, data-is-headers, [data]*, [extents]*}`, which is built recursively.
 /// The base header, \p raggedHeader, must be initialized to zeros.
 void createLazyArrayTempValue(AbstractConverter &converter,
-                              const SomeExpr &expr, mlir::Value raggedHeader,
+                              const SomeExpr &expr, aiir::Value raggedHeader,
                               SymMap &symMap, StatementContext &stmtCtx);
 
 /// Lower an array expression to a value of type box. The expression must be a
@@ -218,16 +218,16 @@ fir::ExtendedValue createSomeArrayBox(AbstractConverter &converter,
 /// context of a user defined assignment. For subroutines with alternate
 /// returns, the returned value indicates which label the code should jump to.
 /// The returned value is null otherwise.
-mlir::Value createSubroutineCall(AbstractConverter &converter,
+aiir::Value createSubroutineCall(AbstractConverter &converter,
                                  const evaluate::ProcedureRef &call,
                                  ExplicitIterSpace &explicitIterSpace,
                                  ImplicitIterSpace &implicitIterSpace,
                                  SymMap &symMap, StatementContext &stmtCtx,
                                  bool isUserDefAssignment);
 
-mlir::Value addCrayPointerInst(mlir::Location loc, fir::FirOpBuilder &builder,
-                               mlir::Value ptrVal, mlir::Type ptrTy,
-                               mlir::Type pteTy);
+aiir::Value addCrayPointerInst(aiir::Location loc, fir::FirOpBuilder &builder,
+                               aiir::Value ptrVal, aiir::Type ptrTy,
+                               aiir::Type pteTy);
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPR_H

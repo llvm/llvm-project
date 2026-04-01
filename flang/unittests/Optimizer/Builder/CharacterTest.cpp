@@ -21,14 +21,14 @@ public:
     kindMap = std::make_unique<fir::KindMapping>(&context,
         "i10:80,l3:24,a1:8,r54:Double,c20:X86_FP80,r11:PPC_FP128,"
         "r12:FP128,r13:X86_FP80,r14:Double,r15:Float,r16:Half,r23:BFloat");
-    mlir::OpBuilder builder(&context);
+    aiir::OpBuilder builder(&context);
     auto loc = builder.getUnknownLoc();
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    moduleOp = mlir::ModuleOp::create(builder, loc);
+    moduleOp = aiir::ModuleOp::create(builder, loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+    aiir::func::FuncOp func = aiir::func::FuncOp::create(
         builder, loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
@@ -38,8 +38,8 @@ public:
 
   fir::FirOpBuilder &getBuilder() { return *firBuilder; }
 
-  mlir::MLIRContext context;
-  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
+  aiir::AIIRContext context;
+  aiir::OwningOpRef<aiir::ModuleOp> moduleOp;
   std::unique_ptr<fir::KindMapping> kindMap;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 };

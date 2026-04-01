@@ -2,17 +2,17 @@
 // RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s --check-prefixes=CHECK-LABEL,CHECK
 
 // CHECK-LABEL:  llvm.func @_QPtest() 
-// CHECK:    %[[CONST_VAL:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:    %[[CONST_VAL:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:    %[[VAL1:.*]] = llvm.alloca %[[CONST_VAL]] x i32 {bindc_name = "n"} : (i64) -> !llvm.ptr
-// CHECK:    %[[CONST_VAL1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:    %[[CONST_VAL1:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:    %[[VAL2:.*]] = llvm.alloca %[[CONST_VAL1]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-// CHECK:    %[[CONST_VAL2:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:    %[[CONST_VAL2:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:    %[[VAL3:.*]] = llvm.alloca %[[CONST_VAL2]] x i32 {bindc_name = "c"} : (i64) -> !llvm.ptr
-// CHECK:    %[[CONST_VAL3:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:    %[[CONST_VAL3:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:    %[[VAL4:.*]] = llvm.alloca %[[CONST_VAL3]] x i32 {bindc_name = "b"} : (i64) -> !llvm.ptr
-// CHECK:    %[[CONST_VAL4:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:    %[[CONST_VAL4:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:    %[[VAL5:.*]] = llvm.alloca %[[CONST_VAL4]] x i32 {bindc_name = "a"} : (i64) -> !llvm.ptr
-// CHECK:    %[[CONST_VAL5:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:    %[[CONST_VAL5:.*]] = llvm.aiir.constant(1 : i32) : i32
 // CHECK:    %[[VAL6:.*]] = llvm.load %[[VAL1]] : !llvm.ptr -> i32
 // CHECK:    omp.simd nontemporal(%[[VAL5]], %[[VAL3]] : !llvm.ptr, !llvm.ptr) {
 // CHECK:      omp.loop_nest (%{{.*}}) : i32 = (%[[CONST_VAL5]]) to (%[[VAL6]]) inclusive step (%[[CONST_VAL5]]) {
@@ -47,15 +47,15 @@
   }
 
 // CHECK-LABEL:  llvm.func @_QPsimd_nontemporal_allocatable
-// CHECK:    %[[CONST_VAL:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:    %[[CONST_VAL:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:    %[[ALLOCA2:.*]] = llvm.alloca %[[CONST_VAL]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-// CHECK:    %[[IDX_VAL:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:    %[[CONST_VAL1:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:    %[[END_IDX:.*]] = llvm.mlir.constant(100 : i32) : i32
+// CHECK:    %[[IDX_VAL:.*]] = llvm.aiir.constant(1 : i32) : i32
+// CHECK:    %[[CONST_VAL1:.*]] = llvm.aiir.constant(0 : index) : i64
+// CHECK:    %[[END_IDX:.*]] = llvm.aiir.constant(100 : i32) : i32
 // CHECK:    omp.simd nontemporal(%[[ARG0:.*]] : !llvm.ptr) {
 // CHECK:      omp.loop_nest (%[[ARG3:.*]]) : i32 = (%[[IDX_VAL]]) to (%[[END_IDX]]) inclusive step (%[[IDX_VAL]]) {
 // CHECK:        llvm.store %[[ARG3]], %{{.*}} : i32, !llvm.ptr
-// CHECK:        %[[CONST_VAL2:.*]] = llvm.mlir.constant(48 : i32) : i32
+// CHECK:        %[[CONST_VAL2:.*]] = llvm.aiir.constant(48 : i32) : i32
 // CHECK:        "llvm.intr.memcpy"(%[[ALLOCA1:.*]], %[[ARG0]], %[[CONST_VAL2]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:        %[[VAL1:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 // CHECK:        %[[VAL2:.*]] = llvm.sext %[[VAL1]] : i32 to i64
@@ -65,8 +65,8 @@
 // CHECK:        %[[VAL6:.*]] = llvm.load %[[VAL5]] : !llvm.ptr -> i64
 // CHECK:        %[[VAL7:.*]] = llvm.getelementptr %[[ALLOCA1]][0, 7, %[[CONST_VAL1]], 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 // CHECK:        %[[VAL8:.*]] = llvm.load %[[VAL7]] : !llvm.ptr -> i64
-// CHECK:        %[[VAL10:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:        %[[VAL11:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:        %[[VAL10:.*]] = llvm.aiir.constant(1 : i64) : i64
+// CHECK:        %[[VAL11:.*]] = llvm.aiir.constant(0 : i64) : i64
 // CHECK:        %[[VAL12:.*]] = llvm.sub %[[VAL2]], %[[VAL6]] overflow<nsw> : i64
 // CHECK:        %[[VAL13:.*]] = llvm.mul %[[VAL12]], %[[VAL10]] overflow<nsw, nuw> : i64
 // CHECK:        %[[VAL14:.*]] = llvm.mul %[[VAL13]], %[[VAL10]] overflow<nsw, nuw> : i64

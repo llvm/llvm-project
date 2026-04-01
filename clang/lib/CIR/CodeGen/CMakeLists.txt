@@ -4,7 +4,7 @@ set(
   Support
 )
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
 
 add_clang_library(clangCIR
   CIRGenerator.cpp
@@ -55,8 +55,8 @@ add_clang_library(clangCIR
   Targets/AMDGPU.cpp
 
   DEPENDS
-  MLIRCIR
-  MLIRCIROpInterfacesIncGen
+  AIIRCIR
+  AIIRCIROpInterfacesIncGen
   ${dialect_libs}
 
   LINK_LIBS
@@ -65,7 +65,7 @@ add_clang_library(clangCIR
   clangLex
   ${dialect_libs}
   CIROpenACCSupport
-  MLIRCIR
-  MLIRCIRInterfaces
-  MLIRTargetLLVMIRImport
+  AIIRCIR
+  AIIRCIRInterfaces
+  AIIRTargetLLVMIRImport
 )

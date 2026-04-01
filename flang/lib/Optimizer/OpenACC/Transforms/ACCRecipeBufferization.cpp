@@ -13,13 +13,13 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/Block.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/SymbolTable.h"
-#include "mlir/IR/Value.h"
-#include "mlir/IR/Visitors.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/Block.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/SymbolTable.h"
+#include "aiir/IR/Value.h"
+#include "aiir/IR/Visitors.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace fir::acc {
@@ -31,50 +31,50 @@ namespace {
 
 class BufferizeInterface {
 public:
-  static std::optional<mlir::Type> mustBufferize(mlir::Type recipeType) {
+  static std::optional<aiir::Type> mustBufferize(aiir::Type recipeType) {
     if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(recipeType))
       return fir::ReferenceType::get(boxTy);
     return std::nullopt;
   }
 
-  static mlir::Operation *load(mlir::OpBuilder &builder, mlir::Location loc,
-                               mlir::Value value) {
+  static aiir::Operation *load(aiir::OpBuilder &builder, aiir::Location loc,
+                               aiir::Value value) {
     return fir::LoadOp::create(builder, loc, value);
   }
 
-  static mlir::Value placeInMemory(mlir::OpBuilder &builder, mlir::Location loc,
-                                   mlir::Value value) {
+  static aiir::Value placeInMemory(aiir::OpBuilder &builder, aiir::Location loc,
+                                   aiir::Value value) {
     auto alloca = fir::AllocaOp::create(builder, loc, value.getType());
     fir::StoreOp::create(builder, loc, value, alloca);
     return alloca;
   }
 };
 
-static void bufferizeRegionArgsAndYields(mlir::Region &region,
-                                         mlir::Location loc, mlir::Type oldType,
-                                         mlir::Type newType) {
+static void bufferizeRegionArgsAndYields(aiir::Region &region,
+                                         aiir::Location loc, aiir::Type oldType,
+                                         aiir::Type newType) {
   if (region.empty())
     return;
 
-  mlir::OpBuilder builder(&region);
-  for (mlir::BlockArgument arg : region.getArguments()) {
+  aiir::OpBuilder builder(&region);
+  for (aiir::BlockArgument arg : region.getArguments()) {
     if (arg.getType() == oldType) {
       arg.setType(newType);
       if (!arg.use_empty()) {
-        mlir::Operation *loadOp = BufferizeInterface::load(builder, loc, arg);
+        aiir::Operation *loadOp = BufferizeInterface::load(builder, loc, arg);
         arg.replaceAllUsesExcept(loadOp->getResult(0), loadOp);
       }
     }
   }
   if (auto yield =
-          llvm::dyn_cast<mlir::acc::YieldOp>(region.back().getTerminator())) {
-    llvm::SmallVector<mlir::Value> newOperands;
+          llvm::dyn_cast<aiir::acc::YieldOp>(region.back().getTerminator())) {
+    llvm::SmallVector<aiir::Value> newOperands;
     newOperands.reserve(yield.getNumOperands());
     bool changed = false;
-    for (mlir::Value oldYieldArg : yield.getOperands()) {
+    for (aiir::Value oldYieldArg : yield.getOperands()) {
       if (oldYieldArg.getType() == oldType) {
         builder.setInsertionPoint(yield);
-        mlir::Value alloca =
+        aiir::Value alloca =
             BufferizeInterface::placeInMemory(builder, loc, oldYieldArg);
         newOperands.push_back(alloca);
         changed = true;
@@ -88,32 +88,32 @@ static void bufferizeRegionArgsAndYields(mlir::Region &region,
 }
 
 template <typename OpTy>
-static void updateRecipeUse(mlir::ValueRange operands,
+static void updateRecipeUse(aiir::ValueRange operands,
                             llvm::StringRef recipeSymName,
-                            mlir::Operation *computeOp) {
+                            aiir::Operation *computeOp) {
   for (auto operand : operands) {
     auto op = operand.getDefiningOp<OpTy>();
     if (!op || !op.getRecipe().has_value() ||
         op.getRecipeAttr().getLeafReference() != recipeSymName)
       continue;
 
-    mlir::Location loc = op->getLoc();
+    aiir::Location loc = op->getLoc();
 
-    mlir::OpBuilder builder(op);
+    aiir::OpBuilder builder(op);
     builder.setInsertionPointAfterValue(op.getVar());
-    mlir::Value alloca =
+    aiir::Value alloca =
         BufferizeInterface::placeInMemory(builder, loc, op.getVar());
     op.getVarMutable().assign(alloca);
     op.getAccVar().setType(alloca.getType());
 
-    mlir::Value oldRes = op.getAccVar();
-    llvm::SmallVector<mlir::Operation *> users(oldRes.getUsers().begin(),
+    aiir::Value oldRes = op.getAccVar();
+    llvm::SmallVector<aiir::Operation *> users(oldRes.getUsers().begin(),
                                                oldRes.getUsers().end());
-    for (mlir::Operation *useOp : users) {
+    for (aiir::Operation *useOp : users) {
       if (useOp == computeOp)
         continue;
       builder.setInsertionPoint(useOp);
-      mlir::Operation *load = BufferizeInterface::load(builder, loc, oldRes);
+      aiir::Operation *load = BufferizeInterface::load(builder, loc, oldRes);
       useOp->replaceUsesOfWith(oldRes, load->getResult(0));
     }
   }
@@ -124,29 +124,29 @@ class ACCRecipeBufferization
           ACCRecipeBufferization> {
 public:
   void runOnOperation() override {
-    mlir::ModuleOp module = getOperation();
+    aiir::ModuleOp module = getOperation();
 
     llvm::SmallVector<llvm::StringRef> recipeNames;
-    module.walk([&](mlir::Operation *recipe) {
-      llvm::TypeSwitch<mlir::Operation *, void>(recipe)
-          .Case<mlir::acc::PrivateRecipeOp, mlir::acc::FirstprivateRecipeOp,
-                mlir::acc::ReductionRecipeOp>([&](auto recipe) {
-            mlir::Type oldType = recipe.getType();
+    module.walk([&](aiir::Operation *recipe) {
+      llvm::TypeSwitch<aiir::Operation *, void>(recipe)
+          .Case<aiir::acc::PrivateRecipeOp, aiir::acc::FirstprivateRecipeOp,
+                aiir::acc::ReductionRecipeOp>([&](auto recipe) {
+            aiir::Type oldType = recipe.getType();
             auto bufferizedType =
                 BufferizeInterface::mustBufferize(recipe.getType());
             if (!bufferizedType)
               return;
-            recipe.setTypeAttr(mlir::TypeAttr::get(*bufferizedType));
-            mlir::Location loc = recipe.getLoc();
+            recipe.setTypeAttr(aiir::TypeAttr::get(*bufferizedType));
+            aiir::Location loc = recipe.getLoc();
             using RecipeOp = decltype(recipe);
             bufferizeRegionArgsAndYields(recipe.getInitRegion(), loc, oldType,
                                          *bufferizedType);
             if constexpr (std::is_same_v<RecipeOp,
-                                         mlir::acc::FirstprivateRecipeOp>)
+                                         aiir::acc::FirstprivateRecipeOp>)
               bufferizeRegionArgsAndYields(recipe.getCopyRegion(), loc, oldType,
                                            *bufferizedType);
             if constexpr (std::is_same_v<RecipeOp,
-                                         mlir::acc::ReductionRecipeOp>)
+                                         aiir::acc::ReductionRecipeOp>)
               bufferizeRegionArgsAndYields(recipe.getCombinerRegion(), loc,
                                            oldType, *bufferizedType);
             bufferizeRegionArgsAndYields(recipe.getDestroyRegion(), loc,
@@ -157,19 +157,19 @@ public:
     if (recipeNames.empty())
       return;
 
-    module.walk([&](mlir::Operation *op) {
-      llvm::TypeSwitch<mlir::Operation *, void>(op)
-          .Case<mlir::acc::LoopOp, mlir::acc::ParallelOp, mlir::acc::SerialOp>(
+    module.walk([&](aiir::Operation *op) {
+      llvm::TypeSwitch<aiir::Operation *, void>(op)
+          .Case<aiir::acc::LoopOp, aiir::acc::ParallelOp, aiir::acc::SerialOp>(
               [&](auto computeOp) {
                 for (llvm::StringRef recipeName : recipeNames) {
                   if (!computeOp.getPrivateOperands().empty())
-                    updateRecipeUse<mlir::acc::PrivateOp>(
+                    updateRecipeUse<aiir::acc::PrivateOp>(
                         computeOp.getPrivateOperands(), recipeName, op);
                   if (!computeOp.getFirstprivateOperands().empty())
-                    updateRecipeUse<mlir::acc::FirstprivateOp>(
+                    updateRecipeUse<aiir::acc::FirstprivateOp>(
                         computeOp.getFirstprivateOperands(), recipeName, op);
                   if (!computeOp.getReductionOperands().empty())
-                    updateRecipeUse<mlir::acc::ReductionOp>(
+                    updateRecipeUse<aiir::acc::ReductionOp>(
                         computeOp.getReductionOperands(), recipeName, op);
                 }
               });
@@ -179,6 +179,6 @@ public:
 
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::acc::createACCRecipeBufferizationPass() {
+std::unique_ptr<aiir::Pass> fir::acc::createACCRecipeBufferizationPass() {
   return std::make_unique<ACCRecipeBufferization>();
 }

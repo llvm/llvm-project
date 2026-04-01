@@ -5,7 +5,7 @@ include(LLVM-Config)
 include(DetermineGCCCompatible)
 
 # get_subproject_title(titlevar)
-#   Set ${outvar} to the title of the current LLVM subproject (Clang, MLIR ...)
+#   Set ${outvar} to the title of the current LLVM subproject (Clang, AIIR ...)
 #
 # The title is set in the subproject's top-level using the variable
 # LLVM_SUBPROJECT_TITLE. If it does not exist, it is assumed it is LLVM itself.

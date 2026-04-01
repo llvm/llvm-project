@@ -2,7 +2,7 @@
 #include "ABIInfo.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "aiir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
@@ -55,15 +55,15 @@ public:
   AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
 
-  void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
+  void setTargetAttributes(const clang::Decl *decl, aiir::Operation *global,
                            CIRGenModule &cgm) const override {
-    if (auto func = mlir::dyn_cast<cir::FuncOp>(global)) {
+    if (auto func = aiir::dyn_cast<cir::FuncOp>(global)) {
       if (requiresAMDGPUProtectedVisibility(decl, func.getGlobalVisibility())) {
         func.setGlobalVisibility(cir::VisibilityKind::Protected);
         func.setDSOLocal(true);
       }
       setAMDGPUTargetFunctionAttributes(decl, func, cgm);
-    } else if (auto gv = mlir::dyn_cast<cir::GlobalOp>(global)) {
+    } else if (auto gv = aiir::dyn_cast<cir::GlobalOp>(global)) {
       if (requiresAMDGPUProtectedVisibility(decl, gv.getGlobalVisibility())) {
         gv.setGlobalVisibility(cir::VisibilityKind::Protected);
         gv.setDSOLocal(true);

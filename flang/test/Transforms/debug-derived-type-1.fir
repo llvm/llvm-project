@@ -1,4 +1,4 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s | FileCheck %s
 
 // Only enabled on x86_64
 // REQUIRES: x86-registered-target

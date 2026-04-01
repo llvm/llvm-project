@@ -17,7 +17,7 @@ public:
     fir::support::loadDialects(context);
     kindMap = new fir::KindMapping(&context, kindMapInit, "r42a10c14d28i40l41");
   }
-  mlir::MLIRContext context;
+  aiir::AIIRContext context;
   fir::KindMapping *kindMap{};
   std::string kindMapInit =
       "i10:80,l3:24,a1:8,r54:Double,r62:X86_FP80,r11:PPC_FP128";
@@ -25,15 +25,15 @@ public:
 
 // Test fir::isPolymorphicType from flang/Optimizer/Dialect/FIRType.h.
 TEST_F(FIRTypesTest, isPolymorphicTypeTest) {
-  mlir::Type noneTy = mlir::NoneType::get(&context);
-  mlir::Type seqNoneTy =
+  aiir::Type noneTy = aiir::NoneType::get(&context);
+  aiir::Type seqNoneTy =
       fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, noneTy);
-  mlir::Type recTy = fir::RecordType::get(&context, "dt");
-  mlir::Type seqRecTy =
+  aiir::Type recTy = fir::RecordType::get(&context, "dt");
+  aiir::Type seqRecTy =
       fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, recTy);
 
   // CLASS(T)
-  mlir::Type ty = fir::ClassType::get(recTy);
+  aiir::Type ty = fir::ClassType::get(recTy);
   EXPECT_TRUE(fir::isPolymorphicType(ty));
   EXPECT_TRUE(fir::isPolymorphicType(fir::ReferenceType::get(ty)));
 
@@ -79,12 +79,12 @@ TEST_F(FIRTypesTest, isPolymorphicTypeTest) {
 
 // Test fir::isUnlimitedPolymorphicType from flang/Optimizer/Dialect/FIRType.h.
 TEST_F(FIRTypesTest, isUnlimitedPolymorphicTypeTest) {
-  mlir::Type noneTy = mlir::NoneType::get(&context);
-  mlir::Type seqNoneTy =
+  aiir::Type noneTy = aiir::NoneType::get(&context);
+  aiir::Type seqNoneTy =
       fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, noneTy);
 
   // CLASS(*)
-  mlir::Type ty = fir::ClassType::get(noneTy);
+  aiir::Type ty = fir::ClassType::get(noneTy);
   EXPECT_TRUE(fir::isUnlimitedPolymorphicType(ty));
   EXPECT_TRUE(fir::isUnlimitedPolymorphicType(fir::ReferenceType::get(ty)));
 
@@ -126,10 +126,10 @@ TEST_F(FIRTypesTest, isUnlimitedPolymorphicTypeTest) {
 
 // Test fir::isBoxedRecordType from flang/Optimizer/Dialect/FIRType.h.
 TEST_F(FIRTypesTest, isBoxedRecordType) {
-  mlir::Type recTy = fir::RecordType::get(&context, "dt");
-  mlir::Type seqRecTy =
+  aiir::Type recTy = fir::RecordType::get(&context, "dt");
+  aiir::Type seqRecTy =
       fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, recTy);
-  mlir::Type ty = fir::BoxType::get(recTy);
+  aiir::Type ty = fir::BoxType::get(recTy);
   EXPECT_TRUE(fir::isBoxedRecordType(ty));
   EXPECT_TRUE(fir::isBoxedRecordType(fir::ReferenceType::get(ty)));
 
@@ -150,15 +150,15 @@ TEST_F(FIRTypesTest, isBoxedRecordType) {
   EXPECT_TRUE(fir::isBoxedRecordType(ty));
 
   EXPECT_FALSE(fir::isBoxedRecordType(fir::BoxType::get(
-      fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)))));
+      fir::ReferenceType::get(aiir::IntegerType::get(&context, 32)))));
 }
 
 // Test fir::isScalarBoxedRecordType from flang/Optimizer/Dialect/FIRType.h.
 TEST_F(FIRTypesTest, isScalarBoxedRecordType) {
-  mlir::Type recTy = fir::RecordType::get(&context, "dt");
-  mlir::Type seqRecTy =
+  aiir::Type recTy = fir::RecordType::get(&context, "dt");
+  aiir::Type seqRecTy =
       fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, recTy);
-  mlir::Type ty = fir::BoxType::get(recTy);
+  aiir::Type ty = fir::BoxType::get(recTy);
   EXPECT_TRUE(fir::isScalarBoxedRecordType(ty));
   EXPECT_TRUE(fir::isScalarBoxedRecordType(fir::ReferenceType::get(ty)));
 
@@ -187,142 +187,142 @@ TEST_F(FIRTypesTest, isScalarBoxedRecordType) {
   EXPECT_FALSE(fir::isScalarBoxedRecordType(ty));
 
   EXPECT_FALSE(fir::isScalarBoxedRecordType(fir::BoxType::get(
-      fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)))));
+      fir::ReferenceType::get(aiir::IntegerType::get(&context, 32)))));
 }
 
 TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
   // RecordType are not changed.
 
   // !fir.tyep<T> -> !fir.type<T>
-  mlir::Type recTy = fir::RecordType::get(&context, "dt");
+  aiir::Type recTy = fir::RecordType::get(&context, "dt");
   EXPECT_EQ(recTy, fir::updateTypeForUnlimitedPolymorphic(recTy));
 
   // !fir.array<2x!fir.type<T>> -> !fir.array<2x!fir.type<T>>
-  mlir::Type arrRecTy = fir::SequenceType::get({2}, recTy);
+  aiir::Type arrRecTy = fir::SequenceType::get({2}, recTy);
   EXPECT_EQ(arrRecTy, fir::updateTypeForUnlimitedPolymorphic(arrRecTy));
 
   // !fir.heap<!fir.type<T>> -> !fir.heap<!fir.type<T>>
-  mlir::Type heapTy = fir::HeapType::get(recTy);
+  aiir::Type heapTy = fir::HeapType::get(recTy);
   EXPECT_EQ(heapTy, fir::updateTypeForUnlimitedPolymorphic(heapTy));
   // !fir.heap<!fir.array<2x!fir.type<T>>> ->
   // !fir.heap<!fir.array<2x!fir.type<T>>>
-  mlir::Type heapArrTy = fir::HeapType::get(arrRecTy);
+  aiir::Type heapArrTy = fir::HeapType::get(arrRecTy);
   EXPECT_EQ(heapArrTy, fir::updateTypeForUnlimitedPolymorphic(heapArrTy));
 
   // !fir.ptr<!fir.type<T>> -> !fir.ptr<!fir.type<T>>
-  mlir::Type ptrTy = fir::PointerType::get(recTy);
+  aiir::Type ptrTy = fir::PointerType::get(recTy);
   EXPECT_EQ(ptrTy, fir::updateTypeForUnlimitedPolymorphic(ptrTy));
   // !fir.ptr<!fir.array<2x!fir.type<T>>> ->
   // !fir.ptr<!fir.array<2x!fir.type<T>>>
-  mlir::Type ptrArrTy = fir::PointerType::get(arrRecTy);
+  aiir::Type ptrArrTy = fir::PointerType::get(arrRecTy);
   EXPECT_EQ(ptrArrTy, fir::updateTypeForUnlimitedPolymorphic(ptrArrTy));
 
   // When updating intrinsic types the array, pointer and heap types are kept.
   // only the inner element type is changed to `none`.
-  mlir::Type none = mlir::NoneType::get(&context);
-  mlir::Type arrNone = fir::SequenceType::get({10}, none);
-  mlir::Type heapNone = fir::HeapType::get(none);
-  mlir::Type heapArrNone = fir::HeapType::get(arrNone);
-  mlir::Type ptrNone = fir::PointerType::get(none);
-  mlir::Type ptrArrNone = fir::PointerType::get(arrNone);
+  aiir::Type none = aiir::NoneType::get(&context);
+  aiir::Type arrNone = fir::SequenceType::get({10}, none);
+  aiir::Type heapNone = fir::HeapType::get(none);
+  aiir::Type heapArrNone = fir::HeapType::get(arrNone);
+  aiir::Type ptrNone = fir::PointerType::get(none);
+  aiir::Type ptrArrNone = fir::PointerType::get(arrNone);
 
-  mlir::Type i32Ty = mlir::IntegerType::get(&context, 32);
-  mlir::Type f32Ty = mlir::Float32Type::get(&context);
-  mlir::Type l1Ty = fir::LogicalType::get(&context, 1);
-  mlir::Type cplx32Ty = mlir::ComplexType::get(f32Ty);
-  mlir::Type char1Ty = fir::CharacterType::get(&context, 1, 10);
-  llvm::SmallVector<mlir::Type> intrinsicTypes = {
+  aiir::Type i32Ty = aiir::IntegerType::get(&context, 32);
+  aiir::Type f32Ty = aiir::Float32Type::get(&context);
+  aiir::Type l1Ty = fir::LogicalType::get(&context, 1);
+  aiir::Type cplx32Ty = aiir::ComplexType::get(f32Ty);
+  aiir::Type char1Ty = fir::CharacterType::get(&context, 1, 10);
+  llvm::SmallVector<aiir::Type> intrinsicTypes = {
       i32Ty, f32Ty, l1Ty, cplx32Ty, char1Ty};
 
-  for (mlir::Type ty : intrinsicTypes) {
+  for (aiir::Type ty : intrinsicTypes) {
     // `ty` -> none
     EXPECT_EQ(none, fir::updateTypeForUnlimitedPolymorphic(ty));
 
     // !fir.array<10xTY> -> !fir.array<10xnone>
-    mlir::Type arrTy = fir::SequenceType::get({10}, ty);
+    aiir::Type arrTy = fir::SequenceType::get({10}, ty);
     EXPECT_EQ(arrNone, fir::updateTypeForUnlimitedPolymorphic(arrTy));
 
     // !fir.heap<TY> -> !fir.heap<none>
-    mlir::Type heapTy = fir::HeapType::get(ty);
+    aiir::Type heapTy = fir::HeapType::get(ty);
     EXPECT_EQ(heapNone, fir::updateTypeForUnlimitedPolymorphic(heapTy));
 
     // !fir.heap<!fir.array<10xTY>> -> !fir.heap<!fir.array<10xnone>>
-    mlir::Type heapArrTy = fir::HeapType::get(arrTy);
+    aiir::Type heapArrTy = fir::HeapType::get(arrTy);
     EXPECT_EQ(heapArrNone, fir::updateTypeForUnlimitedPolymorphic(heapArrTy));
 
     // !fir.ptr<TY> -> !fir.ptr<none>
-    mlir::Type ptrTy = fir::PointerType::get(ty);
+    aiir::Type ptrTy = fir::PointerType::get(ty);
     EXPECT_EQ(ptrNone, fir::updateTypeForUnlimitedPolymorphic(ptrTy));
 
     // !fir.ptr<!fir.array<10xTY>> -> !fir.ptr<!fir.array<10xnone>>
-    mlir::Type ptrArrTy = fir::PointerType::get(arrTy);
+    aiir::Type ptrArrTy = fir::PointerType::get(arrTy);
     EXPECT_EQ(ptrArrNone, fir::updateTypeForUnlimitedPolymorphic(ptrArrTy));
   }
 }
 
 TEST_F(FIRTypesTest, getTypeAsString) {
   EXPECT_EQ("i32",
-      fir::getTypeAsString(mlir::IntegerType::get(&context, 32), *kindMap));
+      fir::getTypeAsString(aiir::IntegerType::get(&context, 32), *kindMap));
   EXPECT_EQ("ref_i32",
       fir::getTypeAsString(
-          fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)),
+          fir::ReferenceType::get(aiir::IntegerType::get(&context, 32)),
           *kindMap));
   EXPECT_EQ(
-      "f64", fir::getTypeAsString(mlir::Float64Type::get(&context), *kindMap));
+      "f64", fir::getTypeAsString(aiir::Float64Type::get(&context), *kindMap));
   EXPECT_EQ(
       "l8", fir::getTypeAsString(fir::LogicalType::get(&context, 1), *kindMap));
   EXPECT_EQ("z32",
       fir::getTypeAsString(
-          mlir::ComplexType::get(mlir::Float32Type::get(&context)), *kindMap));
+          aiir::ComplexType::get(aiir::Float32Type::get(&context)), *kindMap));
   EXPECT_EQ("c8",
       fir::getTypeAsString(fir::CharacterType::get(&context, 1, 1), *kindMap));
   EXPECT_EQ("c8x10",
       fir::getTypeAsString(fir::CharacterType::get(&context, 1, 10), *kindMap));
-  mlir::Type ty = mlir::IntegerType::get(&context, 64);
-  mlir::Type arrTy = fir::SequenceType::get({10, 20}, ty);
+  aiir::Type ty = aiir::IntegerType::get(&context, 64);
+  aiir::Type arrTy = fir::SequenceType::get({10, 20}, ty);
   EXPECT_EQ("10x20xi64", fir::getTypeAsString(arrTy, *kindMap));
   EXPECT_EQ(
-      "idx", fir::getTypeAsString(mlir::IndexType::get(&context), *kindMap));
+      "idx", fir::getTypeAsString(aiir::IndexType::get(&context), *kindMap));
   EXPECT_EQ("ptr_i32",
       fir::getTypeAsString(
-          fir::PointerType::get(mlir::IntegerType::get(&context, 32)),
+          fir::PointerType::get(aiir::IntegerType::get(&context, 32)),
           *kindMap));
   EXPECT_EQ("heap_i32",
       fir::getTypeAsString(
-          fir::HeapType::get(mlir::IntegerType::get(&context, 32)), *kindMap));
+          fir::HeapType::get(aiir::IntegerType::get(&context, 32)), *kindMap));
   EXPECT_EQ("box_i32",
       fir::getTypeAsString(
-          fir::BoxType::get(mlir::IntegerType::get(&context, 32)), *kindMap));
+          fir::BoxType::get(aiir::IntegerType::get(&context, 32)), *kindMap));
   EXPECT_EQ("class_i32",
       fir::getTypeAsString(
-          fir::ClassType::get(mlir::IntegerType::get(&context, 32)), *kindMap));
+          fir::ClassType::get(aiir::IntegerType::get(&context, 32)), *kindMap));
   EXPECT_EQ("class_none",
       fir::getTypeAsString(
-          fir::ClassType::get(mlir::NoneType::get(&context)), *kindMap));
+          fir::ClassType::get(aiir::NoneType::get(&context)), *kindMap));
   auto derivedTy = fir::RecordType::get(&context, "derived");
-  llvm::SmallVector<std::pair<std::string, mlir::Type>> components;
-  components.emplace_back("p1", mlir::IntegerType::get(&context, 64));
+  llvm::SmallVector<std::pair<std::string, aiir::Type>> components;
+  components.emplace_back("p1", aiir::IntegerType::get(&context, 64));
   derivedTy.finalize({}, components);
   EXPECT_EQ("rec_derived", fir::getTypeAsString(derivedTy, *kindMap));
-  mlir::Type dynArrTy =
+  aiir::Type dynArrTy =
       fir::SequenceType::get({fir::SequenceType::getUnknownExtent(),
                                  fir::SequenceType::getUnknownExtent()},
           ty);
   EXPECT_EQ("UxUxi64", fir::getTypeAsString(dynArrTy, *kindMap));
   EXPECT_EQ("llvmptr_i32",
       fir::getTypeAsString(
-          fir::LLVMPointerType::get(mlir::IntegerType::get(&context, 32)),
+          fir::LLVMPointerType::get(aiir::IntegerType::get(&context, 32)),
           *kindMap));
   EXPECT_EQ("boxchar_c8xU",
       fir::getTypeAsString(fir::BoxCharType::get(&context, 1), *kindMap));
 }
 
 TEST_F(FIRTypesTest, isVolatileType) {
-  mlir::Type i32 = mlir::IntegerType::get(&context, 32);
+  aiir::Type i32 = aiir::IntegerType::get(&context, 32);
 
-  mlir::Type i32NonVolatileRef = fir::ReferenceType::get(i32);
-  mlir::Type i32NonVolatileBox = fir::BoxType::get(i32);
-  mlir::Type i32NonVolatileClass = fir::ClassType::get(i32);
+  aiir::Type i32NonVolatileRef = fir::ReferenceType::get(i32);
+  aiir::Type i32NonVolatileBox = fir::BoxType::get(i32);
+  aiir::Type i32NonVolatileClass = fir::ClassType::get(i32);
 
   // Ensure the default value is false
   EXPECT_EQ(i32NonVolatileRef, fir::ReferenceType::get(i32, false));
@@ -337,11 +337,11 @@ TEST_F(FIRTypesTest, isVolatileType) {
   // Should return the same type if it's not capable of representing volatility.
   EXPECT_EQ(i32, fir::updateTypeWithVolatility(i32, true));
 
-  mlir::Type i32VolatileRef =
+  aiir::Type i32VolatileRef =
       fir::updateTypeWithVolatility(i32NonVolatileRef, true);
-  mlir::Type i32VolatileBox =
+  aiir::Type i32VolatileBox =
       fir::updateTypeWithVolatility(i32NonVolatileBox, true);
-  mlir::Type i32VolatileClass =
+  aiir::Type i32VolatileClass =
       fir::updateTypeWithVolatility(i32NonVolatileClass, true);
 
   EXPECT_TRUE(fir::isa_volatile_type(i32VolatileRef));

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OwningOpRef.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/IR/OwningOpRef.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
@@ -47,10 +47,10 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
 }
 
 static std::unique_ptr<llvm::Module>
-lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
-                     llvm::StringRef mlirSaveTempsOutFile = {}) {
-  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx,
-                                              mlirSaveTempsOutFile);
+lowerFromCIRToLLVMIR(aiir::ModuleOp AIIRModule, llvm::LLVMContext &LLVMCtx,
+                     llvm::StringRef aiirSaveTempsOutFile = {}) {
+  return direct::lowerDirectlyFromCIRToLLVMIR(AIIRModule, LLVMCtx,
+                                              aiirSaveTempsOutFile);
 }
 
 class CIRGenConsumer : public clang::ASTConsumer {
@@ -115,13 +115,13 @@ public:
       }
     }
 
-    mlir::ModuleOp MlirModule = Gen->getModule();
-    mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
+    aiir::ModuleOp AiirModule = Gen->getModule();
+    aiir::AIIRContext &AiirCtx = Gen->getAIIRContext();
 
     if (!FEOptions.ClangIRDisablePasses) {
       // Setup and run CIR pipeline.
       if (runCIRToCIRPasses(
-              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              AiirModule, AiirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
@@ -131,10 +131,10 @@ public:
 
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
-      if (OutputStream && MlirModule) {
-        mlir::OpPrintingFlags Flags;
+      if (OutputStream && AiirModule) {
+        aiir::OpPrintingFlags Flags;
         Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-        MlirModule->print(*OutputStream, Flags);
+        AiirModule->print(*OutputStream, Flags);
       }
       break;
     case CIRGenAction::OutputType::EmitLLVM:
@@ -142,25 +142,25 @@ public:
     case CIRGenAction::OutputType::EmitObj:
     case CIRGenAction::OutputType::EmitAssembly: {
       StringRef saveTempsPrefix = CGO.SaveTempsFilePrefix;
-      std::string cirSaveTempsOutFile, mlirSaveTempsOutFile;
+      std::string cirSaveTempsOutFile, aiirSaveTempsOutFile;
       if (!saveTempsPrefix.empty()) {
         SmallString<128> stem(saveTempsPrefix);
         llvm::sys::path::replace_extension(stem, "cir");
         cirSaveTempsOutFile = std::string(stem);
-        llvm::sys::path::replace_extension(stem, "mlir");
-        mlirSaveTempsOutFile = std::string(stem);
+        llvm::sys::path::replace_extension(stem, "aiir");
+        aiirSaveTempsOutFile = std::string(stem);
       }
 
       if (!cirSaveTempsOutFile.empty()) {
         std::error_code ec;
         llvm::raw_fd_ostream out(cirSaveTempsOutFile, ec);
         if (!ec)
-          MlirModule->print(out);
+          AiirModule->print(out);
       }
 
       llvm::LLVMContext LLVMCtx;
       std::unique_ptr<llvm::Module> LLVMModule =
-          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, mlirSaveTempsOutFile);
+          lowerFromCIRToLLVMIR(AiirModule, LLVMCtx, aiirSaveTempsOutFile);
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(
@@ -192,10 +192,10 @@ public:
 
 void CIRGenConsumer::anchor() {}
 
-CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
-    : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext), Action(Act) {}
+CIRGenAction::CIRGenAction(OutputType Act, aiir::AIIRContext *AIIRCtx)
+    : AIIRCtx(AIIRCtx ? AIIRCtx : new aiir::AIIRContext), Action(Act) {}
 
-CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
+CIRGenAction::~CIRGenAction() { AIIRMod.release(); }
 
 static std::unique_ptr<raw_pwrite_stream>
 getOutputStream(CompilerInstance &CI, StringRef InFile,
@@ -229,21 +229,21 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 void EmitAssemblyAction::anchor() {}
-EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitAssembly, MLIRCtx) {}
+EmitAssemblyAction::EmitAssemblyAction(aiir::AIIRContext *AIIRCtx)
+    : CIRGenAction(OutputType::EmitAssembly, AIIRCtx) {}
 
 void EmitCIRAction::anchor() {}
-EmitCIRAction::EmitCIRAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitCIR, MLIRCtx) {}
+EmitCIRAction::EmitCIRAction(aiir::AIIRContext *AIIRCtx)
+    : CIRGenAction(OutputType::EmitCIR, AIIRCtx) {}
 
 void EmitLLVMAction::anchor() {}
-EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitLLVM, MLIRCtx) {}
+EmitLLVMAction::EmitLLVMAction(aiir::AIIRContext *AIIRCtx)
+    : CIRGenAction(OutputType::EmitLLVM, AIIRCtx) {}
 
 void EmitBCAction::anchor() {}
-EmitBCAction::EmitBCAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitBC, MLIRCtx) {}
+EmitBCAction::EmitBCAction(aiir::AIIRContext *AIIRCtx)
+    : CIRGenAction(OutputType::EmitBC, AIIRCtx) {}
 
 void EmitObjAction::anchor() {}
-EmitObjAction::EmitObjAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitObj, MLIRCtx) {}
+EmitObjAction::EmitObjAction(aiir::AIIRContext *AIIRCtx)
+    : CIRGenAction(OutputType::EmitObj, AIIRCtx) {}

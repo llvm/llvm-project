@@ -24,7 +24,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/io-api.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "aiir/Dialect/LLVMIR/LLVMAttrs.h"
 
 namespace fir {
 #define GEN_PASS_DEF_SETRUNTIMECALLATTRIBUTES
@@ -55,40 +55,40 @@ using namespace Fortran::runtime::io;
 // The attribute deduction is conservative in a sense that it applies
 // to most of the runtime calls, but it may still be incorrect for some
 // runtime calls.
-static mlir::LLVM::MemoryEffectsAttr getGenericMemoryAttr(fir::CallOp callOp) {
+static aiir::LLVM::MemoryEffectsAttr getGenericMemoryAttr(fir::CallOp callOp) {
   bool maybeIndirectAccess = false;
   for (auto arg : callOp.getArgOperands()) {
-    mlir::Type argType = arg.getType();
-    if (mlir::isa<fir::BaseBoxType>(argType)) {
+    aiir::Type argType = arg.getType();
+    if (aiir::isa<fir::BaseBoxType>(argType)) {
       // If it is a null/absent box, then this particular call
       // cannot access memory indirectly through the box's
       // base_addr.
       auto def = arg.getDefiningOp();
-      if (!mlir::isa_and_nonnull<fir::ZeroOp, fir::AbsentOp>(def)) {
+      if (!aiir::isa_and_nonnull<fir::ZeroOp, fir::AbsentOp>(def)) {
         maybeIndirectAccess = true;
         break;
       }
     }
-    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(argType)) {
+    if (auto refType = aiir::dyn_cast<fir::ReferenceType>(argType)) {
       if (!fir::isa_trivial(refType.getElementType())) {
         maybeIndirectAccess = true;
         break;
       }
     }
-    if (auto ptrType = mlir::dyn_cast<mlir::LLVM::LLVMPointerType>(argType)) {
+    if (auto ptrType = aiir::dyn_cast<aiir::LLVM::LLVMPointerType>(argType)) {
       maybeIndirectAccess = true;
       break;
     }
   }
   if (!maybeIndirectAccess) {
-    return mlir::LLVM::MemoryEffectsAttr::get(
+    return aiir::LLVM::MemoryEffectsAttr::get(
         callOp->getContext(),
-        {/*other=*/mlir::LLVM::ModRefInfo::NoModRef,
-         /*argMem=*/mlir::LLVM::ModRefInfo::ModRef,
-         /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::ModRef,
-         /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-         /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
-         /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef});
+        {/*other=*/aiir::LLVM::ModRefInfo::NoModRef,
+         /*argMem=*/aiir::LLVM::ModRefInfo::ModRef,
+         /*inaccessibleMem=*/aiir::LLVM::ModRefInfo::ModRef,
+         /*errnoMem=*/aiir::LLVM::ModRefInfo::NoModRef,
+         /*targetMem0=*/aiir::LLVM::ModRefInfo::NoModRef,
+         /*targetMem1=*/aiir::LLVM::ModRefInfo::NoModRef});
   }
 
   return {};
@@ -108,14 +108,14 @@ constexpr bool IsAny = std::disjunction_v<std::is_same<T, Ts>...>;
 } // end anonymous namespace
 
 // MemoryAttrDesc type provides get() method for computing
-// mlir::LLVM::MemoryEffectsAttr for the given Fortran runtime call.
+// aiir::LLVM::MemoryEffectsAttr for the given Fortran runtime call.
 // If needed, add specializations for particular runtime calls.
 namespace {
 // Default implementation just uses getGenericMemoryAttr().
 // Note that it may be incorrect for some runtime calls.
 template <typename KEY, typename Enable = void>
 struct MemoryAttrDesc {
-  static mlir::LLVM::MemoryEffectsAttr get(fir::CallOp callOp) {
+  static aiir::LLVM::MemoryEffectsAttr get(fir::CallOp callOp) {
     return getGenericMemoryAttr(callOp);
   }
 };
@@ -128,10 +128,10 @@ namespace {
 // This should be true for the majority of the Fortran runtime calls.
 template <typename KEY, typename Enable = void>
 struct NosyncAttrDesc {
-  static std::optional<mlir::NamedAttribute> get(fir::CallOp callOp) {
+  static std::optional<aiir::NamedAttribute> get(fir::CallOp callOp) {
     // TODO: replace llvm.nosync with an LLVM dialect callback.
-    return mlir::NamedAttribute("llvm.nosync",
-                                mlir::UnitAttr::get(callOp->getContext()));
+    return aiir::NamedAttribute("llvm.nosync",
+                                aiir::UnitAttr::get(callOp->getContext()));
   }
 };
 } // end anonymous namespace
@@ -144,10 +144,10 @@ namespace {
 // user functions during their execution (e.g. defined IO, assignment).
 template <typename KEY, typename Enable = void>
 struct NocallbackAttrDesc {
-  static std::optional<mlir::NamedAttribute> get(fir::CallOp callOp) {
+  static std::optional<aiir::NamedAttribute> get(fir::CallOp callOp) {
     // TODO: replace llvm.nocallback with an LLVM dialect callback.
-    return mlir::NamedAttribute("llvm.nocallback",
-                                mlir::UnitAttr::get(callOp->getContext()));
+    return aiir::NamedAttribute("llvm.nocallback",
+                                aiir::UnitAttr::get(callOp->getContext()));
   }
 };
 
@@ -160,7 +160,7 @@ struct NocallbackAttrDesc<
     KEY, std::enable_if_t<
              IsAny<KEY, mkIOKey(OutputDerivedType), mkIOKey(InputDerivedType),
                    mkIOKey(OutputNamelist), mkIOKey(InputNamelist)>>> {
-  static std::optional<mlir::NamedAttribute> get(fir::CallOp) {
+  static std::optional<aiir::NamedAttribute> get(fir::CallOp) {
     return std::nullopt;
   }
 };
@@ -170,9 +170,9 @@ namespace {
 // RuntimeFunction provides different callbacks that compute values
 // of fir.call attributes for a Fortran runtime function.
 struct RuntimeFunction {
-  using MemoryAttrGeneratorTy = mlir::LLVM::MemoryEffectsAttr (*)(fir::CallOp);
+  using MemoryAttrGeneratorTy = aiir::LLVM::MemoryEffectsAttr (*)(fir::CallOp);
   using NamedAttrGeneratorTy =
-      std::optional<mlir::NamedAttribute> (*)(fir::CallOp);
+      std::optional<aiir::NamedAttribute> (*)(fir::CallOp);
   using Key = std::string_view;
   constexpr operator Key() const { return key; }
   Key key;
@@ -216,12 +216,12 @@ static_assert(runtimeFuncs.Verify() && "map must be sorted");
 // Set attributes for the given Fortran runtime call.
 // The symbolTable is used to cache the name lookups in the module.
 static void setRuntimeCallAttributes(fir::CallOp callOp,
-                                     mlir::SymbolTableCollection &symbolTable) {
-  auto iface = mlir::cast<mlir::CallOpInterface>(callOp.getOperation());
-  auto funcOp = mlir::dyn_cast_or_null<mlir::func::FuncOp>(
+                                     aiir::SymbolTableCollection &symbolTable) {
+  auto iface = aiir::cast<aiir::CallOpInterface>(callOp.getOperation());
+  auto funcOp = aiir::dyn_cast_or_null<aiir::func::FuncOp>(
       iface.resolveCallableInTable(&symbolTable));
 
-  if (!funcOp || !funcOp->hasAttrOfType<mlir::UnitAttr>(
+  if (!funcOp || !funcOp->hasAttrOfType<aiir::UnitAttr>(
                      fir::FIROpsDialect::getFirRuntimeAttrName()))
     return;
 
@@ -233,7 +233,7 @@ static void setRuntimeCallAttributes(fir::CallOp callOp,
     const RuntimeFunction &desc = *range.first;
     LLVM_DEBUG(llvm::dbgs()
                << "Identified runtime function call: " << desc.key << '\n');
-    if (mlir::LLVM::MemoryEffectsAttr memoryAttr =
+    if (aiir::LLVM::MemoryEffectsAttr memoryAttr =
             desc.memoryAttrGenerator(callOp))
       callOp->setAttr(fir::FIROpsDialect::getFirCallMemoryAttrName(),
                       memoryAttr);
@@ -246,14 +246,14 @@ static void setRuntimeCallAttributes(fir::CallOp callOp,
 }
 
 void SetRuntimeCallAttributesPass::runOnOperation() {
-  mlir::func::FuncOp funcOp = getOperation();
+  aiir::func::FuncOp funcOp = getOperation();
   // Exit early for declarations to skip the debug output for them.
   if (funcOp.isDeclaration())
     return;
   LLVM_DEBUG(llvm::dbgs() << "=== Begin " DEBUG_TYPE " ===\n");
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << funcOp.getSymName() << "\n");
 
-  mlir::SymbolTableCollection symbolTable;
+  aiir::SymbolTableCollection symbolTable;
   funcOp.walk([&](fir::CallOp callOp) {
     setRuntimeCallAttributes(callOp, symbolTable);
   });

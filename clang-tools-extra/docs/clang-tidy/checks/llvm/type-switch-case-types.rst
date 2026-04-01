@@ -34,4 +34,4 @@ Transforms to:
 
 Note: The second case (``auto`` parameter) only emits a warning without a
 fix-it, because the deduced type of ``auto`` depends on ``dyn_cast`` behavior
-which varies between pointer types and MLIR handle types.
+which varies between pointer types and AIIR handle types.

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir -mlir-print-debuginfo -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -aiir-print-debuginfo -o - %s | FileCheck %s
 
   integer :: n = 0, x = 1
   if (x .ne. 1) goto 9

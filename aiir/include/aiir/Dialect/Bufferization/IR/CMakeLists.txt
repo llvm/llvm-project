@@ -1,0 +1,16 @@
+add_aiir_dialect(BufferizationOps bufferization)
+add_aiir_doc(BufferizationOps BufferizationOps Dialects/ -gen-dialect-doc)
+add_aiir_interface(AllocationOpInterface)
+add_aiir_interface(BufferDeallocationOpInterface)
+add_aiir_interface(BufferizableOpInterface)
+add_aiir_interface(BufferViewFlowOpInterface)
+
+set(LLVM_TARGET_DEFINITIONS BufferizationEnums.td)
+aiir_tablegen(BufferizationEnums.h.inc -gen-enum-decls)
+aiir_tablegen(BufferizationEnums.cpp.inc -gen-enum-defs)
+add_aiir_dialect_tablegen_target(AIIRBufferizationEnumsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BufferizationTypeInterfaces.td)
+aiir_tablegen(BufferizationTypeInterfaces.h.inc -gen-type-interface-decls)
+aiir_tablegen(BufferizationTypeInterfaces.cpp.inc -gen-type-interface-defs)
+add_aiir_dialect_tablegen_target(AIIRBufferizationTypeInterfacesIncGen)

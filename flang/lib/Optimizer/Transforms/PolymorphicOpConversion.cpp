@@ -19,13 +19,13 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/derived-api.h"
 #include "flang/Semantics/runtime-type-info.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "aiir/Dialect/Affine/IR/AffineOps.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -35,7 +35,7 @@ namespace fir {
 } // namespace fir
 
 using namespace fir;
-using namespace mlir;
+using namespace aiir;
 
 // Reconstruct binding tables for dynamic dispatch.
 using BindingTable = llvm::DenseMap<llvm::StringRef, unsigned>;
@@ -49,10 +49,10 @@ static std::string getTypeDescriptorTypeName() {
                                   /*kinds=*/{});
 }
 
-static std::optional<mlir::Type>
-buildBindingTables(BindingTables &bindingTables, mlir::ModuleOp mod) {
+static std::optional<aiir::Type>
+buildBindingTables(BindingTables &bindingTables, aiir::ModuleOp mod) {
 
-  std::optional<mlir::Type> typeDescriptorType;
+  std::optional<aiir::Type> typeDescriptorType;
   std::string typeDescriptorTypeName = getTypeDescriptorTypeName();
   // The binding tables are defined in FIR after lowering inside fir.type_info
   // operations. Go through each binding tables and store the procedure name and
@@ -85,29 +85,29 @@ class SelectTypeConv : public OpConversionPattern<fir::SelectTypeOp> {
 public:
   using OpConversionPattern<fir::SelectTypeOp>::OpConversionPattern;
 
-  SelectTypeConv(mlir::MLIRContext *ctx)
-      : mlir::OpConversionPattern<fir::SelectTypeOp>(ctx) {}
+  SelectTypeConv(aiir::AIIRContext *ctx)
+      : aiir::OpConversionPattern<fir::SelectTypeOp>(ctx) {}
 
   llvm::LogicalResult
   matchAndRewrite(fir::SelectTypeOp selectType, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override;
+                  aiir::ConversionPatternRewriter &rewriter) const override;
 
 private:
   // Generate comparison of type descriptor addresses.
-  mlir::Value genTypeDescCompare(mlir::Location loc, mlir::Value selector,
-                                 mlir::Type ty, mlir::ModuleOp mod,
-                                 mlir::PatternRewriter &rewriter) const;
+  aiir::Value genTypeDescCompare(aiir::Location loc, aiir::Value selector,
+                                 aiir::Type ty, aiir::ModuleOp mod,
+                                 aiir::PatternRewriter &rewriter) const;
 
-  llvm::LogicalResult genTypeLadderStep(mlir::Location loc,
-                                        mlir::Value selector,
-                                        mlir::Attribute attr, mlir::Block *dest,
-                                        std::optional<mlir::ValueRange> destOps,
-                                        mlir::ModuleOp mod,
-                                        mlir::PatternRewriter &rewriter,
+  llvm::LogicalResult genTypeLadderStep(aiir::Location loc,
+                                        aiir::Value selector,
+                                        aiir::Attribute attr, aiir::Block *dest,
+                                        std::optional<aiir::ValueRange> destOps,
+                                        aiir::ModuleOp mod,
+                                        aiir::PatternRewriter &rewriter,
                                         fir::KindMapping &kindMap) const;
 
   llvm::SmallSet<llvm::StringRef, 4> collectAncestors(fir::TypeInfoOp dt,
-                                                      mlir::ModuleOp mod) const;
+                                                      aiir::ModuleOp mod) const;
 };
 
 /// Lower `fir.dispatch` operation. A virtual call to a method in a dispatch
@@ -115,24 +115,24 @@ private:
 struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
   using OpConversionPattern<fir::DispatchOp>::OpConversionPattern;
 
-  DispatchOpConv(mlir::MLIRContext *ctx, const BindingTables &bindingTables,
-                 std::optional<mlir::Type> typeDescriptorType)
-      : mlir::OpConversionPattern<fir::DispatchOp>(ctx),
+  DispatchOpConv(aiir::AIIRContext *ctx, const BindingTables &bindingTables,
+                 std::optional<aiir::Type> typeDescriptorType)
+      : aiir::OpConversionPattern<fir::DispatchOp>(ctx),
         bindingTables(bindingTables), typeDescriptorType{typeDescriptorType} {}
 
   llvm::LogicalResult
   matchAndRewrite(fir::DispatchOp dispatch, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::Location loc = dispatch.getLoc();
+                  aiir::ConversionPatternRewriter &rewriter) const override {
+    aiir::Location loc = dispatch.getLoc();
 
     if (bindingTables.empty())
       return emitError(loc) << "no binding tables found";
 
     // Get derived type information.
-    mlir::Type declaredType =
+    aiir::Type declaredType =
         fir::getDerivedType(dispatch.getObject().getType().getEleTy());
-    assert(mlir::isa<fir::RecordType>(declaredType) && "expecting fir.type");
-    auto recordType = mlir::dyn_cast<fir::RecordType>(declaredType);
+    assert(aiir::isa<fir::RecordType>(declaredType) && "expecting fir.type");
+    auto recordType = aiir::dyn_cast<fir::RecordType>(declaredType);
 
     // Lookup for the binding table.
     auto bindingsIter = bindingTables.find(recordType.getName());
@@ -148,13 +148,13 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
              << "cannot find binding for " << dispatch.getMethod();
     unsigned bindingIdx = bindingIter->second;
 
-    mlir::Value passedObject = dispatch.getObject();
+    aiir::Value passedObject = dispatch.getObject();
 
     if (!typeDescriptorType)
       return emitError(loc) << "cannot find " << getTypeDescriptorTypeName()
                             << " fir.type_info that is required to get the "
                                "related builtin type and lower fir.dispatch";
-    mlir::Type typeDescTy = *typeDescriptorType;
+    aiir::Type typeDescTy = *typeDescriptorType;
 
     // clang-format off
     // Before:
@@ -179,115 +179,115 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     // clang-format on
 
     // Load the descriptor.
-    mlir::Type fieldTy = fir::FieldType::get(rewriter.getContext());
-    mlir::Type tdescType =
-        fir::TypeDescType::get(mlir::NoneType::get(rewriter.getContext()));
-    mlir::Value boxDesc =
+    aiir::Type fieldTy = fir::FieldType::get(rewriter.getContext());
+    aiir::Type tdescType =
+        fir::TypeDescType::get(aiir::NoneType::get(rewriter.getContext()));
+    aiir::Value boxDesc =
         fir::BoxTypeDescOp::create(rewriter, loc, tdescType, passedObject);
     boxDesc = fir::ConvertOp::create(
         rewriter, loc, fir::ReferenceType::get(typeDescTy), boxDesc);
 
     // Load the bindings descriptor.
     auto bindingsCompName = Fortran::semantics::bindingDescCompName;
-    fir::RecordType typeDescRecTy = mlir::cast<fir::RecordType>(typeDescTy);
-    mlir::Value field =
+    fir::RecordType typeDescRecTy = aiir::cast<fir::RecordType>(typeDescTy);
+    aiir::Value field =
         fir::FieldIndexOp::create(rewriter, loc, fieldTy, bindingsCompName,
-                                  typeDescRecTy, mlir::ValueRange{});
-    mlir::Type coorTy =
+                                  typeDescRecTy, aiir::ValueRange{});
+    aiir::Type coorTy =
         fir::ReferenceType::get(typeDescRecTy.getType(bindingsCompName));
-    mlir::Value bindingBoxAddr =
+    aiir::Value bindingBoxAddr =
         fir::CoordinateOp::create(rewriter, loc, coorTy, boxDesc, field);
-    mlir::Value bindingBox = fir::LoadOp::create(rewriter, loc, bindingBoxAddr);
+    aiir::Value bindingBox = fir::LoadOp::create(rewriter, loc, bindingBoxAddr);
 
     // Load the correct binding.
-    mlir::Value bindings = fir::BoxAddrOp::create(rewriter, loc, bindingBox);
+    aiir::Value bindings = fir::BoxAddrOp::create(rewriter, loc, bindingBox);
     fir::RecordType bindingTy = fir::unwrapIfDerived(
-        mlir::cast<fir::BaseBoxType>(bindingBox.getType()));
-    mlir::Type bindingAddrTy = fir::ReferenceType::get(bindingTy);
-    mlir::Value bindingIdxVal =
-        mlir::arith::ConstantOp::create(rewriter, loc, rewriter.getIndexType(),
+        aiir::cast<fir::BaseBoxType>(bindingBox.getType()));
+    aiir::Type bindingAddrTy = fir::ReferenceType::get(bindingTy);
+    aiir::Value bindingIdxVal =
+        aiir::arith::ConstantOp::create(rewriter, loc, rewriter.getIndexType(),
                                         rewriter.getIndexAttr(bindingIdx));
-    mlir::Value bindingAddr = fir::CoordinateOp::create(
+    aiir::Value bindingAddr = fir::CoordinateOp::create(
         rewriter, loc, bindingAddrTy, bindings, bindingIdxVal);
 
     // Get the function pointer.
     auto procCompName = Fortran::semantics::procCompName;
-    mlir::Value procField = fir::FieldIndexOp::create(
-        rewriter, loc, fieldTy, procCompName, bindingTy, mlir::ValueRange{});
+    aiir::Value procField = fir::FieldIndexOp::create(
+        rewriter, loc, fieldTy, procCompName, bindingTy, aiir::ValueRange{});
     fir::RecordType procTy =
-        mlir::cast<fir::RecordType>(bindingTy.getType(procCompName));
-    mlir::Type procRefTy = fir::ReferenceType::get(procTy);
-    mlir::Value procRef = fir::CoordinateOp::create(rewriter, loc, procRefTy,
+        aiir::cast<fir::RecordType>(bindingTy.getType(procCompName));
+    aiir::Type procRefTy = fir::ReferenceType::get(procTy);
+    aiir::Value procRef = fir::CoordinateOp::create(rewriter, loc, procRefTy,
                                                     bindingAddr, procField);
 
     auto addressFieldName = Fortran::lower::builtin::cptrFieldName;
-    mlir::Value addressField = fir::FieldIndexOp::create(
-        rewriter, loc, fieldTy, addressFieldName, procTy, mlir::ValueRange{});
-    mlir::Type addressTy = procTy.getType(addressFieldName);
-    mlir::Type addressRefTy = fir::ReferenceType::get(addressTy);
-    mlir::Value addressRef = fir::CoordinateOp::create(
+    aiir::Value addressField = fir::FieldIndexOp::create(
+        rewriter, loc, fieldTy, addressFieldName, procTy, aiir::ValueRange{});
+    aiir::Type addressTy = procTy.getType(addressFieldName);
+    aiir::Type addressRefTy = fir::ReferenceType::get(addressTy);
+    aiir::Value addressRef = fir::CoordinateOp::create(
         rewriter, loc, addressRefTy, procRef, addressField);
-    mlir::Value address = fir::LoadOp::create(rewriter, loc, addressRef);
+    aiir::Value address = fir::LoadOp::create(rewriter, loc, addressRef);
 
     // Get the function type.
-    llvm::SmallVector<mlir::Type> argTypes;
-    for (mlir::Value operand : dispatch.getArgs())
+    llvm::SmallVector<aiir::Type> argTypes;
+    for (aiir::Value operand : dispatch.getArgs())
       argTypes.push_back(operand.getType());
-    llvm::SmallVector<mlir::Type> resTypes;
+    llvm::SmallVector<aiir::Type> resTypes;
     if (!dispatch.getResults().empty())
       resTypes.push_back(dispatch.getResults()[0].getType());
 
-    mlir::Type funTy =
-        mlir::FunctionType::get(rewriter.getContext(), argTypes, resTypes);
-    mlir::Value funcPtr = fir::ConvertOp::create(rewriter, loc, funTy, address);
+    aiir::Type funTy =
+        aiir::FunctionType::get(rewriter.getContext(), argTypes, resTypes);
+    aiir::Value funcPtr = fir::ConvertOp::create(rewriter, loc, funTy, address);
 
     // Make the call.
-    llvm::SmallVector<mlir::Value> args{funcPtr};
+    llvm::SmallVector<aiir::Value> args{funcPtr};
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
     rewriter.replaceOpWithNewOp<fir::CallOp>(
         dispatch, resTypes, nullptr, args, dispatch.getArgAttrsAttr(),
         dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr(),
         /*inline_attr*/ fir::FortranInlineEnumAttr{},
-        /*accessGroups*/ mlir::ArrayAttr{});
-    return mlir::success();
+        /*accessGroups*/ aiir::ArrayAttr{});
+    return aiir::success();
   }
 
 private:
   BindingTables bindingTables;
-  std::optional<mlir::Type> typeDescriptorType;
+  std::optional<aiir::Type> typeDescriptorType;
 };
 
 /// Convert FIR structured control flow ops to CFG ops.
 class PolymorphicOpConversion
     : public fir::impl::PolymorphicOpConversionBase<PolymorphicOpConversion> {
 public:
-  llvm::LogicalResult initialize(mlir::MLIRContext *ctx) override {
-    return mlir::success();
+  llvm::LogicalResult initialize(aiir::AIIRContext *ctx) override {
+    return aiir::success();
   }
 
   void runOnOperation() override {
     auto *context = &getContext();
-    mlir::ModuleOp mod = getOperation();
-    mlir::RewritePatternSet patterns(context);
+    aiir::ModuleOp mod = getOperation();
+    aiir::RewritePatternSet patterns(context);
 
     BindingTables bindingTables;
-    std::optional<mlir::Type> typeDescriptorType =
+    std::optional<aiir::Type> typeDescriptorType =
         buildBindingTables(bindingTables, mod);
 
     patterns.insert<SelectTypeConv>(context);
     patterns.insert<DispatchOpConv>(context, bindingTables, typeDescriptorType);
-    mlir::ConversionTarget target(*context);
-    target.addLegalDialect<mlir::affine::AffineDialect,
-                           mlir::cf::ControlFlowDialect, FIROpsDialect,
-                           mlir::func::FuncDialect>();
+    aiir::ConversionTarget target(*context);
+    target.addLegalDialect<aiir::affine::AffineDialect,
+                           aiir::cf::ControlFlowDialect, FIROpsDialect,
+                           aiir::func::FuncDialect>();
 
     // apply the patterns
     target.addIllegalOp<SelectTypeOp>();
     target.addIllegalOp<DispatchOp>();
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
-    if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
+    if (aiir::failed(aiir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(context),
+      aiir::emitError(aiir::UnknownLoc::get(context),
                       "error in converting to CFG\n");
       signalPassFailure();
     }
@@ -297,13 +297,13 @@ public:
 
 llvm::LogicalResult SelectTypeConv::matchAndRewrite(
     fir::SelectTypeOp selectType, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
+    aiir::ConversionPatternRewriter &rewriter) const {
   auto operands = adaptor.getOperands();
   auto typeGuards = selectType.getCases();
   unsigned typeGuardNum = typeGuards.size();
   auto selector = selectType.getSelector();
   auto loc = selectType.getLoc();
-  auto mod = selectType.getOperation()->getParentOfType<mlir::ModuleOp>();
+  auto mod = selectType.getOperation()->getParentOfType<aiir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(mod);
 
   // Order type guards so the condition and branches are done to respect the
@@ -334,13 +334,13 @@ llvm::LogicalResult SelectTypeConv::matchAndRewrite(
   //   before in the list to respect point 3. above. Otherwise it is just
   //   added in order at the end.
   for (unsigned t = 0; t < typeGuardNum; ++t) {
-    if (auto a = mlir::dyn_cast<fir::ExactTypeAttr>(typeGuards[t])) {
+    if (auto a = aiir::dyn_cast<fir::ExactTypeAttr>(typeGuards[t])) {
       orderedTypeGuards.push_back(t);
       continue;
     }
 
-    if (auto a = mlir::dyn_cast<fir::SubclassAttr>(typeGuards[t])) {
-      if (auto recTy = mlir::dyn_cast<fir::RecordType>(a.getType())) {
+    if (auto a = aiir::dyn_cast<fir::SubclassAttr>(typeGuards[t])) {
+      if (auto recTy = aiir::dyn_cast<fir::RecordType>(a.getType())) {
         auto dt = mod.lookupSymbol<fir::TypeInfoOp>(recTy.getName());
         assert(dt && "dispatch table not found");
         llvm::SmallSet<llvm::StringRef, 4> ancestors =
@@ -349,8 +349,8 @@ llvm::LogicalResult SelectTypeConv::matchAndRewrite(
           auto it = orderedClassIsGuards.begin();
           while (it != orderedClassIsGuards.end()) {
             fir::SubclassAttr sAttr =
-                mlir::dyn_cast<fir::SubclassAttr>(typeGuards[*it]);
-            if (auto ty = mlir::dyn_cast<fir::RecordType>(sAttr.getType())) {
+                aiir::dyn_cast<fir::SubclassAttr>(typeGuards[*it]);
+            if (auto ty = aiir::dyn_cast<fir::RecordType>(sAttr.getType())) {
               if (ancestors.contains(ty.getName()))
                 break;
             }
@@ -373,76 +373,76 @@ llvm::LogicalResult SelectTypeConv::matchAndRewrite(
 
   for (unsigned idx : orderedTypeGuards) {
     auto *dest = selectType.getSuccessor(idx);
-    std::optional<mlir::ValueRange> destOps =
+    std::optional<aiir::ValueRange> destOps =
         selectType.getSuccessorOperands(operands, idx);
-    if (mlir::dyn_cast<mlir::UnitAttr>(typeGuards[idx]))
-      rewriter.replaceOpWithNewOp<mlir::cf::BranchOp>(
-          selectType, dest, destOps.value_or(mlir::ValueRange{}));
-    else if (mlir::failed(genTypeLadderStep(loc, selector, typeGuards[idx],
+    if (aiir::dyn_cast<aiir::UnitAttr>(typeGuards[idx]))
+      rewriter.replaceOpWithNewOp<aiir::cf::BranchOp>(
+          selectType, dest, destOps.value_or(aiir::ValueRange{}));
+    else if (aiir::failed(genTypeLadderStep(loc, selector, typeGuards[idx],
                                             dest, destOps, mod, rewriter,
                                             kindMap)))
-      return mlir::failure();
+      return aiir::failure();
   }
-  return mlir::success();
+  return aiir::success();
 }
 
 llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
-    mlir::Location loc, mlir::Value selector, mlir::Attribute attr,
-    mlir::Block *dest, std::optional<mlir::ValueRange> destOps,
-    mlir::ModuleOp mod, mlir::PatternRewriter &rewriter,
+    aiir::Location loc, aiir::Value selector, aiir::Attribute attr,
+    aiir::Block *dest, std::optional<aiir::ValueRange> destOps,
+    aiir::ModuleOp mod, aiir::PatternRewriter &rewriter,
     fir::KindMapping &kindMap) const {
-  mlir::Value cmp;
+  aiir::Value cmp;
   // TYPE IS type guard comparison are all done inlined.
-  if (auto a = mlir::dyn_cast<fir::ExactTypeAttr>(attr)) {
+  if (auto a = aiir::dyn_cast<fir::ExactTypeAttr>(attr)) {
     if (fir::isa_trivial(a.getType()) ||
-        mlir::isa<fir::CharacterType>(a.getType())) {
+        aiir::isa<fir::CharacterType>(a.getType())) {
       // For type guard statement with Intrinsic type spec the type code of
       // the descriptor is compared.
       int code = fir::getTypeCode(a.getType(), kindMap);
       if (code == 0)
-        return mlir::emitError(loc)
+        return aiir::emitError(loc)
                << "type code unavailable for " << a.getType();
-      mlir::Value typeCode = mlir::arith::ConstantOp::create(
+      aiir::Value typeCode = aiir::arith::ConstantOp::create(
           rewriter, loc, rewriter.getI8IntegerAttr(code));
-      mlir::Value selectorTypeCode = fir::BoxTypeCodeOp::create(
+      aiir::Value selectorTypeCode = fir::BoxTypeCodeOp::create(
           rewriter, loc, rewriter.getI8Type(), selector);
-      cmp = mlir::arith::CmpIOp::create(rewriter, loc,
-                                        mlir::arith::CmpIPredicate::eq,
+      cmp = aiir::arith::CmpIOp::create(rewriter, loc,
+                                        aiir::arith::CmpIPredicate::eq,
                                         selectorTypeCode, typeCode);
     } else {
       // Flang inline the kind parameter in the type descriptor so we can
       // directly check if the type descriptor addresses are identical for
       // the TYPE IS type guard statement.
-      mlir::Value res =
+      aiir::Value res =
           genTypeDescCompare(loc, selector, a.getType(), mod, rewriter);
       if (!res)
-        return mlir::failure();
+        return aiir::failure();
       cmp = res;
     }
     // CLASS IS type guard statement is done with a runtime call.
-  } else if (auto a = mlir::dyn_cast<fir::SubclassAttr>(attr)) {
+  } else if (auto a = aiir::dyn_cast<fir::SubclassAttr>(attr)) {
     // Retrieve the type descriptor from the type guard statement record type.
-    assert(mlir::isa<fir::RecordType>(a.getType()) && "expect fir.record type");
-    mlir::Value typeDescAddr = fir::TypeDescOp::create(
-        rewriter, loc, mlir::TypeAttr::get(a.getType()));
-    mlir::Type refNoneType = ReferenceType::get(rewriter.getNoneType());
-    mlir::Value typeDesc =
+    assert(aiir::isa<fir::RecordType>(a.getType()) && "expect fir.record type");
+    aiir::Value typeDescAddr = fir::TypeDescOp::create(
+        rewriter, loc, aiir::TypeAttr::get(a.getType()));
+    aiir::Type refNoneType = ReferenceType::get(rewriter.getNoneType());
+    aiir::Value typeDesc =
         ConvertOp::create(rewriter, loc, refNoneType, typeDescAddr);
 
     // Prepare the selector descriptor for the runtime call.
-    mlir::Type descNoneTy = fir::BoxType::get(rewriter.getNoneType());
-    mlir::Value descSelector =
+    aiir::Type descNoneTy = fir::BoxType::get(rewriter.getNoneType());
+    aiir::Value descSelector =
         ConvertOp::create(rewriter, loc, descNoneTy, selector);
 
     // Generate runtime call.
     llvm::StringRef fctName = RTNAME_STRING(ClassIs);
-    mlir::func::FuncOp callee;
+    aiir::func::FuncOp callee;
     {
       // Since conversion is done in parallel for each fir.select_type
       // operation, the runtime function insertion must be threadsafe.
       auto runtimeAttr =
-          mlir::NamedAttribute(fir::FIROpsDialect::getFirRuntimeAttrName(),
-                               mlir::UnitAttr::get(rewriter.getContext()));
+          aiir::NamedAttribute(fir::FIROpsDialect::getFirRuntimeAttrName(),
+                               aiir::UnitAttr::get(rewriter.getContext()));
       callee =
           fir::createFuncOp(rewriter.getUnknownLoc(), mod, fctName,
                             rewriter.getFunctionType({descNoneTy, refNoneType},
@@ -450,45 +450,45 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
                             {runtimeAttr});
     }
     cmp = fir::CallOp::create(rewriter, loc, callee,
-                              mlir::ValueRange{descSelector, typeDesc})
+                              aiir::ValueRange{descSelector, typeDesc})
               .getResult(0);
   }
 
   auto *thisBlock = rewriter.getInsertionBlock();
   auto *newBlock =
-      rewriter.createBlock(dest->getParent(), mlir::Region::iterator(dest));
+      rewriter.createBlock(dest->getParent(), aiir::Region::iterator(dest));
   rewriter.setInsertionPointToEnd(thisBlock);
   if (destOps.has_value())
-    mlir::cf::CondBranchOp::create(rewriter, loc, cmp, dest, destOps.value(),
-                                   newBlock, mlir::ValueRange{});
+    aiir::cf::CondBranchOp::create(rewriter, loc, cmp, dest, destOps.value(),
+                                   newBlock, aiir::ValueRange{});
   else
-    mlir::cf::CondBranchOp::create(rewriter, loc, cmp, dest, newBlock);
+    aiir::cf::CondBranchOp::create(rewriter, loc, cmp, dest, newBlock);
   rewriter.setInsertionPointToEnd(newBlock);
-  return mlir::success();
+  return aiir::success();
 }
 
 // Generate comparison of type descriptor addresses.
-mlir::Value
-SelectTypeConv::genTypeDescCompare(mlir::Location loc, mlir::Value selector,
-                                   mlir::Type ty, mlir::ModuleOp mod,
-                                   mlir::PatternRewriter &rewriter) const {
-  assert(mlir::isa<fir::RecordType>(ty) && "expect fir.record type");
-  mlir::Value typeDescAddr =
-      fir::TypeDescOp::create(rewriter, loc, mlir::TypeAttr::get(ty));
-  mlir::Value selectorTdescAddr = fir::BoxTypeDescOp::create(
+aiir::Value
+SelectTypeConv::genTypeDescCompare(aiir::Location loc, aiir::Value selector,
+                                   aiir::Type ty, aiir::ModuleOp mod,
+                                   aiir::PatternRewriter &rewriter) const {
+  assert(aiir::isa<fir::RecordType>(ty) && "expect fir.record type");
+  aiir::Value typeDescAddr =
+      fir::TypeDescOp::create(rewriter, loc, aiir::TypeAttr::get(ty));
+  aiir::Value selectorTdescAddr = fir::BoxTypeDescOp::create(
       rewriter, loc, typeDescAddr.getType(), selector);
   auto intPtrTy = rewriter.getIndexType();
   auto typeDescInt =
       fir::ConvertOp::create(rewriter, loc, intPtrTy, typeDescAddr);
   auto selectorTdescInt =
       fir::ConvertOp::create(rewriter, loc, intPtrTy, selectorTdescAddr);
-  return mlir::arith::CmpIOp::create(rewriter, loc,
-                                     mlir::arith::CmpIPredicate::eq,
+  return aiir::arith::CmpIOp::create(rewriter, loc,
+                                     aiir::arith::CmpIPredicate::eq,
                                      typeDescInt, selectorTdescInt);
 }
 
 llvm::SmallSet<llvm::StringRef, 4>
-SelectTypeConv::collectAncestors(fir::TypeInfoOp dt, mlir::ModuleOp mod) const {
+SelectTypeConv::collectAncestors(fir::TypeInfoOp dt, aiir::ModuleOp mod) const {
   llvm::SmallSet<llvm::StringRef, 4> ancestors;
   while (auto parentName = dt.getIfParentName()) {
     ancestors.insert(*parentName);

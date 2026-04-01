@@ -1,4 +1,4 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s | FileCheck %s
 
 module {
   fir.global @_QMmEvar : !fir.type<_QMmTt1{elm:!fir.array<5xi32>,elm2:!fir.array<5x8xi32>}> {} loc(#loc1)

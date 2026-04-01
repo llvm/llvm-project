@@ -7,19 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/TBAAForest.h"
-#include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
+#include <aiir/Dialect/LLVMIR/LLVMAttrs.h>
 
-mlir::LLVM::TBAATagAttr
+aiir::LLVM::TBAATagAttr
 fir::TBAATree::SubtreeState::getTag(llvm::StringRef uniqueName) const {
   std::string id = (parentId + '/' + uniqueName).str();
-  mlir::LLVM::TBAATypeDescriptorAttr type =
-      mlir::LLVM::TBAATypeDescriptorAttr::get(
-          context, id, mlir::LLVM::TBAAMemberAttr::get(parent, 0));
-  return mlir::LLVM::TBAATagAttr::get(type, type, 0);
+  aiir::LLVM::TBAATypeDescriptorAttr type =
+      aiir::LLVM::TBAATypeDescriptorAttr::get(
+          context, id, aiir::LLVM::TBAAMemberAttr::get(parent, 0));
+  return aiir::LLVM::TBAATagAttr::get(type, type, 0);
 }
 
 fir::TBAATree::SubtreeState &
-fir::TBAATree::SubtreeState::getOrCreateNamedSubtree(mlir::StringAttr name) {
+fir::TBAATree::SubtreeState::getOrCreateNamedSubtree(aiir::StringAttr name) {
   auto it = namedSubtrees.find(name);
   if (it != namedSubtrees.end())
     return it->second;
@@ -30,41 +30,41 @@ fir::TBAATree::SubtreeState::getOrCreateNamedSubtree(mlir::StringAttr name) {
       .first->second;
 }
 
-mlir::LLVM::TBAATagAttr fir::TBAATree::SubtreeState::getTag() const {
-  return mlir::LLVM::TBAATagAttr::get(parent, parent, 0);
+aiir::LLVM::TBAATagAttr fir::TBAATree::SubtreeState::getTag() const {
+  return aiir::LLVM::TBAATagAttr::get(parent, parent, 0);
 }
 
-fir::TBAATree fir::TBAATree::buildTree(mlir::StringAttr func) {
+fir::TBAATree fir::TBAATree::buildTree(aiir::StringAttr func) {
   llvm::StringRef funcName = func.getValue();
   std::string rootId = ("Flang function root " + funcName).str();
-  mlir::MLIRContext *ctx = func.getContext();
-  mlir::LLVM::TBAARootAttr funcRoot =
-      mlir::LLVM::TBAARootAttr::get(ctx, mlir::StringAttr::get(ctx, rootId));
+  aiir::AIIRContext *ctx = func.getContext();
+  aiir::LLVM::TBAARootAttr funcRoot =
+      aiir::LLVM::TBAARootAttr::get(ctx, aiir::StringAttr::get(ctx, rootId));
 
   static constexpr llvm::StringRef anyAccessTypeDescId = "any access";
-  mlir::LLVM::TBAATypeDescriptorAttr anyAccess =
-      mlir::LLVM::TBAATypeDescriptorAttr::get(
+  aiir::LLVM::TBAATypeDescriptorAttr anyAccess =
+      aiir::LLVM::TBAATypeDescriptorAttr::get(
           ctx, anyAccessTypeDescId,
-          mlir::LLVM::TBAAMemberAttr::get(funcRoot, 0));
+          aiir::LLVM::TBAAMemberAttr::get(funcRoot, 0));
 
   static constexpr llvm::StringRef anyDataAccessTypeDescId = "any data access";
-  mlir::LLVM::TBAATypeDescriptorAttr dataRoot =
-      mlir::LLVM::TBAATypeDescriptorAttr::get(
+  aiir::LLVM::TBAATypeDescriptorAttr dataRoot =
+      aiir::LLVM::TBAATypeDescriptorAttr::get(
           ctx, anyDataAccessTypeDescId,
-          mlir::LLVM::TBAAMemberAttr::get(anyAccess, 0));
+          aiir::LLVM::TBAAMemberAttr::get(anyAccess, 0));
 
   static constexpr llvm::StringRef boxMemberTypeDescId = "descriptor member";
-  mlir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc =
-      mlir::LLVM::TBAATypeDescriptorAttr::get(
+  aiir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc =
+      aiir::LLVM::TBAATypeDescriptorAttr::get(
           ctx, boxMemberTypeDescId,
-          mlir::LLVM::TBAAMemberAttr::get(anyAccess, 0));
+          aiir::LLVM::TBAAMemberAttr::get(anyAccess, 0));
 
   return TBAATree{anyAccess, dataRoot, boxMemberTypeDesc};
 }
 
-fir::TBAATree::TBAATree(mlir::LLVM::TBAATypeDescriptorAttr anyAccess,
-                        mlir::LLVM::TBAATypeDescriptorAttr dataRoot,
-                        mlir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc)
+fir::TBAATree::TBAATree(aiir::LLVM::TBAATypeDescriptorAttr anyAccess,
+                        aiir::LLVM::TBAATypeDescriptorAttr dataRoot,
+                        aiir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc)
     : targetDataTree(dataRoot.getContext(), "target data", dataRoot),
       globalDataTree(dataRoot.getContext(), "global data", dataRoot),
       allocatedDataTree(dataRoot.getContext(), "allocated data", dataRoot),

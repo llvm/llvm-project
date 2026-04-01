@@ -12,8 +12,8 @@ add_flang_tool(bbc bbc.cpp
 )
 
 llvm_update_compile_flags(bbc)
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY AIIR_EXTENSION_LIBS)
 
 target_link_libraries(bbc PRIVATE
   CUFAttrs
@@ -38,9 +38,9 @@ target_link_libraries(bbc PRIVATE
   MIFDialect
 )
 
-mlir_target_link_libraries(bbc PRIVATE
+aiir_target_link_libraries(bbc PRIVATE
   ${dialect_libs}
   ${extension_libs}
-  MLIRAffineToStandard
-  MLIRSCFToControlFlow
+  AIIRAffineToStandard
+  AIIRSCFToControlFlow
 )

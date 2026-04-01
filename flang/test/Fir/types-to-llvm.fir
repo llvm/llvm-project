@@ -227,7 +227,7 @@ func.func private @foo3(%arg0: !fir.llvm_ptr<!fir.ptr<f32>>)
 
 // -----
 
-// Test MLIR `complex<KIND>` conversion.
+// Test AIIR `complex<KIND>` conversion.
 
 func.func private @foo0(%arg0: complex<f16>)
 // CHECK-LABEL: foo0

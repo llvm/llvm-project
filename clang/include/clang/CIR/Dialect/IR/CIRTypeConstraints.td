@@ -13,16 +13,16 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRTYPECONSTRAINTS_TD
 #define CLANG_CIR_DIALECT_IR_CIRTYPECONSTRAINTS_TD
 
-include "mlir/IR/Constraints.td"
-include "mlir/IR/CommonTypeConstraints.td"
+include "aiir/IR/Constraints.td"
+include "aiir/IR/CommonTypeConstraints.td"
 
-class CIR_IsTypePred<code type> : CPred<"::mlir::isa<" # type # ">($_self)">;
+class CIR_IsTypePred<code type> : CPred<"::aiir::isa<" # type # ">($_self)">;
 
 class CIR_TypeBase<code type, string summary = "">
     : Type<CIR_IsTypePred<type>, summary, type>;
 
 class CIR_CastSelfToType<code type, Pred pred>
-    : SubstLeaves<"$_self", "::mlir::cast<" # type # ">($_self)", pred>;
+    : SubstLeaves<"$_self", "::aiir::cast<" # type # ">($_self)", pred>;
 
 class CIR_CastedSelfsToType<code type, list<Pred> preds>
     : And<!foreach(pred, preds, CIR_CastSelfToType<type, pred>)>;
@@ -237,7 +237,7 @@ class CIR_PtrToPtrTo<Type type, string summary>
 
 // Pointee type constraint bases
 class CIR_PointeePred<Pred pred> : SubstLeaves<"$_self",
-      "::mlir::cast<::cir::PointerType>($_self).getPointee()", pred>;
+      "::aiir::cast<::cir::PointerType>($_self).getPointee()", pred>;
 
 class CIR_PtrToAnyOf<list<Type> types, string summary = "">
 : CIR_ConfinedType<CIR_AnyPtrType,
@@ -281,7 +281,7 @@ def CIR_VectorElementType
 }
 
 class CIR_ElementTypePred<Pred pred> : SubstLeaves<"$_self",
-    "::mlir::cast<::cir::VectorType>($_self).getElementType()", pred>;
+    "::aiir::cast<::cir::VectorType>($_self).getElementType()", pred>;
 
 class CIR_VectorTypeOf<list<Type> types, string summary = "">
     : CIR_ConfinedType<CIR_AnyVectorType,
@@ -296,11 +296,11 @@ class CIR_ScalarOrVectorOf<Type T> : AnyTypeOf<[T, CIR_VectorTypeOf<[T]>]>;
 // Vector of integral type
 def IntegerVector : Type<
     And<[
-      CPred<"::mlir::isa<::cir::VectorType>($_self)">,
-      CPred<"::mlir::isa<::cir::IntType>("
-            "::mlir::cast<::cir::VectorType>($_self).getElementType())">,
-      CPred<"::mlir::cast<::cir::IntType>("
-            "::mlir::cast<::cir::VectorType>($_self).getElementType())"
+      CPred<"::aiir::isa<::cir::VectorType>($_self)">,
+      CPred<"::aiir::isa<::cir::IntType>("
+            "::aiir::cast<::cir::VectorType>($_self).getElementType())">,
+      CPred<"::aiir::cast<::cir::IntType>("
+            "::aiir::cast<::cir::VectorType>($_self).getElementType())"
             ".isFundamental()">
     ]>, "!cir.vector of !cir.int"> {
 }

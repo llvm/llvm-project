@@ -75,13 +75,13 @@ ENUM_LOWERINGOPT(CUDARuntimeCheck, unsigned, 1, 0)
 ENUM_LOWERINGOPT(SkipExternalRttiDefinition, unsigned, 1, 0)
 
 /// If true, convert complex number division to runtime on the frontend.
-/// If false, lower to the complex dialect of MLIR.
+/// If false, lower to the complex dialect of AIIR.
 /// On by default.
 ENUM_LOWERINGOPT(ComplexDivisionToRuntime, unsigned, 1, 1)
 
-/// When true, it registers MLIRDiagnosticsHandler for the duration
+/// When true, it registers AIIRDiagnosticsHandler for the duration
 /// of the lowering pipeline.
-ENUM_LOWERINGOPT(RegisterMLIRDiagnosticsHandler, unsigned, 1, 1)
+ENUM_LOWERINGOPT(RegisterAIIRDiagnosticsHandler, unsigned, 1, 1)
 
 /// If true, preserve USE statement information during PFT building for
 /// debug info generation. Should be enabled when debug info level is above

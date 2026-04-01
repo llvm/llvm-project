@@ -14,14 +14,14 @@
 using namespace Fortran::runtime;
 
 void fir::runtime::genPointerAssociateScalar(fir::FirOpBuilder &builder,
-                                             mlir::Location loc,
-                                             mlir::Value desc,
-                                             mlir::Value target) {
-  mlir::func::FuncOp func{
+                                             aiir::Location loc,
+                                             aiir::Value desc,
+                                             aiir::Value target) {
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociateScalar)>(loc,
                                                                     builder)};
-  mlir::FunctionType fTy{func.getFunctionType()};
-  llvm::SmallVector<mlir::Value> args{
+  aiir::FunctionType fTy{func.getFunctionType()};
+  llvm::SmallVector<aiir::Value> args{
       fir::runtime::createArguments(builder, loc, fTy, desc, target)};
   fir::CallOp::create(builder, loc, func, args);
 }

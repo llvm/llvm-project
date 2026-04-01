@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I%S/Inputs %s -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare -o %t.cir 2> %t-before.cir
+// RUN: %clang_cc1 -I%S/Inputs %s -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -maiir --aiir-print-ir-before=cir-lowering-prepare -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefixes=CIR
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR
 // RUN: %clang_cc1 -I%S/Inputs %s -triple x86_64-apple-darwin10 -fclangir -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=LLVM

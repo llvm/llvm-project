@@ -10,9 +10,9 @@
 ! C and E are used in several contexts, under B, under D, and outside
 ! of it to test how metadata is generated for them.
 !
-! Without "local caching" of C and E when generating mlir::LLVM::DITypeAttr
+! Without "local caching" of C and E when generating aiir::LLVM::DITypeAttr
 ! for such derived types, many duplicate llvm metadata for the derived types
-! would be emitted, while with the right duplication of mlir::LLVM::DITypeAttr,
+! would be emitted, while with the right duplication of aiir::LLVM::DITypeAttr,
 ! a lot more duplicate llvm IR metadata ends up emitted (19 DICompositeType
 ! vs 71 before the patch that added this test).
 !

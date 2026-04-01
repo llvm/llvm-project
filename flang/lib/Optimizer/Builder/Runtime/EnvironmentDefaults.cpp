@@ -13,45 +13,45 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "llvm/ADT/ArrayRef.h"
 
-mlir::Value fir::runtime::genEnvironmentDefaults(
-    fir::FirOpBuilder &builder, mlir::Location loc,
+aiir::Value fir::runtime::genEnvironmentDefaults(
+    fir::FirOpBuilder &builder, aiir::Location loc,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults) {
   std::string envDefaultListPtrName =
       fir::NameUniquer::doGenerated("EnvironmentDefaults");
 
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::StringAttr linkOnce = builder.createLinkOnceLinkage();
-  mlir::IntegerType intTy = builder.getIntegerType(8 * sizeof(int));
+  aiir::AIIRContext *context = builder.getContext();
+  aiir::StringAttr linkOnce = builder.createLinkOnceLinkage();
+  aiir::IntegerType intTy = builder.getIntegerType(8 * sizeof(int));
   fir::ReferenceType charRefTy =
       fir::ReferenceType::get(builder.getIntegerType(8));
   fir::SequenceType itemListTy = fir::SequenceType::get(
       envDefaults.size(),
-      mlir::TupleType::get(context, {charRefTy, charRefTy}));
-  mlir::TupleType envDefaultListTy = mlir::TupleType::get(
+      aiir::TupleType::get(context, {charRefTy, charRefTy}));
+  aiir::TupleType envDefaultListTy = aiir::TupleType::get(
       context, {intTy, fir::ReferenceType::get(itemListTy)});
   fir::ReferenceType envDefaultListRefTy =
       fir::ReferenceType::get(envDefaultListTy);
 
   // If no defaults were specified, initialize with a null pointer.
   if (envDefaults.empty()) {
-    mlir::Value nullVal = builder.createNullConstant(loc, envDefaultListRefTy);
+    aiir::Value nullVal = builder.createNullConstant(loc, envDefaultListRefTy);
     return nullVal;
   }
 
   // Create the Item list.
-  mlir::IndexType idxTy = builder.getIndexType();
-  mlir::IntegerAttr zero = builder.getIntegerAttr(idxTy, 0);
-  mlir::IntegerAttr one = builder.getIntegerAttr(idxTy, 1);
+  aiir::IndexType idxTy = builder.getIndexType();
+  aiir::IntegerAttr zero = builder.getIntegerAttr(idxTy, 0);
+  aiir::IntegerAttr one = builder.getIntegerAttr(idxTy, 1);
   std::string itemListName = envDefaultListPtrName + ".items";
   auto listBuilder = [&](fir::FirOpBuilder &builder) {
-    mlir::Value list = fir::UndefOp::create(builder, loc, itemListTy);
-    llvm::SmallVector<mlir::Attribute, 2> idx = {mlir::Attribute{},
-                                                 mlir::Attribute{}};
+    aiir::Value list = fir::UndefOp::create(builder, loc, itemListTy);
+    llvm::SmallVector<aiir::Attribute, 2> idx = {aiir::Attribute{},
+                                                 aiir::Attribute{}};
     auto insertStringField = [&](const std::string &s,
-                                 llvm::ArrayRef<mlir::Attribute> idx) {
-      mlir::Value stringAddress = fir::getBase(
+                                 llvm::ArrayRef<aiir::Attribute> idx) {
+      aiir::Value stringAddress = fir::getBase(
           fir::factory::createStringLiteral(builder, loc, s + '\0'));
-      mlir::Value addr = builder.createConvert(loc, charRefTy, stringAddress);
+      aiir::Value addr = builder.createConvert(loc, charRefTy, stringAddress);
       return fir::InsertValueOp::create(builder, loc, itemListTy, list, addr,
                                         builder.getArrayAttr(idx));
     };
@@ -72,16 +72,16 @@ mlir::Value fir::runtime::genEnvironmentDefaults(
 
   // Define the EnviornmentDefaultList object.
   auto envDefaultListBuilder = [&](fir::FirOpBuilder &builder) {
-    mlir::Value envDefaultList =
+    aiir::Value envDefaultList =
         fir::UndefOp::create(builder, loc, envDefaultListTy);
-    mlir::Value numItems =
+    aiir::Value numItems =
         builder.createIntegerConstant(loc, intTy, envDefaults.size());
     envDefaultList = fir::InsertValueOp::create(builder, loc, envDefaultListTy,
                                                 envDefaultList, numItems,
                                                 builder.getArrayAttr(zero));
     fir::GlobalOp itemList = builder.getNamedGlobal(itemListName);
     assert(itemList && "missing environment default list");
-    mlir::Value listAddr = fir::AddrOfOp::create(
+    aiir::Value listAddr = fir::AddrOfOp::create(
         builder, loc, itemList.resultType(), itemList.getSymbol());
     envDefaultList = fir::InsertValueOp::create(builder, loc, envDefaultListTy,
                                                 envDefaultList, listAddr,
@@ -93,7 +93,7 @@ mlir::Value fir::runtime::genEnvironmentDefaults(
       envDefaultListBuilder, linkOnce);
 
   // Define the pointer to the list used by the runtime.
-  mlir::Value addr = fir::AddrOfOp::create(
+  aiir::Value addr = fir::AddrOfOp::create(
       builder, loc, envDefaultList.resultType(), envDefaultList.getSymbol());
   return addr;
 }

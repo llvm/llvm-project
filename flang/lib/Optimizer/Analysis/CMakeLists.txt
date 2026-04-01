@@ -15,13 +15,13 @@ add_flang_library(FIRAnalysis
   FIRSupport
   HLFIRDialect
 
-  MLIR_DEPS
-  MLIRIR
-  MLIROpenMPDialect
+  AIIR_DEPS
+  AIIRIR
+  AIIROpenMPDialect
 
-  MLIR_LIBS
-  MLIRFuncDialect
-  MLIRLLVMDialect
-  MLIRMathTransforms
-  MLIROpenMPDialect
+  AIIR_LIBS
+  AIIRFuncDialect
+  AIIRLLVMDialect
+  AIIRMathTransforms
+  AIIROpenMPDialect
 )

@@ -63,7 +63,7 @@ config.suffixes = [
     ".F08",
     ".ll",
     ".fir",
-    ".mlir",
+    ".aiir",
     ".s",
 ]
 

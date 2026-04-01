@@ -227,8 +227,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   if (Args.hasFlag(options::OPT_funsafe_cray_pointers,
                    options::OPT_fno_unsafe_cray_pointers, false)) {
-    // TODO: currently passed as MLIR option
-    CmdArgs.push_back("-mmlir");
+    // TODO: currently passed as AIIR option
+    CmdArgs.push_back("-maiir");
     CmdArgs.push_back("-unsafe-cray-pointers");
   }
 
@@ -1178,7 +1178,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
-  for (const Arg *A : Args.filtered(options::OPT_mmlir)) {
+  for (const Arg *A : Args.filtered(options::OPT_maiir)) {
     A->claim();
     A->render(Args, CmdArgs);
   }

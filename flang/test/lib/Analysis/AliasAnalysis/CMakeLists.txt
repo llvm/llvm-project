@@ -1,4 +1,4 @@
-# Exclude tests from libMLIR.so
+# Exclude tests from libAIIR.so
 add_flang_library(FIRTestAnalysis
   TestAliasAnalysis.cpp
 
@@ -15,19 +15,19 @@ add_flang_library(FIRTestAnalysis
   FIRSupport
   FIRTransforms
   FIRAnalysis
-  MLIRTestAnalysis
+  AIIRTestAnalysis
 
-  MLIR_DEPS
+  AIIR_DEPS
   ${dialect_libs}
 
-  MLIR_LIBS
+  AIIR_LIBS
   ${dialect_libs}
-  MLIRFuncDialect
-  MLIRLLVMDialect
-  MLIRAnalysis
+  AIIRFuncDialect
+  AIIRLLVMDialect
+  AIIRAnalysis
   )
 
 target_include_directories(FIRTestAnalysis
   PRIVATE
-  ${MLIR_MAIN_SRC_DIR}/..
+  ${AIIR_MAIN_SRC_DIR}/..
   )

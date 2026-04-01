@@ -1,4 +1,4 @@
-//===- CIRTypes.cpp - MLIR CIR Types --------------------------------------===//
+//===- CIRTypes.cpp - AIIR CIR Types --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,11 +12,11 @@
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Support/LLVM.h"
+#include "aiir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/DialectImplementation.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/Support/LLVM.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -30,8 +30,8 @@
 //===----------------------------------------------------------------------===//
 // CIR Helpers
 //===----------------------------------------------------------------------===//
-bool cir::isSized(mlir::Type ty) {
-  if (auto sizedTy = mlir::dyn_cast<cir::SizedTypeInterface>(ty))
+bool cir::isSized(aiir::Type ty) {
+  if (auto sizedTy = aiir::dyn_cast<cir::SizedTypeInterface>(ty))
     return sizedTy.isSized();
   assert(!cir::MissingFeatures::unsizedTypes());
   return false;
@@ -41,40 +41,40 @@ bool cir::isSized(mlir::Type ty) {
 // CIR Custom Parser/Printer Signatures
 //===----------------------------------------------------------------------===//
 
-static mlir::ParseResult
-parseFuncTypeParams(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
+static aiir::ParseResult
+parseFuncTypeParams(aiir::AsmParser &p, llvm::SmallVector<aiir::Type> &params,
                     bool &isVarArg);
-static void printFuncTypeParams(mlir::AsmPrinter &p,
-                                mlir::ArrayRef<mlir::Type> params,
+static void printFuncTypeParams(aiir::AsmPrinter &p,
+                                aiir::ArrayRef<aiir::Type> params,
                                 bool isVarArg);
 //===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
 //===----------------------------------------------------------------------===//
 
-static mlir::ParseResult
-parseFuncTypeParams(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
+static aiir::ParseResult
+parseFuncTypeParams(aiir::AsmParser &p, llvm::SmallVector<aiir::Type> &params,
                     bool &isVarArg);
 
-static void printFuncTypeParams(mlir::AsmPrinter &p,
-                                mlir::ArrayRef<mlir::Type> params,
+static void printFuncTypeParams(aiir::AsmPrinter &p,
+                                aiir::ArrayRef<aiir::Type> params,
                                 bool isVarArg);
 
 //===----------------------------------------------------------------------===//
 // AddressSpace
 //===----------------------------------------------------------------------===//
 
-mlir::ParseResult
-parseAddressSpaceValue(mlir::AsmParser &p,
-                       mlir::ptr::MemorySpaceAttrInterface &attr);
+aiir::ParseResult
+parseAddressSpaceValue(aiir::AsmParser &p,
+                       aiir::ptr::MemorySpaceAttrInterface &attr);
 
-void printAddressSpaceValue(mlir::AsmPrinter &printer,
-                            mlir::ptr::MemorySpaceAttrInterface attr);
+void printAddressSpaceValue(aiir::AsmPrinter &printer,
+                            aiir::ptr::MemorySpaceAttrInterface attr);
 
 // Custom parser/printer for the `addrSpace` parameter in `!cir.ptr`.
-mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
+aiir::ParseResult parseTargetAddressSpace(aiir::AsmParser &p,
                                           cir::TargetAddressSpaceAttr &attr);
 
-void printTargetAddressSpace(mlir::AsmPrinter &p,
+void printTargetAddressSpace(aiir::AsmPrinter &p,
                              cir::TargetAddressSpaceAttr attr);
 
 //===----------------------------------------------------------------------===//
@@ -90,7 +90,7 @@ namespace cir {
 #define GET_TYPEDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsTypes.cpp.inc"
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
 //===----------------------------------------------------------------------===//
@@ -130,14 +130,14 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
 // RecordType Definitions
 //===----------------------------------------------------------------------===//
 
-Type RecordType::parse(mlir::AsmParser &parser) {
+Type RecordType::parse(aiir::AsmParser &parser) {
   FailureOr<AsmParser::CyclicParseReset> cyclicParseGuard;
   const llvm::SMLoc loc = parser.getCurrentLocation();
-  const mlir::Location eLoc = parser.getEncodedSourceLoc(loc);
+  const aiir::Location eLoc = parser.getEncodedSourceLoc(loc);
   bool packed = false;
   bool padded = false;
   RecordKind kind;
-  mlir::MLIRContext *context = parser.getContext();
+  aiir::AIIRContext *context = parser.getContext();
 
   if (parser.parseLess())
     return {};
@@ -155,7 +155,7 @@ Type RecordType::parse(mlir::AsmParser &parser) {
     return {};
   }
 
-  mlir::StringAttr name;
+  aiir::StringAttr name;
   parser.parseOptionalAttribute(name);
 
   // Is a self reference: ensure referenced type was parsed.
@@ -186,7 +186,7 @@ Type RecordType::parse(mlir::AsmParser &parser) {
 
   // Parse record members or lack thereof.
   bool incomplete = true;
-  llvm::SmallVector<mlir::Type> members;
+  llvm::SmallVector<aiir::Type> members;
   if (parser.parseOptionalKeyword("incomplete").failed()) {
     incomplete = false;
     const auto delimiter = AsmParser::Delimiter::Braces;
@@ -201,8 +201,8 @@ Type RecordType::parse(mlir::AsmParser &parser) {
     return {};
 
   // Try to create the proper record type.
-  ArrayRef<mlir::Type> membersRef(members); // Needed for template deduction.
-  mlir::Type type = {};
+  ArrayRef<aiir::Type> membersRef(members); // Needed for template deduction.
+  aiir::Type type = {};
   if (name && incomplete) { // Identified & incomplete
     type = getChecked(eLoc, context, name, kind);
   } else if (!name && !incomplete) { // Anonymous & complete
@@ -211,8 +211,8 @@ Type RecordType::parse(mlir::AsmParser &parser) {
     type = getChecked(eLoc, context, membersRef, name, packed, padded, kind);
     // If the record has a self-reference, its type already exists in a
     // incomplete state. In this case, we must complete it.
-    if (mlir::cast<RecordType>(type).isIncomplete())
-      mlir::cast<RecordType>(type).complete(membersRef, packed, padded);
+    if (aiir::cast<RecordType>(type).isIncomplete())
+      aiir::cast<RecordType>(type).complete(membersRef, packed, padded);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else { // anonymous & incomplete
     parser.emitError(loc, "anonymous records must be complete");
@@ -222,7 +222,7 @@ Type RecordType::parse(mlir::AsmParser &parser) {
   return type;
 }
 
-void RecordType::print(mlir::AsmPrinter &printer) const {
+void RecordType::print(aiir::AsmPrinter &printer) const {
   FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrintGuard;
   printer << '<';
 
@@ -268,23 +268,23 @@ void RecordType::print(mlir::AsmPrinter &printer) const {
   printer << '>';
 }
 
-mlir::LogicalResult
-RecordType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
-                   llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
+aiir::LogicalResult
+RecordType::verify(function_ref<aiir::InFlightDiagnostic()> emitError,
+                   llvm::ArrayRef<aiir::Type> members, aiir::StringAttr name,
                    bool incomplete, bool packed, bool padded,
                    RecordType::RecordKind kind) {
   if (name && name.getValue().empty())
     return emitError() << "identified records cannot have an empty name";
-  return mlir::success();
+  return aiir::success();
 }
 
-::llvm::ArrayRef<mlir::Type> RecordType::getMembers() const {
+::llvm::ArrayRef<aiir::Type> RecordType::getMembers() const {
   return getImpl()->members;
 }
 
 bool RecordType::isIncomplete() const { return getImpl()->incomplete; }
 
-mlir::StringAttr RecordType::getName() const { return getImpl()->name; }
+aiir::StringAttr RecordType::getName() const { return getImpl()->name; }
 
 bool RecordType::getIncomplete() const { return getImpl()->incomplete; }
 
@@ -305,7 +305,7 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
 /// Return the largest member of in the type.
 ///
 /// Recurses into union members never returning a union as the largest member.
-Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
+Type RecordType::getLargestMember(const ::aiir::DataLayout &dataLayout) const {
   assert(isUnion() && "Only call getLargestMember on unions");
   llvm::ArrayRef<Type> members = getMembers();
   if (members.empty())
@@ -341,24 +341,24 @@ bool RecordType::isLayoutIdentical(const RecordType &other) {
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
-                               ::mlir::DataLayoutEntryListRef params) const {
+PointerType::getTypeSizeInBits(const ::aiir::DataLayout &dataLayout,
+                               ::aiir::DataLayoutEntryListRef params) const {
   // FIXME: improve this in face of address spaces
   assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
   return llvm::TypeSize::getFixed(64);
 }
 
 uint64_t
-PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                             ::mlir::DataLayoutEntryListRef params) const {
+PointerType::getABIAlignment(const ::aiir::DataLayout &dataLayout,
+                             ::aiir::DataLayoutEntryListRef params) const {
   // FIXME: improve this in face of address spaces
   assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
   return 8;
 }
 
 llvm::TypeSize
-RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                              mlir::DataLayoutEntryListRef params) const {
+RecordType::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                              aiir::DataLayoutEntryListRef params) const {
   if (isUnion())
     return dataLayout.getTypeSize(getLargestMember(dataLayout));
 
@@ -367,8 +367,8 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 }
 
 uint64_t
-RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                            ::mlir::DataLayoutEntryListRef params) const {
+RecordType::getABIAlignment(const ::aiir::DataLayout &dataLayout,
+                            ::aiir::DataLayoutEntryListRef params) const {
   if (isUnion())
     return dataLayout.getTypeABIAlignment(getLargestMember(dataLayout));
 
@@ -379,14 +379,14 @@ RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 }
 
 unsigned
-RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
+RecordType::computeStructSize(const aiir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
   // This is a similar algorithm to LLVM's StructLayout.
   unsigned recordSize = 0;
   uint64_t recordAlignment = 1;
 
-  for (mlir::Type ty : getMembers()) {
+  for (aiir::Type ty : getMembers()) {
     // This assumes that we're calculating size based on the ABI alignment, not
     // the preferred alignment for each type.
     const uint64_t tyAlign =
@@ -413,19 +413,19 @@ RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
 // but that's implemented yet.
 // TODO(CIR): Implement a way to cache the result.
 uint64_t
-RecordType::computeStructAlignment(const mlir::DataLayout &dataLayout) const {
+RecordType::computeStructAlignment(const aiir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
   // This is a similar algorithm to LLVM's StructLayout.
   uint64_t recordAlignment = 1;
-  for (mlir::Type ty : getMembers())
+  for (aiir::Type ty : getMembers())
     recordAlignment =
         std::max(dataLayout.getTypeABIAlignment(ty), recordAlignment);
 
   return recordAlignment;
 }
 
-uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
+uint64_t RecordType::getElementOffset(const ::aiir::DataLayout &dataLayout,
                                       unsigned idx) const {
   assert(idx < getMembers().size() && "access not valid");
 
@@ -435,11 +435,11 @@ uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
 
   assert(isComplete() && "Cannot get layout of incomplete records");
   assert(idx < getNumElements());
-  llvm::ArrayRef<mlir::Type> members = getMembers();
+  llvm::ArrayRef<aiir::Type> members = getMembers();
 
   unsigned offset = 0;
 
-  for (mlir::Type ty :
+  for (aiir::Type ty :
        llvm::make_range(members.begin(), std::next(members.begin(), idx))) {
     // This matches LLVM since it uses the ABI instead of preferred alignment.
     const llvm::Align tyAlign =
@@ -465,8 +465,8 @@ uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
 // IntType Definitions
 //===----------------------------------------------------------------------===//
 
-Type IntType::parse(mlir::AsmParser &parser) {
-  mlir::MLIRContext *context = parser.getBuilder().getContext();
+Type IntType::parse(aiir::AsmParser &parser) {
+  aiir::AIIRContext *context = parser.getBuilder().getContext();
   llvm::SMLoc loc = parser.getCurrentLocation();
   bool isSigned;
   unsigned width;
@@ -505,30 +505,30 @@ Type IntType::parse(mlir::AsmParser &parser) {
   return IntType::get(context, width, isSigned);
 }
 
-void IntType::print(mlir::AsmPrinter &printer) const {
+void IntType::print(aiir::AsmPrinter &printer) const {
   char sign = isSigned() ? 's' : 'u';
   printer << '<' << sign << ", " << getWidth() << '>';
 }
 
 llvm::TypeSize
-IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                           mlir::DataLayoutEntryListRef params) const {
+IntType::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                           aiir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(getWidth());
 }
 
-uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
-                                  mlir::DataLayoutEntryListRef params) const {
+uint64_t IntType::getABIAlignment(const aiir::DataLayout &dataLayout,
+                                  aiir::DataLayoutEntryListRef params) const {
   return (uint64_t)(getWidth() / 8);
 }
 
-mlir::LogicalResult
-IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+aiir::LogicalResult
+IntType::verify(llvm::function_ref<aiir::InFlightDiagnostic()> emitError,
                 unsigned width, bool isSigned) {
   if (width < IntType::minBitwidth() || width > IntType::maxBitwidth())
     return emitError() << "IntType only supports widths from "
                        << IntType::minBitwidth() << " up to "
                        << IntType::maxBitwidth();
-  return mlir::success();
+  return aiir::success();
 }
 
 bool cir::isValidFundamentalIntWidth(unsigned width) {
@@ -544,14 +544,14 @@ const llvm::fltSemantics &SingleType::getFloatSemantics() const {
 }
 
 llvm::TypeSize
-SingleType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                              mlir::DataLayoutEntryListRef params) const {
+SingleType::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                              aiir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(getWidth());
 }
 
 uint64_t
-SingleType::getABIAlignment(const mlir::DataLayout &dataLayout,
-                            mlir::DataLayoutEntryListRef params) const {
+SingleType::getABIAlignment(const aiir::DataLayout &dataLayout,
+                            aiir::DataLayoutEntryListRef params) const {
   return (uint64_t)(getWidth() / 8);
 }
 
@@ -560,14 +560,14 @@ const llvm::fltSemantics &DoubleType::getFloatSemantics() const {
 }
 
 llvm::TypeSize
-DoubleType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                              mlir::DataLayoutEntryListRef params) const {
+DoubleType::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                              aiir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(getWidth());
 }
 
 uint64_t
-DoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
-                            mlir::DataLayoutEntryListRef params) const {
+DoubleType::getABIAlignment(const aiir::DataLayout &dataLayout,
+                            aiir::DataLayoutEntryListRef params) const {
   return (uint64_t)(getWidth() / 8);
 }
 
@@ -576,13 +576,13 @@ const llvm::fltSemantics &FP16Type::getFloatSemantics() const {
 }
 
 llvm::TypeSize
-FP16Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                            mlir::DataLayoutEntryListRef params) const {
+FP16Type::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                            aiir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(getWidth());
 }
 
-uint64_t FP16Type::getABIAlignment(const mlir::DataLayout &dataLayout,
-                                   mlir::DataLayoutEntryListRef params) const {
+uint64_t FP16Type::getABIAlignment(const aiir::DataLayout &dataLayout,
+                                   aiir::DataLayoutEntryListRef params) const {
   return (uint64_t)(getWidth() / 8);
 }
 
@@ -591,13 +591,13 @@ const llvm::fltSemantics &BF16Type::getFloatSemantics() const {
 }
 
 llvm::TypeSize
-BF16Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                            mlir::DataLayoutEntryListRef params) const {
+BF16Type::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                            aiir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(getWidth());
 }
 
-uint64_t BF16Type::getABIAlignment(const mlir::DataLayout &dataLayout,
-                                   mlir::DataLayoutEntryListRef params) const {
+uint64_t BF16Type::getABIAlignment(const aiir::DataLayout &dataLayout,
+                                   aiir::DataLayoutEntryListRef params) const {
   return (uint64_t)(getWidth() / 8);
 }
 
@@ -606,14 +606,14 @@ const llvm::fltSemantics &FP80Type::getFloatSemantics() const {
 }
 
 llvm::TypeSize
-FP80Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                            mlir::DataLayoutEntryListRef params) const {
+FP80Type::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                            aiir::DataLayoutEntryListRef params) const {
   // Though only 80 bits are used for the value, the type is 128 bits in size.
   return llvm::TypeSize::getFixed(128);
 }
 
-uint64_t FP80Type::getABIAlignment(const mlir::DataLayout &dataLayout,
-                                   mlir::DataLayoutEntryListRef params) const {
+uint64_t FP80Type::getABIAlignment(const aiir::DataLayout &dataLayout,
+                                   aiir::DataLayoutEntryListRef params) const {
   return 16;
 }
 
@@ -622,31 +622,31 @@ const llvm::fltSemantics &FP128Type::getFloatSemantics() const {
 }
 
 llvm::TypeSize
-FP128Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                             mlir::DataLayoutEntryListRef params) const {
+FP128Type::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                             aiir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(getWidth());
 }
 
-uint64_t FP128Type::getABIAlignment(const mlir::DataLayout &dataLayout,
-                                    mlir::DataLayoutEntryListRef params) const {
+uint64_t FP128Type::getABIAlignment(const aiir::DataLayout &dataLayout,
+                                    aiir::DataLayoutEntryListRef params) const {
   return 16;
 }
 
 const llvm::fltSemantics &LongDoubleType::getFloatSemantics() const {
-  return mlir::cast<cir::FPTypeInterface>(getUnderlying()).getFloatSemantics();
+  return aiir::cast<cir::FPTypeInterface>(getUnderlying()).getFloatSemantics();
 }
 
 llvm::TypeSize
-LongDoubleType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                                  mlir::DataLayoutEntryListRef params) const {
-  return mlir::cast<mlir::DataLayoutTypeInterface>(getUnderlying())
+LongDoubleType::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                                  aiir::DataLayoutEntryListRef params) const {
+  return aiir::cast<aiir::DataLayoutTypeInterface>(getUnderlying())
       .getTypeSizeInBits(dataLayout, params);
 }
 
 uint64_t
-LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
-                                mlir::DataLayoutEntryListRef params) const {
-  return mlir::cast<mlir::DataLayoutTypeInterface>(getUnderlying())
+LongDoubleType::getABIAlignment(const aiir::DataLayout &dataLayout,
+                                aiir::DataLayoutEntryListRef params) const {
+  return aiir::cast<aiir::DataLayoutTypeInterface>(getUnderlying())
       .getABIAlignment(dataLayout, params);
 }
 
@@ -655,8 +655,8 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-cir::ComplexType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                                    mlir::DataLayoutEntryListRef params) const {
+cir::ComplexType::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                                    aiir::DataLayoutEntryListRef params) const {
   // C17 6.2.5p13:
   //   Each complex type has the same representation and alignment requirements
   //   as an array type containing exactly two elements of the corresponding
@@ -666,8 +666,8 @@ cir::ComplexType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 }
 
 uint64_t
-cir::ComplexType::getABIAlignment(const mlir::DataLayout &dataLayout,
-                                  mlir::DataLayoutEntryListRef params) const {
+cir::ComplexType::getABIAlignment(const aiir::DataLayout &dataLayout,
+                                  aiir::DataLayoutEntryListRef params) const {
   // C17 6.2.5p13:
   //   Each complex type has the same representation and alignment requirements
   //   as an array type containing exactly two elements of the corresponding
@@ -682,12 +682,12 @@ FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
 }
 
 // Custom parser that parses function parameters of form `(<type>*, ...)`.
-static mlir::ParseResult
-parseFuncTypeParams(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
+static aiir::ParseResult
+parseFuncTypeParams(aiir::AsmParser &p, llvm::SmallVector<aiir::Type> &params,
                     bool &isVarArg) {
   isVarArg = false;
   return p.parseCommaSeparatedList(
-      AsmParser::Delimiter::Paren, [&]() -> mlir::ParseResult {
+      AsmParser::Delimiter::Paren, [&]() -> aiir::ParseResult {
         if (isVarArg)
           return p.emitError(p.getCurrentLocation(),
                              "variadic `...` must be the last parameter");
@@ -695,7 +695,7 @@ parseFuncTypeParams(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
           isVarArg = true;
           return success();
         }
-        mlir::Type type;
+        aiir::Type type;
         if (failed(p.parseType(type)))
           return failure();
         params.push_back(type);
@@ -703,12 +703,12 @@ parseFuncTypeParams(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
       });
 }
 
-static void printFuncTypeParams(mlir::AsmPrinter &p,
-                                mlir::ArrayRef<mlir::Type> params,
+static void printFuncTypeParams(aiir::AsmPrinter &p,
+                                aiir::ArrayRef<aiir::Type> params,
                                 bool isVarArg) {
   p << '(';
   llvm::interleaveComma(params, p,
-                        [&p](mlir::Type type) { p.printType(type); });
+                        [&p](aiir::Type type) { p.printType(type); });
   if (isVarArg) {
     if (!params.empty())
       p << ", ";
@@ -719,16 +719,16 @@ static void printFuncTypeParams(mlir::AsmPrinter &p,
 
 /// Get the C-style return type of the function, which is !cir.void if the
 /// function returns nothing and the actual return type otherwise.
-mlir::Type FuncType::getReturnType() const {
+aiir::Type FuncType::getReturnType() const {
   if (hasVoidReturn())
     return cir::VoidType::get(getContext());
   return getOptionalReturnType();
 }
 
-/// Get the MLIR-style return type of the function, which is an empty
+/// Get the AIIR-style return type of the function, which is an empty
 /// ArrayRef if the function returns nothing and a single-element ArrayRef
 /// with the actual return type otherwise.
-llvm::ArrayRef<mlir::Type> FuncType::getReturnTypes() const {
+llvm::ArrayRef<aiir::Type> FuncType::getReturnTypes() const {
   if (hasVoidReturn())
     return {};
   // Can't use getOptionalReturnType() here because llvm::ArrayRef hold a
@@ -740,40 +740,40 @@ llvm::ArrayRef<mlir::Type> FuncType::getReturnTypes() const {
 // Does the fuction type return nothing?
 bool FuncType::hasVoidReturn() const { return !getOptionalReturnType(); }
 
-mlir::LogicalResult
-FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                 llvm::ArrayRef<mlir::Type> argTypes, mlir::Type returnType,
+aiir::LogicalResult
+FuncType::verify(llvm::function_ref<aiir::InFlightDiagnostic()> emitError,
+                 llvm::ArrayRef<aiir::Type> argTypes, aiir::Type returnType,
                  bool isVarArg) {
-  if (mlir::isa_and_nonnull<cir::VoidType>(returnType))
+  if (aiir::isa_and_nonnull<cir::VoidType>(returnType))
     return emitError()
            << "!cir.func cannot have an explicit 'void' return type";
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
 // MethodType Definitions
 //===----------------------------------------------------------------------===//
 
-static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
+static aiir::Type getMethodLayoutType(aiir::AIIRContext *ctx) {
   // With Itanium ABI, member function pointers have the same layout as the
   // following struct: struct { fnptr_t, ptrdiff_t }, where fnptr_t is a
   // function pointer type.
   // TODO: consider member function pointer layout in other ABIs
   auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
-  mlir::Type fields[2]{voidPtrTy, voidPtrTy};
+  aiir::Type fields[2]{voidPtrTy, voidPtrTy};
   return cir::RecordType::get(ctx, fields, /*packed=*/false,
                               /*padded=*/false, cir::RecordType::Struct);
 }
 
 llvm::TypeSize
-MethodType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                              mlir::DataLayoutEntryListRef params) const {
+MethodType::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                              aiir::DataLayoutEntryListRef params) const {
   return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
 }
 
 uint64_t
-MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
-                            mlir::DataLayoutEntryListRef params) const {
+MethodType::getABIAlignment(const aiir::DataLayout &dataLayout,
+                            aiir::DataLayoutEntryListRef params) const {
   return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
 }
 
@@ -782,14 +782,14 @@ MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-BoolType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
-                            ::mlir::DataLayoutEntryListRef params) const {
+BoolType::getTypeSizeInBits(const ::aiir::DataLayout &dataLayout,
+                            ::aiir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(8);
 }
 
 uint64_t
-BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                          ::mlir::DataLayoutEntryListRef params) const {
+BoolType::getABIAlignment(const ::aiir::DataLayout &dataLayout,
+                          ::aiir::DataLayoutEntryListRef params) const {
   return 1;
 }
 
@@ -798,16 +798,16 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-DataMemberType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
-                                  ::mlir::DataLayoutEntryListRef params) const {
+DataMemberType::getTypeSizeInBits(const ::aiir::DataLayout &dataLayout,
+                                  ::aiir::DataLayoutEntryListRef params) const {
   // FIXME: consider size differences under different ABIs
   assert(!MissingFeatures::cxxABI());
   return llvm::TypeSize::getFixed(64);
 }
 
 uint64_t
-DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                                ::mlir::DataLayoutEntryListRef params) const {
+DataMemberType::getABIAlignment(const ::aiir::DataLayout &dataLayout,
+                                ::aiir::DataLayoutEntryListRef params) const {
   // FIXME: consider alignment differences under different ABIs
   assert(!MissingFeatures::cxxABI());
   return 8;
@@ -818,14 +818,14 @@ DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-VPtrType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
-                            mlir::DataLayoutEntryListRef params) const {
+VPtrType::getTypeSizeInBits(const aiir::DataLayout &dataLayout,
+                            aiir::DataLayoutEntryListRef params) const {
   // FIXME: consider size differences under different ABIs
   return llvm::TypeSize::getFixed(64);
 }
 
-uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
-                                   mlir::DataLayoutEntryListRef params) const {
+uint64_t VPtrType::getABIAlignment(const aiir::DataLayout &dataLayout,
+                                   aiir::DataLayoutEntryListRef params) const {
   // FIXME: consider alignment differences under different ABIs
   return 8;
 }
@@ -835,14 +835,14 @@ uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
-                             ::mlir::DataLayoutEntryListRef params) const {
+ArrayType::getTypeSizeInBits(const ::aiir::DataLayout &dataLayout,
+                             ::aiir::DataLayoutEntryListRef params) const {
   return getSize() * dataLayout.getTypeSizeInBits(getElementType());
 }
 
 uint64_t
-ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                           ::mlir::DataLayoutEntryListRef params) const {
+ArrayType::getABIAlignment(const ::aiir::DataLayout &dataLayout,
+                           ::aiir::DataLayoutEntryListRef params) const {
   return dataLayout.getTypeABIAlignment(getElementType());
 }
 
@@ -851,32 +851,32 @@ ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize cir::VectorType::getTypeSizeInBits(
-    const ::mlir::DataLayout &dataLayout,
-    ::mlir::DataLayoutEntryListRef params) const {
+    const ::aiir::DataLayout &dataLayout,
+    ::aiir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(
       getSize() * dataLayout.getTypeSizeInBits(getElementType()));
 }
 
 uint64_t
-cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                                 ::mlir::DataLayoutEntryListRef params) const {
+cir::VectorType::getABIAlignment(const ::aiir::DataLayout &dataLayout,
+                                 ::aiir::DataLayoutEntryListRef params) const {
   return llvm::NextPowerOf2(dataLayout.getTypeSizeInBits(*this));
 }
 
-mlir::LogicalResult cir::VectorType::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, uint64_t size, bool scalable) {
+aiir::LogicalResult cir::VectorType::verify(
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError,
+    aiir::Type elementType, uint64_t size, bool scalable) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
   return success();
 }
 
-mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
+aiir::Type cir::VectorType::parse(::aiir::AsmParser &odsParser) {
 
   llvm::SMLoc odsLoc = odsParser.getCurrentLocation();
-  mlir::Builder odsBuilder(odsParser.getContext());
-  mlir::FailureOr<::mlir::Type> elementType;
-  mlir::FailureOr<uint64_t> size;
+  aiir::Builder odsBuilder(odsParser.getContext());
+  aiir::FailureOr<::aiir::Type> elementType;
+  aiir::FailureOr<uint64_t> size;
   bool isScalabe = false;
 
   // Parse literal '<'
@@ -888,8 +888,8 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
     isScalabe = true;
 
   // Parse variable 'size'
-  size = mlir::FieldParser<uint64_t>::parse(odsParser);
-  if (mlir::failed(size)) {
+  size = aiir::FieldParser<uint64_t>::parse(odsParser);
+  if (aiir::failed(size)) {
     odsParser.emitError(odsParser.getCurrentLocation(),
                         "failed to parse CIR_VectorType parameter 'size' which "
                         "is to be a `uint64_t`");
@@ -909,11 +909,11 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
     return {};
 
   // Parse variable 'elementType'
-  elementType = mlir::FieldParser<::mlir::Type>::parse(odsParser);
-  if (mlir::failed(elementType)) {
+  elementType = aiir::FieldParser<::aiir::Type>::parse(odsParser);
+  if (aiir::failed(elementType)) {
     odsParser.emitError(odsParser.getCurrentLocation(),
                         "failed to parse CIR_VectorType parameter "
-                        "'elementType' which is to be a `mlir::Type`");
+                        "'elementType' which is to be a `aiir::Type`");
     return {};
   }
 
@@ -921,12 +921,12 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
   if (odsParser.parseGreater())
     return {};
   return odsParser.getChecked<VectorType>(odsLoc, odsParser.getContext(),
-                                          mlir::Type((*elementType)),
+                                          aiir::Type((*elementType)),
                                           uint64_t((*size)), isScalabe);
 }
 
-void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
-  mlir::Builder odsBuilder(getContext());
+void cir::VectorType::print(aiir::AsmPrinter &odsPrinter) const {
+  aiir::Builder odsBuilder(getContext());
   odsPrinter << "<";
   if (this->getIsScalable())
     odsPrinter << "[";
@@ -945,8 +945,8 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
 //===----------------------------------------------------------------------===//
 
 bool cir::isSupportedCIRMemorySpaceAttr(
-    mlir::ptr::MemorySpaceAttrInterface memorySpace) {
-  return mlir::isa<cir::LangAddressSpaceAttr, cir::TargetAddressSpaceAttr>(
+    aiir::ptr::MemorySpaceAttrInterface memorySpace) {
+  return aiir::isa<cir::LangAddressSpaceAttr, cir::TargetAddressSpaceAttr>(
       memorySpace);
 }
 
@@ -989,9 +989,9 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
   }
 }
 
-mlir::ParseResult
-parseAddressSpaceValue(mlir::AsmParser &p,
-                       mlir::ptr::MemorySpaceAttrInterface &attr) {
+aiir::ParseResult
+parseAddressSpaceValue(aiir::AsmParser &p,
+                       aiir::ptr::MemorySpaceAttrInterface &attr) {
 
   llvm::SMLoc loc = p.getCurrentLocation();
 
@@ -1009,7 +1009,7 @@ parseAddressSpaceValue(mlir::AsmParser &p,
       return p.emitError(loc, "expected ')'");
 
     attr = cir::TargetAddressSpaceAttr::get(p.getContext(), val);
-    return mlir::success();
+    return aiir::success();
   }
 
   // Try to parse language specific address space.
@@ -1017,16 +1017,16 @@ parseAddressSpaceValue(mlir::AsmParser &p,
     if (p.parseLParen())
       return p.emitError(loc, "expected '(' after 'lang_address_space'");
 
-    mlir::FailureOr<cir::LangAddressSpace> result =
-        mlir::FieldParser<cir::LangAddressSpace>::parse(p);
-    if (mlir::failed(result))
-      return mlir::failure();
+    aiir::FailureOr<cir::LangAddressSpace> result =
+        aiir::FieldParser<cir::LangAddressSpace>::parse(p);
+    if (aiir::failed(result))
+      return aiir::failure();
 
     if (p.parseRParen())
       return p.emitError(loc, "expected ')'");
 
     attr = cir::LangAddressSpaceAttr::get(p.getContext(), result.value());
-    return mlir::success();
+    return aiir::success();
   }
 
   llvm::StringRef keyword;
@@ -1035,11 +1035,11 @@ parseAddressSpaceValue(mlir::AsmParser &p,
            << keyword << "'; expected 'target_address_space' or "
            << "'lang_address_space'";
 
-  return mlir::success();
+  return aiir::success();
 }
 
-void printAddressSpaceValue(mlir::AsmPrinter &p,
-                            mlir::ptr::MemorySpaceAttrInterface attr) {
+void printAddressSpaceValue(aiir::AsmPrinter &p,
+                            aiir::ptr::MemorySpaceAttrInterface attr) {
   if (!attr)
     return;
 
@@ -1057,32 +1057,32 @@ void printAddressSpaceValue(mlir::AsmPrinter &p,
   llvm_unreachable("unexpected address-space attribute kind");
 }
 
-mlir::OptionalParseResult
-parseGlobalAddressSpaceValue(mlir::AsmParser &p,
-                             mlir::ptr::MemorySpaceAttrInterface &attr) {
+aiir::OptionalParseResult
+parseGlobalAddressSpaceValue(aiir::AsmParser &p,
+                             aiir::ptr::MemorySpaceAttrInterface &attr) {
 
-  mlir::SMLoc loc = p.getCurrentLocation();
+  aiir::SMLoc loc = p.getCurrentLocation();
   if (parseAddressSpaceValue(p, attr).failed())
     return p.emitError(loc, "failed to parse Address Space Value for GlobalOp");
-  return mlir::success();
+  return aiir::success();
 }
 
-void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp,
-                                  mlir::ptr::MemorySpaceAttrInterface attr) {
+void printGlobalAddressSpaceValue(aiir::AsmPrinter &printer, cir::GlobalOp,
+                                  aiir::ptr::MemorySpaceAttrInterface attr) {
   printAddressSpaceValue(printer, attr);
 }
 
-mlir::ptr::MemorySpaceAttrInterface cir::normalizeDefaultAddressSpace(
-    mlir::ptr::MemorySpaceAttrInterface addrSpace) {
+aiir::ptr::MemorySpaceAttrInterface cir::normalizeDefaultAddressSpace(
+    aiir::ptr::MemorySpaceAttrInterface addrSpace) {
   if (auto langAS =
-          mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace))
+          aiir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace))
     if (langAS.getValue() == cir::LangAddressSpace::Default)
       return {};
   return addrSpace;
 }
 
-mlir::ptr::MemorySpaceAttrInterface
-cir::toCIRAddressSpaceAttr(mlir::MLIRContext &ctx, clang::LangAS langAS) {
+aiir::ptr::MemorySpaceAttrInterface
+cir::toCIRAddressSpaceAttr(aiir::AIIRContext &ctx, clang::LangAS langAS) {
   using clang::LangAS;
 
   if (langAS == LangAS::Default)
@@ -1096,12 +1096,12 @@ cir::toCIRAddressSpaceAttr(mlir::MLIRContext &ctx, clang::LangAS langAS) {
   return cir::LangAddressSpaceAttr::get(&ctx, toCIRLangAddressSpace(langAS));
 }
 
-bool cir::isMatchingAddressSpace(mlir::ptr::MemorySpaceAttrInterface cirAS,
+bool cir::isMatchingAddressSpace(aiir::ptr::MemorySpaceAttrInterface cirAS,
                                  clang::LangAS as) {
   cirAS = normalizeDefaultAddressSpace(cirAS);
   if (!cirAS)
     return as == clang::LangAS::Default;
-  mlir::ptr::MemorySpaceAttrInterface expected = normalizeDefaultAddressSpace(
+  aiir::ptr::MemorySpaceAttrInterface expected = normalizeDefaultAddressSpace(
       toCIRAddressSpaceAttr(*cirAS.getContext(), as));
   return expected == cirAS;
 }
@@ -1110,9 +1110,9 @@ bool cir::isMatchingAddressSpace(mlir::ptr::MemorySpaceAttrInterface cirAS,
 // PointerType Definitions
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cir::PointerType::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type pointee, mlir::ptr::MemorySpaceAttrInterface addrSpace) {
+aiir::LogicalResult cir::PointerType::verify(
+    llvm::function_ref<aiir::InFlightDiagnostic()> emitError,
+    aiir::Type pointee, aiir::ptr::MemorySpaceAttrInterface addrSpace) {
   if (addrSpace) {
     if (!isSupportedCIRMemorySpaceAttr(addrSpace)) {
       return emitError() << "unsupported address space attribute; expected "

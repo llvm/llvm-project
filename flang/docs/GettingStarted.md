@@ -32,7 +32,7 @@ tool.
 
 ### Building flang in tree with bootstrapped Flang-RT
 Building flang in tree means building flang along with all of the projects on
-which it depends.  These projects include mlir, clang, flang, openmp, and
+which it depends.  These projects include aiir, clang, flang, openmp, and
 compiler-rt.  Note that compiler-rt is only needed to access libraries that
 support 16 bit floating point numbers.  It's not needed to run the automated
 tests.  You can use several different C++ compilers for most of the build,
@@ -79,7 +79,7 @@ cmake \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_LIT_ARGS=-v \
-  -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" \
+  -DLLVM_ENABLE_PROJECTS="clang;aiir;flang" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt;openmp" \
   ../llvm-project/llvm
 
@@ -157,7 +157,7 @@ cmake \
   -DLLVM_LIT_ARGS=-v \
   -DLLVM_DIR=$ROOTDIR/build/lib/cmake/llvm \
   -DCLANG_DIR=$ROOTDIR/build/lib/cmake/clang \
-  -DMLIR_DIR=$ROOTDIR/build/lib/cmake/mlir \
+  -DAIIR_DIR=$ROOTDIR/build/lib/cmake/aiir \
   ..
 
 ninja
@@ -397,7 +397,7 @@ Flang supports 2 different categories of tests
 To run all tests:
 ```bash
 cd ~/flang/build
-cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ~/flang/src
+cmake -DLLVM_DIR=$LLVM -DAIIR_DIR=$AIIR ~/flang/src
 ninja check-all
 ```
 

@@ -68,7 +68,7 @@ void genFormTeamStatement(AbstractConverter &, pft::Evaluation &eval,
 /// message-passing runtime to access another image's data.
 class CoarrayExprHelper {
 public:
-  explicit CoarrayExprHelper(AbstractConverter &converter, mlir::Location loc,
+  explicit CoarrayExprHelper(AbstractConverter &converter, aiir::Location loc,
                              SymMap &syms)
       : converter{converter}, symMap{syms}, loc{loc} {}
   CoarrayExprHelper(const CoarrayExprHelper &) = delete;
@@ -82,7 +82,7 @@ public:
 private:
   AbstractConverter &converter;
   SymMap &symMap;
-  mlir::Location loc;
+  aiir::Location loc;
 };
 
 } // namespace lower

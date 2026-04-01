@@ -22,8 +22,8 @@
 'lld':
   - '/\blld(?!\-)\b/i'
 
-'mlir':
-  - '/\bmlir(?!\-)\b/i'
+'aiir':
+  - '/\baiir(?!\-)\b/i'
 
 'bolt':
   - '/\bbolt(?!\-)\b/i'

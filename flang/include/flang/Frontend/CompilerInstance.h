@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -93,11 +93,11 @@ class CompilerInstance {
   /// Objects needed when timing is enabled.
   /// @{
   /// The timing manager.
-  mlir::DefaultTimingManager timingMgr;
+  aiir::DefaultTimingManager timingMgr;
 
   /// The root of the timingScope. This will be reset in @ref executeAction if
   /// timers have been enabled.
-  mlir::TimingScope timingScopeRoot;
+  aiir::TimingScope timingScopeRoot;
 
   /// @name Timing stream
   /// The output streams to capture the timing. Three different streams are
@@ -105,7 +105,7 @@ class CompilerInstance {
   /// these streams so we have control over when and how the timing is
   /// displayed. Otherwise, the timing is only displayed when the corresponding
   /// managers/timers go out of scope.
-  std::unique_ptr<Fortran::support::string_ostream> timingStreamMLIR;
+  std::unique_ptr<Fortran::support::string_ostream> timingStreamAIIR;
   std::unique_ptr<Fortran::support::string_ostream> timingStreamLLVM;
   std::unique_ptr<Fortran::support::string_ostream> timingStreamCodeGen;
   /// @}
@@ -302,20 +302,20 @@ public:
   /// @{
   bool isTimingEnabled() const { return timingMgr.isEnabled(); }
 
-  mlir::DefaultTimingManager &getTimingManager() { return timingMgr; }
-  const mlir::DefaultTimingManager &getTimingManager() const {
+  aiir::DefaultTimingManager &getTimingManager() { return timingMgr; }
+  const aiir::DefaultTimingManager &getTimingManager() const {
     return timingMgr;
   }
 
-  mlir::TimingScope &getTimingScopeRoot() { return timingScopeRoot; }
-  const mlir::TimingScope &getTimingScopeRoot() const {
+  aiir::TimingScope &getTimingScopeRoot() { return timingScopeRoot; }
+  const aiir::TimingScope &getTimingScopeRoot() const {
     return timingScopeRoot;
   }
 
-  /// Get the timing stream for the MLIR pass manager.
-  llvm::raw_ostream &getTimingStreamMLIR() {
-    assert(timingStreamMLIR && "Timing stream for MLIR was not set");
-    return *timingStreamMLIR;
+  /// Get the timing stream for the AIIR pass manager.
+  llvm::raw_ostream &getTimingStreamAIIR() {
+    assert(timingStreamAIIR && "Timing stream for AIIR was not set");
+    return *timingStreamAIIR;
   }
 
   /// Get the timing stream for the new LLVM pass manager.

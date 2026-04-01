@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +17,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Tools/CrossToolHelpers.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -36,14 +36,14 @@ namespace {
 using namespace Fortran::lower::omp;
 
 struct ConstructDecomposition {
-  ConstructDecomposition(mlir::ModuleOp modOp,
+  ConstructDecomposition(aiir::ModuleOp modOp,
                          semantics::SemanticsContext &semaCtx,
                          lower::pft::Evaluation &ev,
                          llvm::omp::Directive compound,
                          const List<Clause> &clauses)
       : semaCtx(semaCtx), mod(modOp), eval(ev) {
     tomp::ConstructDecompositionT decompose(
-        mlir::omp::getOpenMPVersionAttribute(modOp), *this, compound,
+        aiir::omp::getOpenMPVersionAttribute(modOp), *this, compound,
         llvm::ArrayRef(clauses));
     output = std::move(decompose.output);
   }
@@ -61,7 +61,7 @@ struct ConstructDecomposition {
   }
 
   semantics::SemanticsContext &semaCtx;
-  mlir::ModuleOp mod;
+  aiir::ModuleOp mod;
   lower::pft::Evaluation &eval;
   List<UnitConstruct> output;
 };
@@ -79,7 +79,7 @@ LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 }
 
 ConstructQueue buildConstructQueue(
-    mlir::ModuleOp modOp, Fortran::semantics::SemanticsContext &semaCtx,
+    aiir::ModuleOp modOp, Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, const parser::CharBlock &source,
     llvm::omp::Directive compound, const List<Clause> &clauses) {
 

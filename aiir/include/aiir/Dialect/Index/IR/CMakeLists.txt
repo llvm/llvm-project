@@ -1,0 +1,7 @@
+set(LLVM_TARGET_DEFINITIONS IndexEnums.td)
+aiir_tablegen(IndexEnums.h.inc -gen-enum-decls)
+aiir_tablegen(IndexEnums.cpp.inc -gen-enum-defs)
+aiir_tablegen(IndexAttrs.h.inc -gen-attrdef-decls -attrdefs-dialect=index)
+aiir_tablegen(IndexAttrs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=index)
+add_aiir_dialect(IndexOps index)
+add_aiir_doc(IndexOps IndexOps Dialects/ -gen-dialect-doc)

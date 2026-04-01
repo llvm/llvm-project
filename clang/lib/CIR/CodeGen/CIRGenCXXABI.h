@@ -38,7 +38,7 @@ public:
       : cgm(cgm), mangleContext(cgm.getASTContext().createMangleContext()) {}
   virtual ~CIRGenCXXABI();
 
-  void setCXXABIThisValue(CIRGenFunction &cgf, mlir::Value thisPtr);
+  void setCXXABIThisValue(CIRGenFunction &cgf, aiir::Value thisPtr);
 
   /// Emit the code to initialize hidden members required to handle virtual
   /// inheritance, if needed by the ABI.
@@ -50,12 +50,12 @@ public:
   /// constructor/destructor Decl.
   virtual void emitCXXStructor(clang::GlobalDecl gd) = 0;
 
-  virtual mlir::Value
-  getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &cgf,
+  virtual aiir::Value
+  getVirtualBaseClassOffset(aiir::Location loc, CIRGenFunction &cgf,
                             Address thisAddr, const CXXRecordDecl *classDecl,
                             const CXXRecordDecl *baseClassDecl) = 0;
 
-  virtual mlir::Value emitDynamicCast(CIRGenFunction &cgf, mlir::Location loc,
+  virtual aiir::Value emitDynamicCast(CIRGenFunction &cgf, aiir::Location loc,
                                       QualType srcRecordTy,
                                       QualType destRecordTy,
                                       cir::PointerType destCIRTy,
@@ -83,7 +83,7 @@ public:
   /// arg; `this` arguments always come first.
   struct AddedStructorArgs {
     struct Arg {
-      mlir::Value value;
+      aiir::Value value;
       QualType type;
     };
     llvm::SmallVector<Arg, 1> prefix;
@@ -132,13 +132,13 @@ public:
   /// analysis.
   virtual bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const = 0;
 
-  virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
+  virtual void emitBadCastCall(CIRGenFunction &cgf, aiir::Location loc) = 0;
 
   virtual void emitBeginCatch(CIRGenFunction &cgf,
                               const CXXCatchStmt *catchStmt,
-                              mlir::Value ehToken) = 0;
+                              aiir::Value ehToken) = 0;
 
-  virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
+  virtual aiir::Attribute getAddrOfRTTIDescriptor(aiir::Location loc,
                                                   QualType ty) = 0;
 
   /// Get the type of the implicit "this" parameter used by a method. May return
@@ -168,20 +168,20 @@ public:
   void buildThisParam(CIRGenFunction &cgf, FunctionArgList &params);
 
   /// Loads the incoming C++ this pointer as it was passed by the caller.
-  mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
+  aiir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
   virtual CatchTypeInfo
-  getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
+  getAddrOfCXXCatchHandlerType(aiir::Location loc, QualType ty,
                                QualType catchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
   virtual bool shouldTypeidBeNullChecked(QualType srcTy) = 0;
-  virtual mlir::Value emitTypeid(CIRGenFunction &cgf, QualType srcTy,
-                                 Address thisPtr, mlir::Type typeInfoPtrTy) = 0;
-  virtual void emitBadTypeidCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
+  virtual aiir::Value emitTypeid(CIRGenFunction &cgf, QualType srcTy,
+                                 Address thisPtr, aiir::Type typeInfoPtrTy) = 0;
+  virtual void emitBadTypeidCall(CIRGenFunction &cgf, aiir::Location loc) = 0;
 
   /// Get the implicit (second) parameter that comes after the "this" pointer,
   /// or nullptr if there is isn't one.
-  virtual mlir::Value getCXXDestructorImplicitParam(CIRGenFunction &cgf,
+  virtual aiir::Value getCXXDestructorImplicitParam(CIRGenFunction &cgf,
                                                     const CXXDestructorDecl *dd,
                                                     CXXDtorType type,
                                                     bool forVirtualBase,
@@ -204,7 +204,7 @@ public:
   /// \param dtor - a function taking a single pointer argument
   /// \param addr - a pointer to pass to the destructor function.
   virtual void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
-                                  mlir::Value addr) = 0;
+                                  aiir::Value addr) = 0;
 
   virtual void emitVirtualObjectDelete(CIRGenFunction &cgf,
                                        const CXXDeleteExpr *de, Address ptr,
@@ -226,7 +226,7 @@ public:
   using DeleteOrMemberCallExpr =
       llvm::PointerUnion<const CXXDeleteExpr *, const CXXMemberCallExpr *>;
 
-  virtual mlir::Value emitVirtualDestructorCall(CIRGenFunction &cgf,
+  virtual aiir::Value emitVirtualDestructorCall(CIRGenFunction &cgf,
                                                 const CXXDestructorDecl *dtor,
                                                 CXXDtorType dtorType,
                                                 Address thisAddr,
@@ -245,14 +245,14 @@ public:
 
   /// Perform adjustment on the 'this' pointer for a thunk.
   /// Returns the adjusted 'this' pointer value.
-  virtual mlir::Value
+  virtual aiir::Value
   performThisAdjustment(CIRGenFunction &cgf, Address thisAddr,
                         const CXXRecordDecl *unadjustedClass,
                         const ThunkInfo &ti) = 0;
 
   /// Perform adjustment on a return pointer for a thunk (covariant returns).
   /// Returns the adjusted return pointer value.
-  virtual mlir::Value
+  virtual aiir::Value
   performReturnAdjustment(CIRGenFunction &cgf, Address ret,
                           const CXXRecordDecl *unadjustedClass,
                           const ReturnAdjustment &ra) = 0;
@@ -285,17 +285,17 @@ public:
   virtual CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &cgf,
                                                  clang::GlobalDecl gd,
                                                  Address thisAddr,
-                                                 mlir::Type ty,
+                                                 aiir::Type ty,
                                                  SourceLocation loc) = 0;
 
   /// Get the address point of the vtable for the given base subobject.
-  virtual mlir::Value
+  virtual aiir::Value
   getVTableAddressPoint(BaseSubobject base,
                         const CXXRecordDecl *vtableClass) = 0;
 
   /// Get the address point of the vtable for the given base subobject while
   /// building a constructor or a destructor.
-  virtual mlir::Value getVTableAddressPointInStructor(
+  virtual aiir::Value getVTableAddressPointInStructor(
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase) = 0;
 
@@ -346,11 +346,11 @@ public:
     return cgf.cxxStructorImplicitParamDecl;
   }
 
-  mlir::Value getStructorImplicitParamValue(CIRGenFunction &cgf) {
+  aiir::Value getStructorImplicitParamValue(CIRGenFunction &cgf) {
     return cgf.cxxStructorImplicitParamValue;
   }
 
-  void setStructorImplicitParamValue(CIRGenFunction &cgf, mlir::Value val) {
+  void setStructorImplicitParamValue(CIRGenFunction &cgf, aiir::Value val) {
     cgf.cxxStructorImplicitParamValue = val;
   }
 
@@ -377,7 +377,7 @@ public:
   /// \param elementType - the base element allocated type,
   ///   i.e. the allocated type after stripping all array types
   virtual Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
-                                        mlir::Value numElements,
+                                        aiir::Value numElements,
                                         const CXXNewExpr *e,
                                         QualType elementType) = 0;
 

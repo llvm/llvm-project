@@ -1,0 +1,21 @@
+add_aiir_unittest(AIIRDialectTests
+  BroadcastShapeTest.cpp
+)
+aiir_target_link_libraries(AIIRDialectTests
+  PRIVATE
+  AIIRIR
+  AIIRDialect)
+
+add_subdirectory(AMDGPU)
+add_subdirectory(ArmSME)
+add_subdirectory(Index)
+add_subdirectory(Linalg)
+add_subdirectory(LLVMIR)
+add_subdirectory(MemRef)
+add_subdirectory(OpenACC)
+add_subdirectory(SCF)
+add_subdirectory(SparseTensor)
+add_subdirectory(SPIRV)
+add_subdirectory(SMT)
+add_subdirectory(Transform)
+add_subdirectory(Utils)

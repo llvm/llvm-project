@@ -3,8 +3,8 @@
 
 ; Test for regression after 87f312aad6e from trying to use the uselist of constantdata
 
-define ptr @_ZN4mlir6Region15getParentOfTypeINS_19FunctionOpInterfaceEEET_v() {
-; CHECK-LABEL: define ptr @_ZN4mlir6Region15getParentOfTypeINS_19FunctionOpInterfaceEEET_v() {
+define ptr @_ZN4aiir6Region15getParentOfTypeINS_19FunctionOpInterfaceEEET_v() {
+; CHECK-LABEL: define ptr @_ZN4aiir6Region15getParentOfTypeINS_19FunctionOpInterfaceEEET_v() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CALL_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i64] zeroinitializer, 0
 ; CHECK-NEXT:    [[I2P:%.*]] = inttoptr i64 [[CALL_FCA_0_EXTRACT]] to ptr

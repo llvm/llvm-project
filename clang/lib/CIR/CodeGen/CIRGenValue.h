@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// These classes implement wrappers around mlir::Value in order to fully
+// These classes implement wrappers around aiir::Value in order to fully
 // represent the range of values for C L- and R- values.
 //
 //===----------------------------------------------------------------------===//
@@ -20,7 +20,7 @@
 #include "clang/AST/Type.h"
 
 #include "CIRGenRecordLayout.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Value.h"
 
 #include "clang/CIR/MissingFeatures.h"
 
@@ -28,13 +28,13 @@ namespace clang::CIRGen {
 
 /// This trivial value class is used to represent the result of an
 /// expression that is evaluated. It can be one of three things: either a
-/// simple MLIR SSA value, a pair of SSA values for complex numbers, or the
+/// simple AIIR SSA value, a pair of SSA values for complex numbers, or the
 /// address of an aggregate value in memory.
 class RValue {
   enum Flavor { Scalar, Complex, Aggregate };
 
   union {
-    mlir::Value value;
+    aiir::Value value;
 
     // Stores aggregate address.
     Address aggregateAddr;
@@ -54,13 +54,13 @@ public:
   bool isVolatileQualified() const { return isVolatile; }
 
   /// Return the value of this scalar value.
-  mlir::Value getValue() const {
+  aiir::Value getValue() const {
     assert(isScalar() && "Not a scalar!");
     return value;
   }
 
   /// Return the value of this complex value.
-  mlir::Value getComplexValue() const {
+  aiir::Value getComplexValue() const {
     assert(isComplex() && "Not a complex!");
     return value;
   }
@@ -71,7 +71,7 @@ public:
     return aggregateAddr;
   }
 
-  mlir::Value getAggregatePointer(QualType pointeeType) const {
+  aiir::Value getAggregatePointer(QualType pointeeType) const {
     return getAggregateAddress().getPointer();
   }
 
@@ -80,7 +80,7 @@ public:
     return get(nullptr);
   }
 
-  static RValue get(mlir::Value v) {
+  static RValue get(aiir::Value v) {
     RValue er;
     er.value = v;
     er.flavor = Scalar;
@@ -88,7 +88,7 @@ public:
     return er;
   }
 
-  static RValue getComplex(mlir::Value v) {
+  static RValue getComplex(aiir::Value v) {
     RValue er;
     er.value = v;
     er.flavor = Complex;
@@ -166,10 +166,10 @@ class LValue {
   // The alignment to use when accessing this lvalue. (For vector elements,
   // this is the alignment of the whole vector)
   unsigned alignment;
-  mlir::Value v;
-  mlir::Value vectorIdx;      // Index for vector subscript
-  mlir::Attribute vectorElts; // ExtVector element subset: V.xyx
-  mlir::Type elementType;
+  aiir::Value v;
+  aiir::Value vectorIdx;      // Index for vector subscript
+  aiir::Attribute vectorElts; // ExtVector element subset: V.xyx
+  aiir::Type elementType;
   LValueBaseInfo baseInfo;
   const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
 
@@ -204,7 +204,7 @@ public:
 
   clang::QualType getType() const { return type; }
 
-  mlir::Value getPointer() const { return v; }
+  aiir::Value getPointer() const { return v; }
 
   clang::CharUnits getAlignment() const {
     return clang::CharUnits::fromQuantity(alignment);
@@ -247,12 +247,12 @@ public:
     return Address(getVectorPointer(), elementType, getAlignment());
   }
 
-  mlir::Value getVectorPointer() const {
+  aiir::Value getVectorPointer() const {
     assert(isVectorElt());
     return v;
   }
 
-  mlir::Value getVectorIdx() const {
+  aiir::Value getVectorIdx() const {
     assert(isVectorElt());
     return vectorIdx;
   }
@@ -263,17 +263,17 @@ public:
     return Address(getExtVectorPointer(), elementType, getAlignment());
   }
 
-  mlir::Value getExtVectorPointer() const {
+  aiir::Value getExtVectorPointer() const {
     assert(isExtVectorElt());
     return v;
   }
 
-  mlir::ArrayAttr getExtVectorElts() const {
+  aiir::ArrayAttr getExtVectorElts() const {
     assert(isExtVectorElt());
-    return mlir::cast<mlir::ArrayAttr>(vectorElts);
+    return aiir::cast<aiir::ArrayAttr>(vectorElts);
   }
 
-  static LValue makeVectorElt(Address vecAddress, mlir::Value index,
+  static LValue makeVectorElt(Address vecAddress, aiir::Value index,
                               clang::QualType t, LValueBaseInfo baseInfo) {
     LValue r;
     r.lvType = VectorElt;
@@ -284,7 +284,7 @@ public:
     return r;
   }
 
-  static LValue makeExtVectorElt(Address vecAddress, mlir::ArrayAttr elts,
+  static LValue makeExtVectorElt(Address vecAddress, aiir::ArrayAttr elts,
                                  clang::QualType type,
                                  LValueBaseInfo baseInfo) {
     LValue r;
@@ -302,7 +302,7 @@ public:
     return Address(getBitFieldPointer(), elementType, getAlignment());
   }
 
-  mlir::Value getBitFieldPointer() const {
+  aiir::Value getBitFieldPointer() const {
     assert(isBitField());
     return v;
   }
@@ -429,7 +429,7 @@ public:
 
   bool isIgnored() const { return !addr.isValid(); }
 
-  mlir::Value getPointer() const { return addr.getPointer(); }
+  aiir::Value getPointer() const { return addr.getPointer(); }
 
   Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 

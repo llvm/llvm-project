@@ -9,9 +9,9 @@
 #ifndef CLANG_CIR_INTERFACES_CIRLOOPOPINTERFACE
 #define CLANG_CIR_INTERFACES_CIRLOOPOPINTERFACE
 
-include "mlir/IR/OpBase.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/LoopLikeInterface.td"
+include "aiir/IR/OpBase.td"
+include "aiir/Interfaces/ControlFlowInterfaces.td"
+include "aiir/Interfaces/LoopLikeInterface.td"
 
 def LoopOpInterface : OpInterface<"LoopOpInterface", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
@@ -27,19 +27,19 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
     InterfaceMethod<[{
         Returns the loop's conditional region.
       }],
-      /*retTy=*/"mlir::Region &",
+      /*retTy=*/"aiir::Region &",
       /*methodName=*/"getCond"
     >,
     InterfaceMethod<[{
         Returns the loop's body region.
       }],
-      /*retTy=*/"mlir::Region &",
+      /*retTy=*/"aiir::Region &",
       /*methodName=*/"getBody"
     >,
     InterfaceMethod<[{
         Returns a pointer to the loop's step region or nullptr.
       }],
-      /*retTy=*/"mlir::Region *",
+      /*retTy=*/"aiir::Region *",
       /*methodName=*/"maybeGetStep",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -48,7 +48,7 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
     InterfaceMethod<[{
         Returns the first region to be executed in the loop.
       }],
-      /*retTy=*/"mlir::Region &",
+      /*retTy=*/"aiir::Region &",
       /*methodName=*/"getEntry",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -57,26 +57,26 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
     InterfaceMethod<[{
         Returns a list of regions in order of execution.
       }],
-      /*retTy=*/"llvm::SmallVector<mlir::Region *>",
+      /*retTy=*/"llvm::SmallVector<aiir::Region *>",
       /*methodName=*/"getRegionsInExecutionOrder",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::SmallVector<mlir::Region *, 2>{&$_op.getRegion(0), &$_op.getRegion(1)};
+        return llvm::SmallVector<aiir::Region *, 2>{&$_op.getRegion(0), &$_op.getRegion(1)};
       }]
     >,
     InterfaceMethod<[{
         Recursively walks the body of the loop in pre-order while skipping
         nested loops and executing a callback on every other operation.
       }],
-      /*retTy=*/"mlir::WalkResult",
+      /*retTy=*/"aiir::WalkResult",
       /*methodName=*/"walkBodySkippingNestedLoops",
-      /*args=*/(ins "::llvm::function_ref<mlir::WalkResult (mlir::Operation *)>":$callback),
+      /*args=*/(ins "::llvm::function_ref<aiir::WalkResult (aiir::Operation *)>":$callback),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.getBody().template walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
-          if (mlir::isa<LoopOpInterface>(op))
-            return mlir::WalkResult::skip();
+        return $_op.getBody().template walk<aiir::WalkOrder::PreOrder>([&](aiir::Operation *op) {
+          if (aiir::isa<LoopOpInterface>(op))
+            return aiir::WalkResult::skip();
           return callback(op);
         });
       }]
@@ -86,12 +86,12 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
   let extraClassDeclaration = [{
     /// Generic method to retrieve the successors of a LoopOpInterface operation.
     static void getLoopOpSuccessorRegions(
-        ::cir::LoopOpInterface op, ::mlir::RegionBranchPoint point,
-        ::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &regions);
+        ::cir::LoopOpInterface op, ::aiir::RegionBranchPoint point,
+        ::aiir::SmallVectorImpl<::aiir::RegionSuccessor> &regions);
     /// Generic method to retrieve the successor inputs of a LoopOpInterface
     /// operation.
-    static ::mlir::ValueRange getLoopOpSuccessorInputs(
-        ::cir::LoopOpInterface op, ::mlir::RegionSuccessor successor);
+    static ::aiir::ValueRange getLoopOpSuccessorInputs(
+        ::cir::LoopOpInterface op, ::aiir::RegionSuccessor successor);
   }];
 
   let verify = [{

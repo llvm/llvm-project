@@ -17,7 +17,7 @@
 #include "Address.h"
 #include "CIRGenModule.h"
 #include "EHScopeStack.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Value.h"
 #include "clang/AST/StmtCXX.h"
 
 namespace clang::CIRGen {
@@ -25,7 +25,7 @@ namespace clang::CIRGen {
 /// The MS C++ ABI needs a pointer to RTTI data plus some flags to describe the
 /// type of a catch handler, so we use this wrapper.
 struct CatchTypeInfo {
-  mlir::TypedAttr rtti;
+  aiir::TypedAttr rtti;
   unsigned flags;
 };
 
@@ -106,7 +106,7 @@ class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
 
   /// The dual entry/exit block along the normal edge.  This is lazily
   /// created if needed before the cleanup is popped.
-  mlir::Block *normalBlock = nullptr;
+  aiir::Block *normalBlock = nullptr;
 
   /// An optional boolean variable indicating whether this cleanup has been
   /// activated yet.
@@ -147,8 +147,8 @@ public:
   // Objects of EHCleanupScope are not destructed. Use destroy().
   ~EHCleanupScope() = delete;
 
-  mlir::Block *getNormalBlock() const { return normalBlock; }
-  void setNormalBlock(mlir::Block *bb) { normalBlock = bb; }
+  aiir::Block *getNormalBlock() const { return normalBlock; }
+  void setNormalBlock(aiir::Block *bb) { normalBlock = bb; }
 
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
   bool isEHCleanup() const { return cleanupBits.isEHCleanup; }

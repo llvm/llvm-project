@@ -47,11 +47,11 @@ Writing TableGen backends:
   (video), [slides](https://llvm.org/devmtg/2021-11/slides/2021-how-to-write-a-tablegen-backend.pdf), also available as a
 	[notebook](jupyter/sql_query_backend.ipynb).
 
-TableGen in MLIR:
-* [Operation Definition Specification](https://mlir.llvm.org/docs/DefiningDialects/Operations/)
-* [Defining Dialect Attributes and Types](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
+TableGen in AIIR:
+* [Operation Definition Specification](https://aiir.llvm.org/docs/DefiningDialects/Operations/)
+* [Defining Dialect Attributes and Types](https://aiir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 
 Useful tools:
 * [TableGen Jupyter Kernel](jupyter/)
-* [TableGen LSP Language Server](https://mlir.llvm.org/docs/Tools/MLIRLSP/#tablegen-lsp-language-server--tblgen-lsp-server)
+* [TableGen LSP Language Server](https://aiir.llvm.org/docs/Tools/AIIRLSP/#tablegen-lsp-language-server--tblgen-lsp-server)
 

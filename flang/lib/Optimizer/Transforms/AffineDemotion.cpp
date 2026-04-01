@@ -20,16 +20,16 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/IntegerSet.h"
-#include "mlir/IR/Visitors.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "aiir/Dialect/Affine/IR/AffineOps.h"
+#include "aiir/Dialect/Affine/Utils.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/MemRef/IR/MemRef.h"
+#include "aiir/Dialect/SCF/IR/SCF.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/IntegerSet.h"
+#include "aiir/IR/Visitors.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -42,17 +42,17 @@ namespace fir {
 #define DEBUG_TYPE "flang-affine-demotion"
 
 using namespace fir;
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
 class AffineLoadConversion
-    : public OpConversionPattern<mlir::affine::AffineLoadOp> {
+    : public OpConversionPattern<aiir::affine::AffineLoadOp> {
 public:
-  using OpConversionPattern<mlir::affine::AffineLoadOp>::OpConversionPattern;
+  using OpConversionPattern<aiir::affine::AffineLoadOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(mlir::affine::AffineLoadOp op, OpAdaptor adaptor,
+  matchAndRewrite(aiir::affine::AffineLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SmallVector<Value> indices(adaptor.getIndices());
     auto maybeExpandedMap = affine::expandAffineMap(rewriter, op.getLoc(),
@@ -71,12 +71,12 @@ public:
 };
 
 class AffineStoreConversion
-    : public OpConversionPattern<mlir::affine::AffineStoreOp> {
+    : public OpConversionPattern<aiir::affine::AffineStoreOp> {
 public:
-  using OpConversionPattern<mlir::affine::AffineStoreOp>::OpConversionPattern;
+  using OpConversionPattern<aiir::affine::AffineStoreOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(mlir::affine::AffineStoreOp op, OpAdaptor adaptor,
+  matchAndRewrite(aiir::affine::AffineStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SmallVector<Value> indices(op.getIndices());
     auto maybeExpandedMap = affine::expandAffineMap(rewriter, op.getLoc(),
@@ -94,21 +94,21 @@ public:
   }
 };
 
-class ConvertConversion : public mlir::OpRewritePattern<fir::ConvertOp> {
+class ConvertConversion : public aiir::OpRewritePattern<fir::ConvertOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   llvm::LogicalResult
   matchAndRewrite(fir::ConvertOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    if (mlir::isa<mlir::MemRefType>(op.getRes().getType())) {
+                  aiir::PatternRewriter &rewriter) const override {
+    if (aiir::isa<aiir::MemRefType>(op.getRes().getType())) {
       // due to index calculation moving to affine maps we still need to
       // add converts for sequence types this has a side effect of losing
       // some information about arrays with known dimensions by creating:
       // fir.convert %arg0 : (!fir.ref<!fir.array<5xi32>>) ->
       // !fir.ref<!fir.array<?xi32>>
       if (auto refTy =
-              mlir::dyn_cast<fir::ReferenceType>(op.getValue().getType()))
-        if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
+              aiir::dyn_cast<fir::ReferenceType>(op.getValue().getType()))
+        if (auto arrTy = aiir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
           fir::SequenceType::Shape flatShape = {
               fir::SequenceType::getUnknownExtent()};
           auto flatArrTy = fir::SequenceType::get(flatShape, arrTy.getEleTy());
@@ -123,17 +123,17 @@ public:
   }
 };
 
-mlir::Type convertMemRef(mlir::MemRefType type) {
+aiir::Type convertMemRef(aiir::MemRefType type) {
   return fir::SequenceType::get(SmallVector<int64_t>(type.getShape()),
                                 type.getElementType());
 }
 
-class StdAllocConversion : public mlir::OpRewritePattern<memref::AllocOp> {
+class StdAllocConversion : public aiir::OpRewritePattern<memref::AllocOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   llvm::LogicalResult
   matchAndRewrite(memref::AllocOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::AllocaOp>(op, convertMemRef(op.getType()),
                                                op.getMemref());
     return success();
@@ -149,25 +149,25 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "AffineDemotion: running on function:\n";
                function.print(llvm::dbgs()););
 
-    mlir::RewritePatternSet patterns(context);
+    aiir::RewritePatternSet patterns(context);
     patterns.insert<ConvertConversion>(context);
     patterns.insert<AffineLoadConversion>(context);
     patterns.insert<AffineStoreConversion>(context);
     patterns.insert<StdAllocConversion>(context);
-    mlir::ConversionTarget target(*context);
+    aiir::ConversionTarget target(*context);
     target.addIllegalOp<memref::AllocOp>();
     target.addDynamicallyLegalOp<fir::ConvertOp>([](fir::ConvertOp op) {
-      if (mlir::isa<mlir::MemRefType>(op.getRes().getType()))
+      if (aiir::isa<aiir::MemRefType>(op.getRes().getType()))
         return false;
       return true;
     });
     target
-        .addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
-                         mlir::arith::ArithDialect, mlir::func::FuncDialect>();
+        .addLegalDialect<FIROpsDialect, aiir::scf::SCFDialect,
+                         aiir::arith::ArithDialect, aiir::func::FuncDialect>();
 
-    if (mlir::failed(mlir::applyPartialConversion(function, target,
+    if (aiir::failed(aiir::applyPartialConversion(function, target,
                                                   std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(context),
+      aiir::emitError(aiir::UnknownLoc::get(context),
                       "error in converting affine dialect\n");
       signalPassFailure();
     }
@@ -176,6 +176,6 @@ public:
 
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::createAffineDemotionPass() {
+std::unique_ptr<aiir::Pass> fir::createAffineDemotionPass() {
   return std::make_unique<AffineDialectDemotion>();
 }

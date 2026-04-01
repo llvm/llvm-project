@@ -10,8 +10,8 @@
 #define FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H
 
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/BuiltinOps.h"
 
 namespace fir {
 
@@ -22,15 +22,15 @@ namespace fir {
 /// is more precise to use a separate memory resource for volatile memory
 /// accesses.
 inline void addVolatileMemoryEffects(
-    mlir::TypeRange type,
+    aiir::TypeRange type,
     llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        aiir::SideEffects::EffectInstance<aiir::MemoryEffects::Effect>>
         &effects) {
-  for (mlir::Type t : type) {
+  for (aiir::Type t : type) {
     if (fir::isa_volatile_type(t)) {
-      effects.emplace_back(mlir::MemoryEffects::Read::get(),
+      effects.emplace_back(aiir::MemoryEffects::Read::get(),
                            fir::VolatileMemoryResource::get());
-      effects.emplace_back(mlir::MemoryEffects::Write::get(),
+      effects.emplace_back(aiir::MemoryEffects::Write::get(),
                            fir::VolatileMemoryResource::get());
       break;
     }
@@ -38,25 +38,25 @@ inline void addVolatileMemoryEffects(
 }
 
 /// Return true iff the Operation is a call.
-inline bool isaCall(mlir::Operation *op) {
-  return mlir::isa<fir::CallOp>(op) || mlir::isa<fir::DispatchOp>(op) ||
-         mlir::isa<mlir::func::CallOp>(op) ||
-         mlir::isa<mlir::func::CallIndirectOp>(op);
+inline bool isaCall(aiir::Operation *op) {
+  return aiir::isa<fir::CallOp>(op) || aiir::isa<fir::DispatchOp>(op) ||
+         aiir::isa<aiir::func::CallOp>(op) ||
+         aiir::isa<aiir::func::CallIndirectOp>(op);
 }
 
 /// Return true iff the Operation is a fir::CallOp, fir::DispatchOp,
-/// mlir::CallOp, or mlir::CallIndirectOp and not pure
+/// aiir::CallOp, or aiir::CallIndirectOp and not pure
 /// NB: This is not the same as `!pureCall(op)`.
-inline bool impureCall(mlir::Operation *op) {
+inline bool impureCall(aiir::Operation *op) {
   // Should we also auto-detect that the called function is pure if its
   // arguments are not references?  For now, rely on a "pure" attribute.
   return op && isaCall(op) && !op->getAttr("pure");
 }
 
 /// Return true iff the Operation is a fir::CallOp, fir::DispatchOp,
-/// mlir::CallOp, or mlir::CallIndirectOp and is also pure.
+/// aiir::CallOp, or aiir::CallIndirectOp and is also pure.
 /// NB: This is not the same as `!impureCall(op)`.
-inline bool pureCall(mlir::Operation *op) {
+inline bool pureCall(aiir::Operation *op) {
   // Should we also auto-detect that the called function is pure if its
   // arguments are not references?  For now, rely on a "pure" attribute.
   return op && isaCall(op) && op->getAttr("pure");
@@ -67,17 +67,17 @@ inline bool pureCall(mlir::Operation *op) {
 /// If `module` already contains FuncOp `name`, it is returned. Otherwise, a new
 /// FuncOp is created, and that new FuncOp is returned. A symbol table can
 /// be provided to speed-up the lookups.
-mlir::func::FuncOp createFuncOp(mlir::Location loc, mlir::ModuleOp module,
-                                llvm::StringRef name, mlir::FunctionType type,
-                                llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
-                                const mlir::SymbolTable *symbolTable = nullptr);
+aiir::func::FuncOp createFuncOp(aiir::Location loc, aiir::ModuleOp module,
+                                llvm::StringRef name, aiir::FunctionType type,
+                                llvm::ArrayRef<aiir::NamedAttribute> attrs = {},
+                                const aiir::SymbolTable *symbolTable = nullptr);
 
 /// Get or create a GlobalOp in a module. A symbol table can be provided to
 /// speed-up the lookups.
-fir::GlobalOp createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
-                             llvm::StringRef name, mlir::Type type,
-                             llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
-                             const mlir::SymbolTable *symbolTable = nullptr);
+fir::GlobalOp createGlobalOp(aiir::Location loc, aiir::ModuleOp module,
+                             llvm::StringRef name, aiir::Type type,
+                             llvm::ArrayRef<aiir::NamedAttribute> attrs = {},
+                             const aiir::SymbolTable *symbolTable = nullptr);
 
 /// Attribute to mark Fortran entities with the CONTIGUOUS attribute.
 constexpr llvm::StringRef getContiguousAttrName() { return "fir.contiguous"; }
@@ -138,12 +138,12 @@ static constexpr llvm::StringRef getAccessGroupsAttrName() {
 
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
-bool hasHostAssociationArgument(mlir::func::FuncOp func);
+bool hasHostAssociationArgument(aiir::func::FuncOp func);
 
 /// Is the function, \p func an internal procedure ?
 /// Some internal procedures may have access to saved host procedure
 /// variables even when they do not have a tuple argument.
-inline bool isInternalProcedure(mlir::func::FuncOp func) {
+inline bool isInternalProcedure(aiir::func::FuncOp func) {
   return func->hasAttr(fir::getHostSymbolAttrName());
 }
 
@@ -155,7 +155,7 @@ inline bool isInternalProcedure(mlir::func::FuncOp func) {
 ///     attributeName
 ///   - or, a fir.box loaded from a fir.ref<fir.box> that matches one of the
 ///     previous cases.
-bool valueHasFirAttribute(mlir::Value value, llvm::StringRef attributeName);
+bool valueHasFirAttribute(aiir::Value value, llvm::StringRef attributeName);
 
 /// A more conservative version of valueHasFirAttribute().
 /// If `value` is one of the operation/function-argument cases listed
@@ -167,16 +167,16 @@ bool valueHasFirAttribute(mlir::Value value, llvm::StringRef attributeName);
 /// Otherwise, the function will return true indicating that the attributes
 /// may actually be set but we were not able to reach the point of definition
 /// to confirm that.
-bool valueMayHaveFirAttributes(mlir::Value value,
+bool valueMayHaveFirAttributes(aiir::Value value,
                                llvm::ArrayRef<llvm::StringRef> attributeNames);
 
 /// Scan the arguments of a FuncOp to determine if any arguments have the
 /// attribute `attr` placed on them. This can be used to determine if the
 /// function has any host associations, for example.
-bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
+bool anyFuncArgsHaveAttr(aiir::func::FuncOp func, llvm::StringRef attr);
 
-/// Unwrap integer constant from an mlir::Value.
-std::optional<std::int64_t> getIntIfConstant(mlir::Value value);
+/// Unwrap integer constant from an aiir::Value.
+std::optional<std::int64_t> getIntIfConstant(aiir::Value value);
 
 static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
@@ -204,13 +204,13 @@ static constexpr llvm::StringRef getFortranProcedureFlagsAttrName() {
 // Template is used to avoid compiler errors in places that don't include
 // FIRBuilder.h
 template <typename Builder>
-inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
-  return {mlir::StringAttr::get(builder.getContext(),
+inline aiir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
+  return {aiir::StringAttr::get(builder.getContext(),
                                 fir::getAdaptToByRefAttrName()),
           builder.getUnitAttr()};
 }
 
-bool isDummyArgument(mlir::Value v);
+bool isDummyArgument(aiir::Value v);
 
 template <fir::FortranProcedureFlagsEnum Flag>
 inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
@@ -218,24 +218,24 @@ inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
 }
 
 template <fir::FortranProcedureFlagsEnum Flag>
-inline bool hasProcedureAttr(mlir::Operation *op) {
-  if (auto firCallOp = mlir::dyn_cast<fir::CallOp>(op))
+inline bool hasProcedureAttr(aiir::Operation *op) {
+  if (auto firCallOp = aiir::dyn_cast<fir::CallOp>(op))
     return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
-  if (auto firCallOp = mlir::dyn_cast<fir::DispatchOp>(op))
+  if (auto firCallOp = aiir::dyn_cast<fir::DispatchOp>(op))
     return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
   return hasProcedureAttr<Flag>(
       op->getAttrOfType<fir::FortranProcedureFlagsEnumAttr>(
           getFortranProcedureFlagsAttrName()));
 }
 
-inline bool hasBindcAttr(mlir::Operation *op) {
+inline bool hasBindcAttr(aiir::Operation *op) {
   return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
 }
 
 /// Get the allocation size of a given alloca if it has compile time constant
 /// size.
 std::optional<int64_t> getAllocaByteSize(fir::AllocaOp alloca,
-                                         const mlir::DataLayout &dl,
+                                         const aiir::DataLayout &dl,
                                          const fir::KindMapping &kindMap);
 
 /// Return true, if \p rebox operation keeps the input array

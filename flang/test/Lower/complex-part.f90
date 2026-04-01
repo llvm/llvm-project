@@ -1,5 +1,5 @@
 ! RUN: bbc %s -o - | tco | FileCheck %s
-! RUN: %flang -emit-llvm -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
+! RUN: %flang -emit-llvm -S -maiir -disable-external-name-interop %s -o - | FileCheck %s
 
   COMPLEX c
   c%RE = 3.14

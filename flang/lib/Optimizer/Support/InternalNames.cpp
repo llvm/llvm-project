@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Diagnostics.h"
+#include "aiir/IR/BuiltinTypes.h"
+#include "aiir/IR/Diagnostics.h"
 #include "llvm/Support/CommandLine.h"
 #include <optional>
 #include <regex>

@@ -1,4 +1,4 @@
-set(LLVM_ENABLE_PROJECTS "clang;flang;mlir;clang-tools-extra;lld" CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS "clang;flang;aiir;clang-tools-extra;lld" CACHE STRING "")
 set(LLVM_ENABLE_RUNTIMES "compiler-rt;flang-rt;libunwind;libcxx;libcxxabi;openmp;offload" CACHE STRING "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
 

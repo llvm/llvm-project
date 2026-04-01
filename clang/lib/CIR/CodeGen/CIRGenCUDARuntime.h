@@ -44,9 +44,9 @@ public:
                                         const CUDAKernelCallExpr *expr,
                                         ReturnValueSlot retValue);
 
-  virtual mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) = 0;
+  virtual aiir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) = 0;
 
-  virtual mlir::Operation *getKernelStub(mlir::Operation *handle) = 0;
+  virtual aiir::Operation *getKernelStub(aiir::Operation *handle) = 0;
 };
 
 CIRGenCUDARuntime *createNVCUDARuntime(CIRGenModule &cgm);

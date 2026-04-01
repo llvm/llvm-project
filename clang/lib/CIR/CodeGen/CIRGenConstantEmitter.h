@@ -63,9 +63,9 @@ public:
 
   /// Try to emit the initializer of the given declaration as an abstract
   /// constant.  If this succeeds, the emission must be finalized.
-  mlir::Attribute tryEmitForInitializer(const VarDecl &d);
+  aiir::Attribute tryEmitForInitializer(const VarDecl &d);
 
-  mlir::Attribute emitForInitializer(const APValue &value, QualType destType);
+  aiir::Attribute emitForInitializer(const APValue &value, QualType destType);
 
   void finalize(cir::GlobalOp gv);
 
@@ -82,43 +82,43 @@ public:
   //     initializer or to propagate to another context; for example,
   //     side effects, or emitting an initialization that requires a
   //     reference to its current location.
-  mlir::Attribute emitForMemory(mlir::Attribute c, QualType destType);
-  static mlir::Attribute emitForMemory(CIRGenModule &cgm, mlir::Attribute c,
+  aiir::Attribute emitForMemory(aiir::Attribute c, QualType destType);
+  static aiir::Attribute emitForMemory(CIRGenModule &cgm, aiir::Attribute c,
                                        clang::QualType destTy);
 
-  mlir::Attribute emitNullForMemory(mlir::Location loc, QualType t) {
+  aiir::Attribute emitNullForMemory(aiir::Location loc, QualType t) {
     return emitNullForMemory(loc, cgm, t);
   }
-  static mlir::Attribute emitNullForMemory(mlir::Location loc,
+  static aiir::Attribute emitNullForMemory(aiir::Location loc,
                                            CIRGenModule &cgm, QualType t);
 
   /// Try to emit the initializer of the given declaration as an abstract
   /// constant.
-  mlir::Attribute tryEmitAbstractForInitializer(const VarDecl &d);
+  aiir::Attribute tryEmitAbstractForInitializer(const VarDecl &d);
 
   /// Emit the result of the given expression as an abstract constant,
   /// asserting that it succeeded.  This is only safe to do when the
   /// expression is known to be a constant expression with either a fairly
   /// simple type or a known simple form.
-  mlir::Attribute emitAbstract(const Expr *e, QualType destType);
-  mlir::Attribute emitAbstract(SourceLocation loc, const APValue &value,
+  aiir::Attribute emitAbstract(const Expr *e, QualType destType);
+  aiir::Attribute emitAbstract(SourceLocation loc, const APValue &value,
                                QualType destType);
 
-  mlir::Attribute tryEmitConstantExpr(const ConstantExpr *ce);
+  aiir::Attribute tryEmitConstantExpr(const ConstantExpr *ce);
 
   // These are private helper routines of the constant emitter that
   // can't actually be private because things are split out into helper
   // functions and classes.
 
-  mlir::Attribute tryEmitPrivateForVarInit(const VarDecl &d);
+  aiir::Attribute tryEmitPrivateForVarInit(const VarDecl &d);
 
-  mlir::TypedAttr tryEmitPrivate(const Expr *e, QualType destType);
-  mlir::Attribute tryEmitPrivate(const APValue &value, QualType destType);
-  mlir::Attribute tryEmitPrivateForMemory(const Expr *e, QualType destTy);
-  mlir::Attribute tryEmitPrivateForMemory(const APValue &value,
+  aiir::TypedAttr tryEmitPrivate(const Expr *e, QualType destType);
+  aiir::Attribute tryEmitPrivate(const APValue &value, QualType destType);
+  aiir::Attribute tryEmitPrivateForMemory(const Expr *e, QualType destTy);
+  aiir::Attribute tryEmitPrivateForMemory(const APValue &value,
                                           QualType destTy);
 
-  mlir::Attribute tryEmitAbstract(const Expr *e, QualType destType);
+  aiir::Attribute tryEmitAbstract(const Expr *e, QualType destType);
 
 private:
 #ifndef NDEBUG
@@ -127,14 +127,14 @@ private:
     initializedNonAbstract = true;
     assert(!cir::MissingFeatures::addressSpace());
   }
-  mlir::Attribute markIfFailed(mlir::Attribute init) {
+  aiir::Attribute markIfFailed(aiir::Attribute init) {
     if (!init)
       failed = true;
     return init;
   }
 #else
   void initializeNonAbstract() {}
-  mlir::Attribute markIfFailed(mlir::Attribute init) { return init; }
+  aiir::Attribute markIfFailed(aiir::Attribute init) { return init; }
 #endif // NDEBUG
 
   class AbstractStateRAII {

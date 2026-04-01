@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -emit-hlfir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-hlfir -mllvm -outline-intrinsics -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-hlfir -mllvm -outline-intrinsics -mllvm --force-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST,CMPLX-MLIR"
+! RUN: %flang_fc1 -emit-hlfir -mllvm -outline-intrinsics -mllvm --force-aiir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST,CMPLX-AIIR"
 ! RUN: %flang_fc1 -fapprox-func -emit-hlfir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-APPROX"
 
 ! CHECK-LABEL: exp_testr
@@ -63,7 +63,7 @@ end subroutine
 
 ! CMPLX-APPROX-LABEL: private @fir.exp.contract_afn.z32.z32
 ! CMPLX-PRECISE-LABEL: private @fir.exp.contract.z32.z32
-! CMPLX-MLIR-LABEL: private @fir.exp.contract.z32.z32
+! CMPLX-AIIR-LABEL: private @fir.exp.contract.z32.z32
 ! CMPLX-SAME: (%[[C:.*]]: complex<f32>) -> complex<f32>
 ! CMPLX-FAST: %[[E:.*]] = complex.exp %[[C]] fastmath<contract> : complex<f32>
 ! CMPLX-APPROX: %[[E:.*]] = complex.exp %[[C]] fastmath<contract,afn> : complex<f32>
@@ -72,7 +72,7 @@ end subroutine
 
 ! CMPLX-APPROX-LABEL: private @fir.exp.contract_afn.z64.z64
 ! CMPLX-PRECISE-LABEL: private @fir.exp.contract.z64.z64
-! CMPLX-MLIR-LABEL: private @fir.exp.contract.z64.z64
+! CMPLX-AIIR-LABEL: private @fir.exp.contract.z64.z64
 ! CMPLX-SAME: (%[[C:.*]]: complex<f64>) -> complex<f64>
 ! CMPLX-FAST: %[[E:.*]] = complex.exp %[[C]] fastmath<contract> : complex<f64>
 ! CMPLX-APPROX: %[[E:.*]] = complex.exp %[[C]] fastmath<contract,afn> : complex<f64>

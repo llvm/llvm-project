@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,9 +15,9 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Target/LLVMIR/ModuleTranslation.h"
-#include "mlir/Transforms/InliningUtils.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Target/LLVMIR/ModuleTranslation.h"
+#include "aiir/Transforms/InliningUtils.h"
 
 #include "flang/Optimizer/Dialect/FIRDialect.cpp.inc"
 
@@ -25,18 +25,18 @@ using namespace fir;
 
 namespace {
 /// This class defines the interface for handling inlining of FIR calls.
-struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
+struct FIRInlinerInterface : public aiir::DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
-  bool isLegalToInline(mlir::Operation *call, mlir::Operation *callable,
+  bool isLegalToInline(aiir::Operation *call, aiir::Operation *callable,
                        bool wouldBeCloned) const final {
     return fir::canLegallyInline(call, callable, wouldBeCloned);
   }
 
   /// This hook checks to see if the operation `op` is legal to inline into the
   /// given region `reg`.
-  bool isLegalToInline(mlir::Operation *op, mlir::Region *reg,
-                       bool wouldBeCloned, mlir::IRMapping &map) const final {
+  bool isLegalToInline(aiir::Operation *op, aiir::Region *reg,
+                       bool wouldBeCloned, aiir::IRMapping &map) const final {
     return fir::canLegallyInline(op, reg, wouldBeCloned, map);
   }
 
@@ -44,18 +44,18 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
   /// We handle the return (a Fortran FUNCTION) by replacing the values
   /// previously returned by the call operation with the operands of the
   /// return.
-  void handleTerminator(mlir::Operation *op,
-                        mlir::ValueRange valuesToRepl) const final {
-    auto returnOp = llvm::cast<mlir::func::ReturnOp>(op);
+  void handleTerminator(aiir::Operation *op,
+                        aiir::ValueRange valuesToRepl) const final {
+    auto returnOp = llvm::cast<aiir::func::ReturnOp>(op);
     assert(returnOp.getNumOperands() == valuesToRepl.size());
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
 
-  mlir::Operation *materializeCallConversion(mlir::OpBuilder &builder,
-                                             mlir::Value input,
-                                             mlir::Type resultType,
-                                             mlir::Location loc) const final {
+  aiir::Operation *materializeCallConversion(aiir::OpBuilder &builder,
+                                             aiir::Value input,
+                                             aiir::Type resultType,
+                                             aiir::Location loc) const final {
     return fir::ConvertOp::create(builder, loc, resultType, input);
   }
 };
@@ -72,9 +72,9 @@ void fir::FIROpsDialect::initialize() {
 }
 
 // Register the FIRInlinerInterface to FIROpsDialect
-void fir::addFIRInlinerExtension(mlir::DialectRegistry &registry) {
+void fir::addFIRInlinerExtension(aiir::DialectRegistry &registry) {
   registry.addExtension(
-      +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
+      +[](aiir::AIIRContext *ctx, fir::FIROpsDialect *dialect) {
         dialect->addInterface<FIRInlinerInterface>();
       });
 }
@@ -88,29 +88,29 @@ void fir::addFIRInlinerExtension(mlir::DialectRegistry &registry) {
 // attributes - this helps to avoid warnings about unhandled attributes.
 // We can provide our own implementation of the interface,
 // when more sophisticated translation is required.
-void fir::addFIRToLLVMIRExtension(mlir::DialectRegistry &registry) {
+void fir::addFIRToLLVMIRExtension(aiir::DialectRegistry &registry) {
   registry.addExtension(
-      +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
-        dialect->addInterface<mlir::LLVMTranslationDialectInterface>();
+      +[](aiir::AIIRContext *ctx, fir::FIROpsDialect *dialect) {
+        dialect->addInterface<aiir::LLVMTranslationDialectInterface>();
       });
 }
 
-mlir::Type fir::FIROpsDialect::parseType(mlir::DialectAsmParser &parser) const {
+aiir::Type fir::FIROpsDialect::parseType(aiir::DialectAsmParser &parser) const {
   return parseFirType(const_cast<FIROpsDialect *>(this), parser);
 }
 
-void fir::FIROpsDialect::printType(mlir::Type ty,
-                                   mlir::DialectAsmPrinter &p) const {
+void fir::FIROpsDialect::printType(aiir::Type ty,
+                                   aiir::DialectAsmPrinter &p) const {
   return printFirType(const_cast<FIROpsDialect *>(this), ty, p);
 }
 
-mlir::Attribute
-fir::FIROpsDialect::parseAttribute(mlir::DialectAsmParser &parser,
-                                   mlir::Type type) const {
+aiir::Attribute
+fir::FIROpsDialect::parseAttribute(aiir::DialectAsmParser &parser,
+                                   aiir::Type type) const {
   return parseFirAttribute(const_cast<FIROpsDialect *>(this), parser, type);
 }
 
-void fir::FIROpsDialect::printAttribute(mlir::Attribute attr,
-                                        mlir::DialectAsmPrinter &p) const {
+void fir::FIROpsDialect::printAttribute(aiir::Attribute attr,
+                                        aiir::DialectAsmPrinter &p) const {
   printFirAttribute(const_cast<FIROpsDialect *>(this), attr, p);
 }

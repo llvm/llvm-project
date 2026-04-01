@@ -36,16 +36,16 @@ if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
   list(APPEND CROSS_PROJECT_TEST_DEPS clang)
 endif()
 
-if ("mlir" IN_LIST LLVM_ENABLE_PROJECTS)
-  add_llvm_executable(check-gdb-mlir-support
-        debuginfo-tests/llvm-prettyprinters/gdb/mlir-support.cpp
+if ("aiir" IN_LIST LLVM_ENABLE_PROJECTS)
+  add_llvm_executable(check-gdb-aiir-support
+        debuginfo-tests/llvm-prettyprinters/gdb/aiir-support.cpp
   )
-  target_include_directories(check-gdb-mlir-support PRIVATE
-                               ${LLVM_EXTERNAL_MLIR_SOURCE_DIR}/include
-                               ${LLVM_BINARY_DIR}/tools/mlir/include)
-  target_link_libraries(check-gdb-mlir-support PRIVATE MLIRIR)
-  list(APPEND CROSS_PROJECT_TEST_DEPS check-gdb-mlir-support)
-  set(MLIR_SOURCE_DIR  ${LLVM_EXTERNAL_MLIR_SOURCE_DIR})
+  target_include_directories(check-gdb-aiir-support PRIVATE
+                               ${LLVM_EXTERNAL_AIIR_SOURCE_DIR}/include
+                               ${LLVM_BINARY_DIR}/tools/aiir/include)
+  target_link_libraries(check-gdb-aiir-support PRIVATE AIIRIR)
+  list(APPEND CROSS_PROJECT_TEST_DEPS check-gdb-aiir-support)
+  set(AIIR_SOURCE_DIR  ${LLVM_EXTERNAL_AIIR_SOURCE_DIR})
 endif()
 
 if("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)

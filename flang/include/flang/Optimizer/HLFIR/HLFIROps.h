@@ -15,10 +15,10 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/Interfaces/InferTypeOpInterface.h"
+#include "aiir/Interfaces/SideEffectInterfaces.h"
 #include <variant>
 
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.h.inc"

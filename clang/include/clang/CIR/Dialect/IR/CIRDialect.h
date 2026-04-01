@@ -13,18 +13,18 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_H
 #define CLANG_CIR_DIALECT_IR_CIRDIALECT_H
 
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/BuiltinTypes.h"
+#include "aiir/IR/Dialect.h"
+#include "aiir/IR/OpDefinition.h"
+#include "aiir/Interfaces/CallInterfaces.h"
+#include "aiir/Interfaces/ControlFlowInterfaces.h"
+#include "aiir/Interfaces/FunctionInterfaces.h"
+#include "aiir/Interfaces/InferTypeOpInterface.h"
+#include "aiir/Interfaces/LoopLikeInterface.h"
+#include "aiir/Interfaces/MemorySlotInterfaces.h"
+#include "aiir/Interfaces/SideEffectInterfaces.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsDialect.h.inc"
@@ -35,15 +35,15 @@
 #include "clang/CIR/MissingFeatures.h"
 
 using BuilderCallbackRef =
-    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>;
+    llvm::function_ref<void(aiir::OpBuilder &, aiir::Location)>;
 using BuilderOpStateCallbackRef = llvm::function_ref<void(
-    mlir::OpBuilder &, mlir::Location, mlir::OperationState &)>;
+    aiir::OpBuilder &, aiir::Location, aiir::OperationState &)>;
 
 namespace cir {
-void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
+void buildTerminatedBody(aiir::OpBuilder &builder, aiir::Location loc);
 } // namespace cir
 
-// TableGen'erated files for MLIR dialects require that a macro be defined when
+// TableGen'erated files for AIIR dialects require that a macro be defined when
 // they are included.  GET_OP_CLASSES tells the file to define the classes for
 // the operations of that dialect.
 #define GET_OP_CLASSES

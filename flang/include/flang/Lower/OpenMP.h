@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,14 +18,14 @@
 #include <cinttypes>
 #include <utility>
 
-namespace mlir {
+namespace aiir {
 class Operation;
 class Location;
 namespace omp {
 enum class DeclareTargetDeviceType : uint32_t;
 enum class DeclareTargetCaptureClause : uint32_t;
 } // namespace omp
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -56,15 +56,15 @@ struct Variable;
 } // namespace pft
 
 struct OMPDeferredDeclareTargetInfo {
-  mlir::omp::DeclareTargetCaptureClause declareTargetCaptureClause;
-  mlir::omp::DeclareTargetDeviceType declareTargetDeviceType;
+  aiir::omp::DeclareTargetCaptureClause declareTargetCaptureClause;
+  aiir::omp::DeclareTargetDeviceType declareTargetDeviceType;
   bool automap = false;
   const Fortran::semantics::Symbol &sym;
 };
 
 // Generate the OpenMP terminator for Operation at Location.
-mlir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
-                                     mlir::Location);
+aiir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, aiir::Operation *,
+                                     aiir::Location);
 
 void genOpenMPConstruct(AbstractConverter &, Fortran::lower::SymMap &,
                         semantics::SemanticsContext &, pft::Evaluation &,
@@ -94,9 +94,9 @@ void gatherOpenMPDeferredDeclareTargets(
     const parser::OpenMPDeclarativeConstruct &,
     llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &);
 bool markOpenMPDeferredDeclareTargetFunctions(
-    mlir::Operation *, llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &,
+    aiir::Operation *, llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &,
     AbstractConverter &);
-void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
+void genOpenMPRequires(aiir::Operation *, const Fortran::semantics::Symbol *);
 
 // Materialize omp.declare_mapper ops for mapper declarations found in
 // imported modules. If \p scope is null, materialize for the whole

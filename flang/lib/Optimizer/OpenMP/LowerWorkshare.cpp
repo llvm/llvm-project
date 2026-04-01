@@ -9,7 +9,7 @@
 // This file implements the lowering of omp.workshare to other omp constructs.
 //
 // This pass is tasked with parallelizing the loops nested in
-// workshare.loop_wrapper while both the Fortran to mlir lowering and the hlfir
+// workshare.loop_wrapper while both the Fortran to aiir lowering and the hlfir
 // to fir lowering pipelines are responsible for emitting the
 // workshare.loop_wrapper ops where appropriate according to the
 // `shouldUseWorkshareLowering` function.
@@ -27,20 +27,20 @@
 #include <llvm/ADT/SmallVectorExtras.h>
 #include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/ErrorHandling.h>
-#include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/LLVMIR/LLVMTypes.h>
-#include <mlir/Dialect/OpenMP/OpenMPClauseOperands.h>
-#include <mlir/Dialect/OpenMP/OpenMPDialect.h>
-#include <mlir/Dialect/SCF/IR/SCF.h>
-#include <mlir/IR/BuiltinOps.h>
-#include <mlir/IR/IRMapping.h>
-#include <mlir/IR/OpDefinition.h>
-#include <mlir/IR/PatternMatch.h>
-#include <mlir/IR/Value.h>
-#include <mlir/IR/Visitors.h>
-#include <mlir/Interfaces/LoopLikeInterface.h>
-#include <mlir/Interfaces/SideEffectInterfaces.h>
-#include <mlir/Support/LLVM.h>
+#include <aiir/Dialect/Arith/IR/Arith.h>
+#include <aiir/Dialect/LLVMIR/LLVMTypes.h>
+#include <aiir/Dialect/OpenMP/OpenMPClauseOperands.h>
+#include <aiir/Dialect/OpenMP/OpenMPDialect.h>
+#include <aiir/Dialect/SCF/IR/SCF.h>
+#include <aiir/IR/BuiltinOps.h>
+#include <aiir/IR/IRMapping.h>
+#include <aiir/IR/OpDefinition.h>
+#include <aiir/IR/PatternMatch.h>
+#include <aiir/IR/Value.h>
+#include <aiir/IR/Visitors.h>
+#include <aiir/Interfaces/LoopLikeInterface.h>
+#include <aiir/Interfaces/SideEffectInterfaces.h>
+#include <aiir/Support/LLVM.h>
 
 #include <variant>
 
@@ -51,7 +51,7 @@ namespace flangomp {
 
 #define DEBUG_TYPE "lower-workshare"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace flangomp {
 
@@ -157,8 +157,8 @@ static bool isOpenMPThreadLocalMemory(Operation *op, Value mem) {
   fir::AliasAnalysis::Source source = aliasAnalysis.getSource(mem);
 
   // Check if the source is a Value (not a global symbol).
-  mlir::Value sourceValue =
-      llvm::dyn_cast_if_present<mlir::Value>(source.origin.u);
+  aiir::Value sourceValue =
+      llvm::dyn_cast_if_present<aiir::Value>(source.origin.u);
   if (!sourceValue)
     return false;
 
@@ -265,25 +265,25 @@ static bool isSafeToParallelize(Operation *op) {
 /// Simple shallow copies suffice for our purposes in this pass, so we implement
 /// this simpler alternative to the full fledged `createCopyFunc` in the
 /// frontend
-static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
+static aiir::func::FuncOp createCopyFunc(aiir::Location loc, aiir::Type varType,
                                          fir::FirOpBuilder builder) {
-  mlir::ModuleOp module = builder.getModule();
+  aiir::ModuleOp module = builder.getModule();
   auto rt = cast<fir::ReferenceType>(varType);
-  mlir::Type eleTy = rt.getEleTy();
+  aiir::Type eleTy = rt.getEleTy();
   std::string copyFuncName =
       fir::getTypeAsString(eleTy, builder.getKindMap(), "_workshare_copy");
 
-  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
+  if (auto decl = module.lookupSymbol<aiir::func::FuncOp>(copyFuncName))
     return decl;
 
   // create function
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::OpBuilder modBuilder(module.getBodyRegion());
-  llvm::SmallVector<mlir::Type> argsTy = {varType, varType};
-  auto funcType = mlir::FunctionType::get(builder.getContext(), argsTy, {});
-  mlir::func::FuncOp funcOp =
-      mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
-  funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  aiir::OpBuilder::InsertionGuard guard(builder);
+  aiir::OpBuilder modBuilder(module.getBodyRegion());
+  llvm::SmallVector<aiir::Type> argsTy = {varType, varType};
+  auto funcType = aiir::FunctionType::get(builder.getContext(), argsTy, {});
+  aiir::func::FuncOp funcOp =
+      aiir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
+  funcOp.setVisibility(aiir::SymbolTable::Visibility::Private);
   fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
@@ -292,7 +292,7 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
   Value loaded = fir::LoadOp::create(builder, loc, funcOp.getArgument(1));
   fir::StoreOp::create(builder, loc, loaded, funcOp.getArgument(0));
 
-  mlir::func::ReturnOp::create(builder, loc);
+  aiir::func::ReturnOp::create(builder, loc);
   return funcOp;
 }
 
@@ -344,7 +344,7 @@ static void cleanupBlock(Block *block) {
 
 static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
                               IRMapping &rootMapping, Location loc,
-                              mlir::DominanceInfo &di) {
+                              aiir::DominanceInfo &di) {
   OpBuilder rootBuilder(sourceRegion.getContext());
   ModuleOp m = sourceRegion.getParentOfType<ModuleOp>();
   OpBuilder copyFuncBuilder(m.getBodyRegion());
@@ -493,7 +493,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           singleOperands.copyprivateVars = copyprivateVars;
           cleanupBlock(singleBlock);
           for (auto var : singleOperands.copyprivateVars) {
-            mlir::func::FuncOp funcOp =
+            aiir::func::FuncOp funcOp =
                 createCopyFunc(loc, var.getType(), firCopyFuncBuilder);
             singleOperands.copyprivateSyms.push_back(
                 SymbolRefAttr::get(funcOp));
@@ -515,7 +515,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           if (isLast)
             wsloopOperands.nowait = rootBuilder.getUnitAttr();
           auto wsloop =
-              mlir::omp::WsloopOp::create(rootBuilder, loc, wsloopOperands);
+              aiir::omp::WsloopOp::create(rootBuilder, loc, wsloopOperands);
           auto clonedWslw = cast<omp::WorkshareLoopWrapperOp>(
               rootBuilder.clone(*wslw, rootMapping));
           wsloop.getRegion().takeBody(clonedWslw.getRegion());
@@ -573,7 +573,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
 ///
 /// Note that we allocate temporary memory for values in omp.single's which need
 /// to be accessed by all threads and broadcast them using single's copyprivate
-LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
+LogicalResult lowerWorkshare(aiir::omp::WorkshareOp wsOp, DominanceInfo &di) {
   Location loc = wsOp->getLoc();
   IRMapping rootMapping;
 
@@ -581,7 +581,7 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
 
   // FIXME Currently, we only support workshare constructs with structured
   // control flow. The transformation itself supports CFG, however, once we
-  // transform the MLIR region in the omp.workshare, we need to inline that
+  // transform the AIIR region in the omp.workshare, we need to inline that
   // region in the parent block. We have no guarantees at this point of the
   // pipeline that the parent op supports CFG (e.g. fir.if), thus this is not
   // generally possible.  The alternative is to put the lowered region in an
@@ -647,8 +647,8 @@ class LowerWorksharePass
     : public flangomp::impl::LowerWorkshareBase<LowerWorksharePass> {
 public:
   void runOnOperation() override {
-    mlir::DominanceInfo &di = getAnalysis<mlir::DominanceInfo>();
-    getOperation()->walk([&](mlir::omp::WorkshareOp wsOp) {
+    aiir::DominanceInfo &di = getAnalysis<aiir::DominanceInfo>();
+    getOperation()->walk([&](aiir::omp::WorkshareOp wsOp) {
       if (failed(lowerWorkshare(wsOp, di)))
         signalPassFailure();
     });

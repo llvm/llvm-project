@@ -10,81 +10,81 @@
 #define FORTRAN_LOWER_CUDAINTRINSICCALL_H
 
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "aiir/Dialect/LLVMIR/NVVMDialect.h"
 
 namespace fir {
 
 struct CUDAIntrinsicLibrary : IntrinsicLibrary {
 
   // Constructors.
-  explicit CUDAIntrinsicLibrary(fir::FirOpBuilder &builder, mlir::Location loc)
+  explicit CUDAIntrinsicLibrary(fir::FirOpBuilder &builder, aiir::Location loc)
       : IntrinsicLibrary(builder, loc) {}
   CUDAIntrinsicLibrary() = delete;
   CUDAIntrinsicLibrary(const CUDAIntrinsicLibrary &) = delete;
 
   // CUDA intrinsic handlers.
-  mlir::Value genAtomicAdd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAtomicAddR2(mlir::Type,
+  aiir::Value genAtomicAdd(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genAtomicAddR2(aiir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
   template <int extent>
-  fir::ExtendedValue genAtomicAddVector(mlir::Type,
+  fir::ExtendedValue genAtomicAddVector(aiir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genAtomicAddVector4x4(mlir::Type,
+  fir::ExtendedValue genAtomicAddVector4x4(aiir::Type,
                                            llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAtomicCas(mlir::Type,
+  aiir::Value genAtomicAnd(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genAtomicCas(aiir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAtomicDec(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAtomicExch(mlir::Type,
+  aiir::Value genAtomicDec(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genAtomicExch(aiir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAtomicInc(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicMax(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicMin(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicSub(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAtomicXor(mlir::Type,
+  aiir::Value genAtomicInc(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genAtomicMax(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genAtomicMin(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genAtomicOr(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genAtomicSub(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genAtomicXor(aiir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genBarrierArrive(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genBarrierArriveCnt(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genBarrierArrive(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genBarrierArriveCnt(aiir::Type, llvm::ArrayRef<aiir::Value>);
   void genBarrierInit(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genBarrierTryWait(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genBarrierTryWaitSleep(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genClusterBlockIndex(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genClusterDimBlocks(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genBarrierTryWait(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genBarrierTryWaitSleep(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genClusterBlockIndex(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genClusterDimBlocks(aiir::Type, llvm::ArrayRef<aiir::Value>);
   fir::ExtendedValue
-      genCUDASetDefaultStream(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+      genCUDASetDefaultStream(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue
-      genCUDASetDefaultStreamArray(mlir::Type,
+      genCUDASetDefaultStreamArray(aiir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue
-      genCUDAGetDefaultStreamArg(mlir::Type,
+      genCUDAGetDefaultStreamArg(aiir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genCUDAGetDefaultStreamNull(mlir::Type,
-                                          llvm::ArrayRef<mlir::Value>);
+  aiir::Value genCUDAGetDefaultStreamNull(aiir::Type,
+                                          llvm::ArrayRef<aiir::Value>);
   fir::ExtendedValue
-      genCUDAStreamSynchronize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genCUDAStreamSynchronizeNull(mlir::Type,
-                                           llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genCUDAStreamDestroy(mlir::Type,
+      genCUDAStreamSynchronize(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genCUDAStreamSynchronizeNull(aiir::Type,
+                                           llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genCUDAStreamDestroy(aiir::Type,
                                           llvm::ArrayRef<fir::ExtendedValue>);
   void genFenceProxyAsync(llvm::ArrayRef<fir::ExtendedValue>);
   template <const char *fctName, int extent>
-  fir::ExtendedValue genLDXXFunc(mlir::Type,
+  fir::ExtendedValue genLDXXFunc(aiir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genMatchAllSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genMatchAnySync(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genMatchAllSync(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genMatchAnySync(aiir::Type, llvm::ArrayRef<aiir::Value>);
   template <typename OpTy>
-  mlir::Value genNVVMTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genNVVMTime(aiir::Type, llvm::ArrayRef<aiir::Value>);
   void genSyncThreads(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genSyncThreadsAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSyncThreadsOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genSyncThreadsAnd(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genSyncThreadsCount(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genSyncThreadsOr(aiir::Type, llvm::ArrayRef<aiir::Value>);
   void genSyncWarp(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genThisCluster(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genThisGrid(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genThisThreadBlock(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genThisWarp(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  template <mlir::NVVM::MemScopeKind scope>
+  aiir::Value genThisCluster(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genThisGrid(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genThisThreadBlock(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genThisWarp(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  template <aiir::NVVM::MemScopeKind scope>
   void genThreadFence(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkCommitGroup(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue>);
@@ -104,8 +104,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   void genTMABulkStoreR4(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkStoreR8(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkWaitGroup(llvm::ArrayRef<fir::ExtendedValue>);
-  template <mlir::NVVM::VoteSyncKind kind>
-  mlir::Value genVoteSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  template <aiir::NVVM::VoteSyncKind kind>
+  aiir::Value genVoteSync(aiir::Type, llvm::ArrayRef<aiir::Value>);
 };
 
 const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name);

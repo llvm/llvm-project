@@ -1,0 +1,9 @@
+add_subdirectory(Transforms)
+
+set(LLVM_TARGET_DEFINITIONS LLVMTranslationDialectInterface.td)
+aiir_tablegen(LLVMTranslationDialectInterface.h.inc -gen-dialect-interface-decls)
+add_aiir_generic_tablegen_target(AIIRLLVMTranslationDialectInterfaceIncGen)
+
+set(LLVM_TARGET_DEFINITIONS LLVMImportDialectInterface.td)
+aiir_tablegen(LLVMImportDialectInterface.h.inc -gen-dialect-interface-decls)
+add_aiir_generic_tablegen_target(AIIRLLVMImportDialectInterfaceIncGen)

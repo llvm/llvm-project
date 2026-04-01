@@ -1,4 +1,4 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s -o - | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s -o - | FileCheck %s
 
 module {
   func.func @test(%arg0: !fir.ref<!fir.char<1,?>> {fir.bindc_name = "str"}, %arg1: i64) {

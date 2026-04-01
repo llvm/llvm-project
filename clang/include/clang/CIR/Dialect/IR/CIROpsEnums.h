@@ -13,7 +13,7 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIROPSENUMS_H
 #define CLANG_CIR_DIALECT_IR_CIROPSENUMS_H
 
-#include "mlir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinAttributes.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h.inc"
 
 namespace cir {

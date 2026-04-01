@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,7 +14,7 @@
 #define FORTRAN_OPTIMIZER_CODEGEN_TBAABUILDER_H
 
 #include "flang/Optimizer/Analysis/TBAAForest.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace fir {
 
@@ -168,52 +168,52 @@ namespace fir {
 class TBAABuilder {
 public:
   /// if forceUnifiedTree is true, functions will not have different TBAA trees
-  TBAABuilder(mlir::MLIRContext *context, bool applyTBAA,
+  TBAABuilder(aiir::AIIRContext *context, bool applyTBAA,
               bool forceUnifiedTree = false);
   TBAABuilder(TBAABuilder const &) = delete;
   TBAABuilder &operator=(TBAABuilder const &) = delete;
 
   // Attach the llvm.tbaa attribute to the given memory accessing operation
   // based on the provided base/access FIR types and the GEPOp.
-  void attachTBAATag(mlir::LLVM::AliasAnalysisOpInterface op,
-                     mlir::Type baseFIRType, mlir::Type accessFIRType,
-                     mlir::LLVM::GEPOp gep);
+  void attachTBAATag(aiir::LLVM::AliasAnalysisOpInterface op,
+                     aiir::Type baseFIRType, aiir::Type accessFIRType,
+                     aiir::LLVM::GEPOp gep);
 
 private:
   // Find or create TBAATagAttr attribute (TBAA access tag) with the specified
   // components and return it.
-  mlir::LLVM::TBAATagAttr
-  getAccessTag(mlir::LLVM::TBAATypeDescriptorAttr baseTypeDesc,
-               mlir::LLVM::TBAATypeDescriptorAttr accessTypeDesc,
+  aiir::LLVM::TBAATagAttr
+  getAccessTag(aiir::LLVM::TBAATypeDescriptorAttr baseTypeDesc,
+               aiir::LLVM::TBAATypeDescriptorAttr accessTypeDesc,
                int64_t offset);
 
   // Returns TBAATagAttr representing access tag:
   //   < <descriptor member>, <descriptor member>, 0 >
-  mlir::LLVM::TBAATagAttr getAnyBoxAccessTag(mlir::LLVM::LLVMFuncOp func);
+  aiir::LLVM::TBAATagAttr getAnyBoxAccessTag(aiir::LLVM::LLVMFuncOp func);
   // Returns TBAATagAttr representing access tag:
   //   < <any data access>, <any data access>, 0 >
-  mlir::LLVM::TBAATagAttr getAnyDataAccessTag(mlir::LLVM::LLVMFuncOp func);
+  aiir::LLVM::TBAATagAttr getAnyDataAccessTag(aiir::LLVM::LLVMFuncOp func);
   // Returns TBAATagAttr representing access tag:
   //   < <any access>, <any access>, 0 >
-  mlir::LLVM::TBAATagAttr getAnyAccessTag(mlir::LLVM::LLVMFuncOp func);
+  aiir::LLVM::TBAATagAttr getAnyAccessTag(aiir::LLVM::LLVMFuncOp func);
 
   // Returns TBAATagAttr representing access tag described by the base and
   // access FIR types and the LLVM::GepOp representing the access in terms of
   // the FIR types converted to LLVM types. The base type must be derivative of
   // fir::BaseBoxType.
-  mlir::LLVM::TBAATagAttr getBoxAccessTag(mlir::Type baseFIRType,
-                                          mlir::Type accessFIRType,
-                                          mlir::LLVM::GEPOp gep,
-                                          mlir::LLVM::LLVMFuncOp func);
+  aiir::LLVM::TBAATagAttr getBoxAccessTag(aiir::Type baseFIRType,
+                                          aiir::Type accessFIRType,
+                                          aiir::LLVM::GEPOp gep,
+                                          aiir::LLVM::LLVMFuncOp func);
 
   // Returns TBAATagAttr representing access tag described by the base and
   // access FIR types and the LLVM::GepOp representing the access in terms of
   // the FIR types converted to LLVM types. The FIR types must describe the
   // "data" access, i.e. not an access of any box/descriptor member.
-  mlir::LLVM::TBAATagAttr getDataAccessTag(mlir::Type baseFIRType,
-                                           mlir::Type accessFIRType,
-                                           mlir::LLVM::GEPOp gep,
-                                           mlir::LLVM::LLVMFuncOp func);
+  aiir::LLVM::TBAATagAttr getDataAccessTag(aiir::Type baseFIRType,
+                                           aiir::Type accessFIRType,
+                                           aiir::LLVM::GEPOp gep,
+                                           aiir::LLVM::LLVMFuncOp func);
 
   // Set to true, if TBAA builder is active, otherwise, all public
   // methods are no-ops.
@@ -224,13 +224,13 @@ private:
 
   // Mapping from a FIR type to the corresponding TBAATypeDescriptorAttr. It
   // must be populated during the type conversion. Currently unused.
-  llvm::DenseMap<mlir::Type, mlir::LLVM::TBAATypeDescriptorAttr> typeDescMap;
+  llvm::DenseMap<aiir::Type, aiir::LLVM::TBAATypeDescriptorAttr> typeDescMap;
 
   // Each TBAA tag is a tuple of <baseTypeSym, accessTypeSym, offset>.
   // This map holds a TBAATagAttr for each unique tuple.
   llvm::DenseMap<
-      std::tuple<mlir::LLVM::TBAANodeAttr, mlir::LLVM::TBAANodeAttr, int64_t>,
-      mlir::LLVM::TBAATagAttr>
+      std::tuple<aiir::LLVM::TBAANodeAttr, aiir::LLVM::TBAANodeAttr, int64_t>,
+      aiir::LLVM::TBAATagAttr>
       tagsMap;
 
   TBAAForrest trees;

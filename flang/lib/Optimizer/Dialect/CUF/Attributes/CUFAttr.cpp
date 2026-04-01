@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/Operation.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinTypes.h"
+#include "aiir/IR/DialectImplementation.h"
+#include "aiir/IR/OpDefinition.h"
+#include "aiir/IR/Operation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFEnumAttr.cpp.inc"
@@ -30,7 +30,7 @@ void CUFDialect::registerAttributes() {
                 LaunchBoundsAttr, ProcAttributeAttr>();
 }
 
-cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {
+cuf::DataAttributeAttr getDataAttr(aiir::Operation *op) {
   if (!op)
     return {};
 
@@ -46,7 +46,7 @@ cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {
   return {};
 }
 
-bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value) {
+bool hasDataAttr(aiir::Operation *op, cuf::DataAttribute value) {
   if (auto dataAttr = getDataAttr(op))
     return dataAttr.getValue() == value;
   return false;
@@ -60,7 +60,7 @@ bool isDeviceDataAttribute(cuf::DataAttribute attr) {
          attr == cuf::DataAttribute::Unified;
 }
 
-bool hasDeviceDataAttr(mlir::Operation *op) {
+bool hasDeviceDataAttr(aiir::Operation *op) {
   if (auto dataAttr = getDataAttr(op))
     return isDeviceDataAttribute(dataAttr.getValue());
   return false;

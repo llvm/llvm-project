@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,39 +17,39 @@
 
 #define DEBUG_TYPE "flang-lower-cuda"
 
-mlir::Type Fortran::lower::gatherDeviceComponentCoordinatesAndType(
-    fir::FirOpBuilder &builder, mlir::Location loc,
+aiir::Type Fortran::lower::gatherDeviceComponentCoordinatesAndType(
+    fir::FirOpBuilder &builder, aiir::Location loc,
     const Fortran::semantics::Symbol &sym, fir::RecordType recTy,
-    llvm::SmallVector<mlir::Value> &coordinates) {
+    llvm::SmallVector<aiir::Value> &coordinates) {
   unsigned fieldIdx = recTy.getFieldIndex(sym.name().ToString());
-  mlir::Type fieldTy;
+  aiir::Type fieldTy;
   if (fieldIdx != std::numeric_limits<unsigned>::max()) {
     // Field found in the base record type.
     auto fieldName = recTy.getTypeList()[fieldIdx].first;
     fieldTy = recTy.getTypeList()[fieldIdx].second;
-    mlir::Value fieldIndex = fir::FieldIndexOp::create(
+    aiir::Value fieldIndex = fir::FieldIndexOp::create(
         builder, loc, fir::FieldType::get(fieldTy.getContext()), fieldName,
         recTy,
-        /*typeParams=*/mlir::ValueRange{});
+        /*typeParams=*/aiir::ValueRange{});
     coordinates.push_back(fieldIndex);
   } else {
     // Field not found in base record type, search in potential
     // record type components.
     for (auto component : recTy.getTypeList()) {
-      if (auto childRecTy = mlir::dyn_cast<fir::RecordType>(component.second)) {
+      if (auto childRecTy = aiir::dyn_cast<fir::RecordType>(component.second)) {
         fieldIdx = childRecTy.getFieldIndex(sym.name().ToString());
         if (fieldIdx != std::numeric_limits<unsigned>::max()) {
-          mlir::Value parentFieldIndex = fir::FieldIndexOp::create(
+          aiir::Value parentFieldIndex = fir::FieldIndexOp::create(
               builder, loc, fir::FieldType::get(childRecTy.getContext()),
               component.first, recTy,
-              /*typeParams=*/mlir::ValueRange{});
+              /*typeParams=*/aiir::ValueRange{});
           coordinates.push_back(parentFieldIndex);
           auto fieldName = childRecTy.getTypeList()[fieldIdx].first;
           fieldTy = childRecTy.getTypeList()[fieldIdx].second;
-          mlir::Value childFieldIndex = fir::FieldIndexOp::create(
+          aiir::Value childFieldIndex = fir::FieldIndexOp::create(
               builder, loc, fir::FieldType::get(fieldTy.getContext()),
               fieldName, childRecTy,
-              /*typeParams=*/mlir::ValueRange{});
+              /*typeParams=*/aiir::ValueRange{});
           coordinates.push_back(childFieldIndex);
           break;
         }
@@ -62,14 +62,14 @@ mlir::Type Fortran::lower::gatherDeviceComponentCoordinatesAndType(
 }
 
 cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
-    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
+    aiir::AIIRContext *aiirContext, const Fortran::semantics::Symbol &sym) {
   std::optional<Fortran::common::CUDADataAttr> cudaAttr =
       Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
-  return cuf::getDataAttribute(mlirContext, cudaAttr);
+  return cuf::getDataAttribute(aiirContext, cudaAttr);
 }
 
 std::pair<hlfir::ElementalOp, hlfir::ElementalOp>
-Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
+Fortran::lower::isTransferWithConversion(aiir::Value rhs) {
   auto isCopyElementalOp = [](hlfir::ElementalOp elOp) {
     return llvm::hasSingleElement(
                elOp.getBody()->getOps<hlfir::DesignateOp>()) &&
@@ -89,20 +89,20 @@ Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
            llvm::hasSingleElement(elOp.getBody()->getOps<fir::ConvertOp>()) ==
                1;
   };
-  if (auto declOp = mlir::dyn_cast<hlfir::DeclareOp>(rhs.getDefiningOp())) {
+  if (auto declOp = aiir::dyn_cast<hlfir::DeclareOp>(rhs.getDefiningOp())) {
     if (!declOp.getMemref().getDefiningOp())
       return {};
-    if (auto associateOp = mlir::dyn_cast<hlfir::AssociateOp>(
+    if (auto associateOp = aiir::dyn_cast<hlfir::AssociateOp>(
             declOp.getMemref().getDefiningOp()))
-      if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(
+      if (auto elOp = aiir::dyn_cast<hlfir::ElementalOp>(
               associateOp.getSource().getDefiningOp()))
         if (isConversionElementalOp(elOp))
           return {elOp, elOp};
   }
-  if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp())) {
+  if (auto elOp = aiir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp())) {
     if (isConversionFromCopyElementalOp(elOp)) {
       auto applyOp = *elOp.getBody()->getOps<hlfir::ApplyOp>().begin();
-      if (auto firstElOp = mlir::dyn_cast<hlfir::ElementalOp>(
+      if (auto firstElOp = aiir::dyn_cast<hlfir::ElementalOp>(
               applyOp.getExpr().getDefiningOp())) {
         if (isCopyElementalOp(firstElOp))
           return {firstElOp, elOp};
@@ -114,10 +114,10 @@ Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
   return {};
 }
 
-bool Fortran::lower::hasDoubleDescriptor(mlir::Value addr) {
+bool Fortran::lower::hasDoubleDescriptor(aiir::Value addr) {
   if (auto declareOp =
-          mlir::dyn_cast_or_null<hlfir::DeclareOp>(addr.getDefiningOp())) {
-    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
+          aiir::dyn_cast_or_null<hlfir::DeclareOp>(addr.getDefiningOp())) {
+    if (aiir::isa_and_nonnull<fir::AddrOfOp>(
             declareOp.getMemref().getDefiningOp())) {
       if (declareOp.getDataAttr() &&
           *declareOp.getDataAttr() == cuf::DataAttribute::Pinned)

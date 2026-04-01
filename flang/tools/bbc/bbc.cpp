@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This is a tool for translating Fortran sources to the FIR dialect of MLIR.
+/// This is a tool for translating Fortran sources to the FIR dialect of AIIR.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -47,16 +47,16 @@
 #include "flang/Tools/CrossToolHelpers.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/AsmState.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Pass/PassRegistry.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/AsmState.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/Parser/Parser.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassManager.h"
+#include "aiir/Pass/PassRegistry.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Transforms/Passes.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
@@ -320,12 +320,12 @@ using ProgramName = std::string;
 
 // Print the module with the "module { ... }" wrapper, preventing
 // information loss from attribute information appended to the module
-static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
-  out << mlirModule << '\n';
+static void printModule(aiir::ModuleOp aiirModule, llvm::raw_ostream &out) {
+  out << aiirModule << '\n';
 }
 
 static void registerAllPasses() {
-  fir::support::registerMLIRPassesForFortranTools();
+  fir::support::registerAIIRPassesForFortranTools();
   fir::registerOptTransformPasses();
 }
 
@@ -355,9 +355,9 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
 /// of the pass manager, allowing it to be invoked as soon as it's
 /// required without impacting the main pass pipeline that may be invoked
 /// more than once for verification.
-static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
-  mlir::PassManager pm(mlirModule->getName(),
-                       mlir::OpPassManager::Nesting::Implicit);
+static llvm::LogicalResult runOpenMPPasses(aiir::ModuleOp aiirModule) {
+  aiir::PassManager pm(aiirModule->getName(),
+                       aiir::OpPassManager::Nesting::Implicit);
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
 
@@ -371,23 +371,23 @@ static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
           .Default(DoConcurrentMappingKind::DCMK_None);
 
   fir::createOpenMPFIRPassPipeline(pm, opts);
-  (void)mlir::applyPassManagerCLOptions(pm);
-  if (mlir::failed(pm.run(mlirModule))) {
+  (void)aiir::applyPassManagerCLOptions(pm);
+  if (aiir::failed(pm.run(aiirModule))) {
     llvm::errs() << "FATAL: failed to correctly apply OpenMP pass pipeline";
-    return mlir::failure();
+    return aiir::failure();
   }
-  return mlir::success();
+  return aiir::success();
 }
 
 //===----------------------------------------------------------------------===//
-// Translate Fortran input to FIR, a dialect of MLIR.
+// Translate Fortran input to FIR, a dialect of AIIR.
 //===----------------------------------------------------------------------===//
 
-static llvm::LogicalResult convertFortranSourceToMLIR(
+static llvm::LogicalResult convertFortranSourceToAIIR(
     std::string path, Fortran::parser::Options options,
     const ProgramName &programPrefix,
     Fortran::semantics::SemanticsContext &semanticsContext,
-    const mlir::PassPipelineCLParser &passPipeline,
+    const aiir::PassPipelineCLParser &passPipeline,
     const llvm::TargetMachine &targetMachine) {
 
   // prep for prescan and parse
@@ -399,7 +399,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   if (!parsing.messages().empty() && (parsing.messages().AnyFatalError())) {
     llvm::errs() << programPrefix << "could not scan " << path << '\n';
     parsing.messages().Emit(llvm::errs(), parsing.allCooked());
-    return mlir::failure();
+    return aiir::failure();
   }
 
   // parse the input Fortran
@@ -409,13 +409,13 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
                         "parser FAIL (final position)",
                         "error: ", llvm::raw_ostream::RED);
-    return mlir::failure();
+    return aiir::failure();
   } else if ((!parsing.messages().empty() &&
               (parsing.messages().AnyFatalError())) ||
              !parsing.parseTree().has_value()) {
     parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     llvm::errs() << programPrefix << "could not parse " << path << '\n';
-    return mlir::failure();
+    return aiir::failure();
   } else {
     semanticsContext.messages().Annex(std::move(parsing.messages()));
   }
@@ -427,7 +427,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   semantics.EmitMessages(llvm::errs());
   if (semantics.AnyFatalError()) {
     llvm::errs() << programPrefix << "semantic errors in " << path << '\n';
-    return mlir::failure();
+    return aiir::failure();
   }
   Fortran::semantics::RuntimeDerivedTypeTables tables;
   if (!semantics.AnyFatalError()) {
@@ -440,7 +440,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
   if (dumpSymbols) {
     semantics.DumpSymbols(llvm::outs());
-    return mlir::success();
+    return aiir::success();
   }
 
   if (pftDumpTest) {
@@ -449,17 +449,17 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext,
                                              loweringOptions)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
-      return mlir::success();
+      return aiir::success();
     }
     llvm::errs() << "Pre FIR Tree is NULL.\n";
-    return mlir::failure();
+    return aiir::failure();
   }
 
-  // translate to FIR dialect of MLIR
-  mlir::DialectRegistry registry;
+  // translate to FIR dialect of AIIR
+  aiir::DialectRegistry registry;
   fir::support::registerNonCodegenDialects(registry);
   fir::support::addFIRExtensions(registry);
-  mlir::MLIRContext ctx(registry);
+  aiir::AIIRContext ctx(registry);
   fir::support::loadNonCodegenDialects(ctx);
   auto &defKinds = semanticsContext.defaultKinds();
   fir::KindMapping kindMap(
@@ -489,12 +489,12 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
       semanticsContext.languageFeatures(), targetMachine, targetOpts, cgOpts);
-  mlir::ModuleOp mlirModule = burnside.getModule();
+  aiir::ModuleOp aiirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
       llvm::errs() << "FATAL: -fopenmp-is-gpu can only be set if "
                       "-fopenmp-is-target-device is also set";
-      return mlir::failure();
+      return aiir::failure();
     }
     // Construct offloading target triples vector.
     std::vector<llvm::Triple> targetTriples;
@@ -502,23 +502,23 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     for (llvm::StringRef s : targetTriplesOpenMP)
       targetTriples.emplace_back(s);
 
-    auto offloadModuleOpts = mlir::omp::OffloadModuleOpts(
+    auto offloadModuleOpts = aiir::omp::OffloadModuleOpts(
         setOpenMPTargetDebug, setOpenMPTeamSubscription,
         setOpenMPThreadSubscription, setOpenMPNoThreadState,
         setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
         enableOpenMPForceUSM, setOpenMPVersion, "", targetTriples, setNoGPULib);
-    mlir::omp::setOffloadModuleInterfaceAttributes(mlirModule,
+    aiir::omp::setOffloadModuleInterfaceAttributes(aiirModule,
                                                    offloadModuleOpts);
-    mlir::omp::setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
+    aiir::omp::setOpenMPVersionAttribute(aiirModule, setOpenMPVersion);
   }
   burnside.lower(parseTree, semanticsContext);
   std::error_code ec;
   std::string outputName = outputFilename;
   if (!outputName.size())
-    outputName = llvm::sys::path::stem(inputFilename).str().append(".mlir");
+    outputName = llvm::sys::path::stem(inputFilename).str().append(".aiir");
   llvm::raw_fd_ostream out(outputName, ec);
   if (ec)
-    return mlir::emitError(mlir::UnknownLoc::get(&ctx),
+    return aiir::emitError(aiir::UnknownLoc::get(&ctx),
                            "could not open output file ")
            << outputName;
 
@@ -526,51 +526,51 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   // ensure that the FIR is correct with respect to OpenMP operations/
   // attributes.
   if (enableOpenMP)
-    if (mlir::failed(runOpenMPPasses(mlirModule)))
-      return mlir::failure();
+    if (aiir::failed(runOpenMPPasses(aiirModule)))
+      return aiir::failure();
 
   // Otherwise run the default passes.
-  mlir::PassManager pm(mlirModule->getName(),
-                       mlir::OpPassManager::Nesting::Implicit);
+  aiir::PassManager pm(aiirModule->getName(),
+                       aiir::OpPassManager::Nesting::Implicit);
   pm.enableVerifier(/*verifyPasses=*/true);
-  (void)mlir::applyPassManagerCLOptions(pm);
+  (void)aiir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {
     // run the command-line specified pipeline
     hlfir::registerHLFIRPasses();
     (void)passPipeline.addToPipeline(pm, [&](const llvm::Twine &msg) {
-      mlir::emitError(mlir::UnknownLoc::get(&ctx)) << msg;
-      return mlir::failure();
+      aiir::emitError(aiir::UnknownLoc::get(&ctx)) << msg;
+      return aiir::failure();
     });
   } else if (emitFIR || emitHLFIR) {
     // --emit-fir: Build the IR, verify it, and dump the IR if the IR passes
     // verification. Use --dump-module-on-failure to dump invalid IR.
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
-    if (mlir::failed(pm.run(mlirModule))) {
+    if (aiir::failed(pm.run(aiirModule))) {
       llvm::errs() << "FATAL: verification of lowering to FIR failed";
-      return mlir::failure();
+      return aiir::failure();
     }
 
     if (emitFIR && useHLFIR) {
       // lower HLFIR to FIR
       fir::EnableOpenMP enableOmp =
           enableOpenMP ? fir::EnableOpenMP::Full : fir::EnableOpenMP::None;
-      MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+      AIIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
       config.fpMaxminBehavior = loweringOptions.getFPMaxminBehavior();
       fir::createHLFIRToFIRPassPipeline(pm, enableOmp, config);
-      if (mlir::failed(pm.run(mlirModule))) {
+      if (aiir::failed(pm.run(aiirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
-        return mlir::failure();
+        return aiir::failure();
       }
     }
 
-    printModule(mlirModule, out);
-    return mlir::success();
+    printModule(aiirModule, out);
+    return aiir::success();
   } else {
     // run the default canned pipeline
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
     // Add O2 optimizer pass pipeline.
-    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    AIIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
     config.fpMaxminBehavior = loweringOptions.getFPMaxminBehavior();
     config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
@@ -580,14 +580,14 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }
 
-  if (mlir::succeeded(pm.run(mlirModule))) {
-    // Emit MLIR and do not lower to LLVM IR.
-    printModule(mlirModule, out);
-    return mlir::success();
+  if (aiir::succeeded(pm.run(aiirModule))) {
+    // Emit AIIR and do not lower to LLVM IR.
+    printModule(aiirModule, out);
+    return aiir::success();
   }
-  // Something went wrong. Try to dump the MLIR module.
+  // Something went wrong. Try to dump the AIIR module.
   llvm::errs() << "oops, pass manager reported failure\n";
-  return mlir::failure();
+  return aiir::failure();
 }
 
 int main(int argc, char **argv) {
@@ -596,10 +596,10 @@ int main(int argc, char **argv) {
   llvm::InitializeAllTargetMCs();
   registerAllPasses();
 
-  mlir::registerMLIRContextCLOptions();
-  mlir::registerAsmPrinterCLOptions();
-  mlir::registerPassManagerCLOptions();
-  mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
+  aiir::registerAIIRContextCLOptions();
+  aiir::registerAsmPrinterCLOptions();
+  aiir::registerPassManagerCLOptions();
+  aiir::PassPipelineCLParser passPipe("", "Compiler passes to run");
   llvm::cl::ParseCommandLineOptions(argc, argv, "Burnside Bridge Compiler\n");
 
   ProgramName programPrefix;
@@ -695,7 +695,7 @@ int main(int argc, char **argv) {
       createTargetMachine(targetTripleOverride, error);
   if (!targetMachine) {
     llvm::errs() << "failed to create target machine: " << error << "\n";
-    return mlir::failed(mlir::failure());
+    return aiir::failed(aiir::failure());
   }
   std::string compilerVersion = Fortran::common::getFlangToolFullVersion("bbc");
   std::string compilerOptions = "";
@@ -703,7 +703,7 @@ int main(int argc, char **argv) {
       semanticsContext.targetCharacteristics(), *targetMachine, {},
       compilerVersion, compilerOptions);
 
-  return mlir::failed(
-      convertFortranSourceToMLIR(inputFilename, options, programPrefix,
+  return aiir::failed(
+      convertFortranSourceToAIIR(inputFilename, options, programPrefix,
                                  semanticsContext, passPipe, *targetMachine));
 }

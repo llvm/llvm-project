@@ -13,8 +13,8 @@
 
 using namespace Fortran::runtime;
 
-void fir::runtime::genAssign(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value destBox, mlir::Value sourceBox) {
+void fir::runtime::genAssign(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value destBox, aiir::Value sourceBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Assign)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -26,8 +26,8 @@ void fir::runtime::genAssign(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 void fir::runtime::genAssignPolymorphic(fir::FirOpBuilder &builder,
-                                        mlir::Location loc, mlir::Value destBox,
-                                        mlir::Value sourceBox) {
+                                        aiir::Location loc, aiir::Value destBox,
+                                        aiir::Value sourceBox) {
   auto func =
       fir::runtime::getRuntimeFunc<mkRTKey(AssignPolymorphic)>(loc, builder);
   auto fTy = func.getFunctionType();
@@ -40,9 +40,9 @@ void fir::runtime::genAssignPolymorphic(fir::FirOpBuilder &builder,
 }
 
 void fir::runtime::genAssignExplicitLengthCharacter(fir::FirOpBuilder &builder,
-                                                    mlir::Location loc,
-                                                    mlir::Value destBox,
-                                                    mlir::Value sourceBox) {
+                                                    aiir::Location loc,
+                                                    aiir::Value destBox,
+                                                    aiir::Value sourceBox) {
   auto func =
       fir::runtime::getRuntimeFunc<mkRTKey(AssignExplicitLengthCharacter)>(
           loc, builder);
@@ -56,8 +56,8 @@ void fir::runtime::genAssignExplicitLengthCharacter(fir::FirOpBuilder &builder,
 }
 
 void fir::runtime::genAssignTemporary(fir::FirOpBuilder &builder,
-                                      mlir::Location loc, mlir::Value destBox,
-                                      mlir::Value sourceBox) {
+                                      aiir::Location loc, aiir::Value destBox,
+                                      aiir::Value sourceBox) {
   auto func =
       fir::runtime::getRuntimeFunc<mkRTKey(AssignTemporary)>(loc, builder);
   auto fTy = func.getFunctionType();
@@ -70,8 +70,8 @@ void fir::runtime::genAssignTemporary(fir::FirOpBuilder &builder,
 }
 
 void fir::runtime::genCopyInAssign(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value destBox,
-                                   mlir::Value sourceBox) {
+                                   aiir::Location loc, aiir::Value destBox,
+                                   aiir::Value sourceBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(CopyInAssign)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -83,8 +83,8 @@ void fir::runtime::genCopyInAssign(fir::FirOpBuilder &builder,
 }
 
 void fir::runtime::genCopyOutAssign(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, mlir::Value destBox,
-                                    mlir::Value sourceBox) {
+                                    aiir::Location loc, aiir::Value destBox,
+                                    aiir::Value sourceBox) {
   auto func =
       fir::runtime::getRuntimeFunc<mkRTKey(CopyOutAssign)>(loc, builder);
   auto fTy = func.getFunctionType();

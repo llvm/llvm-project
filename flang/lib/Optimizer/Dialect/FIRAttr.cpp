@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "mlir/IR/AttributeSupport.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
+#include "aiir/IR/AttributeSupport.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinTypes.h"
+#include "aiir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -29,7 +29,7 @@ using namespace fir;
 
 namespace fir::detail {
 
-struct RealAttributeStorage : public mlir::AttributeStorage {
+struct RealAttributeStorage : public aiir::AttributeStorage {
   using KeyTy = std::pair<int, llvm::APFloat>;
 
   RealAttributeStorage(int kind, const llvm::APFloat &value)
@@ -45,7 +45,7 @@ struct RealAttributeStorage : public mlir::AttributeStorage {
   }
 
   static RealAttributeStorage *
-  construct(mlir::AttributeStorageAllocator &allocator, const KeyTy &key) {
+  construct(aiir::AttributeStorageAllocator &allocator, const KeyTy &key) {
     return new (allocator.allocate<RealAttributeStorage>())
         RealAttributeStorage(key);
   }
@@ -59,10 +59,10 @@ private:
 };
 
 /// An attribute representing a reference to a type.
-struct TypeAttributeStorage : public mlir::AttributeStorage {
-  using KeyTy = mlir::Type;
+struct TypeAttributeStorage : public aiir::AttributeStorage {
+  using KeyTy = aiir::Type;
 
-  TypeAttributeStorage(mlir::Type value) : value(value) {
+  TypeAttributeStorage(aiir::Type value) : value(value) {
     assert(value && "must not be of Type null");
   }
 
@@ -71,15 +71,15 @@ struct TypeAttributeStorage : public mlir::AttributeStorage {
 
   /// Construct a new storage instance.
   static TypeAttributeStorage *
-  construct(mlir::AttributeStorageAllocator &allocator, KeyTy key) {
+  construct(aiir::AttributeStorageAllocator &allocator, KeyTy key) {
     return new (allocator.allocate<TypeAttributeStorage>())
         TypeAttributeStorage(key);
   }
 
-  mlir::Type getType() const { return value; }
+  aiir::Type getType() const { return value; }
 
 private:
-  mlir::Type value;
+  aiir::Type value;
 };
 } // namespace fir::detail
 
@@ -87,37 +87,37 @@ private:
 // Attributes for SELECT TYPE
 //===----------------------------------------------------------------------===//
 
-ExactTypeAttr fir::ExactTypeAttr::get(mlir::Type value) {
+ExactTypeAttr fir::ExactTypeAttr::get(aiir::Type value) {
   return Base::get(value.getContext(), value);
 }
 
-mlir::Type fir::ExactTypeAttr::getType() const { return getImpl()->getType(); }
+aiir::Type fir::ExactTypeAttr::getType() const { return getImpl()->getType(); }
 
-SubclassAttr fir::SubclassAttr::get(mlir::Type value) {
+SubclassAttr fir::SubclassAttr::get(aiir::Type value) {
   return Base::get(value.getContext(), value);
 }
 
-mlir::Type fir::SubclassAttr::getType() const { return getImpl()->getType(); }
+aiir::Type fir::SubclassAttr::getType() const { return getImpl()->getType(); }
 
 //===----------------------------------------------------------------------===//
 // Attributes for SELECT CASE
 //===----------------------------------------------------------------------===//
 
-using AttributeUniquer = mlir::detail::AttributeUniquer;
+using AttributeUniquer = aiir::detail::AttributeUniquer;
 
-ClosedIntervalAttr fir::ClosedIntervalAttr::get(mlir::MLIRContext *ctxt) {
+ClosedIntervalAttr fir::ClosedIntervalAttr::get(aiir::AIIRContext *ctxt) {
   return AttributeUniquer::get<ClosedIntervalAttr>(ctxt);
 }
 
-UpperBoundAttr fir::UpperBoundAttr::get(mlir::MLIRContext *ctxt) {
+UpperBoundAttr fir::UpperBoundAttr::get(aiir::AIIRContext *ctxt) {
   return AttributeUniquer::get<UpperBoundAttr>(ctxt);
 }
 
-LowerBoundAttr fir::LowerBoundAttr::get(mlir::MLIRContext *ctxt) {
+LowerBoundAttr fir::LowerBoundAttr::get(aiir::AIIRContext *ctxt) {
   return AttributeUniquer::get<LowerBoundAttr>(ctxt);
 }
 
-PointIntervalAttr fir::PointIntervalAttr::get(mlir::MLIRContext *ctxt) {
+PointIntervalAttr fir::PointIntervalAttr::get(aiir::AIIRContext *ctxt) {
   return AttributeUniquer::get<PointIntervalAttr>(ctxt);
 }
 
@@ -125,7 +125,7 @@ PointIntervalAttr fir::PointIntervalAttr::get(mlir::MLIRContext *ctxt) {
 // RealAttr
 //===----------------------------------------------------------------------===//
 
-RealAttr fir::RealAttr::get(mlir::MLIRContext *ctxt,
+RealAttr fir::RealAttr::get(aiir::AIIRContext *ctxt,
                             const RealAttr::ValueType &key) {
   return Base::get(ctxt, key);
 }
@@ -138,9 +138,9 @@ llvm::APFloat fir::RealAttr::getValue() const { return getImpl()->getValue(); }
 // FIR attribute parsing
 //===----------------------------------------------------------------------===//
 
-static mlir::Attribute parseFirRealAttr(FIROpsDialect *dialect,
-                                        mlir::DialectAsmParser &parser,
-                                        mlir::Type type) {
+static aiir::Attribute parseFirRealAttr(FIROpsDialect *dialect,
+                                        aiir::DialectAsmParser &parser,
+                                        aiir::Type type) {
   int kind = 0;
   if (parser.parseLess() || parser.parseInteger(kind) || parser.parseComma()) {
     parser.emitError(parser.getNameLoc(), "expected '<' kind ','");
@@ -178,17 +178,17 @@ static mlir::Attribute parseFirRealAttr(FIROpsDialect *dialect,
   return RealAttr::get(dialect->getContext(), {kind, value});
 }
 
-mlir::Attribute fir::FortranVariableFlagsAttr::parse(mlir::AsmParser &parser,
-                                                     mlir::Type type) {
-  if (mlir::failed(parser.parseLess()))
+aiir::Attribute fir::FortranVariableFlagsAttr::parse(aiir::AsmParser &parser,
+                                                     aiir::Type type) {
+  if (aiir::failed(parser.parseLess()))
     return {};
 
   fir::FortranVariableFlagsEnum flags = {};
-  if (mlir::failed(parser.parseOptionalGreater())) {
-    auto parseFlags = [&]() -> mlir::ParseResult {
+  if (aiir::failed(parser.parseOptionalGreater())) {
+    auto parseFlags = [&]() -> aiir::ParseResult {
       llvm::StringRef elemName;
-      if (mlir::failed(parser.parseKeyword(&elemName)))
-        return mlir::failure();
+      if (aiir::failed(parser.parseKeyword(&elemName)))
+        return aiir::failure();
 
       auto elem = fir::symbolizeFortranVariableFlagsEnum(elemName);
       if (!elem)
@@ -197,9 +197,9 @@ mlir::Attribute fir::FortranVariableFlagsAttr::parse(mlir::AsmParser &parser,
                << elemName;
 
       flags = flags | *elem;
-      return mlir::success();
+      return aiir::success();
     };
-    if (mlir::failed(parser.parseCommaSeparatedList(parseFlags)) ||
+    if (aiir::failed(parser.parseCommaSeparatedList(parseFlags)) ||
         parser.parseGreater())
       return {};
   }
@@ -207,13 +207,13 @@ mlir::Attribute fir::FortranVariableFlagsAttr::parse(mlir::AsmParser &parser,
   return FortranVariableFlagsAttr::get(parser.getContext(), flags);
 }
 
-mlir::Attribute fir::parseFirAttribute(FIROpsDialect *dialect,
-                                       mlir::DialectAsmParser &parser,
-                                       mlir::Type type) {
+aiir::Attribute fir::parseFirAttribute(FIROpsDialect *dialect,
+                                       aiir::DialectAsmParser &parser,
+                                       aiir::Type type) {
   auto loc = parser.getNameLoc();
   llvm::StringRef attrName;
-  mlir::Attribute attr;
-  mlir::OptionalParseResult result =
+  aiir::Attribute attr;
+  aiir::OptionalParseResult result =
       generatedAttributeParser(parser, &attrName, type, attr);
   if (result.has_value())
     return attr;
@@ -221,7 +221,7 @@ mlir::Attribute fir::parseFirAttribute(FIROpsDialect *dialect,
     return {}; // error reported by generatedAttributeParser
 
   if (attrName == ExactTypeAttr::getAttrName()) {
-    mlir::Type type;
+    aiir::Type type;
     if (parser.parseLess() || parser.parseType(type) || parser.parseGreater()) {
       parser.emitError(loc, "expected a type");
       return {};
@@ -229,7 +229,7 @@ mlir::Attribute fir::parseFirAttribute(FIROpsDialect *dialect,
     return ExactTypeAttr::get(type);
   }
   if (attrName == SubclassAttr::getAttrName()) {
-    mlir::Type type;
+    aiir::Type type;
     if (parser.parseLess() || parser.parseType(type) || parser.parseGreater()) {
       parser.emitError(loc, "expected a subtype");
       return {};
@@ -255,37 +255,37 @@ mlir::Attribute fir::parseFirAttribute(FIROpsDialect *dialect,
 // FIR attribute pretty printer
 //===----------------------------------------------------------------------===//
 
-void fir::FortranVariableFlagsAttr::print(mlir::AsmPrinter &printer) const {
+void fir::FortranVariableFlagsAttr::print(aiir::AsmPrinter &printer) const {
   printer << "<";
   printer << fir::stringifyFortranVariableFlagsEnum(this->getFlags());
   printer << ">";
 }
 
-void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
-                            mlir::DialectAsmPrinter &p) {
+void fir::printFirAttribute(FIROpsDialect *dialect, aiir::Attribute attr,
+                            aiir::DialectAsmPrinter &p) {
   auto &os = p.getStream();
-  if (auto exact = mlir::dyn_cast<fir::ExactTypeAttr>(attr)) {
+  if (auto exact = aiir::dyn_cast<fir::ExactTypeAttr>(attr)) {
     os << fir::ExactTypeAttr::getAttrName() << '<';
     p.printType(exact.getType());
     os << '>';
-  } else if (auto sub = mlir::dyn_cast<fir::SubclassAttr>(attr)) {
+  } else if (auto sub = aiir::dyn_cast<fir::SubclassAttr>(attr)) {
     os << fir::SubclassAttr::getAttrName() << '<';
     p.printType(sub.getType());
     os << '>';
-  } else if (mlir::dyn_cast_or_null<fir::PointIntervalAttr>(attr)) {
+  } else if (aiir::dyn_cast_or_null<fir::PointIntervalAttr>(attr)) {
     os << fir::PointIntervalAttr::getAttrName();
-  } else if (mlir::dyn_cast_or_null<fir::ClosedIntervalAttr>(attr)) {
+  } else if (aiir::dyn_cast_or_null<fir::ClosedIntervalAttr>(attr)) {
     os << fir::ClosedIntervalAttr::getAttrName();
-  } else if (mlir::dyn_cast_or_null<fir::LowerBoundAttr>(attr)) {
+  } else if (aiir::dyn_cast_or_null<fir::LowerBoundAttr>(attr)) {
     os << fir::LowerBoundAttr::getAttrName();
-  } else if (mlir::dyn_cast_or_null<fir::UpperBoundAttr>(attr)) {
+  } else if (aiir::dyn_cast_or_null<fir::UpperBoundAttr>(attr)) {
     os << fir::UpperBoundAttr::getAttrName();
-  } else if (auto a = mlir::dyn_cast_or_null<fir::RealAttr>(attr)) {
+  } else if (auto a = aiir::dyn_cast_or_null<fir::RealAttr>(attr)) {
     os << fir::RealAttr::getAttrName() << '<' << a.getFKind() << ", i x";
     llvm::SmallString<40> ss;
     a.getValue().bitcastToAPInt().toStringUnsigned(ss, 16);
     os << ss << '>';
-  } else if (mlir::failed(generatedAttributePrinter(attr, p))) {
+  } else if (aiir::failed(generatedAttributePrinter(attr, p))) {
     // don't know how to print the attribute, so use a default
     os << "<(unknown attribute)>";
   }

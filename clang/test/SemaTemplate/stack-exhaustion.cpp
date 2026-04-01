@@ -39,13 +39,13 @@ namespace template_argument_recursion {
   struct ostream;
   template<typename T> T &&declval();
 
-  namespace mlir {
+  namespace aiir {
     template<typename T, typename = decltype(declval<ostream&>() << declval<T&>())>
     ostream &operator<<(ostream& os, const T& obj); // expected-error {{exceeded maximum depth}}
     struct Value;
   }
 
-  void printFunctionalType(ostream &os, mlir::Value &v) { os << v; }
+  void printFunctionalType(ostream &os, aiir::Value &v) { os << v; }
 }
 
 #elif TEST == 3
@@ -55,13 +55,13 @@ namespace template_parameter_type_recursion {
   template<typename T> T &&declval();
   template<bool B, typename T> struct enable_if { using type = T; };
 
-  namespace mlir {
+  namespace aiir {
     template<typename T, typename enable_if<declval<ostream&>() << declval<T&>(), void*>::type = nullptr>
     ostream &operator<<(ostream& os, const T& obj); // expected-error {{exceeded maximum depth}}
     struct Value;
   }
 
-  void printFunctionalType(ostream &os, mlir::Value &v) { os << v; }
+  void printFunctionalType(ostream &os, aiir::Value &v) { os << v; }
 }
 
 #else

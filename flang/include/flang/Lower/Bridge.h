@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,8 +22,8 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/OwningOpRef.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/OwningOpRef.h"
 #include <set>
 
 namespace llvm {
@@ -53,12 +53,12 @@ namespace lower {
 //===----------------------------------------------------------------------===//
 
 /// The lowering bridge converts the front-end parse trees and semantics
-/// checking residual to MLIR (FIR dialect) code.
+/// checking residual to AIIR (FIR dialect) code.
 class LoweringBridge {
 public:
   /// Create a lowering bridge instance.
   static LoweringBridge
-  create(mlir::MLIRContext &ctx,
+  create(aiir::AIIRContext &ctx,
          Fortran::semantics::SemanticsContext &semanticsContext,
          const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
          const Fortran::evaluate::IntrinsicProcTable &intrinsics,
@@ -82,11 +82,11 @@ public:
   // Getters
   //===--------------------------------------------------------------------===//
 
-  mlir::MLIRContext &getMLIRContext() { return context; }
+  aiir::AIIRContext &getAIIRContext() { return context; }
 
   /// Get the ModuleOp. It can never be null, which is asserted in the ctor.
-  mlir::ModuleOp getModule() { return *module; }
-  mlir::ModuleOp getModuleAndRelease() { return module.release(); }
+  aiir::ModuleOp getModule() { return *module; }
+  aiir::ModuleOp getModuleAndRelease() { return module.release(); }
 
   const Fortran::common::IntrinsicTypeDefaultKinds &getDefaultKinds() const {
     return defaultKinds;
@@ -132,20 +132,20 @@ public:
   bool validModule() { return getModule(); }
 
   //===--------------------------------------------------------------------===//
-  // Perform the creation of an mlir::ModuleOp
+  // Perform the creation of an aiir::ModuleOp
   //===--------------------------------------------------------------------===//
 
-  /// Read in an MLIR input file rather than lowering Fortran sources.
+  /// Read in an AIIR input file rather than lowering Fortran sources.
   /// This is intended to be used for testing.
   void parseSourceFile(llvm::SourceMgr &);
 
-  /// Cross the bridge from the Fortran parse-tree, etc. to MLIR dialects
+  /// Cross the bridge from the Fortran parse-tree, etc. to AIIR dialects
   void lower(const Fortran::parser::Program &program,
              const Fortran::semantics::SemanticsContext &semanticsContext);
 
 private:
   explicit LoweringBridge(
-      mlir::MLIRContext &ctx,
+      aiir::AIIRContext &ctx,
       Fortran::semantics::SemanticsContext &semanticsContext,
       const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
       const Fortran::evaluate::IntrinsicProcTable &intrinsics,
@@ -168,14 +168,14 @@ private:
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
   const Fortran::evaluate::TargetCharacteristics &targetCharacteristics;
   const Fortran::parser::AllCookedSources *cooked;
-  mlir::MLIRContext &context;
-  mlir::OwningOpRef<mlir::ModuleOp> module;
+  aiir::AIIRContext &context;
+  aiir::OwningOpRef<aiir::ModuleOp> module;
   fir::KindMapping &kindMap;
   const Fortran::lower::LoweringOptions &loweringOptions;
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
   const Fortran::common::LanguageFeatureControl &languageFeatures;
   std::set<std::string> tempNames;
-  std::optional<mlir::DiagnosticEngine::HandlerID> diagHandlerID;
+  std::optional<aiir::DiagnosticEngine::HandlerID> diagHandlerID;
 };
 
 } // namespace lower

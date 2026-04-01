@@ -24,7 +24,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -117,18 +117,18 @@ static bool isPointerAssignment(const evaluate::Assignment &assign) {
 }
 
 static fir::FirOpBuilder::InsertPoint
-getInsertionPointBefore(mlir::Operation *op) {
+getInsertionPointBefore(aiir::Operation *op) {
   return fir::FirOpBuilder::InsertPoint(op->getBlock(),
-                                        mlir::Block::iterator(op));
+                                        aiir::Block::iterator(op));
 }
 
 static fir::FirOpBuilder::InsertPoint
-getInsertionPointAfter(mlir::Operation *op) {
+getInsertionPointAfter(aiir::Operation *op) {
   return fir::FirOpBuilder::InsertPoint(op->getBlock(),
-                                        ++mlir::Block::iterator(op));
+                                        ++aiir::Block::iterator(op));
 }
 
-static mlir::IntegerAttr getAtomicHint(lower::AbstractConverter &converter,
+static aiir::IntegerAttr getAtomicHint(lower::AbstractConverter &converter,
                                        const omp::List<omp::Clause> &clauses) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const omp::Clause &clause : clauses) {
@@ -142,42 +142,42 @@ static mlir::IntegerAttr getAtomicHint(lower::AbstractConverter &converter,
   return nullptr;
 }
 
-static mlir::omp::ClauseMemoryOrderKind
+static aiir::omp::ClauseMemoryOrderKind
 getMemoryOrderKind(common::OmpMemoryOrderType kind) {
   switch (kind) {
   case common::OmpMemoryOrderType::Acq_Rel:
-    return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
+    return aiir::omp::ClauseMemoryOrderKind::Acq_rel;
   case common::OmpMemoryOrderType::Acquire:
-    return mlir::omp::ClauseMemoryOrderKind::Acquire;
+    return aiir::omp::ClauseMemoryOrderKind::Acquire;
   case common::OmpMemoryOrderType::Relaxed:
-    return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    return aiir::omp::ClauseMemoryOrderKind::Relaxed;
   case common::OmpMemoryOrderType::Release:
-    return mlir::omp::ClauseMemoryOrderKind::Release;
+    return aiir::omp::ClauseMemoryOrderKind::Release;
   case common::OmpMemoryOrderType::Seq_Cst:
-    return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
+    return aiir::omp::ClauseMemoryOrderKind::Seq_cst;
   }
   llvm_unreachable("Unexpected kind");
 }
 
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
+static std::optional<aiir::omp::ClauseMemoryOrderKind>
 getMemoryOrderKind(llvm::omp::Clause clauseId) {
   switch (clauseId) {
   case llvm::omp::Clause::OMPC_acq_rel:
-    return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
+    return aiir::omp::ClauseMemoryOrderKind::Acq_rel;
   case llvm::omp::Clause::OMPC_acquire:
-    return mlir::omp::ClauseMemoryOrderKind::Acquire;
+    return aiir::omp::ClauseMemoryOrderKind::Acquire;
   case llvm::omp::Clause::OMPC_relaxed:
-    return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    return aiir::omp::ClauseMemoryOrderKind::Relaxed;
   case llvm::omp::Clause::OMPC_release:
-    return mlir::omp::ClauseMemoryOrderKind::Release;
+    return aiir::omp::ClauseMemoryOrderKind::Release;
   case llvm::omp::Clause::OMPC_seq_cst:
-    return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
+    return aiir::omp::ClauseMemoryOrderKind::Seq_cst;
   default:
     return std::nullopt;
   }
 }
 
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
+static std::optional<aiir::omp::ClauseMemoryOrderKind>
 getMemoryOrderFromRequires(const semantics::Scope &scope) {
   // The REQUIRES construct is only allowed in the main program scope
   // and module scope, but seems like we also accept it in a subprogram
@@ -204,15 +204,15 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
   return std::nullopt;
 }
 
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
+static std::optional<aiir::omp::ClauseMemoryOrderKind>
 getDefaultAtomicMemOrder(semantics::SemanticsContext &semaCtx) {
   unsigned version = semaCtx.langOptions().OpenMPVersion;
   if (version > 50)
-    return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+    return aiir::omp::ClauseMemoryOrderKind::Relaxed;
   return std::nullopt;
 }
 
-static std::pair<std::optional<mlir::omp::ClauseMemoryOrderKind>, bool>
+static std::pair<std::optional<aiir::omp::ClauseMemoryOrderKind>, bool>
 getAtomicMemoryOrder(semantics::SemanticsContext &semaCtx,
                      const omp::List<omp::Clause> &clauses,
                      const semantics::Scope &scope) {
@@ -228,8 +228,8 @@ getAtomicMemoryOrder(semantics::SemanticsContext &semaCtx,
                         /*canOverride=*/false);
 }
 
-static std::optional<mlir::omp::ClauseMemoryOrderKind>
-makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
+static std::optional<aiir::omp::ClauseMemoryOrderKind>
+makeValidForAction(std::optional<aiir::omp::ClauseMemoryOrderKind> memOrder,
                    int action0, int action1, unsigned version) {
   // When the atomic default memory order specified on a REQUIRES directive is
   // disallowed on a given ATOMIC operation, and it's not ACQ_REL, the order
@@ -250,39 +250,39 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
 
   if (action == Analysis::Read) {
     // "acq_rel" decays to "acquire"
-    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
-      return mlir::omp::ClauseMemoryOrderKind::Acquire;
+    if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Acq_rel)
+      return aiir::omp::ClauseMemoryOrderKind::Acquire;
   } else if (action == Analysis::Write) {
     // "acq_rel" decays to "release"
-    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
-      return mlir::omp::ClauseMemoryOrderKind::Release;
+    if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Acq_rel)
+      return aiir::omp::ClauseMemoryOrderKind::Release;
   }
 
   if (version > 50) {
     if (action == Analysis::Read) {
       // "release" prohibited
-      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release)
-        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+      if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Release)
+        return aiir::omp::ClauseMemoryOrderKind::Relaxed;
     }
     if (action == Analysis::Write) {
       // "acquire" prohibited
-      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
-        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+      if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Acquire)
+        return aiir::omp::ClauseMemoryOrderKind::Relaxed;
     }
   } else {
     if (action == Analysis::Read) {
       // "release" prohibited
-      if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release)
-        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+      if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Release)
+        return aiir::omp::ClauseMemoryOrderKind::Relaxed;
     } else {
       if (action & Analysis::Write) { // include "update"
         // "acquire" prohibited
-        if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire)
-          return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+        if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Acquire)
+          return aiir::omp::ClauseMemoryOrderKind::Relaxed;
         if (action == Analysis::Update) {
           // "acq_rel" prohibited
-          if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel)
-            return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+          if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Acq_rel)
+            return aiir::omp::ClauseMemoryOrderKind::Relaxed;
         }
       }
     }
@@ -291,23 +291,23 @@ makeValidForAction(std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
   return memOrder;
 }
 
-static mlir::omp::ClauseMemoryOrderKindAttr
+static aiir::omp::ClauseMemoryOrderKindAttr
 makeMemOrderAttr(lower::AbstractConverter &converter,
-                 std::optional<mlir::omp::ClauseMemoryOrderKind> maybeKind) {
+                 std::optional<aiir::omp::ClauseMemoryOrderKind> maybeKind) {
   if (maybeKind) {
-    return mlir::omp::ClauseMemoryOrderKindAttr::get(
+    return aiir::omp::ClauseMemoryOrderKindAttr::get(
         converter.getFirOpBuilder().getContext(), *maybeKind);
   }
   return nullptr;
 }
 
-static mlir::Operation * //
+static aiir::Operation * //
 genAtomicRead(lower::AbstractConverter &converter,
-              semantics::SemanticsContext &semaCtx, mlir::Location loc,
-              lower::StatementContext &stmtCtx, mlir::Value atomAddr,
+              semantics::SemanticsContext &semaCtx, aiir::Location loc,
+              lower::StatementContext &stmtCtx, aiir::Value atomAddr,
               const semantics::SomeExpr &atom,
-              const evaluate::Assignment &assign, mlir::IntegerAttr hint,
-              std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
+              const evaluate::Assignment &assign, aiir::IntegerAttr hint,
+              std::optional<aiir::omp::ClauseMemoryOrderKind> memOrder,
               fir::FirOpBuilder::InsertPoint preAt,
               fir::FirOpBuilder::InsertPoint atomicAt,
               fir::FirOpBuilder::InsertPoint postAt) {
@@ -317,29 +317,29 @@ genAtomicRead(lower::AbstractConverter &converter,
   // If the atomic clause is read then the memory-order clause must
   // not be release.
   if (memOrder) {
-    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release) {
+    if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Release) {
       // Reset it back to the default.
       memOrder = getDefaultAtomicMemOrder(semaCtx);
-    } else if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
-      // The MLIR verifier doesn't like acq_rel either.
-      memOrder = mlir::omp::ClauseMemoryOrderKind::Acquire;
+    } else if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Acq_rel) {
+      // The AIIR verifier doesn't like acq_rel either.
+      memOrder = aiir::omp::ClauseMemoryOrderKind::Acquire;
     }
   }
 
-  mlir::Value storeAddr =
+  aiir::Value storeAddr =
       fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx, &loc));
-  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
-  mlir::Type storeType = fir::unwrapRefType(storeAddr.getType());
+  aiir::Type atomType = fir::unwrapRefType(atomAddr.getType());
+  aiir::Type storeType = fir::unwrapRefType(storeAddr.getType());
 
-  mlir::Value toAddr = [&]() {
+  aiir::Value toAddr = [&]() {
     if (atomType == storeType)
       return storeAddr;
     return builder.createTemporary(loc, atomType, ".tmp.atomval");
   }();
 
   builder.restoreInsertionPoint(atomicAt);
-  mlir::Operation *op = mlir::omp::AtomicReadOp::create(
-      builder, loc, atomAddr, toAddr, mlir::TypeAttr::get(atomType), hint,
+  aiir::Operation *op = aiir::omp::AtomicReadOp::create(
+      builder, loc, atomAddr, toAddr, aiir::TypeAttr::get(atomType), hint,
       makeMemOrderAttr(converter, memOrder));
 
   if (atomType != storeType) {
@@ -347,11 +347,11 @@ genAtomicRead(lower::AbstractConverter &converter,
     // The READ operation could be a part of UPDATE CAPTURE, so make sure
     // we don't emit extra code into the body of the atomic op.
     builder.restoreInsertionPoint(postAt);
-    mlir::Value load = fir::LoadOp::create(builder, loc, toAddr);
+    aiir::Value load = fir::LoadOp::create(builder, loc, toAddr);
     overrides.try_emplace(&atom, load);
 
     converter.overrideExprValues(&overrides);
-    mlir::Value value =
+    aiir::Value value =
         fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
     converter.resetExprOverrides();
 
@@ -360,13 +360,13 @@ genAtomicRead(lower::AbstractConverter &converter,
   return op;
 }
 
-static mlir::Operation * //
+static aiir::Operation * //
 genAtomicWrite(lower::AbstractConverter &converter,
-               semantics::SemanticsContext &semaCtx, mlir::Location loc,
-               lower::StatementContext &stmtCtx, mlir::Value atomAddr,
+               semantics::SemanticsContext &semaCtx, aiir::Location loc,
+               lower::StatementContext &stmtCtx, aiir::Value atomAddr,
                const semantics::SomeExpr &atom,
-               const evaluate::Assignment &assign, mlir::IntegerAttr hint,
-               std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
+               const evaluate::Assignment &assign, aiir::IntegerAttr hint,
+               std::optional<aiir::omp::ClauseMemoryOrderKind> memOrder,
                fir::FirOpBuilder::InsertPoint preAt,
                fir::FirOpBuilder::InsertPoint atomicAt,
                fir::FirOpBuilder::InsertPoint postAt) {
@@ -376,34 +376,34 @@ genAtomicWrite(lower::AbstractConverter &converter,
   // If the atomic clause is write then the memory-order clause must
   // not be acquire.
   if (memOrder) {
-    if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire) {
+    if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Acquire) {
       // Reset it back to the default.
       memOrder = getDefaultAtomicMemOrder(semaCtx);
-    } else if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
-      // The MLIR verifier doesn't like acq_rel either.
-      memOrder = mlir::omp::ClauseMemoryOrderKind::Release;
+    } else if (*memOrder == aiir::omp::ClauseMemoryOrderKind::Acq_rel) {
+      // The AIIR verifier doesn't like acq_rel either.
+      memOrder = aiir::omp::ClauseMemoryOrderKind::Release;
     }
   }
 
-  mlir::Value value =
+  aiir::Value value =
       fir::getBase(converter.genExprValue(assign.rhs, stmtCtx, &loc));
-  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
-  mlir::Value converted = builder.createConvert(loc, atomType, value);
+  aiir::Type atomType = fir::unwrapRefType(atomAddr.getType());
+  aiir::Value converted = builder.createConvert(loc, atomType, value);
 
   builder.restoreInsertionPoint(atomicAt);
-  mlir::Operation *op =
-      mlir::omp::AtomicWriteOp::create(builder, loc, atomAddr, converted, hint,
+  aiir::Operation *op =
+      aiir::omp::AtomicWriteOp::create(builder, loc, atomAddr, converted, hint,
                                        makeMemOrderAttr(converter, memOrder));
   return op;
 }
 
-static mlir::Operation *
+static aiir::Operation *
 genAtomicUpdate(lower::AbstractConverter &converter,
-                semantics::SemanticsContext &semaCtx, mlir::Location loc,
-                lower::StatementContext &stmtCtx, mlir::Value atomAddr,
+                semantics::SemanticsContext &semaCtx, aiir::Location loc,
+                lower::StatementContext &stmtCtx, aiir::Value atomAddr,
                 const semantics::SomeExpr &atom,
-                const evaluate::Assignment &assign, mlir::IntegerAttr hint,
-                std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
+                const evaluate::Assignment &assign, aiir::IntegerAttr hint,
+                std::optional<aiir::omp::ClauseMemoryOrderKind> memOrder,
                 fir::FirOpBuilder::InsertPoint preAt,
                 fir::FirOpBuilder::InsertPoint atomicAt,
                 fir::FirOpBuilder::InsertPoint postAt) {
@@ -412,7 +412,7 @@ genAtomicUpdate(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   builder.restoreInsertionPoint(preAt);
 
-  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
+  aiir::Type atomType = fir::unwrapRefType(atomAddr.getType());
 
   // This must exist by now.
   semantics::SomeExpr rhs = assign.rhs;
@@ -422,45 +422,45 @@ genAtomicUpdate(lower::AbstractConverter &converter,
 
   for (auto &arg : args) {
     if (!evaluate::IsSameOrConvertOf(arg, atom)) {
-      mlir::Value val = fir::getBase(converter.genExprValue(arg, naCtx, &loc));
+      aiir::Value val = fir::getBase(converter.genExprValue(arg, naCtx, &loc));
       overrides.try_emplace(&arg, val);
     }
   }
 
-  mlir::ModuleOp module = builder.getModule();
-  mlir::omp::AtomicControlAttr atomicControlAttr =
-      mlir::omp::AtomicControlAttr::get(
+  aiir::ModuleOp module = builder.getModule();
+  aiir::omp::AtomicControlAttr atomicControlAttr =
+      aiir::omp::AtomicControlAttr::get(
           builder.getContext(), fir::getAtomicIgnoreDenormalMode(module),
           fir::getAtomicFineGrainedMemory(module),
           fir::getAtomicRemoteMemory(module));
   builder.restoreInsertionPoint(atomicAt);
-  auto updateOp = mlir::omp::AtomicUpdateOp::create(
+  auto updateOp = aiir::omp::AtomicUpdateOp::create(
       builder, loc, atomAddr, atomicControlAttr, hint,
       makeMemOrderAttr(converter, memOrder));
 
-  mlir::Region &region = updateOp->getRegion(0);
-  mlir::Block *block = builder.createBlock(&region, {}, {atomType}, {loc});
-  mlir::Value localAtom = fir::getBase(block->getArgument(0));
+  aiir::Region &region = updateOp->getRegion(0);
+  aiir::Block *block = builder.createBlock(&region, {}, {atomType}, {loc});
+  aiir::Value localAtom = fir::getBase(block->getArgument(0));
   overrides.try_emplace(&atom, localAtom);
 
   converter.overrideExprValues(&overrides);
-  mlir::Value updated =
+  aiir::Value updated =
       fir::getBase(converter.genExprValue(rhs, stmtCtx, &loc));
-  mlir::Value converted = builder.createConvert(loc, atomType, updated);
-  mlir::omp::YieldOp::create(builder, loc, converted);
+  aiir::Value converted = builder.createConvert(loc, atomType, updated);
+  aiir::omp::YieldOp::create(builder, loc, converted);
   converter.resetExprOverrides();
 
   builder.restoreInsertionPoint(postAt); // For naCtx cleanups
   return updateOp;
 }
 
-static mlir::Operation *
+static aiir::Operation *
 genAtomicOperation(lower::AbstractConverter &converter,
-                   semantics::SemanticsContext &semaCtx, mlir::Location loc,
+                   semantics::SemanticsContext &semaCtx, aiir::Location loc,
                    lower::StatementContext &stmtCtx, int action,
-                   mlir::Value atomAddr, const semantics::SomeExpr &atom,
-                   const evaluate::Assignment &assign, mlir::IntegerAttr hint,
-                   std::optional<mlir::omp::ClauseMemoryOrderKind> memOrder,
+                   aiir::Value atomAddr, const semantics::SomeExpr &atom,
+                   const evaluate::Assignment &assign, aiir::IntegerAttr hint,
+                   std::optional<aiir::omp::ClauseMemoryOrderKind> memOrder,
                    fir::FirOpBuilder::InsertPoint preAt,
                    fir::FirOpBuilder::InsertPoint atomicAt,
                    fir::FirOpBuilder::InsertPoint postAt) {
@@ -507,10 +507,10 @@ void Fortran::lower::omp::lowerAtomic(
     dumpAtomicAnalysis(analysis);
 
   const semantics::SomeExpr &atom = *get(analysis.atom);
-  mlir::Location loc = converter.genLocation(construct.source);
-  mlir::Value atomAddr =
+  aiir::Location loc = converter.genLocation(construct.source);
+  aiir::Value atomAddr =
       fir::getBase(converter.genExprAddr(atom, stmtCtx, &loc));
-  mlir::IntegerAttr hint = getAtomicHint(converter, clauses);
+  aiir::IntegerAttr hint = getAtomicHint(converter, clauses);
   auto [memOrder, canOverride] = getAtomicMemoryOrder(
       semaCtx, clauses, semaCtx.FindScope(construct.source));
 
@@ -524,7 +524,7 @@ void Fortran::lower::omp::lowerAtomic(
     (void)cond;
     TODO(loc, "OpenMP ATOMIC COMPARE");
   } else {
-    mlir::Operation *captureOp = nullptr;
+    aiir::Operation *captureOp = nullptr;
     fir::FirOpBuilder::InsertPoint preAt = builder.saveInsertionPoint();
     fir::FirOpBuilder::InsertPoint atomicAt, postAt;
 
@@ -534,16 +534,16 @@ void Fortran::lower::omp::lowerAtomic(
              "Expexcing two actions");
       (void)action0;
       (void)action1;
-      captureOp = mlir::omp::AtomicCaptureOp::create(
+      captureOp = aiir::omp::AtomicCaptureOp::create(
           builder, loc, hint, makeMemOrderAttr(converter, memOrder));
       // Set the non-atomic insertion point to before the atomic.capture.
       preAt = getInsertionPointBefore(captureOp);
 
-      mlir::Block *block = builder.createBlock(&captureOp->getRegion(0));
+      aiir::Block *block = builder.createBlock(&captureOp->getRegion(0));
       builder.setInsertionPointToEnd(block);
       // Set the atomic insertion point to before the terminator inside
       // atomic.capture.
-      mlir::Operation *term = mlir::omp::TerminatorOp::create(builder, loc);
+      aiir::Operation *term = aiir::omp::TerminatorOp::create(builder, loc);
       atomicAt = getInsertionPointBefore(term);
       postAt = getInsertionPointAfter(captureOp);
       hint = nullptr;
@@ -558,13 +558,13 @@ void Fortran::lower::omp::lowerAtomic(
 
     // The builder's insertion point needs to be specifically set before
     // each call to `genAtomicOperation`.
-    mlir::Operation *firstOp = genAtomicOperation(
+    aiir::Operation *firstOp = genAtomicOperation(
         converter, semaCtx, loc, stmtCtx, analysis.op0.what, atomAddr, atom,
         *get(analysis.op0.assign), hint, memOrder, preAt, atomicAt, postAt);
     assert(firstOp && "Should have created an atomic operation");
     atomicAt = getInsertionPointAfter(firstOp);
 
-    mlir::Operation *secondOp = nullptr;
+    aiir::Operation *secondOp = nullptr;
     if (analysis.op1.what != analysis.None) {
       secondOp = genAtomicOperation(
           converter, semaCtx, loc, stmtCtx, analysis.op1.what, atomAddr, atom,

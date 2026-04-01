@@ -1,0 +1,27 @@
+R"(
+
+__NAMESPACE_OPEN__
+
+__DIALECT_CPP_NAME__::__DIALECT_CPP_NAME__(::aiir::AIIRContext *context)
+    : ::aiir::Dialect(getDialectNamespace(), context,
+                      ::aiir::TypeID::get<__DIALECT_CPP_NAME__>())
+{
+  initialize();
+}
+
+__DIALECT_CPP_NAME__::~__DIALECT_CPP_NAME__() = default;
+
+
+void __DIALECT_CPP_NAME__::initialize() {
+    addOperations<
+      __OP_LIST__
+    >();
+    addTypes<
+      __TYPE_LIST__
+    >();
+}
+
+__NAMESPACE_CLOSE__
+
+AIIR_DEFINE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__DIALECT_CPP_NAME__)
+)"

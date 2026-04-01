@@ -16,18 +16,18 @@ add_flang_library(FIRSupport
   LINK_COMPONENTS
   TargetParser
 
-  MLIR_DEPS
-  MLIRIR
+  AIIR_DEPS
+  AIIRIR
   ${dialect_libs}
   ${extension_libs}
 
-  MLIR_LIBS
-  MLIRBuiltinToLLVMIRTranslation
-  MLIRLLVMToLLVMIRTranslation
-  MLIROpenACCToLLVMIRTranslation
-  MLIROpenMPToLLVMIRTranslation
-  MLIRRegisterAllDialects
-  MLIRRegisterAllExtensions
-  MLIRTargetLLVMIRExport
-  MLIRTargetLLVMIRImport
+  AIIR_LIBS
+  AIIRBuiltinToLLVMIRTranslation
+  AIIRLLVMToLLVMIRTranslation
+  AIIROpenACCToLLVMIRTranslation
+  AIIROpenMPToLLVMIRTranslation
+  AIIRRegisterAllDialects
+  AIIRRegisterAllExtensions
+  AIIRTargetLLVMIRExport
+  AIIRTargetLLVMIRImport
 )

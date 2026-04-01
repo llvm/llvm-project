@@ -84,7 +84,7 @@ Developer Tools
    clang-tblgen
    lldb-tblgen
    llvm-tblgen
-   mlir-tblgen
+   aiir-tblgen
    lit
    llvm-exegesis
    llvm-ifs

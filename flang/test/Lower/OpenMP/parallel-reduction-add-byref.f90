@@ -1,5 +1,5 @@
 ! RUN: bbc -emit-hlfir --force-byref-reduction -fopenmp -o - %s 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 
 !CHECK-LABEL: omp.declare_reduction
 !CHECK-SAME: @[[RED_F32_NAME:.*]] : !fir.ref<f32>

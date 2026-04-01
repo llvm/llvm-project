@@ -1,0 +1,7 @@
+// RUN: aiir-opt %s
+// RUN: not aiir-opt %s -test-aiir-reducer -pass-test function-reducer
+
+func.func @test() {
+  "test.op_crash"() : () -> ()
+  return
+}

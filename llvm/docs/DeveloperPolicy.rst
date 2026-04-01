@@ -16,7 +16,7 @@ to eliminate miscommunication, rework, and confusion that might arise from the
 distributed nature of LLVM's development.  By stating the policy in clear terms,
 we hope each developer can know ahead of time what to expect when making LLVM
 contributions.  This policy covers all llvm.org subprojects, including Clang,
-LLDB, libc++, MLIR, etc.
+LLDB, libc++, AIIR, etc.
 
 The developer policy supports the following LLVM project objectives:
 
@@ -229,7 +229,7 @@ features added.  Some tips for getting your testcase approved:
   used to test IR transformations, ``llc`` for backend changes, and ``clang``
   for frontend changes. Some components have scripts for generating and
   updating golden tests in the ``utils/`` subproject directory, i.e.
-  `mlir/utils/generate-test-checks.py <https://github.com/llvm/llvm-project/blob/main/mlir/utils/generate-test-checks.py>`_
+  `aiir/utils/generate-test-checks.py <https://github.com/llvm/llvm-project/blob/main/aiir/utils/generate-test-checks.py>`_
   and `llvm/utils/update_llc_test_checks.py <https://github.com/llvm/llvm-project/blob/main/llvm/utils/update_llc_test_checks.py>`_
 
 * Some subprojects such as ``clang`` and ``clangd`` have project specific

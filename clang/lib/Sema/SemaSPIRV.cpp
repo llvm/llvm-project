@@ -16,7 +16,7 @@
 // SPIR-V enumerants. Enums have only the required entries, see SPIR-V specs for
 // values.
 // FIXME: either use the SPIRV-Headers or generate a custom header using the
-// grammar (like done with MLIR).
+// grammar (like done with AIIR).
 namespace spirv {
 enum class StorageClass : int {
   Workgroup = 4,

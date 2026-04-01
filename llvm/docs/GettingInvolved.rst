@@ -213,7 +213,7 @@ what to add to your calendar invite.
      - `ics <https://calendar.google.com/calendar/ical/f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com&ctz=Asia%2FTokyo>`__
      - `Minutes/docs <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`__
-   * - MLIR C/C++ Frontend Working Group
+   * - AIIR C/C++ Frontend Working Group
      - Monthly, usually 1st Monday of the month
      - `ics <https://calendar.google.com/calendar/ical/jvceakm3kbpku3f4jrsv1lkigo%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=jvceakm3kbpku3f4jrsv1lkigo%40group.calendar.google.com&ctz=America%2FLos_Angeles>`__
@@ -262,7 +262,7 @@ the future.
      - Every 2 weeks on Tuesdays, 3pm UTC
      -
      - `Minutes/docs <https://docs.google.com/document/d/1q26ToudQjnqN5x31zk8zgq_s0lem1-BF8pQmciLa4k8/edit?usp=sharing>`__
-   * - `MLIR <https://mlir.llvm.org>`__ design meetings
+   * - `AIIR <https://aiir.llvm.org>`__ design meetings
      - Weekly, on Thursdays
      -
      - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
@@ -322,7 +322,7 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_MTMxNzU4MWYtYzViNS00OTM2LWJmNWQtMjg5ZWFhNGVjNzgw%40thread.v2/0?context=%7b%22Tid%22%3a%22a722dec9-ae4e-4ae3-9d75-fd66e2680a63%22%2c%22Oid%22%3a%22885bda30-ce8e-46db-aa7e-15de0474831a%22%7d>`__
     - English, German
   * - Tobias Grosser
-    - General questions on how to contribute to LLVM/MLIR, Polly, Loop Optimization, FPL, Research in LLVM, PhD in CS, Summer of Code.
+    - General questions on how to contribute to LLVM/AIIR, Polly, Loop Optimization, FPL, Research in LLVM, PhD in CS, Summer of Code.
     - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.
     - `Video Call <https://meet.grosser.science/LLVMOfficeHours>`__
     - English, German, Spanish, French
@@ -337,7 +337,7 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - `Zoom <https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09>`__
     - English, Russian
   * - Quentin Colombet (he/him)
-    - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
+    - LLVM/AIIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
       Register allocation, etc.); Optimizations; MCA
     - Monthly, 1st Wednesday of the month at 8.00am PT, for 30 minutes.
       `ics <https://calendar.google.com/calendar/ical/48c4ad60290a4df218e51e1ceec1106fe317b0ebc76938d9273592053f38204e%40group.calendar.google.com/public/basic.ics>`__
@@ -355,12 +355,12 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
     - English
   * - Maksim Levental and Jeremy Kun
-    - MLIR newcomers and general discussion (`livestreamed <https://www.youtube.com/playlist?list=PLhxO86S3jsX2k7kOhZaV-qKWm8tNsUdAE>`__)
+    - AIIR newcomers and general discussion (`livestreamed <https://www.youtube.com/playlist?list=PLhxO86S3jsX2k7kOhZaV-qKWm8tNsUdAE>`__)
     - Every two weeks, Wednesdays at 2:00pm US Pacific, for 90 minutes.
     - Livestream chat or `Google meet <https://meet.google.com/wit-tvzc-dwc>`__
     - English
   * - Renato Golin
-    - General LLVM, MLIR & Linalg, distributed computing, research, socials.
+    - General LLVM, AIIR & Linalg, distributed computing, research, socials.
     - Every first Friday of the month, 14:00 UK time, for 60 minutes.
     - `Google meet <https://meet.google.com/jps-twgq-ivz>`__
     - English, Portuguese

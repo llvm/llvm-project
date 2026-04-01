@@ -1,0 +1,24 @@
+add_aiir_unittest(AIIROpenACCTests
+  OpenACCOpsTest.cpp
+  OpenACCOpsInterfacesTest.cpp
+  OpenACCTypeInterfacesTest.cpp
+  OpenACCUtilsCGTest.cpp
+  OpenACCUtilsGPUTest.cpp
+  OpenACCUtilsTest.cpp
+  OpenACCUtilsTilingTest.cpp
+  OpenACCUtilsLoopTest.cpp
+)
+aiir_target_link_libraries(AIIROpenACCTests
+  PRIVATE
+  AIIRIR
+  AIIRAffineDialect
+  AIIRDLTIDialect
+  AIIRFuncDialect
+  AIIRGPUDialect
+  AIIRMemRefDialect
+  AIIRArithDialect
+  AIIROpenACCDialect
+  AIIROpenACCUtils
+  AIIRSCFDialect
+  AIIRControlFlowDialect
+)

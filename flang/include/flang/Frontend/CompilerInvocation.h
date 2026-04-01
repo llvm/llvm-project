@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,7 +21,7 @@
 #include "flang/Parser/options.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/LangOptions.h"
-#include "mlir/Support/Timing.h"
+#include "aiir/Support/Timing.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/Option/ArgList.h"

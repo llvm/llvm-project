@@ -15,18 +15,18 @@
 #define OPTIMIZER_HLFIR_TRANSFORM_SCHEDULEORDEREDASSIGNMENTS_H
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "aiir/Interfaces/SideEffectInterfaces.h"
 #include <list>
 
 namespace hlfir {
 
 struct ElementalTree {
   // build an elemental tree given a masked region terminator.
-  static ElementalTree buildElementalTree(mlir::Operation &regionTerminator);
+  static ElementalTree buildElementalTree(aiir::Operation &regionTerminator);
   // Check if op is an ElementalOpInterface that is part of this elemental tree.
-  bool contains(mlir::Operation *op) const;
+  bool contains(aiir::Operation *op) const;
 
-  std::optional<bool> isOrdered(mlir::Operation *op) const;
+  std::optional<bool> isOrdered(aiir::Operation *op) const;
 
 private:
   void gatherElementalTree(hlfir::ElementalOpInterface elemental,
@@ -36,7 +36,7 @@ private:
   // Boolean to indicate if they are applied in order (that is, if their
   // indexing space is the same as the one for the array yielded by the mask
   // region that owns this tree).
-  llvm::SmallVector<std::pair<mlir::Operation *, bool>> tree;
+  llvm::SmallVector<std::pair<aiir::Operation *, bool>> tree;
 };
 
 /// Structure to represent that the value yielded by some region
@@ -45,40 +45,40 @@ private:
 /// All subsequent evaluation depending on the value yielded
 /// by this region will use the value that was saved.
 struct SaveEntity {
-  mlir::Region *yieldRegion;
+  aiir::Region *yieldRegion;
   /// Returns the hlfir.yield op argument.
-  mlir::Value getSavedValue();
+  aiir::Value getSavedValue();
 };
 
-/// Wrapper class around mlir::MemoryEffects::EffectInstance that
+/// Wrapper class around aiir::MemoryEffects::EffectInstance that
 /// allows providing an extra array value that indicates that the
 /// effect is done element by element in array order (one element
 /// accessed at each iteration of the ordered assignment iteration
 /// space).
 class DetailedEffectInstance {
 public:
-  DetailedEffectInstance(mlir::MemoryEffects::Effect *effect,
-                         mlir::OpOperand *value = nullptr,
-                         mlir::Value orderedElementalEffectOn = nullptr);
-  DetailedEffectInstance(mlir::MemoryEffects::EffectInstance effectInstance,
-                         mlir::Value orderedElementalEffectOn = nullptr);
+  DetailedEffectInstance(aiir::MemoryEffects::Effect *effect,
+                         aiir::OpOperand *value = nullptr,
+                         aiir::Value orderedElementalEffectOn = nullptr);
+  DetailedEffectInstance(aiir::MemoryEffects::EffectInstance effectInstance,
+                         aiir::Value orderedElementalEffectOn = nullptr);
 
-  static DetailedEffectInstance getArrayReadEffect(mlir::OpOperand *array);
-  static DetailedEffectInstance getArrayWriteEffect(mlir::OpOperand *array);
+  static DetailedEffectInstance getArrayReadEffect(aiir::OpOperand *array);
+  static DetailedEffectInstance getArrayWriteEffect(aiir::OpOperand *array);
 
-  mlir::Value getValue() const { return effectInstance.getValue(); }
-  mlir::MemoryEffects::Effect *getEffect() const {
+  aiir::Value getValue() const { return effectInstance.getValue(); }
+  aiir::MemoryEffects::Effect *getEffect() const {
     return effectInstance.getEffect();
   }
-  mlir::Value getOrderedElementalEffectOn() const {
+  aiir::Value getOrderedElementalEffectOn() const {
     return orderedElementalEffectOn;
   }
 
 private:
-  mlir::MemoryEffects::EffectInstance effectInstance;
+  aiir::MemoryEffects::EffectInstance effectInstance;
   // Array whose elements are affected in array order by the
   // ordered assignment iterations. Null value otherwise.
-  mlir::Value orderedElementalEffectOn;
+  aiir::Value orderedElementalEffectOn;
 };
 
 /// A run is a list of actions required to evaluate an ordered assignment tree

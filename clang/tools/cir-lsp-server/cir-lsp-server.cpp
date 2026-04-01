@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/InitAllDialects.h"
-#include "mlir/Tools/mlir-lsp-server/MlirLspServerMain.h"
+#include "aiir/IR/Dialect.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/InitAllDialects.h"
+#include "aiir/Tools/aiir-lsp-server/AiirLspServerMain.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 int main(int argc, char **argv) {
-  mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
+  aiir::DialectRegistry registry;
+  aiir::registerAllDialects(registry);
   registry.insert<cir::CIRDialect>();
-  return failed(mlir::MlirLspServerMain(argc, argv, registry));
+  return failed(aiir::AiirLspServerMain(argc, argv, registry));
 }

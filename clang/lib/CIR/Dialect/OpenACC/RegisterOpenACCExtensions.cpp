@@ -17,8 +17,8 @@
 
 namespace cir::acc {
 
-void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
-  registry.addExtension(+[](mlir::MLIRContext *ctx, cir::CIRDialect *dialect) {
+void registerOpenACCExtensions(aiir::DialectRegistry &registry) {
+  registry.addExtension(+[](aiir::AIIRContext *ctx, cir::CIRDialect *dialect) {
     cir::PointerType::attachInterface<
         OpenACCPointerLikeModel<cir::PointerType>>(*ctx);
   });

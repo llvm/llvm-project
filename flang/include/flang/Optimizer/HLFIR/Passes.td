@@ -9,15 +9,15 @@
 #ifndef FORTRAN_DIALECT_HLFIR_PASSES
 #define FORTRAN_DIALECT_HLFIR_PASSES
 
-include "mlir/Pass/PassBase.td"
-def ConvertHLFIRtoFIR : Pass<"convert-hlfir-to-fir", "::mlir::ModuleOp"> {
+include "aiir/Pass/PassBase.td"
+def ConvertHLFIRtoFIR : Pass<"convert-hlfir-to-fir", "::aiir::ModuleOp"> {
   let summary = "Lower High-Level FIR to FIR";
   let dependentDialects = [
-    "mlir::func::FuncDialect",
+    "aiir::func::FuncDialect",
   ];
 }
 
-def BufferizeHLFIR : Pass<"bufferize-hlfir", "::mlir::ModuleOp"> {
+def BufferizeHLFIR : Pass<"bufferize-hlfir", "::aiir::ModuleOp"> {
   let summary = "Convert HLFIR operations operating on hlfir.expr into operations on memory";
   let options = [Option<"optimizeEmptyElementals", "opt-empty-elementals",
                         "bool", /*default=*/"false",
@@ -30,11 +30,11 @@ def OptimizedBufferization : Pass<"opt-bufferization"> {
   let summary = "Special cases for hlfir.expr bufferization where we can avoid a temporary which would be created by the generic bufferization pass";
 }
 
-def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
+def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::aiir::ModuleOp"> {
   let summary = "Lower HLFIR transformational intrinsic operations";
 }
 
-def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::mlir::ModuleOp"> {
+def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::aiir::ModuleOp"> {
   let summary = "Lower HLFIR ordered assignments like forall and where operations";
   let options = [
     Option<"tryFusingAssignments", "fuse-assignments",
@@ -56,7 +56,7 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
                         "and hlfir.eval_in_mem with hlfir.assign inside it."
                         "The hlfir.assign has a write effect on the memory "
                         "argument of hlfir.eval_in_mem, which may block "
-                        "some existing MLIR transformations (e.g. CSE) "
+                        "some existing AIIR transformations (e.g. CSE) "
                         "that otherwise would have been possible across "
                         "the hlfir.matmul.">,
                  Option<"fpMaxminBehavior", "fp-maxmin-behavior",

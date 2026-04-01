@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -23,9 +23,9 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 
-namespace mlir {
+namespace aiir {
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace hlfir {
 class ElementalAddrOp;
@@ -37,12 +37,12 @@ class AbstractConverter;
 class SymMap;
 
 hlfir::EntityWithAttributes
-convertExprToHLFIR(mlir::Location loc, Fortran::lower::AbstractConverter &,
+convertExprToHLFIR(aiir::Location loc, Fortran::lower::AbstractConverter &,
                    const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
                    Fortran::lower::StatementContext &);
 
 inline fir::ExtendedValue translateToExtendedValue(
-    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity entity,
+    aiir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity entity,
     Fortran::lower::StatementContext &context, bool contiguityHint = false) {
   auto [exv, exvCleanup] =
       hlfir::translateToExtendedValue(loc, builder, entity, contiguityHint);
@@ -53,16 +53,16 @@ inline fir::ExtendedValue translateToExtendedValue(
 
 /// Lower an evaluate::Expr object to a fir.box, and a procedure designator to a
 /// fir.boxproc<>
-fir::ExtendedValue convertExprToBox(mlir::Location loc,
+fir::ExtendedValue convertExprToBox(aiir::Location loc,
                                     Fortran::lower::AbstractConverter &,
                                     const Fortran::lower::SomeExpr &,
                                     Fortran::lower::SymMap &,
                                     Fortran::lower::StatementContext &);
-fir::ExtendedValue convertToBox(mlir::Location loc,
+fir::ExtendedValue convertToBox(aiir::Location loc,
                                 Fortran::lower::AbstractConverter &,
                                 hlfir::Entity entity,
                                 Fortran::lower::StatementContext &,
-                                mlir::Type fortranType);
+                                aiir::Type fortranType);
 
 /// Lower an evaluate::Expr to fir::ExtendedValue address.
 /// The address may be a raw fir.ref<T>, or a fir.box<T>/fir.class<T>, or a
@@ -89,29 +89,29 @@ fir::ExtendedValue convertToBox(mlir::Location loc,
 /// that had a non-trivial behaviour and would create contiguous temporary for
 /// array sections `x(:, :)`, but not for `x` even if x is not simply
 /// contiguous.
-fir::ExtendedValue convertExprToAddress(mlir::Location loc,
+fir::ExtendedValue convertExprToAddress(aiir::Location loc,
                                         Fortran::lower::AbstractConverter &,
                                         const Fortran::lower::SomeExpr &,
                                         Fortran::lower::SymMap &,
                                         Fortran::lower::StatementContext &);
-fir::ExtendedValue convertToAddress(mlir::Location loc,
+fir::ExtendedValue convertToAddress(aiir::Location loc,
                                     Fortran::lower::AbstractConverter &,
                                     hlfir::Entity entity,
                                     Fortran::lower::StatementContext &,
-                                    mlir::Type fortranType);
+                                    aiir::Type fortranType);
 
 /// Lower an evaluate::Expr to a fir::ExtendedValue value.
-fir::ExtendedValue convertExprToValue(mlir::Location loc,
+fir::ExtendedValue convertExprToValue(aiir::Location loc,
                                       Fortran::lower::AbstractConverter &,
                                       const Fortran::lower::SomeExpr &,
                                       Fortran::lower::SymMap &,
                                       Fortran::lower::StatementContext &);
-fir::ExtendedValue convertToValue(mlir::Location loc,
+fir::ExtendedValue convertToValue(aiir::Location loc,
                                   Fortran::lower::AbstractConverter &,
                                   hlfir::Entity entity,
                                   Fortran::lower::StatementContext &);
 
-fir::ExtendedValue convertDataRefToValue(mlir::Location loc,
+fir::ExtendedValue convertDataRefToValue(aiir::Location loc,
                                          Fortran::lower::AbstractConverter &,
                                          const Fortran::evaluate::DataRef &,
                                          Fortran::lower::SymMap &,
@@ -121,7 +121,7 @@ fir::ExtendedValue convertDataRefToValue(mlir::Location loc,
 /// This can only be called if the Expr is a POINTER or ALLOCATABLE,
 /// otherwise, this will crash.
 fir::MutableBoxValue
-convertExprToMutableBox(mlir::Location loc, Fortran::lower::AbstractConverter &,
+convertExprToMutableBox(aiir::Location loc, Fortran::lower::AbstractConverter &,
                         const Fortran::lower::SomeExpr &,
                         Fortran::lower::SymMap &);
 /// Lower a designator containing vector subscripts into an
@@ -133,7 +133,7 @@ convertExprToMutableBox(mlir::Location loc, Fortran::lower::AbstractConverter &,
 /// about vector subscripts, they are automatically turned into array expression
 /// values via an hlfir.elemental in the convertExprToXXX calls.
 hlfir::ElementalAddrOp convertVectorSubscriptedExprToElementalAddr(
-    mlir::Location loc, Fortran::lower::AbstractConverter &,
+    aiir::Location loc, Fortran::lower::AbstractConverter &,
     const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
     Fortran::lower::StatementContext &);
 
@@ -142,7 +142,7 @@ hlfir::ElementalAddrOp convertVectorSubscriptedExprToElementalAddr(
 /// helper which calls convertVectorSubscriptedExprToElementalAddr and lowers
 /// the hlfir::ElementalAddrOp.
 hlfir::Entity genVectorSubscriptedDesignatorFirstElementAddress(
-    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    aiir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx);
 

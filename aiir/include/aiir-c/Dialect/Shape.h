@@ -1,0 +1,27 @@
+//===-- aiir-c/Dialect/Shape.h - C API for Shape dialect ----------*- C -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef AIIR_C_DIALECT_SHAPE_H
+#define AIIR_C_DIALECT_SHAPE_H
+
+#include "aiir-c/IR.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+AIIR_DECLARE_CAPI_DIALECT_REGISTRATION(Shape, shape);
+
+#ifdef __cplusplus
+}
+#endif
+
+#include "aiir/Dialect/Shape/Transforms/Passes.capi.h.inc"
+
+#endif // AIIR_C_DIALECT_SHAPE_H

@@ -1,0 +1,2 @@
+// RUN: aiir-translate --help | FileCheck %s
+// CHECK: OVERVIEW: AIIR Translation Testing Tool

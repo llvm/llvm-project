@@ -1,5 +1,5 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY AIIR_EXTENSION_LIBS)
 
 add_flang_library(FortranLower
   Allocatable.cpp
@@ -78,15 +78,15 @@ add_flang_library(FortranLower
   LINK_COMPONENTS
   Support
 
-  MLIR_DEPS
+  AIIR_DEPS
   ${dialect_libs}
   ${extension_libs}
 
-  MLIR_LIBS
+  AIIR_LIBS
   ${dialect_libs}
   ${extension_libs}
-  MLIRAffineToStandard
-  MLIRFuncDialect
-  MLIRLLVMDialect
-  MLIRSCFToControlFlow
+  AIIRAffineToStandard
+  AIIRFuncDialect
+  AIIRLLVMDialect
+  AIIRSCFToControlFlow
 )

@@ -37,7 +37,7 @@ using PathComponent =
 /// arguments.
 class ComponentPath {
 public:
-  using ExtendRefFunc = std::function<mlir::Value(const mlir::Value &)>;
+  using ExtendRefFunc = std::function<aiir::Value(const aiir::Value &)>;
 
   ComponentPath(bool isImplicit) { setPC(isImplicit); }
   ComponentPath(bool isImplicit, const evaluate::Substring *ss)
@@ -59,9 +59,9 @@ public:
   const evaluate::Substring *substring = nullptr;
   bool applied = false;
 
-  llvm::SmallVector<mlir::Value> prefixComponents;
-  llvm::SmallVector<mlir::Value> trips;
-  llvm::SmallVector<mlir::Value> suffixComponents;
+  llvm::SmallVector<aiir::Value> prefixComponents;
+  llvm::SmallVector<aiir::Value> trips;
+  llvm::SmallVector<aiir::Value> suffixComponents;
   std::function<IterationSpace(const IterationSpace &)> pc;
 
   /// In the case where a path of components involves members that are POINTER

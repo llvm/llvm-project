@@ -1,16 +1,16 @@
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -flang-experimental-hlfir -emit-llvm %s -o - | FileCheck --check-prefixes=LLVM-HOST,LLVM-ALL %s
-! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-HOST,MLIR-ALL %s
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck --check-prefixes=AIIR-HOST,AIIR-ALL %s
 ! RUN: %if amdgpu-registered-target %{ %flang_fc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-version=52 -fopenmp-is-target-device -flang-experimental-hlfir -emit-llvm %s -o - | FileCheck --check-prefixes=LLVM-DEVICE,LLVM-ALL %s %}
-! RUN: %if amdgpu-registered-target %{ %flang_fc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-version=52 -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-DEVICE,MLIR-ALL %s %}
-! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-HOST,MLIR-ALL %s
-! RUN: %if amdgpu-registered-target %{ bbc -target amdgcn-amd-amdhsa -fopenmp -fopenmp-version=52 -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-DEVICE,MLIR-ALL %s %}
+! RUN: %if amdgpu-registered-target %{ %flang_fc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-version=52 -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck --check-prefixes=AIIR-DEVICE,AIIR-ALL %s %}
+! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck --check-prefixes=AIIR-HOST,AIIR-ALL %s
+! RUN: %if amdgpu-registered-target %{ bbc -target amdgcn-amd-amdhsa -fopenmp -fopenmp-version=52 -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck --check-prefixes=AIIR-DEVICE,AIIR-ALL %s %}
 
 ! Check that the correct LLVM IR functions are kept for the host and device
 ! after running the whole set of translation and transformation passes from
 ! Fortran.
 
-! MLIR-ALL: func.func @{{.*}}device_fn(
-! MLIR-ALL: return
+! AIIR-ALL: func.func @{{.*}}device_fn(
+! AIIR-ALL: return
 
 ! LLVM-ALL: define {{.*}} @{{.*}}device_fn{{.*}}(
 function device_fn() result(x)
@@ -19,8 +19,8 @@ function device_fn() result(x)
   x = 10
 end function device_fn
 
-! MLIR-ALL: func.func @{{.*}}device_fn_enter(
-! MLIR-ALL: return
+! AIIR-ALL: func.func @{{.*}}device_fn_enter(
+! AIIR-ALL: return
 
 ! LLVM-ALL: define {{.*}} @{{.*}}device_fn_enter{{.*}}(
 function device_fn_enter() result(x)
@@ -29,9 +29,9 @@ function device_fn_enter() result(x)
   x = 10
 end function device_fn_enter
 
-! MLIR-HOST: func.func @{{.*}}host_fn(
-! MLIR-HOST: return
-! MLIR-DEVICE-NOT: func.func {{.*}}host_fn(
+! AIIR-HOST: func.func @{{.*}}host_fn(
+! AIIR-HOST: return
+! AIIR-DEVICE-NOT: func.func {{.*}}host_fn(
 
 ! LLVM-HOST: define {{.*}} @{{.*}}host_fn{{.*}}(
 ! LLVM-DEVICE-NOT: {{.*}} @{{.*}}host_fn{{.*}}(
@@ -49,8 +49,8 @@ function host_fn_enter() result(x)
   x = 10
 end function host_fn_enter
 
-! MLIR-ALL: func.func @{{.*}}target_subr(
-! MLIR-ALL: return
+! AIIR-ALL: func.func @{{.*}}target_subr(
+! AIIR-ALL: return
 
 ! LLVM-HOST: define {{.*}} @{{.*}}target_subr{{.*}}(
 ! LLVM-ALL: define {{.*}} @__omp_offloading_{{.*}}_{{.*}}_target_subr__{{.*}}(

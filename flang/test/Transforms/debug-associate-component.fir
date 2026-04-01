@@ -1,4 +1,4 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s | FileCheck %s
 
 // Test the access of coordinates in fir.coordinate_of, when
 // there is just the field attribute:

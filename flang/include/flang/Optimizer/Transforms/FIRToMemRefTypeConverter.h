@@ -20,39 +20,39 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinTypes.h"
+#include "aiir/Transforms/DialectConversion.h"
 
 namespace fir {
 
-class FIRToMemRefTypeConverter : public mlir::TypeConverter {
+class FIRToMemRefTypeConverter : public aiir::TypeConverter {
 private:
   KindMapping kindMapping;
   bool convertComplexTypes = false;
   bool convertScalarTypesOnly = false;
 
 public:
-  explicit FIRToMemRefTypeConverter(mlir::ModuleOp mod)
+  explicit FIRToMemRefTypeConverter(aiir::ModuleOp mod)
       : kindMapping(fir::getKindMapping(mod)) {
-    addConversion([](mlir::Type type) { return type; });
+    addConversion([](aiir::Type type) { return type; });
 
-    addConversion([&](fir::LogicalType type) -> mlir::Type {
-      return mlir::IntegerType::get(
+    addConversion([&](fir::LogicalType type) -> aiir::Type {
+      return aiir::IntegerType::get(
           type.getContext(), kindMapping.getLogicalBitsize(type.getFKind()));
     });
 
-    addSourceMaterialization([](mlir::OpBuilder &builder, mlir::Type type,
-                                mlir::ValueRange inputs,
-                                mlir::Location loc) -> mlir::Value {
+    addSourceMaterialization([](aiir::OpBuilder &builder, aiir::Type type,
+                                aiir::ValueRange inputs,
+                                aiir::Location loc) -> aiir::Value {
       assert(!inputs.empty() && "expected a single input for materialization");
       builder.setInsertionPointAfter(inputs[0].getDefiningOp());
       return fir::ConvertOp::create(builder, loc, type, inputs[0]);
     });
 
-    addTargetMaterialization([](mlir::OpBuilder &builder, mlir::Type type,
-                                mlir::ValueRange inputs,
-                                mlir::Location loc) -> mlir::Value {
+    addTargetMaterialization([](aiir::OpBuilder &builder, aiir::Type type,
+                                aiir::ValueRange inputs,
+                                aiir::Location loc) -> aiir::Value {
       return fir::ConvertOp::create(builder, loc, type, inputs[0]);
     });
   }
@@ -65,16 +65,16 @@ public:
 
   /// Return true if the given FIR type can be converted to a MemRef-typed
   /// descriptor (i.e. is a supported base element for MemRef converting).
-  bool convertibleMemrefType(mlir::Type ty) {
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty))
+  bool convertibleMemrefType(aiir::Type ty) {
+    if (auto refTy = aiir::dyn_cast<fir::ReferenceType>(ty))
       return convertibleMemrefType(refTy.getElementType());
-    else if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty))
+    else if (auto pointerTy = aiir::dyn_cast<fir::PointerType>(ty))
       return convertibleMemrefType(pointerTy.getElementType());
-    else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
+    else if (auto heapTy = aiir::dyn_cast<fir::HeapType>(ty))
       return convertibleMemrefType(heapTy.getElementType());
-    else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+    else if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(ty))
       return convertibleMemrefType(seqTy.getElementType());
-    else if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
+    else if (auto boxTy = aiir::dyn_cast<fir::BoxType>(ty))
       return convertibleMemrefType(boxTy.getElementType());
 
     setConvertScalarTypesOnly(true);
@@ -85,14 +85,14 @@ public:
 
   /// Return true if the given FIR type represents an empty array (has a zero
   /// extent in its shape).
-  bool isEmptyArray(mlir::Type ty) const {
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty))
+  bool isEmptyArray(aiir::Type ty) const {
+    if (auto refTy = aiir::dyn_cast<fir::ReferenceType>(ty))
       return isEmptyArray(refTy.getElementType());
-    else if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty))
+    else if (auto pointerTy = aiir::dyn_cast<fir::PointerType>(ty))
       return isEmptyArray(pointerTy.getElementType());
-    else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
+    else if (auto heapTy = aiir::dyn_cast<fir::HeapType>(ty))
       return isEmptyArray(heapTy.getElementType());
-    else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    else if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(ty)) {
       llvm::ArrayRef<int64_t> firShape = seqTy.getShape();
       for (auto shape : firShape)
         if (shape == 0)
@@ -104,21 +104,21 @@ public:
 
   /// Returns true if the given type can be converted according to the current
   /// converter settings (scalar-only or full).
-  bool convertibleType(mlir::Type type) const {
+  bool convertibleType(aiir::Type type) const {
     if (!convertScalarTypesOnly) {
-      if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(type)) {
+      if (auto refTy = aiir::dyn_cast<fir::ReferenceType>(type)) {
         auto elTy = refTy.getElementType();
-        if (mlir::isa<fir::SequenceType>(elTy))
+        if (aiir::isa<fir::SequenceType>(elTy))
           return false;
         return convertibleType(elTy);
       }
 
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type))
+      if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(type))
         return convertibleType(seqTy.getElementType());
     }
 
     if (fir::isa_fir_type(type)) {
-      if (mlir::isa<fir::LogicalType>(type))
+      if (aiir::isa<fir::LogicalType>(type))
         return true;
       return false;
     }
@@ -126,74 +126,74 @@ public:
     if (type.isUnsignedInteger())
       return false;
 
-    if (mlir::isa<mlir::ComplexType>(type))
+    if (aiir::isa<aiir::ComplexType>(type))
       return convertComplexTypes;
 
-    if (mlir::isa<mlir::FunctionType>(type))
+    if (aiir::isa<aiir::FunctionType>(type))
       return false;
 
-    if (mlir::isa<mlir::TupleType>(type))
+    if (aiir::isa<aiir::TupleType>(type))
       return false;
 
     return true;
   }
 
   /// Convert a FIR element / aggregate type to a MemRef descriptor type.
-  mlir::MemRefType convertMemrefType(mlir::Type firTy) const {
-    auto convertBaseType = [&](mlir::Type firTy) -> mlir::MemRefType {
-      if (auto charTy = mlir::dyn_cast<fir::CharacterType>(firTy)) {
+  aiir::MemRefType convertMemrefType(aiir::Type firTy) const {
+    auto convertBaseType = [&](aiir::Type firTy) -> aiir::MemRefType {
+      if (auto charTy = aiir::dyn_cast<fir::CharacterType>(firTy)) {
         unsigned kind = charTy.getFKind();
         unsigned bitWidth = kindMapping.getCharacterBitsize(kind);
-        mlir::Type elTy = mlir::IntegerType::get(charTy.getContext(), bitWidth);
+        aiir::Type elTy = aiir::IntegerType::get(charTy.getContext(), bitWidth);
 
         if (charTy.hasConstantLen() && charTy.getLen() == 1) {
-          return mlir::MemRefType::get({}, elTy);
+          return aiir::MemRefType::get({}, elTy);
         } else if (charTy.hasConstantLen()) {
           int64_t len = charTy.getLen();
-          return mlir::MemRefType::get({len}, elTy);
+          return aiir::MemRefType::get({len}, elTy);
         } else {
-          return mlir::MemRefType::get({mlir::ShapedType::kDynamic}, elTy);
+          return aiir::MemRefType::get({aiir::ShapedType::kDynamic}, elTy);
         }
       }
 
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(firTy)) {
+      if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(firTy)) {
         auto elTy = seqTy.getElementType();
-        mlir::Type ty = convertType(elTy);
+        aiir::Type ty = convertType(elTy);
 
         llvm::ArrayRef<int64_t> firShape = seqTy.getShape();
         llvm::SmallVector<int64_t> shape;
         for (auto it = firShape.rbegin(); it != firShape.rend(); ++it)
           shape.push_back(*it);
 
-        assert(mlir::BaseMemRefType::isValidElementType(ty) &&
+        assert(aiir::BaseMemRefType::isValidElementType(ty) &&
                "got invalid memref element type from array fir type");
-        return mlir::MemRefType::get(shape, ty);
+        return aiir::MemRefType::get(shape, ty);
       }
 
-      mlir::Type ty = convertType(firTy);
-      assert(mlir::BaseMemRefType::isValidElementType(ty) &&
+      aiir::Type ty = convertType(firTy);
+      assert(aiir::BaseMemRefType::isValidElementType(ty) &&
              "got invalid memref element type from scalar fir type");
-      return mlir::MemRefType::get({}, ty);
+      return aiir::MemRefType::get({}, ty);
     };
 
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(firTy))
+    if (auto refTy = aiir::dyn_cast<fir::ReferenceType>(firTy))
       return convertBaseType(refTy.getElementType());
 
-    if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(firTy))
+    if (auto pointerTy = aiir::dyn_cast<fir::PointerType>(firTy))
       return convertBaseType(pointerTy.getElementType());
 
-    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(firTy))
+    if (auto heapTy = aiir::dyn_cast<fir::HeapType>(firTy))
       return convertBaseType(heapTy.getElementType());
 
-    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(firTy)) {
+    if (auto boxTy = aiir::dyn_cast<fir::BoxType>(firTy)) {
       auto elTy = boxTy.getElementType();
 
       auto memRefTy = convertMemrefType(elTy);
-      mlir::MemRefType dynTy = mlir::MemRefType::Builder(memRefTy).setLayout(
-          mlir::StridedLayoutAttr::get(
-              memRefTy.getContext(), mlir::ShapedType::kDynamic,
+      aiir::MemRefType dynTy = aiir::MemRefType::Builder(memRefTy).setLayout(
+          aiir::StridedLayoutAttr::get(
+              memRefTy.getContext(), aiir::ShapedType::kDynamic,
               llvm::SmallVector<int64_t>(memRefTy.getRank(),
-                                         mlir::ShapedType::kDynamic)));
+                                         aiir::ShapedType::kDynamic)));
       return dynTy;
     }
 

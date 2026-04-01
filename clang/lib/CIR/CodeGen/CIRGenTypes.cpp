@@ -2,7 +2,7 @@
 
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "aiir/IR/BuiltinTypes.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/GlobalDecl.h"
@@ -25,7 +25,7 @@ CIRGenTypes::~CIRGenTypes() {
     delete &*i++;
 }
 
-mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
+aiir::AIIRContext &CIRGenTypes::getAIIRContext() const {
   return *builder.getContext();
 }
 
@@ -45,7 +45,7 @@ bool CIRGenTypes::isFuncParamTypeConvertible(clang::QualType type) {
   if (!tagType)
     return true;
 
-  // Function types involving incomplete class types are problematic in MLIR.
+  // Function types involving incomplete class types are problematic in AIIR.
   return !tagType->isIncompleteType();
 }
 
@@ -66,7 +66,7 @@ bool CIRGenTypes::isFuncTypeConvertible(const FunctionType *ft) {
   return true;
 }
 
-mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
+aiir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
   assert(qft.isCanonical());
   const FunctionType *ft = cast<FunctionType>(qft.getTypePtr());
 
@@ -88,7 +88,7 @@ mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
         CanQual<FunctionNoProtoType>::CreateUnsafe(QualType(fnpt, 0)));
   }
 
-  mlir::Type resultType = getFunctionType(*fi);
+  aiir::Type resultType = getFunctionType(*fi);
 
   return resultType;
 }
@@ -216,7 +216,7 @@ static bool isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt) {
 }
 
 /// Lay out a tagged decl type like struct or union.
-mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
+aiir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
   // connected to the decl.
   const Type *key = astContext.getCanonicalTagType(rd).getTypePtr();
@@ -274,7 +274,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   return entry;
 }
 
-mlir::Type CIRGenTypes::convertType(QualType type) {
+aiir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
 
@@ -290,7 +290,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   // For types that haven't been implemented yet or are otherwise unsupported,
   // report an error and return 'int'.
 
-  mlir::Type resultType = nullptr;
+  aiir::Type resultType = nullptr;
   switch (ty->getTypeClass()) {
   case Type::Record:
     llvm_unreachable("Should have been handled above");
@@ -304,7 +304,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
     // bool
     case BuiltinType::Bool:
-      resultType = cir::BoolType::get(&getMLIRContext());
+      resultType = cir::BoolType::get(&getAIIRContext());
       break;
 
     // Signed integral types.
@@ -317,7 +317,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::Short:
     case BuiltinType::WChar_S:
       resultType =
-          cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
+          cir::IntType::get(&getAIIRContext(), astContext.getTypeSize(ty),
                             /*isSigned=*/true);
       break;
 
@@ -388,7 +388,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::UShort:
     case BuiltinType::WChar_U:
       resultType =
-          cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
+          cir::IntType::get(&getAIIRContext(), astContext.getTypeSize(ty),
                             /*isSigned=*/false);
       break;
 
@@ -450,7 +450,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::Complex: {
     const auto *ct = cast<clang::ComplexType>(ty);
-    mlir::Type elementTy = convertType(ct->getElementType());
+    aiir::Type elementTy = convertType(ct->getElementType());
     resultType = cir::ComplexType::get(elementTy);
     break;
   }
@@ -470,7 +470,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     QualType elemTy = ptrTy->getPointeeType();
     assert(!elemTy->isConstantMatrixType() && "not implemented");
 
-    mlir::Type pointeeType = convertType(elemTy);
+    aiir::Type pointeeType = convertType(elemTy);
 
     resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
     break;
@@ -491,7 +491,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     if (arrTy->getIndexTypeCVRQualifiers() != 0)
       cgm.errorNYI(SourceLocation(), "non trivial array types", type);
 
-    mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+    aiir::Type elemTy = convertTypeForMem(arrTy->getElementType());
     // int X[] -> [0 x int], unless the element type is not sized.  If it is
     // unsized (e.g. an incomplete record) just use [0 x i8].
     if (!cir::isSized(elemTy)) {
@@ -504,7 +504,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
-    mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+    aiir::Type elemTy = convertTypeForMem(arrTy->getElementType());
     // In classic codegen, arrays of unsized types which it assumes are "arrays
     // of undefined struct type" are lowered to arrays of i8 "just to have a
     // concrete type", but in CIR, we can get here with abstract types like
@@ -517,7 +517,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ExtVector:
   case Type::Vector: {
     const VectorType *vec = cast<VectorType>(ty);
-    const mlir::Type elemTy = convertType(vec->getElementType());
+    const aiir::Type elemTy = convertType(vec->getElementType());
     resultType = cir::VectorType::get(elemTy, vec->getNumElements());
     break;
   }
@@ -537,10 +537,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const auto *mpt = cast<MemberPointerType>(ty);
 
     NestedNameSpecifier mptNNS = mpt->getQualifier();
-    auto clsTy = mlir::cast<cir::RecordType>(
+    auto clsTy = aiir::cast<cir::RecordType>(
         convertType(QualType(mptNNS.getAsType(), 0)));
     if (mpt->isMemberDataPointer()) {
-      mlir::Type memberTy = convertType(mpt->getPointeeType());
+      aiir::Type memberTy = convertType(mpt->getPointeeType());
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
       auto memberFuncTy = getFunctionType(cgm.getTypes().arrangeCXXMethodType(
@@ -563,7 +563,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       cgm.errorNYI(SourceLocation(), "large _BitInt type", type);
       resultType = cgm.sInt32Ty;
     } else {
-      resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
+      resultType = cir::IntType::get(&getAIIRContext(), bitIntTy->getNumBits(),
                                      bitIntTy->isSigned());
     }
     break;
@@ -596,14 +596,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   return resultType;
 }
 
-mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
+aiir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
   if (qualType->isConstantMatrixType()) {
     cgm.errorNYI("Matrix type conversion");
     return cgm.sInt32Ty;
   }
 
-  mlir::Type convertedType = convertType(qualType);
+  aiir::Type convertedType = convertType(qualType);
 
   assert(!forBitField && "Bit fields NYI");
 

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t.before.log
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -maiir --aiir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t.before.log
 // RUN: FileCheck %s --input-file=%t.before.log -check-prefix=CIR-BEFORE
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-cxxabi-lowering %s -o %t.cir 2> %t.after.log
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -maiir --aiir-print-ir-after=cir-cxxabi-lowering %s -o %t.cir 2> %t.after.log
 // RUN: FileCheck %s --input-file=%t.after.log -check-prefix=CIR-AFTER
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck %s --input-file=%t-cir.ll -check-prefix=LLVM

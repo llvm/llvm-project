@@ -11,9 +11,9 @@ add_flang_library(CUFAttrs
   AsmPrinter
   Remarks
 
-  MLIR_DEPS
-  MLIRIR
+  AIIR_DEPS
+  AIIRIR
 
-  MLIR_LIBS
-  MLIRTargetLLVMIRExport
+  AIIR_LIBS
+  AIIRTargetLLVMIRExport
 )

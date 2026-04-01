@@ -81,9 +81,9 @@ function(tablegen project ofn)
   # char literals, instead. If we're cross-compiling, then conservatively assume
   # that the source might be consumed by MSVC.
   # [1] https://docs.microsoft.com/en-us/cpp/cpp/compiler-limits?view=vs-2017
-  # Don't pass this flag to mlir-src-sharder, since it doesn't support the
+  # Don't pass this flag to aiir-src-sharder, since it doesn't support the
   # flag, and it doesn't need it.
-  if (MSVC AND NOT "${project}" STREQUAL "MLIR_SRC_SHARDER")
+  if (MSVC AND NOT "${project}" STREQUAL "AIIR_SRC_SHARDER")
     list(APPEND LLVM_TABLEGEN_FLAGS "--long-string-literals=0")
   endif()
   if (CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -95,9 +95,9 @@ function(tablegen project ofn)
     set(tblgen_change_flag "--write-if-changed")
   endif()
 
-  # Don't pass this flag to mlir-src-sharder, since it doesn't support the
+  # Don't pass this flag to aiir-src-sharder, since it doesn't support the
   # flag, and it doesn't need it.
-  if (NOT LLVM_ENABLE_WARNINGS AND NOT "${project}" STREQUAL "MLIR_SRC_SHARDER")
+  if (NOT LLVM_ENABLE_WARNINGS AND NOT "${project}" STREQUAL "AIIR_SRC_SHARDER")
     list(APPEND LLVM_TABLEGEN_FLAGS "-no-warn-on-unused-template-args")
   endif()
 

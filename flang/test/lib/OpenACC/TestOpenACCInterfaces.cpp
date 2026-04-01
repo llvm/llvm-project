@@ -6,40 +6,40 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/LLVM.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Support/LLVM.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
 struct TestFIROpenACCInterfaces
     : public PassWrapper<TestFIROpenACCInterfaces, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFIROpenACCInterfaces)
+  AIIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFIROpenACCInterfaces)
 
   StringRef getArgument() const final { return "test-fir-openacc-interfaces"; }
   StringRef getDescription() const final {
     return "Test FIR implementation of the OpenACC interfaces.";
   }
-  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+  void getDependentDialects(::aiir::DialectRegistry &registry) const override {
     registry.insert<fir::FIROpsDialect, hlfir::hlfirDialect,
-        mlir::arith::ArithDialect, mlir::acc::OpenACCDialect,
-        mlir::DLTIDialect>();
+        aiir::arith::ArithDialect, aiir::acc::OpenACCDialect,
+        aiir::DLTIDialect>();
   }
   void runOnOperation() override {
-    mlir::ModuleOp mod = getOperation();
+    aiir::ModuleOp mod = getOperation();
     auto datalayout =
-        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
-    mlir::OpBuilder builder(mod);
+        fir::support::getOrSetAIIRDataLayout(mod, /*allowDefaultLayout=*/true);
+    aiir::OpBuilder builder(mod);
     getOperation().walk([&](Operation *op) {
       if (isa<ACC_DATA_ENTRY_OPS>(op)) {
         Value var = acc::getVar(op);
@@ -59,14 +59,14 @@ struct TestFIROpenACCInterfaces
         llvm::errs() << "Visiting: " << *op << "\n";
         llvm::errs() << "\tVar: " << var << "\n";
 
-        if (mlir::isa<acc::PointerLikeType>(typeOfVar) &&
-            mlir::isa<acc::MappableType>(typeOfVar)) {
+        if (aiir::isa<acc::PointerLikeType>(typeOfVar) &&
+            aiir::isa<acc::MappableType>(typeOfVar)) {
           llvm::errs() << "\tPointer-like and Mappable: " << typeOfVar << "\n";
-        } else if (mlir::isa<acc::PointerLikeType>(typeOfVar)) {
+        } else if (aiir::isa<acc::PointerLikeType>(typeOfVar)) {
           llvm::errs() << "\tPointer-like: " << typeOfVar << "\n";
         } else {
           assert(
-              mlir::isa<acc::MappableType>(typeOfVar) && "expected mappable");
+              aiir::isa<acc::MappableType>(typeOfVar) && "expected mappable");
           llvm::errs() << "\tMappable: " << typeOfVar << "\n";
         }
 

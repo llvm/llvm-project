@@ -9,10 +9,10 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ARRAYCONSTRUCTOR_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ARRAYCONSTRUCTOR_H
 
-namespace mlir {
+namespace aiir {
 class Value;
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -20,20 +20,20 @@ class FirOpBuilder;
 
 namespace fir::runtime {
 
-mlir::Value genInitArrayConstructorVector(mlir::Location loc,
+aiir::Value genInitArrayConstructorVector(aiir::Location loc,
                                           fir::FirOpBuilder &builder,
-                                          mlir::Value toBox,
-                                          mlir::Value useValueLengthParameters);
+                                          aiir::Value toBox,
+                                          aiir::Value useValueLengthParameters);
 
-void genPushArrayConstructorValue(mlir::Location loc,
+void genPushArrayConstructorValue(aiir::Location loc,
                                   fir::FirOpBuilder &builder,
-                                  mlir::Value arrayConstructorVector,
-                                  mlir::Value fromBox);
+                                  aiir::Value arrayConstructorVector,
+                                  aiir::Value fromBox);
 
-void genPushArrayConstructorSimpleScalar(mlir::Location loc,
+void genPushArrayConstructorSimpleScalar(aiir::Location loc,
                                          fir::FirOpBuilder &builder,
-                                         mlir::Value arrayConstructorVector,
-                                         mlir::Value fromAddress);
+                                         aiir::Value arrayConstructorVector,
+                                         aiir::Value fromAddress);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ARRAYCONSTRUCTOR_H

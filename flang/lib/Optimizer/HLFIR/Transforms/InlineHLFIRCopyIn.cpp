@@ -16,9 +16,9 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/Support/LLVM.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace hlfir {
 #define GEN_PASS_DEF_INLINEHLFIRCOPYIN
@@ -33,22 +33,22 @@ static llvm::cl::opt<bool> noInlineHLFIRCopyIn(
     llvm::cl::init(false));
 
 namespace {
-class InlineCopyInConversion : public mlir::OpRewritePattern<hlfir::CopyInOp> {
+class InlineCopyInConversion : public aiir::OpRewritePattern<hlfir::CopyInOp> {
 public:
-  using mlir::OpRewritePattern<hlfir::CopyInOp>::OpRewritePattern;
+  using aiir::OpRewritePattern<hlfir::CopyInOp>::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::CopyInOp copyIn,
-                  mlir::PatternRewriter &rewriter) const override;
+                  aiir::PatternRewriter &rewriter) const override;
 };
 
 llvm::LogicalResult
 InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
-                                        mlir::PatternRewriter &rewriter) const {
+                                        aiir::PatternRewriter &rewriter) const {
   fir::FirOpBuilder builder(rewriter, copyIn.getOperation());
-  mlir::Location loc = copyIn.getLoc();
+  aiir::Location loc = copyIn.getLoc();
   hlfir::Entity inputVariable{copyIn.getVar()};
-  mlir::Type resultAddrType = copyIn.getCopiedIn().getType();
+  aiir::Type resultAddrType = copyIn.getCopiedIn().getType();
   if (!fir::isa_trivial(inputVariable.getFortranElementType()))
     return rewriter.notifyMatchFailure(copyIn,
                                        "CopyInOp's data type is not trivial");
@@ -60,14 +60,14 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
         copyIn, "CopyInOp's WasCopied has no single user");
   // The copy out should always be present, either to actually copy or just
   // deallocate memory.
-  auto copyOut = mlir::dyn_cast<hlfir::CopyOutOp>(
+  auto copyOut = aiir::dyn_cast<hlfir::CopyOutOp>(
       copyIn.getWasCopied().user_begin().getCurrent().getUser());
 
   if (!copyOut)
     return rewriter.notifyMatchFailure(copyIn,
                                        "CopyInOp has no direct CopyOut");
 
-  if (mlir::cast<fir::BaseBoxType>(resultAddrType).isAssumedRank())
+  if (aiir::cast<fir::BaseBoxType>(resultAddrType).isAssumedRank())
     return rewriter.notifyMatchFailure(copyIn,
                                        "The result array is assumed-rank");
 
@@ -78,33 +78,33 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
 
   inputVariable =
       hlfir::derefPointersAndAllocatables(loc, builder, inputVariable);
-  mlir::Type sequenceType =
+  aiir::Type sequenceType =
       hlfir::getFortranElementOrSequenceType(inputVariable.getType());
   fir::BoxType resultBoxType = fir::BoxType::get(sequenceType);
-  mlir::Value isContiguous =
+  aiir::Value isContiguous =
       fir::IsContiguousBoxOp::create(builder, loc, inputVariable);
-  mlir::Operation::result_range results =
+  aiir::Operation::result_range results =
       builder
           .genIfOp(loc, {resultBoxType, builder.getI1Type()}, isContiguous,
                    /*withElseRegion=*/true)
           .genThen([&]() {
-            mlir::Value result = inputVariable;
+            aiir::Value result = inputVariable;
             if (fir::isPointerType(inputVariable.getType())) {
               result = fir::ReboxOp::create(builder, loc, resultBoxType,
-                                            inputVariable, mlir::Value{},
-                                            mlir::Value{});
+                                            inputVariable, aiir::Value{},
+                                            aiir::Value{});
             }
             fir::ResultOp::create(
                 builder, loc,
-                mlir::ValueRange{result, builder.createBool(loc, false)});
+                aiir::ValueRange{result, builder.createBool(loc, false)});
           })
           .genElse([&] {
-            mlir::Value shape = hlfir::genShape(loc, builder, inputVariable);
-            llvm::SmallVector<mlir::Value> extents =
+            aiir::Value shape = hlfir::genShape(loc, builder, inputVariable);
+            llvm::SmallVector<aiir::Value> extents =
                 hlfir::getIndexExtents(loc, builder, shape);
             llvm::StringRef tmpName{".tmp.copy_in"};
-            llvm::SmallVector<mlir::Value> lenParams;
-            mlir::Value alloc = builder.createHeapTemporary(
+            llvm::SmallVector<aiir::Value> lenParams;
+            aiir::Value alloc = builder.createHeapTemporary(
                 loc, sequenceType, tmpName, extents, lenParams);
 
             auto declareOp = hlfir::DeclareOp::create(builder, loc, alloc,
@@ -126,27 +126,27 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
             hlfir::AssignOp::create(builder, loc, elem, tempElem);
             builder.setInsertionPointAfter(loopNest.outerOp);
 
-            mlir::Value result;
+            aiir::Value result;
             // Make sure the result is always a boxed array by boxing it
             // ourselves if need be.
-            if (mlir::isa<fir::BaseBoxType>(temp.getType())) {
+            if (aiir::isa<fir::BaseBoxType>(temp.getType())) {
               result = temp;
             } else {
               fir::ReferenceType refTy =
                   fir::ReferenceType::get(temp.getElementOrSequenceType());
-              mlir::Value refVal = builder.createConvert(loc, refTy, temp);
+              aiir::Value refVal = builder.createConvert(loc, refTy, temp);
               result = fir::EmboxOp::create(builder, loc, resultBoxType, refVal,
                                             shape);
             }
 
             fir::ResultOp::create(
                 builder, loc,
-                mlir::ValueRange{result, builder.createBool(loc, true)});
+                aiir::ValueRange{result, builder.createBool(loc, true)});
           })
           .getResults();
 
-  mlir::OpResult resultBox = results[0];
-  mlir::OpResult needsCleanup = results[1];
+  aiir::OpResult resultBox = results[0];
+  aiir::OpResult needsCleanup = results[1];
 
   // Prepare the corresponding copyOut to free the temporary if it is required
   auto alloca = fir::AllocaOp::create(builder, loc, resultBox.getType());
@@ -157,28 +157,28 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   rewriter.finalizeOpModification(copyOut);
 
   rewriter.replaceOp(copyIn, {resultBox, builder.genNot(loc, isContiguous)});
-  return mlir::success();
+  return aiir::success();
 }
 
 class InlineHLFIRCopyInPass
     : public hlfir::impl::InlineHLFIRCopyInBase<InlineHLFIRCopyInPass> {
 public:
   void runOnOperation() override {
-    mlir::MLIRContext *context = &getContext();
+    aiir::AIIRContext *context = &getContext();
 
-    mlir::GreedyRewriteConfig config;
+    aiir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
     config.setRegionSimplificationLevel(
-        mlir::GreedySimplifyRegionLevel::Disabled);
+        aiir::GreedySimplifyRegionLevel::Disabled);
 
-    mlir::RewritePatternSet patterns(context);
+    aiir::RewritePatternSet patterns(context);
     if (!noInlineHLFIRCopyIn) {
       patterns.insert<InlineCopyInConversion>(context);
     }
 
-    if (mlir::failed(mlir::applyPatternsGreedily(
+    if (aiir::failed(aiir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
-      mlir::emitError(getOperation()->getLoc(),
+      aiir::emitError(getOperation()->getLoc(),
                       "failure in hlfir.copy_in inlining");
       signalPassFailure();
     }

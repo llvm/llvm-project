@@ -17,16 +17,16 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/stop.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/IR/Matchers.h"
+#include "aiir/Transforms/DialectConversion.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace fir {
 #define GEN_PASS_DEF_MIFOPCONVERSION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 using namespace Fortran::runtime;
 
 namespace {
@@ -38,11 +38,11 @@ static std::string getPRIFProcName(std::string fmt) {
   return fir::NameUniquer::doProcedure({"prif"}, {}, oss.str());
 }
 
-static mlir::Type getPRIFStatType(fir::FirOpBuilder &builder) {
+static aiir::Type getPRIFStatType(fir::FirOpBuilder &builder) {
   return builder.getRefType(builder.getI32Type());
 }
 
-static mlir::Type getPRIFErrmsgType(fir::FirOpBuilder &builder) {
+static aiir::Type getPRIFErrmsgType(fir::FirOpBuilder &builder) {
   return fir::BoxType::get(fir::CharacterType::get(
       builder.getContext(), 1, fir::CharacterType::unknownLen()));
 }
@@ -54,51 +54,51 @@ static mlir::Type getPRIFErrmsgType(fir::FirOpBuilder &builder) {
 // call.
 // Depending on the type of `errmsg`, this function will return the pair
 // corresponding to (`errmsg`, `errmsg_alloc`).
-static std::pair<mlir::Value, mlir::Value>
-genErrmsgPRIF(fir::FirOpBuilder &builder, mlir::Location loc,
-              mlir::Value errmsg) {
-  mlir::Value absent =
+static std::pair<aiir::Value, aiir::Value>
+genErrmsgPRIF(fir::FirOpBuilder &builder, aiir::Location loc,
+              aiir::Value errmsg) {
+  aiir::Value absent =
       fir::AbsentOp::create(builder, loc, getPRIFErrmsgType(builder));
   if (!errmsg)
     return {absent, absent};
 
   bool isAllocatableErrmsg = fir::isAllocatableType(errmsg.getType());
-  mlir::Value errMsg = isAllocatableErrmsg ? absent : errmsg;
-  mlir::Value errMsgAlloc = isAllocatableErrmsg ? errmsg : absent;
+  aiir::Value errMsg = isAllocatableErrmsg ? absent : errmsg;
+  aiir::Value errMsgAlloc = isAllocatableErrmsg ? errmsg : absent;
   return {errMsg, errMsgAlloc};
 }
 
-static mlir::Value genStatPRIF(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value stat) {
+static aiir::Value genStatPRIF(fir::FirOpBuilder &builder, aiir::Location loc,
+                               aiir::Value stat) {
   if (!stat)
     return fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
   return stat;
 }
 
 static fir::CallOp genPRIFStopErrorStop(fir::FirOpBuilder &builder,
-                                        mlir::Location loc,
-                                        mlir::Value stopCode,
+                                        aiir::Location loc,
+                                        aiir::Value stopCode,
                                         bool isError = false) {
-  mlir::Type stopCharTy = fir::BoxCharType::get(builder.getContext(), 1);
-  mlir::Type i1Ty = builder.getI1Type();
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::Type stopCharTy = fir::BoxCharType::get(builder.getContext(), 1);
+  aiir::Type i1Ty = builder.getI1Type();
+  aiir::Type i32Ty = builder.getI32Type();
 
-  mlir::FunctionType ftype = mlir::FunctionType::get(
+  aiir::FunctionType ftype = aiir::FunctionType::get(
       builder.getContext(),
       /*inputs*/
       {builder.getRefType(i1Ty), builder.getRefType(i32Ty), stopCharTy},
       /*results*/ {});
-  mlir::func::FuncOp funcOp =
+  aiir::func::FuncOp funcOp =
       isError
           ? builder.createFunction(loc, getPRIFProcName("error_stop"), ftype)
           : builder.createFunction(loc, getPRIFProcName("stop"), ftype);
 
   // QUIET is managed in flang-rt, so its value is set to TRUE here.
-  mlir::Value q = builder.createBool(loc, true);
-  mlir::Value quiet = builder.createTemporary(loc, i1Ty);
+  aiir::Value q = builder.createBool(loc, true);
+  aiir::Value quiet = builder.createTemporary(loc, i1Ty);
   fir::StoreOp::create(builder, loc, q, quiet);
 
-  mlir::Value stopCodeInt, stopCodeChar;
+  aiir::Value stopCodeInt, stopCodeChar;
   if (!stopCode) {
     stopCodeChar = fir::AbsentOp::create(builder, loc, stopCharTy);
     stopCodeInt =
@@ -111,7 +111,7 @@ static fir::CallOp genPRIFStopErrorStop(fir::FirOpBuilder &builder,
     fir::StoreOp::create(builder, loc, stopCode, stopCodeInt);
   } else {
     stopCodeChar = stopCode;
-    if (!mlir::isa<fir::BoxCharType>(stopCodeChar.getType())) {
+    if (!aiir::isa<fir::BoxCharType>(stopCodeChar.getType())) {
       auto len =
           fir::UndefOp::create(builder, loc, builder.getCharacterLengthType());
       stopCodeChar =
@@ -121,7 +121,7 @@ static fir::CallOp genPRIFStopErrorStop(fir::FirOpBuilder &builder,
         fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
   }
 
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, ftype, quiet, stopCodeInt, stopCodeChar);
   return fir::CallOp::create(builder, loc, funcOp, args);
 }
@@ -130,32 +130,32 @@ enum class TerminationKind { Normal = 0, Error = 1, FailImage = 2 };
 // Generates a wrapper function for the different kind of termination in PRIF.
 // This function will be used to register wrappers on PRIF runtime termination
 // functions into the Fortran runtime.
-mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
-                                           mlir::Location loc,
-                                           mlir::ModuleOp module,
+aiir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
+                                           aiir::Location loc,
+                                           aiir::ModuleOp module,
                                            TerminationKind termKind) {
   std::string funcName;
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {}, {});
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::FunctionType funcType =
+      aiir::FunctionType::get(builder.getContext(), {}, {});
+  aiir::Type i32Ty = builder.getI32Type();
   if (termKind == TerminationKind::Normal) {
     funcName = getPRIFProcName("stop");
-    funcType = mlir::FunctionType::get(builder.getContext(), {i32Ty}, {});
+    funcType = aiir::FunctionType::get(builder.getContext(), {i32Ty}, {});
   } else if (termKind == TerminationKind::Error) {
     funcName = getPRIFProcName("error_stop");
-    funcType = mlir::FunctionType::get(builder.getContext(), {i32Ty}, {});
+    funcType = aiir::FunctionType::get(builder.getContext(), {i32Ty}, {});
   } else {
     funcName = getPRIFProcName("fail_image");
   }
   funcName += "_termination_wrapper";
-  mlir::func::FuncOp funcWrapperOp =
-      module.lookupSymbol<mlir::func::FuncOp>(funcName);
+  aiir::func::FuncOp funcWrapperOp =
+      module.lookupSymbol<aiir::func::FuncOp>(funcName);
 
   if (!funcWrapperOp) {
     funcWrapperOp = builder.createFunction(loc, funcName, funcType);
 
     // generating the body of the function.
-    mlir::OpBuilder::InsertPoint saveInsertPoint = builder.saveInsertionPoint();
+    aiir::OpBuilder::InsertPoint saveInsertPoint = builder.saveInsertionPoint();
     builder.setInsertionPointToStart(funcWrapperOp.addEntryBlock());
 
     if (termKind == TerminationKind::Normal) {
@@ -165,112 +165,112 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
       genPRIFStopErrorStop(builder, loc, funcWrapperOp.getArgument(0),
                            /*isError*/ true);
     } else {
-      mlir::func::FuncOp fOp = builder.createFunction(
+      aiir::func::FuncOp fOp = builder.createFunction(
           loc, getPRIFProcName("fail_image"),
-          mlir::FunctionType::get(builder.getContext(), {}, {}));
+          aiir::FunctionType::get(builder.getContext(), {}, {}));
       fir::CallOp::create(builder, loc, fOp);
     }
 
-    mlir::func::ReturnOp::create(builder, loc);
+    aiir::func::ReturnOp::create(builder, loc);
     builder.restoreInsertionPoint(saveInsertPoint);
   }
 
-  mlir::SymbolRefAttr symbolRef = mlir::SymbolRefAttr::get(
+  aiir::SymbolRefAttr symbolRef = aiir::SymbolRefAttr::get(
       builder.getContext(), funcWrapperOp.getSymNameAttr());
   return fir::AddrOfOp::create(builder, loc, funcType, symbolRef);
 }
 
 /// Convert mif.init operation to runtime call of 'prif_init'
-struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
+struct MIFInitOpConversion : public aiir::OpRewritePattern<mif::InitOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::InitOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
-    mlir::Type i32Ty = builder.getI32Type();
-    mlir::Value result = builder.createTemporary(loc, i32Ty);
+    aiir::Type i32Ty = builder.getI32Type();
+    aiir::Value result = builder.createTemporary(loc, i32Ty);
 
     // Registering PRIF runtime termination to the Fortran runtime
     // STOP
-    mlir::Value funcStopOp = genTerminationOperationWrapper(
+    aiir::Value funcStopOp = genTerminationOperationWrapper(
         builder, loc, mod, TerminationKind::Normal);
-    mlir::func::FuncOp normalEndFunc =
+    aiir::func::FuncOp normalEndFunc =
         fir::runtime::getRuntimeFunc<mkRTKey(RegisterImagesNormalEndCallback)>(
             loc, builder);
-    llvm::SmallVector<mlir::Value> args1 = fir::runtime::createArguments(
+    llvm::SmallVector<aiir::Value> args1 = fir::runtime::createArguments(
         builder, loc, normalEndFunc.getFunctionType(), funcStopOp);
     fir::CallOp::create(builder, loc, normalEndFunc, args1);
 
     // ERROR STOP
-    mlir::Value funcErrorStopOp = genTerminationOperationWrapper(
+    aiir::Value funcErrorStopOp = genTerminationOperationWrapper(
         builder, loc, mod, TerminationKind::Error);
-    mlir::func::FuncOp errorFunc =
+    aiir::func::FuncOp errorFunc =
         fir::runtime::getRuntimeFunc<mkRTKey(RegisterImagesErrorCallback)>(
             loc, builder);
-    llvm::SmallVector<mlir::Value> args2 = fir::runtime::createArguments(
+    llvm::SmallVector<aiir::Value> args2 = fir::runtime::createArguments(
         builder, loc, errorFunc.getFunctionType(), funcErrorStopOp);
     fir::CallOp::create(builder, loc, errorFunc, args2);
 
     // FAIL IMAGE
-    mlir::Value failImageOp = genTerminationOperationWrapper(
+    aiir::Value failImageOp = genTerminationOperationWrapper(
         builder, loc, mod, TerminationKind::FailImage);
-    mlir::func::FuncOp failImageFunc =
+    aiir::func::FuncOp failImageFunc =
         fir::runtime::getRuntimeFunc<mkRTKey(RegisterFailImageCallback)>(
             loc, builder);
-    llvm::SmallVector<mlir::Value> args3 = fir::runtime::createArguments(
+    llvm::SmallVector<aiir::Value> args3 = fir::runtime::createArguments(
         builder, loc, errorFunc.getFunctionType(), failImageOp);
     fir::CallOp::create(builder, loc, failImageFunc, args3);
 
     // Intialize the multi-image parallel environment
-    mlir::FunctionType ftype = mlir::FunctionType::get(
+    aiir::FunctionType ftype = aiir::FunctionType::get(
         builder.getContext(),
         /*inputs*/ {builder.getRefType(i32Ty)}, /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("init"), ftype);
-    llvm::SmallVector<mlir::Value> args =
+    llvm::SmallVector<aiir::Value> args =
         fir::runtime::createArguments(builder, loc, ftype, result);
     fir::CallOp::create(builder, loc, funcOp, args);
     rewriter.replaceOpWithNewOp<fir::LoadOp>(op, result);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.this_image operation to PRIF runtime call
 struct MIFThisImageOpConversion
-    : public mlir::OpRewritePattern<mif::ThisImageOp> {
+    : public aiir::OpRewritePattern<mif::ThisImageOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::ThisImageOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
     if (op.getCoarray())
       TODO(loc, "mif.this_image op with coarray argument.");
     else {
-      mlir::Type i32Ty = builder.getI32Type();
-      mlir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());
-      mlir::Value result = builder.createTemporary(loc, i32Ty);
-      mlir::FunctionType ftype = mlir::FunctionType::get(
+      aiir::Type i32Ty = builder.getI32Type();
+      aiir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());
+      aiir::Value result = builder.createTemporary(loc, i32Ty);
+      aiir::FunctionType ftype = aiir::FunctionType::get(
           builder.getContext(),
           /*inputs*/ {boxTy, builder.getRefType(i32Ty)}, /*results*/ {});
-      mlir::Value teamArg = op.getTeam();
+      aiir::Value teamArg = op.getTeam();
       if (!op.getTeam())
         teamArg = fir::AbsentOp::create(builder, loc, boxTy);
 
-      mlir::func::FuncOp funcOp = builder.createFunction(
+      aiir::func::FuncOp funcOp = builder.createFunction(
           loc, getPRIFProcName("this_image_no_coarray"), ftype);
-      llvm::SmallVector<mlir::Value> args =
+      llvm::SmallVector<aiir::Value> args =
           fir::runtime::createArguments(builder, loc, ftype, teamArg, result);
       fir::CallOp::create(builder, loc, funcOp, args);
       rewriter.replaceOpWithNewOp<fir::LoadOp>(op, result);
-      return mlir::success();
+      return aiir::success();
     }
   }
 };
@@ -278,25 +278,25 @@ struct MIFThisImageOpConversion
 /// Convert mif.num_images operation to runtime call of
 /// prif_num_images_with_{team|team_number}
 struct MIFNumImagesOpConversion
-    : public mlir::OpRewritePattern<mif::NumImagesOp> {
+    : public aiir::OpRewritePattern<mif::NumImagesOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::NumImagesOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
-    mlir::Type i32Ty = builder.getI32Type();
-    mlir::Type i64Ty = builder.getI64Type();
-    mlir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());
-    mlir::Value result = builder.createTemporary(loc, i32Ty);
+    aiir::Type i32Ty = builder.getI32Type();
+    aiir::Type i64Ty = builder.getI64Type();
+    aiir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());
+    aiir::Value result = builder.createTemporary(loc, i32Ty);
 
-    mlir::func::FuncOp funcOp;
-    llvm::SmallVector<mlir::Value> args;
+    aiir::func::FuncOp funcOp;
+    llvm::SmallVector<aiir::Value> args;
     if (!op.getTeam() && !op.getTeamNumber()) {
-      mlir::FunctionType ftype = mlir::FunctionType::get(
+      aiir::FunctionType ftype = aiir::FunctionType::get(
           builder.getContext(),
           /*inputs*/ {builder.getRefType(i32Ty)}, /*results*/ {});
       funcOp =
@@ -304,8 +304,8 @@ struct MIFNumImagesOpConversion
       args = fir::runtime::createArguments(builder, loc, ftype, result);
     } else {
       if (op.getTeam()) {
-        mlir::FunctionType ftype =
-            mlir::FunctionType::get(builder.getContext(),
+        aiir::FunctionType ftype =
+            aiir::FunctionType::get(builder.getContext(),
                                     /*inputs*/
                                     {boxTy, builder.getRefType(i32Ty)},
                                     /*results*/ {});
@@ -314,12 +314,12 @@ struct MIFNumImagesOpConversion
         args = fir::runtime::createArguments(builder, loc, ftype, op.getTeam(),
                                              result);
       } else {
-        mlir::Value teamNumber = builder.createTemporary(loc, i64Ty);
-        mlir::Value cst = op.getTeamNumber();
+        aiir::Value teamNumber = builder.createTemporary(loc, i64Ty);
+        aiir::Value cst = op.getTeamNumber();
         if (op.getTeamNumber().getType() != i64Ty)
           cst = fir::ConvertOp::create(builder, loc, i64Ty, op.getTeamNumber());
         fir::StoreOp::create(builder, loc, cst, teamNumber);
-        mlir::FunctionType ftype = mlir::FunctionType::get(
+        aiir::FunctionType ftype = aiir::FunctionType::get(
             builder.getContext(),
             /*inputs*/ {builder.getRefType(i64Ty), builder.getRefType(i32Ty)},
             /*results*/ {});
@@ -331,158 +331,158 @@ struct MIFNumImagesOpConversion
     }
     fir::CallOp::create(builder, loc, funcOp, args);
     rewriter.replaceOpWithNewOp<fir::LoadOp>(op, result);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.sync_all operation to runtime call of 'prif_sync_all'
-struct MIFSyncAllOpConversion : public mlir::OpRewritePattern<mif::SyncAllOp> {
+struct MIFSyncAllOpConversion : public aiir::OpRewritePattern<mif::SyncAllOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::SyncAllOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::FunctionType ftype = mlir::FunctionType::get(
+    aiir::Type errmsgTy = getPRIFErrmsgType(builder);
+    aiir::FunctionType ftype = aiir::FunctionType::get(
         builder.getContext(),
         /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("sync_all"), ftype);
 
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+    aiir::Value stat = genStatPRIF(builder, loc, op.getStat());
+    llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
     rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.sync_images operation to runtime call of 'prif_sync_images'
 struct MIFSyncImagesOpConversion
-    : public mlir::OpRewritePattern<mif::SyncImagesOp> {
+    : public aiir::OpRewritePattern<mif::SyncImagesOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::SyncImagesOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::Type imgSetTy = fir::BoxType::get(fir::SequenceType::get(
+    aiir::Type errmsgTy = getPRIFErrmsgType(builder);
+    aiir::Type imgSetTy = fir::BoxType::get(fir::SequenceType::get(
         {fir::SequenceType::getUnknownExtent()}, builder.getI32Type()));
-    mlir::FunctionType ftype = mlir::FunctionType::get(
+    aiir::FunctionType ftype = aiir::FunctionType::get(
         builder.getContext(),
         /*inputs*/
         {imgSetTy, getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("sync_images"), ftype);
 
     // If imageSet is scalar, PRIF require to pass an array of size 1.
-    mlir::Value imageSet = op.getImageSet();
+    aiir::Value imageSet = op.getImageSet();
     if (!imageSet)
       imageSet = fir::AbsentOp::create(builder, loc, imgSetTy);
-    else if (auto boxTy = mlir::dyn_cast<fir::BoxType>(imageSet.getType())) {
-      if (!mlir::isa<fir::SequenceType>(boxTy.getEleTy())) {
-        mlir::Value one =
+    else if (auto boxTy = aiir::dyn_cast<fir::BoxType>(imageSet.getType())) {
+      if (!aiir::isa<fir::SequenceType>(boxTy.getEleTy())) {
+        aiir::Value one =
             builder.createIntegerConstant(loc, builder.getI32Type(), 1);
-        mlir::Value shape = fir::ShapeOp::create(builder, loc, one);
+        aiir::Value shape = fir::ShapeOp::create(builder, loc, one);
         imageSet =
             fir::ReboxOp::create(builder, loc,
                                  fir::BoxType::get(fir::SequenceType::get(
                                      {1}, builder.getI32Type())),
-                                 imageSet, shape, mlir::Value{});
+                                 imageSet, shape, aiir::Value{});
       }
     }
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+    aiir::Value stat = genStatPRIF(builder, loc, op.getStat());
+    llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, imageSet, stat, errmsgArg, errmsgAllocArg);
     rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.sync_memory operation to runtime call of 'prif_sync_memory'
 struct MIFSyncMemoryOpConversion
-    : public mlir::OpRewritePattern<mif::SyncMemoryOp> {
+    : public aiir::OpRewritePattern<mif::SyncMemoryOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::SyncMemoryOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::FunctionType ftype = mlir::FunctionType::get(
+    aiir::Type errmsgTy = getPRIFErrmsgType(builder);
+    aiir::FunctionType ftype = aiir::FunctionType::get(
         builder.getContext(),
         /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("sync_memory"), ftype);
 
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+    aiir::Value stat = genStatPRIF(builder, loc, op.getStat());
+    llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
     rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.sync_team operation to runtime call of 'prif_sync_team'
 struct MIFSyncTeamOpConversion
-    : public mlir::OpRewritePattern<mif::SyncTeamOp> {
+    : public aiir::OpRewritePattern<mif::SyncTeamOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::SyncTeamOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::FunctionType ftype = mlir::FunctionType::get(
+    aiir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    aiir::Type errmsgTy = getPRIFErrmsgType(builder);
+    aiir::FunctionType ftype = aiir::FunctionType::get(
         builder.getContext(),
         /*inputs*/ {boxTy, getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("sync_team"), ftype);
 
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+    aiir::Value stat = genStatPRIF(builder, loc, op.getStat());
+    llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, op.getTeam(), stat, errmsgArg, errmsgAllocArg);
     rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Generate call to collective subroutines except co_reduce
 /// A must be lowered as a box
 static fir::CallOp genCollectiveSubroutine(fir::FirOpBuilder &builder,
-                                           mlir::Location loc, mlir::Value A,
-                                           mlir::Value image, mlir::Value stat,
-                                           mlir::Value errmsg,
+                                           aiir::Location loc, aiir::Value A,
+                                           aiir::Value image, aiir::Value stat,
+                                           aiir::Value errmsg,
                                            std::string coName) {
-  mlir::Value rootImage;
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::Value rootImage;
+  aiir::Type i32Ty = builder.getI32Type();
   if (!image)
     rootImage = fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
   else {
@@ -492,59 +492,59 @@ static fir::CallOp genCollectiveSubroutine(fir::FirOpBuilder &builder,
     fir::StoreOp::create(builder, loc, image, rootImage);
   }
 
-  mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-  mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(builder.getContext(),
+  aiir::Type errmsgTy = getPRIFErrmsgType(builder);
+  aiir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+  aiir::FunctionType ftype =
+      aiir::FunctionType::get(builder.getContext(),
                               /*inputs*/
                               {boxTy, builder.getRefType(builder.getI32Type()),
                                getPRIFStatType(builder), errmsgTy, errmsgTy},
                               /*results*/ {});
-  mlir::func::FuncOp funcOp = builder.createFunction(loc, coName, ftype);
+  aiir::func::FuncOp funcOp = builder.createFunction(loc, coName, ftype);
 
   auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
   if (!stat)
     stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, ftype, A, rootImage, stat, errmsgArg, errmsgAllocArg);
   return fir::CallOp::create(builder, loc, funcOp, args);
 }
 
 /// Convert mif.co_broadcast operation to runtime call of 'prif_co_broadcast'
 struct MIFCoBroadcastOpConversion
-    : public mlir::OpRewritePattern<mif::CoBroadcastOp> {
+    : public aiir::OpRewritePattern<mif::CoBroadcastOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::CoBroadcastOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
     fir::CallOp callOp = genCollectiveSubroutine(
         builder, loc, op.getA(), op.getSourceImage(), op.getStat(),
         op.getErrmsg(), getPRIFProcName("co_broadcast"));
     rewriter.replaceOp(op, callOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.co_max operation to runtime call of 'prif_co_max'
-struct MIFCoMaxOpConversion : public mlir::OpRewritePattern<mif::CoMaxOp> {
+struct MIFCoMaxOpConversion : public aiir::OpRewritePattern<mif::CoMaxOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::CoMaxOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
     fir::CallOp callOp;
-    mlir::Type argTy =
+    aiir::Type argTy =
         fir::unwrapSequenceType(fir::unwrapPassByRefType(op.getA().getType()));
-    if (mlir::isa<fir::CharacterType>(argTy))
+    if (aiir::isa<fir::CharacterType>(argTy))
       callOp = genCollectiveSubroutine(
           builder, loc, op.getA(), op.getResultImage(), op.getStat(),
           op.getErrmsg(), getPRIFProcName("co_max_character"));
@@ -553,25 +553,25 @@ struct MIFCoMaxOpConversion : public mlir::OpRewritePattern<mif::CoMaxOp> {
           builder, loc, op.getA(), op.getResultImage(), op.getStat(),
           op.getErrmsg(), getPRIFProcName("co_max"));
     rewriter.replaceOp(op, callOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.co_min operation to runtime call of 'prif_co_min'
-struct MIFCoMinOpConversion : public mlir::OpRewritePattern<mif::CoMinOp> {
+struct MIFCoMinOpConversion : public aiir::OpRewritePattern<mif::CoMinOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::CoMinOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
     fir::CallOp callOp;
-    mlir::Type argTy =
+    aiir::Type argTy =
         fir::unwrapSequenceType(fir::unwrapPassByRefType(op.getA().getType()));
-    if (mlir::isa<fir::CharacterType>(argTy))
+    if (aiir::isa<fir::CharacterType>(argTy))
       callOp = genCollectiveSubroutine(
           builder, loc, op.getA(), op.getResultImage(), op.getStat(),
           op.getErrmsg(), getPRIFProcName("co_min_character"));
@@ -580,65 +580,65 @@ struct MIFCoMinOpConversion : public mlir::OpRewritePattern<mif::CoMinOp> {
           builder, loc, op.getA(), op.getResultImage(), op.getStat(),
           op.getErrmsg(), getPRIFProcName("co_min"));
     rewriter.replaceOp(op, callOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.co_sum operation to runtime call of 'prif_co_sum'
-struct MIFCoSumOpConversion : public mlir::OpRewritePattern<mif::CoSumOp> {
+struct MIFCoSumOpConversion : public aiir::OpRewritePattern<mif::CoSumOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::CoSumOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
     fir::CallOp callOp = genCollectiveSubroutine(
         builder, loc, op.getA(), op.getResultImage(), op.getStat(),
         op.getErrmsg(), getPRIFProcName("co_sum"));
     rewriter.replaceOp(op, callOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.form_team operation to runtime call of 'prif_form_team'
 struct MIFFormTeamOpConversion
-    : public mlir::OpRewritePattern<mif::FormTeamOp> {
+    : public aiir::OpRewritePattern<mif::FormTeamOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::FormTeamOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
-    mlir::FunctionType ftype = mlir::FunctionType::get(
+    aiir::Location loc = op.getLoc();
+    aiir::Type errmsgTy = getPRIFErrmsgType(builder);
+    aiir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    aiir::FunctionType ftype = aiir::FunctionType::get(
         builder.getContext(),
         /*inputs*/
         {builder.getRefType(builder.getI64Type()), boxTy,
          builder.getRefType(builder.getI32Type()), getPRIFStatType(builder),
          errmsgTy, errmsgTy},
         /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("form_team"), ftype);
 
-    mlir::Type i64Ty = builder.getI64Type();
-    mlir::Value teamNumber = builder.createTemporary(loc, i64Ty);
-    mlir::Value t =
+    aiir::Type i64Ty = builder.getI64Type();
+    aiir::Value teamNumber = builder.createTemporary(loc, i64Ty);
+    aiir::Value t =
         (op.getTeamNumber().getType() == i64Ty)
             ? op.getTeamNumber()
             : fir::ConvertOp::create(builder, loc, i64Ty, op.getTeamNumber());
     fir::StoreOp::create(builder, loc, t, teamNumber);
 
-    mlir::Type i32Ty = builder.getI32Type();
-    mlir::Value newIndex;
+    aiir::Type i32Ty = builder.getI32Type();
+    aiir::Value newIndex;
     if (op.getNewIndex()) {
       newIndex = builder.createTemporary(loc, i32Ty);
-      mlir::Value ni =
+      aiir::Value ni =
           (op.getNewIndex().getType() == i32Ty)
               ? op.getNewIndex()
               : fir::ConvertOp::create(builder, loc, i32Ty, op.getNewIndex());
@@ -646,162 +646,162 @@ struct MIFFormTeamOpConversion
     } else
       newIndex = fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
 
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
+    aiir::Value stat = genStatPRIF(builder, loc, op.getStat());
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+    llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, teamNumber, op.getTeamVar(), newIndex, stat,
         errmsgArg, errmsgAllocArg);
     fir::CallOp callOp = fir::CallOp::create(builder, loc, funcOp, args);
     rewriter.replaceOp(op, callOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.change_team operation to runtime call of 'prif_change_team'
 struct MIFChangeTeamOpConversion
-    : public mlir::OpRewritePattern<mif::ChangeTeamOp> {
+    : public aiir::OpRewritePattern<mif::ChangeTeamOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::ChangeTeamOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
     builder.setInsertionPoint(op);
 
-    mlir::Location loc = op.getLoc();
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
-    mlir::FunctionType ftype = mlir::FunctionType::get(
+    aiir::Location loc = op.getLoc();
+    aiir::Type errmsgTy = getPRIFErrmsgType(builder);
+    aiir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    aiir::FunctionType ftype = aiir::FunctionType::get(
         builder.getContext(),
         /*inputs*/ {boxTy, getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("change_team"), ftype);
 
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
+    aiir::Value stat = genStatPRIF(builder, loc, op.getStat());
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+    llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, op.getTeam(), stat, errmsgArg, errmsgAllocArg);
     fir::CallOp::create(builder, loc, funcOp, args);
 
-    mlir::Operation *changeOp = op.getOperation();
+    aiir::Operation *changeOp = op.getOperation();
     auto &bodyRegion = op.getRegion();
-    mlir::Block &bodyBlock = bodyRegion.front();
+    aiir::Block &bodyBlock = bodyRegion.front();
 
     rewriter.inlineBlockBefore(&bodyBlock, changeOp);
     rewriter.eraseOp(op);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.end_team operation to runtime call of 'prif_end_team'
-struct MIFEndTeamOpConversion : public mlir::OpRewritePattern<mif::EndTeamOp> {
+struct MIFEndTeamOpConversion : public aiir::OpRewritePattern<mif::EndTeamOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::EndTeamOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::FunctionType ftype = mlir::FunctionType::get(
+    aiir::Location loc = op.getLoc();
+    aiir::Type errmsgTy = getPRIFErrmsgType(builder);
+    aiir::FunctionType ftype = aiir::FunctionType::get(
         builder.getContext(),
         /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("end_team"), ftype);
 
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
+    aiir::Value stat = genStatPRIF(builder, loc, op.getStat());
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+    llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
         builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
     fir::CallOp callOp = fir::CallOp::create(builder, loc, funcOp, args);
     rewriter.replaceOp(op, callOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.get_team operation to runtime call of 'prif_get_team'
-struct MIFGetTeamOpConversion : public mlir::OpRewritePattern<mif::GetTeamOp> {
+struct MIFGetTeamOpConversion : public aiir::OpRewritePattern<mif::GetTeamOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::GetTeamOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
 
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
-    mlir::Type lvlTy = builder.getRefType(builder.getI32Type());
-    mlir::FunctionType ftype =
-        mlir::FunctionType::get(builder.getContext(),
+    aiir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    aiir::Type lvlTy = builder.getRefType(builder.getI32Type());
+    aiir::FunctionType ftype =
+        aiir::FunctionType::get(builder.getContext(),
                                 /*inputs*/ {lvlTy, boxTy},
                                 /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("get_team"), ftype);
 
-    mlir::Value level = op.getLevel();
+    aiir::Value level = op.getLevel();
     if (!level)
       level = fir::AbsentOp::create(builder, loc, lvlTy);
     else {
-      mlir::Value cst = op.getLevel();
-      mlir::Type i32Ty = builder.getI32Type();
+      aiir::Value cst = op.getLevel();
+      aiir::Type i32Ty = builder.getI32Type();
       level = builder.createTemporary(loc, i32Ty);
       if (cst.getType() != i32Ty)
         cst = builder.createConvert(loc, i32Ty, cst);
       fir::StoreOp::create(builder, loc, cst, level);
     }
-    mlir::Type resultType = op.getResult().getType();
-    mlir::Type baseTy = fir::unwrapRefType(resultType);
-    mlir::Value team = builder.createTemporary(loc, baseTy);
+    aiir::Type resultType = op.getResult().getType();
+    aiir::Type baseTy = fir::unwrapRefType(resultType);
+    aiir::Value team = builder.createTemporary(loc, baseTy);
     fir::EmboxOp box = fir::EmboxOp::create(builder, loc, resultType, team);
 
-    llvm::SmallVector<mlir::Value> args =
+    llvm::SmallVector<aiir::Value> args =
         fir::runtime::createArguments(builder, loc, ftype, level, box);
     fir::CallOp::create(builder, loc, funcOp, args);
 
     rewriter.replaceOp(op, box);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Convert mif.team_number operation to runtime call of 'prif_team_number'
 struct MIFTeamNumberOpConversion
-    : public mlir::OpRewritePattern<mif::TeamNumberOp> {
+    : public aiir::OpRewritePattern<mif::TeamNumberOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(mif::TeamNumberOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+                  aiir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<aiir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
-    mlir::Type i64Ty = builder.getI64Type();
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
-    mlir::FunctionType ftype =
-        mlir::FunctionType::get(builder.getContext(),
+    aiir::Location loc = op.getLoc();
+    aiir::Type i64Ty = builder.getI64Type();
+    aiir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    aiir::FunctionType ftype =
+        aiir::FunctionType::get(builder.getContext(),
                                 /*inputs*/ {boxTy, builder.getRefType(i64Ty)},
                                 /*results*/ {});
-    mlir::func::FuncOp funcOp =
+    aiir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("team_number"), ftype);
 
-    mlir::Value team = op.getTeam();
+    aiir::Value team = op.getTeam();
     if (!team)
       team = fir::AbsentOp::create(builder, loc, boxTy);
 
-    mlir::Value result = builder.createTemporary(loc, i64Ty);
-    llvm::SmallVector<mlir::Value> args =
+    aiir::Value result = builder.createTemporary(loc, i64Ty);
+    llvm::SmallVector<aiir::Value> args =
         fir::runtime::createArguments(builder, loc, ftype, team, result);
     fir::CallOp::create(builder, loc, funcOp, args);
     fir::LoadOp load = fir::LoadOp::create(builder, loc, result);
     rewriter.replaceOp(op, load);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -809,17 +809,17 @@ class MIFOpConversion : public fir::impl::MIFOpConversionBase<MIFOpConversion> {
 public:
   void runOnOperation() override {
     auto *ctx = &getContext();
-    mlir::RewritePatternSet patterns(ctx);
-    mlir::ConversionTarget target(*ctx);
+    aiir::RewritePatternSet patterns(ctx);
+    aiir::ConversionTarget target(*ctx);
 
     mif::populateMIFOpConversionPatterns(patterns);
 
     target.addLegalDialect<fir::FIROpsDialect>();
-    target.addLegalOp<mlir::ModuleOp>();
+    target.addLegalOp<aiir::ModuleOp>();
 
-    if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
+    if (aiir::failed(aiir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(ctx),
+      aiir::emitError(aiir::UnknownLoc::get(ctx),
                       "error in MIF op conversion\n");
       return signalPassFailure();
     }
@@ -827,7 +827,7 @@ public:
 };
 } // namespace
 
-void mif::populateMIFOpConversionPatterns(mlir::RewritePatternSet &patterns) {
+void mif::populateMIFOpConversionPatterns(aiir::RewritePatternSet &patterns) {
   patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
                   MIFNumImagesOpConversion, MIFSyncAllOpConversion,
                   MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,

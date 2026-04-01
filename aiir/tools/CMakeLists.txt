@@ -1,0 +1,16 @@
+add_subdirectory(aiir-lsp-server)
+add_subdirectory(aiir-opt)
+add_subdirectory(aiir-parser-fuzzer)
+add_subdirectory(aiir-pdll-lsp-server)
+add_subdirectory(aiir-query)
+add_subdirectory(aiir-reduce)
+add_subdirectory(aiir-rewrite)
+add_subdirectory(aiir-shlib)
+add_subdirectory(aiir-translate)
+add_subdirectory(tblgen-lsp-server)
+add_subdirectory(tblgen-to-irdl)
+
+# aiir-runner requires ExecutionEngine.
+if(AIIR_ENABLE_EXECUTION_ENGINE)
+  add_subdirectory(aiir-runner)
+endif()

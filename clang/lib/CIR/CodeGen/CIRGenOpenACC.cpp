@@ -11,23 +11,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenFunction.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 #include "clang/AST/ExprCXX.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
 namespace {
-mlir::Value createBound(CIRGenFunction &cgf, CIRGen::CIRGenBuilderTy &builder,
-                        mlir::Location boundLoc, mlir::Value lowerBound,
-                        mlir::Value upperBound, mlir::Value extent) {
+aiir::Value createBound(CIRGenFunction &cgf, CIRGen::CIRGenBuilderTy &builder,
+                        aiir::Location boundLoc, aiir::Value lowerBound,
+                        aiir::Value upperBound, aiir::Value extent) {
   // Arrays always have a start-idx of 0.
-  mlir::Value startIdx = cgf.createOpenACCConstantInt(boundLoc, 64, 0);
+  aiir::Value startIdx = cgf.createOpenACCConstantInt(boundLoc, 64, 0);
   // Stride is always 1 in C/C++.
-  mlir::Value stride = cgf.createOpenACCConstantInt(boundLoc, 64, 1);
+  aiir::Value stride = cgf.createOpenACCConstantInt(boundLoc, 64, 1);
 
-  auto bound = mlir::acc::DataBoundsOp::create(builder, boundLoc, lowerBound,
+  auto bound = aiir::acc::DataBoundsOp::create(builder, boundLoc, lowerBound,
                                                upperBound);
   bound.getStartIdxMutable().assign(startIdx);
   if (extent)
@@ -38,28 +38,28 @@ mlir::Value createBound(CIRGenFunction &cgf, CIRGen::CIRGenBuilderTy &builder,
 }
 } // namespace
 
-mlir::Value CIRGenFunction::emitOpenACCIntExpr(const Expr *intExpr) {
-  mlir::Value expr = emitScalarExpr(intExpr);
-  mlir::Location exprLoc = cgm.getLoc(intExpr->getBeginLoc());
+aiir::Value CIRGenFunction::emitOpenACCIntExpr(const Expr *intExpr) {
+  aiir::Value expr = emitScalarExpr(intExpr);
+  aiir::Location exprLoc = cgm.getLoc(intExpr->getBeginLoc());
 
-  mlir::IntegerType targetType = mlir::IntegerType::get(
-      &getMLIRContext(), getContext().getIntWidth(intExpr->getType()),
+  aiir::IntegerType targetType = aiir::IntegerType::get(
+      &getAIIRContext(), getContext().getIntWidth(intExpr->getType()),
       intExpr->getType()->isSignedIntegerOrEnumerationType()
-          ? mlir::IntegerType::SignednessSemantics::Signed
-          : mlir::IntegerType::SignednessSemantics::Unsigned);
+          ? aiir::IntegerType::SignednessSemantics::Signed
+          : aiir::IntegerType::SignednessSemantics::Unsigned);
 
-  auto conversionOp = mlir::UnrealizedConversionCastOp::create(
+  auto conversionOp = aiir::UnrealizedConversionCastOp::create(
       builder, exprLoc, targetType, expr);
   return conversionOp.getResult(0);
 }
 
-mlir::Value CIRGenFunction::createOpenACCConstantInt(mlir::Location loc,
+aiir::Value CIRGenFunction::createOpenACCConstantInt(aiir::Location loc,
                                                      unsigned width,
                                                      int64_t value) {
-  mlir::IntegerType ty =
-      mlir::IntegerType::get(&getMLIRContext(), width,
-                             mlir::IntegerType::SignednessSemantics::Signless);
-  auto constOp = mlir::arith::ConstantOp::create(
+  aiir::IntegerType ty =
+      aiir::IntegerType::get(&getAIIRContext(), width,
+                             aiir::IntegerType::SignednessSemantics::Signless);
+  auto constOp = aiir::arith::ConstantOp::create(
       builder, loc, builder.getIntegerAttr(ty, value));
 
   return constOp;
@@ -75,8 +75,8 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
           dyn_cast<ArraySectionExpr>(curVarExpr->IgnoreParenImpCasts()))
     origType = section->getElementType();
 
-  mlir::Location exprLoc = cgm.getLoc(curVarExpr->getBeginLoc());
-  llvm::SmallVector<mlir::Value> bounds;
+  aiir::Location exprLoc = cgm.getLoc(curVarExpr->getBeginLoc());
+  llvm::SmallVector<aiir::Value> bounds;
   llvm::SmallVector<QualType> boundTypes;
 
   std::string exprString;
@@ -93,10 +93,10 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
   addBoundType(curVarExpr);
 
   while (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
-    mlir::Location boundLoc = cgm.getLoc(curVarExpr->getBeginLoc());
-    mlir::Value lowerBound;
-    mlir::Value upperBound;
-    mlir::Value extent;
+    aiir::Location boundLoc = cgm.getLoc(curVarExpr->getBeginLoc());
+    aiir::Value lowerBound;
+    aiir::Value upperBound;
+    aiir::Value extent;
 
     if (const auto *section = dyn_cast<ArraySectionExpr>(curVarExpr)) {
       if (const Expr *lb = section->getLowerBound())

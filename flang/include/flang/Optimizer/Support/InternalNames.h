@@ -176,7 +176,7 @@ struct NameUniquer {
                                           llvm::StringRef componentName);
 
   /// Remove markers that have been added when doing partial type
-  /// conversions. mlir::Type cannot be mutated in a pass, so new
+  /// conversions. aiir::Type cannot be mutated in a pass, so new
   /// fir::RecordType must be created when lowering member types.
   /// Suffixes added to these new types are meaningless and are
   /// dropped in the names passed to LLVM.

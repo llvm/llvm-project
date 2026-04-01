@@ -109,15 +109,15 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
   cir::CleanupScopeOp cleanupScope = nullptr;
   if (!skipCleanupScope) {
     CIRGenBuilderTy &builder = cgf->getBuilder();
-    mlir::Location loc = builder.getUnknownLoc();
+    aiir::Location loc = builder.getUnknownLoc();
     cleanupScope = cir::CleanupScopeOp::create(
         builder, loc, cleanupKind,
         /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
+        [&](aiir::OpBuilder &b, aiir::Location loc) {
           // Terminations will be handled in popCleanup
         },
         /*cleanupBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
+        [&](aiir::OpBuilder &b, aiir::Location loc) {
           // Terminations will be handled after emiting cleanup
         });
 
@@ -166,7 +166,7 @@ void EHScopeStack::popCleanup() {
   if (cleanupScope) {
     auto *block = &cleanupScope.getBodyRegion().back();
     if (!block->mightHaveTerminator()) {
-      mlir::OpBuilder::InsertionGuard guard(cgf->getBuilder());
+      aiir::OpBuilder::InsertionGuard guard(cgf->getBuilder());
       cgf->getBuilder().setInsertionPointToEnd(block);
       cir::YieldOp::create(cgf->getBuilder(),
                            cgf->getBuilder().getUnknownLoc());
@@ -196,7 +196,7 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
 /// if necessary.
 static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
                                           EHScopeStack::stable_iterator c,
-                                          mlir::Operation *dominatingIP) {
+                                          aiir::Operation *dominatingIP) {
   EHCleanupScope &scope = cast<EHCleanupScope>(*cgf.ehStack.find(c));
 
   assert((scope.isNormalCleanup() || scope.isEHCleanup()) &&
@@ -215,7 +215,7 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
   // initialized before the conditional branch begins.
   Address var = scope.getActiveFlag();
   if (!var.isValid()) {
-    mlir::Location loc = builder.getUnknownLoc();
+    aiir::Location loc = builder.getUnknownLoc();
 
     var = cgf.createTempAllocaWithoutCast(builder.getBoolTy(), CharUnits::One(),
                                           loc, "cleanup.isactive");
@@ -224,10 +224,10 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
     assert(dominatingIP && "no existing variable and no dominating IP!");
 
     if (cgf.isInConditionalBranch()) {
-      mlir::Value val = builder.getBool(true, loc);
+      aiir::Value val = builder.getBool(true, loc);
       cgf.setBeforeOutermostConditional(val, var);
     } else {
-      mlir::OpBuilder::InsertionGuard guard(builder);
+      aiir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPoint(dominatingIP);
       builder.createFlagStore(loc, true, var.getPointer());
     }
@@ -236,13 +236,13 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
   // The code above sets the `isActive` flag to `true` as its initial state
   // at the point where the variable is created. The code below sets it to
   // `false` at the point where the cleanup is deactivated.
-  mlir::Location loc = builder.getUnknownLoc();
+  aiir::Location loc = builder.getUnknownLoc();
   builder.createFlagStore(loc, false, var.getPointer());
 }
 
 /// Deactive a cleanup that was created in an active state.
 void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
-                                            mlir::Operation *dominatingIP) {
+                                            aiir::Operation *dominatingIP) {
   assert(c != ehStack.stable_end() && "deactivating bottom of stack?");
   EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.find(c));
   assert(scope.isActive() && "double deactivation");
@@ -266,21 +266,21 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
                         EHScopeStack::Cleanup::Flags flags,
                         Address activeFlag) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Block &block = cleanupScope.getCleanupRegion().back();
+  aiir::Block &block = cleanupScope.getCleanupRegion().back();
 
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  aiir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(&block);
 
   // Ask the cleanup to emit itself.
   assert(cgf.haveInsertPoint() && "expected insertion point");
 
   if (activeFlag.isValid()) {
-    mlir::Location loc = cleanupScope.getLoc();
-    mlir::Value isActive = builder.createFlagLoad(loc, activeFlag.getPointer());
+    aiir::Location loc = cleanupScope.getLoc();
+    aiir::Value isActive = builder.createFlagLoad(loc, activeFlag.getPointer());
     cir::IfOp::create(builder, loc, isActive,
                       /*withElseRegion=*/false,
                       /*thenBuilder=*/
-                      [&](mlir::OpBuilder &, mlir::Location) {
+                      [&](aiir::OpBuilder &, aiir::Location) {
                         cleanup->emit(cgf, flags);
                         assert(cgf.haveInsertPoint() &&
                                "cleanup ended with no insertion point?");
@@ -291,21 +291,21 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
     assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
   }
 
-  mlir::Block &cleanupRegionLastBlock = cleanupScope.getCleanupRegion().back();
+  aiir::Block &cleanupRegionLastBlock = cleanupScope.getCleanupRegion().back();
   if (cleanupRegionLastBlock.empty() ||
-      !cleanupRegionLastBlock.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
+      !cleanupRegionLastBlock.back().hasTrait<aiir::OpTrait::IsTerminator>()) {
+    aiir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPointToEnd(&cleanupRegionLastBlock);
     builder.createYield(cleanupScope.getLoc());
   }
 }
 
-static mlir::Block *createNormalEntry(CIRGenFunction &cgf,
+static aiir::Block *createNormalEntry(CIRGenFunction &cgf,
                                       EHCleanupScope &scope) {
   assert(scope.isNormalCleanup());
-  mlir::Block *entry = scope.getNormalBlock();
+  aiir::Block *entry = scope.getNormalBlock();
   if (!entry) {
-    mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
+    aiir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
     entry = cgf.curLexScope->getOrCreateCleanupBlock(cgf.getBuilder());
     scope.setNormalBlock(entry);
   }
@@ -330,7 +330,7 @@ void CIRGenFunction::popCleanupBlock() {
                              : Address::invalid();
 
   // - whether there's a fallthrough
-  mlir::Block *fallthroughSource = builder.getInsertionBlock();
+  aiir::Block *fallthroughSource = builder.getInsertionBlock();
   bool hasFallthrough = fallthroughSource != nullptr && isActive;
 
   bool requiresNormalCleanup = scope.isNormalCleanup() && hasFallthrough;
@@ -401,10 +401,10 @@ void CIRGenFunction::popCleanupBlock() {
     // the cleanup block and then try to clean up after ourselves.
 
     // Force the entry block to exist.
-    mlir::Block *normalEntry = createNormalEntry(*this, scope);
+    aiir::Block *normalEntry = createNormalEntry(*this, scope);
 
     // I.  Set up the fallthrough edge in.
-    mlir::OpBuilder::InsertPoint savedInactiveFallthroughIP;
+    aiir::OpBuilder::InsertPoint savedInactiveFallthroughIP;
 
     // If we have a fallthrough source, but this cleanup is inactive,
     // save and clear the IP.
@@ -435,7 +435,7 @@ void CIRGenFunction::popCleanupBlock() {
     if (hasEnclosingCleanups)
       cgm.errorNYI("cleanup branch-through dest");
 
-    mlir::Block *fallthroughDest = nullptr;
+    aiir::Block *fallthroughDest = nullptr;
 
     // If there's exactly one branch-after and no other threads,
     // we can route it without a switch.
@@ -497,7 +497,7 @@ void CIRGenFunction::popCleanupBlock() {
 /// Pops cleanup blocks until the given savepoint is reached.
 void CIRGenFunction::popCleanupBlocks(
     EHScopeStack::stable_iterator oldCleanupStackDepth,
-    ArrayRef<mlir::Value *> valuesToReload) {
+    ArrayRef<aiir::Value *> valuesToReload) {
   // If the current stack depth is the same as the cleanup stack depth,
   // we won't be exiting any cleanup scopes, so we don't need to reload
   // any values.
@@ -511,12 +511,12 @@ void CIRGenFunction::popCleanupBlocks(
   }
 
   // If there are values that we need to keep live, spill them now before
-  // we pop the cleanup blocks. These are passed as pointers to mlir::Value
+  // we pop the cleanup blocks. These are passed as pointers to aiir::Value
   // because we're going to replace them with the reloaded value.
   SmallVector<Address> tempAllocas;
   if (requiresCleanup) {
-    for (mlir::Value *valPtr : valuesToReload) {
-      mlir::Value val = *valPtr;
+    for (aiir::Value *valPtr : valuesToReload) {
+      aiir::Value val = *valPtr;
       if (!val)
         continue;
 
@@ -537,7 +537,7 @@ void CIRGenFunction::popCleanupBlocks(
   // Reload the values that we spilled, if necessary.
   if (requiresCleanup) {
     for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
-      mlir::Location loc = valPtr->getLoc();
+      aiir::Location loc = valPtr->getLoc();
       *valPtr = builder.createLoad(loc, addr);
     }
   }

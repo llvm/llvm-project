@@ -353,7 +353,7 @@ mkdir build_%arch%
 cd build_%arch%
 call :do_generate_profile || exit /b 1
 cmake -GNinja %cmake_flags% ^
-  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;aiir" ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
@@ -367,7 +367,7 @@ if "%arch%"=="amd64" (
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
 REM ninja check-flang || ninja check-flang || ninja check-flang || exit /b 1
-REM ninja check-mlir || ninja check-mlir || ninja check-mlir || exit /b 1
+REM ninja check-aiir || ninja check-aiir || ninja check-aiir || exit /b 1
 REM ninja check-lldb || ninja check-lldb || ninja check-lldb || exit /b 1
 ninja package || exit /b 1
 

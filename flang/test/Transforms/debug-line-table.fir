@@ -1,7 +1,7 @@
 
-// RUN: fir-opt --add-debug-info="debug-level=Full" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=FULL
-// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
-// RUN: fir-opt --add-debug-info="is-optimized=true" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=OPT
+// RUN: fir-opt --add-debug-info="debug-level=Full" --aiir-print-debuginfo %s | FileCheck %s --check-prefix=FULL
+// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --aiir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
+// RUN: fir-opt --add-debug-info="is-optimized=true" --aiir-print-debuginfo %s | FileCheck %s --check-prefix=OPT
 
 module {
   func.func @_QPsb() {

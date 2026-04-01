@@ -100,11 +100,11 @@ func.func @real_part(%arg0 : !fir.ref<complex<f32>>) {
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<complex<f32>>) {
 // CHECK:  %[[VAL_1:.*]] = hlfir.designate %[[VAL_0]] real :  (!fir.ref<complex<f32>>) -> !fir.ref<f32>
 
-func.func @imag_part_mlir_complex(%arg0 : !fir.ref<complex<f32>>) {
+func.func @imag_part_aiir_complex(%arg0 : !fir.ref<complex<f32>>) {
   %0 = hlfir.designate %arg0 imag :  (!fir.ref<complex<f32>>) -> !fir.ref<f32>
   return
 }
-// CHECK-LABEL: func.func @imag_part_mlir_complex(
+// CHECK-LABEL: func.func @imag_part_aiir_complex(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<complex<f32>>) {
 // CHECK:  %[[VAL_1:.*]] = hlfir.designate %[[VAL_0]] imag :  (!fir.ref<complex<f32>>) -> !fir.ref<f32>
 

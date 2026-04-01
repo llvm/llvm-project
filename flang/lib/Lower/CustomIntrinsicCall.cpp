@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -85,20 +85,20 @@ bool Fortran::lower::intrinsicRequiresCustomOptionalHandling(
          isAssociatedWithDynamicallyOptionalArg(name, procRef);
 }
 
-/// Generate the FIR+MLIR operations for the generic intrinsic \p name
+/// Generate the FIR+AIIR operations for the generic intrinsic \p name
 /// with arguments \p args and the expected result type \p resultType.
 /// Returned fir::ExtendedValue is the returned Fortran intrinsic value.
 fir::ExtendedValue
-Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
+Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, aiir::Location loc,
                                  llvm::StringRef name,
-                                 std::optional<mlir::Type> resultType,
+                                 std::optional<aiir::Type> resultType,
                                  llvm::ArrayRef<fir::ExtendedValue> args,
                                  Fortran::lower::StatementContext &stmtCtx,
                                  Fortran::lower::AbstractConverter *converter) {
   auto [result, mustBeFreed] =
       fir::genIntrinsicCall(builder, loc, name, resultType, args, converter);
   if (mustBeFreed) {
-    mlir::Value addr = fir::getBase(result);
+    aiir::Value addr = fir::getBase(result);
     if (auto *box = result.getBoxOf<fir::BoxValue>())
       addr =
           fir::BoxAddrOp::create(builder, loc, box->getMemTy(), box->getAddr());
@@ -111,13 +111,13 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
 static void prepareMinOrMaxArguments(
     const Fortran::evaluate::ProcedureRef &procRef,
     const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-    std::optional<mlir::Type> retTy,
+    std::optional<aiir::Type> retTy,
     const Fortran::lower::OperandPrepare &prepareOptionalArgument,
     const Fortran::lower::OperandPrepareAs &prepareOtherArgument,
     Fortran::lower::AbstractConverter &converter) {
   assert(retTy && "MIN and MAX must have a return type");
-  mlir::Type resultType = *retTy;
-  mlir::Location loc = converter.getCurrentLocation();
+  aiir::Type resultType = *retTy;
+  aiir::Location loc = converter.getCurrentLocation();
   if (fir::isa_char(resultType))
     TODO(loc, "CHARACTER MIN and MAX with dynamically optional arguments");
   for (auto arg : llvm::enumerate(procRef.arguments())) {
@@ -140,8 +140,8 @@ static void prepareMinOrMaxArguments(
 }
 
 static fir::ExtendedValue
-lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
-              llvm::StringRef name, std::optional<mlir::Type> retTy,
+lowerMinOrMax(fir::FirOpBuilder &builder, aiir::Location loc,
+              llvm::StringRef name, std::optional<aiir::Type> retTy,
               const Fortran::lower::OperandPresent &isPresentCheck,
               const Fortran::lower::OperandGetter &getOperand,
               std::size_t numOperands,
@@ -149,16 +149,16 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
   assert(numOperands >= 2 && !isPresentCheck(0) && !isPresentCheck(1) &&
          "min/max must have at least two non-optional args");
   assert(retTy && "MIN and MAX must have a return type");
-  mlir::Type resultType = *retTy;
+  aiir::Type resultType = *retTy;
   llvm::SmallVector<fir::ExtendedValue> args;
   const bool loadOperand = true;
   args.push_back(getOperand(0, loadOperand));
   args.push_back(getOperand(1, loadOperand));
-  mlir::Value extremum = fir::getBase(
+  aiir::Value extremum = fir::getBase(
       genIntrinsicCall(builder, loc, name, resultType, args, stmtCtx));
 
   for (std::size_t opIndex = 2; opIndex < numOperands; ++opIndex) {
-    if (std::optional<mlir::Value> isPresentRuntimeCheck =
+    if (std::optional<aiir::Value> isPresentRuntimeCheck =
             isPresentCheck(opIndex)) {
       // Argument is dynamically optional.
       extremum =
@@ -190,7 +190,7 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
 static void prepareIshftcArguments(
     const Fortran::evaluate::ProcedureRef &procRef,
     const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-    std::optional<mlir::Type> retTy,
+    std::optional<aiir::Type> retTy,
     const Fortran::lower::OperandPrepare &prepareOptionalArgument,
     const Fortran::lower::OperandPrepareAs &prepareOtherArgument,
     Fortran::lower::AbstractConverter &converter) {
@@ -210,8 +210,8 @@ static void prepareIshftcArguments(
 }
 
 static fir::ExtendedValue
-lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
-            llvm::StringRef name, std::optional<mlir::Type> retTy,
+lowerIshftc(fir::FirOpBuilder &builder, aiir::Location loc,
+            llvm::StringRef name, std::optional<aiir::Type> retTy,
             const Fortran::lower::OperandPresent &isPresentCheck,
             const Fortran::lower::OperandGetter &getOperand,
             std::size_t numOperands,
@@ -220,7 +220,7 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
          isPresentCheck(2) &&
          "only ISHFTC SIZE arg is expected to be dynamically optional here");
   assert(retTy && "ISFHTC must have a return type");
-  mlir::Type resultType = *retTy;
+  aiir::Type resultType = *retTy;
   llvm::SmallVector<fir::ExtendedValue> args;
   const bool loadOperand = true;
   args.push_back(getOperand(0, loadOperand));
@@ -233,14 +233,14 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
                    /*withElseRegion=*/true)
           .genThen([&]() {
             fir::ExtendedValue sizeExv = getOperand(2, loadOperand);
-            mlir::Value size =
+            aiir::Value size =
                 builder.createConvert(loc, resultType, fir::getBase(sizeExv));
             fir::ResultOp::create(builder, loc, size);
           })
           .genElse([&]() {
-            mlir::Value bitSize = builder.createIntegerConstant(
+            aiir::Value bitSize = builder.createIntegerConstant(
                 loc, resultType,
-                mlir::cast<mlir::IntegerType>(resultType).getWidth());
+                aiir::cast<aiir::IntegerType>(resultType).getWidth());
             fir::ResultOp::create(builder, loc, bitSize);
           })
           .getResults()[0]);
@@ -250,7 +250,7 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
 static void prepareAssociatedArguments(
     const Fortran::evaluate::ProcedureRef &procRef,
     const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-    std::optional<mlir::Type> retTy,
+    std::optional<aiir::Type> retTy,
     const Fortran::lower::OperandPrepare &prepareOptionalArgument,
     const Fortran::lower::OperandPrepareAs &prepareOtherArgument,
     Fortran::lower::AbstractConverter &converter) {
@@ -263,8 +263,8 @@ static void prepareAssociatedArguments(
 }
 
 static fir::ExtendedValue
-lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
-                llvm::StringRef name, std::optional<mlir::Type> resultType,
+lowerAssociated(fir::FirOpBuilder &builder, aiir::Location loc,
+                llvm::StringRef name, std::optional<aiir::Type> resultType,
                 const Fortran::lower::OperandPresent &isPresentCheck,
                 const Fortran::lower::OperandGetter &getOperand,
                 std::size_t numOperands,
@@ -275,15 +275,15 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
   // Ensure a null descriptor is passed to the code lowering Associated if
   // TARGET is absent.
   fir::ExtendedValue targetExv = getOperand(1, /*loadOperand=*/false);
-  mlir::Value targetBase = fir::getBase(targetExv);
+  aiir::Value targetBase = fir::getBase(targetExv);
   // subtle: isPresentCheck would test for an unallocated/disassociated target,
   // while the optionality of the target pointer/allocatable is what must be
   // checked here.
-  mlir::Value isPresent =
+  aiir::Value isPresent =
       fir::IsPresentOp::create(builder, loc, builder.getI1Type(), targetBase);
-  mlir::Type targetType = fir::unwrapRefType(targetBase.getType());
-  mlir::Type targetValueType = fir::unwrapPassByRefType(targetType);
-  mlir::Type boxType = mlir::isa<fir::BaseBoxType>(targetType)
+  aiir::Type targetType = fir::unwrapRefType(targetBase.getType());
+  aiir::Type targetValueType = fir::unwrapPassByRefType(targetType);
+  aiir::Type boxType = aiir::isa<fir::BaseBoxType>(targetType)
                            ? targetType
                            : fir::BoxType::get(targetValueType);
   fir::BoxValue targetBox =
@@ -291,12 +291,12 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
           .genIfOp(loc, {boxType}, isPresent,
                    /*withElseRegion=*/true)
           .genThen([&]() {
-            mlir::Value box = builder.createBox(loc, targetExv);
-            mlir::Value cast = builder.createConvert(loc, boxType, box);
+            aiir::Value box = builder.createBox(loc, targetExv);
+            aiir::Value cast = builder.createConvert(loc, boxType, box);
             fir::ResultOp::create(builder, loc, cast);
           })
           .genElse([&]() {
-            mlir::Value absentBox =
+            aiir::Value absentBox =
                 fir::AbsentOp::create(builder, loc, boxType);
             fir::ResultOp::create(builder, loc, absentBox);
           })
@@ -308,7 +308,7 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
 void Fortran::lower::prepareCustomIntrinsicArgument(
     const Fortran::evaluate::ProcedureRef &procRef,
     const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-    std::optional<mlir::Type> retTy,
+    std::optional<aiir::Type> retTy,
     const OperandPrepare &prepareOptionalArgument,
     const OperandPrepareAs &prepareOtherArgument,
     AbstractConverter &converter) {
@@ -328,8 +328,8 @@ void Fortran::lower::prepareCustomIntrinsicArgument(
 }
 
 fir::ExtendedValue Fortran::lower::lowerCustomIntrinsic(
-    fir::FirOpBuilder &builder, mlir::Location loc, llvm::StringRef name,
-    std::optional<mlir::Type> retTy, const OperandPresent &isPresentCheck,
+    fir::FirOpBuilder &builder, aiir::Location loc, llvm::StringRef name,
+    std::optional<aiir::Type> retTy, const OperandPresent &isPresentCheck,
     const OperandGetter &getOperand, std::size_t numOperands,
     Fortran::lower::StatementContext &stmtCtx) {
   if (name == "min" || name == "max")

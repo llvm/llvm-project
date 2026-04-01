@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library", "cc_test")
-load("//mlir:tblgen.bzl", "gentbl_cc_library")
+load("//aiir:tblgen.bzl", "gentbl_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],

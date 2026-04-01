@@ -14,14 +14,14 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
-#include "mlir/Analysis/DataFlow/Utils.h"
-#include "mlir/Analysis/DataFlowFramework.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/LLVM.h"
+#include "aiir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "aiir/Analysis/DataFlow/Utils.h"
+#include "aiir/Analysis/DataFlowFramework.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace flangomp {
@@ -29,7 +29,7 @@ namespace flangomp {
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 

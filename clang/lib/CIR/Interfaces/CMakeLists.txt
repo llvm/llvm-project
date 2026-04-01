@@ -1,21 +1,21 @@
-add_clang_library(MLIRCIRInterfaces
+add_clang_library(AIIRCIRInterfaces
   ASTAttrInterfaces.cpp
   CIROpInterfaces.cpp
   CIRLoopOpInterface.cpp
   CIRTypeInterfaces.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+  ${AIIR_MAIN_INCLUDE_DIR}/aiir/Interfaces
 
   DEPENDS
-  MLIRCIRASTAttrInterfacesIncGen
-  MLIRCIREnumsGen
-  MLIRCIRTypeInterfacesIncGen
-  MLIRCIRLoopOpInterfaceIncGen
-  MLIRCIROpInterfacesIncGen
+  AIIRCIRASTAttrInterfacesIncGen
+  AIIRCIREnumsGen
+  AIIRCIRTypeInterfacesIncGen
+  AIIRCIRLoopOpInterfaceIncGen
+  AIIRCIROpInterfacesIncGen
 
   LINK_LIBS
   ${dialect_libs}
-  MLIRIR
-  MLIRSupport
+  AIIRIR
+  AIIRSupport
  )

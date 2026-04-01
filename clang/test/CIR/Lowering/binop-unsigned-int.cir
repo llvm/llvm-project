@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=AIIR
 // RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering  | FileCheck %s -check-prefix=LLVM
 !u32i = !cir.int<u, 32>
 
@@ -49,18 +49,18 @@ module {
   }
 }
 
-// MLIR: = llvm.mul
-// MLIR: = llvm.udiv
-// MLIR: = llvm.urem
-// MLIR: = llvm.add
-// MLIR: = llvm.sub
-// MLIR: = llvm.and
-// MLIR: = llvm.xor
-// MLIR: = llvm.or
-// MLIR: = llvm.intr.uadd.sat{{.*}}(i32, i32) -> i32
-// MLIR: = llvm.intr.usub.sat{{.*}}(i32, i32) -> i32 
-// MLIR: = llvm.intr.umax
-// MLIR: = llvm.intr.umin
+// AIIR: = llvm.mul
+// AIIR: = llvm.udiv
+// AIIR: = llvm.urem
+// AIIR: = llvm.add
+// AIIR: = llvm.sub
+// AIIR: = llvm.and
+// AIIR: = llvm.xor
+// AIIR: = llvm.or
+// AIIR: = llvm.intr.uadd.sat{{.*}}(i32, i32) -> i32
+// AIIR: = llvm.intr.usub.sat{{.*}}(i32, i32) -> i32 
+// AIIR: = llvm.intr.umax
+// AIIR: = llvm.intr.umin
 
 // LLVM: = mul i32
 // LLVM: = udiv i32

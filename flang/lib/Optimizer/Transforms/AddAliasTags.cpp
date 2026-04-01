@@ -20,9 +20,9 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/IR/Dominance.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/IR/Dominance.h"
+#include "aiir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -69,15 +69,15 @@ namespace {
 // TODO: this must be combined with DebugTypeGenerator::getFieldSizeAndAlign().
 // We'd better move fir::LLVMTypeConverter out of the FIRCodeGen component.
 static std::pair<std::uint64_t, unsigned short>
-getTypeSizeAndAlignment(mlir::Type type,
+getTypeSizeAndAlignment(aiir::Type type,
                         fir::LLVMTypeConverter &llvmTypeConverter) {
-  mlir::Type llvmTy;
-  if (auto boxTy = mlir::dyn_cast_if_present<fir::BaseBoxType>(type))
+  aiir::Type llvmTy;
+  if (auto boxTy = aiir::dyn_cast_if_present<fir::BaseBoxType>(type))
     llvmTy = llvmTypeConverter.convertBoxTypeAsStruct(boxTy, getBoxRank(boxTy));
   else
     llvmTy = llvmTypeConverter.convertType(type);
 
-  const mlir::DataLayout &dataLayout = llvmTypeConverter.getDataLayout();
+  const aiir::DataLayout &dataLayout = llvmTypeConverter.getDataLayout();
   uint64_t byteSize = dataLayout.getTypeSize(llvmTy);
   unsigned short byteAlign = dataLayout.getTypeABIAlignment(llvmTy);
   return std::pair{byteSize, byteAlign};
@@ -184,15 +184,15 @@ operator<<(llvm::raw_ostream &os, const IntervalSetTy &set) {
 /// Shared state per-module
 class PassState {
 public:
-  PassState(mlir::ModuleOp module, const mlir::DataLayout &dl,
-            mlir::DominanceInfo &domInfo,
+  PassState(aiir::ModuleOp module, const aiir::DataLayout &dl,
+            aiir::DominanceInfo &domInfo,
             std::optional<unsigned> localAllocsThreshold)
       : domInfo(domInfo), localAllocsThreshold(localAllocsThreshold),
         symTab(module.getOperation()),
         llvmTypeConverter(module, /*applyTBAA=*/false,
                           /*forceUnifiedTBAATree=*/false, dl) {}
   /// memoised call to fir::AliasAnalysis::getSource
-  inline const fir::AliasAnalysis::Source &getSource(mlir::Value value) {
+  inline const fir::AliasAnalysis::Source &getSource(aiir::Value value) {
     if (!analysisCache.contains(value))
       analysisCache.insert(
           {value, analysis.getSource(value, /*getInstantiationPoint=*/true)});
@@ -200,24 +200,24 @@ public:
   }
 
   /// get the per-function TBAATree for this function
-  inline fir::TBAATree &getMutableFuncTreeWithScope(mlir::func::FuncOp func,
+  inline fir::TBAATree &getMutableFuncTreeWithScope(aiir::func::FuncOp func,
                                                     fir::DummyScopeOp scope) {
     auto &scopeMap = scopeNames.at(func);
     return forrest.getMutableFuncTreeWithScope(func, scopeMap.lookup(scope));
   }
-  inline const fir::TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
+  inline const fir::TBAATree &getFuncTreeWithScope(aiir::func::FuncOp func,
                                                    fir::DummyScopeOp scope) {
     return getMutableFuncTreeWithScope(func, scope);
   }
 
-  void processFunctionScopes(mlir::func::FuncOp func);
+  void processFunctionScopes(aiir::func::FuncOp func);
   // For the given fir.declare returns the dominating fir.dummy_scope
   // operation.
   fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp);
   // Returns true, if the given type of a memref of a FirAliasTagOpInterface
   // operation is a descriptor or contains a descriptor
   // (e.g. !fir.ref<!fir.type<Derived{f:!fir.box<!fir.heap<f32>>}>>).
-  bool typeReferencesDescriptor(mlir::Type type);
+  bool typeReferencesDescriptor(aiir::Type type);
 
   // Returns true if we can attach a TBAA tag to an access of an allocatable
   // entities. It checks if localAllocsThreshold allows the next tag
@@ -225,18 +225,18 @@ public:
   bool attachLocalAllocTag();
 
   // Return fir.global for the given name.
-  fir::GlobalOp getGlobalDefiningOp(mlir::StringAttr name) const {
+  fir::GlobalOp getGlobalDefiningOp(aiir::StringAttr name) const {
     return symTab.lookup<fir::GlobalOp>(name);
   }
 
   // Process fir::FortranVariableStorageOpInterface operations within
   // the given op, and fill in declToStorageMap with the information
   // about their physical storages and layouts.
-  void collectPhysicalStorageAliasSets(mlir::Operation *op);
+  void collectPhysicalStorageAliasSets(aiir::Operation *op);
 
   // Return the byte size of the given declaration.
   std::size_t getDeclarationSize(fir::FortranVariableStorageOpInterface decl) {
-    mlir::Type memType = fir::unwrapRefType(decl.getBase().getType());
+    aiir::Type memType = fir::unwrapRefType(decl.getBase().getType());
     auto [size, alignment] =
         getTypeSizeAndAlignment(memType, llvmTypeConverter);
     return llvm::alignTo(size, alignment);
@@ -247,7 +247,7 @@ public:
   // a variable resides.
   struct StorageDesc {
     StorageDesc() = delete;
-    StorageDesc(mlir::Operation *storageDef, std::uint64_t start,
+    StorageDesc(aiir::Operation *storageDef, std::uint64_t start,
                 std::size_t size)
         : storageDef(storageDef), interval(start, size) {}
 
@@ -260,14 +260,14 @@ public:
           .str();
     }
 
-    mlir::Operation *storageDef;
+    aiir::Operation *storageDef;
     IntervalTy interval;
   };
 
   // Fills in declToStorageMap on the first invocation.
   // Returns a storage descriptor for the given op (if registered
   // in declToStorageMap).
-  const StorageDesc *computeStorageDesc(mlir::Operation *op) {
+  const StorageDesc *computeStorageDesc(aiir::Operation *op) {
     if (!op)
       return nullptr;
 
@@ -277,50 +277,50 @@ public:
     // results for storages that have members with descriptors
     // in one function but not the others.
     if (!declToStorageMapComputed)
-      collectPhysicalStorageAliasSets(op->getParentOfType<mlir::ModuleOp>());
+      collectPhysicalStorageAliasSets(op->getParentOfType<aiir::ModuleOp>());
     return getStorageDesc(op);
   }
 
 private:
-  const StorageDesc *getStorageDesc(mlir::Operation *op) const {
+  const StorageDesc *getStorageDesc(aiir::Operation *op) const {
     auto it = declToStorageMap.find(op);
     return it == declToStorageMap.end() ? nullptr : &it->second;
   }
 
-  StorageDesc &getMutableStorageDesc(mlir::Operation *op) {
+  StorageDesc &getMutableStorageDesc(aiir::Operation *op) {
     auto it = declToStorageMap.find(op);
     assert(it != declToStorageMap.end());
     return it->second;
   }
 
 private:
-  mlir::DominanceInfo &domInfo;
+  aiir::DominanceInfo &domInfo;
   std::optional<unsigned> localAllocsThreshold;
   // Symbol table cache for the module.
-  mlir::SymbolTable symTab;
+  aiir::SymbolTable symTab;
   // Type converter to compute the size of declarations.
   fir::LLVMTypeConverter llvmTypeConverter;
   fir::AliasAnalysis analysis;
-  llvm::DenseMap<mlir::Value, fir::AliasAnalysis::Source> analysisCache;
+  llvm::DenseMap<aiir::Value, fir::AliasAnalysis::Source> analysisCache;
   fir::TBAAForrest forrest;
   // Unique names for fir.dummy_scope operations within
   // the given function.
-  llvm::DenseMap<mlir::func::FuncOp,
+  llvm::DenseMap<aiir::func::FuncOp,
                  llvm::DenseMap<fir::DummyScopeOp, std::string>>
       scopeNames;
   // A map providing a vector of fir.dummy_scope operations
   // for the given function. The vectors are sorted according
   // to the dominance information.
-  llvm::DenseMap<mlir::func::FuncOp, llvm::SmallVector<fir::DummyScopeOp, 16>>
+  llvm::DenseMap<aiir::func::FuncOp, llvm::SmallVector<fir::DummyScopeOp, 16>>
       sortedScopeOperations;
 
   // Local pass cache for derived types that contain descriptor
   // member(s), to avoid the cost of isRecordWithDescriptorMember().
-  llvm::DenseSet<mlir::Type> typesContainingDescriptors;
+  llvm::DenseSet<aiir::Type> typesContainingDescriptors;
 
   // A map between fir::FortranVariableStorageOpInterface operations
   // and their storage descriptors.
-  llvm::DenseMap<mlir::Operation *, StorageDesc> declToStorageMap;
+  llvm::DenseMap<aiir::Operation *, StorageDesc> declToStorageMap;
   // declToStorageMapComputed is set to true after declToStorageMap
   // is initialized by collectPhysicalStorageAliasSets().
   bool declToStorageMapComputed = false;
@@ -330,7 +330,7 @@ private:
 // sort them according to the dominance information, and
 // associate a unique (within the current function) scope name
 // with each of them.
-void PassState::processFunctionScopes(mlir::func::FuncOp func) {
+void PassState::processFunctionScopes(aiir::func::FuncOp func) {
   if (scopeNames.contains(func))
     return;
 
@@ -356,7 +356,7 @@ void PassState::processFunctionScopes(mlir::func::FuncOp func) {
 // For the given fir.declare returns the dominating fir.dummy_scope
 // operation.
 fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
-  auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
+  auto func = declareOp->getParentOfType<aiir::func::FuncOp>();
   assert(func && "fir.declare does not have parent func.func");
   auto &scopeOps = sortedScopeOperations.at(func);
   for (auto II = scopeOps.rbegin(), IE = scopeOps.rend(); II != IE; ++II) {
@@ -366,12 +366,12 @@ fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
   return nullptr;
 }
 
-bool PassState::typeReferencesDescriptor(mlir::Type type) {
+bool PassState::typeReferencesDescriptor(aiir::Type type) {
   type = fir::unwrapAllRefAndSeqType(type);
-  if (mlir::isa<fir::BaseBoxType>(type))
+  if (aiir::isa<fir::BaseBoxType>(type))
     return true;
 
-  if (mlir::isa<fir::RecordType>(type)) {
+  if (aiir::isa<fir::RecordType>(type)) {
     if (typesContainingDescriptors.contains(type))
       return true;
     if (fir::isRecordWithDescriptorMember(type)) {
@@ -395,30 +395,30 @@ bool PassState::attachLocalAllocTag() {
   return true;
 }
 
-static mlir::Value getStorageDefinition(mlir::Value storageRef) {
+static aiir::Value getStorageDefinition(aiir::Value storageRef) {
   while (auto convert =
-             mlir::dyn_cast_or_null<fir::ConvertOp>(storageRef.getDefiningOp()))
+             aiir::dyn_cast_or_null<fir::ConvertOp>(storageRef.getDefiningOp()))
     storageRef = convert.getValue();
   return storageRef;
 }
 
-void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
+void PassState::collectPhysicalStorageAliasSets(aiir::Operation *op) {
   // A map between fir::FortranVariableStorageOpInterface operations
   // and the intervals describing their layout within their physical
   // storages.
-  llvm::DenseMap<mlir::Operation *, IntervalSetTy> memberIntervals;
+  llvm::DenseMap<aiir::Operation *, IntervalSetTy> memberIntervals;
   // A map between operations defining physical storages (e.g. fir.global)
   // and sets of fir::FortranVariableStorageOpInterface operations
   // declaring their member variables.
-  llvm::DenseMap<mlir::Operation *, llvm::SmallVector<mlir::Operation *, 10>>
+  llvm::DenseMap<aiir::Operation *, llvm::SmallVector<aiir::Operation *, 10>>
       storageDecls;
 
   bool seenUnknownStorage = false;
   bool seenDeclWithDescriptor = false;
   op->walk([&](fir::FortranVariableStorageOpInterface decl) {
-    mlir::Value storageRef = decl.getStorage();
+    aiir::Value storageRef = decl.getStorage();
     if (!storageRef)
-      return mlir::WalkResult::advance();
+      return aiir::WalkResult::advance();
 
     // If we have seen a declaration of a variable containing
     // a descriptor, and we have not been able to identify
@@ -428,12 +428,12 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
     // assumptions about any variable with physical
     // storage. Exit early.
     if (seenUnknownStorage && seenDeclWithDescriptor)
-      return mlir::WalkResult::interrupt();
+      return aiir::WalkResult::interrupt();
 
     if (typeReferencesDescriptor(decl.getBase().getType()))
       seenDeclWithDescriptor = true;
 
-    mlir::Operation *storageDef =
+    aiir::Operation *storageDef =
         getStorageDefinition(storageRef).getDefiningOp();
     // All physical storages that are defined by non-global
     // objects (e.g. via fir.alloca) indicate an EQUIVALENCE.
@@ -443,14 +443,14 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
     // no reason to investigate them further.
     // Note that, in general, the storage may be defined by a block
     // argument.
-    auto addrOfOp = mlir::dyn_cast_or_null<fir::AddrOfOp>(storageDef);
+    auto addrOfOp = aiir::dyn_cast_or_null<fir::AddrOfOp>(storageDef);
     if (!storageDef ||
-        (!addrOfOp && !mlir::dyn_cast<fir::AllocaOp>(storageDef))) {
+        (!addrOfOp && !aiir::dyn_cast<fir::AllocaOp>(storageDef))) {
       seenUnknownStorage = true;
-      return mlir::WalkResult::advance();
+      return aiir::WalkResult::advance();
     }
     if (!addrOfOp)
-      return mlir::WalkResult::advance();
+      return aiir::WalkResult::advance();
     fir::GlobalOp globalDef =
         getGlobalDefiningOp(addrOfOp.getSymbol().getRootReference());
     std::uint64_t storageOffset = decl.getStorageOffset();
@@ -463,12 +463,12 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
                << "Size: " << declSize << "\n");
     if (!globalDef) {
       seenUnknownStorage = true;
-      return mlir::WalkResult::advance();
+      return aiir::WalkResult::advance();
     }
     // Zero-sized variables do not need any TBAA tags, because
     // they cannot be accessed.
     if (declSize == 0)
-      return mlir::WalkResult::advance();
+      return aiir::WalkResult::advance();
 
     declToStorageMap.try_emplace(decl.getOperation(), globalDef.getOperation(),
                                  storageOffset, declSize);
@@ -478,7 +478,7 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
     auto &set =
         memberIntervals.try_emplace(globalDef.getOperation()).first->second;
     set.insert(IntervalTy(storageOffset, declSize));
-    return mlir::WalkResult::advance();
+    return aiir::WalkResult::advance();
   });
 
   // Mark the map as computed before any early exits below.
@@ -491,12 +491,12 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
 
   // Process each physical storage.
   for (auto &map : memberIntervals) {
-    mlir::Operation *storageDef = map.first;
+    aiir::Operation *storageDef = map.first;
     const IntervalSetTy &originalSet = map.second;
     LLVM_DEBUG(
         llvm::dbgs() << "Merging " << originalSet.size()
                      << " member intervals for: ";
-        storageDef->print(llvm::dbgs(), mlir::OpPrintingFlags{}.skipRegions());
+        storageDef->print(llvm::dbgs(), aiir::OpPrintingFlags{}.skipRegions());
         llvm::dbgs() << "\nIntervals: " << originalSet << "\n");
     // Ordered set of merged overlapping intervals.
     // Since the intervals in originalSet are sorted, the merged
@@ -542,7 +542,7 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
         declStorageDesc.interval = *containingInterval;
       }
       if (typeReferencesDescriptor(
-              mlir::cast<fir::FortranVariableStorageOpInterface>(decl)
+              aiir::cast<fir::FortranVariableStorageOpInterface>(decl)
                   .getBase()
                   .getType())) {
         // If a variable contains a descriptor within it.
@@ -603,32 +603,32 @@ private:
 
 } // namespace
 
-static fir::DeclareOp getDeclareOp(mlir::Value arg) {
+static fir::DeclareOp getDeclareOp(aiir::Value arg) {
   if (auto declare =
-          mlir::dyn_cast_or_null<fir::DeclareOp>(arg.getDefiningOp()))
+          aiir::dyn_cast_or_null<fir::DeclareOp>(arg.getDefiningOp()))
     return declare;
-  for (mlir::Operation *use : arg.getUsers())
-    if (fir::DeclareOp declare = mlir::dyn_cast<fir::DeclareOp>(use))
+  for (aiir::Operation *use : arg.getUsers())
+    if (fir::DeclareOp declare = aiir::dyn_cast<fir::DeclareOp>(use))
       return declare;
   return nullptr;
 }
 
 /// Get the name of a function argument using the "fir.bindc_name" attribute,
 /// or ""
-static std::string getFuncArgName(mlir::Value arg) {
+static std::string getFuncArgName(aiir::Value arg) {
   // first try getting the name from the fir.declare
   if (fir::DeclareOp declare = getDeclareOp(arg))
     return declare.getUniqName().str();
 
   // get from attribute on function argument
   // always succeeds because arg is a function argument
-  mlir::BlockArgument blockArg = mlir::cast<mlir::BlockArgument>(arg);
+  aiir::BlockArgument blockArg = aiir::cast<aiir::BlockArgument>(arg);
   assert(blockArg.getOwner() && blockArg.getOwner()->isEntryBlock() &&
          "arg is a function argument");
-  mlir::FunctionOpInterface func = mlir::dyn_cast<mlir::FunctionOpInterface>(
+  aiir::FunctionOpInterface func = aiir::dyn_cast<aiir::FunctionOpInterface>(
       blockArg.getOwner()->getParentOp());
   assert(func && "This is not a function argument");
-  mlir::StringAttr attr = func.getArgAttrOfType<mlir::StringAttr>(
+  aiir::StringAttr attr = func.getArgAttrOfType<aiir::StringAttr>(
       blockArg.getArgNumber(), "fir.bindc_name");
   if (!attr)
     return "";
@@ -637,14 +637,14 @@ static std::string getFuncArgName(mlir::Value arg) {
 
 void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                                            PassState &state) {
-  mlir::func::FuncOp func = op->getParentOfType<mlir::func::FuncOp>();
+  aiir::func::FuncOp func = op->getParentOfType<aiir::func::FuncOp>();
   if (!func)
     return;
 
-  llvm::SmallVector<mlir::Value> accessedOperands = op.getAccessedOperands();
+  llvm::SmallVector<aiir::Value> accessedOperands = op.getAccessedOperands();
   assert(accessedOperands.size() == 1 &&
          "load and store only access one address");
-  mlir::Value memref = accessedOperands.front();
+  aiir::Value memref = accessedOperands.front();
 
   // Skip boxes and derived types that contain descriptors.
   // The box accesses get an "any descriptor access" tag in TBAABuilder
@@ -670,28 +670,28 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     // If the source is a dummy argument within some fir.dummy_scope,
     // then find the corresponding innermost scope to be used for finding
     // the right TBAA tree.
-    auto declareOp = mlir::dyn_cast<fir::DeclareOp>(declOp);
+    auto declareOp = aiir::dyn_cast<fir::DeclareOp>(declOp);
     assert(declareOp && "Instantiation point must be fir.declare");
     if (auto dummyScope = declareOp.getDummyScope())
-      scopeOp = mlir::cast<fir::DummyScopeOp>(dummyScope.getDefiningOp());
+      scopeOp = aiir::cast<fir::DummyScopeOp>(dummyScope.getDefiningOp());
     if (!scopeOp)
       scopeOp = state.getDeclarationScope(declareOp);
   }
 
-  mlir::LLVM::TBAATagAttr tag;
+  aiir::LLVM::TBAATagAttr tag;
   // Cray pointer/pointee is a special case. These might alias with any data.
   if (supportCrayPointers && source.isCrayPointerOrPointee()) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to Cray pointer/pointee at " << *op << "\n");
-    mlir::LLVM::TBAATypeDescriptorAttr anyDataDesc =
+    aiir::LLVM::TBAATypeDescriptorAttr anyDataDesc =
         state.getFuncTreeWithScope(func, scopeOp).anyDataTypeDesc;
-    tag = mlir::LLVM::TBAATagAttr::get(anyDataDesc, anyDataDesc, /*offset=*/0);
+    tag = aiir::LLVM::TBAATagAttr::get(anyDataDesc, anyDataDesc, /*offset=*/0);
     // TBAA for dummy arguments
   } else if (enableDummyArgs &&
              source.kind == fir::AliasAnalysis::SourceKind::Argument) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
-    std::string name = getFuncArgName(llvm::cast<mlir::Value>(source.origin.u));
+    std::string name = getFuncArgName(llvm::cast<aiir::Value>(source.origin.u));
     // POINTERS can alias with any POINTER or TARGET. Assume that TARGET dummy
     // arguments might alias with each other (because of the "TARGET" hole for
     // dummy arguments). See flang/docs/Aliasing.md.
@@ -711,8 +711,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableGlobals &&
              source.kind == fir::AliasAnalysis::SourceKind::Global &&
              !source.isBoxData()) {
-    mlir::SymbolRefAttr glbl = llvm::cast<mlir::SymbolRefAttr>(source.origin.u);
-    mlir::StringAttr globalName = glbl.getRootReference();
+    aiir::SymbolRefAttr glbl = llvm::cast<aiir::SymbolRefAttr>(source.origin.u);
+    aiir::StringAttr globalName = glbl.getRootReference();
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to global " << globalName.str() << " at "
                << *op << "\n");
@@ -720,9 +720,9 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     // Add a named tag inside the given subtree, disambiguating members of a
     // common block
     auto addTagUsingStorageDesc = [&](fir::TBAATree::SubtreeState *subTree) {
-      mlir::Operation *instantiationPoint = source.origin.instantiationPoint;
+      aiir::Operation *instantiationPoint = source.origin.instantiationPoint;
       auto storageIface =
-          mlir::dyn_cast_or_null<fir::FortranVariableStorageOpInterface>(
+          aiir::dyn_cast_or_null<fir::FortranVariableStorageOpInterface>(
               instantiationPoint);
       const PassState::StorageDesc *storageDesc =
           state.computeStorageDesc(instantiationPoint);
@@ -783,7 +783,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableDirect &&
              source.kind == fir::AliasAnalysis::SourceKind::Global &&
              source.isBoxData()) {
-    if (auto glbl = llvm::dyn_cast<mlir::SymbolRefAttr>(source.origin.u)) {
+    if (auto glbl = llvm::dyn_cast<aiir::SymbolRefAttr>(source.origin.u)) {
       const char *name = glbl.getRootReference().data();
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to direct " << name
                                         << " at " << *op << "\n");
@@ -809,12 +809,12 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableLocalAllocs &&
              source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
     std::optional<llvm::StringRef> name;
-    mlir::Operation *sourceOp =
-        llvm::cast<mlir::Value>(source.origin.u).getDefiningOp();
+    aiir::Operation *sourceOp =
+        llvm::cast<aiir::Value>(source.origin.u).getDefiningOp();
     bool unknownAllocOp = false;
-    if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
+    if (auto alloc = aiir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
       name = alloc.getUniqName();
-    else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
+    else if (auto alloc = aiir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
       name = alloc.getUniqName();
     else
       unknownAllocOp = true;
@@ -858,20 +858,20 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   }
 
   if (tag)
-    op.setTBAATags(mlir::ArrayAttr::get(&getContext(), tag));
+    op.setTBAATags(aiir::ArrayAttr::get(&getContext(), tag));
 }
 
 void AddAliasTagsPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "=== Begin " DEBUG_TYPE " ===\n");
 
-  // MLIR forbids storing state in a pass because different instances might be
+  // AIIR forbids storing state in a pass because different instances might be
   // used in different threads.
-  // Instead this pass stores state per mlir::ModuleOp (which is what MLIR
+  // Instead this pass stores state per aiir::ModuleOp (which is what AIIR
   // thinks the pass operates on), then the real work of the pass is done in
   // runOnAliasInterface
-  auto &domInfo = getAnalysis<mlir::DominanceInfo>();
-  mlir::ModuleOp module = getOperation();
-  mlir::DataLayout dl = *fir::support::getOrSetMLIRDataLayout(
+  auto &domInfo = getAnalysis<aiir::DominanceInfo>();
+  aiir::ModuleOp module = getOperation();
+  aiir::DataLayout dl = *fir::support::getOrSetAIIRDataLayout(
       module, /*allowDefaultLayout=*/false);
   PassState state(module, dl, domInfo,
                   localAllocsThreshold.getPosition()

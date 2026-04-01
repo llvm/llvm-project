@@ -16,9 +16,9 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
-#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "aiir/Dialect/OpenACC/OpenACCUtils.h"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace fir {
 namespace acc {
@@ -27,17 +27,17 @@ std::string FIROpenACCSupportAnalysis::getVariableName(Value v) {
   return fir::acc::getVariableName(v, /*preferDemangledName=*/true);
 }
 
-std::string FIROpenACCSupportAnalysis::getRecipeName(mlir::acc::RecipeKind kind,
+std::string FIROpenACCSupportAnalysis::getRecipeName(aiir::acc::RecipeKind kind,
                                                      Type type, Value var) {
   return fir::acc::getRecipeName(kind, type, var);
 }
 
-mlir::InFlightDiagnostic
+aiir::InFlightDiagnostic
 FIROpenACCSupportAnalysis::emitNYI(Location loc, const Twine &message) {
   TODO(loc, message);
   // Should be unreachable, but we return an actual diagnostic
   // to satisfy the interface.
-  return mlir::emitError(loc, "not yet implemented: " + message.str());
+  return aiir::emitError(loc, "not yet implemented: " + message.str());
 }
 
 bool FIROpenACCSupportAnalysis::isValidSymbolUse(Operation *user,
@@ -46,7 +46,7 @@ bool FIROpenACCSupportAnalysis::isValidSymbolUse(Operation *user,
   // First check using the default OpenACC utility (recipes, device globals,
   // acc routine, LLVM intrinsics, declare attribute).
   Operation *definingOp = nullptr;
-  if (mlir::acc::isValidSymbolUse(user, symbol, &definingOp)) {
+  if (aiir::acc::isValidSymbolUse(user, symbol, &definingOp)) {
     if (definingOpPtr)
       *definingOpPtr = definingOp;
     return true;
@@ -75,12 +75,12 @@ bool FIROpenACCSupportAnalysis::isValidSymbolUse(Operation *user,
 
 bool FIROpenACCSupportAnalysis::isValidValueUse(Value v, Region &region) {
   // First check using the base utility.
-  if (mlir::acc::isValidValueUse(v, region))
+  if (aiir::acc::isValidValueUse(v, region))
     return true;
 
   // FIR-specific: fir.logical is a trivial scalar type that can be
   // passed by value.
-  if (mlir::isa<fir::LogicalType>(v.getType()))
+  if (aiir::isa<fir::LogicalType>(v.getType()))
     return true;
 
   return false;

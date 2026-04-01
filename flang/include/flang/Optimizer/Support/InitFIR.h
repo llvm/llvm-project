@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,60 +20,60 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 #include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
-#include "mlir/Conversion/Passes.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/Transforms/Passes.h"
-#include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Index/IR/IndexDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
-#include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenACC/Transforms/Passes.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/InitAllDialects.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
-#include "mlir/Transforms/LocationSnapshot.h"
-#include "mlir/Transforms/Passes.h"
+#include "aiir/Conversion/Passes.h"
+#include "aiir/Dialect/Affine/IR/AffineOps.h"
+#include "aiir/Dialect/Affine/Transforms/Passes.h"
+#include "aiir/Dialect/Complex/IR/Complex.h"
+#include "aiir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/Dialect/Func/Extensions/InlinerExtension.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/Index/IR/IndexDialect.h"
+#include "aiir/Dialect/LLVMIR/NVVMDialect.h"
+#include "aiir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
+#include "aiir/Dialect/Math/IR/Math.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/Transforms/Passes.h"
+#include "aiir/Dialect/SCF/IR/SCF.h"
+#include "aiir/Dialect/SCF/Transforms/Passes.h"
+#include "aiir/InitAllDialects.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassRegistry.h"
+#include "aiir/Transforms/LocationSnapshot.h"
+#include "aiir/Transforms/Passes.h"
 
 namespace fir::support {
 
 #define FLANG_NONCODEGEN_DIALECT_LIST                                          \
-  mlir::affine::AffineDialect, FIROpsDialect, hlfir::hlfirDialect,             \
-      mlir::acc::OpenACCDialect, mlir::omp::OpenMPDialect,                     \
-      mlir::scf::SCFDialect, mlir::arith::ArithDialect,                        \
-      mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
-      mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
-      mlir::complex::ComplexDialect, mlir::DLTIDialect, cuf::CUFDialect,       \
-      mlir::NVVM::NVVMDialect, mlir::gpu::GPUDialect,                          \
-      mlir::index::IndexDialect, mif::MIFDialect
+  aiir::affine::AffineDialect, FIROpsDialect, hlfir::hlfirDialect,             \
+      aiir::acc::OpenACCDialect, aiir::omp::OpenMPDialect,                     \
+      aiir::scf::SCFDialect, aiir::arith::ArithDialect,                        \
+      aiir::cf::ControlFlowDialect, aiir::func::FuncDialect,                   \
+      aiir::vector::VectorDialect, aiir::math::MathDialect,                    \
+      aiir::complex::ComplexDialect, aiir::DLTIDialect, cuf::CUFDialect,       \
+      aiir::NVVM::NVVMDialect, aiir::gpu::GPUDialect,                          \
+      aiir::index::IndexDialect, mif::MIFDialect
 
-#define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
+#define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, aiir::LLVM::LLVMDialect
 
 // The definitive list of dialects used by flang.
 #define FLANG_DIALECT_LIST                                                     \
   FLANG_NONCODEGEN_DIALECT_LIST, FLANG_CODEGEN_DIALECT_LIST
 
-inline void registerNonCodegenDialects(mlir::DialectRegistry &registry) {
+inline void registerNonCodegenDialects(aiir::DialectRegistry &registry) {
   registry.insert<FLANG_NONCODEGEN_DIALECT_LIST>();
-  mlir::func::registerInlinerExtension(registry);
-  mlir::LLVM::registerInlinerInterface(registry);
+  aiir::func::registerInlinerExtension(registry);
+  aiir::LLVM::registerInlinerInterface(registry);
 }
 
 /// Register all the dialects used by flang.
-inline void registerDialects(mlir::DialectRegistry &registry) {
+inline void registerDialects(aiir::DialectRegistry &registry) {
   registerNonCodegenDialects(registry);
   registry.insert<FLANG_CODEGEN_DIALECT_LIST>();
 }
 
 // Register FIR Extensions
-inline void addFIRExtensions(mlir::DialectRegistry &registry,
+inline void addFIRExtensions(aiir::DialectRegistry &registry,
                              bool addFIRInlinerInterface = true) {
   if (addFIRInlinerInterface)
     addFIRInlinerExtension(registry);
@@ -83,19 +83,19 @@ inline void addFIRExtensions(mlir::DialectRegistry &registry,
   fir::omp::registerOpenMPExtensions(registry);
 }
 
-inline void loadNonCodegenDialects(mlir::MLIRContext &context) {
-  mlir::DialectRegistry registry;
+inline void loadNonCodegenDialects(aiir::AIIRContext &context) {
+  aiir::DialectRegistry registry;
   registerNonCodegenDialects(registry);
   context.appendDialectRegistry(registry);
 
   context.loadDialect<FLANG_NONCODEGEN_DIALECT_LIST>();
 }
 
-/// Forced load of all the dialects used by flang.  Lowering is not an MLIR
-/// pass, but a producer of FIR and MLIR. It is therefore a requirement that the
+/// Forced load of all the dialects used by flang.  Lowering is not an AIIR
+/// pass, but a producer of FIR and AIIR. It is therefore a requirement that the
 /// dialects be preloaded to be able to build the IR.
-inline void loadDialects(mlir::MLIRContext &context) {
-  mlir::DialectRegistry registry;
+inline void loadDialects(aiir::AIIRContext &context) {
+  aiir::DialectRegistry registry;
   registerDialects(registry);
   context.appendDialectRegistry(registry);
 
@@ -104,37 +104,37 @@ inline void loadDialects(mlir::MLIRContext &context) {
 
 /// Register the standard passes we use. This comes from registerAllPasses(),
 /// but is a smaller set since we aren't using many of the passes found there.
-inline void registerMLIRPassesForFortranTools() {
-  mlir::acc::registerOpenACCPasses();
-  mlir::registerCanonicalizerPass();
-  mlir::registerCSEPass();
-  mlir::affine::registerAffineLoopFusionPass();
-  mlir::registerLoopInvariantCodeMotionPass();
-  mlir::affine::registerLoopCoalescingPass();
-  mlir::registerStripDebugInfoPass();
-  mlir::registerPrintOpStatsPass();
-  mlir::registerInlinerPass();
-  mlir::registerSCCPPass();
-  mlir::registerSCFPasses();
-  mlir::affine::registerAffineScalarReplacementPass();
-  mlir::registerSymbolDCEPass();
-  mlir::registerLocationSnapshotPass();
-  mlir::affine::registerAffinePipelineDataTransferPass();
+inline void registerAIIRPassesForFortranTools() {
+  aiir::acc::registerOpenACCPasses();
+  aiir::registerCanonicalizerPass();
+  aiir::registerCSEPass();
+  aiir::affine::registerAffineLoopFusionPass();
+  aiir::registerLoopInvariantCodeMotionPass();
+  aiir::affine::registerLoopCoalescingPass();
+  aiir::registerStripDebugInfoPass();
+  aiir::registerPrintOpStatsPass();
+  aiir::registerInlinerPass();
+  aiir::registerSCCPPass();
+  aiir::registerSCFPasses();
+  aiir::affine::registerAffineScalarReplacementPass();
+  aiir::registerSymbolDCEPass();
+  aiir::registerLocationSnapshotPass();
+  aiir::affine::registerAffinePipelineDataTransferPass();
 
-  mlir::affine::registerAffineVectorizePass();
-  mlir::affine::registerAffineLoopUnrollPass();
-  mlir::affine::registerAffineLoopUnrollAndJamPass();
-  mlir::affine::registerSimplifyAffineStructuresPass();
-  mlir::affine::registerAffineLoopInvariantCodeMotionPass();
-  mlir::affine::registerAffineLoopTilingPass();
-  mlir::affine::registerAffineDataCopyGenerationPass();
+  aiir::affine::registerAffineVectorizePass();
+  aiir::affine::registerAffineLoopUnrollPass();
+  aiir::affine::registerAffineLoopUnrollAndJamPass();
+  aiir::affine::registerSimplifyAffineStructuresPass();
+  aiir::affine::registerAffineLoopInvariantCodeMotionPass();
+  aiir::affine::registerAffineLoopTilingPass();
+  aiir::affine::registerAffineDataCopyGenerationPass();
 
-  mlir::registerMem2RegPass();
-  mlir::registerLowerAffinePass();
+  aiir::registerMem2RegPass();
+  aiir::registerLowerAffinePass();
 }
 
 /// Register the interfaces needed to lower to LLVM IR.
-void registerLLVMTranslation(mlir::MLIRContext &context);
+void registerLLVMTranslation(aiir::AIIRContext &context);
 
 } // namespace fir::support
 

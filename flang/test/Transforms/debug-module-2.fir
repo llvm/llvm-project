@@ -1,4 +1,4 @@
-// RUN: fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --aiir-print-debuginfo %s | FileCheck %s
 
 module {
   fir.global @_QMhelperEgli : i32 {
@@ -33,5 +33,5 @@ module {
 // CHECK-DAG: #[[GLR:.*]] = #llvm.di_global_variable<{{.*}}name = "glr", linkageName = "_QMhelperEglr"{{.*}}>
 // CHECK-DAG: #[[GLIE:.*]] = #llvm.di_global_variable_expression<var = #[[GLI]]>
 // CHECK-DAG: #[[GLRE:.*]] = #llvm.di_global_variable_expression<var = #[[GLR]]>
-// CHECK-DAG: llvm.mlir.global{{.*}}@_QMhelperEgli() {{{.*}}dbg_exprs = [#[[GLIE]]]}
-// CHECK-DAG: llvm.mlir.global{{.*}}@_QMhelperEglr() {{{.*}}dbg_exprs = [#[[GLRE]]]}
+// CHECK-DAG: llvm.aiir.global{{.*}}@_QMhelperEgli() {{{.*}}dbg_exprs = [#[[GLIE]]]}
+// CHECK-DAG: llvm.aiir.global{{.*}}@_QMhelperEglr() {{{.*}}dbg_exprs = [#[[GLRE]]]}

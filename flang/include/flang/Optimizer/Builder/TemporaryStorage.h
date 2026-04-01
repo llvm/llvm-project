@@ -43,22 +43,22 @@ namespace fir::factory {
 /// huge array constructors without implied-do-loops.
 struct Counter {
   /// Create a counter set to the initial value.
-  Counter(mlir::Location loc, fir::FirOpBuilder &builder,
-          mlir::Value initialValue, bool canCountThroughLoops = true);
+  Counter(aiir::Location loc, fir::FirOpBuilder &builder,
+          aiir::Value initialValue, bool canCountThroughLoops = true);
   /// Return "counter++".
-  mlir::Value getAndIncrementIndex(mlir::Location loc,
+  aiir::Value getAndIncrementIndex(aiir::Location loc,
                                    fir::FirOpBuilder &builder);
   /// Set the counter to the initial value.
-  void reset(mlir::Location loc, fir::FirOpBuilder &builder);
+  void reset(aiir::Location loc, fir::FirOpBuilder &builder);
   const bool canCountThroughLoops;
 
 private:
   /// Zero for the init/reset.
-  mlir::Value initialValue;
+  aiir::Value initialValue;
   /// One for the increment.
-  mlir::Value one;
+  aiir::Value one;
   /// Index variable or value holding the counter current value.
-  mlir::Value index;
+  aiir::Value index;
 };
 
 /// Data structure to stack simple scalars that all have the same type and
@@ -67,22 +67,22 @@ private:
 /// runtime.
 class HomogeneousScalarStack {
 public:
-  HomogeneousScalarStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                         fir::SequenceType declaredType, mlir::Value extent,
-                         llvm::ArrayRef<mlir::Value> lengths,
+  HomogeneousScalarStack(aiir::Location loc, fir::FirOpBuilder &builder,
+                         fir::SequenceType declaredType, aiir::Value extent,
+                         llvm::ArrayRef<aiir::Value> lengths,
                          bool allocateOnHeap, bool stackThroughLoops,
                          llvm::StringRef name);
 
-  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value);
-  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
-  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  void pushValue(aiir::Location loc, fir::FirOpBuilder &builder,
+                 aiir::Value value);
+  void resetFetchPosition(aiir::Location loc, fir::FirOpBuilder &builder);
+  aiir::Value fetch(aiir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(aiir::Location loc, fir::FirOpBuilder &builder);
 
   /// Move the temporary storage into a rank one array expression value
   /// (hlfir.expr<?xT>). The temporary should not be used anymore after this
   /// call.
-  hlfir::Entity moveStackAsArrayExpr(mlir::Location loc,
+  hlfir::Entity moveStackAsArrayExpr(aiir::Location loc,
                                      fir::FirOpBuilder &builder);
 
   ///  "fetch" cannot be called right after "pushValue" because the counter is
@@ -95,24 +95,24 @@ private:
   /// Counter to keep track of the insertion or fetching position.
   Counter counter;
   /// Temporary storage.
-  mlir::Value temp;
+  aiir::Value temp;
 };
 
 /// Structure to hold the value of a single entity.
 class SimpleCopy {
 public:
-  SimpleCopy(mlir::Location loc, fir::FirOpBuilder &builder,
+  SimpleCopy(aiir::Location loc, fir::FirOpBuilder &builder,
              hlfir::Entity source, llvm::StringRef tempName);
 
-  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value) {
+  void pushValue(aiir::Location loc, fir::FirOpBuilder &builder,
+                 aiir::Value value) {
     assert(false && "must not be called: value already set");
   }
-  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder){};
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
+  void resetFetchPosition(aiir::Location loc, fir::FirOpBuilder &builder){};
+  aiir::Value fetch(aiir::Location loc, fir::FirOpBuilder &builder) {
     return copy.getBase();
   }
-  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(aiir::Location loc, fir::FirOpBuilder &builder);
   bool canBeFetchedAfterPush() const { return true; }
 
 public:
@@ -120,7 +120,7 @@ public:
   hlfir::AssociateOp copy;
 };
 
-/// Structure to keep track of a simple mlir::Value. This is useful
+/// Structure to keep track of a simple aiir::Value. This is useful
 /// when a value does not need an in memory copy because it is
 /// already saved in an SSA value that will be accessible at the fetching
 /// point.
@@ -128,20 +128,20 @@ class SSARegister {
 public:
   SSARegister(){};
 
-  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value) {
+  void pushValue(aiir::Location loc, fir::FirOpBuilder &builder,
+                 aiir::Value value) {
     ssaRegister = value;
   }
-  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder){};
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
+  void resetFetchPosition(aiir::Location loc, fir::FirOpBuilder &builder){};
+  aiir::Value fetch(aiir::Location loc, fir::FirOpBuilder &builder) {
     return ssaRegister;
   }
-  void destroy(mlir::Location loc, fir::FirOpBuilder &builder) {}
+  void destroy(aiir::Location loc, fir::FirOpBuilder &builder) {}
   bool canBeFetchedAfterPush() const { return true; }
 
 public:
   /// Temporary storage for the copy.
-  mlir::Value ssaRegister;
+  aiir::Value ssaRegister;
 };
 
 /// Data structure to stack any kind of values with the same static type and
@@ -151,27 +151,27 @@ public:
 /// implemented using runtime.
 class AnyValueStack {
 public:
-  AnyValueStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                mlir::Type valueStaticType);
+  AnyValueStack(aiir::Location loc, fir::FirOpBuilder &builder,
+                aiir::Type valueStaticType);
 
-  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value);
-  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
-  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  void pushValue(aiir::Location loc, fir::FirOpBuilder &builder,
+                 aiir::Value value);
+  void resetFetchPosition(aiir::Location loc, fir::FirOpBuilder &builder);
+  aiir::Value fetch(aiir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(aiir::Location loc, fir::FirOpBuilder &builder);
   bool canBeFetchedAfterPush() const { return true; }
 
 private:
   /// Keep the original value type. Values may be stored by the runtime
   /// with a different type (i1 cannot be passed by descriptor).
-  mlir::Type valueStaticType;
+  aiir::Type valueStaticType;
   /// Runtime cookie created by the runtime. It is a pointer to an opaque
   /// runtime data structure that manages the stack.
-  mlir::Value opaquePtr;
+  aiir::Value opaquePtr;
   /// Counter to keep track of the fetching position.
   Counter counter;
   /// Allocatable box passed to the runtime when fetching the values.
-  mlir::Value retValueBox;
+  aiir::Value retValueBox;
 };
 
 /// Data structure to stack any kind of variables with the same static type and
@@ -183,26 +183,26 @@ private:
 /// addresses, use AnyAddressStack instead.
 class AnyVariableStack {
 public:
-  AnyVariableStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                   mlir::Type valueStaticType);
+  AnyVariableStack(aiir::Location loc, fir::FirOpBuilder &builder,
+                   aiir::Type valueStaticType);
 
-  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value);
-  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
-  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  void pushValue(aiir::Location loc, fir::FirOpBuilder &builder,
+                 aiir::Value value);
+  void resetFetchPosition(aiir::Location loc, fir::FirOpBuilder &builder);
+  aiir::Value fetch(aiir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(aiir::Location loc, fir::FirOpBuilder &builder);
   bool canBeFetchedAfterPush() const { return true; }
 
 private:
   /// Keep the original variable type.
-  mlir::Type variableStaticType;
+  aiir::Type variableStaticType;
   /// Runtime cookie created by the runtime. It is a pointer to an opaque
   /// runtime data structure that manages the stack.
-  mlir::Value opaquePtr;
+  aiir::Value opaquePtr;
   /// Counter to keep track of the fetching position.
   Counter counter;
   /// Pointer box passed to the runtime when fetching the values.
-  mlir::Value retValueBox;
+  aiir::Value retValueBox;
 };
 
 /// Data structure to stack simple addresses (C pointers). It can be used to
@@ -211,15 +211,15 @@ private:
 /// the hood.
 class AnyAddressStack : public AnyValueStack {
 public:
-  AnyAddressStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                  mlir::Type addressType);
+  AnyAddressStack(aiir::Location loc, fir::FirOpBuilder &builder,
+                  aiir::Type addressType);
 
-  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value);
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
+  void pushValue(aiir::Location loc, fir::FirOpBuilder &builder,
+                 aiir::Value value);
+  aiir::Value fetch(aiir::Location loc, fir::FirOpBuilder &builder);
 
 private:
-  mlir::Type addressType;
+  aiir::Type addressType;
 };
 
 class TemporaryStorage;
@@ -231,21 +231,21 @@ class TemporaryStorage;
 /// vector subscript entities shapes, these shapes must be saved too.
 class AnyVectorSubscriptStack : public AnyVariableStack {
 public:
-  AnyVectorSubscriptStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                          mlir::Type valueStaticType,
+  AnyVectorSubscriptStack(aiir::Location loc, fir::FirOpBuilder &builder,
+                          aiir::Type valueStaticType,
                           bool shapeCanBeSavedAsRegister, int rank);
-  void pushShape(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value shape);
-  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
-  mlir::Value fetchShape(mlir::Location loc, fir::FirOpBuilder &builder);
-  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  void pushShape(aiir::Location loc, fir::FirOpBuilder &builder,
+                 aiir::Value shape);
+  void resetFetchPosition(aiir::Location loc, fir::FirOpBuilder &builder);
+  aiir::Value fetchShape(aiir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(aiir::Location loc, fir::FirOpBuilder &builder);
   bool canBeFetchedAfterPush() const { return true; }
 
 private:
   std::unique_ptr<TemporaryStorage> shapeTemp;
   // If the shape is saved inside a descriptor (as extents),
   // keep track of the descriptor type.
-  std::optional<mlir::Type> boxType;
+  std::optional<aiir::Type> boxType;
 };
 
 /// Generic wrapper over the different sorts of temporary storages.
@@ -254,19 +254,19 @@ public:
   template <typename T>
   TemporaryStorage(T &&impl) : impl{std::forward<T>(impl)} {}
 
-  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value) {
+  void pushValue(aiir::Location loc, fir::FirOpBuilder &builder,
+                 aiir::Value value) {
     std::visit([&](auto &temp) { temp.pushValue(loc, builder, value); }, impl);
   }
-  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder) {
+  void resetFetchPosition(aiir::Location loc, fir::FirOpBuilder &builder) {
     std::visit([&](auto &temp) { temp.resetFetchPosition(loc, builder); },
                impl);
   }
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
+  aiir::Value fetch(aiir::Location loc, fir::FirOpBuilder &builder) {
     return std::visit([&](auto &temp) { return temp.fetch(loc, builder); },
                       impl);
   }
-  void destroy(mlir::Location loc, fir::FirOpBuilder &builder) {
+  void destroy(aiir::Location loc, fir::FirOpBuilder &builder) {
     std::visit([&](auto &temp) { temp.destroy(loc, builder); }, impl);
   }
   /// Can "fetch" be called to get the last value pushed with

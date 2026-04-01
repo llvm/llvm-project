@@ -9,7 +9,7 @@
 #ifndef CLANG_CIR_INTERFACES_ASTATTRINTERFACES_H
 #define CLANG_CIR_INTERFACES_ASTATTRINTERFACES_H
 
-#include "mlir/IR/Attributes.h"
+#include "aiir/IR/Attributes.h"
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"

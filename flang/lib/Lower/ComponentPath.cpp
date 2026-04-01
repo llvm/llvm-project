@@ -57,5 +57,5 @@ void Fortran::lower::ComponentPath::setPC(bool isImplicit) {
 
 Fortran::lower::ComponentPath::ExtendRefFunc
 Fortran::lower::ComponentPath::getExtendCoorRef() const {
-  return hasExtendCoorRef() ? *extendCoorRef : [](mlir::Value v) { return v; };
+  return hasExtendCoorRef() ? *extendCoorRef : [](aiir::Value v) { return v; };
 }

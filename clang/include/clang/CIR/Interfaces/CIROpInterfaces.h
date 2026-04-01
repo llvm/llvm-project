@@ -13,10 +13,10 @@
 #ifndef CLANG_CIR_INTERFACES_CIR_OP_H
 #define CLANG_CIR_INTERFACES_CIR_OP_H
 
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/Value.h"
-#include "mlir/Interfaces/CallInterfaces.h"
+#include "aiir/IR/Attributes.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/IR/Value.h"
+#include "aiir/Interfaces/CallInterfaces.h"
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclTemplate.h"

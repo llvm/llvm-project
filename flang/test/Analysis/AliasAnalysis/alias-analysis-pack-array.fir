@@ -1,7 +1,7 @@
 // Test alias analysis queries for dummy arguments wired
 // through fir.pack_array.
 // fir.pack_array is a pass-through operation for FIR alias analysis.
-// RUN: fir-opt %s --test-fir-alias-analysis -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-opt %s --test-fir-alias-analysis -split-input-file --aiir-disable-threading 2>&1 | FileCheck %s
 
 // The two pointers referencing two different maybe repacked
 // versions of the original dummy arguments do not alias:

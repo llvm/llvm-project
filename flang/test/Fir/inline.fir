@@ -1,5 +1,5 @@
 // RUN: tco --inline-all %s -o - | FileCheck %s
-// RUN: %flang_fc1  -mmlir --inline-all -emit-llvm %s -o - | FileCheck %s
+// RUN: %flang_fc1  -maiir --inline-all -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: @add
 func.func @add(%a : i32, %b : i32) -> i32 {

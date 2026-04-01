@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenFunction.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -35,20 +35,20 @@ public:
   }
 
   void VisitOMPProcBindClause(const OMPProcBindClause *clause) {
-    if constexpr (std::is_same_v<OpTy, mlir::omp::ParallelOp>) {
-      mlir::omp::ClauseProcBindKind kind;
+    if constexpr (std::is_same_v<OpTy, aiir::omp::ParallelOp>) {
+      aiir::omp::ClauseProcBindKind kind;
       switch (clause->getProcBindKind()) {
       case llvm::omp::ProcBindKind::OMP_PROC_BIND_master:
-        kind = mlir::omp::ClauseProcBindKind::Master;
+        kind = aiir::omp::ClauseProcBindKind::Master;
         break;
       case llvm::omp::ProcBindKind::OMP_PROC_BIND_close:
-        kind = mlir::omp::ClauseProcBindKind::Close;
+        kind = aiir::omp::ClauseProcBindKind::Close;
         break;
       case llvm::omp::ProcBindKind::OMP_PROC_BIND_spread:
-        kind = mlir::omp::ClauseProcBindKind::Spread;
+        kind = aiir::omp::ClauseProcBindKind::Spread;
         break;
       case llvm::omp::ProcBindKind::OMP_PROC_BIND_primary:
-        kind = mlir::omp::ClauseProcBindKind::Primary;
+        kind = aiir::omp::ClauseProcBindKind::Primary;
         break;
       case llvm::omp::ProcBindKind::OMP_PROC_BIND_default:
         // 'default' in the classic-codegen does no runtime call/doesn't
@@ -81,7 +81,7 @@ auto makeClauseEmitter(OpTy &op, CIRGen::CIRGenFunction &cgf,
 template <typename Op>
 void CIRGenFunction::emitOpenMPClauses(Op &op,
                                        ArrayRef<const OMPClause *> clauses) {
-  mlir::OpBuilder::InsertionGuard guardCase(builder);
+  aiir::OpBuilder::InsertionGuard guardCase(builder);
   builder.setInsertionPoint(op);
   makeClauseEmitter(op, *this, builder).emitClauses(clauses);
 }
@@ -91,5 +91,5 @@ void CIRGenFunction::emitOpenMPClauses(Op &op,
 #define EXPL_SPEC(N)                                                           \
   template void CIRGenFunction::emitOpenMPClauses<N>(                          \
       N &, ArrayRef<const OMPClause *>);
-EXPL_SPEC(mlir::omp::ParallelOp)
+EXPL_SPEC(aiir::omp::ParallelOp)
 #undef EXPL_SPEC

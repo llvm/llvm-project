@@ -13,10 +13,10 @@
 #ifndef FORTRAN_OPTIMIZER_OPENACC_ANALYSIS_FIROPENACCSUPPORTANALYSIS_H
 #define FORTRAN_OPTIMIZER_OPENACC_ANALYSIS_FIROPENACCSUPPORTANALYSIS_H
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/Region.h"
-#include "mlir/IR/Value.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/IR/Region.h"
+#include "aiir/IR/Value.h"
 #include <string>
 
 namespace fir {
@@ -31,25 +31,25 @@ namespace acc {
 /// using setImplementation()
 ///
 /// Usage:
-///   auto &support = getAnalysis<mlir::acc::OpenACCSupport>();
+///   auto &support = getAnalysis<aiir::acc::OpenACCSupport>();
 ///   support.setImplementation(fir::acc::FIROpenACCSupportAnalysis());
 ///
 class FIROpenACCSupportAnalysis {
 public:
   FIROpenACCSupportAnalysis() = default;
 
-  std::string getVariableName(mlir::Value v);
+  std::string getVariableName(aiir::Value v);
 
-  std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type,
-                            mlir::Value var);
+  std::string getRecipeName(aiir::acc::RecipeKind kind, aiir::Type type,
+                            aiir::Value var);
 
-  mlir::InFlightDiagnostic emitNYI(mlir::Location loc,
-                                   const mlir::Twine &message);
+  aiir::InFlightDiagnostic emitNYI(aiir::Location loc,
+                                   const aiir::Twine &message);
 
-  bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
-                        mlir::Operation **definingOpPtr);
+  bool isValidSymbolUse(aiir::Operation *user, aiir::SymbolRefAttr symbol,
+                        aiir::Operation **definingOpPtr);
 
-  bool isValidValueUse(mlir::Value v, mlir::Region &region);
+  bool isValidValueUse(aiir::Value v, aiir::Region &region);
 };
 
 } // namespace acc

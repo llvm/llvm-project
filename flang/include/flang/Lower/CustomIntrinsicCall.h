@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -54,9 +54,9 @@ using OperandPrepareAs = std::function<void(const Fortran::lower::SomeExpr &,
 
 /// Type of the callback to inquire about an argument presence, once the call
 /// preparation was done. An absent optional means the argument is statically
-/// present. An mlir::Value means the presence must be checked at runtime, and
+/// present. An aiir::Value means the presence must be checked at runtime, and
 /// that the value contains the "is present" boolean value.
-using OperandPresent = std::function<std::optional<mlir::Value>(std::size_t)>;
+using OperandPresent = std::function<std::optional<aiir::Value>(std::size_t)>;
 
 /// Type of the callback to generate an argument reference after the call
 /// preparation was done. For optional arguments, the utility guarantees
@@ -80,7 +80,7 @@ using OperandGetter = std::function<fir::ExtendedValue(std::size_t, bool)>;
 void prepareCustomIntrinsicArgument(
     const Fortran::evaluate::ProcedureRef &procRef,
     const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-    std::optional<mlir::Type> retTy,
+    std::optional<aiir::Type> retTy,
     const OperandPrepare &prepareOptionalArgument,
     const OperandPrepareAs &prepareOtherArgument, AbstractConverter &converter);
 
@@ -92,20 +92,20 @@ void prepareCustomIntrinsicArgument(
 /// be called during the loop nest generation for elemental intrinsics. It will
 /// not generate any implicit loop nest on its own).
 fir::ExtendedValue
-lowerCustomIntrinsic(fir::FirOpBuilder &builder, mlir::Location loc,
-                     llvm::StringRef name, std::optional<mlir::Type> retTy,
+lowerCustomIntrinsic(fir::FirOpBuilder &builder, aiir::Location loc,
+                     llvm::StringRef name, std::optional<aiir::Type> retTy,
                      const OperandPresent &isPresentCheck,
                      const OperandGetter &getOperand, std::size_t numOperands,
                      Fortran::lower::StatementContext &stmtCtx);
 
 /// DEPRECATED: NEW CODE SHOULD USE THE VERSION OF genIntrinsicCall WITHOUT A
 /// StatementContext, DECLARED IN IntrinsicCall.h
-/// Generate the FIR+MLIR operations for the generic intrinsic \p name
+/// Generate the FIR+AIIR operations for the generic intrinsic \p name
 /// with argument \p args and expected result type \p resultType.
 /// Returned fir::ExtendedValue is the returned Fortran intrinsic value.
 fir::ExtendedValue
-genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
-                 llvm::StringRef name, std::optional<mlir::Type> resultType,
+genIntrinsicCall(fir::FirOpBuilder &builder, aiir::Location loc,
+                 llvm::StringRef name, std::optional<aiir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
                  StatementContext &stmtCtx,
                  Fortran::lower::AbstractConverter *converter = nullptr);

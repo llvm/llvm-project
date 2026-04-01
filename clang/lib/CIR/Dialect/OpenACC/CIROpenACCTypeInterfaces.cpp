@@ -16,50 +16,50 @@
 
 namespace cir::acc {
 
-mlir::Type getBaseType(mlir::Value varPtr) {
-  mlir::Operation *op = varPtr.getDefiningOp();
+aiir::Type getBaseType(aiir::Value varPtr) {
+  aiir::Operation *op = varPtr.getDefiningOp();
   assert(op && "Expected a defining operation");
 
   // This is the variable definition we're looking for.
-  if (auto allocaOp = mlir::dyn_cast<cir::AllocaOp>(*op))
+  if (auto allocaOp = aiir::dyn_cast<cir::AllocaOp>(*op))
     return allocaOp.getAllocaType();
 
   // Look through casts to the source pointer.
-  if (auto castOp = mlir::dyn_cast<cir::CastOp>(*op))
+  if (auto castOp = aiir::dyn_cast<cir::CastOp>(*op))
     return getBaseType(castOp.getSrc());
 
   // Follow the source of ptr strides.
-  if (auto ptrStrideOp = mlir::dyn_cast<cir::PtrStrideOp>(*op))
+  if (auto ptrStrideOp = aiir::dyn_cast<cir::PtrStrideOp>(*op))
     return getBaseType(ptrStrideOp.getBase());
 
-  if (auto getMemberOp = mlir::dyn_cast<cir::GetMemberOp>(*op))
+  if (auto getMemberOp = aiir::dyn_cast<cir::GetMemberOp>(*op))
     return getBaseType(getMemberOp.getAddr());
 
-  return mlir::cast<cir::PointerType>(varPtr.getType()).getPointee();
+  return aiir::cast<cir::PointerType>(varPtr.getType()).getPointee();
 }
 
 template <>
-mlir::acc::VariableTypeCategory
+aiir::acc::VariableTypeCategory
 OpenACCPointerLikeModel<cir::PointerType>::getPointeeTypeCategory(
-    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
-    mlir::Type varType) const {
-  mlir::Type eleTy = getBaseType(varPtr);
+    aiir::Type pointer, aiir::TypedValue<aiir::acc::PointerLikeType> varPtr,
+    aiir::Type varType) const {
+  aiir::Type eleTy = getBaseType(varPtr);
 
-  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+  if (auto mappableTy = aiir::dyn_cast<aiir::acc::MappableType>(eleTy))
     return mappableTy.getTypeCategory(varPtr);
 
   if (isAnyIntegerOrFloatingPointType(eleTy) ||
-      mlir::isa<cir::BoolType>(eleTy) || mlir::isa<cir::PointerType>(eleTy))
-    return mlir::acc::VariableTypeCategory::scalar;
-  if (mlir::isa<cir::ArrayType>(eleTy))
-    return mlir::acc::VariableTypeCategory::array;
-  if (mlir::isa<cir::RecordType>(eleTy))
-    return mlir::acc::VariableTypeCategory::composite;
-  if (mlir::isa<cir::FuncType>(eleTy) || mlir::isa<cir::VectorType>(eleTy))
-    return mlir::acc::VariableTypeCategory::nonscalar;
+      aiir::isa<cir::BoolType>(eleTy) || aiir::isa<cir::PointerType>(eleTy))
+    return aiir::acc::VariableTypeCategory::scalar;
+  if (aiir::isa<cir::ArrayType>(eleTy))
+    return aiir::acc::VariableTypeCategory::array;
+  if (aiir::isa<cir::RecordType>(eleTy))
+    return aiir::acc::VariableTypeCategory::composite;
+  if (aiir::isa<cir::FuncType>(eleTy) || aiir::isa<cir::VectorType>(eleTy))
+    return aiir::acc::VariableTypeCategory::nonscalar;
 
   // Without further checking, this type cannot be categorized.
-  return mlir::acc::VariableTypeCategory::uncategorized;
+  return aiir::acc::VariableTypeCategory::uncategorized;
 }
 
 } // namespace cir::acc

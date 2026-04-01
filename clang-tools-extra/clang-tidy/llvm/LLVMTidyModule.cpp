@@ -18,7 +18,7 @@
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
 #include "TwineLocalCheck.h"
 #include "TypeSwitchCaseTypesCheck.h"
-#include "UseNewMLIROpBuilderCheck.h"
+#include "UseNewAIIROpBuilderCheck.h"
 #include "UseRangesCheck.h"
 #include "UseVectorUtilsCheck.h"
 
@@ -46,8 +46,8 @@ public:
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
     CheckFactories.registerCheck<TypeSwitchCaseTypesCheck>(
         "llvm-type-switch-case-types");
-    CheckFactories.registerCheck<UseNewMlirOpBuilderCheck>(
-        "llvm-use-new-mlir-op-builder");
+    CheckFactories.registerCheck<UseNewAiirOpBuilderCheck>(
+        "llvm-use-new-aiir-op-builder");
     CheckFactories.registerCheck<UseRangesCheck>("llvm-use-ranges");
     CheckFactories.registerCheck<UseVectorUtilsCheck>("llvm-use-vector-utils");
   }

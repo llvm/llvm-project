@@ -25,10 +25,10 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Support/LLVM.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -48,41 +48,41 @@ static llvm::cl::opt<bool> useAccReductionCombineAll(
 namespace fir::acc {
 
 template <typename Ty>
-mlir::TypedValue<mlir::acc::PointerLikeType>
-OpenACCMappableModel<Ty>::getVarPtr(mlir::Type type, mlir::Value var) const {
+aiir::TypedValue<aiir::acc::PointerLikeType>
+OpenACCMappableModel<Ty>::getVarPtr(aiir::Type type, aiir::Value var) const {
   if (auto ptr =
-          mlir::dyn_cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(var))
+          aiir::dyn_cast<aiir::TypedValue<aiir::acc::PointerLikeType>>(var))
     return ptr;
 
-  if (auto load = mlir::dyn_cast_if_present<fir::LoadOp>(var.getDefiningOp())) {
+  if (auto load = aiir::dyn_cast_if_present<fir::LoadOp>(var.getDefiningOp())) {
     // All FIR reference types implement the PointerLikeType interface.
-    return mlir::cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(
+    return aiir::cast<aiir::TypedValue<aiir::acc::PointerLikeType>>(
         load.getMemref());
   }
 
   return {};
 }
 
-template mlir::TypedValue<mlir::acc::PointerLikeType>
-OpenACCMappableModel<fir::BaseBoxType>::getVarPtr(mlir::Type type,
-                                                  mlir::Value var) const;
+template aiir::TypedValue<aiir::acc::PointerLikeType>
+OpenACCMappableModel<fir::BaseBoxType>::getVarPtr(aiir::Type type,
+                                                  aiir::Value var) const;
 
-template mlir::TypedValue<mlir::acc::PointerLikeType>
-OpenACCMappableModel<fir::ReferenceType>::getVarPtr(mlir::Type type,
-                                                    mlir::Value var) const;
+template aiir::TypedValue<aiir::acc::PointerLikeType>
+OpenACCMappableModel<fir::ReferenceType>::getVarPtr(aiir::Type type,
+                                                    aiir::Value var) const;
 
-template mlir::TypedValue<mlir::acc::PointerLikeType>
-OpenACCMappableModel<fir::HeapType>::getVarPtr(mlir::Type type,
-                                               mlir::Value var) const;
+template aiir::TypedValue<aiir::acc::PointerLikeType>
+OpenACCMappableModel<fir::HeapType>::getVarPtr(aiir::Type type,
+                                               aiir::Value var) const;
 
-template mlir::TypedValue<mlir::acc::PointerLikeType>
-OpenACCMappableModel<fir::PointerType>::getVarPtr(mlir::Type type,
-                                                  mlir::Value var) const;
+template aiir::TypedValue<aiir::acc::PointerLikeType>
+OpenACCMappableModel<fir::PointerType>::getVarPtr(aiir::Type type,
+                                                  aiir::Value var) const;
 
 template <typename Ty>
 std::optional<llvm::TypeSize> OpenACCMappableModel<Ty>::getSizeInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const {
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const {
   // TODO: Bounds operation affect the size - add support to take them
   // into account.
   if (!accBounds.empty())
@@ -91,28 +91,28 @@ std::optional<llvm::TypeSize> OpenACCMappableModel<Ty>::getSizeInBytes(
   // Class-type is either a polymorphic or unlimited polymorphic. In the latter
   // case, the size is not computable. But in the former it should be - however,
   // fir::getTypeSizeAndAlignment does not support polymorphic types.
-  if (mlir::isa<fir::ClassType>(type)) {
+  if (aiir::isa<fir::ClassType>(type)) {
     return {};
   }
 
   // When requesting the size of a box entity or a reference, the intent
   // is to get the size of the data that it is referring to.
-  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  aiir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
   assert(eleTy && "expect to be able to unwrap the element type");
 
   // If the type enclosed is a mappable type, then have it provide the size.
-  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+  if (auto mappableTy = aiir::dyn_cast<aiir::acc::MappableType>(eleTy))
     return mappableTy.getSizeInBytes(var, accBounds, dataLayout);
 
   // Dynamic extents or unknown ranks generally do not have compile-time
   // computable dimensions.
-  auto seqType = mlir::dyn_cast<fir::SequenceType>(eleTy);
+  auto seqType = aiir::dyn_cast<fir::SequenceType>(eleTy);
   if (seqType && (seqType.hasDynamicExtents() || seqType.hasUnknownShape()))
     return {};
 
   // Attempt to find an operation that a lookup for KindMapping can be done
   // from.
-  mlir::Operation *kindMapSrcOp = var.getDefiningOp();
+  aiir::Operation *kindMapSrcOp = var.getDefiningOp();
   if (!kindMapSrcOp) {
     kindMapSrcOp = var.getParentRegion()->getParentOp();
     if (!kindMapSrcOp)
@@ -130,28 +130,28 @@ std::optional<llvm::TypeSize> OpenACCMappableModel<Ty>::getSizeInBytes(
 
 template std::optional<llvm::TypeSize>
 OpenACCMappableModel<fir::BaseBoxType>::getSizeInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const;
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const;
 
 template std::optional<llvm::TypeSize>
 OpenACCMappableModel<fir::ReferenceType>::getSizeInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const;
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const;
 
 template std::optional<llvm::TypeSize>
 OpenACCMappableModel<fir::HeapType>::getSizeInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const;
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const;
 
 template std::optional<llvm::TypeSize>
 OpenACCMappableModel<fir::PointerType>::getSizeInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const;
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const;
 
 template <typename Ty>
 std::optional<int64_t> OpenACCMappableModel<Ty>::getOffsetInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const {
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const {
   // TODO: Bounds operation affect the offset - add support to take them
   // into account.
   if (!accBounds.empty())
@@ -159,22 +159,22 @@ std::optional<int64_t> OpenACCMappableModel<Ty>::getOffsetInBytes(
 
   // Class-type does not behave like a normal box because it does not hold an
   // element type. Thus special handle it here.
-  if (mlir::isa<fir::ClassType>(type)) {
+  if (aiir::isa<fir::ClassType>(type)) {
     // The pointer to the class-type is always at the start address.
     return {0};
   }
 
-  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  aiir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
   assert(eleTy && "expect to be able to unwrap the element type");
 
   // If the type enclosed is a mappable type, then have it provide the offset.
-  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+  if (auto mappableTy = aiir::dyn_cast<aiir::acc::MappableType>(eleTy))
     return mappableTy.getOffsetInBytes(var, accBounds, dataLayout);
 
   // Dynamic extents (aka descriptor-based arrays) - may have a offset.
   // For example, a negative stride may mean a negative offset to compute the
   // start of array.
-  auto seqType = mlir::dyn_cast<fir::SequenceType>(eleTy);
+  auto seqType = aiir::dyn_cast<fir::SequenceType>(eleTy);
   if (seqType && (seqType.hasDynamicExtents() || seqType.hasUnknownShape()))
     return {};
 
@@ -191,113 +191,113 @@ std::optional<int64_t> OpenACCMappableModel<Ty>::getOffsetInBytes(
 
 template std::optional<int64_t>
 OpenACCMappableModel<fir::BaseBoxType>::getOffsetInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const;
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const;
 
 template std::optional<int64_t>
 OpenACCMappableModel<fir::ReferenceType>::getOffsetInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const;
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const;
 
 template std::optional<int64_t>
 OpenACCMappableModel<fir::HeapType>::getOffsetInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const;
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const;
 
 template std::optional<int64_t>
 OpenACCMappableModel<fir::PointerType>::getOffsetInBytes(
-    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const;
+    aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+    const aiir::DataLayout &dataLayout) const;
 
 template <typename Ty>
-bool OpenACCMappableModel<Ty>::hasUnknownDimensions(mlir::Type type) const {
+bool OpenACCMappableModel<Ty>::hasUnknownDimensions(aiir::Type type) const {
   assert(fir::isa_ref_type(type) && "expected FIR reference type");
   return fir::hasDynamicSize(fir::unwrapRefType(type));
 }
 
 template bool OpenACCMappableModel<fir::ReferenceType>::hasUnknownDimensions(
-    mlir::Type type) const;
+    aiir::Type type) const;
 
 template bool OpenACCMappableModel<fir::HeapType>::hasUnknownDimensions(
-    mlir::Type type) const;
+    aiir::Type type) const;
 
 template bool OpenACCMappableModel<fir::PointerType>::hasUnknownDimensions(
-    mlir::Type type) const;
+    aiir::Type type) const;
 
 template <>
 bool OpenACCMappableModel<fir::BaseBoxType>::hasUnknownDimensions(
-    mlir::Type type) const {
+    aiir::Type type) const {
   // Descriptor-based entities have dimensions encoded.
   return false;
 }
 
-static llvm::SmallVector<mlir::Value>
-generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
-                       mlir::OpBuilder &builder) {
-  assert((mlir::isa<mlir::acc::PointerLikeType>(var.getType()) ||
-          mlir::isa<mlir::acc::MappableType>(var.getType())) &&
+static llvm::SmallVector<aiir::Value>
+generateSeqTyAccBounds(fir::SequenceType seqType, aiir::Value var,
+                       aiir::OpBuilder &builder) {
+  assert((aiir::isa<aiir::acc::PointerLikeType>(var.getType()) ||
+          aiir::isa<aiir::acc::MappableType>(var.getType())) &&
          "must be pointer-like or mappable");
   fir::FirOpBuilder firBuilder(builder, var.getDefiningOp());
-  mlir::Location loc = var.getLoc();
+  aiir::Location loc = var.getLoc();
 
   // If [hl]fir.declare is visible, extract the bounds from the declaration's
   // shape (if it is provided).
-  if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
-    mlir::Value zero =
+  if (aiir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
+    aiir::Value zero =
         firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
-    mlir::Value one =
+    aiir::Value one =
         firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
 
-    mlir::Value shape;
+    aiir::Value shape;
     if (auto declareOp =
-            mlir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
+            aiir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
       shape = declareOp.getShape();
-    else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+    else if (auto declareOp = aiir::dyn_cast_if_present<hlfir::DeclareOp>(
                  var.getDefiningOp()))
       shape = declareOp.getShape();
 
     const bool strideIncludeLowerExtent = true;
 
-    llvm::SmallVector<mlir::Value> accBounds;
-    mlir::Operation *anyShapeOp = shape ? shape.getDefiningOp() : nullptr;
-    if (auto shapeOp = mlir::dyn_cast_if_present<fir::ShapeOp>(anyShapeOp)) {
-      mlir::Value cummulativeExtent = one;
+    llvm::SmallVector<aiir::Value> accBounds;
+    aiir::Operation *anyShapeOp = shape ? shape.getDefiningOp() : nullptr;
+    if (auto shapeOp = aiir::dyn_cast_if_present<fir::ShapeOp>(anyShapeOp)) {
+      aiir::Value cummulativeExtent = one;
       for (auto extent : shapeOp.getExtents()) {
-        mlir::Value upperbound =
-            mlir::arith::SubIOp::create(builder, loc, extent, one);
-        mlir::Value stride = one;
+        aiir::Value upperbound =
+            aiir::arith::SubIOp::create(builder, loc, extent, one);
+        aiir::Value stride = one;
         if (strideIncludeLowerExtent) {
           stride = cummulativeExtent;
-          cummulativeExtent = mlir::arith::MulIOp::create(
+          cummulativeExtent = aiir::arith::MulIOp::create(
               builder, loc, cummulativeExtent, extent);
         }
-        auto accBound = mlir::acc::DataBoundsOp::create(
-            builder, loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+        auto accBound = aiir::acc::DataBoundsOp::create(
+            builder, loc, aiir::acc::DataBoundsType::get(builder.getContext()),
             /*lowerbound=*/zero, /*upperbound=*/upperbound,
             /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
             /*startIdx=*/one);
         accBounds.push_back(accBound);
       }
     } else if (auto shapeShiftOp =
-                   mlir::dyn_cast_if_present<fir::ShapeShiftOp>(anyShapeOp)) {
-      mlir::Value lowerbound;
-      mlir::Value cummulativeExtent = one;
+                   aiir::dyn_cast_if_present<fir::ShapeShiftOp>(anyShapeOp)) {
+      aiir::Value lowerbound;
+      aiir::Value cummulativeExtent = one;
       for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
         if (idx % 2 == 0) {
           lowerbound = val;
         } else {
-          mlir::Value extent = val;
-          mlir::Value upperbound =
-              mlir::arith::SubIOp::create(builder, loc, extent, one);
-          mlir::Value stride = one;
+          aiir::Value extent = val;
+          aiir::Value upperbound =
+              aiir::arith::SubIOp::create(builder, loc, extent, one);
+          aiir::Value stride = one;
           if (strideIncludeLowerExtent) {
             stride = cummulativeExtent;
-            cummulativeExtent = mlir::arith::MulIOp::create(
+            cummulativeExtent = aiir::arith::MulIOp::create(
                 builder, loc, cummulativeExtent, extent);
           }
-          auto accBound = mlir::acc::DataBoundsOp::create(
+          auto accBound = aiir::acc::DataBoundsOp::create(
               builder, loc,
-              mlir::acc::DataBoundsType::get(builder.getContext()),
+              aiir::acc::DataBoundsType::get(builder.getContext()),
               /*lowerbound=*/zero, /*upperbound=*/upperbound,
               /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
               /*startIdx=*/lowerbound);
@@ -311,14 +311,14 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
   }
 
   if (seqType.hasDynamicExtents() || seqType.hasUnknownShape()) {
-    mlir::Value box;
+    aiir::Value box;
     bool mayBeOptional = false;
     if (auto boxAddr =
-            mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
+            aiir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
       box = boxAddr.getVal();
       // Since fir.box_addr already accesses the box, we do not care
       // checking if it is optional.
-    } else if (mlir::isa<fir::BaseBoxType>(var.getType())) {
+    } else if (aiir::isa<fir::BaseBoxType>(var.getType())) {
       box = var;
       mayBeOptional = fir::mayBeAbsentBox(box);
     }
@@ -327,20 +327,20 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
       auto res =
           hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
       fir::ExtendedValue exv = res.first;
-      mlir::Value boxRef = box;
+      aiir::Value boxRef = box;
       if (auto boxPtr =
-              mlir::cast<mlir::acc::MappableType>(box.getType()).getVarPtr(box))
+              aiir::cast<aiir::acc::MappableType>(box.getType()).getVarPtr(box))
         boxRef = boxPtr;
 
-      mlir::Value isPresent =
-          !mayBeOptional ? mlir::Value{}
+      aiir::Value isPresent =
+          !mayBeOptional ? aiir::Value{}
                          : fir::IsPresentOp::create(builder, loc,
                                                     builder.getI1Type(), box);
 
       fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
                                            box.getType());
-      return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
-                                               mlir::acc::DataBoundsType>(
+      return fir::factory::genBoundsOpsFromBox<aiir::acc::DataBoundsOp,
+                                               aiir::acc::DataBoundsType>(
           firBuilder, loc, exv, info);
     }
 
@@ -352,65 +352,65 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
   const bool isAssumedSize = false;
   auto valToCheck = var;
   if (auto boxAddr =
-          mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
+          aiir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
     valToCheck = boxAddr.getVal();
   }
   auto res = hlfir::translateToExtendedValue(loc, firBuilder,
                                              hlfir::Entity(valToCheck));
   fir::ExtendedValue exv = res.first;
-  return fir::factory::genBaseBoundsOps<mlir::acc::DataBoundsOp,
-                                        mlir::acc::DataBoundsType>(
+  return fir::factory::genBaseBoundsOps<aiir::acc::DataBoundsOp,
+                                        aiir::acc::DataBoundsType>(
       firBuilder, loc, exv,
       /*isAssumedSize=*/isAssumedSize);
 }
 
 template <typename Ty>
-llvm::SmallVector<mlir::Value>
-OpenACCMappableModel<Ty>::generateAccBounds(mlir::Type type, mlir::Value var,
-                                            mlir::OpBuilder &builder) const {
+llvm::SmallVector<aiir::Value>
+OpenACCMappableModel<Ty>::generateAccBounds(aiir::Type type, aiir::Value var,
+                                            aiir::OpBuilder &builder) const {
   // acc bounds only make sense for arrays - thus look for sequence type.
-  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
-  if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(eleTy)) {
+  aiir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  if (auto seqTy = aiir::dyn_cast_if_present<fir::SequenceType>(eleTy)) {
     return generateSeqTyAccBounds(seqTy, var, builder);
   }
 
   return {};
 }
 
-template llvm::SmallVector<mlir::Value>
+template llvm::SmallVector<aiir::Value>
 OpenACCMappableModel<fir::BaseBoxType>::generateAccBounds(
-    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const;
+    aiir::Type type, aiir::Value var, aiir::OpBuilder &builder) const;
 
-template llvm::SmallVector<mlir::Value>
+template llvm::SmallVector<aiir::Value>
 OpenACCMappableModel<fir::ReferenceType>::generateAccBounds(
-    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const;
+    aiir::Type type, aiir::Value var, aiir::OpBuilder &builder) const;
 
-template llvm::SmallVector<mlir::Value>
+template llvm::SmallVector<aiir::Value>
 OpenACCMappableModel<fir::HeapType>::generateAccBounds(
-    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const;
+    aiir::Type type, aiir::Value var, aiir::OpBuilder &builder) const;
 
-template llvm::SmallVector<mlir::Value>
+template llvm::SmallVector<aiir::Value>
 OpenACCMappableModel<fir::PointerType>::generateAccBounds(
-    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const;
+    aiir::Type type, aiir::Value var, aiir::OpBuilder &builder) const;
 
-static mlir::Value
-getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
+static aiir::Value
+getBaseRef(aiir::TypedValue<aiir::acc::PointerLikeType> varPtr) {
   // If there is no defining op - the unwrapped reference is the base one.
-  mlir::Operation *op = varPtr.getDefiningOp();
+  aiir::Operation *op = varPtr.getDefiningOp();
   if (!op)
     return varPtr;
 
   // Look to find if this value originates from an interior pointer
   // calculation op.
-  mlir::Value baseRef =
-      llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
+  aiir::Value baseRef =
+      llvm::TypeSwitch<aiir::Operation *, aiir::Value>(op)
           .Case([&](fir::DeclareOp op) {
             // If this declare binds a view with an underlying storage operand,
             // treat that storage as the base reference. Otherwise, fall back
             // to the declared memref.
             if (auto storage = op.getStorage())
               return storage;
-            return mlir::Value(varPtr);
+            return aiir::Value(varPtr);
           })
           .Case([&](hlfir::DesignateOp op) {
             // Get the base object.
@@ -425,88 +425,88 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
             // object, get the base object.
             return op.getRef();
           })
-          .Case([&](fir::ConvertOp op) -> mlir::Value {
+          .Case([&](fir::ConvertOp op) -> aiir::Value {
             // Strip the conversion and recursively check the operand
-            if (auto ptrLikeOperand = mlir::dyn_cast_if_present<
-                    mlir::TypedValue<mlir::acc::PointerLikeType>>(
+            if (auto ptrLikeOperand = aiir::dyn_cast_if_present<
+                    aiir::TypedValue<aiir::acc::PointerLikeType>>(
                     op.getValue()))
               return getBaseRef(ptrLikeOperand);
             return varPtr;
           })
-          .Default([&](mlir::Operation *) { return varPtr; });
+          .Default([&](aiir::Operation *) { return varPtr; });
 
   return baseRef;
 }
 
-static bool isScalarLike(mlir::Type type) {
+static bool isScalarLike(aiir::Type type) {
   return fir::isa_trivial(type) || fir::isa_ref_type(type);
 }
 
-static bool isArrayLike(mlir::Type type) {
-  return mlir::isa<fir::SequenceType>(type);
+static bool isArrayLike(aiir::Type type) {
+  return aiir::isa<fir::SequenceType>(type);
 }
 
-static bool isCompositeLike(mlir::Type type) {
+static bool isCompositeLike(aiir::Type type) {
   // class(*) is not a composite type since it does not have a determined type.
   if (fir::isUnlimitedPolymorphicType(type))
     return false;
 
-  return mlir::isa<fir::RecordType, fir::ClassType, mlir::TupleType>(type);
+  return aiir::isa<fir::RecordType, fir::ClassType, aiir::TupleType>(type);
 }
 
-static mlir::acc::VariableTypeCategory
-categorizeElemType(mlir::Type enclosingTy, mlir::Type eleTy, mlir::Value var) {
+static aiir::acc::VariableTypeCategory
+categorizeElemType(aiir::Type enclosingTy, aiir::Type eleTy, aiir::Value var) {
   // If the type enclosed is a mappable type, then have it provide the type
   // category.
-  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+  if (auto mappableTy = aiir::dyn_cast<aiir::acc::MappableType>(eleTy))
     return mappableTy.getTypeCategory(var);
 
   // For all arrays, despite whether they are allocatable, pointer, assumed,
   // etc, we'd like to categorize them as "array".
   if (isArrayLike(eleTy))
-    return mlir::acc::VariableTypeCategory::array;
+    return aiir::acc::VariableTypeCategory::array;
 
   if (isCompositeLike(eleTy))
-    return mlir::acc::VariableTypeCategory::composite;
-  if (mlir::isa<fir::BoxType>(enclosingTy)) {
+    return aiir::acc::VariableTypeCategory::composite;
+  if (aiir::isa<fir::BoxType>(enclosingTy)) {
     // Even if we have a scalar type - simply because it is wrapped in a box
     // we want to categorize it as "nonscalar". Anything else would've been
     // non-scalar anyway.
-    return mlir::acc::VariableTypeCategory::nonscalar;
+    return aiir::acc::VariableTypeCategory::nonscalar;
   }
   if (isScalarLike(eleTy))
-    return mlir::acc::VariableTypeCategory::scalar;
-  if (mlir::isa<fir::CharacterType, mlir::FunctionType>(eleTy))
-    return mlir::acc::VariableTypeCategory::nonscalar;
+    return aiir::acc::VariableTypeCategory::scalar;
+  if (aiir::isa<fir::CharacterType, aiir::FunctionType>(eleTy))
+    return aiir::acc::VariableTypeCategory::nonscalar;
   // Assumed-type (type(*))does not have a determined type that can be
   // categorized.
-  if (mlir::isa<mlir::NoneType>(eleTy))
-    return mlir::acc::VariableTypeCategory::uncategorized;
+  if (aiir::isa<aiir::NoneType>(eleTy))
+    return aiir::acc::VariableTypeCategory::uncategorized;
   // "pointers" - in the sense of raw address point-of-view, are considered
   // scalars.
-  if (mlir::isa<fir::LLVMPointerType>(eleTy))
-    return mlir::acc::VariableTypeCategory::scalar;
+  if (aiir::isa<fir::LLVMPointerType>(eleTy))
+    return aiir::acc::VariableTypeCategory::scalar;
 
   // Without further checking, this type cannot be categorized.
-  return mlir::acc::VariableTypeCategory::uncategorized;
+  return aiir::acc::VariableTypeCategory::uncategorized;
 }
 
 template <typename Ty>
-mlir::acc::VariableTypeCategory
-OpenACCMappableModel<Ty>::getTypeCategory(mlir::Type type,
-                                          mlir::Value var) const {
+aiir::acc::VariableTypeCategory
+OpenACCMappableModel<Ty>::getTypeCategory(aiir::Type type,
+                                          aiir::Value var) const {
   // FIR uses operations to compute interior pointers.
   // So for example, an array element or composite field access to a float
   // value would both be represented as !fir.ref<f32>. We do not want to treat
   // such a reference as a scalar. Thus unwrap interior pointer calculations.
-  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  aiir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
   if (eleTy && isScalarLike(eleTy)) {
-    if (auto ptrLikeVar = mlir::dyn_cast_if_present<
-            mlir::TypedValue<mlir::acc::PointerLikeType>>(var)) {
+    if (auto ptrLikeVar = aiir::dyn_cast_if_present<
+            aiir::TypedValue<aiir::acc::PointerLikeType>>(var)) {
       auto baseRef = getBaseRef(ptrLikeVar);
       if (baseRef != var) {
         type = baseRef.getType();
-        if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(type))
+        if (auto mappableTy = aiir::dyn_cast<aiir::acc::MappableType>(type))
           return mappableTy.getTypeCategory(baseRef);
       }
     }
@@ -514,62 +514,62 @@ OpenACCMappableModel<Ty>::getTypeCategory(mlir::Type type,
 
   // Class-type does not behave like a normal box because it does not hold an
   // element type. Thus special handle it here.
-  if (mlir::isa<fir::ClassType>(type)) {
+  if (aiir::isa<fir::ClassType>(type)) {
     // class(*) is not a composite type since it does not have a determined
     // type.
     if (fir::isUnlimitedPolymorphicType(type))
-      return mlir::acc::VariableTypeCategory::uncategorized;
-    return mlir::acc::VariableTypeCategory::composite;
+      return aiir::acc::VariableTypeCategory::uncategorized;
+    return aiir::acc::VariableTypeCategory::composite;
   }
 
   assert(eleTy && "expect to be able to unwrap the element type");
   return categorizeElemType(type, eleTy, var);
 }
 
-template mlir::acc::VariableTypeCategory
-OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(mlir::Type type,
-                                                        mlir::Value var) const;
+template aiir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(aiir::Type type,
+                                                        aiir::Value var) const;
 
-template mlir::acc::VariableTypeCategory
+template aiir::acc::VariableTypeCategory
 OpenACCMappableModel<fir::ReferenceType>::getTypeCategory(
-    mlir::Type type, mlir::Value var) const;
+    aiir::Type type, aiir::Value var) const;
 
-template mlir::acc::VariableTypeCategory
-OpenACCMappableModel<fir::HeapType>::getTypeCategory(mlir::Type type,
-                                                     mlir::Value var) const;
+template aiir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::HeapType>::getTypeCategory(aiir::Type type,
+                                                     aiir::Value var) const;
 
-template mlir::acc::VariableTypeCategory
-OpenACCMappableModel<fir::PointerType>::getTypeCategory(mlir::Type type,
-                                                        mlir::Value var) const;
+template aiir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::PointerType>::getTypeCategory(aiir::Type type,
+                                                        aiir::Value var) const;
 
 template <typename Ty>
-mlir::acc::VariableInfoAttr OpenACCMappableModel<Ty>::genPrivateVariableInfo(
-    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const {
+aiir::acc::VariableInfoAttr OpenACCMappableModel<Ty>::genPrivateVariableInfo(
+    aiir::Type type, aiir::TypedValue<aiir::acc::MappableType> var) const {
   hlfir::Entity entity{var};
   return fir::OpenACCFortranVariableInfoAttr::get(var.getContext(),
                                                   entity.mayBeOptional());
 }
 
-template mlir::acc::VariableInfoAttr
+template aiir::acc::VariableInfoAttr
 OpenACCMappableModel<fir::BaseBoxType>::genPrivateVariableInfo(
-    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
+    aiir::Type type, aiir::TypedValue<aiir::acc::MappableType> var) const;
 
-template mlir::acc::VariableInfoAttr
+template aiir::acc::VariableInfoAttr
 OpenACCMappableModel<fir::ReferenceType>::genPrivateVariableInfo(
-    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
+    aiir::Type type, aiir::TypedValue<aiir::acc::MappableType> var) const;
 
-template mlir::acc::VariableInfoAttr
+template aiir::acc::VariableInfoAttr
 OpenACCMappableModel<fir::HeapType>::genPrivateVariableInfo(
-    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
+    aiir::Type type, aiir::TypedValue<aiir::acc::MappableType> var) const;
 
-template mlir::acc::VariableInfoAttr
+template aiir::acc::VariableInfoAttr
 OpenACCMappableModel<fir::PointerType>::genPrivateVariableInfo(
-    mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
+    aiir::Type type, aiir::TypedValue<aiir::acc::MappableType> var) const;
 
-static mlir::acc::VariableTypeCategory
-categorizePointee(mlir::Type pointer,
-                  mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
-                  mlir::Type varType) {
+static aiir::acc::VariableTypeCategory
+categorizePointee(aiir::Type pointer,
+                  aiir::TypedValue<aiir::acc::PointerLikeType> varPtr,
+                  aiir::Type varType) {
   // FIR uses operations to compute interior pointers.
   // So for example, an array element or composite field access to a float
   // value would both be represented as !fir.ref<f32>. We do not want to treat
@@ -577,59 +577,59 @@ categorizePointee(mlir::Type pointer,
   auto baseRef = getBaseRef(varPtr);
 
   if (auto mappableTy =
-          mlir::dyn_cast<mlir::acc::MappableType>(baseRef.getType()))
+          aiir::dyn_cast<aiir::acc::MappableType>(baseRef.getType()))
     return mappableTy.getTypeCategory(baseRef);
 
   // It must be a pointer-like type since it is not a MappableType.
-  auto ptrLikeTy = mlir::cast<mlir::acc::PointerLikeType>(baseRef.getType());
-  mlir::Type eleTy = ptrLikeTy.getElementType();
+  auto ptrLikeTy = aiir::cast<aiir::acc::PointerLikeType>(baseRef.getType());
+  aiir::Type eleTy = ptrLikeTy.getElementType();
   return categorizeElemType(pointer, eleTy, varPtr);
 }
 
 template <>
-mlir::acc::VariableTypeCategory
+aiir::acc::VariableTypeCategory
 OpenACCPointerLikeModel<fir::ReferenceType>::getPointeeTypeCategory(
-    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
-    mlir::Type varType) const {
+    aiir::Type pointer, aiir::TypedValue<aiir::acc::PointerLikeType> varPtr,
+    aiir::Type varType) const {
   return categorizePointee(pointer, varPtr, varType);
 }
 
 template <>
-mlir::acc::VariableTypeCategory
+aiir::acc::VariableTypeCategory
 OpenACCPointerLikeModel<fir::PointerType>::getPointeeTypeCategory(
-    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
-    mlir::Type varType) const {
+    aiir::Type pointer, aiir::TypedValue<aiir::acc::PointerLikeType> varPtr,
+    aiir::Type varType) const {
   return categorizePointee(pointer, varPtr, varType);
 }
 
 template <>
-mlir::acc::VariableTypeCategory
+aiir::acc::VariableTypeCategory
 OpenACCPointerLikeModel<fir::HeapType>::getPointeeTypeCategory(
-    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
-    mlir::Type varType) const {
+    aiir::Type pointer, aiir::TypedValue<aiir::acc::PointerLikeType> varPtr,
+    aiir::Type varType) const {
   return categorizePointee(pointer, varPtr, varType);
 }
 
 template <>
-mlir::acc::VariableTypeCategory
+aiir::acc::VariableTypeCategory
 OpenACCPointerLikeModel<fir::LLVMPointerType>::getPointeeTypeCategory(
-    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
-    mlir::Type varType) const {
+    aiir::Type pointer, aiir::TypedValue<aiir::acc::PointerLikeType> varPtr,
+    aiir::Type varType) const {
   return categorizePointee(pointer, varPtr, varType);
 }
 
 static hlfir::Entity
-genDesignateWithTriplets(fir::FirOpBuilder &builder, mlir::Location loc,
+genDesignateWithTriplets(fir::FirOpBuilder &builder, aiir::Location loc,
                          hlfir::Entity &entity,
                          hlfir::DesignateOp::Subscripts &triplets,
-                         mlir::Value shape, mlir::ValueRange extents) {
-  llvm::SmallVector<mlir::Value> lenParams;
+                         aiir::Value shape, aiir::ValueRange extents) {
+  llvm::SmallVector<aiir::Value> lenParams;
   hlfir::genLengthParameters(loc, builder, entity, lenParams);
 
   // Compute result type of array section.
   fir::SequenceType::Shape resultTypeShape;
   bool shapeIsConstant = true;
-  for (mlir::Value extent : extents) {
+  for (aiir::Value extent : extents) {
     if (std::optional<std::int64_t> cst_extent =
             fir::getIntIfConstant(extent)) {
       resultTypeShape.push_back(*cst_extent);
@@ -640,13 +640,13 @@ genDesignateWithTriplets(fir::FirOpBuilder &builder, mlir::Location loc,
   }
   assert(!resultTypeShape.empty() &&
          "expect private sections to always represented as arrays");
-  mlir::Type eleTy = entity.getFortranElementType();
+  aiir::Type eleTy = entity.getFortranElementType();
   auto seqTy = fir::SequenceType::get(resultTypeShape, eleTy);
   bool isVolatile = fir::isa_volatile_type(entity.getType());
   bool resultNeedsBox =
       llvm::isa<fir::BaseBoxType>(entity.getType()) || !shapeIsConstant;
   bool isPolymorphic = fir::isPolymorphicType(entity.getType());
-  mlir::Type resultType;
+  aiir::Type resultType;
   if (isPolymorphic) {
     resultType = fir::ClassType::get(seqTy, isVolatile);
   } else if (resultNeedsBox) {
@@ -658,8 +658,8 @@ genDesignateWithTriplets(fir::FirOpBuilder &builder, mlir::Location loc,
   // Generate section with hlfir.designate.
   auto designate = hlfir::DesignateOp::create(
       builder, loc, resultType, entity, /*component=*/"",
-      /*componentShape=*/mlir::Value{}, triplets,
-      /*substring=*/mlir::ValueRange{}, /*complexPartAttr=*/std::nullopt, shape,
+      /*componentShape=*/aiir::Value{}, triplets,
+      /*substring=*/aiir::ValueRange{}, /*complexPartAttr=*/std::nullopt, shape,
       lenParams);
   return hlfir::Entity{designate.getResult()};
 }
@@ -667,44 +667,44 @@ genDesignateWithTriplets(fir::FirOpBuilder &builder, mlir::Location loc,
 // Designate uses triplets based on object lower bounds while acc.bounds are
 // zero based. This helper shift the bounds to create the designate triplets.
 static hlfir::DesignateOp::Subscripts
-genTripletsFromAccBounds(fir::FirOpBuilder &builder, mlir::Location loc,
-                         const llvm::SmallVector<mlir::Value> &accBounds,
+genTripletsFromAccBounds(fir::FirOpBuilder &builder, aiir::Location loc,
+                         const llvm::SmallVector<aiir::Value> &accBounds,
                          hlfir::Entity entity) {
   assert(entity.getRank() * 3 == static_cast<int>(accBounds.size()) &&
          "must get lb,ub,step for each dimension");
   hlfir::DesignateOp::Subscripts triplets;
   for (unsigned i = 0; i < accBounds.size(); i += 3) {
-    mlir::Value lb = hlfir::genLBound(loc, builder, entity, i / 3);
+    aiir::Value lb = hlfir::genLBound(loc, builder, entity, i / 3);
     lb = builder.createConvert(loc, accBounds[i].getType(), lb);
     assert(accBounds[i].getType() == accBounds[i + 1].getType() &&
            "mix of integer types in triplets");
-    mlir::Value sliceLB =
-        builder.createOrFold<mlir::arith::AddIOp>(loc, accBounds[i], lb);
-    mlir::Value sliceUB =
-        builder.createOrFold<mlir::arith::AddIOp>(loc, accBounds[i + 1], lb);
+    aiir::Value sliceLB =
+        builder.createOrFold<aiir::arith::AddIOp>(loc, accBounds[i], lb);
+    aiir::Value sliceUB =
+        builder.createOrFold<aiir::arith::AddIOp>(loc, accBounds[i + 1], lb);
     triplets.emplace_back(
         hlfir::DesignateOp::Triplet{sliceLB, sliceUB, accBounds[i + 2]});
   }
   return triplets;
 }
 
-static std::pair<mlir::Value, llvm::SmallVector<mlir::Value>>
-computeSectionShapeAndExtents(fir::FirOpBuilder &builder, mlir::Location loc,
-                              mlir::ValueRange bounds) {
-  llvm::SmallVector<mlir::Value> extents;
+static std::pair<aiir::Value, llvm::SmallVector<aiir::Value>>
+computeSectionShapeAndExtents(fir::FirOpBuilder &builder, aiir::Location loc,
+                              aiir::ValueRange bounds) {
+  llvm::SmallVector<aiir::Value> extents;
   // Compute the fir.shape of the array section and the triplets to create
   // hlfir.designate.
-  mlir::Type idxTy = builder.getIndexType();
+  aiir::Type idxTy = builder.getIndexType();
   for (unsigned i = 0; i + 2 < bounds.size(); i += 3)
     extents.push_back(builder.genExtentFromTriplet(
         loc, bounds[i], bounds[i + 1], bounds[i + 2], idxTy, /*fold=*/true));
-  mlir::Value shape = fir::ShapeOp::create(builder, loc, extents);
+  aiir::Value shape = fir::ShapeOp::create(builder, loc, extents);
   return {shape, extents};
 }
 
 static std::pair<hlfir::Entity, hlfir::Entity>
-genArraySectionsInRecipe(fir::FirOpBuilder &builder, mlir::Location loc,
-                         mlir::ValueRange bounds, hlfir::Entity lhs,
+genArraySectionsInRecipe(fir::FirOpBuilder &builder, aiir::Location loc,
+                         aiir::ValueRange bounds, hlfir::Entity lhs,
                          hlfir::Entity rhs) {
   assert(lhs.getRank() * 3 == static_cast<int>(bounds.size()) &&
          "must get lb,ub,step for each dimension");
@@ -730,24 +730,24 @@ genArraySectionsInRecipe(fir::FirOpBuilder &builder, mlir::Location loc,
   return {leftSection, rightSection};
 }
 
-static bool boundsAreAllConstants(mlir::ValueRange bounds) {
-  for (mlir::Value bound : bounds)
+static bool boundsAreAllConstants(aiir::ValueRange bounds) {
+  for (aiir::Value bound : bounds)
     if (!fir::getIntIfConstant(bound).has_value())
       return false;
   return true;
 }
 
 template <typename Ty>
-mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
-    mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange bounds, mlir::Value initVal, mlir::acc::VariableInfoAttr,
+aiir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
+    aiir::Type type, aiir::OpBuilder &aiirBuilder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::MappableType> var, llvm::StringRef varName,
+    aiir::ValueRange bounds, aiir::Value initVal, aiir::acc::VariableInfoAttr,
     bool &needsDestroy) const {
-  mlir::ModuleOp mod = mlirBuilder.getInsertionBlock()
+  aiir::ModuleOp mod = aiirBuilder.getInsertionBlock()
                            ->getParent()
-                           ->getParentOfType<mlir::ModuleOp>();
+                           ->getParentOfType<aiir::ModuleOp>();
   assert(mod && "failed to retrieve ModuleOp");
-  fir::FirOpBuilder builder(mlirBuilder, mod);
+  fir::FirOpBuilder builder(aiirBuilder, mod);
 
   hlfir::Entity inputVar = hlfir::Entity{var};
   if (inputVar.isPolymorphic())
@@ -775,8 +775,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   // entity being privatized. Designate the array section if only a section is
   // privatized, otherwise just use the original variable.
   hlfir::Entity privatizedVar = dereferencedVar;
-  mlir::Value tempShape;
-  llvm::SmallVector<mlir::Value> tempExtents;
+  aiir::Value tempShape;
+  llvm::SmallVector<aiir::Value> tempExtents;
   // TODO: while it seems best to allocate as little memory as possible and
   // allocate only the storage for the section, this may actually have drawbacks
   // when the array has static size and can be privatized with an alloca while
@@ -799,15 +799,15 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     privatizedVar = genDesignateWithTriplets(builder, loc, dereferencedVar,
                                              triplets, tempShape, tempExtents);
   } else if (privatizedVar.getRank() > 0) {
-    mlir::Value shape = hlfir::genShape(loc, builder, privatizedVar);
+    aiir::Value shape = hlfir::genShape(loc, builder, privatizedVar);
     tempExtents = hlfir::getExplicitExtentsFromShape(shape, builder);
     tempShape = fir::ShapeOp::create(builder, loc, tempExtents);
   }
-  llvm::SmallVector<mlir::Value> typeParams;
+  llvm::SmallVector<aiir::Value> typeParams;
   hlfir::genLengthParameters(loc, builder, privatizedVar, typeParams);
-  mlir::Type baseType = privatizedVar.getElementOrSequenceType();
+  aiir::Type baseType = privatizedVar.getElementOrSequenceType();
   // Step2: Create a temporary allocation for the privatized part.
-  mlir::Value alloc;
+  aiir::Value alloc;
   if (fir::hasDynamicSize(baseType) ||
       (isPointerOrAllocatable && bounds.empty())) {
     // Note: heap allocation is forced for whole pointers/allocatable so that
@@ -826,11 +826,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   }
   // Step3: Assign the initial value to the privatized part if any.
   if (initVal) {
-    mlir::Value tempEntity = alloc;
+    aiir::Value tempEntity = alloc;
     if (fir::hasDynamicSize(baseType))
       tempEntity =
           fir::EmboxOp::create(builder, loc, fir::BoxType::get(baseType), alloc,
-                               tempShape, /*slice=*/mlir::Value{}, typeParams);
+                               tempShape, /*slice=*/aiir::Value{}, typeParams);
     hlfir::genNoAliasAssignment(
         loc, builder, hlfir::Entity{initVal}, hlfir::Entity{tempEntity},
         /*emitWorkshareLoop=*/false, /*temporaryLHS=*/true);
@@ -859,7 +859,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   // input if needed.
   // - store this new descriptor in a temporary allocation if the input variable
   // is a POINTER/ALLOCATABLE.
-  llvm::SmallVector<mlir::Value> inputVarLowerBounds, inputVarExtents;
+  llvm::SmallVector<aiir::Value> inputVarLowerBounds, inputVarExtents;
   if (dereferencedVar.isArray()) {
     for (int dim = 0; dim < dereferencedVar.getRank(); ++dim) {
       inputVarLowerBounds.push_back(
@@ -869,48 +869,48 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     }
   }
 
-  mlir::Value privateVarBaseAddr = alloc;
+  aiir::Value privateVarBaseAddr = alloc;
   if (allocateSection) {
     // To compute the mock base address without doing pointer arithmetic,
     // compute: TYPE, TEMP(ZERO_BASED_SECTION_LB:) MOCK_BASE = TEMP(0)
     // This addresses the section "backwards" (0 <= ZERO_BASED_SECTION_LB). This
     // is currently OK, but care should be taken to avoid tripping bound checks
     // if added in the future.
-    mlir::Type inputBaseAddrType =
+    aiir::Type inputBaseAddrType =
         dereferencedVar.getBoxType().getBaseAddressType();
-    mlir::Value tempBaseAddr =
+    aiir::Value tempBaseAddr =
         builder.createConvert(loc, inputBaseAddrType, alloc);
-    mlir::Value zero =
+    aiir::Value zero =
         builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-    llvm::SmallVector<mlir::Value> lowerBounds;
-    llvm::SmallVector<mlir::Value> zeros;
+    llvm::SmallVector<aiir::Value> lowerBounds;
+    llvm::SmallVector<aiir::Value> zeros;
     for (unsigned i = 0; i < bounds.size(); i += 3) {
       lowerBounds.push_back(bounds[i]);
       zeros.push_back(zero);
     }
-    mlir::Value offsetShapeShift =
+    aiir::Value offsetShapeShift =
         builder.genShape(loc, lowerBounds, inputVarExtents);
-    mlir::Type eleRefType =
+    aiir::Type eleRefType =
         builder.getRefType(privatizedVar.getFortranElementType());
-    mlir::Value mockBase = fir::ArrayCoorOp::create(
+    aiir::Value mockBase = fir::ArrayCoorOp::create(
         builder, loc, eleRefType, tempBaseAddr, offsetShapeShift,
-        /*slice=*/mlir::Value{}, /*indices=*/zeros,
-        /*typeParams=*/mlir::ValueRange{});
+        /*slice=*/aiir::Value{}, /*indices=*/zeros,
+        /*typeParams=*/aiir::ValueRange{});
     privateVarBaseAddr =
         builder.createConvert(loc, inputBaseAddrType, mockBase);
   }
 
-  mlir::Value retVal = privateVarBaseAddr;
+  aiir::Value retVal = privateVarBaseAddr;
   if (inputVar.isBoxAddressOrValue()) {
     // Recreate descriptor with same bounds as the input variable.
-    mlir::Value shape;
+    aiir::Value shape;
     if (!inputVarExtents.empty())
       shape = builder.genShape(loc, inputVarLowerBounds, inputVarExtents);
-    mlir::Value box = fir::EmboxOp::create(builder, loc, inputVar.getBoxType(),
+    aiir::Value box = fir::EmboxOp::create(builder, loc, inputVar.getBoxType(),
                                            privateVarBaseAddr, shape,
-                                           /*slice=*/mlir::Value{}, typeParams);
+                                           /*slice=*/aiir::Value{}, typeParams);
     if (inputVar.isMutableBox()) {
-      mlir::Value boxAlloc =
+      aiir::Value boxAlloc =
           fir::AllocaOp::create(builder, loc, inputVar.getBoxType());
       fir::StoreOp::create(builder, loc, box, boxAlloc);
       retVal = boxAlloc;
@@ -921,43 +921,43 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   return retVal;
 }
 
-template mlir::Value
+template aiir::Value
 OpenACCMappableModel<fir::BaseBoxType>::generatePrivateInit(
-    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal,
-    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
+    aiir::Type type, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::MappableType> var, llvm::StringRef varName,
+    aiir::ValueRange extents, aiir::Value initVal,
+    aiir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
-template mlir::Value
+template aiir::Value
 OpenACCMappableModel<fir::ReferenceType>::generatePrivateInit(
-    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal,
-    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
+    aiir::Type type, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::MappableType> var, llvm::StringRef varName,
+    aiir::ValueRange extents, aiir::Value initVal,
+    aiir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
-template mlir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
-    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal,
-    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
+template aiir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
+    aiir::Type type, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::MappableType> var, llvm::StringRef varName,
+    aiir::ValueRange extents, aiir::Value initVal,
+    aiir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
-template mlir::Value
+template aiir::Value
 OpenACCMappableModel<fir::PointerType>::generatePrivateInit(
-    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal,
-    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
+    aiir::Type type, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::MappableType> var, llvm::StringRef varName,
+    aiir::ValueRange extents, aiir::Value initVal,
+    aiir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generateCopy(
-    mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::MappableType> src,
-    mlir::TypedValue<mlir::acc::MappableType> dest, mlir::ValueRange bounds,
-    mlir::acc::VariableInfoAttr varInfo) const {
-  mlir::ModuleOp mod =
-      mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
+    aiir::Type type, aiir::OpBuilder &aiirBuilder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::MappableType> src,
+    aiir::TypedValue<aiir::acc::MappableType> dest, aiir::ValueRange bounds,
+    aiir::acc::VariableInfoAttr varInfo) const {
+  aiir::ModuleOp mod =
+      aiirBuilder.getBlock()->getParent()->getParentOfType<aiir::ModuleOp>();
   assert(mod && "failed to retrieve parent module");
-  fir::FirOpBuilder builder(mlirBuilder, mod);
+  fir::FirOpBuilder builder(aiirBuilder, mod);
   hlfir::Entity source{src};
   hlfir::Entity destination{dest};
 
@@ -988,165 +988,165 @@ bool OpenACCMappableModel<Ty>::generateCopy(
 }
 
 template bool OpenACCMappableModel<fir::BaseBoxType>::generateCopy(
-    mlir::Type, mlir::OpBuilder &, mlir::Location,
-    mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    mlir::acc::VariableInfoAttr) const;
+    aiir::Type, aiir::OpBuilder &, aiir::Location,
+    aiir::TypedValue<aiir::acc::MappableType>,
+    aiir::TypedValue<aiir::acc::MappableType>, aiir::ValueRange,
+    aiir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::ReferenceType>::generateCopy(
-    mlir::Type, mlir::OpBuilder &, mlir::Location,
-    mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    mlir::acc::VariableInfoAttr) const;
+    aiir::Type, aiir::OpBuilder &, aiir::Location,
+    aiir::TypedValue<aiir::acc::MappableType>,
+    aiir::TypedValue<aiir::acc::MappableType>, aiir::ValueRange,
+    aiir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::PointerType>::generateCopy(
-    mlir::Type, mlir::OpBuilder &, mlir::Location,
-    mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    mlir::acc::VariableInfoAttr) const;
+    aiir::Type, aiir::OpBuilder &, aiir::Location,
+    aiir::TypedValue<aiir::acc::MappableType>,
+    aiir::TypedValue<aiir::acc::MappableType>, aiir::ValueRange,
+    aiir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::HeapType>::generateCopy(
-    mlir::Type, mlir::OpBuilder &, mlir::Location,
-    mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    mlir::acc::VariableInfoAttr) const;
+    aiir::Type, aiir::OpBuilder &, aiir::Location,
+    aiir::TypedValue<aiir::acc::MappableType>,
+    aiir::TypedValue<aiir::acc::MappableType>, aiir::ValueRange,
+    aiir::acc::VariableInfoAttr) const;
 
 template <typename Op>
-static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
-                                      mlir::Location loc, mlir::Value value1,
-                                      mlir::Value value2) {
-  mlir::Type i1 = builder.getI1Type();
-  mlir::Value v1 = fir::ConvertOp::create(builder, loc, i1, value1);
-  mlir::Value v2 = fir::ConvertOp::create(builder, loc, i1, value2);
-  mlir::Value combined = Op::create(builder, loc, v1, v2);
+static aiir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
+                                      aiir::Location loc, aiir::Value value1,
+                                      aiir::Value value2) {
+  aiir::Type i1 = builder.getI1Type();
+  aiir::Value v1 = fir::ConvertOp::create(builder, loc, i1, value1);
+  aiir::Value v2 = fir::ConvertOp::create(builder, loc, i1, value2);
+  aiir::Value combined = Op::create(builder, loc, v1, v2);
   return fir::ConvertOp::create(builder, loc, value1.getType(), combined);
 }
 
-static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::arith::CmpIPredicate pred,
-                                         mlir::Value value1,
-                                         mlir::Value value2) {
-  mlir::Type i1 = builder.getI1Type();
-  mlir::Value v1 = fir::ConvertOp::create(builder, loc, i1, value1);
-  mlir::Value v2 = fir::ConvertOp::create(builder, loc, i1, value2);
-  mlir::Value add = mlir::arith::CmpIOp::create(builder, loc, pred, v1, v2);
+static aiir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
+                                         aiir::Location loc,
+                                         aiir::arith::CmpIPredicate pred,
+                                         aiir::Value value1,
+                                         aiir::Value value2) {
+  aiir::Type i1 = builder.getI1Type();
+  aiir::Value v1 = fir::ConvertOp::create(builder, loc, i1, value1);
+  aiir::Value v2 = fir::ConvertOp::create(builder, loc, i1, value2);
+  aiir::Value add = aiir::arith::CmpIOp::create(builder, loc, pred, v1, v2);
   return fir::ConvertOp::create(builder, loc, value1.getType(), add);
 }
 
-static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
-                                     mlir::Location loc,
-                                     mlir::acc::ReductionOperator op,
-                                     mlir::Type ty, mlir::Value value1,
-                                     mlir::Value value2) {
+static aiir::Value genScalarCombiner(fir::FirOpBuilder &builder,
+                                     aiir::Location loc,
+                                     aiir::acc::ReductionOperator op,
+                                     aiir::Type ty, aiir::Value value1,
+                                     aiir::Value value2) {
   value1 = builder.loadIfRef(loc, value1);
   value2 = builder.loadIfRef(loc, value2);
-  if (op == mlir::acc::ReductionOperator::AccAdd) {
+  if (op == aiir::acc::ReductionOperator::AccAdd) {
     if (ty.isIntOrIndex())
-      return mlir::arith::AddIOp::create(builder, loc, value1, value2);
-    if (mlir::isa<mlir::FloatType>(ty))
-      return mlir::arith::AddFOp::create(builder, loc, value1, value2);
-    if (auto cmplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(ty))
+      return aiir::arith::AddIOp::create(builder, loc, value1, value2);
+    if (aiir::isa<aiir::FloatType>(ty))
+      return aiir::arith::AddFOp::create(builder, loc, value1, value2);
+    if (auto cmplxTy = aiir::dyn_cast_or_null<aiir::ComplexType>(ty))
       return fir::AddcOp::create(builder, loc, value1, value2);
     TODO(loc, "reduction add type");
   }
 
-  if (op == mlir::acc::ReductionOperator::AccMul) {
+  if (op == aiir::acc::ReductionOperator::AccMul) {
     if (ty.isIntOrIndex())
-      return mlir::arith::MulIOp::create(builder, loc, value1, value2);
-    if (mlir::isa<mlir::FloatType>(ty))
-      return mlir::arith::MulFOp::create(builder, loc, value1, value2);
-    if (mlir::isa<mlir::ComplexType>(ty))
+      return aiir::arith::MulIOp::create(builder, loc, value1, value2);
+    if (aiir::isa<aiir::FloatType>(ty))
+      return aiir::arith::MulFOp::create(builder, loc, value1, value2);
+    if (aiir::isa<aiir::ComplexType>(ty))
       return fir::MulcOp::create(builder, loc, value1, value2);
     TODO(loc, "reduction mul type");
   }
 
-  if (op == mlir::acc::ReductionOperator::AccMin ||
-      op == mlir::acc::ReductionOperator::AccMinimumf ||
-      op == mlir::acc::ReductionOperator::AccMinnumf) {
+  if (op == aiir::acc::ReductionOperator::AccMin ||
+      op == aiir::acc::ReductionOperator::AccMinimumf ||
+      op == aiir::acc::ReductionOperator::AccMinnumf) {
     Fortran::common::FPMaxminBehavior savedMode = builder.getFPMaxminBehavior();
-    if (op == mlir::acc::ReductionOperator::AccMinimumf)
+    if (op == aiir::acc::ReductionOperator::AccMinimumf)
       builder.setFPMaxminBehavior(Fortran::common::FPMaxminBehavior::Extremum);
-    else if (op == mlir::acc::ReductionOperator::AccMinnumf)
+    else if (op == aiir::acc::ReductionOperator::AccMinnumf)
       builder.setFPMaxminBehavior(
           Fortran::common::FPMaxminBehavior::ExtremeNum);
 
-    mlir::Value result = fir::genMin(builder, loc, {value1, value2});
+    aiir::Value result = fir::genMin(builder, loc, {value1, value2});
     builder.setFPMaxminBehavior(savedMode);
     return result;
   }
 
-  if (op == mlir::acc::ReductionOperator::AccMax ||
-      op == mlir::acc::ReductionOperator::AccMaximumf ||
-      op == mlir::acc::ReductionOperator::AccMaxnumf) {
+  if (op == aiir::acc::ReductionOperator::AccMax ||
+      op == aiir::acc::ReductionOperator::AccMaximumf ||
+      op == aiir::acc::ReductionOperator::AccMaxnumf) {
     Fortran::common::FPMaxminBehavior savedMode = builder.getFPMaxminBehavior();
-    if (op == mlir::acc::ReductionOperator::AccMaximumf)
+    if (op == aiir::acc::ReductionOperator::AccMaximumf)
       builder.setFPMaxminBehavior(Fortran::common::FPMaxminBehavior::Extremum);
-    else if (op == mlir::acc::ReductionOperator::AccMaxnumf)
+    else if (op == aiir::acc::ReductionOperator::AccMaxnumf)
       builder.setFPMaxminBehavior(
           Fortran::common::FPMaxminBehavior::ExtremeNum);
 
-    mlir::Value result = fir::genMax(builder, loc, {value1, value2});
+    aiir::Value result = fir::genMax(builder, loc, {value1, value2});
     builder.setFPMaxminBehavior(savedMode);
     return result;
   }
 
-  if (op == mlir::acc::ReductionOperator::AccIand)
-    return mlir::arith::AndIOp::create(builder, loc, value1, value2);
+  if (op == aiir::acc::ReductionOperator::AccIand)
+    return aiir::arith::AndIOp::create(builder, loc, value1, value2);
 
-  if (op == mlir::acc::ReductionOperator::AccIor)
-    return mlir::arith::OrIOp::create(builder, loc, value1, value2);
+  if (op == aiir::acc::ReductionOperator::AccIor)
+    return aiir::arith::OrIOp::create(builder, loc, value1, value2);
 
-  if (op == mlir::acc::ReductionOperator::AccXor)
-    return mlir::arith::XOrIOp::create(builder, loc, value1, value2);
+  if (op == aiir::acc::ReductionOperator::AccXor)
+    return aiir::arith::XOrIOp::create(builder, loc, value1, value2);
 
-  if (op == mlir::acc::ReductionOperator::AccLand)
-    return genLogicalCombiner<mlir::arith::AndIOp>(builder, loc, value1,
+  if (op == aiir::acc::ReductionOperator::AccLand)
+    return genLogicalCombiner<aiir::arith::AndIOp>(builder, loc, value1,
                                                    value2);
 
-  if (op == mlir::acc::ReductionOperator::AccLor)
-    return genLogicalCombiner<mlir::arith::OrIOp>(builder, loc, value1, value2);
+  if (op == aiir::acc::ReductionOperator::AccLor)
+    return genLogicalCombiner<aiir::arith::OrIOp>(builder, loc, value1, value2);
 
-  if (op == mlir::acc::ReductionOperator::AccEqv)
-    return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::eq,
+  if (op == aiir::acc::ReductionOperator::AccEqv)
+    return genComparisonCombiner(builder, loc, aiir::arith::CmpIPredicate::eq,
                                  value1, value2);
 
-  if (op == mlir::acc::ReductionOperator::AccNeqv)
-    return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::ne,
+  if (op == aiir::acc::ReductionOperator::AccNeqv)
+    return genComparisonCombiner(builder, loc, aiir::arith::CmpIPredicate::ne,
                                  value1, value2);
 
   TODO(loc, "reduction operator");
 }
 
-static bool useAccReductionCombineOp(mlir::Type elementType,
-                                     mlir::acc::ReductionOperator op) {
+static bool useAccReductionCombineOp(aiir::Type elementType,
+                                     aiir::acc::ReductionOperator op) {
   if (useAccReductionCombineAll)
     return true;
   if (!useAccReductionCombine)
     return false;
-  // LOGICAL operators do not have mlir operators and requires FIR specific
+  // LOGICAL operators do not have aiir operators and requires FIR specific
   // logic to interpret the TRUE and FALSE values from the storage (implemented
   // in fir.convert to i1).
-  if (!llvm::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(
+  if (!llvm::isa<aiir::IntegerType, aiir::FloatType, aiir::ComplexType>(
           elementType))
     return false;
   // MIN/MAX for floating point can have different edge-case behaviors (NANs).
-  // Currently the mlir operator does not match the behavior implemented by
+  // Currently the aiir operator does not match the behavior implemented by
   // flang.
-  return op != mlir::acc::ReductionOperator::AccMax &&
-         op != mlir::acc::ReductionOperator::AccMin;
+  return op != aiir::acc::ReductionOperator::AccMax &&
+         op != aiir::acc::ReductionOperator::AccMin;
 }
 
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generateCombiner(
-    mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::MappableType> dest,
-    mlir::TypedValue<mlir::acc::MappableType> source, mlir::ValueRange bounds,
-    mlir::acc::ReductionOperator op, mlir::Attribute fastmathFlags) const {
-  mlir::ModuleOp mod =
-      mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
+    aiir::Type type, aiir::OpBuilder &aiirBuilder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::MappableType> dest,
+    aiir::TypedValue<aiir::acc::MappableType> source, aiir::ValueRange bounds,
+    aiir::acc::ReductionOperator op, aiir::Attribute fastmathFlags) const {
+  aiir::ModuleOp mod =
+      aiirBuilder.getBlock()->getParent()->getParentOfType<aiir::ModuleOp>();
   assert(mod && "failed to retrieve parent module");
-  fir::FirOpBuilder builder(mlirBuilder, mod);
+  fir::FirOpBuilder builder(aiirBuilder, mod);
   if (fastmathFlags)
     if (auto fastMathAttr =
-            mlir::dyn_cast<mlir::arith::FastMathFlagsAttr>(fastmathFlags))
+            aiir::dyn_cast<aiir::arith::FastMathFlagsAttr>(fastmathFlags))
       builder.setFastMathFlags(fastMathAttr.getValue());
   // Generate loops that combine and assign the inputs into dest (or array
   // section of the inputs when there are bounds).
@@ -1157,13 +1157,13 @@ bool OpenACCMappableModel<Ty>::generateCombiner(
         genArraySectionsInRecipe(builder, loc, bounds, srcSection, destSection);
   }
 
-  mlir::Type elementType = fir::getFortranElementType(dest.getType());
+  aiir::Type elementType = fir::getFortranElementType(dest.getType());
   auto genKernel =
-      [&](mlir::Location l, fir::FirOpBuilder &b, hlfir::Entity destElementAddr,
-          hlfir::Entity srcElementAddr, mlir::ArrayAttr accessGroups) -> void {
+      [&](aiir::Location l, fir::FirOpBuilder &b, hlfir::Entity destElementAddr,
+          hlfir::Entity srcElementAddr, aiir::ArrayAttr accessGroups) -> void {
     assert(!accessGroups && "access groups not expected in acc reductions");
     if (useAccReductionCombineOp(elementType, op)) {
-      mlir::acc::ReductionCombineOp::create(builder, loc, destElementAddr,
+      aiir::acc::ReductionCombineOp::create(builder, loc, destElementAddr,
                                             srcElementAddr, op);
       return;
     }
@@ -1185,39 +1185,39 @@ bool OpenACCMappableModel<Ty>::generateCombiner(
 }
 
 template bool OpenACCMappableModel<fir::BaseBoxType>::generateCombiner(
-    mlir::Type, mlir::OpBuilder &, mlir::Location,
-    mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    mlir::acc::ReductionOperator op, mlir::Attribute) const;
+    aiir::Type, aiir::OpBuilder &, aiir::Location,
+    aiir::TypedValue<aiir::acc::MappableType>,
+    aiir::TypedValue<aiir::acc::MappableType>, aiir::ValueRange,
+    aiir::acc::ReductionOperator op, aiir::Attribute) const;
 template bool OpenACCMappableModel<fir::ReferenceType>::generateCombiner(
-    mlir::Type, mlir::OpBuilder &, mlir::Location,
-    mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    mlir::acc::ReductionOperator op, mlir::Attribute) const;
+    aiir::Type, aiir::OpBuilder &, aiir::Location,
+    aiir::TypedValue<aiir::acc::MappableType>,
+    aiir::TypedValue<aiir::acc::MappableType>, aiir::ValueRange,
+    aiir::acc::ReductionOperator op, aiir::Attribute) const;
 template bool OpenACCMappableModel<fir::PointerType>::generateCombiner(
-    mlir::Type, mlir::OpBuilder &, mlir::Location,
-    mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    mlir::acc::ReductionOperator op, mlir::Attribute) const;
+    aiir::Type, aiir::OpBuilder &, aiir::Location,
+    aiir::TypedValue<aiir::acc::MappableType>,
+    aiir::TypedValue<aiir::acc::MappableType>, aiir::ValueRange,
+    aiir::acc::ReductionOperator op, aiir::Attribute) const;
 template bool OpenACCMappableModel<fir::HeapType>::generateCombiner(
-    mlir::Type, mlir::OpBuilder &, mlir::Location,
-    mlir::TypedValue<mlir::acc::MappableType>,
-    mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    mlir::acc::ReductionOperator op, mlir::Attribute) const;
+    aiir::Type, aiir::OpBuilder &, aiir::Location,
+    aiir::TypedValue<aiir::acc::MappableType>,
+    aiir::TypedValue<aiir::acc::MappableType>, aiir::ValueRange,
+    aiir::acc::ReductionOperator op, aiir::Attribute) const;
 
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
-    mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds,
-    mlir::acc::VariableInfoAttr varInfo) const {
+    aiir::Type type, aiir::OpBuilder &aiirBuilder, aiir::Location loc,
+    aiir::Value privatized, aiir::ValueRange bounds,
+    aiir::acc::VariableInfoAttr varInfo) const {
   hlfir::Entity inputVar = hlfir::Entity{privatized};
-  mlir::ModuleOp mod =
-      mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
+  aiir::ModuleOp mod =
+      aiirBuilder.getBlock()->getParent()->getParentOfType<aiir::ModuleOp>();
   assert(mod && "failed to retrieve parent module");
-  fir::FirOpBuilder builder(mlirBuilder, mod);
+  fir::FirOpBuilder builder(aiirBuilder, mod);
   auto genFreeRawAddress = [&](hlfir::Entity entity) {
-    mlir::Value addr = hlfir::genVariableRawAddress(loc, builder, entity);
-    mlir::Type heapType =
+    aiir::Value addr = hlfir::genVariableRawAddress(loc, builder, entity);
+    aiir::Type heapType =
         fir::HeapType::get(fir::unwrapRefType(addr.getType()));
     if (heapType != addr.getType())
       addr = fir::ConvertOp::create(builder, loc, heapType, addr);
@@ -1243,30 +1243,30 @@ bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
 }
 
 template bool OpenACCMappableModel<fir::BaseBoxType>::generatePrivateDestroy(
-    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds,
-    mlir::acc::VariableInfoAttr varInfo) const;
+    aiir::Type type, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value privatized, aiir::ValueRange bounds,
+    aiir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::ReferenceType>::generatePrivateDestroy(
-    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds,
-    mlir::acc::VariableInfoAttr varInfo) const;
+    aiir::Type type, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value privatized, aiir::ValueRange bounds,
+    aiir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::HeapType>::generatePrivateDestroy(
-    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds,
-    mlir::acc::VariableInfoAttr varInfo) const;
+    aiir::Type type, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value privatized, aiir::ValueRange bounds,
+    aiir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::PointerType>::generatePrivateDestroy(
-    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value privatized, mlir::ValueRange bounds,
-    mlir::acc::VariableInfoAttr varInfo) const;
+    aiir::Type type, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value privatized, aiir::ValueRange bounds,
+    aiir::acc::VariableInfoAttr varInfo) const;
 
 template <typename Ty>
-mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+aiir::Value OpenACCPointerLikeModel<Ty>::genAllocate(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    llvm::StringRef varName, aiir::Type varType, aiir::Value originalVar,
     bool &needsFree) const {
 
   // Unwrap to get the pointee type.
-  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  aiir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
   assert(pointeeTy && "expected pointee type to be extractable");
 
   // Box types are descriptors that contain both metadata and a pointer to data.
@@ -1292,7 +1292,7 @@ mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(
   // Fortran pointer type, it feels a bit odd to "allocate" since it is meant
   // to point to an existing entity - but one can imagine where a pointee is
   // privatized - thus it makes sense to issue an allocate.
-  mlir::Value allocation;
+  aiir::Value allocation;
   if (std::is_same_v<Ty, fir::HeapType>) {
     needsFree = true;
     allocation = fir::AllocMemOp::create(builder, loc, pointeeTy);
@@ -1313,34 +1313,34 @@ mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(
   return allocation;
 }
 
-template mlir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genAllocate(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+template aiir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genAllocate(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    llvm::StringRef varName, aiir::Type varType, aiir::Value originalVar,
     bool &needsFree) const;
 
-template mlir::Value OpenACCPointerLikeModel<fir::PointerType>::genAllocate(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+template aiir::Value OpenACCPointerLikeModel<fir::PointerType>::genAllocate(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    llvm::StringRef varName, aiir::Type varType, aiir::Value originalVar,
     bool &needsFree) const;
 
-template mlir::Value OpenACCPointerLikeModel<fir::HeapType>::genAllocate(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+template aiir::Value OpenACCPointerLikeModel<fir::HeapType>::genAllocate(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    llvm::StringRef varName, aiir::Type varType, aiir::Value originalVar,
     bool &needsFree) const;
 
-template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genAllocate(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
+template aiir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genAllocate(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    llvm::StringRef varName, aiir::Type varType, aiir::Value originalVar,
     bool &needsFree) const;
 
 template <typename Ty>
 bool OpenACCPointerLikeModel<Ty>::genFree(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
-    mlir::Value allocRes, mlir::Type varType) const {
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> varToFree,
+    aiir::Value allocRes, aiir::Type varType) const {
 
   // Unwrap to get the pointee type.
-  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  aiir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
   assert(pointeeTy && "expected pointee type to be extractable");
 
   // Box types contain both a descriptor and data. The `genFree` API
@@ -1357,16 +1357,16 @@ bool OpenACCPointerLikeModel<Ty>::genFree(
   }
 
   // Use allocRes if provided to determine the allocation type
-  mlir::Value valueToInspect = allocRes ? allocRes : varToFree;
+  aiir::Value valueToInspect = allocRes ? allocRes : varToFree;
 
   // Strip casts and declare operations to find the original allocation
-  mlir::Value strippedValue = fir::acc::getOriginalDef(valueToInspect);
-  mlir::Operation *originalAlloc = strippedValue.getDefiningOp();
+  aiir::Value strippedValue = fir::acc::getOriginalDef(valueToInspect);
+  aiir::Operation *originalAlloc = strippedValue.getDefiningOp();
 
   // If we found an AllocMemOp (heap allocation), free it
-  if (mlir::isa_and_nonnull<fir::AllocMemOp>(originalAlloc)) {
-    mlir::Value toFree = varToFree;
-    if (!mlir::isa<fir::HeapType>(valueToInspect.getType()))
+  if (aiir::isa_and_nonnull<fir::AllocMemOp>(originalAlloc)) {
+    aiir::Value toFree = varToFree;
+    if (!aiir::isa<fir::HeapType>(valueToInspect.getType()))
       toFree = fir::ConvertOp::create(
           builder, loc,
           fir::HeapType::get(varToFree.getType().getElementType()), toFree);
@@ -1375,7 +1375,7 @@ bool OpenACCPointerLikeModel<Ty>::genFree(
   }
 
   // If we found an AllocaOp (stack allocation), no deallocation needed
-  if (mlir::isa_and_nonnull<fir::AllocaOp>(originalAlloc))
+  if (aiir::isa_and_nonnull<fir::AllocaOp>(originalAlloc))
     return true;
 
   // Unable to determine allocation type
@@ -1383,38 +1383,38 @@ bool OpenACCPointerLikeModel<Ty>::genFree(
 }
 
 template bool OpenACCPointerLikeModel<fir::ReferenceType>::genFree(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
-    mlir::Value allocRes, mlir::Type varType) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> varToFree,
+    aiir::Value allocRes, aiir::Type varType) const;
 
 template bool OpenACCPointerLikeModel<fir::PointerType>::genFree(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
-    mlir::Value allocRes, mlir::Type varType) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> varToFree,
+    aiir::Value allocRes, aiir::Type varType) const;
 
 template bool OpenACCPointerLikeModel<fir::HeapType>::genFree(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
-    mlir::Value allocRes, mlir::Type varType) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> varToFree,
+    aiir::Value allocRes, aiir::Type varType) const;
 
 template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genFree(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
-    mlir::Value allocRes, mlir::Type varType) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> varToFree,
+    aiir::Value allocRes, aiir::Type varType) const;
 
 template <typename Ty>
 bool OpenACCPointerLikeModel<Ty>::genCopy(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
-    mlir::TypedValue<mlir::acc::PointerLikeType> source,
-    mlir::Type varType) const {
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destination,
+    aiir::TypedValue<aiir::acc::PointerLikeType> source,
+    aiir::Type varType) const {
 
   // Check that source and destination types match
   if (source.getType() != destination.getType())
     return false;
 
   // Unwrap to get the pointee type.
-  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  aiir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
   assert(pointeeTy && "expected pointee type to be extractable");
 
   // Box types contain both a descriptor and referenced data. The genCopy API
@@ -1442,37 +1442,37 @@ bool OpenACCPointerLikeModel<Ty>::genCopy(
 }
 
 template bool OpenACCPointerLikeModel<fir::ReferenceType>::genCopy(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
-    mlir::TypedValue<mlir::acc::PointerLikeType> source,
-    mlir::Type varType) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destination,
+    aiir::TypedValue<aiir::acc::PointerLikeType> source,
+    aiir::Type varType) const;
 
 template bool OpenACCPointerLikeModel<fir::PointerType>::genCopy(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
-    mlir::TypedValue<mlir::acc::PointerLikeType> source,
-    mlir::Type varType) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destination,
+    aiir::TypedValue<aiir::acc::PointerLikeType> source,
+    aiir::Type varType) const;
 
 template bool OpenACCPointerLikeModel<fir::HeapType>::genCopy(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
-    mlir::TypedValue<mlir::acc::PointerLikeType> source,
-    mlir::Type varType) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destination,
+    aiir::TypedValue<aiir::acc::PointerLikeType> source,
+    aiir::Type varType) const;
 
 template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genCopy(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destination,
-    mlir::TypedValue<mlir::acc::PointerLikeType> source,
-    mlir::Type varType) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destination,
+    aiir::TypedValue<aiir::acc::PointerLikeType> source,
+    aiir::Type varType) const;
 
 template <typename Ty>
-mlir::Value OpenACCPointerLikeModel<Ty>::genLoad(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
-    mlir::Type valueType) const {
+aiir::Value OpenACCPointerLikeModel<Ty>::genLoad(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> srcPtr,
+    aiir::Type valueType) const {
 
   // Unwrap to get the pointee type.
-  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  aiir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
   assert(pointeeTy && "expected pointee type to be extractable");
 
   // Box types contain both a descriptor and referenced data. The genLoad API
@@ -1489,7 +1489,7 @@ mlir::Value OpenACCPointerLikeModel<Ty>::genLoad(
   if (fir::hasDynamicSize(pointeeTy))
     return {};
 
-  mlir::Value loadedValue = fir::LoadOp::create(builder, loc, srcPtr);
+  aiir::Value loadedValue = fir::LoadOp::create(builder, loc, srcPtr);
 
   // If valueType is provided and differs from the loaded type, insert a convert
   if (valueType && loadedValue.getType() != valueType)
@@ -1498,34 +1498,34 @@ mlir::Value OpenACCPointerLikeModel<Ty>::genLoad(
   return loadedValue;
 }
 
-template mlir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genLoad(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
-    mlir::Type valueType) const;
+template aiir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genLoad(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> srcPtr,
+    aiir::Type valueType) const;
 
-template mlir::Value OpenACCPointerLikeModel<fir::PointerType>::genLoad(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
-    mlir::Type valueType) const;
+template aiir::Value OpenACCPointerLikeModel<fir::PointerType>::genLoad(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> srcPtr,
+    aiir::Type valueType) const;
 
-template mlir::Value OpenACCPointerLikeModel<fir::HeapType>::genLoad(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
-    mlir::Type valueType) const;
+template aiir::Value OpenACCPointerLikeModel<fir::HeapType>::genLoad(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> srcPtr,
+    aiir::Type valueType) const;
 
-template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genLoad(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
-    mlir::Type valueType) const;
+template aiir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genLoad(
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::TypedValue<aiir::acc::PointerLikeType> srcPtr,
+    aiir::Type valueType) const;
 
 template <typename Ty>
 bool OpenACCPointerLikeModel<Ty>::genStore(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value valueToStore,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const {
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value valueToStore,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destPtr) const {
 
   // Unwrap to get the pointee type.
-  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  aiir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
   assert(pointeeTy && "expected pointee type to be extractable");
 
   // Box types contain both a descriptor and referenced data. The genStore API
@@ -1543,8 +1543,8 @@ bool OpenACCPointerLikeModel<Ty>::genStore(
     return false;
 
   // Get the type from the value being stored
-  mlir::Type valueType = valueToStore.getType();
-  mlir::Value convertedValue = valueToStore;
+  aiir::Type valueType = valueToStore.getType();
+  aiir::Value convertedValue = valueToStore;
 
   // If the value type differs from the pointee type, insert a convert
   if (valueType != pointeeTy)
@@ -1556,27 +1556,27 @@ bool OpenACCPointerLikeModel<Ty>::genStore(
 }
 
 template bool OpenACCPointerLikeModel<fir::ReferenceType>::genStore(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value valueToStore,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value valueToStore,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destPtr) const;
 
 template bool OpenACCPointerLikeModel<fir::PointerType>::genStore(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value valueToStore,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value valueToStore,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destPtr) const;
 
 template bool OpenACCPointerLikeModel<fir::HeapType>::genStore(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value valueToStore,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value valueToStore,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destPtr) const;
 
 template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
-    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-    mlir::Value valueToStore,
-    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+    aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+    aiir::Value valueToStore,
+    aiir::TypedValue<aiir::acc::PointerLikeType> destPtr) const;
 
 /// Check CUDA attributes on a function argument.
-static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
+static bool hasCUDADeviceAttrOnFuncArg(aiir::BlockArgument blockArg) {
   auto *owner = blockArg.getOwner();
   if (!owner)
     return false;
@@ -1585,26 +1585,26 @@ static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
   if (!parentOp)
     return false;
 
-  if (auto funcLike = mlir::dyn_cast<mlir::FunctionOpInterface>(parentOp)) {
+  if (auto funcLike = aiir::dyn_cast<aiir::FunctionOpInterface>(parentOp)) {
     unsigned argIndex = blockArg.getArgNumber();
     if (argIndex < funcLike.getNumArguments())
       if (auto attr = funcLike.getArgAttr(argIndex, cuf::getDataAttrName()))
-        if (auto cudaAttr = mlir::dyn_cast<cuf::DataAttributeAttr>(attr))
+        if (auto cudaAttr = aiir::dyn_cast<cuf::DataAttributeAttr>(attr))
           return cuf::isDeviceDataAttribute(cudaAttr.getValue());
   }
   return false;
 }
 
 /// Shared implementation for checking if a value represents device data.
-static bool isDeviceDataImpl(mlir::Value var) {
+static bool isDeviceDataImpl(aiir::Value var) {
   // Strip casts to find the underlying value.
-  mlir::Value currentVal =
+  aiir::Value currentVal =
       fir::acc::getOriginalDef(var, /*stripDeclare=*/false);
 
-  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
+  if (auto blockArg = aiir::dyn_cast<aiir::BlockArgument>(currentVal))
     return hasCUDADeviceAttrOnFuncArg(blockArg);
 
-  mlir::Operation *defOp = currentVal.getDefiningOp();
+  aiir::Operation *defOp = currentVal.getDefiningOp();
   assert(defOp && "expected defining op for non-block-argument value");
 
   // Check for CUDA attributes on the defining operation.
@@ -1614,23 +1614,23 @@ static bool isDeviceDataImpl(mlir::Value var) {
   // Handle operations that access a partial entity - check if the base entity
   // is device data.
   if (auto partialAccess =
-          mlir::dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp))
-    if (mlir::Value base = partialAccess.getBaseEntity())
+          aiir::dyn_cast<aiir::acc::PartialEntityAccessOpInterface>(defOp))
+    if (aiir::Value base = partialAccess.getBaseEntity())
       return isDeviceDataImpl(base);
 
   // Handle fir.embox, fir.rebox, and similar ops via
   // FortranObjectViewOpInterface to check if the underlying source is device
   // data.
-  if (auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp))
-    if (mlir::Value source = viewOp.getViewSource(defOp->getResult(0)))
+  if (auto viewOp = aiir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp))
+    if (aiir::Value source = viewOp.getViewSource(defOp->getResult(0)))
       return isDeviceDataImpl(source);
 
   // Handle address_of - check the referenced global.
   if (auto addrOfIface =
-          mlir::dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+          aiir::dyn_cast<aiir::acc::AddressOfGlobalOpInterface>(defOp)) {
     auto symbol = addrOfIface.getSymbol();
-    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
-            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+    if (auto global = aiir::SymbolTable::lookupNearestSymbolFrom<
+            aiir::acc::GlobalVariableOpInterface>(defOp, symbol))
       return global.isDeviceData();
     return false;
   }
@@ -1639,51 +1639,51 @@ static bool isDeviceDataImpl(mlir::Value var) {
 }
 
 template <typename Ty>
-bool OpenACCPointerLikeModel<Ty>::isDeviceData(mlir::Type pointer,
-                                               mlir::Value var) const {
+bool OpenACCPointerLikeModel<Ty>::isDeviceData(aiir::Type pointer,
+                                               aiir::Value var) const {
   return isDeviceDataImpl(var);
 }
 
 template bool OpenACCPointerLikeModel<fir::ReferenceType>::isDeviceData(
-    mlir::Type, mlir::Value) const;
+    aiir::Type, aiir::Value) const;
 template bool
-    OpenACCPointerLikeModel<fir::PointerType>::isDeviceData(mlir::Type,
-                                                            mlir::Value) const;
+    OpenACCPointerLikeModel<fir::PointerType>::isDeviceData(aiir::Type,
+                                                            aiir::Value) const;
 template bool
-    OpenACCPointerLikeModel<fir::HeapType>::isDeviceData(mlir::Type,
-                                                         mlir::Value) const;
+    OpenACCPointerLikeModel<fir::HeapType>::isDeviceData(aiir::Type,
+                                                         aiir::Value) const;
 template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::isDeviceData(
-    mlir::Type, mlir::Value) const;
+    aiir::Type, aiir::Value) const;
 
 template <typename Ty>
-bool OpenACCMappableModel<Ty>::isDeviceData(mlir::Type type,
-                                            mlir::Value var) const {
+bool OpenACCMappableModel<Ty>::isDeviceData(aiir::Type type,
+                                            aiir::Value var) const {
   return isDeviceDataImpl(var);
 }
 
 template bool
-    OpenACCMappableModel<fir::BaseBoxType>::isDeviceData(mlir::Type,
-                                                         mlir::Value) const;
+    OpenACCMappableModel<fir::BaseBoxType>::isDeviceData(aiir::Type,
+                                                         aiir::Value) const;
 template bool
-    OpenACCMappableModel<fir::ReferenceType>::isDeviceData(mlir::Type,
-                                                           mlir::Value) const;
+    OpenACCMappableModel<fir::ReferenceType>::isDeviceData(aiir::Type,
+                                                           aiir::Value) const;
 template bool
-    OpenACCMappableModel<fir::HeapType>::isDeviceData(mlir::Type,
-                                                      mlir::Value) const;
+    OpenACCMappableModel<fir::HeapType>::isDeviceData(aiir::Type,
+                                                      aiir::Value) const;
 template bool
-    OpenACCMappableModel<fir::PointerType>::isDeviceData(mlir::Type,
-                                                         mlir::Value) const;
+    OpenACCMappableModel<fir::PointerType>::isDeviceData(aiir::Type,
+                                                         aiir::Value) const;
 
-std::optional<mlir::arith::AtomicRMWKind>
+std::optional<aiir::arith::AtomicRMWKind>
 OpenACCReducibleLogicalModel::getAtomicRMWKind(
-    mlir::Type type, mlir::acc::ReductionOperator redOp) const {
+    aiir::Type type, aiir::acc::ReductionOperator redOp) const {
   switch (redOp) {
-  case mlir::acc::ReductionOperator::AccLand:
-    return mlir::arith::AtomicRMWKind::andi;
-  case mlir::acc::ReductionOperator::AccLor:
-    return mlir::arith::AtomicRMWKind::ori;
-  case mlir::acc::ReductionOperator::AccEqv:
-  case mlir::acc::ReductionOperator::AccNeqv:
+  case aiir::acc::ReductionOperator::AccLand:
+    return aiir::arith::AtomicRMWKind::andi;
+  case aiir::acc::ReductionOperator::AccLor:
+    return aiir::arith::AtomicRMWKind::ori;
+  case aiir::acc::ReductionOperator::AccEqv:
+  case aiir::acc::ReductionOperator::AccNeqv:
     // Eqv and Neqv are valid for logical types but don't have a direct
     // AtomicRMWKind mapping yet.
     return std::nullopt;

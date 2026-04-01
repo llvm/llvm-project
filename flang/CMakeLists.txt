@@ -73,7 +73,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "flang isn't supported on 32 bit CPUs")
 endif()
 
-set(MLIR_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../mlir" CACHE PATH "Path to MLIR source tree")
+set(AIIR_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../aiir" CACHE PATH "Path to AIIR source tree")
 
 if (FLANG_STANDALONE_BUILD)
   set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -153,21 +153,21 @@ if (FLANG_STANDALONE_BUILD)
   include(AddClang)
 
   include(TableGen)
-  # If the user specifies a relative path to MLIR_DIR, the calls to include
-  # MLIR modules fail. Append the absolute path to MLIR_DIR instead.
-  if (MLIR_DIR)
-    get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR}
+  # If the user specifies a relative path to AIIR_DIR, the calls to include
+  # AIIR modules fail. Append the absolute path to AIIR_DIR instead.
+  if (AIIR_DIR)
+    get_filename_component(AIIR_DIR_ABSOLUTE ${AIIR_DIR}
       REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-    list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR_ABSOLUTE})
+    list(APPEND CMAKE_MODULE_PATH ${AIIR_DIR_ABSOLUTE})
   endif()
-  find_package(MLIR REQUIRED CONFIG HINTS ${MLIR_DIR_ABSOLUTE})
-  if (NOT MLIR_DIR_ABSOLUTE)
-    list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR})
+  find_package(AIIR REQUIRED CONFIG HINTS ${AIIR_DIR_ABSOLUTE})
+  if (NOT AIIR_DIR_ABSOLUTE)
+    list(APPEND CMAKE_MODULE_PATH ${AIIR_DIR})
   endif()
   # Use SYSTEM for the same reasons as for LLVM includes
-  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
-  include(AddMLIR)
-  find_program(MLIR_TABLEGEN_EXE "mlir-tblgen" ${LLVM_TOOLS_BINARY_DIR}
+  include_directories(SYSTEM ${AIIR_INCLUDE_DIRS})
+  include(AddAIIR)
+  find_program(AIIR_TABLEGEN_EXE "aiir-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
 
   option(LLVM_INSTALL_TOOLCHAIN_ONLY
@@ -257,10 +257,10 @@ else()
     set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
-  set(MLIR_INCLUDE_DIRS ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
-  set(MLIR_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/mlir/include)
-  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
-  include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
+  set(AIIR_INCLUDE_DIRS ${AIIR_MAIN_SRC_DIR}/include ) # --includedir
+  set(AIIR_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/aiir/include)
+  include_directories(SYSTEM ${AIIR_INCLUDE_DIRS})
+  include_directories(SYSTEM ${AIIR_TABLEGEN_OUTPUT_DIR})
 endif()
 
 if (FLANG_STANDALONE_BUILD)

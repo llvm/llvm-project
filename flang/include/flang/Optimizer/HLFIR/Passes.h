@@ -14,9 +14,9 @@
 #define FORTRAN_OPTIMIZER_HLFIR_PASSES_H
 
 #include "flang/Support/FPMaxminBehavior.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassRegistry.h"
 #include <memory>
 
 namespace hlfir {

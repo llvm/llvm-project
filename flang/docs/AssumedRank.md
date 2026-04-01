@@ -138,7 +138,7 @@ per dimension). Hence the selection of the simple approach using static size
 allocation to the maximum rank.
 
 ### Representation in FIR and HLFIR
-SSA values for assumed-rank entities have an MLIR type containing a
+SSA values for assumed-rank entities have an AIIR type containing a
 `!fir.array<*xT>` sequence type wrapped in a `!fir.box` or `!fir.class` type
 (additionally wrapped in a `!fir.ref` type for pointers and allocatables).
 

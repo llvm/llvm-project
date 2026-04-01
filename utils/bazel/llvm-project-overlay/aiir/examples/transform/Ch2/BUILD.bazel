@@ -1,0 +1,75 @@
+# Description:
+#   AIIR Tutorial
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//aiir:tblgen.bzl", "gentbl_cc_library", "td_library")
+
+licenses(["notice"])
+
+package(default_visibility = ["//visibility:public"])
+
+td_library(
+    name = "TransformTdFiles",
+    srcs = [
+        "include/MyExtension.td",
+    ],
+    includes = ["include"],
+    deps = [
+        "//aiir:OpBaseTdFiles",
+        "//aiir:SideEffectInterfacesTdFiles",
+        "//aiir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/MyExtension.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/MyExtension.cpp.inc",
+        ),
+    ],
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "include/MyExtension.td",
+    deps = [":TransformTdFiles"],
+)
+
+cc_library(
+    name = "MyExtension",
+    srcs = glob(["lib/*.cpp"]),
+    hdrs = glob(["include/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":TransformIncGen",
+        "//llvm:Support",
+        "//aiir:FuncDialect",
+        "//aiir:IR",
+        "//aiir:SCFDialect",
+        "//aiir:SideEffectInterfaces",
+        "//aiir:Support",
+        "//aiir:TransformDialect",
+        "//aiir:TransformDialectInterfaces",
+    ],
+)
+
+cc_binary(
+    name = "transform-opt-ch2",
+    srcs = glob(["transform-opt/*.cpp"]),
+    local_defines = ["AIIR_INCLUDE_TESTS"],
+    deps = [
+        ":MyExtension",
+        "//aiir:AllExtensions",
+        "//aiir:AllPassesAndDialects",
+        "//aiir:IR",
+        "//aiir:AiirOptLib",
+        "//aiir:RegisterAllDialects",
+        "//aiir:RegisterAllExtensions",
+        "//aiir:TransformDialectTransforms",
+        "//aiir:Transforms",
+        "//aiir/test:TestTransformDialect",
+    ],
+)

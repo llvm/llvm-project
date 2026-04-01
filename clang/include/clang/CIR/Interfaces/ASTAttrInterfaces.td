@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CIR_INTERFACES_ASTATTRINTERFACES_TD
-#define MLIR_CIR_INTERFACES_ASTATTRINTERFACES_TD
+#ifndef AIIR_CIR_INTERFACES_ASTATTRINTERFACES_TD
+#define AIIR_CIR_INTERFACES_ASTATTRINTERFACES_TD
 
-include "mlir/IR/OpBase.td"
+include "aiir/IR/OpBase.td"
 
 let cppNamespace = "::cir" in {
   def ASTVarDeclInterface : AttrInterface<"ASTVarDeclInterface"> {
@@ -36,4 +36,4 @@ let cppNamespace = "::cir" in {
   }
 } // namespace cir
 
-#endif // MLIR_CIR_INTERFACES_ASTATTRINTERFACES_TD
+#endif // AIIR_CIR_INTERFACES_ASTATTRINTERFACES_TD

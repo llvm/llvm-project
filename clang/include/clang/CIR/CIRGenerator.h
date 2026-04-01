@@ -30,9 +30,9 @@ class CIRGenModule;
 } // namespace CIRGen
 } // namespace clang
 
-namespace mlir {
-class MLIRContext;
-} // namespace mlir
+namespace aiir {
+class AIIRContext;
+} // namespace aiir
 namespace cir {
 class CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
@@ -63,7 +63,7 @@ class CIRGenerator : public clang::ASTConsumer {
   };
 
 protected:
-  std::unique_ptr<mlir::MLIRContext> mlirContext;
+  std::unique_ptr<aiir::AIIRContext> aiirContext;
   std::unique_ptr<clang::CIRGen::CIRGenModule> cgm;
 
 private:
@@ -87,9 +87,9 @@ public:
   void CompleteTentativeDefinition(clang::VarDecl *d) override;
   void HandleVTable(clang::CXXRecordDecl *rd) override;
 
-  mlir::ModuleOp getModule() const;
-  mlir::MLIRContext &getMLIRContext() { return *mlirContext; };
-  const mlir::MLIRContext &getMLIRContext() const { return *mlirContext; };
+  aiir::ModuleOp getModule() const;
+  aiir::AIIRContext &getAIIRContext() { return *aiirContext; };
+  const aiir::AIIRContext &getAIIRContext() const { return *aiirContext; };
 
   bool verifyModule() const;
 

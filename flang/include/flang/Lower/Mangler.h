@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,7 +15,7 @@
 
 #include "flang/Evaluate/expression.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "aiir/IR/BuiltinTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
@@ -68,7 +68,7 @@ mangleArrayLiteral(size_t size,
 
 template <Fortran::common::TypeCategory TC, int KIND>
 std::string mangleArrayLiteral(
-    mlir::Type,
+    aiir::Type,
     const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>> &x) {
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
                             x.shape(), TC, KIND);
@@ -76,7 +76,7 @@ std::string mangleArrayLiteral(
 
 template <int KIND>
 std::string
-mangleArrayLiteral(mlir::Type,
+mangleArrayLiteral(aiir::Type,
                    const Fortran::evaluate::Constant<Fortran::evaluate::Type<
                        Fortran::common::TypeCategory::Character, KIND>> &x) {
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
@@ -85,12 +85,12 @@ mangleArrayLiteral(mlir::Type,
 }
 
 inline std::string mangleArrayLiteral(
-    mlir::Type eleTy,
+    aiir::Type eleTy,
     const Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived> &x) {
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
                             x.shape(), Fortran::common::TypeCategory::Derived,
                             /*kind=*/0, /*charLen=*/-1,
-                            mlir::cast<fir::RecordType>(eleTy).getName());
+                            aiir::cast<fir::RecordType>(eleTy).getName());
 }
 
 /// Return the compiler-generated name of a static namelist variable descriptor.

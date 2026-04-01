@@ -27,7 +27,7 @@ the letters **P**, **Y**, **N** for the implementation status:
 - **Y** : Yes. When the implementation is complete
 - **N** : No. When the implementation is absent
 
-Note : No distinction is made between the support in Parser/Semantics, MLIR, Lowering or the OpenMPIRBuilder.
+Note : No distinction is made between the support in Parser/Semantics, AIIR, Lowering or the OpenMPIRBuilder.
 
 ## OpenMP 4.0
 

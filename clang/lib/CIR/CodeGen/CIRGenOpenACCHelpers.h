@@ -10,13 +10,13 @@
 // CIRGenModule, but can't live in a single .cpp file.
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 #include "clang/AST/DeclOpenACC.h"
 
 namespace clang::CIRGen {
-inline mlir::acc::DataClauseModifier
+inline aiir::acc::DataClauseModifier
 convertOpenACCModifiers(OpenACCModifierKind modifiers) {
-  using namespace mlir::acc;
+  using namespace aiir::acc;
   static_assert(static_cast<int>(OpenACCModifierKind::Zero) ==
                     static_cast<int>(DataClauseModifier::zero) &&
                 static_cast<int>(OpenACCModifierKind::Readonly) ==
@@ -28,29 +28,29 @@ convertOpenACCModifiers(OpenACCModifierKind modifiers) {
                 static_cast<int>(OpenACCModifierKind::Capture) ==
                     static_cast<int>(DataClauseModifier::capture));
 
-  DataClauseModifier mlirModifiers{};
+  DataClauseModifier aiirModifiers{};
 
-  // The MLIR representation of this represents `always` as `alwaysin` +
+  // The AIIR representation of this represents `always` as `alwaysin` +
   // `alwaysout`.  So do a small fixup here.
   if (isOpenACCModifierBitSet(modifiers, OpenACCModifierKind::Always)) {
-    mlirModifiers = mlirModifiers | DataClauseModifier::always;
+    aiirModifiers = aiirModifiers | DataClauseModifier::always;
     modifiers &= ~OpenACCModifierKind::Always;
   }
 
-  mlirModifiers = mlirModifiers | static_cast<DataClauseModifier>(modifiers);
-  return mlirModifiers;
+  aiirModifiers = aiirModifiers | static_cast<DataClauseModifier>(modifiers);
+  return aiirModifiers;
 }
 
-inline mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
+inline aiir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
   // '*' case leaves no identifier-info, just a nullptr.
   if (!ii)
-    return mlir::acc::DeviceType::Star;
-  return llvm::StringSwitch<mlir::acc::DeviceType>(ii->getName())
-      .CaseLower("default", mlir::acc::DeviceType::Default)
-      .CaseLower("host", mlir::acc::DeviceType::Host)
-      .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
+    return aiir::acc::DeviceType::Star;
+  return llvm::StringSwitch<aiir::acc::DeviceType>(ii->getName())
+      .CaseLower("default", aiir::acc::DeviceType::Default)
+      .CaseLower("host", aiir::acc::DeviceType::Host)
+      .CaseLower("multicore", aiir::acc::DeviceType::Multicore)
       .CasesLower({"nvidia", "acc_device_nvidia"},
-                  mlir::acc::DeviceType::Nvidia)
-      .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
+                  aiir::acc::DeviceType::Nvidia)
+      .CaseLower("radeon", aiir::acc::DeviceType::Radeon);
 }
 } // namespace clang::CIRGen

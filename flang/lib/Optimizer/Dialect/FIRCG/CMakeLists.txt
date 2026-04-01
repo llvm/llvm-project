@@ -11,6 +11,6 @@ add_flang_library(FIRCodeGenDialect
   AsmParser
   AsmPrinter
 
-  MLIR_LIBS
-  MLIRIR
+  AIIR_LIBS
+  AIIRIR
   )

@@ -14,27 +14,27 @@
 #ifndef FORTRAN_FIR_REWRITE_PATTERNS
 #define FORTRAN_FIR_REWRITE_PATTERNS
 
-include "mlir/IR/OpBase.td"
-include "mlir/IR/PatternBase.td"
-include "mlir/Dialect/Arith/IR/ArithOps.td"
+include "aiir/IR/OpBase.td"
+include "aiir/IR/PatternBase.td"
+include "aiir/Dialect/Arith/IR/ArithOps.td"
 include "flang/Optimizer/Dialect/FIROps.td"
 
 def IdenticalTypePred : Constraint<CPred<"$0.getType() == $1.getType()">>;
 def IntegerTypePred : Constraint<CPred<"fir::isa_integer($0.getType())">>;
 def IndexTypePred : Constraint<CPred<
-                       "mlir::isa<mlir::IndexType>($0.getType())">>;
+                       "aiir::isa<aiir::IndexType>($0.getType())">>;
 
 // Widths are monotonic.
 //   $0.bits >= $1.bits >= $2.bits or $0.bits <= $1.bits <= $2.bits
 def MonotonicTypePred
-    : Constraint<CPred<"((mlir::isa<mlir::IntegerType>($0.getType()) && "
-                       "  mlir::isa<mlir::IntegerType>($1.getType()) && "
-                       "  mlir::isa<mlir::IntegerType>($2.getType()) && "
+    : Constraint<CPred<"((aiir::isa<aiir::IntegerType>($0.getType()) && "
+                       "  aiir::isa<aiir::IntegerType>($1.getType()) && "
+                       "  aiir::isa<aiir::IntegerType>($2.getType()) && "
                        "  $0.getType().isUnsignedInteger() == $1.getType().isUnsignedInteger() && "
                        "  $1.getType().isUnsignedInteger() == $2.getType().isUnsignedInteger()) || "
-                       " (mlir::isa<mlir::FloatType>($0.getType()) && "
-                       "  mlir::isa<mlir::FloatType>($1.getType()) && "
-                       "  mlir::isa<mlir::FloatType>($2.getType()))) && "
+                       " (aiir::isa<aiir::FloatType>($0.getType()) && "
+                       "  aiir::isa<aiir::FloatType>($1.getType()) && "
+                       "  aiir::isa<aiir::FloatType>($2.getType()))) && "
                        "(($0.getType().getIntOrFloatBitWidth() <= "
                        "  $1.getType().getIntOrFloatBitWidth() && "
                        "  $1.getType().getIntOrFloatBitWidth() <= "
@@ -45,8 +45,8 @@ def MonotonicTypePred
                        "  $2.getType().getIntOrFloatBitWidth()))">>;
 
 def IntPred : Constraint<CPred<
-                       "mlir::isa<mlir::IntegerType>($0.getType()) && "
-                       "mlir::isa<mlir::IntegerType>($1.getType())">>;
+                       "aiir::isa<aiir::IntegerType>($0.getType()) && "
+                       "aiir::isa<aiir::IntegerType>($1.getType())">>;
                        
 // If both are int type and the first is smaller than the second.
 //   $0.bits <= $1.bits
@@ -105,10 +105,10 @@ def CombineConvertTruncOptPattern
            (IntPred $arg, $irm), (SmallerWidthPred $arg, $irm)]>;
 
 def createConstantOp
-    : NativeCodeCall<"mlir::arith::ConstantOp::create"
+    : NativeCodeCall<"aiir::arith::ConstantOp::create"
                      "($_builder, $_loc, $_builder.getIndexType(), "
                      "rewriter.getIndexAttr("
-                     "mlir::dyn_cast<mlir::IntegerAttr>($1).getInt()))">;
+                     "aiir::dyn_cast<aiir::IntegerAttr>($1).getInt()))">;
 
 def ForwardConstantConvertPattern
     : Pat<(fir_ConvertOp:$res (Arith_ConstantOp:$cnt $attr)),

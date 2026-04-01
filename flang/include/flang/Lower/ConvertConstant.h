@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -38,7 +38,7 @@ public:
   /// fir.global initialization body cannot contain code manipulating memory
   /// (e.g.  fir.load/fir.store...).
   static fir::ExtendedValue gen(Fortran::lower::AbstractConverter &converter,
-                                mlir::Location loc,
+                                aiir::Location loc,
                                 const evaluate::Constant<T> &constant,
                                 bool outlineBigConstantsInReadOnlyMemory);
 };
@@ -47,7 +47,7 @@ FOR_EACH_SPECIFIC_TYPE(extern template class ConstantBuilder, )
 
 template <typename T>
 fir::ExtendedValue convertConstant(Fortran::lower::AbstractConverter &converter,
-                                   mlir::Location loc,
+                                   aiir::Location loc,
                                    const evaluate::Constant<T> &constant,
                                    bool outlineBigConstantsInReadOnlyMemory) {
   return ConstantBuilder<T>::gen(converter, loc, constant,
@@ -56,14 +56,14 @@ fir::ExtendedValue convertConstant(Fortran::lower::AbstractConverter &converter,
 
 /// Create a fir.global array with a dense attribute containing the value of
 /// \p initExpr.
-/// Using a dense attribute allows faster MLIR compilation times compared to
+/// Using a dense attribute allows faster AIIR compilation times compared to
 /// creating an initialization body for the initial value. However, a dense
 /// attribute can only be created if initExpr is a non-empty rank 1 numerical or
 /// logical Constant<T>. Otherwise, the value returned will be null.
 fir::GlobalOp tryCreatingDenseGlobal(fir::FirOpBuilder &builder,
-                                     mlir::Location loc, mlir::Type symTy,
+                                     aiir::Location loc, aiir::Type symTy,
                                      llvm::StringRef globalName,
-                                     mlir::StringAttr linkage, bool isConst,
+                                     aiir::StringAttr linkage, bool isConst,
                                      const Fortran::lower::SomeExpr &initExpr,
                                      cuf::DataAttributeAttr dataAttr = {});
 
@@ -74,7 +74,7 @@ fir::GlobalOp tryCreatingDenseGlobal(fir::FirOpBuilder &builder,
 /// memory).
 fir::ExtendedValue
 genInlinedStructureCtorLit(Fortran::lower::AbstractConverter &converter,
-                           mlir::Location loc,
+                           aiir::Location loc,
                            const Fortran::evaluate::StructureConstructor &ctor);
 
 } // namespace Fortran::lower

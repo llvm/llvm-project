@@ -9,9 +9,9 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_MIFOPCONVERSION_H_
 #define FORTRAN_OPTIMIZER_TRANSFORMS_MIFOPCONVERSION_H_
 
-#include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
+#include "aiir/Conversion/LLVMCommon/Pattern.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassRegistry.h"
 
 namespace fir {
 class LLVMTypeConverter;
@@ -20,7 +20,7 @@ class LLVMTypeConverter;
 namespace mif {
 
 /// Patterns that convert MIF operations to runtime calls.
-void populateMIFOpConversionPatterns(mlir::RewritePatternSet &patterns);
+void populateMIFOpConversionPatterns(aiir::RewritePatternSet &patterns);
 
 } // namespace mif
 

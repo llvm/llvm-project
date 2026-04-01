@@ -1,5 +1,5 @@
-// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
-// RUN: FileCheck --input-file=%t.mlir %s
+// RUN: cir-opt %s -cir-to-llvm -o %t.aiir
+// RUN: FileCheck --input-file=%t.aiir %s
 
 // Test that various linkage types are correctly lowered from CIR to LLVM dialect.
 
@@ -13,8 +13,8 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global appending @eeee = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>
 }
 
-// CHECK: llvm.mlir.global external @aaaa
-// CHECK: llvm.mlir.global internal @bbbb
-// CHECK: llvm.mlir.global linkonce_odr @cccc
-// CHECK: llvm.mlir.global weak_odr @dddd
-// CHECK: llvm.mlir.global appending @eeee
+// CHECK: llvm.aiir.global external @aaaa
+// CHECK: llvm.aiir.global internal @bbbb
+// CHECK: llvm.aiir.global linkonce_odr @cccc
+// CHECK: llvm.aiir.global weak_odr @dddd
+// CHECK: llvm.aiir.global appending @eeee

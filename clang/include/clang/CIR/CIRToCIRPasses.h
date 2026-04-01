@@ -13,7 +13,7 @@
 #ifndef CLANG_CIR_CIRTOCIRPASSES_H
 #define CLANG_CIR_CIRTOCIRPASSES_H
 
-#include "mlir/Pass/Pass.h"
+#include "aiir/Pass/Pass.h"
 
 #include <memory>
 
@@ -21,16 +21,16 @@ namespace clang {
 class ASTContext;
 }
 
-namespace mlir {
-class MLIRContext;
+namespace aiir {
+class AIIRContext;
 class ModuleOp;
-} // namespace mlir
+} // namespace aiir
 
 namespace cir {
 
 // Run set of cleanup/prepare/etc passes CIR <-> CIR.
-mlir::LogicalResult
-runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirCtx,
+aiir::LogicalResult
+runCIRToCIRPasses(aiir::ModuleOp theModule, aiir::AIIRContext &aiirCtx,
                   clang::ASTContext &astCtx, bool enableVerifier,
                   bool enableIdiomRecognizer, bool enableCIRSimplify);
 

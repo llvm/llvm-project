@@ -9,13 +9,13 @@
 #ifndef FORTRAN_OPTIMIZER_ANALYSIS_ARRAYSECTIONANALYZER_H
 #define FORTRAN_OPTIMIZER_ANALYSIS_ARRAYSECTIONANALYZER_H
 
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/IR/Value.h"
 
-namespace mlir {
+namespace aiir {
 class Operation;
 class Value;
-} // namespace mlir
+} // namespace aiir
 
 namespace hlfir {
 class ElementalOpInterface;
@@ -44,7 +44,7 @@ public:
   // on the array slices to see if they are identical or disjoint.
   // Note that the alias analysis are not able to give such an answer
   // about the references.
-  static SlicesOverlapKind analyze(mlir::Value ref1, mlir::Value ref2);
+  static SlicesOverlapKind analyze(aiir::Value ref1, aiir::Value ref2);
 
   static bool isDesignatingArrayInOrder(hlfir::DesignateOp designate,
                                         hlfir::ElementalOpInterface elemental);
@@ -54,9 +54,9 @@ private:
     // An array section is described by <lb, ub, stride> tuple.
     // If the designator's subscript is not a triple, then
     // the section descriptor is constructed as <lb, nullptr, nullptr>.
-    mlir::Value lb, ub, stride;
+    aiir::Value lb, ub, stride;
 
-    SectionDesc(mlir::Value lb, mlir::Value ub, mlir::Value stride);
+    SectionDesc(aiir::Value lb, aiir::Value ub, aiir::Value stride);
 
     // Normalize the section descriptor:
     //   1. If UB is nullptr, then it is set to LB.
@@ -74,7 +74,7 @@ private:
   // the subscript is a triplet, and the result is <lb, ub, stride>.
   // Otherwise, the subscript is a scalar index, and the result
   // is <index, nullptr, nullptr>.
-  static SectionDesc readSectionDesc(mlir::Operation::operand_iterator &it,
+  static SectionDesc readSectionDesc(aiir::Operation::operand_iterator &it,
                                      bool isTriplet);
 
   // Return the ordered lower and upper bounds of the section.
@@ -84,7 +84,7 @@ private:
   // bounds are <ub, lb> of the descriptor.
   // If stride is unknown, we cannot deduce any order,
   // so the result is <nullptr, nullptr>
-  static std::pair<mlir::Value, mlir::Value>
+  static std::pair<aiir::Value, aiir::Value>
   getOrderedBounds(const SectionDesc &desc);
 
   // Given two array sections <lb1, ub1, stride1> and
@@ -112,7 +112,7 @@ private:
                                    const SectionDesc &desc2);
 
   // Return true, if v1 is known to be less than v2.
-  static bool isLess(mlir::Value v1, mlir::Value v2);
+  static bool isLess(aiir::Value v1, aiir::Value v2);
 };
 } // namespace fir
 

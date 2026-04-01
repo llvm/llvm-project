@@ -13,7 +13,7 @@
 #ifndef CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_H
 #define CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_H
 
-#include "mlir/IR/Types.h"
+#include "aiir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
 
 /// Include the tablegen'd interface declarations.

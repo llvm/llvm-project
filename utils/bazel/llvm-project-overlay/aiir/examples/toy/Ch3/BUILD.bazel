@@ -1,0 +1,70 @@
+# Description:
+#   AIIR Tutorial
+
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//aiir:tblgen.bzl", "gentbl_cc_library", "td_library")
+
+licenses(["notice"])
+
+package(default_visibility = ["//visibility:public"])
+
+td_library(
+    name = "ToyOpsTdFiles",
+    srcs = [
+        "include/toy/Ops.td",
+    ],
+    includes = ["include"],
+    deps = [
+        "//aiir:FunctionInterfacesTdFiles",
+        "//aiir:OpBaseTdFiles",
+        "//aiir:SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ToyOpsIncGen",
+    tbl_outs = {
+        "include/toy/Ops.h.inc": ["-gen-op-decls"],
+        "include/toy/Ops.cpp.inc": ["-gen-op-defs"],
+        "include/toy/Dialect.h.inc": ["-gen-dialect-decls"],
+        "include/toy/Dialect.cpp.inc": ["-gen-dialect-defs"],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "include/toy/Ops.td",
+    deps = [":ToyOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ToyCombineIncGen",
+    strip_include_prefix = "aiir",
+    tbl_outs = {"aiir/ToyCombine.inc": ["-gen-rewriters"]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "aiir/ToyCombine.td",
+    deps = [":ToyOpsTdFiles"],
+)
+
+cc_binary(
+    name = "toyc-ch3",
+    srcs = [
+        "aiir/Dialect.cpp",
+        "aiir/AIIRGen.cpp",
+        "aiir/ToyCombine.cpp",
+        "parser/AST.cpp",
+        "toyc.cpp",
+    ] + glob(["include/toy/*.h"]),
+    includes = ["include/"],
+    deps = [
+        ":ToyCombineIncGen",
+        ":ToyOpsIncGen",
+        "//llvm:Support",
+        "//aiir:Analysis",
+        "//aiir:BytecodeReader",
+        "//aiir:FunctionInterfaces",
+        "//aiir:IR",
+        "//aiir:Parser",
+        "//aiir:Pass",
+        "//aiir:SideEffectInterfaces",
+        "//aiir:Support",
+        "//aiir:Transforms",
+    ],
+)

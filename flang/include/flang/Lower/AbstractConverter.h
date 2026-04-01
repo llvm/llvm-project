@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,13 +23,13 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Operation.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/Operation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 
-namespace mlir {
+namespace aiir {
 class SymbolTable;
 class StateStack;
 }
@@ -72,10 +72,10 @@ struct FunctionLikeUnit;
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
 using TypeConstructionStack =
-    llvm::DenseMap<const Fortran::semantics::Scope *, mlir::Type>;
+    llvm::DenseMap<const Fortran::semantics::Scope *, aiir::Type>;
 class StatementContext;
 
-using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
+using ExprToValueMap = llvm::DenseMap<const SomeExpr *, aiir::Value>;
 
 //===----------------------------------------------------------------------===//
 // AbstractConverter interface
@@ -83,15 +83,15 @@ using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
 
 /// The abstract interface for converter implementations to lower Fortran
 /// front-end fragments such as expressions, types, etc. to the FIR dialect of
-/// MLIR.
+/// AIIR.
 class AbstractConverter {
 public:
   //===--------------------------------------------------------------------===//
   // Symbols
   //===--------------------------------------------------------------------===//
 
-  /// Get the mlir instance of a symbol.
-  virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
+  /// Get the aiir instance of a symbol.
+  virtual aiir::Value getSymbolAddress(SymbolRef sym) = 0;
 
   virtual fir::ExtendedValue
   symBoxToExtendedValue(const Fortran::lower::SymbolBox &symBox) = 0;
@@ -101,7 +101,7 @@ public:
                          Fortran::lower::SymMap *symMap = nullptr) = 0;
 
   /// Get the binding of an implied do variable by name.
-  virtual mlir::Value impliedDoBinding(llvm::StringRef name) = 0;
+  virtual aiir::Value impliedDoBinding(llvm::StringRef name) = 0;
 
   /// Copy the binding of src to target symbol.
   virtual void copySymbolBinding(SymbolRef src, SymbolRef target) = 0;
@@ -126,11 +126,11 @@ public:
   getSymbolStorage(SymbolRef sym) = 0;
 
   /// Return the Symbol Map used to map semantics::Symbol to their SSA
-  /// values in the generated MLIR.
+  /// values in the generated AIIR.
   virtual Fortran::lower::SymMap &getSymbolMap() = 0;
 
   /// Override lowering of expression with pre-lowered values.
-  /// Associate mlir::Value to evaluate::Expr. All subsequent call to
+  /// Associate aiir::Value to evaluate::Expr. All subsequent call to
   /// genExprXXX() will replace any occurrence of an overridden
   /// expression in the expression tree by the pre-lowered values.
   virtual void overrideExprValues(const ExprToValueMap *) = 0;
@@ -164,10 +164,10 @@ public:
   /// host symbol.
   virtual void
   copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
-                       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr,
+                       aiir::OpBuilder::InsertPoint *copyAssignIP = nullptr,
                        bool hostIsSource = true) = 0;
 
-  virtual void copyVar(mlir::Location loc, mlir::Value dst, mlir::Value src,
+  virtual void copyVar(aiir::Location loc, aiir::Value dst, aiir::Value src,
                        fir::FortranVariableFlagsEnum attrs) = 0;
 
   /// For a given symbol, check if it is present in the inner-most
@@ -195,9 +195,9 @@ public:
   /// of the constant elements. For array constants it specifies
   /// the array's element type.
   virtual llvm::StringRef
-  getUniqueLitName(mlir::Location loc,
+  getUniqueLitName(aiir::Location loc,
                    std::unique_ptr<Fortran::lower::SomeExpr> expression,
-                   mlir::Type eleTy) = 0;
+                   aiir::Type eleTy) = 0;
 
   //===--------------------------------------------------------------------===//
   // Expressions
@@ -209,14 +209,14 @@ public:
   /// expression value. The clean-up for this temporary is added to \p context.
   virtual fir::ExtendedValue genExprAddr(const SomeExpr &expr,
                                          StatementContext &context,
-                                         mlir::Location *locPtr = nullptr) = 0;
+                                         aiir::Location *locPtr = nullptr) = 0;
 
   /// Generate the address of the location holding the expression, \p expr.
-  fir::ExtendedValue genExprAddr(mlir::Location loc, const SomeExpr *expr,
+  fir::ExtendedValue genExprAddr(aiir::Location loc, const SomeExpr *expr,
                                  StatementContext &stmtCtx) {
     return genExprAddr(*expr, stmtCtx, &loc);
   }
-  fir::ExtendedValue genExprAddr(mlir::Location loc, const SomeExpr &expr,
+  fir::ExtendedValue genExprAddr(aiir::Location loc, const SomeExpr &expr,
                                  StatementContext &stmtCtx) {
     return genExprAddr(expr, stmtCtx, &loc);
   }
@@ -224,14 +224,14 @@ public:
   /// Generate the computations of the expression to produce a value.
   virtual fir::ExtendedValue genExprValue(const SomeExpr &expr,
                                           StatementContext &context,
-                                          mlir::Location *locPtr = nullptr) = 0;
+                                          aiir::Location *locPtr = nullptr) = 0;
 
   /// Generate the computations of the expression, \p expr, to produce a value.
-  fir::ExtendedValue genExprValue(mlir::Location loc, const SomeExpr *expr,
+  fir::ExtendedValue genExprValue(aiir::Location loc, const SomeExpr *expr,
                                   StatementContext &stmtCtx) {
     return genExprValue(*expr, stmtCtx, &loc);
   }
-  fir::ExtendedValue genExprValue(mlir::Location loc, const SomeExpr &expr,
+  fir::ExtendedValue genExprValue(aiir::Location loc, const SomeExpr &expr,
                                   StatementContext &stmtCtx) {
     return genExprValue(expr, stmtCtx, &loc);
   }
@@ -239,14 +239,14 @@ public:
   /// Generate or get a fir.box describing the expression. If SomeExpr is
   /// a Designator, the fir.box describes an entity over the Designator base
   /// storage without making a temporary.
-  virtual fir::ExtendedValue genExprBox(mlir::Location loc,
+  virtual fir::ExtendedValue genExprBox(aiir::Location loc,
                                         const SomeExpr &expr,
                                         StatementContext &stmtCtx) = 0;
 
   /// Generate the address of the box describing the variable designated
   /// by the expression. The expression must be an allocatable or pointer
   /// designator.
-  virtual fir::MutableBoxValue genExprMutableBox(mlir::Location loc,
+  virtual fir::MutableBoxValue genExprMutableBox(aiir::Location loc,
                                                  const SomeExpr &expr) = 0;
 
   /// Get FoldingContext that is required for some expression
@@ -255,16 +255,16 @@ public:
 
   /// Host associated variables are grouped as a tuple. This returns that value,
   /// which is itself a reference. Use bindTuple() to set this value.
-  virtual mlir::Value hostAssocTupleValue() = 0;
+  virtual aiir::Value hostAssocTupleValue() = 0;
 
   /// Record a binding for the ssa-value of the host assoications tuple for this
   /// function.
-  virtual void bindHostAssocTuple(mlir::Value val) = 0;
+  virtual void bindHostAssocTuple(aiir::Value val) = 0;
 
   /// Returns fir.dummy_scope operation's result value to be used
   /// as dummy_scope operand of hlfir.declare operations for the dummy
   /// arguments of this function.
-  virtual mlir::Value dummyArgsScopeValue() const = 0;
+  virtual aiir::Value dummyArgsScopeValue() const = 0;
 
   /// Returns true if the given symbol is a dummy argument of this function.
   /// Note that it returns false for all the symbols after all the variables
@@ -291,24 +291,24 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Generate the type of an Expr
-  virtual mlir::Type genType(const SomeExpr &) = 0;
+  virtual aiir::Type genType(const SomeExpr &) = 0;
   /// Generate the type of a Symbol
-  virtual mlir::Type genType(SymbolRef) = 0;
+  virtual aiir::Type genType(SymbolRef) = 0;
   /// Generate the type from a category
-  virtual mlir::Type genType(Fortran::common::TypeCategory tc) = 0;
+  virtual aiir::Type genType(Fortran::common::TypeCategory tc) = 0;
   /// Generate the type from a category and kind and length parameters.
-  virtual mlir::Type
+  virtual aiir::Type
   genType(Fortran::common::TypeCategory tc, int kind,
           llvm::ArrayRef<std::int64_t> lenParameters = {}) = 0;
   /// Generate the type from a DerivedTypeSpec.
-  virtual mlir::Type genType(const Fortran::semantics::DerivedTypeSpec &) = 0;
+  virtual aiir::Type genType(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Generate the type from a Variable
-  virtual mlir::Type genType(const pft::Variable &) = 0;
+  virtual aiir::Type genType(const pft::Variable &) = 0;
 
   /// Register a runtime derived type information object symbol to ensure its
   /// object will be generated as a global.
   virtual void
-  registerTypeInfo(mlir::Location loc, SymbolRef typeInfoSym,
+  registerTypeInfo(aiir::Location loc, SymbolRef typeInfoSym,
                    const Fortran::semantics::DerivedTypeSpec &typeSpec,
                    fir::RecordType type) = 0;
 
@@ -321,25 +321,25 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Get the converter's current location
-  virtual mlir::Location getCurrentLocation() = 0;
+  virtual aiir::Location getCurrentLocation() = 0;
   /// Generate a dummy location
-  virtual mlir::Location genUnknownLocation() = 0;
+  virtual aiir::Location genUnknownLocation() = 0;
   /// Generate the location as converted from a CharBlock
-  virtual mlir::Location genLocation(const Fortran::parser::CharBlock &) = 0;
+  virtual aiir::Location genLocation(const Fortran::parser::CharBlock &) = 0;
 
   /// Get the converter's current scope
   virtual const Fortran::semantics::Scope &getCurrentScope() = 0;
 
   //===--------------------------------------------------------------------===//
-  // FIR/MLIR
+  // FIR/AIIR
   //===--------------------------------------------------------------------===//
 
   /// Get the OpBuilder
   virtual fir::FirOpBuilder &getFirOpBuilder() = 0;
   /// Get the ModuleOp
-  virtual mlir::ModuleOp getModuleOp() = 0;
-  /// Get the MLIRContext
-  virtual mlir::MLIRContext &getMLIRContext() = 0;
+  virtual aiir::ModuleOp getModuleOp() = 0;
+  /// Get the AIIRContext
+  virtual aiir::AIIRContext &getAIIRContext() = 0;
   /// Unique a symbol (add a containing scope specific prefix)
   virtual std::string mangleName(const Fortran::semantics::Symbol &) = 0;
   /// Unique a derived type (add a containing scope specific prefix)
@@ -360,8 +360,8 @@ public:
   virtual Fortran::lower::StatementContext &getFctCtx() = 0;
 
   /// Generate STAT and ERRMSG from a list of StatOrErrmsg
-  virtual std::pair<mlir::Value, mlir::Value>
-  genStatAndErrmsg(mlir::Location loc,
+  virtual std::pair<aiir::Value, aiir::Value>
+  genStatAndErrmsg(aiir::Location loc,
                    const std::list<Fortran::parser::StatOrErrmsg> &) = 0;
 
   AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
@@ -390,16 +390,16 @@ public:
   virtual Fortran::lower::SymbolBox
   shallowLookupSymbol(const Fortran::semantics::Symbol &sym) = 0;
 
-  /// Return the mlir::SymbolTable associated to the ModuleOp.
+  /// Return the aiir::SymbolTable associated to the ModuleOp.
   /// Look-ups are faster using it than using module.lookup<>,
   /// but the module op should be queried in case of failure
   /// because this symbol table is not guaranteed to contain
   /// all the symbols from the ModuleOp (the symbol table should
   /// always be provided to the builder helper creating globals and
   /// functions in order to be in sync).
-  virtual mlir::SymbolTable *getMLIRSymbolTable() = 0;
+  virtual aiir::SymbolTable *getAIIRSymbolTable() = 0;
 
-  virtual mlir::StateStack &getStateStack() = 0;
+  virtual aiir::StateStack &getStateStack() = 0;
 
 private:
   /// Options controlling lowering behavior.

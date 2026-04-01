@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,31 +19,31 @@
 using namespace Fortran::runtime::cuda;
 
 void fir::runtime::cuda::genSyncGlobalDescriptor(fir::FirOpBuilder &builder,
-                                                 mlir::Location loc,
-                                                 mlir::Value hostPtr) {
-  mlir::func::FuncOp callee =
+                                                 aiir::Location loc,
+                                                 aiir::Value hostPtr) {
+  aiir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(CUFSyncGlobalDescriptor)>(loc,
                                                                      builder);
   auto fTy = callee.getFunctionType();
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, hostPtr, sourceFile, sourceLine)};
   fir::CallOp::create(builder, loc, callee, args);
 }
 
 void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
-                                                   mlir::Location loc,
-                                                   mlir::Value desc) {
-  mlir::func::FuncOp func =
+                                                   aiir::Location loc,
+                                                   aiir::Value desc) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(CUFDescriptorCheckSection)>(loc,
                                                                        builder);
   auto fTy = func.getFunctionType();
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, desc, sourceFile, sourceLine)};
   fir::CallOp::create(builder, loc, func, args);
 }

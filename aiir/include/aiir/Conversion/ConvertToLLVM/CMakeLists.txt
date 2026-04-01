@@ -1,0 +1,7 @@
+set(LLVM_TARGET_DEFINITIONS ToLLVMInterface.td)
+aiir_tablegen(ToLLVMAttrInterface.h.inc -gen-attr-interface-decls)
+aiir_tablegen(ToLLVMAttrInterface.cpp.inc -gen-attr-interface-defs)
+aiir_tablegen(ToLLVMOpInterface.h.inc -gen-op-interface-decls)
+aiir_tablegen(ToLLVMOpInterface.cpp.inc -gen-op-interface-defs)
+aiir_tablegen(ToLLVMDialectInterface.h.inc -gen-dialect-interface-decls)
+add_aiir_generic_tablegen_target(AIIRConvertToLLVMInterfaceIncGen)

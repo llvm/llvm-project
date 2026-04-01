@@ -12,10 +12,10 @@
 
 TEST_F(RuntimeCallTest, genDerivedTypeAssign) {
   auto loc = firBuilder->getUnknownLoc();
-  mlir::Type seqTy =
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
-  mlir::Value source = fir::UndefOp::create(*firBuilder, loc, seqTy);
-  mlir::Value dest = fir::UndefOp::create(*firBuilder, loc, seqTy);
+  aiir::Value source = fir::UndefOp::create(*firBuilder, loc, seqTy);
+  aiir::Value dest = fir::UndefOp::create(*firBuilder, loc, seqTy);
   fir::runtime::genAssign(*firBuilder, loc, dest, source);
   checkCallOpFromResultBox(dest, "_FortranAAssign", 2);
 }

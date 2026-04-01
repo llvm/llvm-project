@@ -11,16 +11,16 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/IR/Matchers.h"
+#include "aiir/Pass/Pass.h"
 
 namespace fir {
 #define GEN_PASS_DEF_STACKRECLAIM
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
@@ -37,11 +37,11 @@ void StackReclaimPass::runOnOperation() {
   fir::FirOpBuilder builder(op, fir::getKindMapping(op));
 
   op->walk([&](fir::DoLoopOp loopOp) {
-    mlir::Location loc = loopOp.getLoc();
+    aiir::Location loc = loopOp.getLoc();
 
     if (!loopOp.getRegion().getOps<fir::AllocaOp>().empty()) {
       builder.setInsertionPointToStart(&loopOp.getRegion().front());
-      mlir::Value sp = builder.genStackSave(loc);
+      aiir::Value sp = builder.genStackSave(loc);
 
       auto *terminator = loopOp.getRegion().back().getTerminator();
       builder.setInsertionPoint(terminator);

@@ -39,8 +39,8 @@ have to adjust their build scripts every time a compiler flag is changed.
 
 The **frontend driver** glues together and drives all of the Flang's frontend
 libraries. As such, it provides an easy-to-use and intuitive interface to the
-frontend. It uses MLIR and LLVM for code-generation and can be viewed as a
-driver for Flang, LLVM and MLIR libraries. Contrary to the compiler driver, it
+frontend. It uses AIIR and LLVM for code-generation and can be viewed as a
+driver for Flang, LLVM and AIIR libraries. Contrary to the compiler driver, it
 is not capable of calling any external tools (including linkers).  It is aware
 of all the frontend internals that are "hidden" from the compiler driver. It
 accepts many frontend-specific options not available in `flang` and as such

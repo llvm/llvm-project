@@ -16,7 +16,7 @@
 #ifndef CLANG_CIR_ABIARGINFO_H
 #define CLANG_CIR_ABIARGINFO_H
 
-#include "mlir/IR/Types.h"
+#include "aiir/IR/Types.h"
 #include "clang/CIR/MissingFeatures.h"
 
 namespace cir {
@@ -40,7 +40,7 @@ public:
   };
 
 private:
-  mlir::Type typeData;
+  aiir::Type typeData;
   struct DirectAttrInfo {
     unsigned offset;
     unsigned align;
@@ -53,7 +53,7 @@ private:
 public:
   ABIArgInfo(Kind k = Direct) : directAttr{0, 0}, theKind(k) {}
 
-  static ABIArgInfo getDirect(mlir::Type ty = nullptr) {
+  static ABIArgInfo getDirect(aiir::Type ty = nullptr) {
     ABIArgInfo info(Direct);
     info.setCoerceToType(ty);
     assert(!cir::MissingFeatures::abiArgInfo());
@@ -92,12 +92,12 @@ public:
     return directAttr.offset;
   }
 
-  mlir::Type getCoerceToType() const {
+  aiir::Type getCoerceToType() const {
     assert(canHaveCoerceToType() && "invalid kind!");
     return typeData;
   }
 
-  void setCoerceToType(mlir::Type ty) {
+  void setCoerceToType(aiir::Type ty) {
     assert(canHaveCoerceToType() && "invalid kind!");
     typeData = ty;
   }

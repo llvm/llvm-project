@@ -12,17 +12,17 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Support/Fortran.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/SymbolTable.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/Dialect/GPU/IR/GPUDialect.h"
+#include "aiir/IR/Attributes.h"
+#include "aiir/IR/SymbolTable.h"
+#include "aiir/Pass/Pass.h"
 
 namespace fir {
 #define GEN_PASS_DEF_EXTERNALNAMECONVERSION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 
 //===----------------------------------------------------------------------===//
 // Helper functions
@@ -43,16 +43,16 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
 
 /// Process a symbol reference and return the updated symbol reference if
 /// needed.
-std::optional<mlir::SymbolRefAttr>
-processSymbolRef(mlir::SymbolRefAttr symRef, mlir::Operation *nestedOp,
-                 const llvm::DenseMap<mlir::StringAttr, mlir::FlatSymbolRefAttr>
+std::optional<aiir::SymbolRefAttr>
+processSymbolRef(aiir::SymbolRefAttr symRef, aiir::Operation *nestedOp,
+                 const llvm::DenseMap<aiir::StringAttr, aiir::FlatSymbolRefAttr>
                      &remappings) {
   if (auto remap = remappings.find(symRef.getLeafReference());
       remap != remappings.end()) {
-    mlir::SymbolRefAttr symAttr = mlir::FlatSymbolRefAttr(remap->second);
-    if (mlir::isa<mlir::gpu::LaunchFuncOp>(nestedOp))
-      symAttr = mlir::SymbolRefAttr::get(
-          symRef.getRootReference(), {mlir::FlatSymbolRefAttr(remap->second)});
+    aiir::SymbolRefAttr symAttr = aiir::FlatSymbolRefAttr(remap->second);
+    if (aiir::isa<aiir::gpu::LaunchFuncOp>(nestedOp))
+      symAttr = aiir::SymbolRefAttr::get(
+          symRef.getRootReference(), {aiir::FlatSymbolRefAttr(remap->second)});
     return symAttr;
   }
   return std::nullopt;
@@ -66,7 +66,7 @@ public:
   using ExternalNameConversionBase<
       ExternalNameConversionPass>::ExternalNameConversionBase;
 
-  mlir::ModuleOp getModule() { return getOperation(); }
+  aiir::ModuleOp getModule() { return getOperation(); }
   void runOnOperation() override;
 };
 } // namespace
@@ -75,21 +75,21 @@ void ExternalNameConversionPass::runOnOperation() {
   auto op = getOperation();
   auto *context = &getContext();
 
-  llvm::DenseMap<mlir::StringAttr, mlir::FlatSymbolRefAttr> remappings;
-  mlir::SymbolTable symbolTable(op);
+  llvm::DenseMap<aiir::StringAttr, aiir::FlatSymbolRefAttr> remappings;
+  aiir::SymbolTable symbolTable(op);
 
-  auto processFctOrGlobal = [&](mlir::Operation &funcOrGlobal) {
-    auto symName = funcOrGlobal.getAttrOfType<mlir::StringAttr>(
-        mlir::SymbolTable::getSymbolAttrName());
+  auto processFctOrGlobal = [&](aiir::Operation &funcOrGlobal) {
+    auto symName = funcOrGlobal.getAttrOfType<aiir::StringAttr>(
+        aiir::SymbolTable::getSymbolAttrName());
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
       // Check if this is a private function that would conflict with a common
       // block and get its mangled name.
-      if (auto funcOp = llvm::dyn_cast<mlir::func::FuncOp>(funcOrGlobal)) {
+      if (auto funcOp = llvm::dyn_cast<aiir::func::FuncOp>(funcOrGlobal)) {
         if (funcOp.isPrivate()) {
           std::string mangledName =
               mangleExternalName(deconstructedName, appendUnderscoreOpt);
-          auto mod = funcOp->getParentOfType<mlir::ModuleOp>();
+          auto mod = funcOp->getParentOfType<aiir::ModuleOp>();
           bool hasConflictingCommonBlock = false;
 
           // Check if any existing global has the same mangled name.
@@ -105,9 +105,9 @@ void ExternalNameConversionPass::runOnOperation() {
                 funcOp.getSymbolUses(mod);
             if (uses.has_value()) {
               for (auto use : *uses) {
-                mlir::Operation *user = use.getUser();
-                if (mlir::isa<fir::CallOp>(user) ||
-                    mlir::isa<mlir::func::CallOp>(user)) {
+                aiir::Operation *user = use.getUser();
+                if (aiir::isa<fir::CallOp>(user) ||
+                    aiir::isa<aiir::func::CallOp>(user)) {
                   isDirectlyCalled = true;
                   break;
                 }
@@ -120,23 +120,23 @@ void ExternalNameConversionPass::runOnOperation() {
       }
 
       auto newName = mangleExternalName(deconstructedName, appendUnderscoreOpt);
-      auto newAttr = mlir::StringAttr::get(context, newName);
-      mlir::SymbolTable::setSymbolName(&funcOrGlobal, newAttr);
-      auto newSymRef = mlir::FlatSymbolRefAttr::get(newAttr);
+      auto newAttr = aiir::StringAttr::get(context, newName);
+      aiir::SymbolTable::setSymbolName(&funcOrGlobal, newAttr);
+      auto newSymRef = aiir::FlatSymbolRefAttr::get(newAttr);
       remappings.try_emplace(symName, newSymRef);
-      if (llvm::isa<mlir::func::FuncOp>(funcOrGlobal))
+      if (llvm::isa<aiir::func::FuncOp>(funcOrGlobal))
         funcOrGlobal.setAttr(fir::getInternalFuncNameAttrName(), symName);
     }
   };
 
-  auto renameFuncOrGlobalInModule = [&](mlir::Operation *module) {
+  auto renameFuncOrGlobalInModule = [&](aiir::Operation *module) {
     for (auto &op : module->getRegion(0).front()) {
-      if (mlir::isa<mlir::func::FuncOp, fir::GlobalOp>(op)) {
+      if (aiir::isa<aiir::func::FuncOp, fir::GlobalOp>(op)) {
         processFctOrGlobal(op);
-      } else if (auto gpuMod = mlir::dyn_cast<mlir::gpu::GPUModuleOp>(op)) {
+      } else if (auto gpuMod = aiir::dyn_cast<aiir::gpu::GPUModuleOp>(op)) {
         for (auto &gpuOp : gpuMod.getBodyRegion().front())
-          if (mlir::isa<mlir::func::FuncOp, fir::GlobalOp,
-                        mlir::gpu::GPUFuncOp>(gpuOp))
+          if (aiir::isa<aiir::func::FuncOp, fir::GlobalOp,
+                        aiir::gpu::GPUFuncOp>(gpuOp))
             processFctOrGlobal(gpuOp);
       }
     }
@@ -150,27 +150,27 @@ void ExternalNameConversionPass::runOnOperation() {
     return;
 
   // Update all uses of the functions and globals that have been renamed.
-  op.walk([&remappings](mlir::Operation *nestedOp) {
-    llvm::SmallVector<std::pair<mlir::StringAttr, mlir::SymbolRefAttr>>
+  op.walk([&remappings](aiir::Operation *nestedOp) {
+    llvm::SmallVector<std::pair<aiir::StringAttr, aiir::SymbolRefAttr>>
         symRefUpdates;
-    llvm::SmallVector<std::pair<mlir::StringAttr, mlir::ArrayAttr>>
+    llvm::SmallVector<std::pair<aiir::StringAttr, aiir::ArrayAttr>>
         arrayUpdates;
-    for (const mlir::NamedAttribute &attr : nestedOp->getAttrDictionary())
-      if (auto symRef = llvm::dyn_cast<mlir::SymbolRefAttr>(attr.getValue())) {
+    for (const aiir::NamedAttribute &attr : nestedOp->getAttrDictionary())
+      if (auto symRef = llvm::dyn_cast<aiir::SymbolRefAttr>(attr.getValue())) {
         if (auto newSymRef = processSymbolRef(symRef, nestedOp, remappings))
           symRefUpdates.emplace_back(
-              std::pair<mlir::StringAttr, mlir::SymbolRefAttr>{attr.getName(),
+              std::pair<aiir::StringAttr, aiir::SymbolRefAttr>{attr.getName(),
                                                                *newSymRef});
       } else if (auto arrayAttr =
-                     llvm::dyn_cast<mlir::ArrayAttr>(attr.getValue())) {
-        llvm::SmallVector<mlir::Attribute> symbolRefs;
+                     llvm::dyn_cast<aiir::ArrayAttr>(attr.getValue())) {
+        llvm::SmallVector<aiir::Attribute> symbolRefs;
         for (auto element : arrayAttr) {
           if (!element) {
             symbolRefs.push_back(element);
             continue;
           }
-          auto symRef = llvm::dyn_cast<mlir::SymbolRefAttr>(element);
-          std::optional<mlir::SymbolRefAttr> updatedSymRef;
+          auto symRef = llvm::dyn_cast<aiir::SymbolRefAttr>(element);
+          std::optional<aiir::SymbolRefAttr> updatedSymRef;
           if (symRef)
             updatedSymRef = processSymbolRef(symRef, nestedOp, remappings);
           if (!symRef || !updatedSymRef)
@@ -180,7 +180,7 @@ void ExternalNameConversionPass::runOnOperation() {
         }
         arrayUpdates.push_back(std::make_pair(
             attr.getName(),
-            mlir::ArrayAttr::get(nestedOp->getContext(), symbolRefs)));
+            aiir::ArrayAttr::get(nestedOp->getContext(), symbolRefs)));
       }
     for (auto update : symRefUpdates)
       nestedOp->setAttr(update.first, update.second);

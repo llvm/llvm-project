@@ -5433,7 +5433,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_Wa_COMMA,
         options::OPT_Xassembler,
         options::OPT_mllvm,
-        options::OPT_mmlir,
+        options::OPT_maiir,
     };
     for (const auto &A : Args)
       if (llvm::is_contained(kBitcodeOptionIgnorelist, A->getOption().getID()))
@@ -7915,8 +7915,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_falloc_token_max_EQ);
 
 #if CLANG_ENABLE_CIR
-  // Forward -mmlir arguments to to the MLIR option parser.
-  for (const Arg *A : Args.filtered(options::OPT_mmlir)) {
+  // Forward -maiir arguments to to the AIIR option parser.
+  for (const Arg *A : Args.filtered(options::OPT_maiir)) {
     A->claim();
     A->render(Args, CmdArgs);
   }

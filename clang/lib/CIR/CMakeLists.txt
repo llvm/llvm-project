@@ -1,10 +1,10 @@
-include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
-include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
+include_directories(${LLVM_MAIN_SRC_DIR}/../aiir/include)
+include_directories(${CMAKE_BINARY_DIR}/tools/aiir/include)
 
 # GCC, unlike clang, issues a warning when one virtual function is overridden
 # in a derived class but one or more other virtual functions with the same
 # name and different signature from a base class are not overridden. This
-# leads to many warnings in the MLIR and ClangIR code when using the
+# leads to many warnings in the AIIR and ClangIR code when using the
 # OpenConversionPattern<>::matchAndRewrite() function in the ordinary way.
 # The "hiding" behavior is what we want, so we're just disabling the warning
 # here.

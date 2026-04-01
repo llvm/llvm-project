@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,13 +14,13 @@
 #define FORTRAN_OPTIMIZER_DIALECT_CUF_CUFATTR_H
 
 #include "flang/Support/Fortran.h"
-#include "mlir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinAttributes.h"
 
 namespace llvm {
 class StringRef;
 }
 
-namespace mlir {
+namespace aiir {
 class Operation;
 }
 
@@ -47,7 +47,7 @@ static constexpr llvm::StringRef getClusterDimsAttrName() {
 }
 
 inline cuf::DataAttributeAttr
-getDataAttribute(mlir::MLIRContext *mlirContext,
+getDataAttribute(aiir::AIIRContext *aiirContext,
                  std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
   if (cudaAttr) {
     cuf::DataAttribute attr;
@@ -74,13 +74,13 @@ getDataAttribute(mlir::MLIRContext *mlirContext,
       attr = cuf::DataAttribute::Unified;
       break;
     }
-    return cuf::DataAttributeAttr::get(mlirContext, attr);
+    return cuf::DataAttributeAttr::get(aiirContext, attr);
   }
   return {};
 }
 
 inline cuf::ProcAttributeAttr
-getProcAttribute(mlir::MLIRContext *mlirContext,
+getProcAttribute(aiir::AIIRContext *aiirContext,
                  std::optional<Fortran::common::CUDASubprogramAttrs> cudaAttr) {
   if (cudaAttr) {
     cuf::ProcAttribute attr;
@@ -101,16 +101,16 @@ getProcAttribute(mlir::MLIRContext *mlirContext,
       attr = cuf::ProcAttribute::GridGlobal;
       break;
     }
-    return cuf::ProcAttributeAttr::get(mlirContext, attr);
+    return cuf::ProcAttributeAttr::get(aiirContext, attr);
   }
   return {};
 }
 
 /// Returns the data attribute if the operation has one.
-cuf::DataAttributeAttr getDataAttr(mlir::Operation *op);
+cuf::DataAttributeAttr getDataAttr(aiir::Operation *op);
 
 /// Returns true if the operation has a data attribute with the given value.
-bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value);
+bool hasDataAttr(aiir::Operation *op, cuf::DataAttribute value);
 
 /// Check if a CUDA data attribute represents device data.
 /// Returns true for Device, Managed, Constant, Shared, and Unified attributes.
@@ -118,7 +118,7 @@ bool isDeviceDataAttribute(cuf::DataAttribute attr);
 
 /// Returns true if the operation has a `cuf::DataAttributeAttr`
 /// whose value returns true for `isDeviceDataAttribute`.
-bool hasDeviceDataAttr(mlir::Operation *op);
+bool hasDeviceDataAttr(aiir::Operation *op);
 
 } // namespace cuf
 

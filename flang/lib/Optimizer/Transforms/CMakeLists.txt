@@ -79,16 +79,16 @@ add_flang_library(FIRTransforms
   HLFIRDialect
   MIFDialect
 
-  MLIR_LIBS
-  MLIRAffineUtils
-  MLIRAnalysis
-  MLIRFuncDialect
-  MLIRGPUDialect
-  MLIRLLVMCommonConversion
-  MLIRLLVMDialect
-  MLIRMathTransforms
-  MLIROpenACCDialect
-  MLIROpenACCToLLVMIRTranslation
-  MLIROpenMPDialect
-  MLIRTransformUtils
+  AIIR_LIBS
+  AIIRAffineUtils
+  AIIRAnalysis
+  AIIRFuncDialect
+  AIIRGPUDialect
+  AIIRLLVMCommonConversion
+  AIIRLLVMDialect
+  AIIRMathTransforms
+  AIIROpenACCDialect
+  AIIROpenACCToLLVMIRTranslation
+  AIIROpenMPDialect
+  AIIRTransformUtils
 )

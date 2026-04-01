@@ -22,11 +22,11 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/Value.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/Dialect/GPU/IR/GPUDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/IR/Value.h"
+#include "aiir/Pass/Pass.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir {
@@ -38,7 +38,7 @@ using namespace Fortran::runtime::cuda;
 
 namespace {
 
-static bool isAssumedSize(mlir::ValueRange shape) {
+static bool isAssumedSize(aiir::ValueRange shape) {
   if (shape.size() != 1)
     return false;
   if (llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(shape[0].getDefiningOp()))
@@ -47,29 +47,29 @@ static bool isAssumedSize(mlir::ValueRange shape) {
 }
 
 static void createSharedMemoryGlobal(fir::FirOpBuilder &builder,
-                                     mlir::Location loc, llvm::StringRef prefix,
+                                     aiir::Location loc, llvm::StringRef prefix,
                                      llvm::StringRef suffix,
-                                     mlir::gpu::GPUModuleOp gpuMod,
-                                     mlir::Type sharedMemType, unsigned size,
+                                     aiir::gpu::GPUModuleOp gpuMod,
+                                     aiir::Type sharedMemType, unsigned size,
                                      unsigned align, bool isDynamic) {
   std::string sharedMemGlobalName =
       isDynamic ? (prefix + llvm::Twine(cudaSharedMemSuffix)).str()
                 : (prefix + llvm::Twine(cudaSharedMemSuffix) + suffix).str();
 
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  aiir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(gpuMod.getBody());
 
-  mlir::StringAttr linkage = isDynamic ? builder.createExternalLinkage()
+  aiir::StringAttr linkage = isDynamic ? builder.createExternalLinkage()
                                        : builder.createInternalLinkage();
-  llvm::SmallVector<mlir::NamedAttribute> attrs;
-  auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
+  llvm::SmallVector<aiir::NamedAttribute> attrs;
+  auto globalOpName = aiir::OperationName(fir::GlobalOp::getOperationName(),
                                           gpuMod.getContext());
-  attrs.push_back(mlir::NamedAttribute(
+  attrs.push_back(aiir::NamedAttribute(
       fir::GlobalOp::getDataAttrAttrName(globalOpName),
       cuf::DataAttributeAttr::get(gpuMod.getContext(),
                                   cuf::DataAttribute::Shared)));
 
-  mlir::DenseElementsAttr init = {};
+  aiir::DenseElementsAttr init = {};
   auto sharedMem =
       fir::GlobalOp::create(builder, loc, sharedMemGlobalName, false, false,
                             sharedMemType, init, linkage, attrs);
@@ -81,59 +81,59 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           CUFComputeSharedMemoryOffsetsAndSize> {
 
   void runOnOperation() override {
-    mlir::ModuleOp mod = getOperation();
-    mlir::SymbolTable symTab(mod);
-    mlir::OpBuilder opBuilder{mod.getBodyRegion()};
+    aiir::ModuleOp mod = getOperation();
+    aiir::SymbolTable symTab(mod);
+    aiir::OpBuilder opBuilder{mod.getBodyRegion()};
     fir::FirOpBuilder builder(opBuilder, mod);
     fir::KindMapping kindMap{fir::getKindMapping(mod)};
-    std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/false);
+    std::optional<aiir::DataLayout> dl =
+        fir::support::getOrSetAIIRDataLayout(mod, /*allowDefaultLayout=*/false);
     if (!dl) {
-      mlir::emitError(mod.getLoc(),
+      aiir::emitError(mod.getLoc(),
                       "data layout attribute is required to perform " +
                           getName() + "pass");
     }
 
     auto gpuMod = cuf::getOrCreateGPUModule(mod, symTab);
-    mlir::Type i8Ty = builder.getI8Type();
-    mlir::Type i32Ty = builder.getI32Type();
-    mlir::Type idxTy = builder.getIndexType();
-    for (auto funcOp : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
+    aiir::Type i8Ty = builder.getI8Type();
+    aiir::Type i32Ty = builder.getI32Type();
+    aiir::Type idxTy = builder.getIndexType();
+    for (auto funcOp : gpuMod.getOps<aiir::gpu::GPUFuncOp>()) {
       unsigned nbDynamicSharedVariables = 0;
       unsigned nbStaticSharedVariables = 0;
       uint64_t sharedMemSize = 0;
       unsigned short alignment = 0;
-      mlir::Value crtDynOffset;
+      aiir::Value crtDynOffset;
 
       // Walk all shared memory operations (including those nested inside
       // scf.parallel from reduction lowering) and compute their start offset
       // and the size and alignment of the global to be generated.
       funcOp.walk([&](cuf::SharedMemoryOp sharedOp) {
-        mlir::Location loc = sharedOp.getLoc();
+        aiir::Location loc = sharedOp.getLoc();
         builder.setInsertionPoint(sharedOp);
         if (fir::hasDynamicSize(sharedOp.getInType())) {
-          mlir::Type ty = sharedOp.getInType();
-          if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+          aiir::Type ty = sharedOp.getInType();
+          if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(ty))
             ty = seqTy.getEleTy();
           unsigned short align = dl->getTypeABIAlignment(ty);
           alignment = std::max(alignment, align);
           uint64_t tySize = dl->getTypeSize(ty);
           ++nbDynamicSharedVariables;
           if (isAssumedSize(sharedOp.getShape()) || !crtDynOffset) {
-            mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
+            aiir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
             sharedOp.getOffsetMutable().assign(zero);
           } else {
             sharedOp.getOffsetMutable().assign(
                 builder.createConvert(loc, i32Ty, crtDynOffset));
           }
 
-          mlir::Value dynSize =
+          aiir::Value dynSize =
               builder.createIntegerConstant(loc, idxTy, tySize);
           for (auto extent : sharedOp.getShape())
             dynSize =
-                mlir::arith::MulIOp::create(builder, loc, dynSize, extent);
+                aiir::arith::MulIOp::create(builder, loc, dynSize, extent);
           if (crtDynOffset)
-            crtDynOffset = mlir::arith::AddIOp::create(builder, loc,
+            crtDynOffset = aiir::arith::AddIOp::create(builder, loc,
                                                        crtDynOffset, dynSize);
           else
             crtDynOffset = dynSize;
@@ -147,7 +147,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
               fir::SequenceType::get(size, i8Ty), size,
               sharedOp.getAlignment() ? *sharedOp.getAlignment() : align,
               /*isDynamic=*/false);
-          mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
+          aiir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
           sharedOp.getOffsetMutable().assign(zero);
           if (!sharedOp.getAlignment())
             sharedOp.setAlignment(align);
@@ -160,7 +160,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
         continue;
 
       if (nbDynamicSharedVariables > 0 && nbStaticSharedVariables > 0)
-        mlir::emitError(
+        aiir::emitError(
             funcOp.getLoc(),
             "static and dynamic shared variables in a single kernel");
 

@@ -635,8 +635,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
 
 // Represents the 'modifier' of a 'modifier-list', as applied to copy, copyin,
 // copyout, and create. Implemented as a 'bitmask'.
-// Note: This attempts to synchronize with mlir::acc::DataClauseModifier,
-// however has to store `Always` separately(whereas MLIR has it as AlwaysIn &
+// Note: This attempts to synchronize with aiir::acc::DataClauseModifier,
+// however has to store `Always` separately(whereas AIIR has it as AlwaysIn &
 // AlwaysOut). However, we keep them in sync so that we can cast between them.
 enum class OpenACCModifierKind : uint8_t {
   Invalid = 0,

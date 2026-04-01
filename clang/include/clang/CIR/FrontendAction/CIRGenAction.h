@@ -11,13 +11,13 @@
 
 #include "clang/Frontend/FrontendAction.h"
 
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/OwningOpRef.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/OwningOpRef.h"
 
-namespace mlir {
-class MLIRContext;
+namespace aiir {
+class AIIRContext;
 class ModuleOp;
-} // namespace mlir
+} // namespace aiir
 
 namespace cir {
 class CIRGenConsumer;
@@ -35,12 +35,12 @@ public:
 private:
   friend class CIRGenConsumer;
 
-  mlir::OwningOpRef<mlir::ModuleOp> MLIRMod;
+  aiir::OwningOpRef<aiir::ModuleOp> AIIRMod;
 
-  mlir::MLIRContext *MLIRCtx;
+  aiir::AIIRContext *AIIRCtx;
 
 protected:
-  CIRGenAction(OutputType Action, mlir::MLIRContext *MLIRCtx = nullptr);
+  CIRGenAction(OutputType Action, aiir::AIIRContext *AIIRCtx = nullptr);
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &CI,
@@ -56,35 +56,35 @@ class EmitCIRAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitCIRAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitCIRAction(aiir::AIIRContext *AIIRCtx = nullptr);
 };
 
 class EmitLLVMAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitLLVMAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitLLVMAction(aiir::AIIRContext *AIIRCtx = nullptr);
 };
 
 class EmitBCAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitBCAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitBCAction(aiir::AIIRContext *AIIRCtx = nullptr);
 };
 
 class EmitAssemblyAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitAssemblyAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitAssemblyAction(aiir::AIIRContext *AIIRCtx = nullptr);
 };
 
 class EmitObjAction : public CIRGenAction {
   virtual void anchor();
 
 public:
-  EmitObjAction(mlir::MLIRContext *MLIRCtx = nullptr);
+  EmitObjAction(aiir::AIIRContext *AIIRCtx = nullptr);
 };
 
 } // namespace cir

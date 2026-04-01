@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,10 +34,10 @@ enum ActionKind {
   /// -fsyntax-only
   ParseSyntaxOnly,
 
-  /// Emit FIR mlir file
+  /// Emit FIR aiir file
   EmitFIR,
 
-  /// Emit HLFIR mlir file
+  /// Emit HLFIR aiir file
   EmitHLFIR,
 
   /// Emit an .ll file
@@ -127,9 +127,9 @@ bool isCUDAFortranSuffix(llvm::StringRef suffix);
 enum class Language : uint8_t {
   Unknown,
 
-  /// MLIR: we accept this so that we can run the optimizer on it, and compile
+  /// AIIR: we accept this so that we can run the optimizer on it, and compile
   /// it to LLVM IR, assembly or object code.
-  MLIR,
+  AIIR,
 
   /// LLVM IR: we accept this so that we can run the optimizer on it,
   /// and compile it to assembly or object code.
@@ -306,9 +306,9 @@ struct FrontendOptions {
   /// should only be used for debugging and experimental features.
   std::vector<std::string> llvmArgs;
 
-  /// A list of arguments to forward to MLIR's option processing; this
+  /// A list of arguments to forward to AIIR's option processing; this
   /// should only be used for debugging and experimental features.
-  std::vector<std::string> mlirArgs;
+  std::vector<std::string> aiirArgs;
 
   // Return the appropriate input kind for a file extension. For example,
   /// "*.f" would return Language::Fortran.

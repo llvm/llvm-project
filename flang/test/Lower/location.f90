@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir --mlir-print-debuginfo %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir --aiir-print-debuginfo %s -o - | FileCheck %s
 
 program test
 include 'location0.inc'

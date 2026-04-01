@@ -10,13 +10,13 @@
 #include "RuntimeCallTestBase.h"
 #include "gtest/gtest.h"
 
-using namespace mlir;
+using namespace aiir;
 
-void testGenExponent(fir::FirOpBuilder &builder, mlir::Type resultType,
-    mlir::Type xType, llvm::StringRef fctName) {
+void testGenExponent(fir::FirOpBuilder &builder, aiir::Type resultType,
+    aiir::Type xType, llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
-  mlir::Value x = fir::UndefOp::create(builder, loc, xType);
-  mlir::Value exp = fir::runtime::genExponent(builder, loc, resultType, x);
+  aiir::Value x = fir::UndefOp::create(builder, loc, xType);
+  aiir::Value exp = fir::runtime::genExponent(builder, loc, resultType, x);
   checkCallOp(exp.getDefiningOp(), fctName, 1, /*addLocArg=*/false);
 }
 
@@ -31,12 +31,12 @@ TEST_F(RuntimeCallTest, genExponentTest) {
   testGenExponent(*firBuilder, i64Ty, f128Ty, "_FortranAExponent16_8");
 }
 
-void testGenX(fir::FirOpBuilder &builder, mlir::Type xType,
-    mlir::Value (*genFct)(fir::FirOpBuilder &, Location, mlir::Value),
+void testGenX(fir::FirOpBuilder &builder, aiir::Type xType,
+    aiir::Value (*genFct)(fir::FirOpBuilder &, Location, aiir::Value),
     llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
-  mlir::Value x = fir::UndefOp::create(builder, loc, xType);
-  mlir::Value val = genFct(builder, loc, x);
+  aiir::Value x = fir::UndefOp::create(builder, loc, xType);
+  aiir::Value val = genFct(builder, loc, x);
   checkCallOp(val.getDefiningOp(), fctName, 1, /*addLocArg=*/false);
 }
 
@@ -49,12 +49,12 @@ TEST_F(RuntimeCallTest, genFractionTest) {
       *firBuilder, f128Ty, fir::runtime::genFraction, "_FortranAFraction16");
 }
 
-void testGenNearest(fir::FirOpBuilder &builder, mlir::Type xType,
-    mlir::Type sType, llvm::StringRef fctName) {
+void testGenNearest(fir::FirOpBuilder &builder, aiir::Type xType,
+    aiir::Type sType, llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
-  mlir::Value x = fir::UndefOp::create(builder, loc, xType);
-  mlir::Value s = fir::UndefOp::create(builder, loc, sType);
-  mlir::Value nearest = fir::runtime::genNearest(builder, loc, x, s);
+  aiir::Value x = fir::UndefOp::create(builder, loc, xType);
+  aiir::Value s = fir::UndefOp::create(builder, loc, sType);
+  aiir::Value nearest = fir::runtime::genNearest(builder, loc, x, s);
   checkCallOp(nearest.getDefiningOp(), fctName, 2, /*addLocArg=*/false);
 }
 
@@ -76,14 +76,14 @@ TEST_F(RuntimeCallTest, genRRSpacingTest) {
       *firBuilder, f128Ty, fir::runtime::genRRSpacing, "_FortranARRSpacing16");
 }
 
-void testGenXI(fir::FirOpBuilder &builder, mlir::Type xType, mlir::Type iType,
-    mlir::Value (*genFct)(
-        fir::FirOpBuilder &, Location, mlir::Value, mlir::Value),
+void testGenXI(fir::FirOpBuilder &builder, aiir::Type xType, aiir::Type iType,
+    aiir::Value (*genFct)(
+        fir::FirOpBuilder &, Location, aiir::Value, aiir::Value),
     llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
-  mlir::Value x = fir::UndefOp::create(builder, loc, xType);
-  mlir::Value i = fir::UndefOp::create(builder, loc, iType);
-  mlir::Value val = genFct(builder, loc, x, i);
+  aiir::Value x = fir::UndefOp::create(builder, loc, xType);
+  aiir::Value i = fir::UndefOp::create(builder, loc, iType);
+  aiir::Value val = genFct(builder, loc, x, i);
   checkCallOp(val.getDefiningOp(), fctName, 2, /*addLocArg=*/false);
 }
 

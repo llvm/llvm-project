@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,20 +49,20 @@ public:
   IterationSpace() = default;
 
   template <typename A>
-  explicit IterationSpace(mlir::Value inArg, mlir::Value outRes,
+  explicit IterationSpace(aiir::Value inArg, aiir::Value outRes,
                           llvm::iterator_range<A> range)
       : inArg{inArg}, outRes{outRes}, indices{range.begin(), range.end()} {}
 
   explicit IterationSpace(const IterationSpace &from,
-                          llvm::ArrayRef<mlir::Value> idxs)
+                          llvm::ArrayRef<aiir::Value> idxs)
       : inArg(from.inArg), outRes(from.outRes), element(from.element),
         indices(idxs) {}
 
   /// Create a copy of the \p from IterationSpace and prepend the \p prefix
   /// values and append the \p suffix values, respectively.
   explicit IterationSpace(const IterationSpace &from,
-                          llvm::ArrayRef<mlir::Value> prefix,
-                          llvm::ArrayRef<mlir::Value> suffix)
+                          llvm::ArrayRef<aiir::Value> prefix,
+                          llvm::ArrayRef<aiir::Value> suffix)
       : inArg(from.inArg), outRes(from.outRes), element(from.element) {
     indices.assign(prefix.begin(), prefix.end());
     indices.append(from.indices.begin(), from.indices.end());
@@ -74,33 +74,33 @@ public:
   /// This is the output value as it appears as an argument in the innermost
   /// loop in the nest. The output value is threaded through the loop (and
   /// conditionals) to maintain proper SSA form.
-  mlir::Value innerArgument() const { return inArg; }
+  aiir::Value innerArgument() const { return inArg; }
 
   /// This is the output value as it appears as an output value from the
   /// outermost loop in the loop nest. The output value is threaded through the
   /// loop (and conditionals) to maintain proper SSA form.
-  mlir::Value outerResult() const { return outRes; }
+  aiir::Value outerResult() const { return outRes; }
 
   /// Returns a vector for the iteration space. This vector is used to access
   /// elements of arrays in the compute loop.
-  llvm::SmallVector<mlir::Value> iterVec() const { return indices; }
+  llvm::SmallVector<aiir::Value> iterVec() const { return indices; }
 
-  mlir::Value iterValue(std::size_t i) const {
+  aiir::Value iterValue(std::size_t i) const {
     assert(i < indices.size());
     return indices[i];
   }
 
   /// Set (rewrite) the Value at a given index.
-  void setIndexValue(std::size_t i, mlir::Value v) {
+  void setIndexValue(std::size_t i, aiir::Value v) {
     assert(i < indices.size());
     indices[i] = v;
   }
 
-  void setIndexValues(llvm::ArrayRef<mlir::Value> vals) {
+  void setIndexValues(llvm::ArrayRef<aiir::Value> vals) {
     indices.assign(vals.begin(), vals.end());
   }
 
-  void insertIndexValue(std::size_t i, mlir::Value av) {
+  void insertIndexValue(std::size_t i, aiir::Value av) {
     assert(i <= indices.size());
     indices.insert(indices.begin() + i, av);
   }
@@ -114,7 +114,7 @@ public:
 
   /// Get the value that will be merged into the resultant array. This is the
   /// computed value that will be stored to the lhs of the assignment.
-  mlir::Value getElement() const {
+  aiir::Value getElement() const {
     assert(fir::getBase(element) && "element must be set");
     return fir::getBase(element);
   }
@@ -125,10 +125,10 @@ public:
   void clearIndices() { indices.clear(); }
 
 private:
-  mlir::Value inArg;
-  mlir::Value outRes;
+  aiir::Value inArg;
+  aiir::Value outRes;
   fir::ExtendedValue element;
-  llvm::SmallVector<mlir::Value> indices;
+  llvm::SmallVector<aiir::Value> indices;
 };
 
 using GenerateElementalArrayFunc =
@@ -226,24 +226,24 @@ public:
 
   /// Add a variable binding, `var`, along with its shape for the mask
   /// expression `exp`.
-  void addMaskVariable(FrontEndExpr exp, mlir::Value var, mlir::Value shape,
-                       mlir::Value header) {
+  void addMaskVariable(FrontEndExpr exp, aiir::Value var, aiir::Value shape,
+                       aiir::Value header) {
     maskVarMap.try_emplace(exp, std::make_tuple(var, shape, header));
   }
 
   /// Lookup the variable corresponding to the temporary buffer that contains
   /// the mask array expression results.
-  mlir::Value lookupMaskVariable(FrontEndExpr exp) {
+  aiir::Value lookupMaskVariable(FrontEndExpr exp) {
     return std::get<0>(maskVarMap.lookup(exp));
   }
 
   /// Lookup the variable containing the shape vector for the mask array
   /// expression results.
-  mlir::Value lookupMaskShapeBuffer(FrontEndExpr exp) {
+  aiir::Value lookupMaskShapeBuffer(FrontEndExpr exp) {
     return std::get<1>(maskVarMap.lookup(exp));
   }
 
-  mlir::Value lookupMaskHeader(FrontEndExpr exp) {
+  aiir::Value lookupMaskHeader(FrontEndExpr exp) {
     return std::get<2>(maskVarMap.lookup(exp));
   }
 
@@ -265,7 +265,7 @@ public:
 
 private:
   llvm::DenseMap<FrontEndExpr,
-                 std::tuple<mlir::Value, mlir::Value, mlir::Value>>
+                 std::tuple<aiir::Value, aiir::Value, aiir::Value>>
       maskVarMap;
 };
 
@@ -381,10 +381,10 @@ public:
   }
 
   /// Get the inner arguments that correspond to the output arrays.
-  mlir::ValueRange getInnerArgs() const { return innerArgs; }
+  aiir::ValueRange getInnerArgs() const { return innerArgs; }
 
   /// Set the inner arguments for the next loop level.
-  void setInnerArgs(llvm::ArrayRef<mlir::BlockArgument> args) {
+  void setInnerArgs(llvm::ArrayRef<aiir::BlockArgument> args) {
     innerArgs.clear();
     for (auto &arg : args)
       innerArgs.push_back(arg);
@@ -400,14 +400,14 @@ public:
   }
 
   /// Sets the inner loop argument at position \p offset to \p val.
-  void setInnerArg(size_t offset, mlir::Value val) {
+  void setInnerArg(size_t offset, aiir::Value val) {
     assert(offset < innerArgs.size());
     innerArgs[offset] = val;
   }
 
   /// Get the types of the output arrays.
-  llvm::SmallVector<mlir::Type> innerArgTypes() const {
-    llvm::SmallVector<mlir::Type> result;
+  llvm::SmallVector<aiir::Type> innerArgTypes() const {
+    llvm::SmallVector<aiir::Type> result;
     for (auto &arg : innerArgs)
       result.push_back(arg.getType());
     return result;
@@ -432,13 +432,13 @@ public:
 
   /// `load` must be a LHS array_load. Determine the threaded inner argument
   /// corresponding to this load.
-  mlir::Value findArgumentOfLoad(fir::ArrayLoadOp load) {
+  aiir::Value findArgumentOfLoad(fir::ArrayLoadOp load) {
     if (auto opt = findArgPosition(load))
       return innerArgs[*opt];
     llvm_unreachable("array load argument not found");
   }
 
-  size_t argPosition(mlir::Value arg) {
+  size_t argPosition(aiir::Value arg) {
     for (auto i : llvm::enumerate(innerArgs))
       if (arg == i.value())
         return i.index();
@@ -530,8 +530,8 @@ private:
 
   // Assignment statement context (inside the loop nest).
   StatementContext stmtCtx;
-  llvm::SmallVector<mlir::Value> innerArgs;
-  llvm::SmallVector<mlir::Value> initialArgs;
+  llvm::SmallVector<aiir::Value> innerArgs;
+  llvm::SmallVector<aiir::Value> initialArgs;
   std::optional<fir::DoLoopOp> outerLoop;
   llvm::SmallVector<llvm::SmallVector<fir::DoLoopOp>> loopStack;
   std::optional<std::function<void(fir::FirOpBuilder &)>> loopCleanup;

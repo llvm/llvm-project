@@ -2,7 +2,7 @@ add_flang_library(flangFrontendTool
   ExecuteCompilerInvocation.cpp
 
   DEPENDS
-  # This makes sure that the MLIR dependencies of flangFrontend (which are
+  # This makes sure that the AIIR dependencies of flangFrontend (which are
   # transitively required here) are generated before this target is build.
   flangFrontend
 
@@ -14,8 +14,8 @@ add_flang_library(flangFrontendTool
   Plugins
   Support
 
-  MLIR_LIBS
-  MLIRPass
+  AIIR_LIBS
+  AIIRPass
 
   CLANG_LIBS
   clangBasic

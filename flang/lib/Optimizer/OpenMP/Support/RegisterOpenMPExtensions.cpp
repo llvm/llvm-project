@@ -13,7 +13,7 @@
 #include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
 
 namespace fir::omp {
-void registerOpenMPExtensions(mlir::DialectRegistry &registry) {
+void registerOpenMPExtensions(aiir::DialectRegistry &registry) {
   registerAttrsExtensions(registry);
   registerOpInterfacesExtensions(registry);
 }

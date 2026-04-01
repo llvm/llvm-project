@@ -13,39 +13,39 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "aiir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-box-value"
 
-mlir::Value fir::getBase(const fir::ExtendedValue &exv) {
+aiir::Value fir::getBase(const fir::ExtendedValue &exv) {
   return exv.match([](const fir::UnboxedValue &x) { return x; },
                    [](const auto &x) { return x.getAddr(); });
 }
 
-mlir::Value fir::getLen(const fir::ExtendedValue &exv) {
+aiir::Value fir::getLen(const fir::ExtendedValue &exv) {
   return exv.match(
       [](const fir::CharBoxValue &x) { return x.getLen(); },
       [](const fir::CharArrayBoxValue &x) { return x.getLen(); },
-      [](const fir::BoxValue &) -> mlir::Value {
+      [](const fir::BoxValue &) -> aiir::Value {
         llvm::report_fatal_error("Need to read len from BoxValue Exv");
       },
-      [](const fir::MutableBoxValue &) -> mlir::Value {
+      [](const fir::MutableBoxValue &) -> aiir::Value {
         llvm::report_fatal_error("Need to read len from MutableBoxValue Exv");
       },
-      [](const auto &) { return mlir::Value{}; });
+      [](const auto &) { return aiir::Value{}; });
 }
 
 fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
-                                  mlir::Value base) {
+                                  aiir::Value base) {
   return exv.match(
       [=](const fir::UnboxedValue &x) { return fir::ExtendedValue(base); },
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
-llvm::SmallVector<mlir::Value>
+llvm::SmallVector<aiir::Value>
 fir::getTypeParams(const fir::ExtendedValue &exv) {
-  using RT = llvm::SmallVector<mlir::Value>;
+  using RT = llvm::SmallVector<aiir::Value>;
   auto baseTy = fir::getBase(exv).getType();
   if (auto t = fir::dyn_cast_ptrEleTy(baseTy))
     baseTy = t;
@@ -188,10 +188,10 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 /// always be called, so it should not have any functional side effects,
 /// the const is here to enforce that.
 bool fir::MutableBoxValue::verify() const {
-  mlir::Type type = fir::dyn_cast_ptrEleTy(getAddr().getType());
+  aiir::Type type = fir::dyn_cast_ptrEleTy(getAddr().getType());
   if (!type)
     return false;
-  auto box = mlir::dyn_cast<fir::BaseBoxType>(type);
+  auto box = aiir::dyn_cast<fir::BaseBoxType>(type);
   if (!box)
     return false;
   // A boxed value always takes a memory reference,
@@ -210,7 +210,7 @@ bool fir::MutableBoxValue::verify() const {
 /// Debug verifier for BoxValue ctor. There is no guarantee this will
 /// always be called.
 bool fir::BoxValue::verify() const {
-  if (!mlir::isa<fir::BaseBoxType>(addr.getType()))
+  if (!aiir::isa<fir::BaseBoxType>(addr.getType()))
     return false;
   if (!lbounds.empty() && lbounds.size() != rank())
     return false;
@@ -223,7 +223,7 @@ bool fir::BoxValue::verify() const {
 
 /// Get exactly one extent for any array-like extended value, \p exv. If \p exv
 /// is not an array or has rank less then \p dim, the result will be a nullptr.
-mlir::Value fir::factory::getExtentAtDimension(mlir::Location loc,
+aiir::Value fir::factory::getExtentAtDimension(aiir::Location loc,
                                                fir::FirOpBuilder &builder,
                                                const fir::ExtendedValue &exv,
                                                unsigned dim) {

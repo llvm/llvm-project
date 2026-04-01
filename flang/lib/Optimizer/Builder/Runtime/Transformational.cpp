@@ -16,7 +16,7 @@
 #include "flang/Runtime/matmul-transpose.h"
 #include "flang/Runtime/matmul.h"
 #include "flang/Runtime/transformational.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
 
 using namespace Fortran::runtime;
 
@@ -24,13 +24,13 @@ using namespace Fortran::runtime;
 struct ForcedBesselJn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::Float80Type::get(ctx);
+    return [](aiir::AIIRContext *ctx) {
+      auto ty = aiir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
-      auto intTy = mlir::IntegerType::get(ctx, 32);
-      return mlir::FunctionType::get(
+      auto strTy = fir::ReferenceType::get(aiir::IntegerType::get(ctx, 8));
+      auto intTy = aiir::IntegerType::get(ctx, 32);
+      return aiir::FunctionType::get(
           ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {});
     };
   }
@@ -40,13 +40,13 @@ struct ForcedBesselJn_10 {
 struct ForcedBesselJn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::Float128Type::get(ctx);
+    return [](aiir::AIIRContext *ctx) {
+      auto ty = aiir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
-      auto intTy = mlir::IntegerType::get(ctx, 32);
-      return mlir::FunctionType::get(
+      auto strTy = fir::ReferenceType::get(aiir::IntegerType::get(ctx, 8));
+      auto intTy = aiir::IntegerType::get(ctx, 32);
+      return aiir::FunctionType::get(
           ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {});
     };
   }
@@ -56,12 +56,12 @@ struct ForcedBesselJn_16 {
 struct ForcedBesselJnX0_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJnX0_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
+    return [](aiir::AIIRContext *ctx) {
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
-      auto intTy = mlir::IntegerType::get(ctx, 32);
-      return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
+      auto strTy = fir::ReferenceType::get(aiir::IntegerType::get(ctx, 8));
+      auto intTy = aiir::IntegerType::get(ctx, 32);
+      return aiir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
                                      {});
     };
   }
@@ -71,12 +71,12 @@ struct ForcedBesselJnX0_10 {
 struct ForcedBesselJnX0_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJnX0_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
+    return [](aiir::AIIRContext *ctx) {
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
-      auto intTy = mlir::IntegerType::get(ctx, 32);
-      return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
+      auto strTy = fir::ReferenceType::get(aiir::IntegerType::get(ctx, 8));
+      auto intTy = aiir::IntegerType::get(ctx, 32);
+      return aiir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
                                      {});
     };
   }
@@ -86,13 +86,13 @@ struct ForcedBesselJnX0_16 {
 struct ForcedBesselYn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::Float80Type::get(ctx);
+    return [](aiir::AIIRContext *ctx) {
+      auto ty = aiir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
-      auto intTy = mlir::IntegerType::get(ctx, 32);
-      return mlir::FunctionType::get(
+      auto strTy = fir::ReferenceType::get(aiir::IntegerType::get(ctx, 8));
+      auto intTy = aiir::IntegerType::get(ctx, 32);
+      return aiir::FunctionType::get(
           ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {});
     };
   }
@@ -102,13 +102,13 @@ struct ForcedBesselYn_10 {
 struct ForcedBesselYn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::Float128Type::get(ctx);
+    return [](aiir::AIIRContext *ctx) {
+      auto ty = aiir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
-      auto intTy = mlir::IntegerType::get(ctx, 32);
-      return mlir::FunctionType::get(
+      auto strTy = fir::ReferenceType::get(aiir::IntegerType::get(ctx, 8));
+      auto intTy = aiir::IntegerType::get(ctx, 32);
+      return aiir::FunctionType::get(
           ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {});
     };
   }
@@ -118,12 +118,12 @@ struct ForcedBesselYn_16 {
 struct ForcedBesselYnX0_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYnX0_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
+    return [](aiir::AIIRContext *ctx) {
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
-      auto intTy = mlir::IntegerType::get(ctx, 32);
-      return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
+      auto strTy = fir::ReferenceType::get(aiir::IntegerType::get(ctx, 8));
+      auto intTy = aiir::IntegerType::get(ctx, 32);
+      return aiir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
                                      {});
     };
   }
@@ -133,23 +133,23 @@ struct ForcedBesselYnX0_10 {
 struct ForcedBesselYnX0_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYnX0_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
+    return [](aiir::AIIRContext *ctx) {
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
-      auto intTy = mlir::IntegerType::get(ctx, 32);
-      return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
+      auto strTy = fir::ReferenceType::get(aiir::IntegerType::get(ctx, 8));
+      auto intTy = aiir::IntegerType::get(ctx, 32);
+      return aiir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
                                      {});
     };
   }
 };
 
 /// Generate call to `BesselJn` intrinsic.
-void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value resultBox, mlir::Value n1,
-                               mlir::Value n2, mlir::Value x, mlir::Value bn2,
-                               mlir::Value bn2_1) {
-  mlir::func::FuncOp func;
+void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, aiir::Location loc,
+                               aiir::Value resultBox, aiir::Value n1,
+                               aiir::Value n2, aiir::Value x, aiir::Value bn2,
+                               aiir::Value bn2_1) {
+  aiir::func::FuncOp func;
   auto xTy = x.getType();
 
   if (xTy.isF32())
@@ -174,10 +174,10 @@ void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to `BesselJn` intrinsic. This is used when `x == 0.0`.
-void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Type xTy, mlir::Value resultBox,
-                                 mlir::Value n1, mlir::Value n2) {
-  mlir::func::FuncOp func;
+void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, aiir::Location loc,
+                                 aiir::Type xTy, aiir::Value resultBox,
+                                 aiir::Value n1, aiir::Value n2) {
+  aiir::func::FuncOp func;
 
   if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJnX0_4)>(loc, builder);
@@ -200,11 +200,11 @@ void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to `BesselYn` intrinsic.
-void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value resultBox, mlir::Value n1,
-                               mlir::Value n2, mlir::Value x, mlir::Value bn1,
-                               mlir::Value bn1_1) {
-  mlir::func::FuncOp func;
+void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, aiir::Location loc,
+                               aiir::Value resultBox, aiir::Value n1,
+                               aiir::Value n2, aiir::Value x, aiir::Value bn1,
+                               aiir::Value bn1_1) {
+  aiir::func::FuncOp func;
   auto xTy = x.getType();
 
   if (xTy.isF32())
@@ -229,10 +229,10 @@ void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to `BesselYn` intrinsic. This is used when `x == 0.0`.
-void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Type xTy, mlir::Value resultBox,
-                                 mlir::Value n1, mlir::Value n2) {
-  mlir::func::FuncOp func;
+void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, aiir::Location loc,
+                                 aiir::Type xTy, aiir::Value resultBox,
+                                 aiir::Value n1, aiir::Value n2) {
+  aiir::func::FuncOp func;
 
   if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYnX0_4)>(loc, builder);
@@ -255,9 +255,9 @@ void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to Cshift intrinsic
-void fir::runtime::genCshift(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value resultBox, mlir::Value arrayBox,
-                             mlir::Value shiftBox, mlir::Value dimBox) {
+void fir::runtime::genCshift(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value resultBox, aiir::Value arrayBox,
+                             aiir::Value shiftBox, aiir::Value dimBox) {
   auto cshiftFunc = fir::runtime::getRuntimeFunc<mkRTKey(Cshift)>(loc, builder);
   auto fTy = cshiftFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -271,8 +271,8 @@ void fir::runtime::genCshift(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Generate call to the vector version of the Cshift intrinsic
 void fir::runtime::genCshiftVector(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value resultBox,
-                                   mlir::Value arrayBox, mlir::Value shiftBox) {
+                                   aiir::Location loc, aiir::Value resultBox,
+                                   aiir::Value arrayBox, aiir::Value shiftBox) {
   auto cshiftFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(CshiftVector)>(loc, builder);
   auto fTy = cshiftFunc.getFunctionType();
@@ -286,10 +286,10 @@ void fir::runtime::genCshiftVector(fir::FirOpBuilder &builder,
 }
 
 /// Generate call to Eoshift intrinsic
-void fir::runtime::genEoshift(fir::FirOpBuilder &builder, mlir::Location loc,
-                              mlir::Value resultBox, mlir::Value arrayBox,
-                              mlir::Value shiftBox, mlir::Value boundBox,
-                              mlir::Value dimBox) {
+void fir::runtime::genEoshift(fir::FirOpBuilder &builder, aiir::Location loc,
+                              aiir::Value resultBox, aiir::Value arrayBox,
+                              aiir::Value shiftBox, aiir::Value boundBox,
+                              aiir::Value dimBox) {
   auto eoshiftFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Eoshift)>(loc, builder);
   auto fTy = eoshiftFunc.getFunctionType();
@@ -304,9 +304,9 @@ void fir::runtime::genEoshift(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Generate call to the vector version of the Eoshift intrinsic
 void fir::runtime::genEoshiftVector(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, mlir::Value resultBox,
-                                    mlir::Value arrayBox, mlir::Value shiftBox,
-                                    mlir::Value boundBox) {
+                                    aiir::Location loc, aiir::Value resultBox,
+                                    aiir::Value arrayBox, aiir::Value shiftBox,
+                                    aiir::Value boundBox) {
   auto eoshiftFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(EoshiftVector)>(loc, builder);
   auto fTy = eoshiftFunc.getFunctionType();
@@ -324,14 +324,14 @@ void fir::runtime::genEoshiftVector(fir::FirOpBuilder &builder,
 /// Define ForcedMatmul<ACAT><AKIND><BCAT><BKIND> models.
 struct ForcedMatmulTypeModel {
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
+    return [](aiir::AIIRContext *ctx) {
       auto boxRefTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::runtime::getModel<const char *>()(ctx);
       auto intTy = fir::runtime::getModel<int>()(ctx);
-      return mlir::FunctionType::get(
+      return aiir::FunctionType::get(
           ctx, {boxRefTy, boxTy, boxTy, strTy, intTy}, {});
     };
   }
@@ -350,18 +350,18 @@ struct ForcedMatmulTypeModel {
 #include "flang/Runtime/matmul-instances.inc"
 
 /// Generate call to Matmul intrinsic runtime routine.
-void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value resultBox, mlir::Value matrixABox,
-                             mlir::Value matrixBBox) {
-  mlir::func::FuncOp func;
+void fir::runtime::genMatmul(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value resultBox, aiir::Value matrixABox,
+                             aiir::Value matrixBBox) {
+  aiir::func::FuncOp func;
   auto boxATy = matrixABox.getType();
   auto arrATy = fir::dyn_cast_ptrOrBoxEleTy(boxATy);
-  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getElementType();
-  auto [aCat, aKind] = fir::mlirTypeToCategoryKind(loc, arrAEleTy);
+  auto arrAEleTy = aiir::cast<fir::SequenceType>(arrATy).getElementType();
+  auto [aCat, aKind] = fir::aiirTypeToCategoryKind(loc, arrAEleTy);
   auto boxBTy = matrixBBox.getType();
   auto arrBTy = fir::dyn_cast_ptrOrBoxEleTy(boxBTy);
-  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getElementType();
-  auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
+  auto arrBEleTy = aiir::cast<fir::SequenceType>(arrBTy).getElementType();
+  auto [bCat, bKind] = fir::aiirTypeToCategoryKind(loc, arrBEleTy);
 
 // Unsigned is treated as Integer when both operands are unsigned/integer
 #define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
@@ -405,18 +405,18 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
 #include "flang/Runtime/matmul-instances.inc"
 
 void fir::runtime::genMatmulTranspose(fir::FirOpBuilder &builder,
-                                      mlir::Location loc, mlir::Value resultBox,
-                                      mlir::Value matrixABox,
-                                      mlir::Value matrixBBox) {
-  mlir::func::FuncOp func;
+                                      aiir::Location loc, aiir::Value resultBox,
+                                      aiir::Value matrixABox,
+                                      aiir::Value matrixBBox) {
+  aiir::func::FuncOp func;
   auto boxATy = matrixABox.getType();
   auto arrATy = fir::dyn_cast_ptrOrBoxEleTy(boxATy);
-  auto arrAEleTy = mlir::cast<fir::SequenceType>(arrATy).getElementType();
-  auto [aCat, aKind] = fir::mlirTypeToCategoryKind(loc, arrAEleTy);
+  auto arrAEleTy = aiir::cast<fir::SequenceType>(arrATy).getElementType();
+  auto [aCat, aKind] = fir::aiirTypeToCategoryKind(loc, arrAEleTy);
   auto boxBTy = matrixBBox.getType();
   auto arrBTy = fir::dyn_cast_ptrOrBoxEleTy(boxBTy);
-  auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getElementType();
-  auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
+  auto arrBEleTy = aiir::cast<fir::SequenceType>(arrBTy).getElementType();
+  auto [bCat, bKind] = fir::aiirTypeToCategoryKind(loc, arrBEleTy);
 
 #define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
   if (!func && aCat == TypeCategory::ACAT && aKind == AKIND &&                 \
@@ -444,9 +444,9 @@ void fir::runtime::genMatmulTranspose(fir::FirOpBuilder &builder,
 }
 
 /// Generate call to Pack intrinsic runtime routine.
-void fir::runtime::genPack(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value resultBox, mlir::Value arrayBox,
-                           mlir::Value maskBox, mlir::Value vectorBox) {
+void fir::runtime::genPack(fir::FirOpBuilder &builder, aiir::Location loc,
+                           aiir::Value resultBox, aiir::Value arrayBox,
+                           aiir::Value maskBox, aiir::Value vectorBox) {
   auto packFunc = fir::runtime::getRuntimeFunc<mkRTKey(Pack)>(loc, builder);
   auto fTy = packFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -459,10 +459,10 @@ void fir::runtime::genPack(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to Reshape intrinsic runtime routine.
-void fir::runtime::genReshape(fir::FirOpBuilder &builder, mlir::Location loc,
-                              mlir::Value resultBox, mlir::Value sourceBox,
-                              mlir::Value shapeBox, mlir::Value padBox,
-                              mlir::Value orderBox) {
+void fir::runtime::genReshape(fir::FirOpBuilder &builder, aiir::Location loc,
+                              aiir::Value resultBox, aiir::Value sourceBox,
+                              aiir::Value shapeBox, aiir::Value padBox,
+                              aiir::Value orderBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Reshape)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -477,8 +477,8 @@ void fir::runtime::genReshape(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate call to ShallowCopy[Direct] runtime routine.
 /// ShallowCopyDirect is used iff \p resultIsAllocated is true.
 void fir::runtime::genShallowCopy(fir::FirOpBuilder &builder,
-                                  mlir::Location loc, mlir::Value resultBox,
-                                  mlir::Value arrayBox,
+                                  aiir::Location loc, aiir::Value resultBox,
+                                  aiir::Value arrayBox,
                                   bool resultIsAllocated) {
   auto packFunc =
       resultIsAllocated
@@ -495,9 +495,9 @@ void fir::runtime::genShallowCopy(fir::FirOpBuilder &builder,
 }
 
 /// Generate call to Spread intrinsic runtime routine.
-void fir::runtime::genSpread(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value resultBox, mlir::Value sourceBox,
-                             mlir::Value dim, mlir::Value ncopies) {
+void fir::runtime::genSpread(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value resultBox, aiir::Value sourceBox,
+                             aiir::Value dim, aiir::Value ncopies) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Spread)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -510,8 +510,8 @@ void fir::runtime::genSpread(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to Transpose intrinsic runtime routine.
-void fir::runtime::genTranspose(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value resultBox, mlir::Value sourceBox) {
+void fir::runtime::genTranspose(fir::FirOpBuilder &builder, aiir::Location loc,
+                                aiir::Value resultBox, aiir::Value sourceBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Transpose)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -523,9 +523,9 @@ void fir::runtime::genTranspose(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to Unpack intrinsic runtime routine.
-void fir::runtime::genUnpack(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value resultBox, mlir::Value vectorBox,
-                             mlir::Value maskBox, mlir::Value fieldBox) {
+void fir::runtime::genUnpack(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value resultBox, aiir::Value vectorBox,
+                             aiir::Value maskBox, aiir::Value fieldBox) {
   auto unpackFunc = fir::runtime::getRuntimeFunc<mkRTKey(Unpack)>(loc, builder);
   auto fTy = unpackFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);

@@ -13,11 +13,11 @@
 
 using namespace Fortran::runtime;
 
-void fir::runtime::genRaggedArrayAllocate(mlir::Location loc,
+void fir::runtime::genRaggedArrayAllocate(aiir::Location loc,
                                           fir::FirOpBuilder &builder,
-                                          mlir::Value header, bool asHeaders,
-                                          mlir::Value eleSize,
-                                          mlir::ValueRange extents) {
+                                          aiir::Value header, bool asHeaders,
+                                          aiir::Value eleSize,
+                                          aiir::ValueRange extents) {
   auto i32Ty = builder.getIntegerType(32);
   auto rank = extents.size();
   auto i64Ty = builder.getIntegerType(64);
@@ -33,7 +33,7 @@ void fir::runtime::genRaggedArrayAllocate(mlir::Location loc,
   auto one = builder.createIntegerConstant(loc, i32Ty, 1);
   auto eleTy = fir::unwrapSequenceType(fir::unwrapRefType(header.getType()));
   auto ptrTy =
-      builder.getRefType(mlir::cast<mlir::TupleType>(eleTy).getType(1));
+      builder.getRefType(aiir::cast<aiir::TupleType>(eleTy).getType(1));
   auto ptr = fir::CoordinateOp::create(builder, loc, ptrTy, header, one);
   auto heap = fir::LoadOp::create(builder, loc, ptr);
   auto cmp = builder.genIsNullAddr(loc, heap);
@@ -57,9 +57,9 @@ void fir::runtime::genRaggedArrayAllocate(mlir::Location loc,
       .end();
 }
 
-void fir::runtime::genRaggedArrayDeallocate(mlir::Location loc,
+void fir::runtime::genRaggedArrayDeallocate(aiir::Location loc,
                                             fir::FirOpBuilder &builder,
-                                            mlir::Value header) {
+                                            aiir::Value header) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(RaggedArrayDeallocate)>(
       loc, builder);
   auto fTy = func.getFunctionType();

@@ -30,11 +30,11 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/SymbolTable.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/SymbolTable.h"
+#include "aiir/Pass/Pass.h"
 #include "llvm/Support/Debug.h"
 #include <type_traits>
 
@@ -45,7 +45,7 @@ namespace flangomp {
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 class MapsForPrivatizedSymbolsPass
@@ -58,9 +58,9 @@ class MapsForPrivatizedSymbolsPass
     // Check if a value of type `type` can be passed to the kernel by value.
     // All kernel parameters are of pointer type, so if the value can be
     // represented inside of a pointer, then it can be passed by value.
-    auto canPassByValue = [&](mlir::Type type) {
-      const mlir::DataLayout &dl = builder.getDataLayout();
-      mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+    auto canPassByValue = [&](aiir::Type type) {
+      const aiir::DataLayout &dl = builder.getDataLayout();
+      aiir::Type ptrTy = aiir::LLVM::LLVMPointerType::get(builder.getContext());
       uint64_t ptrSize = dl.getTypeSize(ptrTy);
       uint64_t ptrAlign = dl.getTypePreferredAlignment(ptrTy);
 
@@ -85,10 +85,10 @@ class MapsForPrivatizedSymbolsPass
     // If we do not have a reference to a descriptor but the descriptor itself,
     // then we need to store that on the stack so that we can map the
     // address of the descriptor.
-    if (mlir::isa<fir::BaseBoxType>(varPtr.getType()) ||
-        mlir::isa<fir::BoxCharType>(varPtr.getType())) {
+    if (aiir::isa<fir::BaseBoxType>(varPtr.getType()) ||
+        aiir::isa<fir::BoxCharType>(varPtr.getType())) {
       OpBuilder::InsertPoint savedInsPoint = builder.saveInsertionPoint();
-      mlir::Block *allocaBlock = builder.getAllocaBlock();
+      aiir::Block *allocaBlock = builder.getAllocaBlock();
       assert(allocaBlock && "No allocablock  found for a funcOp");
       builder.setInsertionPointToStart(allocaBlock);
       auto alloca = fir::AllocaOp::create(builder, loc, varPtr.getType());
@@ -96,33 +96,33 @@ class MapsForPrivatizedSymbolsPass
       fir::StoreOp::create(builder, loc, varPtr, alloca);
       varPtr = alloca;
     }
-    assert(mlir::isa<omp::PointerLikeType>(varPtr.getType()) &&
+    assert(aiir::isa<omp::PointerLikeType>(varPtr.getType()) &&
            "Dealing with a varPtr that is not a PointerLikeType");
 
     // Figure out the bounds because knowing the bounds will help the subsequent
     // MapInfoFinalizationPass map the underlying data of the descriptor.
-    llvm::SmallVector<mlir::Value> boundsOps;
+    llvm::SmallVector<aiir::Value> boundsOps;
     if (needsBoundsOps(varPtr))
       genBoundsOps(builder, varPtr, boundsOps);
-    mlir::Type varType = varPtr.getType();
+    aiir::Type varType = varPtr.getType();
 
-    mlir::omp::VariableCaptureKind captureKind =
-        mlir::omp::VariableCaptureKind::ByRef;
+    aiir::omp::VariableCaptureKind captureKind =
+        aiir::omp::VariableCaptureKind::ByRef;
     if (fir::isa_trivial(fir::unwrapRefType(varType)) ||
         fir::isa_char(fir::unwrapRefType(varType))) {
       if (canPassByValue(fir::unwrapRefType(varType))) {
-        captureKind = mlir::omp::VariableCaptureKind::ByCopy;
+        captureKind = aiir::omp::VariableCaptureKind::ByCopy;
       }
     }
 
     // Use tofrom if what we are mapping is not a trivial type. In all
     // likelihood, it is a descriptor
-    mlir::omp::ClauseMapFlags mapFlag;
+    aiir::omp::ClauseMapFlags mapFlag;
     if (fir::isa_trivial(fir::unwrapRefType(varType)) ||
         fir::isa_char(fir::unwrapRefType(varType)))
-      mapFlag = mlir::omp::ClauseMapFlags::to;
+      mapFlag = aiir::omp::ClauseMapFlags::to;
     else
-      mapFlag = mlir::omp::ClauseMapFlags::to | mlir::omp::ClauseMapFlags::from;
+      mapFlag = aiir::omp::ClauseMapFlags::to | aiir::omp::ClauseMapFlags::from;
 
     return omp::MapInfoOp::create(
         builder, loc, varType, varPtr,
@@ -132,9 +132,9 @@ class MapsForPrivatizedSymbolsPass
         builder.getAttr<omp::VariableCaptureKindAttr>(captureKind),
         /*varPtrPtr=*/Value{},
         /*members=*/SmallVector<Value>{},
-        /*member_index=*/mlir::ArrayAttr{},
+        /*member_index=*/aiir::ArrayAttr{},
         /*bounds=*/boundsOps,
-        /*mapperId=*/mlir::FlatSymbolRefAttr(), /*name=*/StringAttr(),
+        /*mapperId=*/aiir::FlatSymbolRefAttr(), /*name=*/StringAttr(),
         builder.getBoolAttr(false));
   }
   void addMapInfoOp(omp::TargetOp targetOp, omp::MapInfoOp mapInfoOp) {
@@ -190,7 +190,7 @@ class MapsForPrivatizedSymbolsPass
       if (!mapInfoOps.empty()) {
         mapInfoOpsForTarget.insert({targetOp.getOperation(), mapInfoOps});
         targetOp.setPrivateMapsAttr(
-            mlir::DenseI64ArrayAttr::get(targetOp.getContext(), privVarMapIdx));
+            aiir::DenseI64ArrayAttr::get(targetOp.getContext(), privVarMapIdx));
       }
     });
     if (!mapInfoOpsForTarget.empty()) {
@@ -203,10 +203,10 @@ class MapsForPrivatizedSymbolsPass
   // it has dynamic size. If true, this pass'll have to extract these
   // bounds from descriptor of var and add the bounds to the resultant
   // MapInfoOp.
-  bool needsBoundsOps(mlir::Value var) {
-    assert(mlir::isa<omp::PointerLikeType>(var.getType()) &&
+  bool needsBoundsOps(aiir::Value var) {
+    assert(aiir::isa<omp::PointerLikeType>(var.getType()) &&
            "needsBoundsOps can deal only with pointer types");
-    mlir::Type t = fir::unwrapRefType(var.getType());
+    aiir::Type t = fir::unwrapRefType(var.getType());
     // t could be a box, so look inside the box
     auto innerType = fir::dyn_cast_ptrOrBoxEleTy(t);
     if (innerType)
@@ -214,9 +214,9 @@ class MapsForPrivatizedSymbolsPass
     return fir::hasDynamicSize(t);
   }
 
-  void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
-                    llvm::SmallVector<mlir::Value> &boundsOps) {
-    mlir::Location loc = var.getLoc();
+  void genBoundsOps(fir::FirOpBuilder &builder, aiir::Value var,
+                    llvm::SmallVector<aiir::Value> &boundsOps) {
+    aiir::Location loc = var.getLoc();
     fir::factory::AddrAndBoundsInfo info =
         fir::factory::getDataOperandBaseAddr(builder, var,
                                              /*isOptional=*/false, loc);
@@ -224,9 +224,9 @@ class MapsForPrivatizedSymbolsPass
         hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{info.addr},
                                         /*continguousHint=*/true)
             .first;
-    llvm::SmallVector<mlir::Value> boundsOpsVec =
-        fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                           mlir::omp::MapBoundsType>(
+    llvm::SmallVector<aiir::Value> boundsOpsVec =
+        fir::factory::genImplicitBoundsOps<aiir::omp::MapBoundsOp,
+                                           aiir::omp::MapBoundsType>(
             builder, info, extendedValue,
             /*dataExvIsAssumedSize=*/false, loc);
     for (auto bounds : boundsOpsVec)

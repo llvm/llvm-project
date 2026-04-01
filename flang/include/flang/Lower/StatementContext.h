@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,10 +18,10 @@
 #include <functional>
 #include <optional>
 
-namespace mlir {
+namespace aiir {
 class Location;
 class Region;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -119,8 +119,8 @@ private:
 
 /// If \p context contains any cleanups, ensure \p region has a block, and
 /// generate the cleanup inside that block.
-void genCleanUpInRegionIfAny(mlir::Location loc, fir::FirOpBuilder &builder,
-                             mlir::Region &region, StatementContext &context);
+void genCleanUpInRegionIfAny(aiir::Location loc, fir::FirOpBuilder &builder,
+                             aiir::Region &region, StatementContext &context);
 
 } // namespace Fortran::lower
 

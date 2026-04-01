@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,9 +16,9 @@
 #include "flang/Common/indirection.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinAttributes.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 

@@ -187,9 +187,9 @@ if(CLANG_ENABLE_CIR)
     message(FATAL_ERROR
       "ClangIR is not yet supported in the standalone build.")
   endif()
-  if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
+  if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "AIIR|aiir")
     message(FATAL_ERROR
-      "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")
+      "Cannot build ClangIR without AIIR in LLVM_ENABLE_PROJECTS")
   endif()
 endif()
 

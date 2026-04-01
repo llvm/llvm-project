@@ -12,10 +12,10 @@
 
 #include "CIRGenModule.h"
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Target/LLVMIR/Import.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/Target/LLVMIR/Import.h"
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/CIR/CIRGenerator.h"
@@ -38,11 +38,11 @@ CIRGenerator::~CIRGenerator() {
   assert(deferredInlineMemberFuncDefs.empty() || diags.hasErrorOccurred());
 }
 
-static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
-  mlir::MLIRContext *mlirContext = mod.getContext();
-  mlir::DataLayoutSpecInterface dlSpec =
-      mlir::translateDataLayout(dl, mlirContext);
-  mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+static void setAIIRDataLayout(aiir::ModuleOp &mod, const llvm::DataLayout &dl) {
+  aiir::AIIRContext *aiirContext = mod.getContext();
+  aiir::DataLayoutSpecInterface dlSpec =
+      aiir::translateDataLayout(dl, aiirContext);
+  mod->setAttr(aiir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
 void CIRGenerator::Initialize(ASTContext &astContext) {
@@ -50,28 +50,28 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
 
   this->astContext = &astContext;
 
-  mlirContext = std::make_unique<mlir::MLIRContext>();
-  mlirContext->loadDialect<mlir::DLTIDialect>();
-  mlirContext->loadDialect<cir::CIRDialect>();
-  mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
-  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
+  aiirContext = std::make_unique<aiir::AIIRContext>();
+  aiirContext->loadDialect<aiir::DLTIDialect>();
+  aiirContext->loadDialect<cir::CIRDialect>();
+  aiirContext->getOrLoadDialect<aiir::acc::OpenACCDialect>();
+  aiirContext->getOrLoadDialect<aiir::omp::OpenMPDialect>();
 
   // Register extensions to integrate CIR types with OpenACC.
-  mlir::DialectRegistry registry;
+  aiir::DialectRegistry registry;
   cir::acc::registerOpenACCExtensions(registry);
-  mlirContext->appendDialectRegistry(registry);
+  aiirContext->appendDialectRegistry(registry);
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
-      *mlirContext.get(), astContext, codeGenOpts, diags);
-  mlir::ModuleOp mod = cgm->getModule();
+      *aiirContext.get(), astContext, codeGenOpts, diags);
+  aiir::ModuleOp mod = cgm->getModule();
   llvm::DataLayout layout =
       llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
-  setMLIRDataLayout(mod, layout);
+  setAIIRDataLayout(mod, layout);
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
 
-mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
+aiir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
   if (diags.hasUnrecoverableErrorOccurred())
@@ -185,7 +185,7 @@ void CIRGenerator::HandleOpenACCRoutineReference(const FunctionDecl *FD,
                                                  const OpenACCRoutineDecl *RD) {
   llvm::StringRef mangledName = cgm->getMangledName(FD);
   cir::FuncOp entry =
-      mlir::dyn_cast_if_present<cir::FuncOp>(cgm->getGlobalValue(mangledName));
+      aiir::dyn_cast_if_present<cir::FuncOp>(cgm->getGlobalValue(mangledName));
 
   // if this wasn't generated, don't force it to be.
   if (!entry)

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Builder routines for constructing the FIR dialect of MLIR. As FIR is a
-// dialect of MLIR, it makes extensive use of MLIR interfaces and MLIR's coding
-// style (https://mlir.llvm.org/getting_started/DeveloperGuide/) is used in this
+// Builder routines for constructing the FIR dialect of AIIR. As FIR is a
+// dialect of AIIR, it makes extensive use of AIIR interfaces and AIIR's coding
+// style (https://aiir.llvm.org/getting_started/DeveloperGuide/) is used in this
 // module.
 //
 //===----------------------------------------------------------------------===//
@@ -18,10 +18,10 @@
 
 #include <optional>
 
-namespace mlir {
+namespace aiir {
 class Location;
 class Value;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class CharBoxValue;
@@ -60,14 +60,14 @@ void genStopStatement(AbstractConverter &, const parser::StopStmt &);
 void genUnlockStatement(AbstractConverter &, const parser::UnlockStmt &);
 void genPauseStatement(AbstractConverter &, const parser::PauseStmt &);
 
-void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
-                         mlir::Value pointer, mlir::Value target);
-void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
-                                  mlir::Value pointer, mlir::Value target,
-                                  mlir::Value bounds, bool isMonomorphic);
-void genPointerAssociateLowerBounds(fir::FirOpBuilder &, mlir::Location,
-                                    mlir::Value pointer, mlir::Value target,
-                                    mlir::Value lbounds);
+void genPointerAssociate(fir::FirOpBuilder &, aiir::Location,
+                         aiir::Value pointer, aiir::Value target);
+void genPointerAssociateRemapping(fir::FirOpBuilder &, aiir::Location,
+                                  aiir::Value pointer, aiir::Value target,
+                                  aiir::Value bounds, bool isMonomorphic);
+void genPointerAssociateLowerBounds(fir::FirOpBuilder &, aiir::Location,
+                                    aiir::Value pointer, aiir::Value target,
+                                    aiir::Value lbounds);
 } // namespace lower
 } // namespace Fortran
 

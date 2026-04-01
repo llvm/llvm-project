@@ -3354,7 +3354,7 @@ def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisablePasses">>;
 def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"ClangIR: Disable MLIR module verifier">,
+  HelpText<"ClangIR: Disable AIIR module verifier">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
 
 def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recognizer">,
@@ -5428,10 +5428,10 @@ def mllvm : Separate<["-"], "mllvm">,
 def : Joined<["-"], "mllvm=">,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<mllvm>,
   HelpText<"Alias for -mllvm">, MetaVarName<"<arg>">;
-def mmlir : Separate<["-"], "mmlir">,
+def maiir : Separate<["-"], "maiir">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
-  HelpText<"Additional arguments to forward to MLIR's option processing">,
-  MarshallingInfoStringVector<FrontendOpts<"MLIRArgs">>;
+  HelpText<"Additional arguments to forward to AIIR's option processing">,
+  MarshallingInfoStringVector<FrontendOpts<"AIIRArgs">>;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set Fuchsia API level">,
@@ -7812,7 +7812,7 @@ defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse
 
 def emit_fir : Flag<["-"], "emit-fir">, Group<Action_Group>,
   HelpText<"Build the parse tree, then lower it to FIR">;
-def emit_mlir : Flag<["-"], "emit-mlir">, Alias<emit_fir>;
+def emit_aiir : Flag<["-"], "emit-aiir">, Alias<emit_fir>;
 
 def emit_hlfir : Flag<["-"], "emit-hlfir">, Group<Action_Group>,
   HelpText<"Build the parse tree, then lower it to HLFIR">;

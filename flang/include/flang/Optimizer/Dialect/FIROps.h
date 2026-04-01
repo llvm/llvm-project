@@ -15,12 +15,12 @@
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "aiir/Interfaces/LoopLikeInterface.h"
+#include "aiir/Interfaces/SideEffectInterfaces.h"
+#include "aiir/Interfaces/ViewLikeInterface.h"
 
 namespace fir {
 
@@ -28,19 +28,19 @@ class FirEndOp;
 class DoLoopOp;
 class RealAttr;
 
-void buildCmpCOp(mlir::OpBuilder &builder, mlir::OperationState &result,
-                 mlir::arith::CmpFPredicate predicate, mlir::Value lhs,
-                 mlir::Value rhs);
-unsigned getCaseArgumentOffset(llvm::ArrayRef<mlir::Attribute> cases,
+void buildCmpCOp(aiir::OpBuilder &builder, aiir::OperationState &result,
+                 aiir::arith::CmpFPredicate predicate, aiir::Value lhs,
+                 aiir::Value rhs);
+unsigned getCaseArgumentOffset(llvm::ArrayRef<aiir::Attribute> cases,
                                unsigned dest);
-DoLoopOp getForInductionVarOwner(mlir::Value val);
-mlir::ParseResult isValidCaseAttr(mlir::Attribute attr);
-mlir::ParseResult parseCmpcOp(mlir::OpAsmParser &parser,
-                              mlir::OperationState &result);
-mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
-                                mlir::OperationState &result,
-                                mlir::OpAsmParser::UnresolvedOperand &selector,
-                                mlir::Type &type);
+DoLoopOp getForInductionVarOwner(aiir::Value val);
+aiir::ParseResult isValidCaseAttr(aiir::Attribute attr);
+aiir::ParseResult parseCmpcOp(aiir::OpAsmParser &parser,
+                              aiir::OperationState &result);
+aiir::ParseResult parseSelector(aiir::OpAsmParser &parser,
+                                aiir::OperationState &result,
+                                aiir::OpAsmParser::UnresolvedOperand &selector,
+                                aiir::Type &type);
 bool useStrictVolatileVerification();
 
 static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
@@ -49,20 +49,20 @@ static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
 
 /// Model operations which affect global debugging information
 struct DebuggingResource
-    : public mlir::SideEffects::Resource::Base<DebuggingResource> {
-  mlir::StringRef getName() const final { return "DebuggingResource"; }
+    : public aiir::SideEffects::Resource::Base<DebuggingResource> {
+  aiir::StringRef getName() const final { return "DebuggingResource"; }
   bool isAddressable() const override { return false; }
 };
 
 /// Model operations which read from/write to volatile memory
 struct VolatileMemoryResource
-    : public mlir::SideEffects::Resource::Base<VolatileMemoryResource> {
-  mlir::StringRef getName() const final { return "VolatileMemoryResource"; }
+    : public aiir::SideEffects::Resource::Base<VolatileMemoryResource> {
+  aiir::StringRef getName() const final { return "VolatileMemoryResource"; }
   bool isAddressable() const override { return false; }
 };
 
 class CoordinateIndicesAdaptor;
-using IntOrValue = llvm::PointerUnion<mlir::IntegerAttr, mlir::Value>;
+using IntOrValue = llvm::PointerUnion<aiir::IntegerAttr, aiir::Value>;
 
 } // namespace fir
 
@@ -74,8 +74,8 @@ class CoordinateIndicesAdaptor {
 public:
   using value_type = IntOrValue;
 
-  CoordinateIndicesAdaptor(mlir::DenseI32ArrayAttr fieldIndices,
-                           mlir::ValueRange values)
+  CoordinateIndicesAdaptor(aiir::DenseI32ArrayAttr fieldIndices,
+                           aiir::ValueRange values)
       : fieldIndices(fieldIndices), values(values) {}
 
   value_type operator[](size_t index) const {
@@ -98,12 +98,12 @@ public:
   public:
     iterator(const CoordinateIndicesAdaptor *base,
              std::optional<llvm::ArrayRef<int32_t>::iterator> fieldIter,
-             llvm::detail::IterOfRange<const mlir::ValueRange> valuesIter)
+             llvm::detail::IterOfRange<const aiir::ValueRange> valuesIter)
         : base(base), fieldIter(fieldIter), valuesIter(valuesIter) {}
 
     value_type operator*() const {
       if (fieldIter && **fieldIter != fir::CoordinateOp::kDynamicIndex) {
-        return mlir::IntegerAttr::get(base->fieldIndices.getElementType(),
+        return aiir::IntegerAttr::get(base->fieldIndices.getElementType(),
                                       **fieldIter);
       }
       return *valuesIter;
@@ -128,7 +128,7 @@ public:
   private:
     const CoordinateIndicesAdaptor *base;
     std::optional<llvm::ArrayRef<int32_t>::const_iterator> fieldIter;
-    llvm::detail::IterOfRange<const mlir::ValueRange> valuesIter;
+    llvm::detail::IterOfRange<const aiir::ValueRange> valuesIter;
   };
 
   iterator begin() const {
@@ -146,18 +146,18 @@ public:
   }
 
 private:
-  mlir::DenseI32ArrayAttr fieldIndices;
-  mlir::ValueRange values;
+  aiir::DenseI32ArrayAttr fieldIndices;
+  aiir::ValueRange values;
 };
 
 struct LocalitySpecifierOperands {
-  llvm::SmallVector<::mlir::Value> privateVars;
-  llvm::SmallVector<::mlir::Attribute> privateSyms;
+  llvm::SmallVector<::aiir::Value> privateVars;
+  llvm::SmallVector<::aiir::Attribute> privateSyms;
 };
 
 /// Returns true if the given box value may be absent.
 /// The given value must have BaseBoxType.
-bool mayBeAbsentBox(mlir::Value val);
+bool mayBeAbsentBox(aiir::Value val);
 
 } // namespace fir
 

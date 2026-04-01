@@ -12,16 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/Math/Transforms/Passes.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Dialect/Math/IR/Math.h"
+#include "aiir/Dialect/Math/Transforms/Passes.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace fir {
 #define GEN_PASS_DEF_ALGEBRAICSIMPLIFICATION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 struct AlgebraicSimplification
@@ -32,7 +32,7 @@ struct AlgebraicSimplification
 
   void runOnOperation() override;
 
-  mlir::GreedyRewriteConfig config;
+  aiir::GreedyRewriteConfig config;
 };
 } // namespace
 
@@ -42,11 +42,11 @@ void AlgebraicSimplification::runOnOperation() {
   (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
 }
 
-std::unique_ptr<mlir::Pass> fir::createAlgebraicSimplificationPass() {
+std::unique_ptr<aiir::Pass> fir::createAlgebraicSimplificationPass() {
   return std::make_unique<AlgebraicSimplification>(GreedyRewriteConfig());
 }
 
-std::unique_ptr<mlir::Pass> fir::createAlgebraicSimplificationPass(
-    const mlir::GreedyRewriteConfig &config) {
+std::unique_ptr<aiir::Pass> fir::createAlgebraicSimplificationPass(
+    const aiir::GreedyRewriteConfig &config) {
   return std::make_unique<AlgebraicSimplification>(config);
 }

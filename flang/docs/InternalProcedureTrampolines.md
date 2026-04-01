@@ -182,7 +182,7 @@ Where:
   object created inside `host()`.
 - `R#` is a target specific register.
 
-In MLIR LLVM dialect the replacement looks like this:
+In AIIR LLVM dialect the replacement looks like this:
 
 ```
     llvm.call @llvm.init.trampoline(%8, %9, %7) : (!llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> ()

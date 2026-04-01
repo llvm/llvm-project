@@ -1,0 +1,12 @@
+// RUN: aiir-transform-opt %s --transform=%p/self-contained.aiir | FileCheck %s
+// RUN: aiir-transform-opt %s --transform=%p/external-decl.aiir --verify-diagnostics
+// RUN: aiir-transform-opt %s --transform=%p/external-def.aiir --transform-entry-point=external_def | FileCheck %s --check-prefix=EXTERNAL
+// RUN: aiir-transform-opt %s --transform=%p/external-decl.aiir --transform-library=%p/external-def.aiir | FileCheck %s --check-prefix=EXTERNAL
+// RUN: aiir-transform-opt %s --transform=%p/syntax-error.aiir --verify-diagnostics
+// RUN: aiir-transform-opt %s --transform=%p/self-contained.aiir --transform-library=%p/syntax-error.aiir --verify-diagnostics
+// RUN: aiir-transform-opt %s --transform=%p/self-contained.aiir --transform-library=%p/external-def.aiir --transform-library=%p/syntax-error.aiir --verify-diagnostics
+
+// CHECK: IR printer: in self-contained
+// EXTERNAL: IR printer: external_def
+// CHECK-NOT: @__transform_main
+module {}

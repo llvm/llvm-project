@@ -1,0 +1,44 @@
+{
+  "scopeName": "source.cpp.aiir",
+  "injectionSelector": "L:source.cpp -string.quoted.double.cpp -string.quoted.double.raw",
+  "patterns": [
+    {
+      "include": "#aiir-raw-string"
+    }
+  ],
+  "repository": {
+    "aiir-raw-string": {
+      "begin": "R\"(?i:aiir)(\\()",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.cpp"
+        },
+        "1": {
+          "name": "aiir.delimeter.raw.string.cpp"
+        }
+      },
+      "end": "\\)(?i:aiir)\"",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.cpp"
+        },
+        "1": {
+          "name": "aiir.delimeter.raw.string.cpp"
+        }
+      },
+      "name": "aiir.raw.string.cpp",
+      "patterns": [
+        {
+          "contentName": "source.aiir",
+          "begin": "(?!\\G)",
+          "end": "(?i)(?=\\)aiir\")",
+          "patterns": [
+            {
+              "include": "source.aiir"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

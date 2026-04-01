@@ -1,6 +1,6 @@
 ! RUN: split-file %s %t
-! RUN: bbc %t/test1.f90 -o - --emit-fir --mlir-print-debuginfo | FileCheck %s --check-prefix=TEST1
-! RUN: bbc %t/test2.f90 -o - --emit-fir --mlir-print-debuginfo | FileCheck %s --check-prefix=TEST2
+! RUN: bbc %t/test1.f90 -o - --emit-fir --aiir-print-debuginfo | FileCheck %s --check-prefix=TEST1
+! RUN: bbc %t/test2.f90 -o - --emit-fir --aiir-print-debuginfo | FileCheck %s --check-prefix=TEST2
 
 ! Check that the missing optional program-stmt (R1401)
 ! does not result in unknown source location of the corresponding

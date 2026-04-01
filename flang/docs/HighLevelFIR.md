@@ -12,14 +12,14 @@ significantly grown in complexity while it still lacks some F95 features around
 character array expressions or FORALL. This is mainly explained by the fact that
 the representation level gap is big, and a lot is happening in lowering.  It
 appears more and more that some intermediate steps would help to split concerns
-between translating the front-end representation to MLIR, implementing some
+between translating the front-end representation to AIIR, implementing some
 Fortran concepts at a lower-level (like character or derived type assignments),
 and how bufferizations of character and array expressions should be done.
 
 This document proposes the addition of two concepts and a set of related
 operations in a new dialect HLFIR to allow a simpler lowering to a higher-level
 FIR representation that would later be lowered to the current FIR representation
-via MLIR translation passes.  As a result of these additions, it is likely that
+via AIIR translation passes.  As a result of these additions, it is likely that
 the fir.array_load/fir.array_merge_store and related array operations could be
 removed from FIR since array assignment analysis could directly happen on the
 higher-level FIR representation.
@@ -47,7 +47,7 @@ The core impact on lowering will be:
 
 ### Strengthening the variable concept
 
-Fortran variables are currently represented in FIR as mlir::Value with reference
+Fortran variables are currently represented in FIR as aiir::Value with reference
 or box type coming from special operations or block arguments. They are either
 the result of a fir.alloca, fir.allocmem, or fir.address_of operations with the
 mangled name of the variable as attribute, or they are function block arguments
@@ -61,7 +61,7 @@ information in the fir::ExtendedValue lowering data structure and uses it when
 needed. If unused in lowering, some information about variables is lost (like
 non-constant array bound expressions). In the IR, only the static type, the
 compile time constant extents, and compile time character lengths can be
-retrieved from the mlir::Value of a variable in the general case (more can be
+retrieved from the aiir::Value of a variable in the general case (more can be
 retrieved if the variable is tracked via a fir.box, but not if it is a bare
 memory reference).
 
@@ -69,7 +69,7 @@ This makes reasoning about Fortran variables in FIR harder, and in general
 forces lowering to apply all decisions related to the information that is lost
 in FIR. A more problematic point is that it does not allow generating debug
 information for the variables from FIR, since the bounds and type parameters
-information is not tightly linked to the base mlir::Value.
+information is not tightly linked to the base aiir::Value.
 
 The proposal is to add a hlfir.declare operation that would anchor the
 fir::ExtendedValue information in the IR. A variable will be represented by a
@@ -227,7 +227,7 @@ T in an array hlfir.expr< e1 x ex2 ..  : T> can be:
 -   A logical type (fir.logical<kind>)
 -   An integer type (i1, i32, ….)
 -   A floating point type (f32, f16…)
--   A complex type (fir.complex<4> or mlir::complex<f32>...)
+-   A complex type (fir.complex<4> or aiir::complex<f32>...)
 
 Some expressions may be polymorphic (for instance, MERGE can be used on
 polymorphic entities). The hlfir.expr type has an optional "class" flag to
@@ -572,7 +572,7 @@ as function of the indices.
 The hlfir.elemental operation can be seen as a closure: it is defining a
 function of the indices that returns the value of the element of the
 represented array expression at the given indices. This an operation with an
-MLIR region. It allows detailing how an elemental expression is implemented at
+AIIR region. It allows detailing how an elemental expression is implemented at
 the element level, without yet requiring materializing the operands and result
 in memory.  The hlfir.expr<T> elements value can be obtained using hlfir.apply.
 
@@ -613,10 +613,10 @@ hlfir.elemental can be inlined at the hlfir.apply. Otherwise, if there is no
 such guarantee, or if the hlfir.elemental is not “visible” (because its result
 is passed as a block argument), the hlfir.elemental will be lowered to an array
 temporary. This will be done as a HLFIR to HLFIR optimization pass. Note that
-MLIR inlining could be used if hlfir.elemental implemented the
-CallableInterface and hlfir.apply the CallInterface.  But MLIR generic inlining
+AIIR inlining could be used if hlfir.elemental implemented the
+CallableInterface and hlfir.apply the CallInterface.  But AIIR generic inlining
 is probably too generic for this case: no recursion is possible here, the call
-graphs are trivial, and using MLIR inlining here could introduce later
+graphs are trivial, and using AIIR inlining here could introduce later
 conflicts or make normal function inlining more complex because FIR inlining
 hooks would already be used.
 
@@ -673,7 +673,7 @@ passed to it (passing results of fir.absent operation), so that the arguments
 can be identified via their positions.
 
 This operation is meant for the transformational intrinsics, not the elemental
-intrinsics, that will be implemented using hlfir.elemental + mlir math dialect
+intrinsics, that will be implemented using hlfir.elemental + aiir math dialect
 operations, nor the intrinsic subroutines (like random_seed or system_clock),
 that will be directly lowered in lowering.
 
@@ -711,7 +711,7 @@ MATMUL(TRANSPOSE(a), b)). This optimization is implemented in Classic Flang.
 
 An operation and runtime function will be added for each commonly used
 composition of intrinsic functions. The operation will be the canonical way to
-write this chained operation (the MLIR canonicalization pass will rewrite the
+write this chained operation (the AIIR canonicalization pass will rewrite the
 operations for the composed intrinsics into this one operation).
 
 These new operations will be treated as though they were standard
@@ -926,7 +926,7 @@ The translation of hlfir.forall will happen by:
 
 ### Mandatory Passes (translation towards lower-level representation)
 
-Note that these passes could be implemented as a single MLIR pass, or successive
+Note that these passes could be implemented as a single AIIR pass, or successive
 passes.
 
 -   Forall rewrites (getting rid of hlfir.forall)
@@ -968,11 +968,11 @@ will remain untouched.
 
 A lot of the code in lowering generating Fortran features (like an intrinsic or
 how to do assignments) is based on the fir::ExtendedValue concept. This
-currently is a collection of mlir::Value that allows describing a Fortran object
+currently is a collection of aiir::Value that allows describing a Fortran object
 (either a variable or an evaluated expression result). The variable and
 expression concepts described above should allow to keep an interface very
 similar to the fir::ExtendedValue, but having the fir::ExtendedValue wrap a
-single value or mlir::Operation* from which all of the object entity
+single value or aiir::Operation* from which all of the object entity
 information can be inferred.
 
 That way, all the helpers currently generating FIR from fir::ExtendedValue could
@@ -1357,14 +1357,14 @@ lowered to fir.array_coor and fir.store operations).
 
 ## Alternatives that were not retained
 
-### Using a non-MLIR based mutable CFG representation
+### Using a non-AIIR based mutable CFG representation
 
 An option would have been to extend the PFT to describe expressions in a way
 that can be annotated and modified with the ability to introduce temporaries.
 This has been rejected because this would imply a whole new set of
-infrastructure and data structures while FIR is already using MLIR
+infrastructure and data structures while FIR is already using AIIR
 infrastructure, so enriching FIR seems a smoother approach and will benefit from
-the MLIR infrastructure experience that was gained.
+the AIIR infrastructure experience that was gained.
 
 ### Using symbols for HLFIR variables
 
@@ -1373,7 +1373,7 @@ the MLIR infrastructure experience that was gained.
 Instead of restricting the memory types an HLFIR variable can have, it was
 force the defining operation of HLFIR variable SSA values to always be
 retrievable. The idea was to add a fir.ref attribute that would repeat the name
-of the HLFIR variable. Using such an attribute would prevent MLIR from merging
+of the HLFIR variable. Using such an attribute would prevent AIIR from merging
 two operations using different variables when merging IR blocks. (which is the
 main reason why the defining op may become inaccessible). The advantage of
 forcing the defining operation to be retrievable is that it allowed all Fortran
@@ -1392,24 +1392,24 @@ doing code motion, and whose complexity would be increased by the naming
 constraints.
 
 
-#### Using MLIR symbols for variables
+#### Using AIIR symbols for variables
 
-Using MLIR symbols for HLFIR variables has been rejected because MLIR symbols
+Using AIIR symbols for HLFIR variables has been rejected because AIIR symbols
 are mainly intended to deal with globals and functions that may refer to each
 other before being defined. Their processing is not as light as normal values,
-and would require to turn every FIR operation with a region into an MLIR symbol
+and would require to turn every FIR operation with a region into an AIIR symbol
 table. This would especially be annoying since fir.designator also produces
-variables with their own properties, which would imply creating a lot of MLIR
+variables with their own properties, which would imply creating a lot of AIIR
 symbols. All the operations that both accept variable and expression operands
 would also either need to be more complex in order to both accept SSA values or
-MLIR symbol operands (or some fir.as_expr %var operation should be added to
+AIIR symbol operands (or some fir.as_expr %var operation should be added to
 turn a variable into an expression). Given all variable definitions will
 dominate their uses, it seems better to use an SSA model with named attributes.
 Using SSA values also makes the transition and mixture with lower-level FIR
 operations smoother: a variable SSA usage can simply be replaced by lower-level
 FIR operations using the same SSA value.
 
-### Using some existing MLIR dialects for the high-level Fortran.
+### Using some existing AIIR dialects for the high-level Fortran.
 
 #### Why not using Linalg dialect?
 
@@ -1424,7 +1424,7 @@ Issues:
 
 -   The linalg dialect is tightly linked to the tensor/memref concepts that
     cannot represent byte stride based discontinuity and would most likely
-    require FIR to use MLIR memref descriptor format to take advantage of it.
+    require FIR to use AIIR memref descriptor format to take advantage of it.
 -   It is not clear whether all Fortran array expression addressing can be
     represented as semi affine maps. For instance, vector subscripted entities
     can probably not, which may force creating temporaries for the related
@@ -1442,7 +1442,7 @@ cases that could be experimented.
 
 #### Why not using Shape dialect?
 
-MLIR shape dialect gives a set of operations to manipulate shapes. The
+AIIR shape dialect gives a set of operations to manipulate shapes. The
 shape.meet operation is exactly similar with hlfir.shape_meet, except that it
 returns a tensor or a shape.shape.
 

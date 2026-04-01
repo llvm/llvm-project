@@ -11,40 +11,40 @@
 //===----------------------------------------------------------------------===//
 
 // #include "clang/AST/ASTContext.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/PassManager.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Pass/PassManager.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/Support/TimeProfiler.h"
 
 namespace cir {
-mlir::LogicalResult
-runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
+aiir::LogicalResult
+runCIRToCIRPasses(aiir::ModuleOp theModule, aiir::AIIRContext &aiirContext,
                   clang::ASTContext &astContext, bool enableVerifier,
                   bool enableIdiomRecognizer, bool enableCIRSimplify) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
-  mlir::PassManager pm(&mlirContext);
-  pm.addPass(mlir::createCIRCanonicalizePass());
+  aiir::PassManager pm(&aiirContext);
+  pm.addPass(aiir::createCIRCanonicalizePass());
 
   if (enableCIRSimplify)
-    pm.addPass(mlir::createCIRSimplifyPass());
+    pm.addPass(aiir::createCIRSimplifyPass());
 
   if (enableIdiomRecognizer)
-    pm.addPass(mlir::createIdiomRecognizerPass(&astContext));
+    pm.addPass(aiir::createIdiomRecognizerPass(&astContext));
 
-  pm.addPass(mlir::createTargetLoweringPass());
-  pm.addPass(mlir::createCXXABILoweringPass());
-  pm.addPass(mlir::createLoweringPreparePass(&astContext));
+  pm.addPass(aiir::createTargetLoweringPass());
+  pm.addPass(aiir::createCXXABILoweringPass());
+  pm.addPass(aiir::createLoweringPreparePass(&astContext));
 
   pm.enableVerifier(enableVerifier);
-  (void)mlir::applyPassManagerCLOptions(pm);
+  (void)aiir::applyPassManagerCLOptions(pm);
   return pm.run(theModule);
 }
 
 } // namespace cir
 
-namespace mlir {
+namespace aiir {
 
 void populateCIRPreLoweringPasses(OpPassManager &pm) {
   pm.addPass(createHoistAllocasPass());
@@ -53,4 +53,4 @@ void populateCIRPreLoweringPasses(OpPassManager &pm) {
   pm.addPass(createGotoSolverPass());
 }
 
-} // namespace mlir
+} // namespace aiir

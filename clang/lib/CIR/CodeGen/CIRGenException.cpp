@@ -12,8 +12,8 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
-#include "mlir/IR/Block.h"
-#include "mlir/IR/Location.h"
+#include "aiir/IR/Block.h"
+#include "aiir/IR/Location.h"
 
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -189,7 +189,7 @@ const EHPersonality &EHPersonality::get(CIRGenFunction &cgf) {
 static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
                                         const EHPersonality &personality) {
   // Create the personality function type: i32 (...)
-  mlir::Type i32Ty = cgm.getBuilder().getI32Type();
+  aiir::Type i32Ty = cgm.getBuilder().getI32Type();
   auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
 
   cir::FuncOp personalityFn = cgm.createRuntimeFunction(
@@ -227,7 +227,7 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
 
   // __cxa_allocate_exception returns a void*;  we need to cast this
   // to the appropriate type for the object.
-  mlir::Type ty = convertTypeForMem(e->getType());
+  aiir::Type ty = convertTypeForMem(e->getType());
   Address typedAddr = addr.withElementType(builder, ty);
 
   // From LLVM's codegen:
@@ -246,8 +246,8 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
 }
 
 void CIRGenFunction::addCatchHandlerAttr(
-    const CXXCatchStmt *catchStmt, SmallVector<mlir::Attribute> &handlerAttrs) {
-  mlir::Location catchLoc = getLoc(catchStmt->getBeginLoc());
+    const CXXCatchStmt *catchStmt, SmallVector<aiir::Attribute> &handlerAttrs) {
+  aiir::Location catchLoc = getLoc(catchStmt->getBeginLoc());
 
   if (catchStmt->getExceptionDecl()) {
     // FIXME: Dropping the reference type on the type into makes it
@@ -269,30 +269,30 @@ void CIRGenFunction::addCatchHandlerAttr(
     handlerAttrs.push_back(typeInfo.rtti);
   } else {
     // No exception decl indicates '...', a catch-all.
-    handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
+    handlerAttrs.push_back(cir::CatchAllAttr::get(&getAIIRContext()));
   }
 }
 
-mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
+aiir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   if (s.getTryBlock()->body_empty())
-    return mlir::LogicalResult::success();
+    return aiir::LogicalResult::success();
 
-  mlir::Location loc = getLoc(s.getSourceRange());
+  aiir::Location loc = getLoc(s.getSourceRange());
   // Create a scope to hold try local storage for catch params.
 
-  mlir::OpBuilder::InsertPoint scopeIP;
+  aiir::OpBuilder::InsertPoint scopeIP;
   cir::ScopeOp::create(
       builder, loc,
-      /*scopeBuilder=*/[&](mlir::OpBuilder &b, mlir::Location loc) {
+      /*scopeBuilder=*/[&](aiir::OpBuilder &b, aiir::Location loc) {
         scopeIP = builder.saveInsertionPoint();
       });
 
   // Set personality function if not already set
-  auto funcOp = mlir::cast<cir::FuncOp>(curFn);
+  auto funcOp = aiir::cast<cir::FuncOp>(curFn);
   if (!funcOp.getPersonality())
     funcOp.setPersonality(getPersonalityFn(cgm, EHPersonality::get(*this)));
 
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  aiir::OpBuilder::InsertionGuard guard(builder);
   builder.restoreInsertionPoint(scopeIP);
 
   const llvm::Triple &t = getTarget().getTriple();
@@ -302,66 +302,66 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
       (cgm.getLangOpts().OpenMPIsTargetDevice && (t.isNVPTX() || t.isAMDGCN()));
   if (isTargetDevice) {
     cgm.errorNYI("emitCXXTryStmt: OpenMP target region offloaded to GPU");
-    return mlir::success();
+    return aiir::success();
   }
 
-  mlir::Location tryLoc = getLoc(s.getBeginLoc());
-  SmallVector<mlir::Attribute> handlerAttrs;
+  aiir::Location tryLoc = getLoc(s.getBeginLoc());
+  SmallVector<aiir::Attribute> handlerAttrs;
 
   CIRGenFunction::LexicalScope tryBodyScope{*this, tryLoc,
                                             builder.getInsertionBlock()};
 
   if (getLangOpts().EHAsynch) {
     cgm.errorNYI("enterCXXTryStmt: EHAsynch");
-    return mlir::failure();
+    return aiir::failure();
   }
 
   // Create the try operation.
-  mlir::LogicalResult tryRes = mlir::success();
+  aiir::LogicalResult tryRes = aiir::success();
   auto tryOp = cir::TryOp::create(
       builder, tryLoc,
       /*tryBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
+      [&](aiir::OpBuilder &b, aiir::Location loc) {
         // Create a RunCleanupsScope that allows us to apply any cleanups that
         // are created for statements within the try body before exiting the
         // try body.
         RunCleanupsScope tryBodyCleanups(*this);
         if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
-          tryRes = mlir::failure();
+          tryRes = aiir::failure();
         tryBodyCleanups.forceCleanup();
         cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc,
-          mlir::OperationState &result) {
-        mlir::OpBuilder::InsertionGuard guard(b);
+      [&](aiir::OpBuilder &b, aiir::Location loc,
+          aiir::OperationState &result) {
+        aiir::OpBuilder::InsertionGuard guard(b);
         bool hasCatchAll = false;
         unsigned numHandlers = s.getNumHandlers();
-        mlir::Type ehTokenTy = cir::EhTokenType::get(&getMLIRContext());
+        aiir::Type ehTokenTy = cir::EhTokenType::get(&getAIIRContext());
         for (unsigned i = 0; i != numHandlers; ++i) {
           const CXXCatchStmt *catchStmt = s.getHandler(i);
           if (!catchStmt->getExceptionDecl())
             hasCatchAll = true;
-          mlir::Region *region = result.addRegion();
+          aiir::Region *region = result.addRegion();
           builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
           addCatchHandlerAttr(catchStmt, handlerAttrs);
         }
         if (!hasCatchAll) {
           // Create unwind region.
-          mlir::Region *region = result.addRegion();
-          mlir::Block *unwindBlock =
+          aiir::Region *region = result.addRegion();
+          aiir::Block *unwindBlock =
               builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
           cir::ResumeOp::create(builder, loc, unwindBlock->getArgument(0));
-          handlerAttrs.push_back(cir::UnwindAttr::get(&getMLIRContext()));
+          handlerAttrs.push_back(cir::UnwindAttr::get(&getAIIRContext()));
         }
       });
 
   if (tryRes.failed())
-    return mlir::failure();
+    return aiir::failure();
 
   // Add final array of clauses into TryOp.
   tryOp.setHandlerTypesAttr(
-      mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
+      aiir::ArrayAttr::get(&getAIIRContext(), handlerAttrs));
 
   // Emit the catch handler bodies. This has to be done after the try op is
   // created and in place so that we can find the insertion point for the
@@ -369,14 +369,14 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   unsigned numHandlers = s.getNumHandlers();
   for (unsigned i = 0; i != numHandlers; ++i) {
     const CXXCatchStmt *catchStmt = s.getHandler(i);
-    mlir::Region *handler = &tryOp.getHandlerRegions()[i];
-    mlir::Location handlerLoc = getLoc(catchStmt->getCatchLoc());
+    aiir::Region *handler = &tryOp.getHandlerRegions()[i];
+    aiir::Location handlerLoc = getLoc(catchStmt->getCatchLoc());
 
-    mlir::OpBuilder::InsertionGuard guard(builder);
+    aiir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(&handler->front());
 
     // Get the !cir.eh_token block argument from the handler region.
-    mlir::Value ehToken = handler->front().getArgument(0);
+    aiir::Value ehToken = handler->front().getArgument(0);
 
     // Enter a cleanup scope, including the catch variable and the
     // end-catch.
@@ -391,7 +391,7 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
     assert(!cir::MissingFeatures::incrementProfileCounter());
 
     // Perform the body of the catch.
-    [[maybe_unused]] mlir::LogicalResult emitResult =
+    [[maybe_unused]] aiir::LogicalResult emitResult =
         emitStmt(catchStmt->getHandlerBlock(), /*useCurrentScope=*/true);
     assert(emitResult.succeeded() && "failed to emit catch handler block");
 
@@ -405,16 +405,16 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
     // Fall out through the catch cleanups.
     handlerScope.forceCleanup();
 
-    mlir::Block *block = &handler->getBlocks().back();
+    aiir::Block *block = &handler->getBlocks().back();
     if (block->empty() ||
-        !block->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-      mlir::OpBuilder::InsertionGuard guard(builder);
+        !block->back().hasTrait<aiir::OpTrait::IsTerminator>()) {
+      aiir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointToEnd(block);
       builder.createYield(handlerLoc);
     }
   }
 
-  return mlir::success();
+  return aiir::success();
 }
 
 // in classic codegen this function is mapping to `isInvokeDest` previously and

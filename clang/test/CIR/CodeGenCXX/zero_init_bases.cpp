@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fclangir -emit-cir -fcxx-exceptions -fexceptions -mmlir --mlir-print-ir-before=cir-cxxabi-lowering -o %t.cir 2> %t-before.cir
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fclangir -emit-cir -fcxx-exceptions -fexceptions -maiir --aiir-print-ir-before=cir-cxxabi-lowering -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefixes=CIR,CIR-BEFORE
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR,CIR-AFTER
 // RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fclangir -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefixes=LLVM

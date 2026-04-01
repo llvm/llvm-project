@@ -1,5 +1,5 @@
 
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s | FileCheck %s
 // REQUIRES: system-linux || system-aix
 
 // Test that there is only one FileAttribute generated for multiple functions

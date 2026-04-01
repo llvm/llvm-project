@@ -12,25 +12,25 @@
 // Complex Factory implementation
 //===----------------------------------------------------------------------===//
 
-mlir::Type
-fir::factory::Complex::getComplexPartType(mlir::Type complexType) const {
-  return mlir::cast<mlir::ComplexType>(complexType).getElementType();
+aiir::Type
+fir::factory::Complex::getComplexPartType(aiir::Type complexType) const {
+  return aiir::cast<aiir::ComplexType>(complexType).getElementType();
 }
 
-mlir::Type fir::factory::Complex::getComplexPartType(mlir::Value cplx) const {
+aiir::Type fir::factory::Complex::getComplexPartType(aiir::Value cplx) const {
   return getComplexPartType(cplx.getType());
 }
 
-mlir::Value fir::factory::Complex::createComplex(mlir::Type cplxTy,
-                                                 mlir::Value real,
-                                                 mlir::Value imag) {
-  mlir::Value und = fir::UndefOp::create(builder, loc, cplxTy);
+aiir::Value fir::factory::Complex::createComplex(aiir::Type cplxTy,
+                                                 aiir::Value real,
+                                                 aiir::Value imag) {
+  aiir::Value und = fir::UndefOp::create(builder, loc, cplxTy);
   return insert<Part::Imag>(insert<Part::Real>(und, real), imag);
 }
 
-mlir::Value fir::factory::Complex::createComplex(mlir::Value real,
-                                                 mlir::Value imag) {
+aiir::Value fir::factory::Complex::createComplex(aiir::Value real,
+                                                 aiir::Value imag) {
   assert(real.getType() == imag.getType() && "part types must match");
-  mlir::Type cplxTy = mlir::ComplexType::get(real.getType());
+  aiir::Type cplxTy = aiir::ComplexType::get(real.getType());
   return createComplex(cplxTy, real, imag);
 }

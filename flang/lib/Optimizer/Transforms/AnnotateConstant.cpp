@@ -10,7 +10,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinAttributes.h"
 
 namespace fir {
 #define GEN_PASS_DEF_ANNOTATECONSTANTOPERANDS
@@ -26,29 +26,29 @@ struct AnnotateConstantOperands
     : public impl::AnnotateConstantOperandsBase<AnnotateConstantOperands> {
   void runOnOperation() override {
     auto *context = &getContext();
-    mlir::Dialect *firDialect = context->getLoadedDialect("fir");
-    getOperation()->walk([&](mlir::Operation *op) {
+    aiir::Dialect *firDialect = context->getLoadedDialect("fir");
+    getOperation()->walk([&](aiir::Operation *op) {
       // We filter out other dialects even though they may undergo merging of
       // non-equal constant values by the canonicalizer as well.
       if (op->getDialect() == firDialect) {
-        llvm::SmallVector<mlir::Attribute> attrs;
+        llvm::SmallVector<aiir::Attribute> attrs;
         bool hasOneOrMoreConstOpnd = false;
-        for (mlir::Value opnd : op->getOperands()) {
-          if (auto constOp = mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(
+        for (aiir::Value opnd : op->getOperands()) {
+          if (auto constOp = aiir::dyn_cast_or_null<aiir::arith::ConstantOp>(
                   opnd.getDefiningOp())) {
             attrs.push_back(constOp.getValue());
             hasOneOrMoreConstOpnd = true;
-          } else if (auto addrOp = mlir::dyn_cast_or_null<fir::AddrOfOp>(
+          } else if (auto addrOp = aiir::dyn_cast_or_null<fir::AddrOfOp>(
                          opnd.getDefiningOp())) {
             attrs.push_back(addrOp.getSymbol());
             hasOneOrMoreConstOpnd = true;
           } else {
-            attrs.push_back(mlir::UnitAttr::get(context));
+            attrs.push_back(aiir::UnitAttr::get(context));
           }
         }
         if (hasOneOrMoreConstOpnd)
           op->setAttr("canonicalize_constant_operands",
-                      mlir::ArrayAttr::get(context, attrs));
+                      aiir::ArrayAttr::get(context, attrs));
       }
     });
   }
@@ -56,6 +56,6 @@ struct AnnotateConstantOperands
 
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::createAnnotateConstantOperandsPass() {
+std::unique_ptr<aiir::Pass> fir::createAnnotateConstantOperandsPass() {
   return std::make_unique<AnnotateConstantOperands>();
 }

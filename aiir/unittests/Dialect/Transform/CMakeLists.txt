@@ -1,0 +1,12 @@
+add_aiir_unittest(AIIRTransformDialectTests
+  BuildOnlyExtensionTest.cpp
+  Preload.cpp
+)
+aiir_target_link_libraries(AIIRTransformDialectTests
+  PRIVATE
+  AIIRFuncDialect
+  AIIRTestTransformDialect
+  AIIRTransformDebugExtension
+  AIIRTransformDialect
+  AIIRTransformDialectTransforms
+)

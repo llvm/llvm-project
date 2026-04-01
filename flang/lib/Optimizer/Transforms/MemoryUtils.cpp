@@ -9,12 +9,12 @@
 #include "flang/Optimizer/Transforms/MemoryUtils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/Dominance.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/Dominance.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace {
-/// Helper class to detect if an alloca is inside an mlir::Block that can be
+/// Helper class to detect if an alloca is inside an aiir::Block that can be
 /// reached again before its deallocation points via block successors. This
 /// analysis is only valid if the deallocation points are inside (or nested
 /// inside) the same region as alloca because it does not consider region CFG
@@ -25,13 +25,13 @@ namespace {
 class BlockCycleDetector {
 public:
   bool allocaIsInCycle(fir::AllocaOp alloca,
-                       llvm::ArrayRef<mlir::Operation *> deallocationPoints);
+                       llvm::ArrayRef<aiir::Operation *> deallocationPoints);
 
 private:
   // Cache for blocks owning alloca that have been analyzed. In many Fortran
   // programs, allocas are usually made in the same blocks with no block cycles.
   // So getting a fast "no" is beneficial.
-  llvm::DenseMap<mlir::Block *, /*isInCycle*/ bool> analyzed;
+  llvm::DenseMap<aiir::Block *, /*isInCycle*/ bool> analyzed;
 };
 } // namespace
 
@@ -41,47 +41,47 @@ public:
   AllocaReplaceImpl(fir::AllocaRewriterCallBack allocaRewriter,
                     fir::DeallocCallBack deallocGenerator)
       : allocaRewriter{allocaRewriter}, deallocGenerator{deallocGenerator} {}
-  bool replace(mlir::RewriterBase &, fir::AllocaOp);
+  bool replace(aiir::RewriterBase &, fir::AllocaOp);
 
 private:
-  mlir::Region *findDeallocationPointsAndOwner(
+  aiir::Region *findDeallocationPointsAndOwner(
       fir::AllocaOp alloca,
-      llvm::SmallVectorImpl<mlir::Operation *> &deallocationPoints);
+      llvm::SmallVectorImpl<aiir::Operation *> &deallocationPoints);
   bool
   allocDominatesDealloc(fir::AllocaOp alloca,
-                        llvm::ArrayRef<mlir::Operation *> deallocationPoints) {
-    return llvm::all_of(deallocationPoints, [&](mlir::Operation *deallocPoint) {
+                        llvm::ArrayRef<aiir::Operation *> deallocationPoints) {
+    return llvm::all_of(deallocationPoints, [&](aiir::Operation *deallocPoint) {
       return this->dominanceInfo.properlyDominates(alloca.getOperation(),
                                                    deallocPoint);
     });
   }
   void
-  genIndirectDeallocation(mlir::RewriterBase &, fir::AllocaOp,
-                          llvm::ArrayRef<mlir::Operation *> deallocationPoints,
-                          mlir::Value replacement, mlir::Region &owningRegion);
+  genIndirectDeallocation(aiir::RewriterBase &, fir::AllocaOp,
+                          llvm::ArrayRef<aiir::Operation *> deallocationPoints,
+                          aiir::Value replacement, aiir::Region &owningRegion);
 
 private:
   fir::AllocaRewriterCallBack allocaRewriter;
   fir::DeallocCallBack deallocGenerator;
-  mlir::DominanceInfo dominanceInfo;
+  aiir::DominanceInfo dominanceInfo;
   BlockCycleDetector blockCycleDetector;
 };
 } // namespace
 
 static bool
-allocaIsInCycleImpl(mlir::Block *allocaBlock,
-                    llvm::ArrayRef<mlir::Operation *> deallocationPoints) {
-  llvm::DenseSet<mlir::Block *> seen;
+allocaIsInCycleImpl(aiir::Block *allocaBlock,
+                    llvm::ArrayRef<aiir::Operation *> deallocationPoints) {
+  llvm::DenseSet<aiir::Block *> seen;
   // Insert the deallocation point blocks as "seen" so that the block
   // traversal will stop at them.
-  for (mlir::Operation *deallocPoint : deallocationPoints)
+  for (aiir::Operation *deallocPoint : deallocationPoints)
     seen.insert(deallocPoint->getBlock());
   if (seen.contains(allocaBlock))
     return false;
   // Traverse the block successor graph starting by the alloca block.
-  llvm::SmallVector<mlir::Block *> successors{allocaBlock};
+  llvm::SmallVector<aiir::Block *> successors{allocaBlock};
   while (!successors.empty())
-    for (mlir::Block *next : successors.pop_back_val()->getSuccessors()) {
+    for (aiir::Block *next : successors.pop_back_val()->getSuccessors()) {
       if (next == allocaBlock)
         return true;
       if (auto pair = seen.insert(next); pair.second)
@@ -92,8 +92,8 @@ allocaIsInCycleImpl(mlir::Block *allocaBlock,
 }
 bool BlockCycleDetector::allocaIsInCycle(
     fir::AllocaOp alloca,
-    llvm::ArrayRef<mlir::Operation *> deallocationPoints) {
-  mlir::Block *allocaBlock = alloca->getBlock();
+    llvm::ArrayRef<aiir::Operation *> deallocationPoints) {
+  aiir::Block *allocaBlock = alloca->getBlock();
   auto analyzedPair = analyzed.try_emplace(allocaBlock, /*isInCycle=*/false);
   bool alreadyAnalyzed = !analyzedPair.second;
   bool &isInCycle = analyzedPair.first->second;
@@ -113,13 +113,13 @@ bool BlockCycleDetector::allocaIsInCycle(
   return allocaIsInCycleImpl(allocaBlock, deallocationPoints);
 }
 
-static bool terminatorYieldsMemory(mlir::Operation &terminator) {
-  return llvm::any_of(terminator.getResults(), [](mlir::OpResult res) {
+static bool terminatorYieldsMemory(aiir::Operation &terminator) {
+  return llvm::any_of(terminator.getResults(), [](aiir::OpResult res) {
     return fir::conformsWithPassByRef(res.getType());
   });
 }
 
-static bool isRegionTerminator(mlir::Operation &terminator) {
+static bool isRegionTerminator(aiir::Operation &terminator) {
   // Using ReturnLike trait is tempting but it is not set on
   // all region terminator that matters (like omp::TerminatorOp that
   // has no results).
@@ -134,21 +134,21 @@ static bool isRegionTerminator(mlir::Operation &terminator) {
   return !terminator.hasSuccessors();
 }
 
-mlir::Region *AllocaReplaceImpl::findDeallocationPointsAndOwner(
+aiir::Region *AllocaReplaceImpl::findDeallocationPointsAndOwner(
     fir::AllocaOp alloca,
-    llvm::SmallVectorImpl<mlir::Operation *> &deallocationPoints) {
+    llvm::SmallVectorImpl<aiir::Operation *> &deallocationPoints) {
   // Step 1: Identify the operation and region owning the alloca.
-  mlir::Region *owningRegion = alloca.getOwnerRegion();
+  aiir::Region *owningRegion = alloca.getOwnerRegion();
   if (!owningRegion)
     return nullptr;
-  mlir::Operation *owningOp = owningRegion->getParentOp();
+  aiir::Operation *owningOp = owningRegion->getParentOp();
   assert(owningOp && "region expected to be owned");
   // Step 2: Identify the exit points of the owning region, they are the default
   // deallocation points. TODO: detect and use lifetime markers to get earlier
   // deallocation points.
-  bool isOpenACCMPRecipe = mlir::isa<mlir::accomp::RecipeInterface>(owningOp);
-  for (mlir::Block &block : owningRegion->getBlocks())
-    if (mlir::Operation *terminator = block.getTerminator();
+  bool isOpenACCMPRecipe = aiir::isa<aiir::accomp::RecipeInterface>(owningOp);
+  for (aiir::Block &block : owningRegion->getBlocks())
+    if (aiir::Operation *terminator = block.getTerminator();
         isRegionTerminator(*terminator)) {
       // FIXME: OpenACC and OpenMP privatization recipe are stand alone
       // operation meant to be later "inlined", the value they return may
@@ -163,7 +163,7 @@ mlir::Region *AllocaReplaceImpl::findDeallocationPointsAndOwner(
     }
   // If no block terminators without successors have been found, this is
   // an odd region we cannot reason about (never seen yet in FIR and
-  // mainstream dialects, but MLIR does not really prevent it).
+  // mainstream dialects, but AIIR does not really prevent it).
   if (deallocationPoints.empty())
     return nullptr;
 
@@ -191,41 +191,41 @@ mlir::Region *AllocaReplaceImpl::findDeallocationPointsAndOwner(
 }
 
 void AllocaReplaceImpl::genIndirectDeallocation(
-    mlir::RewriterBase &rewriter, fir::AllocaOp alloca,
-    llvm::ArrayRef<mlir::Operation *> deallocationPoints,
-    mlir::Value replacement, mlir::Region &owningRegion) {
-  mlir::Location loc = alloca.getLoc();
+    aiir::RewriterBase &rewriter, fir::AllocaOp alloca,
+    llvm::ArrayRef<aiir::Operation *> deallocationPoints,
+    aiir::Value replacement, aiir::Region &owningRegion) {
+  aiir::Location loc = alloca.getLoc();
   auto replacementInsertPoint = rewriter.saveInsertionPoint();
   // Create C pointer variable in the entry block to store the alloc
   // and access it indirectly in the entry points that do not dominate.
   rewriter.setInsertionPointToStart(&owningRegion.front());
-  mlir::Type heapType = fir::HeapType::get(alloca.getInType());
-  mlir::Value ptrVar = fir::AllocaOp::create(rewriter, loc, heapType);
-  mlir::Value nullPtr = fir::ZeroOp::create(rewriter, loc, heapType);
+  aiir::Type heapType = fir::HeapType::get(alloca.getInType());
+  aiir::Value ptrVar = fir::AllocaOp::create(rewriter, loc, heapType);
+  aiir::Value nullPtr = fir::ZeroOp::create(rewriter, loc, heapType);
   fir::StoreOp::create(rewriter, loc, nullPtr, ptrVar);
   // TODO: introducing a pointer compare op in FIR would help
   // generating less IR here.
-  mlir::Type intPtrTy = fir::getIntPtrType(rewriter);
-  mlir::Value c0 = mlir::arith::ConstantOp::create(
+  aiir::Type intPtrTy = fir::getIntPtrType(rewriter);
+  aiir::Value c0 = aiir::arith::ConstantOp::create(
       rewriter, loc, intPtrTy, rewriter.getIntegerAttr(intPtrTy, 0));
 
   // Store new storage address right after its creation.
   rewriter.restoreInsertionPoint(replacementInsertPoint);
-  mlir::Value castReplacement =
+  aiir::Value castReplacement =
       fir::factory::createConvert(rewriter, loc, heapType, replacement);
   fir::StoreOp::create(rewriter, loc, castReplacement, ptrVar);
 
   // Generate conditional deallocation at every deallocation point.
-  auto genConditionalDealloc = [&](mlir::Location loc) {
-    mlir::Value ptrVal = fir::LoadOp::create(rewriter, loc, ptrVar);
-    mlir::Value ptrToInt =
+  auto genConditionalDealloc = [&](aiir::Location loc) {
+    aiir::Value ptrVal = fir::LoadOp::create(rewriter, loc, ptrVar);
+    aiir::Value ptrToInt =
         fir::ConvertOp::create(rewriter, loc, intPtrTy, ptrVal);
-    mlir::Value isAllocated = mlir::arith::CmpIOp::create(
-        rewriter, loc, mlir::arith::CmpIPredicate::ne, ptrToInt, c0);
-    auto ifOp = fir::IfOp::create(rewriter, loc, mlir::TypeRange{}, isAllocated,
+    aiir::Value isAllocated = aiir::arith::CmpIOp::create(
+        rewriter, loc, aiir::arith::CmpIPredicate::ne, ptrToInt, c0);
+    auto ifOp = fir::IfOp::create(rewriter, loc, aiir::TypeRange{}, isAllocated,
                                   /*withElseRegion=*/false);
     rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    mlir::Value cast = fir::factory::createConvert(
+    aiir::Value cast = fir::factory::createConvert(
         rewriter, loc, replacement.getType(), ptrVal);
     deallocGenerator(loc, rewriter, cast);
     // Currently there is no need to reset the pointer var because two
@@ -233,28 +233,28 @@ void AllocaReplaceImpl::genIndirectDeallocation(
     // alloca.
     rewriter.setInsertionPointAfter(ifOp);
   };
-  for (mlir::Operation *deallocPoint : deallocationPoints) {
+  for (aiir::Operation *deallocPoint : deallocationPoints) {
     rewriter.setInsertionPoint(deallocPoint);
     genConditionalDealloc(deallocPoint->getLoc());
   }
 }
 
-bool AllocaReplaceImpl::replace(mlir::RewriterBase &rewriter,
+bool AllocaReplaceImpl::replace(aiir::RewriterBase &rewriter,
                                 fir::AllocaOp alloca) {
-  llvm::SmallVector<mlir::Operation *> deallocationPoints;
-  mlir::Region *owningRegion =
+  llvm::SmallVector<aiir::Operation *> deallocationPoints;
+  aiir::Region *owningRegion =
       findDeallocationPointsAndOwner(alloca, deallocationPoints);
   if (!owningRegion)
     return false;
   rewriter.setInsertionPointAfter(alloca.getOperation());
   bool deallocPointsDominateAlloc =
       allocDominatesDealloc(alloca, deallocationPoints);
-  if (mlir::Value replacement =
+  if (aiir::Value replacement =
           allocaRewriter(rewriter, alloca, deallocPointsDominateAlloc)) {
-    mlir::Value castReplacement = fir::factory::createConvert(
+    aiir::Value castReplacement = fir::factory::createConvert(
         rewriter, alloca.getLoc(), alloca.getType(), replacement);
     if (deallocPointsDominateAlloc)
-      for (mlir::Operation *deallocPoint : deallocationPoints) {
+      for (aiir::Operation *deallocPoint : deallocationPoints) {
         rewriter.setInsertionPoint(deallocPoint);
         deallocGenerator(deallocPoint->getLoc(), rewriter, replacement);
       }
@@ -266,8 +266,8 @@ bool AllocaReplaceImpl::replace(mlir::RewriterBase &rewriter,
   return true;
 }
 
-bool fir::replaceAllocas(mlir::RewriterBase &rewriter,
-                         mlir::Operation *parentOp,
+bool fir::replaceAllocas(aiir::RewriterBase &rewriter,
+                         aiir::Operation *parentOp,
                          MustRewriteCallBack mustReplace,
                          AllocaRewriterCallBack allocaRewriter,
                          DeallocCallBack deallocGenerator) {

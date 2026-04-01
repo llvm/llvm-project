@@ -20,10 +20,10 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Support/LLVM.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -62,13 +62,13 @@ namespace {
 /// This transformation does not support runtime checking for
 /// non-conforming LHS/RHS arrays' shapes currently.
 class InlineHLFIRAssignConversion
-    : public mlir::OpRewritePattern<hlfir::AssignOp> {
+    : public aiir::OpRewritePattern<hlfir::AssignOp> {
 public:
-  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
+  using aiir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     if (assign.isAllocatableAssignment())
       return rewriter.notifyMatchFailure(assign,
                                          "AssignOp may imply allocation");
@@ -79,7 +79,7 @@ public:
       return rewriter.notifyMatchFailure(assign,
                                          "AssignOp's RHS is not an array");
 
-    mlir::Type rhsEleTy = rhs.getFortranElementType();
+    aiir::Type rhsEleTy = rhs.getFortranElementType();
     if (!fir::isa_trivial(rhsEleTy))
       return rewriter.notifyMatchFailure(
           assign, "AssignOp's RHS data type is not trivial");
@@ -89,7 +89,7 @@ public:
       return rewriter.notifyMatchFailure(assign,
                                          "AssignOp's LHS is not an array");
 
-    mlir::Type lhsEleTy = lhs.getFortranElementType();
+    aiir::Type lhsEleTy = lhs.getFortranElementType();
     if (!fir::isa_trivial(lhsEleTy))
       return rewriter.notifyMatchFailure(
           assign, "AssignOp's LHS data type is not trivial");
@@ -98,13 +98,13 @@ public:
       return rewriter.notifyMatchFailure(assign,
                                          "RHS/LHS element types mismatch");
 
-    if (!mlir::isa<hlfir::ExprType>(rhs.getType())) {
+    if (!aiir::isa<hlfir::ExprType>(rhs.getType())) {
       // If RHS is not an hlfir.expr, then we should prove that
       // LHS and RHS do not alias.
       // TODO: if they may alias, we can insert hlfir.as_expr for RHS,
       // and proceed with the inlining.
       fir::AliasAnalysis aliasAnalysis;
-      mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
+      aiir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
       if (!aliasRes.isNo()) {
         // Alias analysis reports potential aliasing, but we can use
         // ArraySectionAnalyzer to check if the slices are disjoint
@@ -121,18 +121,18 @@ public:
       }
     }
 
-    mlir::Location loc = assign->getLoc();
+    aiir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
-    mlir::ArrayAttr accessGroups;
-    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+    aiir::ArrayAttr accessGroups;
+    if (auto attrs = assign.getOperation()->getAttrOfType<aiir::ArrayAttr>(
             fir::getAccessGroupsAttrName()))
       accessGroups = attrs;
     hlfir::genNoAliasArrayAssignment(
         loc, builder, rhs, lhs, flangomp::shouldUseWorkshareLowering(assign),
         /*temporaryLHS=*/false, /*combiner=*/nullptr, accessGroups);
     rewriter.eraseOp(assign);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -160,13 +160,13 @@ public:
 ///     hlfir.assign %rhs_val to %lhs_elem : f64, !fir.ref<f64>
 ///   }
 class InlineAllocatableExprAssignConversion
-    : public mlir::OpRewritePattern<hlfir::AssignOp> {
+    : public aiir::OpRewritePattern<hlfir::AssignOp> {
 public:
-  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
+  using aiir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     // This pattern only handles allocatable assignments
     if (!assign.isAllocatableAssignment())
       return rewriter.notifyMatchFailure(
@@ -176,7 +176,7 @@ public:
     hlfir::Entity lhs{assign.getLhs()};
 
     // RHS must be an hlfir.expr (this is the key condition - no aliasing)
-    if (!mlir::isa<hlfir::ExprType>(rhs.getType()))
+    if (!aiir::isa<hlfir::ExprType>(rhs.getType()))
       return rewriter.notifyMatchFailure(
           assign,
           "RHS is not an hlfir.expr - cannot inline allocatable assign");
@@ -187,12 +187,12 @@ public:
                                          "AssignOp's RHS is not an array");
 
     // Check element types are trivial and match
-    mlir::Type rhsEleTy = rhs.getFortranElementType();
+    aiir::Type rhsEleTy = rhs.getFortranElementType();
     if (!fir::isa_trivial(rhsEleTy))
       return rewriter.notifyMatchFailure(
           assign, "AssignOp's RHS data type is not trivial");
 
-    mlir::Type lhsEleTy = lhs.getFortranElementType();
+    aiir::Type lhsEleTy = lhs.getFortranElementType();
     if (!fir::isa_trivial(lhsEleTy))
       return rewriter.notifyMatchFailure(
           assign, "AssignOp's LHS data type is not trivial");
@@ -202,7 +202,7 @@ public:
                                          "RHS/LHS element types mismatch");
 
     // LHS must be a reference to a box (allocatable)
-    mlir::Type lhsType = lhs.getType();
+    aiir::Type lhsType = lhs.getType();
     if (!fir::isBoxAddress(lhsType))
       return rewriter.notifyMatchFailure(assign,
                                          "LHS is not a reference to a box");
@@ -210,17 +210,17 @@ public:
     LLVM_DEBUG(llvm::dbgs()
                << "InlineHLFIRAssign: inlining allocatable expr assignment\n");
 
-    mlir::Location loc = assign->getLoc();
+    aiir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
 
     // Get the shape of the RHS expression
-    mlir::Value rhsShape = hlfir::genShape(loc, builder, rhs);
-    llvm::SmallVector<mlir::Value> rhsExtents =
+    aiir::Value rhsShape = hlfir::genShape(loc, builder, rhs);
+    llvm::SmallVector<aiir::Value> rhsExtents =
         hlfir::getIndexExtents(loc, builder, rhsShape);
 
     // Create a MutableBoxValue for the LHS allocatable
-    mlir::Value lhsBoxRef = lhs.getFirBase();
+    aiir::Value lhsBoxRef = lhs.getFirBase();
 
     // Create MutableBoxValue - for trivial types, no length params needed
     fir::MutableBoxValue mutableBox(lhsBoxRef, /*lenParameters=*/{},
@@ -238,7 +238,7 @@ public:
       hlfir::Entity lhsEntity{
           fir::getBase(fir::factory::createBoxValue(builder, loc, storage))};
 
-      llvm::SmallVector<mlir::Value> extents =
+      llvm::SmallVector<aiir::Value> extents =
           fir::factory::getExtents(loc, builder, storage);
 
       // Generate loop nest to assign elements
@@ -266,7 +266,7 @@ public:
     };
 
     // No length params for trivial types
-    llvm::SmallVector<mlir::Value> lenParams;
+    llvm::SmallVector<aiir::Value> lenParams;
 
     // Generate reallocation logic with assignment in the callback
     fir::factory::MutableBoxReallocation realloc =
@@ -279,7 +279,7 @@ public:
 
     // Erase the original assign
     rewriter.eraseOp(assign);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -289,14 +289,14 @@ public:
   using InlineHLFIRAssignBase<InlineHLFIRAssignPass>::InlineHLFIRAssignBase;
 
   void runOnOperation() override {
-    mlir::MLIRContext *context = &getContext();
+    aiir::AIIRContext *context = &getContext();
 
-    mlir::GreedyRewriteConfig config;
+    aiir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
     config.setRegionSimplificationLevel(
-        mlir::GreedySimplifyRegionLevel::Disabled);
+        aiir::GreedySimplifyRegionLevel::Disabled);
 
-    mlir::RewritePatternSet patterns(context);
+    aiir::RewritePatternSet patterns(context);
     patterns.insert<InlineHLFIRAssignConversion>(context);
 
     // Optionally add the allocatable expr assignment pattern
@@ -307,9 +307,9 @@ public:
       patterns.insert<InlineAllocatableExprAssignConversion>(context);
     }
 
-    if (mlir::failed(mlir::applyPatternsGreedily(
+    if (aiir::failed(aiir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
-      mlir::emitError(getOperation()->getLoc(),
+      aiir::emitError(getOperation()->getLoc(),
                       "failure in hlfir.assign inlining");
       signalPassFailure();
     }

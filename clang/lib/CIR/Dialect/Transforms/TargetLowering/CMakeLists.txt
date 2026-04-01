@@ -1,4 +1,4 @@
-add_clang_library(MLIRCIRTargetLowering
+add_clang_library(AIIRCIRTargetLowering
   CIRCXXABI.cpp
   LowerModule.cpp
   LowerItaniumCXXABI.cpp
@@ -13,10 +13,10 @@ add_clang_library(MLIRCIRTargetLowering
   LINK_LIBS PUBLIC
 
   clangBasic
-  MLIRIR
-  MLIRPass
-  MLIRDLTIDialect
-  MLIRCIR
-  MLIRCIRInterfaces
-  MLIRLLVMDialect
+  AIIRIR
+  AIIRPass
+  AIIRDLTIDialect
+  AIIRCIR
+  AIIRCIRInterfaces
+  AIIRLLVMDialect
 )

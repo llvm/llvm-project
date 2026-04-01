@@ -13,7 +13,7 @@
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
-using namespace mlir;
+using namespace aiir;
 
 /// Conditions the deletion of the operation to the removal of all its uses.
 static bool forwardToUsers(Operation *op,
@@ -137,12 +137,12 @@ Value cir::CopyOp::getStored(const MemorySlot &slot, OpBuilder &builder,
 
 DeletionKind cir::CopyOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder, mlir::Value reachingDefinition,
+    OpBuilder &builder, aiir::Value reachingDefinition,
     const DataLayout &dataLayout) {
   if (loadsFrom(slot))
     cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
                          /*isVolatile=*/false,
-                         /*alignment=*/mlir::IntegerAttr{},
+                         /*alignment=*/aiir::IntegerAttr{},
                          /*sync_scope=*/cir::SyncScopeKindAttr(),
                          /*mem-order=*/cir::MemOrderAttr());
   return DeletionKind::Delete;

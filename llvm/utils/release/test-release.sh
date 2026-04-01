@@ -39,7 +39,7 @@ do_openmp="yes"
 do_lld="yes"
 do_lldb="yes"
 do_polly="yes"
-do_mlir="yes"
+do_aiir="yes"
 do_flang="yes"
 do_silent_log="no"
 BuildDir="`pwd`"
@@ -84,7 +84,7 @@ function usage() {
     echo " -lldb                Enable check-out & build lldb"
     echo " -no-lldb             Disable check-out & build lldb (default)"
     echo " -no-polly            Disable check-out & build Polly"
-    echo " -no-mlir             Disable check-out & build MLIR"
+    echo " -no-aiir             Disable check-out & build AIIR"
     echo " -no-flang            Disable check-out & build Flang"
     echo " -silent-log          Don't output build logs to stdout"
     echo " -use-cmake-cache     Build using a CMake cache file"
@@ -192,8 +192,8 @@ while [ $# -gt 0 ]; do
         -no-polly )
             do_polly="no"
             ;;
-        -no-mlir )
-            do_mlir="no"
+        -no-aiir )
+            do_aiir="no"
             ;;
         -no-flang )
             do_flang="no"
@@ -217,8 +217,8 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-if [ $do_mlir = "no" ] && [ $do_flang = "yes" ]; then
-  echo "error: cannot build Flang without MLIR"
+if [ $do_aiir = "no" ] && [ $do_flang = "yes" ]; then
+  echo "error: cannot build Flang without AIIR"
   exit 1
 fi
 
@@ -306,8 +306,8 @@ fi
 if [ $do_polly = "yes" ]; then
   projects="${projects:+$projects;}polly"
 fi
-if [ $do_mlir = "yes" ]; then
-  projects="${projects:+$projects;}mlir"
+if [ $do_aiir = "yes" ]; then
+  projects="${projects:+$projects;}aiir"
 fi
 if [ $do_flang = "yes" ]; then
   projects="${projects:+$projects;}flang"

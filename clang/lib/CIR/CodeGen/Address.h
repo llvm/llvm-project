@@ -14,8 +14,8 @@
 #ifndef CLANG_LIB_CIR_ADDRESS_H
 #define CLANG_LIB_CIR_ADDRESS_H
 
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
-#include "mlir/IR/Value.h"
+#include "aiir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "aiir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -31,12 +31,12 @@ class CIRGenBuilderTy;
 class Address {
 
   // The boolean flag indicates whether the pointer is known to be non-null.
-  llvm::PointerIntPair<mlir::Value, 1, bool> pointerAndKnownNonNull;
+  llvm::PointerIntPair<aiir::Value, 1, bool> pointerAndKnownNonNull;
 
   /// The expected CIR type of the pointer. Carrying accurate element type
   /// information in Address makes it more convenient to work with Address
   /// values and allows frontend assertions to catch simple mistakes.
-  mlir::Type elementType;
+  aiir::Type elementType;
 
   clang::CharUnits alignment;
 
@@ -44,11 +44,11 @@ protected:
   Address(std::nullptr_t) : elementType(nullptr) {}
 
 public:
-  Address(mlir::Value pointer, mlir::Type elementType,
+  Address(aiir::Value pointer, aiir::Type elementType,
           clang::CharUnits alignment)
       : Address(pointer, elementType, alignment, false) {}
 
-  Address(mlir::Value pointer, mlir::Type elementType,
+  Address(aiir::Value pointer, aiir::Type elementType,
           clang::CharUnits alignment, bool isKnownNonNull)
       : pointerAndKnownNonNull(pointer, isKnownNonNull),
         elementType(elementType), alignment(alignment) {
@@ -56,16 +56,16 @@ public:
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
 
-    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+    assert(aiir::isa<cir::PointerType>(pointer.getType()) &&
            "Expected cir.ptr type");
 
-    assert(mlir::cast<cir::PointerType>(pointer.getType()).getPointee() ==
+    assert(aiir::cast<cir::PointerType>(pointer.getType()).getPointee() ==
            elementType);
   }
 
-  Address(mlir::Value pointer, clang::CharUnits alignment)
+  Address(aiir::Value pointer, clang::CharUnits alignment)
       : Address(pointer,
-                mlir::cast<cir::PointerType>(pointer.getType()).getPointee(),
+                aiir::cast<cir::PointerType>(pointer.getType()).getPointee(),
                 alignment) {
     assert((!alignment.isZero() || pointer == nullptr) &&
            "creating valid address with invalid alignment");
@@ -78,7 +78,7 @@ public:
 
   /// Return address with different pointer, but same element type and
   /// alignment.
-  Address withPointer(mlir::Value newPtr) const {
+  Address withPointer(aiir::Value newPtr) const {
     return Address(newPtr, getElementType(), getAlignment());
   }
 
@@ -91,14 +91,14 @@ public:
 
   /// Return address with different element type, a bitcast pointer, and
   /// the same alignment.
-  Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;
+  Address withElementType(CIRGenBuilderTy &builder, aiir::Type ElemTy) const;
 
-  mlir::Value getPointer() const {
+  aiir::Value getPointer() const {
     assert(isValid());
     return pointerAndKnownNonNull.getPointer();
   }
 
-  mlir::Value getBasePointer() const {
+  aiir::Value getBasePointer() const {
     // TODO(cir): Remove the version above when we catchup with OG codegen on
     // ptr auth.
     assert(isValid() && "pointer isn't valid");
@@ -107,43 +107,43 @@ public:
 
   /// Return the pointer contained in this class after authenticating it and
   /// adding offset to it if necessary.
-  mlir::Value emitRawPointer() const {
+  aiir::Value emitRawPointer() const {
     assert(!cir::MissingFeatures::addressPointerAuthInfo());
     return getBasePointer();
   }
 
-  mlir::Type getType() const {
-    assert(mlir::cast<cir::PointerType>(
+  aiir::Type getType() const {
+    assert(aiir::cast<cir::PointerType>(
                pointerAndKnownNonNull.getPointer().getType())
                .getPointee() == elementType);
 
-    return mlir::cast<cir::PointerType>(getPointer().getType());
+    return aiir::cast<cir::PointerType>(getPointer().getType());
   }
 
-  mlir::Type getElementType() const {
+  aiir::Type getElementType() const {
     assert(isValid());
-    assert(mlir::cast<cir::PointerType>(
+    assert(aiir::cast<cir::PointerType>(
                pointerAndKnownNonNull.getPointer().getType())
                .getPointee() == elementType);
     return elementType;
   }
 
-  mlir::ptr::MemorySpaceAttrInterface getAddressSpace() const {
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(getType());
+  aiir::ptr::MemorySpaceAttrInterface getAddressSpace() const {
+    auto ptrTy = aiir::dyn_cast<cir::PointerType>(getType());
     return ptrTy.getAddrSpace();
   }
 
   clang::CharUnits getAlignment() const { return alignment; }
 
   /// Get the operation which defines this address.
-  mlir::Operation *getDefiningOp() const {
+  aiir::Operation *getDefiningOp() const {
     if (!isValid())
       return nullptr;
     return getPointer().getDefiningOp();
   }
 
   template <typename OpTy> OpTy getDefiningOp() const {
-    return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
+    return aiir::dyn_cast_or_null<OpTy>(getDefiningOp());
   }
 
   /// Whether the pointer is known not to be null.

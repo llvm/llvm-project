@@ -1,4 +1,4 @@
-# Dummy target because real CIRUnitTests depends on //mlir, which isn't
+# Dummy target because real CIRUnitTests depends on //aiir, which isn't
 # part of the GN build.
 group("CIRUnitTests") {
   sources = [ "PointerLikeTest.cpp" ]

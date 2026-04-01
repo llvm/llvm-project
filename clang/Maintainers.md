@@ -43,7 +43,7 @@ efriedma@qti.qualcomm.com (email), efriedma (Phabricator), [efriedma-quic](https
 Anton Korobeynikov \
 anton@korobeynikov.info (email), asl (Phabricator), [asl](https://github.com/asl) (GitHub)
 
-### Clang MLIR generation
+### Clang AIIR generation
 
 Andy Kaylor \
 akaylor@nvidia.com (email), AndyKaylor (Discord), [AndyKaylor](https://github.com/AndyKaylor) (GitHub)

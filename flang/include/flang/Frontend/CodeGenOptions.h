@@ -214,7 +214,7 @@ public:
 
     /// Implementation of complex division offering an improved handling
     /// for overflow in intermediate calculations. Overflow and non-finite
-    /// values are handled by MLIR's implementation of "complex.div", but this
+    /// values are handled by AIIR's implementation of "complex.div", but this
     /// may change in the future.
     CX_Improved,
 

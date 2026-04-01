@@ -1,5 +1,5 @@
 // RUN:  fir-opt -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis-modref))' \
-// RUN:  --mlir-disable-threading %s -o /dev/null 2>&1 | FileCheck %s
+// RUN:  --aiir-disable-threading %s -o /dev/null 2>&1 | FileCheck %s
 
 // Test that fir.call modref can recognize Fortran user procedures
 // after ExternalNameConversion pass.

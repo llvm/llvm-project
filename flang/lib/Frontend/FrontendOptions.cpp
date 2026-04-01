@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -48,8 +48,8 @@ InputKind FrontendOptions::getInputKindForExtension(llvm::StringRef extension) {
 
   if (extension == "bc" || extension == "ll")
     return Language::LLVM_IR;
-  if (extension == "fir" || extension == "mlir")
-    return Language::MLIR;
+  if (extension == "fir" || extension == "aiir")
+    return Language::AIIR;
 
   return Language::Unknown;
 }

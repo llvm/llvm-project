@@ -10,9 +10,9 @@
 #define FORTRAN_OPTIMIZER_CODEGEN_CODEGEN_H
 
 #include "flang/Frontend/CodeGenOptions.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassRegistry.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -61,33 +61,33 @@ struct FIRToLLVMPassOptions {
   bool typeDescriptorsRenamedForAssembly = false;
 
   // Specify the calculation method for complex number division used by the
-  // Conversion pass of the MLIR complex dialect.
+  // Conversion pass of the AIIR complex dialect.
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Full;
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.
-std::unique_ptr<mlir::Pass> createFIRToLLVMPass();
+std::unique_ptr<aiir::Pass> createFIRToLLVMPass();
 
 /// Convert FIR to the LLVM IR dialect
-std::unique_ptr<mlir::Pass> createFIRToLLVMPass(FIRToLLVMPassOptions options);
+std::unique_ptr<aiir::Pass> createFIRToLLVMPass(FIRToLLVMPassOptions options);
 
 using LLVMIRLoweringPrinter =
     std::function<void(llvm::Module &, llvm::raw_ostream &)>;
 
 /// Convert the LLVM IR dialect to LLVM-IR proper
-std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
+std::unique_ptr<aiir::Pass> createLLVMDialectToLLVMPass(
     llvm::raw_ostream &output,
     LLVMIRLoweringPrinter printer =
         [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
 
 /// Populate the given list with patterns that convert from FIR to LLVM.
 void populateFIRToLLVMConversionPatterns(
-    const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
+    const fir::LLVMTypeConverter &converter, aiir::RewritePatternSet &patterns,
     fir::FIRToLLVMPassOptions &options);
 
 /// Populate the pattern set with the PreCGRewrite patterns.
-void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
+void populatePreCGRewritePatterns(aiir::RewritePatternSet &patterns,
                                   bool preserveDeclare);
 
 // declarative passes

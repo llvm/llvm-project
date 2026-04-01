@@ -15,10 +15,10 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_TRAMPOLINE_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_TRAMPOLINE_H
 
-namespace mlir {
+namespace aiir {
 class Value;
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -28,19 +28,19 @@ namespace fir::runtime {
 
 /// Generate a call to _FortranATrampolineInit.
 /// Returns an opaque handle (void*) for the trampoline.
-mlir::Value genTrampolineInit(fir::FirOpBuilder &builder, mlir::Location loc,
-                              mlir::Value scratch, mlir::Value calleeAddress,
-                              mlir::Value staticChainAddress);
+aiir::Value genTrampolineInit(fir::FirOpBuilder &builder, aiir::Location loc,
+                              aiir::Value scratch, aiir::Value calleeAddress,
+                              aiir::Value staticChainAddress);
 
 /// Generate a call to _FortranATrampolineAdjust.
 /// Returns the callable function pointer for the trampoline.
-mlir::Value genTrampolineAdjust(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value handle);
+aiir::Value genTrampolineAdjust(fir::FirOpBuilder &builder, aiir::Location loc,
+                                aiir::Value handle);
 
 /// Generate a call to _FortranATrampolineFree.
 /// Frees the trampoline slot.
-void genTrampolineFree(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value handle);
+void genTrampolineFree(fir::FirOpBuilder &builder, aiir::Location loc,
+                       aiir::Value handle);
 
 } // namespace fir::runtime
 

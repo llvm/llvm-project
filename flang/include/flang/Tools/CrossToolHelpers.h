@@ -19,9 +19,9 @@
 #include "flang/Support/MathOptionsBase.h"
 #include <cstdint>
 
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/PassRegistry.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Pass/PassRegistry.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -30,61 +30,61 @@
 class FlangEPCallBacks {
 public:
   void registerFIROptEarlyEPCallbacks(
-      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+      const std::function<void(aiir::PassManager &, llvm::OptimizationLevel)>
           &C) {
     FIROptEarlyEPCallbacks.push_back(C);
   }
 
   void registerFIRInlinerCallback(
-      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+      const std::function<void(aiir::PassManager &, llvm::OptimizationLevel)>
           &C) {
     FIRInlinerCallback.push_back(C);
   }
 
   void registerFIROptLastEPCallbacks(
-      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+      const std::function<void(aiir::PassManager &, llvm::OptimizationLevel)>
           &C) {
     FIROptLastEPCallbacks.push_back(C);
   }
 
   void invokeFIROptEarlyEPCallbacks(
-      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+      aiir::PassManager &pm, llvm::OptimizationLevel optLevel) {
     for (auto &C : FIROptEarlyEPCallbacks)
       C(pm, optLevel);
   };
 
   void invokeFIRInlinerCallback(
-      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+      aiir::PassManager &pm, llvm::OptimizationLevel optLevel) {
     for (auto &C : FIRInlinerCallback)
       C(pm, optLevel);
   };
 
   void invokeFIROptLastEPCallbacks(
-      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+      aiir::PassManager &pm, llvm::OptimizationLevel optLevel) {
     for (auto &C : FIROptLastEPCallbacks)
       C(pm, optLevel);
   };
 
 private:
   llvm::SmallVector<
-      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      std::function<void(aiir::PassManager &, llvm::OptimizationLevel)>, 1>
       FIROptEarlyEPCallbacks;
 
   llvm::SmallVector<
-      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      std::function<void(aiir::PassManager &, llvm::OptimizationLevel)>, 1>
       FIRInlinerCallback;
 
   llvm::SmallVector<
-      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      std::function<void(aiir::PassManager &, llvm::OptimizationLevel)>, 1>
       FIROptLastEPCallbacks;
 };
 
-/// Configuriation for the MLIR to LLVM pass pipeline.
-struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
-  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
+/// Configuriation for the AIIR to LLVM pass pipeline.
+struct AIIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
+  explicit AIIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
     OptLevel = level;
   }
-  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level,
+  explicit AIIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level,
       const Fortran::frontend::CodeGenOptions &opts,
       const Fortran::common::MathOptionsBase &mathOpts) {
     OptLevel = level;
@@ -160,9 +160,9 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
 };
 
 /// Create OffloadModuleOpts from Flang LangOptions.
-[[maybe_unused]] static mlir::omp::OffloadModuleOpts makeOffloadModuleOpts(
+[[maybe_unused]] static aiir::omp::OffloadModuleOpts makeOffloadModuleOpts(
     Fortran::common::LangOptions &Opts) {
-  return mlir::omp::OffloadModuleOpts(Opts.OpenMPTargetDebug,
+  return aiir::omp::OffloadModuleOpts(Opts.OpenMPTargetDebug,
       Opts.OpenMPTeamSubscription, Opts.OpenMPThreadSubscription,
       Opts.OpenMPNoThreadState, Opts.OpenMPNoNestedParallelism,
       Opts.OpenMPIsTargetDevice, Opts.OpenMPIsGPU, Opts.OpenMPForceUSM,

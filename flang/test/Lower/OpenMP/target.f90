@@ -1,6 +1,6 @@
 ! The "thread_limit" clause was added to the "target" construct in OpenMP 5.1.
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=false -fopenmp-version=51 %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=true -fopenmp-version=51 %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --enable-delayed-privatization-staging=false -fopenmp-version=51 %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --enable-delayed-privatization-staging=true -fopenmp-version=51 %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
 
 !===============================================================================
 ! Target_Enter Simple

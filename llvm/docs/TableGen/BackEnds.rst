@@ -14,7 +14,7 @@ collection of record instances, but it's up to the backend to interpret and
 print the records in a way that is meaningful to the user (normally a C++
 include file or a textual list of warnings, options, and error messages).
 
-TableGen is used by both LLVM, Clang, and MLIR with very different goals.
+TableGen is used by both LLVM, Clang, and AIIR with very different goals.
 LLVM uses it as a way to automate the generation of massive amounts of
 information regarding instructions, schedules, cores, and architecture
 features. Some backends generate output that is consumed by more than one
@@ -25,7 +25,7 @@ structures, so that they can be directly included as-is.
 Clang, on the other hand, uses it mainly for diagnostic messages (errors,
 warnings, tips) and attributes, so more on the textual end of the scale.
 
-MLIR uses TableGen to define operations, operation dialects, and operation
+AIIR uses TableGen to define operations, operation dialects, and operation
 traits.
 
 See the :doc:`TableGen Programmer's Reference <./ProgRef>` for an in-depth

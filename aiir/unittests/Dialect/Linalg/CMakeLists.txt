@@ -1,0 +1,11 @@
+add_aiir_unittest(AIIRLinalgTests
+  InferConvolutionDimsTest.cpp
+)
+aiir_target_link_libraries(AIIRLinalgTests
+  PRIVATE
+  AIIRIR
+  AIIRArithDialect
+  AIIRFuncDialect
+  AIIRLinalgDialect
+  AIIRTensorDialect
+)

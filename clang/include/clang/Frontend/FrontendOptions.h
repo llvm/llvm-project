@@ -505,9 +505,9 @@ public:
   /// should only be used for debugging and experimental features.
   std::vector<std::string> LLVMArgs;
 
-  /// A list of arguments to forward to MLIR's option processing; this
+  /// A list of arguments to forward to AIIR's option processing; this
   /// should only be used for debugging and experimental features.
-  std::vector<std::string> MLIRArgs;
+  std::vector<std::string> AIIRArgs;
 
   /// File name of the file that will provide record layouts
   /// (in the format produced by -fdump-record-layouts).

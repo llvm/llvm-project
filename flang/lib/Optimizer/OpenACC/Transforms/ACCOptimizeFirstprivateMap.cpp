@@ -36,7 +36,7 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir::acc {
@@ -44,7 +44,7 @@ namespace fir::acc {
 #include "flang/Optimizer/OpenACC/Passes.h.inc"
 } // namespace fir::acc
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
@@ -92,7 +92,7 @@ static bool mayBeOptionalVariable(Value var) {
 /// types - since we would need to check if the load is valid via
 /// a null-check to enable the optimization.
 static bool isRefToTrivialType(Type type) {
-  if (!mlir::isa<fir::ReferenceType>(type))
+  if (!aiir::isa<fir::ReferenceType>(type))
     return false;
   return fir::isa_trivial(fir::unwrapRefType(type));
 }

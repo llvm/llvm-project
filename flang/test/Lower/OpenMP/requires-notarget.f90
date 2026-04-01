@@ -3,7 +3,7 @@
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 ! RUN: bbc -fopenmp -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck %s
 
-! This test checks that requires lowering into MLIR skips creating the
+! This test checks that requires lowering into AIIR skips creating the
 ! omp.requires attribute with target-related clauses if there are no device
 ! functions in the compilation unit
 

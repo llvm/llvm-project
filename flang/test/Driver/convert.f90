@@ -14,11 +14,11 @@
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
-! RUN: %flang_fc1 -emit-mlir -fconvert=unknown %s -o - | FileCheck %s --check-prefix=VALID_FC1
-! RUN: %flang_fc1 -emit-mlir -fconvert=native %s -o - | FileCheck %s --check-prefix=VALID_FC1
-! RUN: %flang_fc1 -emit-mlir -fconvert=little-endian %s -o - | FileCheck %s --check-prefix=VALID_FC1
-! RUN: %flang_fc1 -emit-mlir -fconvert=big-endian %s -o - | FileCheck %s --check-prefix=VALID_FC1
-! RUN: %flang_fc1 -emit-mlir -fconvert=swap %s -o - | FileCheck %s --check-prefix=VALID_FC1
+! RUN: %flang_fc1 -emit-aiir -fconvert=unknown %s -o - | FileCheck %s --check-prefix=VALID_FC1
+! RUN: %flang_fc1 -emit-aiir -fconvert=native %s -o - | FileCheck %s --check-prefix=VALID_FC1
+! RUN: %flang_fc1 -emit-aiir -fconvert=little-endian %s -o - | FileCheck %s --check-prefix=VALID_FC1
+! RUN: %flang_fc1 -emit-aiir -fconvert=big-endian %s -o - | FileCheck %s --check-prefix=VALID_FC1
+! RUN: %flang_fc1 -emit-aiir -fconvert=swap %s -o - | FileCheck %s --check-prefix=VALID_FC1
 ! RUN: not %flang_fc1 -fconvert=foobar %s  2>&1 | FileCheck %s --check-prefix=INVALID
 
 ! Only test that the command executes without error. Correct handling of each

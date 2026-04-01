@@ -17,12 +17,12 @@ add_flang_library(FIROpenACCAnalysis
   FIROpenACCSupport
   HLFIRDialect
 
-  MLIR_DEPS
-  MLIROpenACCDialect
-  MLIROpenACCUtils
+  AIIR_DEPS
+  AIIROpenACCDialect
+  AIIROpenACCUtils
 
-  MLIR_LIBS
-  MLIROpenACCDialect
-  MLIROpenACCUtils
+  AIIR_LIBS
+  AIIROpenACCDialect
+  AIIROpenACCUtils
 )
 

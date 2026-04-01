@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,14 +18,14 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
-namespace mlir {
+namespace aiir {
 class Value;
 class Location;
-class MLIRContext;
-} // namespace mlir
+class AIIRContext;
+} // namespace aiir
 
 namespace hlfir {
 class ElementalOp;
@@ -51,24 +51,24 @@ static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   return kDefaultAllocator;
 }
 
-mlir::Type gatherDeviceComponentCoordinatesAndType(
-    fir::FirOpBuilder &builder, mlir::Location loc,
+aiir::Type gatherDeviceComponentCoordinatesAndType(
+    fir::FirOpBuilder &builder, aiir::Location loc,
     const Fortran::semantics::Symbol &sym, fir::RecordType recTy,
-    llvm::SmallVector<mlir::Value> &coordinates);
+    llvm::SmallVector<aiir::Value> &coordinates);
 
 /// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
 /// representation.
 cuf::DataAttributeAttr
-translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
+translateSymbolCUFDataAttribute(aiir::AIIRContext *aiirContext,
                                 const Fortran::semantics::Symbol &sym);
 
 /// Check if the rhs has an implicit conversion. Return the elemental op if
 /// there is a conversion. Return null otherwise.
 std::pair<hlfir::ElementalOp, hlfir::ElementalOp>
-isTransferWithConversion(mlir::Value rhs);
+isTransferWithConversion(aiir::Value rhs);
 
 /// Check if the value is an allocatable with double descriptor.
-bool hasDoubleDescriptor(mlir::Value);
+bool hasDoubleDescriptor(aiir::Value);
 
 } // end namespace Fortran::lower
 

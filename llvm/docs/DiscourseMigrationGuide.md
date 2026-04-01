@@ -70,10 +70,10 @@ Use these email addresses to create a topic by email in the specific discourse c
 <tr><td>Runtimes - C</td><td>runtimes-c@discourse.llvm.org</td></tr>
 <tr><td>Runtimes - OpenMP</td><td>runtimes-openmp@discourse.llvm.org</td></tr>
 <tr><td>Runtimes - OpenCL</td><td>runtimes-opencl@discourse.llvm.org</td></tr>
-<tr><td>MLIR</td><td>mlir@discourse.llvm.org</td></tr>
-<tr><td>MLIR - Announce</td><td>mlir-announce@discourse.llvm.org</td></tr>
-<tr><td>MLIR - Newsletter</td><td>mlir-news@discourse.llvm.org</td></tr>
-<tr><td>MLIR - TCP-WG</td><td>mlir-tcpwg@discourse.llvm.org</td></tr>
+<tr><td>AIIR</td><td>aiir@discourse.llvm.org</td></tr>
+<tr><td>AIIR - Announce</td><td>aiir-announce@discourse.llvm.org</td></tr>
+<tr><td>AIIR - Newsletter</td><td>aiir-news@discourse.llvm.org</td></tr>
+<tr><td>AIIR - TCP-WG</td><td>aiir-tcpwg@discourse.llvm.org</td></tr>
 <tr><td>Subprojects</td><td>subprojects@discourse.llvm.org</td></tr>
 <tr><td>Subprojects - Polly</td><td>polly@discourse.llvm.org</td></tr>
 <tr><td>Subprojects - LLDB</td><td>lldb@discourse.llvm.org</td></tr>
@@ -100,7 +100,7 @@ Use these email addresses to create a topic by email in the specific discourse c
 <tr><td>Community - Newsletters</td><td>newsletters@discourse.llvm.org</td></tr>
 <tr><td>Incubator</td><td>incubator@discourse.llvm.org</td></tr>
 <tr><td>Incubator - CIRCT</td><td>circt@discourse.llvm.org</td></tr>
-<tr><td>Incubator - Torch-MLIR</td><td>torch-mlir@discourse.llvm.org</td></tr>
+<tr><td>Incubator - Torch-AIIR</td><td>torch-aiir@discourse.llvm.org</td></tr>
 <tr><td>Incubator - Enzyme</td><td>enzyme@discourse.llvm.org</td></tr>
 <tr><td>Feedback</td><td>feedback@discourse.llvm.org</td></tr>
 </table>
@@ -144,7 +144,7 @@ migration.
 <tr><td>llvm-dev</td><td>Project Infrastructure/LLVM Dev List Archives</td></tr>
 <tr><td>llvm-devmeeting</td><td>Community/US Developer Meeting</td></tr>
 <tr><td>llvm-foundation</td><td>Community/LLVM Foundation</td></tr>
-<tr><td>Mlir-commits</td><td>no migration at the moment</td></tr>
+<tr><td>Aiir-commits</td><td>no migration at the moment</td></tr>
 <tr><td>Openmp-commits</td><td>no migration at the moment</td></tr>
 <tr><td>Openmp-dev</td><td>Runtimes/OpenMP</td></tr>
 <tr><td>Parallel_libs-commits</td><td>no migration at the moment</td></tr>

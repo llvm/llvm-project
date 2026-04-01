@@ -134,13 +134,13 @@ public:
   }
 
 private:
-  // Trim "::" prefix. If the namespace specified is ""::mlir::toy", then the
+  // Trim "::" prefix. If the namespace specified is ""::aiir::toy", then the
   // generated namespace scope needs to use
   //
-  // namespace mlir::toy {
+  // namespace aiir::toy {
   // }
   //
-  // and cannot use "namespace ::mlir::toy".
+  // and cannot use "namespace ::aiir::toy".
   static StringRef trim(StringRef Name) {
     Name.consume_front("::");
     return Name;

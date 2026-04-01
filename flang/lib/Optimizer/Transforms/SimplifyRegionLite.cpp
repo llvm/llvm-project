@@ -8,11 +8,11 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/RegionUtils.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/DialectConversion.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Transforms/RegionUtils.h"
 
 namespace fir {
 #define GEN_PASS_DEF_SIMPLIFYREGIONLITE
@@ -31,11 +31,11 @@ public:
 void SimplifyRegionLitePass::runOnOperation() {
   auto op = getOperation();
   auto regions = op->getRegions();
-  mlir::RewritePatternSet patterns(op.getContext());
+  aiir::RewritePatternSet patterns(op.getContext());
   if (regions.empty())
     return;
 
-  mlir::PatternRewriter rewriter(op.getContext());
-  (void)mlir::eraseUnreachableBlocks(rewriter, regions);
-  (void)mlir::runRegionDCE(rewriter, regions);
+  aiir::PatternRewriter rewriter(op.getContext());
+  (void)aiir::eraseUnreachableBlocks(rewriter, regions);
+  (void)aiir::runRegionDCE(rewriter, regions);
 }

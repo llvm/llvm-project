@@ -1,0 +1,49 @@
+# There's no real issue with windows here, it's just that some CMake generated paths for targets end up being longer
+# than 255 chars when combined with the fact that pip wants to install into a tmp directory buried under
+# C/Users/ContainerAdministrator/AppData/Local/Temp.
+# UNSUPPORTED: target={{.*(windows).*}}
+# REQUIRES: expensive_checks
+# REQUIRES: non-shared-libs-build
+# REQUIRES: bindings-python
+
+# RUN: export CMAKE_BUILD_TYPE=%cmake_build_type
+# RUN: export CMAKE_CXX_COMPILER=%host_cxx
+# RUN: export CMAKE_CXX_COMPILER_LAUNCHER=%hostcxx_compiler_launcher
+# RUN: export CMAKE_C_COMPILER=%host_cc
+# RUN: export CMAKE_C_COMPILER_LAUNCHER=%hostc_compiler_launcher
+# RUN: export CMAKE_GENERATOR=%cmake_generator
+# RUN: export LLVM_USE_LINKER=%llvm_use_linker
+# RUN: export AIIR_DIR="%aiir_cmake_dir"
+# RUN: export AIIR_INCLUDE_TESTS=ON
+# RUN: export AIIR_PYTHON_PACKAGE_PREFIX=aiir_standalone
+# RUN: export AIIR_BINDINGS_PYTHON_NB_DOMAIN=aiir_standalone
+
+# RUN: %python -m pip wheel "%aiir_src_root/examples/standalone" -w "%aiir_obj_root/wheelhouse" -v | tee %t
+
+# RUN: rm -rf "%aiir_obj_root/standalone-python-bindings-install"
+# RUN: %python -m pip install standalone_python_bindings -f "%aiir_obj_root/wheelhouse" --target "%aiir_obj_root/standalone-python-bindings-install" -v | tee -a %t
+
+# RUN: export PYTHONPATH="%aiir_obj_root/standalone-python-bindings-install:%aiir_obj_root/python_packages/aiir_core"
+# RUN: %python "%aiir_src_root/examples/standalone/test/python/smoketest.py" 2>&1 | tee -a %t
+
+# RUN: FileCheck --input-file=%t %s
+
+# CHECK: Successfully built standalone-python-bindings
+
+# CHECK: Testing aiir_standalone package
+
+# CHECK: module {
+# CHECK:   %[[C2:.*]] = arith.constant 2 : i32
+# CHECK:   %[[V0:.*]] = standalone.foo %[[C2]] : i32
+# CHECK: }
+
+# CHECK: !standalone.custom<"foo">
+
+# CHECK: this is a fp16 type
+# CHECK: this is a fp32 type
+# CHECK: this is a fp64 type
+
+# CHECK: Testing aiir package
+
+# CHECK-NOT: RuntimeWarning: nanobind: type '{{.*}}' was already registered!
+

@@ -13,9 +13,9 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRATTRCONSTRAINTS_TD
 #define CLANG_CIR_DIALECT_IR_CIRATTRCONSTRAINTS_TD
 
-include "mlir/IR/CommonAttrConstraints.td"
+include "aiir/IR/CommonAttrConstraints.td"
 
-class CIR_IsAttrPred<code attr> : CPred<"::mlir::isa<" # attr # ">($_self)">;
+class CIR_IsAttrPred<code attr> : CPred<"::aiir::isa<" # attr # ">($_self)">;
 
 class CIR_AttrConstraint<code attr, string summary = "">
     : Attr<CIR_IsAttrPred<attr>, summary>;
@@ -35,7 +35,7 @@ def CIR_AnyFPAttr : CIR_AttrConstraint<"::cir::FPAttr",
 
 def CIR_AnyIntOrFloatAttr : AnyAttrOf<[CIR_AnyIntAttr, CIR_AnyFPAttr],
     "integer or floating point type"> {
-  string cppType = "::mlir::TypedAttr";
+  string cppType = "::aiir::TypedAttr";
 }
 
 //===----------------------------------------------------------------------===//
@@ -58,13 +58,13 @@ def CIR_AnyGlobalViewAttr
 def CIR_AnyIntOrGlobalViewAttr
     : AnyAttrOf<[CIR_AnyIntAttr, CIR_AnyGlobalViewAttr],
                 "integer or global view attribute"> {
-  string cppType = "::mlir::TypedAttr";
+  string cppType = "::aiir::TypedAttr";
 }
 
 def CIR_TryHandlerAttr
     : AnyAttrOf<[CIR_AnyGlobalViewAttr, CIR_AnyCatchAllAttr, CIR_AnyUnwindAttr],
                 "catch all or unwind or global view attribute"> {
-  string cppType = "::mlir::TypedAttr";
+  string cppType = "::aiir::TypedAttr";
 }
 
 //===----------------------------------------------------------------------===//
@@ -76,7 +76,7 @@ def CIR_IntArrayAttr : TypedArrayAttrBase<CIR_AnyIntAttr,
 
 def CIR_IntOrGlobalViewArrayAttr : TypedArrayAttrBase<CIR_AnyIntOrGlobalViewAttr,
    "integer or global view array attribute">{
-  string cppType = "::mlir::ArrayAttr";
+  string cppType = "::aiir::ArrayAttr";
 }
 
 def CIR_TryHandlerArrayAttr : TypedArrayAttrBase<CIR_TryHandlerAttr,

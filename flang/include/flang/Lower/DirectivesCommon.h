@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -35,10 +35,10 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/Value.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/SCF/IR/SCF.h"
+#include "aiir/IR/Value.h"
 #include <list>
 #include <type_traits>
 
@@ -51,15 +51,15 @@ template <typename... TerminatorOps>
 void createEmptyRegionBlocks(
     fir::FirOpBuilder &builder,
     std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
-  mlir::Region *region = &builder.getRegion();
+  aiir::Region *region = &builder.getRegion();
   for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
     if (eval.block) {
       if (eval.block->empty()) {
         eval.block->erase();
         eval.block = builder.createBlock(region);
       } else {
-        [[maybe_unused]] mlir::Operation &terminatorOp = eval.block->back();
-        assert(mlir::isa<TerminatorOps...>(terminatorOp) &&
+        [[maybe_unused]] aiir::Operation &terminatorOp = eval.block->back();
+        assert(aiir::isa<TerminatorOps...>(terminatorOp) &&
                "expected terminator op");
       }
     }
@@ -72,7 +72,7 @@ void createEmptyRegionBlocks(
 inline fir::factory::AddrAndBoundsInfo
 getDataOperandBaseAddr(Fortran::lower::AbstractConverter &converter,
                        fir::FirOpBuilder &builder,
-                       Fortran::lower::SymbolRef sym, mlir::Location loc,
+                       Fortran::lower::SymbolRef sym, aiir::Location loc,
                        bool unwrapFirBox = true) {
   return fir::factory::getDataOperandBaseAddr(
       builder, converter.getSymbolAddress(sym),
@@ -151,8 +151,8 @@ peelOuterConvert(Fortran::semantics::SomeExpr &expr) {
 /// Generate bounds operations for an array section when subscripts are
 /// provided.
 template <typename BoundsOp, typename BoundsType>
-llvm::SmallVector<mlir::Value>
-genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
+llvm::SmallVector<aiir::Value>
+genBoundsOps(fir::FirOpBuilder &builder, aiir::Location loc,
              Fortran::lower::AbstractConverter &converter,
              Fortran::lower::StatementContext &stmtCtx,
              const std::vector<Fortran::evaluate::Subscript> &subscripts,
@@ -161,39 +161,39 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              bool treatIndexAsSection = false,
              bool strideIncludeLowerExtent = false) {
   int dimension = 0;
-  mlir::Type idxTy = builder.getIndexType();
-  mlir::Type boundTy = builder.getType<BoundsType>();
-  llvm::SmallVector<mlir::Value> bounds;
+  aiir::Type idxTy = builder.getIndexType();
+  aiir::Type boundTy = builder.getType<BoundsType>();
+  llvm::SmallVector<aiir::Value> bounds;
 
-  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  aiir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  aiir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   const int dataExvRank = static_cast<int>(dataExv.rank());
-  mlir::Value cumulativeExtent = one;
+  aiir::Value cumulativeExtent = one;
   for (const auto &subscript : subscripts) {
     const auto *triplet{std::get_if<Fortran::evaluate::Triplet>(&subscript.u)};
     if (triplet || treatIndexAsSection) {
       if (dimension != 0)
         asFortran << ',';
-      mlir::Value lbound, ubound, extent;
+      aiir::Value lbound, ubound, extent;
       std::optional<std::int64_t> lval, uval;
-      mlir::Value baseLb =
+      aiir::Value baseLb =
           fir::factory::readLowerBound(builder, loc, dataExv, dimension, one);
       bool defaultLb = baseLb == one;
-      mlir::Value stride = one;
+      aiir::Value stride = one;
       bool strideInBytes = false;
 
-      if (mlir::isa<fir::BaseBoxType>(
+      if (aiir::isa<fir::BaseBoxType>(
               fir::unwrapRefType(info.addr.getType()))) {
         if (info.isPresent) {
           stride =
               builder
                   .genIfOp(loc, idxTy, info.isPresent, /*withElseRegion=*/true)
                   .genThen([&]() {
-                    mlir::Value box =
+                    aiir::Value box =
                         !fir::isBoxAddress(info.addr.getType())
                             ? info.addr
                             : fir::LoadOp::create(builder, loc, info.addr);
-                    mlir::Value d =
+                    aiir::Value d =
                         builder.createIntegerConstant(loc, idxTy, dimension);
                     auto dimInfo = fir::BoxDimsOp::create(builder, loc, idxTy,
                                                           idxTy, idxTy, box, d);
@@ -201,16 +201,16 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
                                           dimInfo.getByteStride());
                   })
                   .genElse([&] {
-                    mlir::Value zero =
+                    aiir::Value zero =
                         builder.createIntegerConstant(loc, idxTy, 0);
                     fir::ResultOp::create(builder, loc, zero);
                   })
                   .getResults()[0];
         } else {
-          mlir::Value box = !fir::isBoxAddress(info.addr.getType())
+          aiir::Value box = !fir::isBoxAddress(info.addr.getType())
                                 ? info.addr
                                 : fir::LoadOp::create(builder, loc, info.addr);
-          mlir::Value d = builder.createIntegerConstant(loc, idxTy, dimension);
+          aiir::Value d = builder.createIntegerConstant(loc, idxTy, dimension);
           auto dimInfo =
               fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box, d);
           stride = dimInfo.getByteStride();
@@ -230,7 +230,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
             std::get<IndirectSubscriptIntegerExpr>(subscript.u).value();
         lower = Fortran::evaluate::AsGenericExpr(std::move(oneInt));
         if (lower->Rank() > 0) {
-          mlir::emitError(
+          aiir::emitError(
               loc, "vector subscript cannot be used for an array section");
           break;
         }
@@ -241,15 +241,15 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           if (defaultLb) {
             lbound = builder.createIntegerConstant(loc, idxTy, *lval - 1);
           } else {
-            mlir::Value lb = builder.createIntegerConstant(loc, idxTy, *lval);
-            lbound = mlir::arith::SubIOp::create(builder, loc, lb, baseLb);
+            aiir::Value lb = builder.createIntegerConstant(loc, idxTy, *lval);
+            lbound = aiir::arith::SubIOp::create(builder, loc, lb, baseLb);
           }
           asFortran << *lval;
         } else {
-          mlir::Value lb =
+          aiir::Value lb =
               fir::getBase(converter.genExprValue(loc, *lower, stmtCtx));
           lb = builder.createConvert(loc, baseLb.getType(), lb);
-          lbound = mlir::arith::SubIOp::create(builder, loc, lb, baseLb);
+          lbound = aiir::arith::SubIOp::create(builder, loc, lb, baseLb);
           asFortran << detail::peelOuterConvert(*lower).AsFortran();
         }
       } else {
@@ -275,45 +275,45 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
             if (defaultLb) {
               ubound = builder.createIntegerConstant(loc, idxTy, *uval - 1);
             } else {
-              mlir::Value ub = builder.createIntegerConstant(loc, idxTy, *uval);
-              ubound = mlir::arith::SubIOp::create(builder, loc, ub, baseLb);
+              aiir::Value ub = builder.createIntegerConstant(loc, idxTy, *uval);
+              ubound = aiir::arith::SubIOp::create(builder, loc, ub, baseLb);
             }
             asFortran << *uval;
           } else {
-            mlir::Value ub =
+            aiir::Value ub =
                 fir::getBase(converter.genExprValue(loc, *upper, stmtCtx));
             ub = builder.createConvert(loc, baseLb.getType(), ub);
-            ubound = mlir::arith::SubIOp::create(builder, loc, ub, baseLb);
+            ubound = aiir::arith::SubIOp::create(builder, loc, ub, baseLb);
             asFortran << detail::peelOuterConvert(*upper).AsFortran();
           }
         }
         if (lower && upper) {
           if (lval && uval && *uval < *lval) {
-            mlir::emitError(loc, "zero sized array section");
+            aiir::emitError(loc, "zero sized array section");
             break;
           } else {
             // Stride is mandatory in evaluate::Triplet. Make sure it's 1.
             auto val = Fortran::evaluate::ToInt64(triplet->GetStride());
             if (!val || *val != 1) {
-              mlir::emitError(loc, "stride cannot be specified on "
+              aiir::emitError(loc, "stride cannot be specified on "
                                    "an array section");
               break;
             }
           }
         }
 
-        if (info.isPresent && mlir::isa<fir::BaseBoxType>(
+        if (info.isPresent && aiir::isa<fir::BaseBoxType>(
                                   fir::unwrapRefType(info.addr.getType()))) {
           extent =
               builder
                   .genIfOp(loc, idxTy, info.isPresent, /*withElseRegion=*/true)
                   .genThen([&]() {
-                    mlir::Value ext = fir::factory::readExtent(
+                    aiir::Value ext = fir::factory::readExtent(
                         builder, loc, dataExv, dimension);
                     fir::ResultOp::create(builder, loc, ext);
                   })
                   .genElse([&] {
-                    mlir::Value zero =
+                    aiir::Value zero =
                         builder.createIntegerConstant(loc, idxTy, 0);
                     fir::ResultOp::create(builder, loc, zero);
                   })
@@ -325,9 +325,9 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         if (dataExvIsAssumedSize && dimension + 1 == dataExvRank) {
           extent = zero;
           if (ubound && lbound) {
-            mlir::Value diff =
-                mlir::arith::SubIOp::create(builder, loc, ubound, lbound);
-            extent = mlir::arith::AddIOp::create(builder, loc, diff, one);
+            aiir::Value diff =
+                aiir::arith::SubIOp::create(builder, loc, ubound, lbound);
+            extent = aiir::arith::AddIOp::create(builder, loc, diff, one);
           }
           if (!ubound)
             ubound = lbound;
@@ -335,7 +335,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
 
         if (!ubound) {
           // ub = extent - 1
-          ubound = mlir::arith::SubIOp::create(builder, loc, extent, one);
+          ubound = aiir::arith::SubIOp::create(builder, loc, extent, one);
         }
       }
 
@@ -343,11 +343,11 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       // and this already includes the lower extents.
       if (strideIncludeLowerExtent && !strideInBytes) {
         stride = cumulativeExtent;
-        cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
+        cumulativeExtent = builder.createOrFold<aiir::arith::MulIOp>(
             loc, cumulativeExtent, extent);
       }
 
-      mlir::Value bound =
+      aiir::Value bound =
           BoundsOp::create(builder, loc, boundTy, lbound, ubound, extent,
                            stride, strideInBytes, baseLb);
       bounds.push_back(bound);
@@ -381,8 +381,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     Fortran::lower::StatementContext &stmtCtx,
     Fortran::semantics::SymbolRef symbol,
     const Fortran::semantics::MaybeExpr &maybeDesignator,
-    mlir::Location operandLocation, std::stringstream &asFortran,
-    llvm::SmallVector<mlir::Value> &bounds, bool treatIndexAsSection = false,
+    aiir::Location operandLocation, std::stringstream &asFortran,
+    llvm::SmallVector<aiir::Value> &bounds, bool treatIndexAsSection = false,
     bool unwrapFirBox = true, bool genDefaultBounds = true,
     bool strideIncludeLowerExtent = false,
     bool loadAllocatableAndPointerComponent = true) {
@@ -464,7 +464,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     info.addr = fir::getBase(compExv);
     info.rawInput = info.addr;
     if (genDefaultBounds &&
-        mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
+        aiir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
       bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, compExv,
           /*isAssumedSize=*/false, strideIncludeLowerExtent);
@@ -477,7 +477,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
 
     if (unwrapFirBox) {
       if (auto loadOp =
-              mlir::dyn_cast_or_null<fir::LoadOp>(info.addr.getDefiningOp())) {
+              aiir::dyn_cast_or_null<fir::LoadOp>(info.addr.getDefiningOp())) {
         if (fir::isAllocatableType(loadOp.getType()) ||
             fir::isPointerType(loadOp.getType())) {
           info.boxType = info.addr.getType();
@@ -493,7 +493,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     // a fir.box_addr has been inserted just before.
     // Retrieve the box so we handle it like other descriptor.
     if (auto boxAddrOp =
-            mlir::dyn_cast_or_null<fir::BoxAddrOp>(info.addr.getDefiningOp())) {
+            aiir::dyn_cast_or_null<fir::BoxAddrOp>(info.addr.getDefiningOp())) {
       info.addr = boxAddrOp.getVal();
       info.boxType = info.addr.getType();
       info.rawInput = info.addr;
@@ -513,7 +513,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*symRef);
       info = getDataOperandBaseAddr(converter, builder, *symRef,
                                     operandLocation, unwrapFirBox);
-      if (genDefaultBounds && mlir::isa<fir::BaseBoxType>(
+      if (genDefaultBounds && aiir::isa<fir::BaseBoxType>(
                                   fir::unwrapRefType(info.addr.getType()))) {
         info.boxType = fir::unwrapRefType(info.addr.getType());
         bounds = fir::factory::genBoundsOpsFromBox<BoundsOp, BoundsType>(
@@ -521,7 +521,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       }
       bool dataExvIsAssumedSize =
           Fortran::semantics::IsAssumedSizeArray(symRef->get().GetUltimate());
-      if (genDefaultBounds && mlir::isa<fir::SequenceType>(
+      if (genDefaultBounds && aiir::isa<fir::SequenceType>(
                                   fir::unwrapRefType(info.addr.getType()))) {
         bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
             builder, operandLocation, dataExv, dataExvIsAssumedSize,
@@ -529,7 +529,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       }
       if ((genDefaultBounds && fir::characterWithDynamicLen(
                                    fir::unwrapRefType(info.addr.getType()))) ||
-          mlir::isa<fir::BoxCharType>(
+          aiir::isa<fir::BoxCharType>(
               fir::unwrapRefType(info.addr.getType()))) {
         bounds = {fir::factory::genBoundsOpFromBoxChar<BoundsOp, BoundsType>(
             builder, operandLocation, dataExv, info)};

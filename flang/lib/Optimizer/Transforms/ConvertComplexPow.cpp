@@ -11,17 +11,17 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/entry-names.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/Complex/IR/Complex.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Pass/Pass.h"
 
 namespace fir {
 #define GEN_PASS_DEF_CONVERTCOMPLEXPOW
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 class ConvertComplexPowPass

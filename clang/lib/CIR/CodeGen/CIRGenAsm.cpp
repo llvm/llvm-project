@@ -117,24 +117,24 @@ collectInOutConstraintInfos(const CIRGenFunction &cgf, const AsmStmt &s,
   }
 }
 
-std::pair<mlir::Value, mlir::Type> CIRGenFunction::emitAsmInputLValue(
+std::pair<aiir::Value, aiir::Type> CIRGenFunction::emitAsmInputLValue(
     const TargetInfo::ConstraintInfo &info, LValue inputValue,
     QualType inputType, std::string &constraintString, SourceLocation loc) {
 
   if (info.allowsRegister() || !info.allowsMemory()) {
     if (hasScalarEvaluationKind(inputType))
-      return {emitLoadOfLValue(inputValue, loc).getValue(), mlir::Type()};
+      return {emitLoadOfLValue(inputValue, loc).getValue(), aiir::Type()};
 
-    mlir::Type ty = convertType(inputType);
+    aiir::Type ty = convertType(inputType);
     uint64_t size = cgm.getDataLayout().getTypeSizeInBits(ty);
     if ((size <= 64 && llvm::isPowerOf2_64(size)) ||
         getTargetHooks().isScalarizableAsmOperand(*this, ty)) {
-      ty = cir::IntType::get(&getMLIRContext(), size, false);
+      ty = cir::IntType::get(&getAIIRContext(), size, false);
 
       return {builder.createLoad(
                   getLoc(loc),
                   inputValue.getAddress().withElementType(builder, ty)),
-              mlir::Type()};
+              aiir::Type()};
     }
   }
 
@@ -143,11 +143,11 @@ std::pair<mlir::Value, mlir::Type> CIRGenFunction::emitAsmInputLValue(
   return {addr.getPointer(), addr.getElementType()};
 }
 
-std::pair<mlir::Value, mlir::Type>
+std::pair<aiir::Value, aiir::Type>
 CIRGenFunction::emitAsmInput(const TargetInfo::ConstraintInfo &info,
                              const Expr *inputExpr,
                              std::string &constraintString) {
-  mlir::Location loc = getLoc(inputExpr->getExprLoc());
+  aiir::Location loc = getLoc(inputExpr->getExprLoc());
 
   // If this can't be a register or memory, i.e., has to be a constant
   // (immediate or symbolic), try to emit it as such.
@@ -159,19 +159,19 @@ CIRGenFunction::emitAsmInput(const TargetInfo::ConstraintInfo &info,
       llvm::APSInt intResult;
       if (evalResult.Val.toIntegralConstant(intResult, inputExpr->getType(),
                                             getContext()))
-        return {builder.getConstInt(loc, intResult), mlir::Type()};
+        return {builder.getConstInt(loc, intResult), aiir::Type()};
     }
 
     Expr::EvalResult result;
     if (inputExpr->EvaluateAsInt(result, getContext()))
-      return {builder.getConstInt(loc, result.Val.getInt()), mlir::Type()};
+      return {builder.getConstInt(loc, result.Val.getInt()), aiir::Type()};
   }
 
   if (info.allowsRegister() || !info.allowsMemory())
     if (CIRGenFunction::hasScalarEvaluationKind(inputExpr->getType()))
-      return {emitScalarExpr(inputExpr), mlir::Type()};
+      return {emitScalarExpr(inputExpr), aiir::Type()};
   if (inputExpr->getStmtClass() == Expr::CXXThisExprClass)
-    return {emitScalarExpr(inputExpr), mlir::Type()};
+    return {emitScalarExpr(inputExpr), aiir::Type()};
   inputExpr = inputExpr->IgnoreParenNoopCasts(getContext());
   LValue dest = emitLValue(inputExpr);
   return emitAsmInputLValue(info, dest, inputExpr->getType(), constraintString,
@@ -179,16 +179,16 @@ CIRGenFunction::emitAsmInput(const TargetInfo::ConstraintInfo &info,
 }
 
 static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
-                          const llvm::ArrayRef<mlir::Value> regResults,
-                          const llvm::ArrayRef<mlir::Type> resultRegTypes,
-                          const llvm::ArrayRef<mlir::Type> resultTruncRegTypes,
+                          const llvm::ArrayRef<aiir::Value> regResults,
+                          const llvm::ArrayRef<aiir::Type> resultRegTypes,
+                          const llvm::ArrayRef<aiir::Type> resultTruncRegTypes,
                           const llvm::ArrayRef<LValue> resultRegDests,
                           const llvm::ArrayRef<QualType> resultRegQualTys,
                           const llvm::BitVector &resultTypeRequiresCast,
                           const llvm::BitVector &resultRegIsFlagReg) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   CIRGenModule &cgm = cgf.cgm;
-  mlir::MLIRContext *ctx = builder.getContext();
+  aiir::AIIRContext *ctx = builder.getContext();
 
   assert(regResults.size() == resultRegTypes.size());
   assert(regResults.size() == resultTruncRegTypes.size());
@@ -200,8 +200,8 @@ static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
   assert(resultRegIsFlagReg.size() <= resultRegDests.size());
 
   for (unsigned i = 0, e = regResults.size(); i != e; ++i) {
-    mlir::Value tmp = regResults[i];
-    mlir::Type truncTy = resultTruncRegTypes[i];
+    aiir::Value tmp = regResults[i];
+    aiir::Type truncTy = resultTruncRegTypes[i];
 
     if (i < resultRegIsFlagReg.size() && resultRegIsFlagReg[i])
       assert(!cir::MissingFeatures::asmLLVMAssume());
@@ -212,7 +212,7 @@ static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
 
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
-      if (mlir::isa<cir::FPTypeInterface>(truncTy)) {
+      if (aiir::isa<cir::FPTypeInterface>(truncTy)) {
         tmp = builder.createFloatingCast(tmp, truncTy);
       } else if (isa<cir::PointerType>(truncTy) &&
                  isa<cir::IntType>(tmp.getType())) {
@@ -260,11 +260,11 @@ static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
   }
 }
 
-mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
+aiir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   // Assemble the final asm string.
   std::string asmString = s.generateAsmString(getContext());
   SourceLocation srcLoc = s.getAsmLoc();
-  mlir::Location loc = getLoc(srcLoc);
+  aiir::Location loc = getLoc(srcLoc);
 
   // Get all the output and input constraints together.
   SmallVector<TargetInfo::ConstraintInfo> outputConstraintInfos;
@@ -277,21 +277,21 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   std::string constraints;
   SmallVector<LValue> resultRegDests;
   SmallVector<QualType> resultRegQualTys;
-  SmallVector<mlir::Type> resultRegTypes;
-  SmallVector<mlir::Type> resultTruncRegTypes;
-  SmallVector<mlir::Type> argTypes;
-  SmallVector<mlir::Type> argElemTypes;
-  SmallVector<mlir::Value> args;
-  SmallVector<mlir::Value> outArgs;
-  SmallVector<mlir::Value> inArgs;
-  SmallVector<mlir::Value> inOutArgs;
+  SmallVector<aiir::Type> resultRegTypes;
+  SmallVector<aiir::Type> resultTruncRegTypes;
+  SmallVector<aiir::Type> argTypes;
+  SmallVector<aiir::Type> argElemTypes;
+  SmallVector<aiir::Value> args;
+  SmallVector<aiir::Value> outArgs;
+  SmallVector<aiir::Value> inArgs;
+  SmallVector<aiir::Value> inOutArgs;
   llvm::BitVector resultTypeRequiresCast;
   llvm::BitVector resultRegIsFlagReg;
 
   // Keep track of input constraints.
   std::string inOutConstraints;
-  SmallVector<mlir::Type> inOutArgTypes;
-  SmallVector<mlir::Type> inOutArgElemTypes;
+  SmallVector<aiir::Type> inOutArgTypes;
+  SmallVector<aiir::Type> inOutArgElemTypes;
 
   // Keep track of out constraints for tied input operand.
   SmallVector<std::string> outputConstraints;
@@ -350,7 +350,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       bool isFlagReg = llvm::StringRef(outputConstraint).starts_with("{@cc");
       resultRegIsFlagReg.push_back(isFlagReg);
 
-      mlir::Type ty = convertTypeForMem(qty);
+      aiir::Type ty = convertTypeForMem(qty);
       const bool requiresCast =
           info.allowsRegister() &&
           (cgm.getTargetCIRGenInfo().isScalarizableAsmOperand(*this, ty) ||
@@ -364,7 +364,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         if (size == 0)
           cgm.error(outExpr->getExprLoc(), "output size should not be zero");
 
-        ty = cir::IntType::get(&getMLIRContext(), size, false);
+        ty = cir::IntType::get(&getAIIRContext(), size, false);
       }
 
       resultRegTypes.push_back(ty);
@@ -389,7 +389,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
           resultRegTypes.back() = convertType(inputTy);
         }
 
-        if (mlir::Type adjTy = cgm.getTargetCIRGenInfo().adjustInlineAsmType(
+        if (aiir::Type adjTy = cgm.getTargetCIRGenInfo().adjustInlineAsmType(
                 *this, outputConstraint, resultRegTypes.back()))
           resultRegTypes.back() = adjTy;
         else
@@ -424,12 +424,12 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       inOutConstraints += ',';
       const Expr *inputExpr = s.getOutputExpr(i);
 
-      // argValue: mlir::Value, argElementType: mlir::Type.
+      // argValue: aiir::Value, argElementType: aiir::Type.
       auto [argValue, argElementType] =
           emitAsmInputLValue(info, dest, inputExpr->getType(), inOutConstraints,
                              inputExpr->getExprLoc());
 
-      if (mlir::Type adjTy = getTargetHooks().adjustInlineAsmType(
+      if (aiir::Type adjTy = getTargetHooks().adjustInlineAsmType(
               *this, outputConstraint, argValue.getType()))
         argValue = builder.createBitcast(argValue, adjTy);
 
@@ -471,7 +471,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         });
 
     std::string replaceConstraint(inputConstraint);
-    // argValue: mlir::Value, argElementType: mlir::Type.
+    // argValue: aiir::Value, argElementType: aiir::Type.
     auto [argValue, argElemType] = emitAsmInput(info, inputExpr, constraints);
 
     // If this input argument is tied to a larger output result, extend the
@@ -489,7 +489,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         // Use ptrtoint as appropriate so that we can do our extension.
         if (isa<cir::PointerType>(argValue.getType()))
           argValue = builder.createPtrToInt(argValue, uIntPtrTy);
-        mlir::Type outputTy = convertType(outputType);
+        aiir::Type outputTy = convertType(outputType);
         if (isa<cir::IntType>(outputTy))
           argValue = builder.createIntCast(argValue, outputTy);
         else if (isa<cir::PointerType>(outputTy))
@@ -502,7 +502,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       replaceConstraint = outputConstraints[output];
     }
 
-    if (mlir::Type adjTy = getTargetHooks().adjustInlineAsmType(
+    if (aiir::Type adjTy = getTargetHooks().adjustInlineAsmType(
             *this, replaceConstraint, argValue.getType()))
       argValue = builder.createBitcast(argValue, adjTy);
     else
@@ -530,9 +530,9 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   bool hasUnwindClobber = false;
   collectClobbers(*this, s, constraints, hasUnwindClobber, readOnly, readNone);
 
-  std::array<mlir::ValueRange, 3> operands = {outArgs, inArgs, inOutArgs};
+  std::array<aiir::ValueRange, 3> operands = {outArgs, inArgs, inOutArgs};
 
-  mlir::Type resultType;
+  aiir::Type resultType;
 
   if (resultRegTypes.size() == 1)
     resultType = resultRegTypes[0];
@@ -542,10 +542,10 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
 
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
 
-  std::vector<mlir::Value> regResults;
+  std::vector<aiir::Value> regResults;
   cir::InlineAsmOp ia = cir::InlineAsmOp::create(
       builder, getLoc(s.getAsmLoc()), resultType, operands, asmString,
-      constraints, hasSideEffect, inferFlavor(cgm, s), mlir::ArrayAttr());
+      constraints, hasSideEffect, inferFlavor(cgm, s), aiir::ArrayAttr());
 
   if (isGCCAsmGoto) {
     assert(!cir::MissingFeatures::asmGoto());
@@ -554,27 +554,27 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   } else {
     assert(!cir::MissingFeatures::asmMemoryEffects());
 
-    mlir::Value result;
+    aiir::Value result;
     if (ia.getNumResults())
       result = ia.getResult(0);
 
-    llvm::SmallVector<mlir::Attribute> operandAttrs;
+    llvm::SmallVector<aiir::Attribute> operandAttrs;
 
     int i = 0;
     for (auto typ : argElemTypes) {
       if (typ) {
-        [[maybe_unused]] mlir::Value op = args[i++];
-        assert(mlir::isa<cir::PointerType>(op.getType()) &&
+        [[maybe_unused]] aiir::Value op = args[i++];
+        assert(aiir::isa<cir::PointerType>(op.getType()) &&
                "pointer type expected");
         assert(cast<cir::PointerType>(op.getType()).getPointee() == typ &&
                "element type differs from pointee type!");
 
-        operandAttrs.push_back(mlir::UnitAttr::get(&getMLIRContext()));
+        operandAttrs.push_back(aiir::UnitAttr::get(&getAIIRContext()));
       } else {
         // We need to add an attribute for every arg since later, during
         // the lowering to LLVM IR the attributes will be assigned to the
         // CallInsn argument by index, i.e. we can't skip null type here
-        operandAttrs.push_back(mlir::Attribute());
+        operandAttrs.push_back(aiir::Attribute());
       }
     }
     assert(args.size() == operandAttrs.size() &&
@@ -586,7 +586,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       regResults.push_back(result);
     } else if (resultRegTypes.size() > 1) {
       CharUnits alignment = CharUnits::One();
-      mlir::Value dest =
+      aiir::Value dest =
           emitAlloca("__asm_result", resultType, loc, alignment, false);
       Address addr = Address(dest, alignment);
       builder.createStore(loc, result, addr);
@@ -604,5 +604,5 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
                 resultRegDests, resultRegQualTys, resultTypeRequiresCast,
                 resultRegIsFlagReg);
 
-  return mlir::success();
+  return aiir::success();
 }

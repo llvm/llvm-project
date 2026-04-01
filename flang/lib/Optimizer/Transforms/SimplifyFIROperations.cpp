@@ -18,9 +18,9 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/IR/IRMapping.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/IR/IRMapping.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 #include <optional>
 
 namespace fir {
@@ -43,17 +43,17 @@ public:
 
 /// Base class for all conversions holding the pass options.
 template <typename Op>
-class ConversionBase : public mlir::OpRewritePattern<Op> {
+class ConversionBase : public aiir::OpRewritePattern<Op> {
 public:
-  using mlir::OpRewritePattern<Op>::OpRewritePattern;
+  using aiir::OpRewritePattern<Op>::OpRewritePattern;
 
   template <typename... Args>
-  ConversionBase(mlir::MLIRContext *context, Args &&...args)
-      : mlir::OpRewritePattern<Op>(context),
+  ConversionBase(aiir::AIIRContext *context, Args &&...args)
+      : aiir::OpRewritePattern<Op>(context),
         options{std::forward<Args>(args)...} {}
 
-  mlir::LogicalResult matchAndRewrite(Op,
-                                      mlir::PatternRewriter &) const override;
+  aiir::LogicalResult matchAndRewrite(Op,
+                                      aiir::PatternRewriter &) const override;
 
 protected:
   fir::SimplifyFIROperationsOptions options;
@@ -71,14 +71,14 @@ using BoxTotalElementsConversion = ConversionBase<fir::BoxTotalElementsOp>;
 /// This conversion may produce fir.box_elesize and a loop (for assumed
 /// rank).
 template <>
-mlir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
-    fir::IsContiguousBoxOp op, mlir::PatternRewriter &rewriter) const {
-  mlir::Location loc = op.getLoc();
+aiir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
+    fir::IsContiguousBoxOp op, aiir::PatternRewriter &rewriter) const {
+  aiir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
-  mlir::Value box = op.getBox();
+  aiir::Value box = op.getBox();
 
   if (options.preferInlineImplementation) {
-    auto boxType = mlir::cast<fir::BaseBoxType>(box.getType());
+    auto boxType = aiir::cast<fir::BaseBoxType>(box.getType());
     unsigned rank = fir::getBoxRank(boxType);
 
     // If rank is one, or 'innermost' attribute is set and
@@ -87,30 +87,30 @@ mlir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
     //
     // The scalar cases are supposed to be optimized by the canonicalization.
     if (rank == 1 || (op.getInnermost() && rank > 0)) {
-      mlir::Type idxTy = builder.getIndexType();
+      aiir::Type idxTy = builder.getIndexType();
       auto eleSize = fir::BoxEleSizeOp::create(builder, loc, idxTy, box);
-      mlir::Value zero = fir::factory::createZeroValue(builder, loc, idxTy);
+      aiir::Value zero = fir::factory::createZeroValue(builder, loc, idxTy);
       auto dimInfo =
           fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box, zero);
-      mlir::Value stride = dimInfo.getByteStride();
-      mlir::Value pred1 = mlir::arith::CmpIOp::create(
-          builder, loc, mlir::arith::CmpIPredicate::eq, eleSize, stride);
-      mlir::Value extent = dimInfo.getExtent();
-      mlir::Value pred2 = mlir::arith::CmpIOp::create(
-          builder, loc, mlir::arith::CmpIPredicate::eq, extent, zero);
-      mlir::Value result =
-          mlir::arith::OrIOp::create(builder, loc, pred1, pred2);
+      aiir::Value stride = dimInfo.getByteStride();
+      aiir::Value pred1 = aiir::arith::CmpIOp::create(
+          builder, loc, aiir::arith::CmpIPredicate::eq, eleSize, stride);
+      aiir::Value extent = dimInfo.getExtent();
+      aiir::Value pred2 = aiir::arith::CmpIOp::create(
+          builder, loc, aiir::arith::CmpIPredicate::eq, extent, zero);
+      aiir::Value result =
+          aiir::arith::OrIOp::create(builder, loc, pred1, pred2);
       result = builder.createConvert(loc, op.getType(), result);
       rewriter.replaceOp(op, result);
-      return mlir::success();
+      return aiir::success();
     }
     // TODO: support arrays with multiple dimensions.
   }
 
   // Generate Fortran runtime call.
-  mlir::Value result;
+  aiir::Value result;
   if (op.getInnermost()) {
-    mlir::Value one =
+    aiir::Value one =
         builder.createIntegerConstant(loc, builder.getI32Type(), 1);
     result = fir::runtime::genIsContiguousUpTo(builder, loc, box, one);
   } else {
@@ -118,16 +118,16 @@ mlir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
   }
   result = builder.createConvert(loc, op.getType(), result);
   rewriter.replaceOp(op, result);
-  return mlir::success();
+  return aiir::success();
 }
 
 /// Generate a call to Size runtime function or an inline
 /// sequence reading extents from the box an multiplying them.
 /// This conversion may produce a loop (for assumed rank).
 template <>
-mlir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
-    fir::BoxTotalElementsOp op, mlir::PatternRewriter &rewriter) const {
-  mlir::Location loc = op.getLoc();
+aiir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
+    fir::BoxTotalElementsOp op, aiir::PatternRewriter &rewriter) const {
+  aiir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
   // TODO: support preferInlineImplementation.
   // Reading the extent from the box for 1D arrays probably
@@ -136,86 +136,86 @@ mlir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
   bool doInline = options.preferInlineImplementation && false;
   if (!doInline) {
     // Generate Fortran runtime call.
-    mlir::Value result = fir::runtime::genSize(builder, loc, op.getBox());
+    aiir::Value result = fir::runtime::genSize(builder, loc, op.getBox());
     result = builder.createConvert(loc, op.getType(), result);
     rewriter.replaceOp(op, result);
-    return mlir::success();
+    return aiir::success();
   }
 
   // Generate inline implementation.
   TODO(loc, "inline BoxTotalElementsOp");
-  return mlir::failure();
+  return aiir::failure();
 }
 
 class DoConcurrentConversion
-    : public mlir::OpRewritePattern<fir::DoConcurrentOp> {
+    : public aiir::OpRewritePattern<fir::DoConcurrentOp> {
   /// Looks up from the operation from and returns the LocalitySpecifierOp with
   /// name symbolName
   static fir::LocalitySpecifierOp
-  findLocalizer(mlir::Operation *from, mlir::SymbolRefAttr symbolName) {
+  findLocalizer(aiir::Operation *from, aiir::SymbolRefAttr symbolName) {
     fir::LocalitySpecifierOp localizer =
-        mlir::SymbolTable::lookupNearestSymbolFrom<fir::LocalitySpecifierOp>(
+        aiir::SymbolTable::lookupNearestSymbolFrom<fir::LocalitySpecifierOp>(
             from, symbolName);
     assert(localizer && "localizer not found in the symbol table");
     return localizer;
   }
 
 public:
-  using mlir::OpRewritePattern<fir::DoConcurrentOp>::OpRewritePattern;
+  using aiir::OpRewritePattern<fir::DoConcurrentOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(fir::DoConcurrentOp doConcurentOp,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     assert(doConcurentOp.getRegion().hasOneBlock());
-    mlir::Block &wrapperBlock = doConcurentOp.getRegion().getBlocks().front();
+    aiir::Block &wrapperBlock = doConcurentOp.getRegion().getBlocks().front();
     auto loop =
-        mlir::cast<fir::DoConcurrentLoopOp>(wrapperBlock.getTerminator());
+        aiir::cast<fir::DoConcurrentLoopOp>(wrapperBlock.getTerminator());
     assert(loop.getRegion().hasOneBlock());
-    mlir::Block &loopBlock = loop.getRegion().getBlocks().front();
+    aiir::Block &loopBlock = loop.getRegion().getBlocks().front();
 
     // Handle localization
     if (!loop.getLocalVars().empty()) {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      aiir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(&loop.getRegion().front());
 
-      std::optional<mlir::ArrayAttr> localSyms = loop.getLocalSyms();
+      std::optional<aiir::ArrayAttr> localSyms = loop.getLocalSyms();
 
       for (auto localInfo : llvm::zip_equal(
                loop.getLocalVars(), loop.getRegionLocalArgs(), *localSyms)) {
-        mlir::Value localVar = std::get<0>(localInfo);
-        mlir::BlockArgument localArg = std::get<1>(localInfo);
-        mlir::Attribute localizerSym = std::get<2>(localInfo);
-        mlir::SymbolRefAttr localizerName =
-            llvm::cast<mlir::SymbolRefAttr>(localizerSym);
+        aiir::Value localVar = std::get<0>(localInfo);
+        aiir::BlockArgument localArg = std::get<1>(localInfo);
+        aiir::Attribute localizerSym = std::get<2>(localInfo);
+        aiir::SymbolRefAttr localizerName =
+            llvm::cast<aiir::SymbolRefAttr>(localizerSym);
         fir::LocalitySpecifierOp localizer = findLocalizer(loop, localizerName);
 
         // TODO Should this be a heap allocation instead? For now, we allocate
         // on the stack for each loop iteration.
-        mlir::Value localAlloc =
+        aiir::Value localAlloc =
             fir::AllocaOp::create(rewriter, loop.getLoc(), localizer.getType());
 
-        auto cloneLocalizerRegion = [&](mlir::Region &region,
-                                        mlir::ValueRange regionArgs,
-                                        mlir::Block::iterator insertionPoint) {
+        auto cloneLocalizerRegion = [&](aiir::Region &region,
+                                        aiir::ValueRange regionArgs,
+                                        aiir::Block::iterator insertionPoint) {
           // It is reasonable to make this assumption since, at this stage,
           // control-flow ops are not converted yet. Therefore, things like `if`
           // conditions will still be represented by their encapsulating `fir`
           // dialect ops.
           assert(region.hasOneBlock() &&
                  "Expected localizer region to have a single block.");
-          mlir::OpBuilder::InsertionGuard guard(rewriter);
+          aiir::OpBuilder::InsertionGuard guard(rewriter);
           rewriter.setInsertionPoint(rewriter.getInsertionBlock(),
                                      insertionPoint);
-          mlir::IRMapping mapper;
+          aiir::IRMapping mapper;
           mapper.map(region.getArguments(), regionArgs);
-          for (mlir::Operation &op : region.front().without_terminator())
+          for (aiir::Operation &op : region.front().without_terminator())
             (void)rewriter.clone(op, mapper);
 
-          auto yield = mlir::cast<fir::YieldOp>(region.front().getTerminator());
+          auto yield = aiir::cast<fir::YieldOp>(region.front().getTerminator());
           assert(yield.getResults().size() < 2);
 
           return yield.getResults().empty()
-                     ? mlir::Value{}
+                     ? aiir::Value{}
                      : mapper.lookup(yield.getResults()[0]);
         };
 
@@ -258,25 +258,25 @@ public:
     // at the beginning of the wrapper block, e.g. LICM may move
     // some operations from the inner fir.do_concurrent.loop into
     // this block.
-    llvm::SmallVector<mlir::Operation *> opsToMove;
-    for (mlir::Operation &op : llvm::drop_end(wrapperBlock))
+    llvm::SmallVector<aiir::Operation *> opsToMove;
+    for (aiir::Operation &op : llvm::drop_end(wrapperBlock))
       opsToMove.push_back(&op);
 
     fir::FirOpBuilder firBuilder(
-        rewriter, doConcurentOp->getParentOfType<mlir::ModuleOp>());
+        rewriter, doConcurentOp->getParentOfType<aiir::ModuleOp>());
     auto *allocIt = firBuilder.getAllocaBlock();
 
     // Move alloca operations into the alloca-block, and all other
     // operations - right before fir.do_concurrent.
-    for (mlir::Operation *op : opsToMove)
-      if (mlir::isa<fir::AllocaOp>(op))
+    for (aiir::Operation *op : opsToMove)
+      if (aiir::isa<fir::AllocaOp>(op))
         rewriter.moveOpBefore(op, allocIt, allocIt->begin());
       else
         rewriter.moveOpBefore(op, doConcurentOp);
 
     rewriter.setInsertionPointAfter(doConcurentOp);
     fir::DoLoopOp innermostUnorderdLoop;
-    mlir::SmallVector<mlir::Value> ivArgs;
+    aiir::SmallVector<aiir::Value> ivArgs;
 
     for (auto [lb, ub, st, iv] :
          llvm::zip_equal(loop.getLowerBound(), loop.getUpperBound(),
@@ -284,7 +284,7 @@ public:
       innermostUnorderdLoop = fir::DoLoopOp::create(
           rewriter, doConcurentOp.getLoc(), lb, ub, st,
           /*unordred=*/true, /*finalCountValue=*/false,
-          /*iterArgs=*/mlir::ValueRange{}, loop.getReduceVars(),
+          /*iterArgs=*/aiir::ValueRange{}, loop.getReduceVars(),
           loop.getReduceAttrsAttr());
       ivArgs.push_back(innermostUnorderdLoop.getInductionVar());
       rewriter.setInsertionPointToStart(innermostUnorderdLoop.getBody());
@@ -297,29 +297,29 @@ public:
     rewriter.inlineBlockBefore(
         &loopBlock, innermostUnorderdLoop.getBody()->getTerminator(), ivArgs);
     rewriter.eraseOp(doConcurentOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 void SimplifyFIROperationsPass::runOnOperation() {
-  mlir::ModuleOp module = getOperation();
-  mlir::MLIRContext &context = getContext();
-  mlir::RewritePatternSet patterns(&context);
+  aiir::ModuleOp module = getOperation();
+  aiir::AIIRContext &context = getContext();
+  aiir::RewritePatternSet patterns(&context);
   fir::populateSimplifyFIROperationsPatterns(patterns,
                                              preferInlineImplementation);
-  mlir::GreedyRewriteConfig config;
+  aiir::GreedyRewriteConfig config;
   config.setRegionSimplificationLevel(
-      mlir::GreedySimplifyRegionLevel::Disabled);
+      aiir::GreedySimplifyRegionLevel::Disabled);
 
-  if (mlir::failed(
-          mlir::applyPatternsGreedily(module, std::move(patterns), config))) {
-    mlir::emitError(module.getLoc(), DEBUG_TYPE " pass failed");
+  if (aiir::failed(
+          aiir::applyPatternsGreedily(module, std::move(patterns), config))) {
+    aiir::emitError(module.getLoc(), DEBUG_TYPE " pass failed");
     signalPassFailure();
   }
 }
 
 void fir::populateSimplifyFIROperationsPatterns(
-    mlir::RewritePatternSet &patterns, bool preferInlineImplementation) {
+    aiir::RewritePatternSet &patterns, bool preferInlineImplementation) {
   patterns.insert<IsContiguousBoxCoversion, BoxTotalElementsConversion>(
       patterns.getContext(), preferInlineImplementation);
   patterns.insert<DoConcurrentConversion>(patterns.getContext());

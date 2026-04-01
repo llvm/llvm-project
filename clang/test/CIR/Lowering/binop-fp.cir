@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=AIIR
 // RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering  | FileCheck %s -check-prefix=LLVM
 
 module {
@@ -45,16 +45,16 @@ module {
   }
 }
 
-// MLIR: = llvm.alloca {{.*}} f32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-// MLIR: = llvm.alloca {{.*}} f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
-// MLIR: = llvm.fmul {{.*}} : f32
-// MLIR: = llvm.fdiv
-// MLIR: = llvm.fadd
-// MLIR: = llvm.fsub
-// MLIR: = llvm.fadd {{.*}} : f64
-// MLIR: = llvm.fsub
-// MLIR: = llvm.fmul
-// MLIR: = llvm.fdiv
+// AIIR: = llvm.alloca {{.*}} f32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// AIIR: = llvm.alloca {{.*}} f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// AIIR: = llvm.fmul {{.*}} : f32
+// AIIR: = llvm.fdiv
+// AIIR: = llvm.fadd
+// AIIR: = llvm.fsub
+// AIIR: = llvm.fadd {{.*}} : f64
+// AIIR: = llvm.fsub
+// AIIR: = llvm.fmul
+// AIIR: = llvm.fdiv
 
 // LLVM: = alloca float, i64
 // LLVM: = alloca double, i64

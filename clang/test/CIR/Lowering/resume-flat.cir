@@ -15,13 +15,13 @@ cir.func private @flattened_resume() {
 
 
 // CHECK: llvm.func @flattened_resume() attributes {sym_visibility = "private"} {
-// CHECK:   %[[CONST_1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:   %[[CONST_1:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:   %[[EXCEPTION_ADDR:.*]] = llvm.alloca %[[CONST_1]] x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
-// CHECK:   %[[CONST_1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:   %[[CONST_1:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:   %[[TYPE_ID_ADDR:.*]] = llvm.alloca %[[CONST_1]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
 // CHECK:   %[[EXCEPTION:.*]] = llvm.load %[[EXCEPTION_ADDR]] {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
 // CHECK:   %[[TYPE_ID:.*]] = llvm.load %[[TYPE_ID_ADDR]] {alignment = 4 : i64} : !llvm.ptr -> i32
-// CHECK:   %[[POISON:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[POISON:.*]] = llvm.aiir.poison : !llvm.struct<(ptr, i32)>
 // CHECK:   %[[TMP_EXCEPTION_INFO:.*]] = llvm.insertvalue %[[EXCEPTION]], %[[POISON]][0] : !llvm.struct<(ptr, i32)>
 // CHECK:   %[[EXCEPTION_INFO:.*]] = llvm.insertvalue %[[TYPE_ID]], %[[TMP_EXCEPTION_INFO]][1] : !llvm.struct<(ptr, i32)>
 // CHECK:   llvm.resume %[[EXCEPTION_INFO]] : !llvm.struct<(ptr, i32)>

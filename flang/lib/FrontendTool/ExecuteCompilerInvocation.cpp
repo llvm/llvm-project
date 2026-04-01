@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,9 +19,9 @@
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
 
-#include "mlir/IR/AsmState.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/PassManager.h"
+#include "aiir/IR/AsmState.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/Pass/PassManager.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Options/Options.h"
 #include "llvm/Option/OptTable.h"
@@ -205,17 +205,17 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
     llvm::cl::ParseCommandLineOptions(numArgs + 1, args.get());
   }
 
-  // Honor -mmlir. This should happen AFTER plugins have been loaded!
-  if (!flang->getFrontendOpts().mlirArgs.empty()) {
-    mlir::registerMLIRContextCLOptions();
-    mlir::registerPassManagerCLOptions();
-    mlir::registerAsmPrinterCLOptions();
-    unsigned numArgs = flang->getFrontendOpts().mlirArgs.size();
+  // Honor -maiir. This should happen AFTER plugins have been loaded!
+  if (!flang->getFrontendOpts().aiirArgs.empty()) {
+    aiir::registerAIIRContextCLOptions();
+    aiir::registerPassManagerCLOptions();
+    aiir::registerAsmPrinterCLOptions();
+    unsigned numArgs = flang->getFrontendOpts().aiirArgs.size();
     auto args = std::make_unique<const char *[]>(numArgs + 2);
-    args[0] = "flang (MLIR option parsing)";
+    args[0] = "flang (AIIR option parsing)";
 
     for (unsigned i = 0; i != numArgs; ++i)
-      args[i + 1] = flang->getFrontendOpts().mlirArgs[i].c_str();
+      args[i + 1] = flang->getFrontendOpts().aiirArgs[i].c_str();
 
     args[numArgs + 1] = nullptr;
     llvm::cl::ParseCommandLineOptions(numArgs + 1, args.get());

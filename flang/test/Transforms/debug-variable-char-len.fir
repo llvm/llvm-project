@@ -1,4 +1,4 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s -o - | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s -o - | FileCheck %s
 
 module {
   func.func @foo(%arg0: !fir.ref<!fir.char<1,?>> {fir.bindc_name = "str1"} , %arg1: !fir.ref<i64> {fir.bindc_name = "len1"} loc("/home/haqadeer/work/fortran/t1/../str.f90":1:1), %arg2: i64) {

@@ -1,6 +1,6 @@
-// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --aiir-print-debuginfo %s | FileCheck %s
 
-// check conversion of complex type of different size. Both fir and mlir
+// check conversion of complex type of different size. Both fir and aiir
 // variants are checked.
 
 module {

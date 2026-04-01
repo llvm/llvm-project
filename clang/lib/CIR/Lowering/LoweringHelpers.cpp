@@ -6,47 +6,47 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains helper functions for lowering from CIR to LLVM or MLIR.
+// This file contains helper functions for lowering from CIR to LLVM or AIIR.
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/LoweringHelpers.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
-mlir::DenseElementsAttr
+aiir::DenseElementsAttr
 convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
-                                     mlir::Type type) {
-  auto values = llvm::SmallVector<mlir::APInt, 8>{};
-  const auto stringAttr = mlir::cast<mlir::StringAttr>(attr.getElts());
+                                     aiir::Type type) {
+  auto values = llvm::SmallVector<aiir::APInt, 8>{};
+  const auto stringAttr = aiir::cast<aiir::StringAttr>(attr.getElts());
 
   for (const char element : stringAttr)
     values.push_back({8, (uint64_t)element});
 
-  const auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());
+  const auto arrayTy = aiir::cast<cir::ArrayType>(attr.getType());
   if (arrayTy.getSize() != stringAttr.size())
     assert(!cir::MissingFeatures::stringTypeWithDifferentArraySize());
 
-  return mlir::DenseElementsAttr::get(
-      mlir::RankedTensorType::get({(int64_t)values.size()}, type),
+  return aiir::DenseElementsAttr::get(
+      aiir::RankedTensorType::get({(int64_t)values.size()}, type),
       llvm::ArrayRef(values));
 }
 
-template <> mlir::APInt getZeroInitFromType(mlir::Type ty) {
-  assert(mlir::isa<cir::IntType>(ty) && "expected int type");
-  const auto intTy = mlir::cast<cir::IntType>(ty);
-  return mlir::APInt::getZero(intTy.getWidth());
+template <> aiir::APInt getZeroInitFromType(aiir::Type ty) {
+  assert(aiir::isa<cir::IntType>(ty) && "expected int type");
+  const auto intTy = aiir::cast<cir::IntType>(ty);
+  return aiir::APInt::getZero(intTy.getWidth());
 }
 
-template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
-  assert((mlir::isa<cir::SingleType, cir::DoubleType>(ty)) &&
+template <> aiir::APFloat getZeroInitFromType(aiir::Type ty) {
+  assert((aiir::isa<cir::SingleType, cir::DoubleType>(ty)) &&
          "only float and double supported");
 
-  if (ty.isF32() || mlir::isa<cir::SingleType>(ty))
-    return mlir::APFloat(0.f);
+  if (ty.isF32() || aiir::isa<cir::SingleType>(ty))
+    return aiir::APFloat(0.f);
 
-  if (ty.isF64() || mlir::isa<cir::DoubleType>(ty))
-    return mlir::APFloat(0.0);
+  if (ty.isF64() || aiir::isa<cir::DoubleType>(ty))
+    return aiir::APFloat(0.0);
 
   llvm_unreachable("NYI");
 }
@@ -61,11 +61,11 @@ void convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
     const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
     int64_t currentIndex) {
-  if (auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
-    if (auto arrayType = mlir::dyn_cast<cir::ArrayType>(attr.getType())) {
+  if (auto stringAttr = aiir::dyn_cast<aiir::StringAttr>(attr.getElts())) {
+    if (auto arrayType = aiir::dyn_cast<cir::ArrayType>(attr.getType())) {
       for (auto element : stringAttr) {
         auto intAttr = cir::IntAttr::get(arrayType.getElementType(), element);
-        values[currentIndex++] = mlir::dyn_cast<AttrTy>(intAttr).getValue();
+        values[currentIndex++] = aiir::dyn_cast<AttrTy>(intAttr).getValue();
       }
       return;
     }
@@ -76,21 +76,21 @@ void convertToDenseElementsAttrImpl(
   for (std::size_t i = dimIndex; i < currentDims.size(); i++)
     elementsSizeInCurrentDim *= currentDims[i];
 
-  auto arrayAttr = mlir::cast<mlir::ArrayAttr>(attr.getElts());
+  auto arrayAttr = aiir::cast<aiir::ArrayAttr>(attr.getElts());
   for (auto eltAttr : arrayAttr) {
-    if (auto valueAttr = mlir::dyn_cast<AttrTy>(eltAttr)) {
+    if (auto valueAttr = aiir::dyn_cast<AttrTy>(eltAttr)) {
       values[currentIndex++] = valueAttr.getValue();
       continue;
     }
 
-    if (auto subArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(eltAttr)) {
+    if (auto subArrayAttr = aiir::dyn_cast<cir::ConstArrayAttr>(eltAttr)) {
       convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values, currentDims,
                                              dimIndex, currentIndex);
       currentIndex += elementsSizeInCurrentDim;
       continue;
     }
 
-    if (mlir::isa<cir::ZeroAttr, cir::UndefAttr>(eltAttr)) {
+    if (aiir::isa<cir::ZeroAttr, cir::UndefAttr>(eltAttr)) {
       currentIndex += elementsSizeInCurrentDim;
       continue;
     }
@@ -100,9 +100,9 @@ void convertToDenseElementsAttrImpl(
 }
 
 template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr convertToDenseElementsAttr(
+aiir::DenseElementsAttr convertToDenseElementsAttr(
     cir::ConstArrayAttr attr, const llvm::SmallVectorImpl<int64_t> &dims,
-    mlir::Type elementType, mlir::Type convertedElementType) {
+    aiir::Type elementType, aiir::Type convertedElementType) {
   unsigned vectorSize = 1;
   for (auto dim : dims)
     vectorSize *= dim;
@@ -110,75 +110,75 @@ mlir::DenseElementsAttr convertToDenseElementsAttr(
       vectorSize, getZeroInitFromType<StorageTy>(elementType));
   convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims, /*currentDim=*/0,
                                          /*initialIndex=*/0);
-  return mlir::DenseElementsAttr::get(
-      mlir::RankedTensorType::get(dims, convertedElementType),
+  return aiir::DenseElementsAttr::get(
+      aiir::RankedTensorType::get(dims, convertedElementType),
       llvm::ArrayRef(values));
 }
 
-std::optional<mlir::Attribute>
+std::optional<aiir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
-                    const mlir::TypeConverter *converter) {
+                    const aiir::TypeConverter *converter) {
   // Ensure ConstArrayAttr has a type.
-  const auto typedConstArr = mlir::cast<mlir::TypedAttr>(constArr);
+  const auto typedConstArr = aiir::cast<aiir::TypedAttr>(constArr);
 
   // Ensure ConstArrayAttr type is a ArrayType.
-  const auto cirArrayType = mlir::cast<cir::ArrayType>(typedConstArr.getType());
+  const auto cirArrayType = aiir::cast<cir::ArrayType>(typedConstArr.getType());
 
   // Is a ConstArrayAttr with an cir::ArrayType: fetch element type.
-  mlir::Type type = cirArrayType;
+  aiir::Type type = cirArrayType;
   auto dims = llvm::SmallVector<int64_t, 2>{};
-  while (auto arrayType = mlir::dyn_cast<cir::ArrayType>(type)) {
+  while (auto arrayType = aiir::dyn_cast<cir::ArrayType>(type)) {
     dims.push_back(arrayType.getSize());
     type = arrayType.getElementType();
   }
 
-  if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
+  if (aiir::isa<aiir::StringAttr>(constArr.getElts()))
     return convertStringAttrToDenseElementsAttr(constArr,
                                                 converter->convertType(type));
-  if (mlir::isa<cir::IntType>(type))
-    return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
+  if (aiir::isa<cir::IntType>(type))
+    return convertToDenseElementsAttr<cir::IntAttr, aiir::APInt>(
         constArr, dims, type, converter->convertType(type));
 
-  if (mlir::isa<cir::FPTypeInterface>(type))
-    return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
+  if (aiir::isa<cir::FPTypeInterface>(type))
+    return convertToDenseElementsAttr<cir::FPAttr, aiir::APFloat>(
         constArr, dims, type, converter->convertType(type));
 
   return std::nullopt;
 }
 
-mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
-                          mlir::Type typ, const llvm::APInt &val) {
-  return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);
+aiir::Value getConstAPInt(aiir::OpBuilder &bld, aiir::Location loc,
+                          aiir::Type typ, const llvm::APInt &val) {
+  return aiir::LLVM::ConstantOp::create(bld, loc, typ, val);
 }
 
-mlir::Value getConst(mlir::OpBuilder &bld, mlir::Location loc, mlir::Type typ,
+aiir::Value getConst(aiir::OpBuilder &bld, aiir::Location loc, aiir::Type typ,
                      unsigned val) {
-  return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);
+  return aiir::LLVM::ConstantOp::create(bld, loc, typ, val);
 }
 
-mlir::Value createShL(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+aiir::Value createShL(aiir::OpBuilder &bld, aiir::Value lhs, unsigned rhs) {
   if (!rhs)
     return lhs;
-  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
-  return mlir::LLVM::ShlOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+  aiir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return aiir::LLVM::ShlOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }
 
-mlir::Value createAShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+aiir::Value createAShR(aiir::OpBuilder &bld, aiir::Value lhs, unsigned rhs) {
   if (!rhs)
     return lhs;
-  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
-  return mlir::LLVM::AShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+  aiir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return aiir::LLVM::AShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }
 
-mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
+aiir::Value createAnd(aiir::OpBuilder &bld, aiir::Value lhs,
                       const llvm::APInt &rhs) {
-  mlir::Value rhsVal = getConstAPInt(bld, lhs.getLoc(), lhs.getType(), rhs);
-  return mlir::LLVM::AndOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+  aiir::Value rhsVal = getConstAPInt(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return aiir::LLVM::AndOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }
 
-mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+aiir::Value createLShR(aiir::OpBuilder &bld, aiir::Value lhs, unsigned rhs) {
   if (!rhs)
     return lhs;
-  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
-  return mlir::LLVM::LShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+  aiir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return aiir::LLVM::LShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }

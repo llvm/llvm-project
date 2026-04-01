@@ -9,21 +9,21 @@
 #ifndef FORTRAN_OPTIMIZER_OPENMP_PASSES
 #define FORTRAN_OPTIMIZER_OPENMP_PASSES
 
-include "mlir/Pass/PassBase.td"
+include "aiir/Pass/PassBase.td"
 
 def MapInfoFinalizationPass
-    : Pass<"omp-map-info-finalization", "mlir::ModuleOp"> {
+    : Pass<"omp-map-info-finalization", "aiir::ModuleOp"> {
   let summary = "expands OpenMP MapInfo operations containing descriptors";
   let description = [{
     Expands MapInfo operations containing descriptor types into multiple
     MapInfo's for each pointer element in the descriptor that requires
     explicit individual mapping by the OpenMP runtime.
   }];
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+  let dependentDialects = ["aiir::omp::OpenMPDialect"];
 }
 
 def MapsForPrivatizedSymbolsPass
-    : Pass<"omp-maps-for-privatized-symbols", "mlir::func::FuncOp"> {
+    : Pass<"omp-maps-for-privatized-symbols", "aiir::func::FuncOp"> {
   let summary = "Creates MapInfoOp instances for privatized symbols when needed";
   let description = [{
     Adds omp.map.info operations for privatized symbols on omp.target ops
@@ -32,11 +32,11 @@ def MapsForPrivatizedSymbolsPass
     in the use of the descriptor inside the target region. As such, the
     descriptor then needs to be mapped. This pass adds such MapInfoOp operations.
   }];
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+  let dependentDialects = ["aiir::omp::OpenMPDialect"];
 }
 
 def DeleteUnreachableTargetsPass
-    : Pass<"omp-delete-unreachable-targets", "mlir::ModuleOp"> {
+    : Pass<"omp-delete-unreachable-targets", "aiir::ModuleOp"> {
   let summary = "Deletes OpenMP target operations in unreachable code";
   let description = [{
     Identifies and removes OpenMP target operations that reside in unreachable
@@ -44,20 +44,20 @@ def DeleteUnreachableTargetsPass
     host and device compilation by preventing unreachable targets from being
     processed on the device side.
   }];
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+  let dependentDialects = ["aiir::omp::OpenMPDialect"];
 }
 
 def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   let summary = "Filters out functions intended for the host when compiling "
                 "for the target device.";
   let dependentDialects = [
-    "mlir::func::FuncDialect",
+    "aiir::func::FuncDialect",
     "fir::FIROpsDialect",
-    "mlir::omp::OpenMPDialect"
+    "aiir::omp::OpenMPDialect"
   ];
 }
 
-def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::ModuleOp"> {
+def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "aiir::ModuleOp"> {
   let summary = "Map `DO CONCURRENT` loops to OpenMP worksharing loops.";
 
   let description = [{ This is an experimental pass to map `DO CONCURRENT` loops
@@ -70,7 +70,7 @@ def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::Mod
        - More extensive testing.
   }];
 
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+  let dependentDialects = ["aiir::omp::OpenMPDialect"];
 
   let options = [
     Option<"mapTo", "map-to",
@@ -88,24 +88,24 @@ def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::Mod
   ];
 }
 
-def LowerNontemporalPass : Pass<"lower-nontemporal", "mlir::func::FuncOp"> {
+def LowerNontemporalPass : Pass<"lower-nontemporal", "aiir::func::FuncOp"> {
   let summary =
       "Adds nontemporal attribute to loads and stores performed on "
       "the list items specified in the nontemporal clause of omp.simd.";
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+  let dependentDialects = ["aiir::omp::OpenMPDialect"];
 }
 
 // Needs to be scheduled on Module as we create functions in it
-def LowerWorkshare : Pass<"lower-workshare", "::mlir::ModuleOp"> {
+def LowerWorkshare : Pass<"lower-workshare", "::aiir::ModuleOp"> {
   let summary = "Lower workshare construct";
 }
 
-def LowerWorkdistribute : Pass<"lower-workdistribute", "::mlir::ModuleOp"> {
+def LowerWorkdistribute : Pass<"lower-workdistribute", "::aiir::ModuleOp"> {
   let summary = "Lower workdistribute construct";
 }
 
 def GenericLoopConversionPass
-    : Pass<"omp-generic-loop-conversion", "mlir::func::FuncOp"> {
+    : Pass<"omp-generic-loop-conversion", "aiir::func::FuncOp"> {
   let summary = "Converts OpenMP generic `omp.loop` to semantically "
                 "equivalent OpenMP ops";
   let description = [{
@@ -119,24 +119,24 @@ def GenericLoopConversionPass
      be nested in a constructor, an overloaded operator, or a runtime function.
   }];
   let dependentDialects = [
-    "mlir::omp::OpenMPDialect"
+    "aiir::omp::OpenMPDialect"
   ];
 }
 
-def SimdOnlyPass : Pass<"omp-simd-only", "mlir::ModuleOp"> {
+def SimdOnlyPass : Pass<"omp-simd-only", "aiir::ModuleOp"> {
   let summary = "Filters out non-simd OpenMP constructs";
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+  let dependentDialects = ["aiir::omp::OpenMPDialect"];
 }
 
 def AutomapToTargetDataPass
-    : Pass<"omp-automap-to-target-data", "::mlir::ModuleOp"> {
+    : Pass<"omp-automap-to-target-data", "::aiir::ModuleOp"> {
   let summary = "Insert OpenMP target data operations for AUTOMAP variables";
   let description = [{
     Inserts `omp.target_enter_data` and `omp.target_exit_data` operations to
     map variables marked with the `AUTOMAP` modifier when their allocation
     or deallocation is detected in the FIR.
   }];
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+  let dependentDialects = ["aiir::omp::OpenMPDialect"];
 }
 
 #endif //FORTRAN_OPTIMIZER_OPENMP_PASSES

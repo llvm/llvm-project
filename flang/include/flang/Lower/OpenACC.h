@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_LOWER_OPENACC_H
 #define FORTRAN_LOWER_OPENACC_H
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
 namespace llvm {
 template <typename T, unsigned N>
@@ -21,7 +21,7 @@ class SmallVector;
 class StringRef;
 } // namespace llvm
 
-namespace mlir {
+namespace aiir {
 namespace func {
 class FuncOp;
 } // namespace func
@@ -30,7 +30,7 @@ class Type;
 class ModuleOp;
 class OpBuilder;
 class Value;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -74,7 +74,7 @@ static constexpr llvm::StringRef declarePostDeallocSuffix =
 
 static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
 
-mlir::Value genOpenACCConstruct(AbstractConverter &,
+aiir::Value genOpenACCConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
                                 pft::Evaluation &,
                                 const parser::OpenACCConstruct &,
@@ -83,19 +83,19 @@ void genOpenACCDeclarativeConstruct(
     AbstractConverter &, Fortran::semantics::SemanticsContext &,
     StatementContext &, const parser::OpenACCDeclarativeConstruct &);
 void genOpenACCRoutineConstruct(
-    AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
+    AbstractConverter &, aiir::ModuleOp, aiir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
 void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
-                                   mlir::Value beginOpValue,
+                                   aiir::Value beginOpValue,
                                    const Fortran::semantics::Symbol &);
 void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
                                     const Fortran::semantics::Symbol &);
 
-void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
-                          mlir::Location);
+void genOpenACCTerminator(fir::FirOpBuilder &, aiir::Operation *,
+                          aiir::Location);
 
 /// Used to obtain the number of contained loops to look for
 /// since this is dependent on number of tile operands and collapse
@@ -116,21 +116,21 @@ bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
 
 void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
 
-void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, mlir::Location);
+void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, aiir::Location);
 
 /// If \p targetBlock is outside the ACC region containing the current
 /// insertion point, generate the appropriate region terminator
 /// (acc.terminator or acc.yield) instead of a cross-region branch.
 /// Returns true if the exit was handled, false if no ACC region boundary
 /// is crossed.
-bool genOpenACCRegionExitBranch(fir::FirOpBuilder &, mlir::Location,
-                                mlir::Block *targetBlock);
+bool genOpenACCRegionExitBranch(fir::FirOpBuilder &, aiir::Location,
+                                aiir::Block *targetBlock);
 
 /// Generates an OpenACC loop from a do construct in order to
 /// properly capture the loop bounds, parallelism determination mode,
 /// and to privatize the loop variables.
 /// When the conversion is rejected, nullptr is returned.
-mlir::Operation *genOpenACCLoopFromDoConstruct(
+aiir::Operation *genOpenACCLoopFromDoConstruct(
     AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::SymMap &localSymbols,

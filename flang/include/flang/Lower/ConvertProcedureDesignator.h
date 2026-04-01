@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -17,7 +17,7 @@
 #ifndef FORTRAN_LOWER_CONVERT_PROCEDURE_DESIGNATOR_H
 #define FORTRAN_LOWER_CONVERT_PROCEDURE_DESIGNATOR_H
 
-namespace mlir {
+namespace aiir {
 class Location;
 class Value;
 class Type;
@@ -44,29 +44,29 @@ class SymMap;
 /// fir::CharBoxValue for character procedure designator (the CharBoxValue
 /// length carries the result length if it is known).
 fir::ExtendedValue convertProcedureDesignator(
-    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    aiir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::ProcedureDesignator &proc,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);
 
 /// Lower a procedure designator to a !fir.boxproc<()->() or
 /// tuple<!fir.boxproc<()->(), len>.
 hlfir::EntityWithAttributes convertProcedureDesignatorToHLFIR(
-    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    aiir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::ProcedureDesignator &proc,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);
 
 /// Generate initialization for procedure pointer to procedure target.
-mlir::Value
+aiir::Value
 convertProcedureDesignatorInitialTarget(Fortran::lower::AbstractConverter &,
-                                        mlir::Location,
+                                        aiir::Location,
                                         const Fortran::semantics::Symbol &sym);
 
 /// Given the value of a "PASS" actual argument \p passedArg and the
 /// evaluate::ProcedureDesignator for the call, address and dereference
 /// the argument's procedure pointer component that must be called.
-mlir::Value derefPassProcPointerComponent(
-    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-    const Fortran::evaluate::ProcedureDesignator &proc, mlir::Value passedArg,
+aiir::Value derefPassProcPointerComponent(
+    aiir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::ProcedureDesignator &proc, aiir::Value passedArg,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_PROCEDURE_DESIGNATOR_H

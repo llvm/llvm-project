@@ -18,7 +18,7 @@ config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.is_msvc = lit.util.pythonize_bool("@MSVC@")
 config.llvm_enabled_projects = "@LLVM_ENABLE_PROJECTS@".split(";")
 
-config.mlir_src_root = "@MLIR_SOURCE_DIR@"
+config.aiir_src_root = "@AIIR_SOURCE_DIR@"
 
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 

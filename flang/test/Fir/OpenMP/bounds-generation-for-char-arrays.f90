@@ -17,16 +17,16 @@ module attributes {omp.is_target_device = false} {
 
 // CHECK-LABEL:   llvm.func @_QPchar_array(
 // CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr) {
-// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(9 : index) : i64
-// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(10 : index) : i64
+// CHECK:           %[[VAL_0:.*]] = llvm.aiir.constant(9 : index) : i64
+// CHECK:           %[[VAL_1:.*]] = llvm.aiir.constant(0 : index) : i64
+// CHECK:           %[[VAL_2:.*]] = llvm.aiir.constant(1 : index) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.aiir.constant(10 : index) : i64
 // CHECK:           %[[VAL_4:.*]] = omp.map.bounds lower_bound(%[[VAL_1]] : i64) upper_bound(%[[VAL_0]] : i64) extent(%[[VAL_3]] : i64) stride(%[[VAL_2]] : i64) start_idx(%[[VAL_2]] : i64)
 // CHECK:           %[[VAL_5:.*]] = omp.map.bounds lower_bound(%[[VAL_1]] : i64) upper_bound(%[[VAL_0]] : i64) extent(%[[VAL_3]] : i64) stride(%[[VAL_2]] : i64) start_idx(%[[VAL_2]] : i64)
-// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(15 : i64) : i64
-// CHECK:           %[[VAL_8:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_9:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_6:.*]] = llvm.aiir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_7:.*]] = llvm.aiir.constant(15 : i64) : i64
+// CHECK:           %[[VAL_8:.*]] = llvm.aiir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_10:.*]] = omp.map.bounds lower_bound(%[[VAL_6]] : i64) upper_bound(%[[VAL_7]] : i64) extent(%[[VAL_7]] : i64) stride(%[[VAL_8]] : i64) start_idx(%[[VAL_9]] : i64)
 // CHECK:           %[[VAL_11:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i8) map_clauses(tofrom) capture(ByRef) bounds(%[[VAL_4]], %[[VAL_5]], %[[VAL_10]]) -> !llvm.ptr {name = ""}
 // CHECK:           omp.target map_entries(%[[VAL_11]] -> %[[VAL_12:.*]] : !llvm.ptr) {
@@ -57,11 +57,11 @@ module attributes {omp.is_target_device = false} {
 
 // CHECK-LABEL:   llvm.func @_QPallocatable_char_array(
 // CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr) {
-// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           %[[VAL_0:.*]] = llvm.aiir.constant(1 : i32) : i32
 // CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:           %[[VAL_4:.*]] = llvm.mlir.constant(72 : i32) : i32
+// CHECK:           %[[VAL_2:.*]] = llvm.aiir.constant(1 : index) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.aiir.constant(0 : index) : i64
+// CHECK:           %[[VAL_4:.*]] = llvm.aiir.constant(72 : i32) : i32
 // CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[ARG0]], %[[VAL_4]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           %[[VAL_5:.*]] = llvm.getelementptr %[[VAL_1]][0, 7, %[[VAL_3]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_6:.*]] = llvm.load %[[VAL_5]] : !llvm.ptr -> i64
@@ -81,10 +81,10 @@ module attributes {omp.is_target_device = false} {
 // CHECK:           %[[VAL_20:.*]] = llvm.sub %[[VAL_17]], %[[VAL_2]] : i64
 // CHECK:           %[[VAL_21:.*]] = omp.map.bounds lower_bound(%[[VAL_3]] : i64) upper_bound(%[[VAL_20]] : i64) extent(%[[VAL_17]] : i64) stride(%[[VAL_13]] : i64) start_idx(%[[VAL_15]] : i64) {stride_in_bytes = true}
 // CHECK:           %[[VAL_22:.*]] = llvm.getelementptr %[[ARG0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
-// CHECK:           %[[VAL_23:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_24:.*]] = llvm.mlir.constant(15 : i64) : i64
-// CHECK:           %[[VAL_25:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_26:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_23:.*]] = llvm.aiir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_24:.*]] = llvm.aiir.constant(15 : i64) : i64
+// CHECK:           %[[VAL_25:.*]] = llvm.aiir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_26:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_27:.*]] = omp.map.bounds lower_bound(%[[VAL_23]] : i64) upper_bound(%[[VAL_24]] : i64) extent(%[[VAL_24]] : i64) stride(%[[VAL_25]] : i64) start_idx(%[[VAL_26]] : i64)
 // CHECK:           %[[VAL_28:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i8) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_22]] : !llvm.ptr) bounds(%[[VAL_12]], %[[VAL_21]], %[[VAL_27]]) -> !llvm.ptr {name = ""}
 // CHECK:           %[[VAL_29:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>) map_clauses(to) capture(ByRef) members(%[[VAL_28]] : [0] : !llvm.ptr) -> !llvm.ptr {name = "csv_chem_list_a"}

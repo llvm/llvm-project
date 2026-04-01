@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -34,7 +34,7 @@ template <typename T>
 class ArrayConstructorBuilder {
 public:
   static hlfir::EntityWithAttributes
-  gen(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+  gen(aiir::Location loc, Fortran::lower::AbstractConverter &converter,
       const Fortran::evaluate::ArrayConstructor<T> &expr,
       Fortran::lower::SymMap &symMap,
       Fortran::lower::StatementContext &stmtCtx);

@@ -129,7 +129,7 @@ TODO
 
 ### Detecting Allocations to Move
 Allocations which could be moved to the stack will be detected by performing a
-forward dense data flow analysis using `mlir::dataflow::DenseForwardDataFlowAnalysis`.
+forward dense data flow analysis using `aiir::dataflow::DenseForwardDataFlowAnalysis`.
 This analysis will search for SSA values created by a `fir.allocmem` which are
 always freed using `fir.freemem` within the same function.
 
@@ -168,7 +168,7 @@ has non-constant extents (causing the `fir.alloca` to have SSA values as
 operands). In this case, the `fir.alloca` will be placed immediately after the
 last operand becomes available.
 
-If this location is inside a loop (either an `mlir::LoopLikeOpInterface` or a
+If this location is inside a loop (either an `aiir::LoopLikeOpInterface` or a
 cyclic CFG), the transformation should attempt to use the `llvm.stacksave`/
 `llvm.stackrestore` intrinsics to ensure that the stack does not grow on every
 loop iteration. Use of these intrinsics is considered valid when the allocation

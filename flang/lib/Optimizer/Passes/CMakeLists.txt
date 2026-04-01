@@ -1,5 +1,5 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY AIIR_EXTENSION_LIBS)
 
 add_flang_library(flangPasses
   CommandLineOpts.cpp
@@ -15,12 +15,12 @@ add_flang_library(flangPasses
   LINK_COMPONENTS
   Passes
 
-  MLIR_LIBS
+  AIIR_LIBS
   ${dialect_libs}
   ${extension_libs}
-  MLIRPass
-  MLIRReconcileUnrealizedCasts
-  MLIRSCFToControlFlow
-  MLIRSupport
-  MLIRTransforms
+  AIIRPass
+  AIIRReconcileUnrealizedCasts
+  AIIRSCFToControlFlow
+  AIIRSupport
+  AIIRTransforms
 )

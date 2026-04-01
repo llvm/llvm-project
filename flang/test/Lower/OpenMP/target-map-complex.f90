@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=false %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=true %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --enable-delayed-privatization-staging=false %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --enable-delayed-privatization-staging=true %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
 
 ! Check that the complex*4 is passed by value. but complex*8 is passed by
 ! reference

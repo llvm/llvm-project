@@ -16,7 +16,7 @@
 
 #include "CIRCXXABI.h"
 #include "TargetLoweringInfo.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/IR/BuiltinOps.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
@@ -27,14 +27,14 @@
 namespace cir {
 
 class LowerModule {
-  mlir::ModuleOp module;
+  aiir::ModuleOp module;
   const std::unique_ptr<clang::TargetInfo> target;
   std::unique_ptr<TargetLoweringInfo> targetLoweringInfo;
   std::unique_ptr<CIRCXXABI> abi;
 
 public:
   LowerModule(clang::LangOptions langOpts, clang::CodeGenOptions codeGenOpts,
-              mlir::ModuleOp &module,
+              aiir::ModuleOp &module,
               std::unique_ptr<clang::TargetInfo> target);
   ~LowerModule() = default;
 
@@ -45,12 +45,12 @@ public:
 
   CIRCXXABI &getCXXABI() const { return *abi; }
   const clang::TargetInfo &getTarget() const { return *target; }
-  mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
+  aiir::AIIRContext *getAIIRContext() { return module.getContext(); }
 
   const TargetLoweringInfo &getTargetLoweringInfo();
 };
 
-std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module);
+std::unique_ptr<LowerModule> createLowerModule(aiir::ModuleOp module);
 
 } // namespace cir
 

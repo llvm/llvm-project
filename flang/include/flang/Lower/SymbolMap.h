@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +20,7 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Support/Matcher.h"
 #include "flang/Semantics/symbol.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Value.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -97,8 +97,8 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   /// Get address of the boxed value. For a scalar, this is the address of the
   /// scalar. For an array, this is the address of the first element in the
   /// array, etc.
-  mlir::Value getAddr() const {
-    return match([](const None &) { return mlir::Value{}; },
+  aiir::Value getAddr() const {
+    return match([](const None &) { return aiir::Value{}; },
                  [](const fir::FortranVariableOpInterface &x) {
                    return fir::FortranVariableOpInterface(x).getBase();
                  },
@@ -174,7 +174,7 @@ private:
 // Map of symbol information
 //===----------------------------------------------------------------------===//
 
-/// Helper class to map front-end symbols to their MLIR representation. This
+/// Helper class to map front-end symbols to their AIIR representation. This
 /// provides a way to lookup the ssa-values that comprise a Fortran symbol's
 /// runtime attributes. These attributes include its address, its dynamic size,
 /// dynamic bounds information for non-scalar entities, dynamic type parameters,
@@ -184,7 +184,7 @@ public:
   using AcDoVar = llvm::StringRef;
   /// Descriptor of a symbol's storage consists of the base address
   /// of the storage and the offset within that storage.
-  using StorageDesc = std::pair<mlir::Value, std::uint64_t>;
+  using StorageDesc = std::pair<aiir::Value, std::uint64_t>;
 
   SymMap() { pushScope(); }
   SymMap(const SymMap &) = delete;
@@ -208,14 +208,14 @@ public:
                  bool force = false);
 
   /// Add a trivial symbol mapping to an address.
-  void addSymbol(semantics::SymbolRef sym, mlir::Value value,
+  void addSymbol(semantics::SymbolRef sym, aiir::Value value,
                  bool force = false) {
     makeSym(sym, SymbolBox::Intrinsic(value), force);
   }
 
   /// Add a scalar CHARACTER mapping to an (address, len).
-  void addCharSymbol(semantics::SymbolRef sym, mlir::Value value,
-                     mlir::Value len, bool force = false) {
+  void addCharSymbol(semantics::SymbolRef sym, aiir::Value value,
+                     aiir::Value len, bool force = false) {
     makeSym(sym, SymbolBox::Char(value, len), force);
   }
   void addCharSymbol(semantics::SymbolRef sym, const SymbolBox::Char &value,
@@ -224,8 +224,8 @@ public:
   }
 
   /// Add an array mapping with (address, shape).
-  void addSymbolWithShape(semantics::SymbolRef sym, mlir::Value value,
-                          llvm::ArrayRef<mlir::Value> shape,
+  void addSymbolWithShape(semantics::SymbolRef sym, aiir::Value value,
+                          llvm::ArrayRef<aiir::Value> shape,
                           bool force = false) {
     makeSym(sym, SymbolBox::FullDim(value, shape), force);
   }
@@ -235,9 +235,9 @@ public:
   }
 
   /// Add an array of CHARACTER mapping.
-  void addCharSymbolWithShape(semantics::SymbolRef sym, mlir::Value value,
-                              mlir::Value len,
-                              llvm::ArrayRef<mlir::Value> shape,
+  void addCharSymbolWithShape(semantics::SymbolRef sym, aiir::Value value,
+                              aiir::Value len,
+                              llvm::ArrayRef<aiir::Value> shape,
                               bool force = false) {
     makeSym(sym, SymbolBox::CharFullDim(value, len, shape), force);
   }
@@ -248,9 +248,9 @@ public:
   }
 
   /// Add an array mapping with bounds notation.
-  void addSymbolWithBounds(semantics::SymbolRef sym, mlir::Value value,
-                           llvm::ArrayRef<mlir::Value> extents,
-                           llvm::ArrayRef<mlir::Value> lbounds,
+  void addSymbolWithBounds(semantics::SymbolRef sym, aiir::Value value,
+                           llvm::ArrayRef<aiir::Value> extents,
+                           llvm::ArrayRef<aiir::Value> lbounds,
                            bool force = false) {
     makeSym(sym, SymbolBox::FullDim(value, extents, lbounds), force);
   }
@@ -261,10 +261,10 @@ public:
   }
 
   /// Add an array of CHARACTER with bounds notation.
-  void addCharSymbolWithBounds(semantics::SymbolRef sym, mlir::Value value,
-                               mlir::Value len,
-                               llvm::ArrayRef<mlir::Value> extents,
-                               llvm::ArrayRef<mlir::Value> lbounds,
+  void addCharSymbolWithBounds(semantics::SymbolRef sym, aiir::Value value,
+                               aiir::Value len,
+                               llvm::ArrayRef<aiir::Value> extents,
+                               llvm::ArrayRef<aiir::Value> lbounds,
                                bool force = false) {
     makeSym(sym, SymbolBox::CharFullDim(value, len, extents, lbounds), force);
   }
@@ -279,10 +279,10 @@ public:
     makeSym(sym, box, force);
   }
 
-  void addBoxSymbol(semantics::SymbolRef sym, mlir::Value irBox,
-                    llvm::ArrayRef<mlir::Value> lbounds,
-                    llvm::ArrayRef<mlir::Value> explicitParams,
-                    llvm::ArrayRef<mlir::Value> explicitExtents,
+  void addBoxSymbol(semantics::SymbolRef sym, aiir::Value irBox,
+                    llvm::ArrayRef<aiir::Value> lbounds,
+                    llvm::ArrayRef<aiir::Value> explicitParams,
+                    llvm::ArrayRef<aiir::Value> explicitExtents,
                     bool force = false) {
     makeSym(sym,
             SymbolBox::Box(irBox, lbounds, explicitParams, explicitExtents),
@@ -318,7 +318,7 @@ public:
   }
 
   /// Add a new binding from the ac-do-variable `var` to `value`.
-  void pushImpliedDoBinding(AcDoVar var, mlir::Value value) {
+  void pushImpliedDoBinding(AcDoVar var, aiir::Value value) {
     impliedDoStack.emplace_back(var, value);
   }
 
@@ -330,7 +330,7 @@ public:
 
   /// Lookup the ac-do-variable and return the Value it is bound to.
   /// If the variable is not found, returns a null Value.
-  mlir::Value lookupImpliedDo(AcDoVar var);
+  aiir::Value lookupImpliedDo(AcDoVar var);
 
   /// Remove all symbols from the map.
   void clear() {
@@ -423,7 +423,7 @@ private:
 
   // Implied DO induction variables are not represented as Se::Symbol in
   // Ev::Expr. Keep the variable markers in their own stack.
-  llvm::SmallVector<std::pair<AcDoVar, mlir::Value>> impliedDoStack;
+  llvm::SmallVector<std::pair<AcDoVar, aiir::Value>> impliedDoStack;
 
   // A stack of maps between the symbols and their storage descriptors.
   llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, StorageDesc>>

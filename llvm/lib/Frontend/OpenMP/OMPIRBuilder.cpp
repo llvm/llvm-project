@@ -8510,7 +8510,7 @@ static Expected<Function *> createOutlinedFunction(
     // NOTE: We cannot remove dead constants that have been rewritten to
     // instructions at this stage, we run the risk of breaking later lowering
     // by doing so as we could still be in the process of lowering the module
-    // from MLIR to LLVM-IR and the MLIR lowering may still require the original
+    // from AIIR to LLVM-IR and the AIIR lowering may still require the original
     // constants we have created rewritten versions of.
     if (auto *Const = dyn_cast<Constant>(Input))
       convertUsersOfConstantsToInstructions(Const, Func, false);

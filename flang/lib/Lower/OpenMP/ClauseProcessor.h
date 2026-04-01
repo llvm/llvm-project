@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 #ifndef FORTRAN_LOWER_CLAUSEPROCESSOR_H
@@ -21,7 +21,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/char-block.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace fir {
 class FirOpBuilder;
@@ -37,7 +37,7 @@ using DefaultMapsTy = std::map<clause::Defaultmap::VariableCategory,
 
 /// Class that handles the processing of OpenMP clauses.
 ///
-/// Its `process<ClauseName>()` methods perform MLIR code generation for their
+/// Its `process<ClauseName>()` methods perform AIIR code generation for their
 /// corresponding clause if it is present in the clause list. Otherwise, they
 /// will return `false` to signal that the clause was not found.
 ///
@@ -57,93 +57,93 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
-  bool processBare(mlir::omp::BareClauseOps &result) const;
-  bool processBind(mlir::omp::BindClauseOps &result) const;
+  bool processBare(aiir::omp::BareClauseOps &result) const;
+  bool processBind(aiir::omp::BindClauseOps &result) const;
   bool processCancelDirectiveName(
-      mlir::omp::CancelDirectiveNameClauseOps &result) const;
+      aiir::omp::CancelDirectiveNameClauseOps &result) const;
   bool
-  processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                  mlir::omp::LoopRelatedClauseOps &loopResult,
-                  mlir::omp::CollapseClauseOps &collapseResult,
+  processCollapse(aiir::Location currentLocation, lower::pft::Evaluation &eval,
+                  aiir::omp::LoopRelatedClauseOps &loopResult,
+                  aiir::omp::CollapseClauseOps &collapseResult,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
   bool processSizes(StatementContext &stmtCtx,
-                    mlir::omp::SizesClauseOps &result) const;
+                    aiir::omp::SizesClauseOps &result) const;
   bool processLooprange(StatementContext &stmtCtx,
-                        mlir::omp::LooprangeClauseOps &result,
+                        aiir::omp::LooprangeClauseOps &result,
                         int64_t &count) const;
   bool processDevice(lower::StatementContext &stmtCtx,
-                     mlir::omp::DeviceClauseOps &result) const;
-  bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
+                     aiir::omp::DeviceClauseOps &result) const;
+  bool processDeviceType(aiir::omp::DeviceTypeClauseOps &result) const;
   bool processDistSchedule(lower::StatementContext &stmtCtx,
-                           mlir::omp::DistScheduleClauseOps &result) const;
-  bool processExclusive(mlir::Location currentLocation,
-                        mlir::omp::ExclusiveClauseOps &result) const;
+                           aiir::omp::DistScheduleClauseOps &result) const;
+  bool processExclusive(aiir::Location currentLocation,
+                        aiir::omp::ExclusiveClauseOps &result) const;
   bool processFilter(lower::StatementContext &stmtCtx,
-                     mlir::omp::FilterClauseOps &result) const;
+                     aiir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
-                    mlir::omp::FinalClauseOps &result) const;
+                    aiir::omp::FinalClauseOps &result) const;
   bool processGrainsize(lower::StatementContext &stmtCtx,
-                        mlir::omp::GrainsizeClauseOps &result) const;
+                        aiir::omp::GrainsizeClauseOps &result) const;
   bool processHasDeviceAddr(
       lower::StatementContext &stmtCtx,
-      mlir::omp::HasDeviceAddrClauseOps &result,
+      aiir::omp::HasDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const;
-  bool processHint(mlir::omp::HintClauseOps &result) const;
-  bool processInbranch(mlir::omp::InbranchClauseOps &result) const;
-  bool processInclusive(mlir::Location currentLocation,
-                        mlir::omp::InclusiveClauseOps &result) const;
+  bool processHint(aiir::omp::HintClauseOps &result) const;
+  bool processInbranch(aiir::omp::InbranchClauseOps &result) const;
+  bool processInclusive(aiir::Location currentLocation,
+                        aiir::omp::InclusiveClauseOps &result) const;
   bool processInitializer(
       lower::SymMap &symMap,
       ReductionProcessor::GenInitValueCBTy &genInitValueCB) const;
-  bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
-  bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
-  bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
-  bool processNowait(mlir::omp::NowaitClauseOps &result) const;
+  bool processMergeable(aiir::omp::MergeableClauseOps &result) const;
+  bool processNogroup(aiir::omp::NogroupClauseOps &result) const;
+  bool processNotinbranch(aiir::omp::NotinbranchClauseOps &result) const;
+  bool processNowait(aiir::omp::NowaitClauseOps &result) const;
   bool processNumTasks(lower::StatementContext &stmtCtx,
-                       mlir::omp::NumTasksClauseOps &result) const;
+                       aiir::omp::NumTasksClauseOps &result) const;
   bool processNumTeams(lower::StatementContext &stmtCtx,
-                       mlir::omp::NumTeamsClauseOps &result) const;
+                       aiir::omp::NumTeamsClauseOps &result) const;
   bool processNumThreads(lower::StatementContext &stmtCtx,
-                         mlir::omp::NumThreadsClauseOps &result) const;
-  bool processOrder(mlir::omp::OrderClauseOps &result) const;
-  bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
+                         aiir::omp::NumThreadsClauseOps &result) const;
+  bool processOrder(aiir::omp::OrderClauseOps &result) const;
+  bool processOrdered(aiir::omp::OrderedClauseOps &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
-                       mlir::omp::PriorityClauseOps &result) const;
-  bool processProcBind(mlir::omp::ProcBindClauseOps &result) const;
+                       aiir::omp::PriorityClauseOps &result) const;
+  bool processProcBind(aiir::omp::ProcBindClauseOps &result) const;
   bool processTileSizes(lower::pft::Evaluation &eval,
-                        mlir::omp::LoopNestOperands &result) const;
-  bool processSafelen(mlir::omp::SafelenClauseOps &result) const;
+                        aiir::omp::LoopNestOperands &result) const;
+  bool processSafelen(aiir::omp::SafelenClauseOps &result) const;
   bool processSchedule(lower::StatementContext &stmtCtx,
-                       mlir::omp::ScheduleClauseOps &result) const;
-  bool processSimdlen(mlir::omp::SimdlenClauseOps &result) const;
-  bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
+                       aiir::omp::ScheduleClauseOps &result) const;
+  bool processSimdlen(aiir::omp::SimdlenClauseOps &result) const;
+  bool processSimd(aiir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
-                          mlir::omp::ThreadLimitClauseOps &result) const;
-  bool processUntied(mlir::omp::UntiedClauseOps &result) const;
+                          aiir::omp::ThreadLimitClauseOps &result) const;
+  bool processUntied(aiir::omp::UntiedClauseOps &result) const;
 
-  bool processDetach(mlir::omp::DetachClauseOps &result) const;
+  bool processDetach(aiir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
-  bool processAffinity(mlir::omp::AffinityClauseOps &result) const;
-  bool processAligned(mlir::omp::AlignedClauseOps &result) const;
-  bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
+  bool processAffinity(aiir::omp::AffinityClauseOps &result) const;
+  bool processAligned(aiir::omp::AlignedClauseOps &result) const;
+  bool processAllocate(aiir::omp::AllocateClauseOps &result) const;
   bool processCopyin() const;
-  bool processCopyprivate(mlir::Location currentLocation,
-                          mlir::omp::CopyprivateClauseOps &result) const;
+  bool processCopyprivate(aiir::Location currentLocation,
+                          aiir::omp::CopyprivateClauseOps &result) const;
   bool processDefaultMap(lower::StatementContext &stmtCtx,
                          DefaultMapsTy &result) const;
   bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
-                     mlir::omp::DependClauseOps &result) const;
+                     aiir::omp::DependClauseOps &result) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
-                 mlir::omp::IfClauseOps &result) const;
+                 aiir::omp::IfClauseOps &result) const;
   bool processInReduction(
-      mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
+      aiir::Location currentLocation, aiir::omp::InReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
   bool processIsDevicePtr(
-      lower::StatementContext &stmtCtx, mlir::omp::IsDevicePtrClauseOps &result,
+      lower::StatementContext &stmtCtx, aiir::omp::IsDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
-  bool processLinear(mlir::omp::LinearClauseOps &result,
+  bool processLinear(aiir::omp::LinearClauseOps &result,
                      bool isDeclareSimd = false) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
@@ -152,37 +152,37 @@ public:
   // The optional parameter mapSyms is used to store the original Fortran symbol
   // for the map operands. It may be used later on to create the block_arguments
   // for some of the directives that require it.
-  bool processMap(mlir::Location currentLocation,
+  bool processMap(aiir::Location currentLocation,
                   lower::StatementContext &stmtCtx,
-                  mlir::omp::MapClauseOps &result,
+                  aiir::omp::MapClauseOps &result,
                   llvm::omp::Directive directive = llvm::omp::OMPD_unknown,
                   llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms =
                       nullptr) const;
   bool processMotionClauses(lower::StatementContext &stmtCtx,
-                            mlir::omp::MapClauseOps &result);
-  bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
+                            aiir::omp::MapClauseOps &result);
+  bool processNontemporal(aiir::omp::NontemporalClauseOps &result) const;
   bool processReduction(
-      mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
+      aiir::Location currentLocation, aiir::omp::ReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) const;
   bool processTaskReduction(
-      mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
+      aiir::Location currentLocation, aiir::omp::TaskReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processUseDeviceAddr(
       lower::StatementContext &stmtCtx,
-      mlir::omp::UseDeviceAddrClauseOps &result,
+      aiir::omp::UseDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
   bool processUseDevicePtr(
       lower::StatementContext &stmtCtx,
-      mlir::omp::UseDevicePtrClauseOps &result,
+      aiir::omp::UseDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
-  bool processUniform(mlir::omp::UniformClauseOps &result) const;
+  bool processUniform(aiir::omp::UniformClauseOps &result) const;
 
   // Call this method for these clauses that should be supported but are not
   // implemented yet. It triggers a compilation error if any of the given
   // clauses is found.
   template <typename... Ts>
-  void processTODO(mlir::Location currentLocation,
+  void processTODO(aiir::Location currentLocation,
                    llvm::omp::Directive directive) const;
 
 private:
@@ -201,15 +201,15 @@ private:
       std::function<void(const T &, const parser::CharBlock &source)>
           callbackFn) const;
 
-  /// Set the `result` to a new `mlir::UnitAttr` if the clause is present.
+  /// Set the `result` to a new `aiir::UnitAttr` if the clause is present.
   template <typename T>
-  bool markClauseOccurrence(mlir::UnitAttr &result) const;
+  bool markClauseOccurrence(aiir::UnitAttr &result) const;
 
   void processMapObjects(
-      lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
-      const omp::ObjectList &objects, mlir::omp::ClauseMapFlags mapTypeBits,
+      lower::StatementContext &stmtCtx, aiir::Location clauseLocation,
+      const omp::ObjectList &objects, aiir::omp::ClauseMapFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
-      llvm::SmallVectorImpl<mlir::Value> &mapVars,
+      llvm::SmallVectorImpl<aiir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
       llvm::StringRef mapperIdNameRef = "",
       bool isMotionModifier = false) const;
@@ -220,7 +220,7 @@ private:
 };
 
 template <typename... Ts>
-void ClauseProcessor::processTODO(mlir::Location currentLocation,
+void ClauseProcessor::processTODO(aiir::Location currentLocation,
                                   llvm::omp::Directive directive) const {
   auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
@@ -255,7 +255,7 @@ bool ClauseProcessor::findRepeatableClause(
 }
 
 template <typename T>
-bool ClauseProcessor::markClauseOccurrence(mlir::UnitAttr &result) const {
+bool ClauseProcessor::markClauseOccurrence(aiir::UnitAttr &result) const {
   if (findUniqueClause<T>()) {
     result = converter.getFirOpBuilder().getUnitAttr();
     return true;

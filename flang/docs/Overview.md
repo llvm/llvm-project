@@ -23,7 +23,7 @@ related errors are detected and reported.
 
 The second high level phase (lowering), changes the decorated parse tree and
 symbol table into the Fortran Intermediate Representation (FIR), which is a
-dialect of LLVM's Multi-Level Intermediate Representation or MLIR.  It then
+dialect of LLVM's Multi-Level Intermediate Representation or AIIR.  It then
 runs a series of passes on the FIR code which verify its validity, perform a
 series of optimizations, and finally transform it into LLVM's Intermediate
 Representation, or LLVM IR
@@ -164,7 +164,7 @@ parse tree.  The compiler walks the PFT generating FIR.
 
 **Commands:**
   - `flang -fc1 -fdebug-dump-pft src.f90` dumps the pre-FIR tree
-  - `flang -fc1 -emit-mlir src.f90` dumps the FIR to the files src.mlir
+  - `flang -fc1 -emit-aiir src.f90` dumps the FIR to the files src.aiir
 
 ### Transformation passes
 
@@ -172,7 +172,7 @@ parse tree.  The compiler walks the PFT generating FIR.
 
 **Output:** An LLVM IR representation of the program
 
-**Entry point:** `mlir::PassManager::run`
+**Entry point:** `aiir::PassManager::run`
 
 The compiler then runs a series of passes over the FIR code.  The first is a
 verification pass.  It's followed by a series of transformation passes that
@@ -180,7 +180,7 @@ perform various optimizations and transformations.  The final pass creates an
 LLVM IR representation of the program.
 
 **Commands:**
-  - `flang -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
+  - `flang -maiir --aiir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
   - `flang -fc1 -emit-llvm src.f90` dumps the LLVM IR to src.ll
 
 ## Object code generation and linking

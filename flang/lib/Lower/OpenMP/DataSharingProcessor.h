@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 #ifndef FORTRAN_LOWER_DATASHARINGPROCESSOR_H
@@ -18,14 +18,14 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 #include <variant>
 
-namespace mlir {
+namespace aiir {
 namespace omp {
 struct PrivateClauseOps;
 } // namespace omp
-} // namespace mlir
+} // namespace aiir
 
 namespace Fortran {
 namespace lower {
@@ -91,8 +91,8 @@ private:
     unsigned version;
   };
 
-  mlir::OpBuilder::InsertPoint lastPrivIP;
-  llvm::SmallVector<mlir::Value> loopIVs;
+  aiir::OpBuilder::InsertPoint lastPrivIP;
+  llvm::SmallVector<aiir::Value> loopIVs;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
@@ -126,21 +126,21 @@ private:
       const omp::ObjectList &objects,
       llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
-  void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps);
+  void insertBarrier(aiir::omp::PrivateClauseOps *clauseOps);
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
   void collectIndirectReferences();
-  void privatize(mlir::omp::PrivateClauseOps *clauseOps,
+  void privatize(aiir::omp::PrivateClauseOps *clauseOps,
                  std::optional<llvm::omp::Directive> dir = std::nullopt);
-  void copyLastPrivatize(mlir::Operation *op);
-  void insertLastPrivateCompare(mlir::Operation *op);
+  void copyLastPrivatize(aiir::Operation *op);
+  void insertLastPrivateCompare(aiir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
   void
   copyFirstPrivateSymbol(const semantics::Symbol *sym,
-                         mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr);
+                         aiir::OpBuilder::InsertPoint *copyAssignIP = nullptr);
   void copyLastPrivateSymbol(const semantics::Symbol *sym,
-                             mlir::OpBuilder::InsertPoint *lastPrivIP);
+                             aiir::OpBuilder::InsertPoint *lastPrivIP);
   void insertDeallocs();
 
   static bool isOpenMPPrivatizingConstruct(const parser::OpenMPConstruct &omp,
@@ -169,15 +169,15 @@ public:
   // construct, for looping constructs this is just before the Operation. The
   // split into two steps was performed basically to be able to call
   // privatisation for looping constructs before the operation is created since
-  // the bounds of the MLIR OpenMP operation can be privatised.
+  // the bounds of the AIIR OpenMP operation can be privatised.
   // Step2 performs the copying for lastprivates and requires knowledge of the
-  // MLIR operation to insert the last private update. Step2 adds
+  // AIIR operation to insert the last private update. Step2 adds
   // dealocation code as well.
-  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr,
+  void processStep1(aiir::omp::PrivateClauseOps *clauseOps = nullptr,
                     std::optional<llvm::omp::Directive> dir = std::nullopt);
-  void processStep2(mlir::Operation *op, bool isLoop);
+  void processStep2(aiir::Operation *op, bool isLoop);
 
-  void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
+  void pushLoopIV(aiir::Value iv) { loopIVs.push_back(iv); }
 
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {
@@ -191,7 +191,7 @@ public:
   }
 
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
-                       mlir::omp::PrivateClauseOps *clauseOps,
+                       aiir::omp::PrivateClauseOps *clauseOps,
                        std::optional<llvm::omp::Directive> dir = std::nullopt);
 };
 

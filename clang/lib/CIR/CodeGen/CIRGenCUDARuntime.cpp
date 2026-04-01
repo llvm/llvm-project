@@ -27,14 +27,14 @@ RValue CIRGenCUDARuntime::emitCUDAKernelCallExpr(CIRGenFunction &cgf,
                                                  ReturnValueSlot retValue) {
 
   CIRGenBuilderTy &builder = cgm.getBuilder();
-  mlir::Location loc =
+  aiir::Location loc =
       cgf.currSrcLoc ? cgf.currSrcLoc.value() : builder.getUnknownLoc();
 
   cgf.emitIfOnBoolExpr(
       expr->getConfig(),
-      [&](mlir::OpBuilder &b, mlir::Location l) { cir::YieldOp::create(b, l); },
+      [&](aiir::OpBuilder &b, aiir::Location l) { cir::YieldOp::create(b, l); },
       loc,
-      [&](mlir::OpBuilder &b, mlir::Location l) {
+      [&](aiir::OpBuilder &b, aiir::Location l) {
         CIRGenCallee callee = cgf.emitCallee(expr->getCallee());
         cgf.emitCall(expr->getCallee()->getType(), callee, expr, retValue);
         cir::YieldOp::create(b, l);

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Instantiation of pft::Variable in FIR/MLIR.
+/// Instantiation of pft::Variable in FIR/AIIR.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace cuf {
@@ -48,7 +48,7 @@ struct Variable;
 /// owned by the code lowering a scope and provided to instantiateVariable.
 using AggregateStoreKey =
     std::tuple<const Fortran::semantics::Scope *, std::size_t>;
-using AggregateStoreMap = llvm::DenseMap<AggregateStoreKey, mlir::Value>;
+using AggregateStoreMap = llvm::DenseMap<AggregateStoreKey, aiir::Value>;
 
 /// Instantiate variable \p var and add it to \p symMap.
 /// The AbstractConverter builder must be set.
@@ -90,10 +90,10 @@ void defineCommonBlocks(
 /// \p commonSize specifies the syze of the COMMON block in bytes.
 /// The size is used to represent a COMMON block reference as
 /// a !fir.ref<!fir.array<SIZExi8>>.
-mlir::Value genCommonBlockMember(AbstractConverter &converter,
-                                 mlir::Location loc,
+aiir::Value genCommonBlockMember(AbstractConverter &converter,
+                                 aiir::Location loc,
                                  const Fortran::semantics::Symbol &sym,
-                                 mlir::Value commonValue,
+                                 aiir::Value commonValue,
                                  std::size_t commonSize);
 
 /// Lower a symbol attributes given an optional storage \p and add it to the
@@ -101,10 +101,10 @@ mlir::Value genCommonBlockMember(AbstractConverter &converter,
 /// be allocated. This is a low level function that should only be used if
 /// instantiateVariable cannot be called.
 void mapSymbolAttributes(AbstractConverter &, const pft::Variable &, SymMap &,
-                         StatementContext &, mlir::Value preAlloc = {});
+                         StatementContext &, aiir::Value preAlloc = {});
 void mapSymbolAttributes(AbstractConverter &, const semantics::SymbolRef &,
                          SymMap &, StatementContext &,
-                         mlir::Value preAlloc = {});
+                         aiir::Value preAlloc = {});
 
 /// Instantiate the variables that appear in the specification expressions
 /// of the result of a function call. The instantiated variables are added
@@ -128,21 +128,21 @@ void mapCallInterfaceSymbolsForDummyArgument(
 
 /// Create initial-data-target fir.box in a global initializer region.
 /// This handles the local instantiation of the target variable.
-mlir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
-                                 mlir::Location, mlir::Type boxType,
+aiir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
+                                 aiir::Location, aiir::Type boxType,
                                  const SomeExpr &initialTarget,
                                  bool couldBeInEquivalence = false);
 
 /// Create the global op and its init if it has one
 fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                            const Fortran::lower::pft::Variable &var,
-                           llvm::StringRef globalName, mlir::StringAttr linkage,
+                           llvm::StringRef globalName, aiir::StringAttr linkage,
                            cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate address \p addr inside an initializer.
 fir::ExtendedValue
 genExtAddrInInitializer(Fortran::lower::AbstractConverter &converter,
-                        mlir::Location loc, const SomeExpr &addr);
+                        aiir::Location loc, const SomeExpr &addr);
 
 /// Create a global variable for an intrinsic module object.
 void createIntrinsicModuleGlobal(Fortran::lower::AbstractConverter &converter,
@@ -156,7 +156,7 @@ void createRuntimeTypeInfoGlobal(Fortran::lower::AbstractConverter &converter,
 /// Translate the Fortran attributes of \p sym into the FIR variable attribute
 /// representation.
 fir::FortranVariableFlagsAttr
-translateSymbolAttributes(mlir::MLIRContext *mlirContext,
+translateSymbolAttributes(aiir::AIIRContext *aiirContext,
                           const Fortran::semantics::Symbol &sym,
                           fir::FortranVariableFlagsEnum extraFlags =
                               fir::FortranVariableFlagsEnum::None);
@@ -174,7 +174,7 @@ void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
 
 /// Given the Fortran type of a Cray pointee, return the fir.box type used to
 /// track the cray pointee as Fortran pointer.
-mlir::Type getCrayPointeeBoxType(mlir::Type);
+aiir::Type getCrayPointeeBoxType(aiir::Type);
 
 /// If the given array symbol must be repacked into contiguous
 /// memory, generate fir.pack_array for the given box array value.
@@ -189,7 +189,7 @@ fir::ExtendedValue genPackArray(Fortran::lower::AbstractConverter &converter,
 /// that reverts the effect of fir.pack_array.
 /// \p def is expected to be hlfir.declare operation.
 void genUnpackArray(Fortran::lower::AbstractConverter &converter,
-                    mlir::Location loc, fir::FortranVariableOpInterface def,
+                    aiir::Location loc, fir::FortranVariableOpInterface def,
                     const Fortran::semantics::Symbol &sym);
 
 } // namespace lower

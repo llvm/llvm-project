@@ -1,0 +1,440 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_test")
+load("//aiir:tblgen.bzl", "gentbl_cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_test(
+    name = "debug_tests",
+    size = "small",
+    srcs = glob([
+        "Debug/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:Debug",
+        "//aiir:IR",
+        "//aiir:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ir_tests",
+    size = "small",
+    srcs = glob([
+        "IR/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Core",
+        "//llvm:Remarks",
+        "//llvm:Support",
+        "//aiir:BytecodeReader",
+        "//aiir:BytecodeWriter",
+        "//aiir:CallOpInterfaces",
+        "//aiir:FunctionInterfaces",
+        "//aiir:IR",
+        "//aiir:MemRefDialect",
+        "//aiir:Parser",
+        "//aiir:RemarkStreamer",
+        "//aiir:Support",
+        "//aiir/test:TestDialect",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "interface_tests",
+    size = "small",
+    srcs = glob([
+        "Interfaces/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:ArithDialect",
+        "//aiir:BytecodeReader",
+        "//aiir:ControlFlowInterfaces",
+        "//aiir:DLTIDialect",
+        "//aiir:DataLayoutInterfaces",
+        "//aiir:FuncDialect",
+        "//aiir:IR",
+        "//aiir:InferIntRangeInterface",
+        "//aiir:InferTypeOpInterface",
+        "//aiir:MemorySlotUtils",
+        "//aiir:Parser",
+        "//aiir:SideEffectInterfaces",
+        "//aiir:Support",
+        "//aiir/test:TestDialect",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "support_tests",
+    size = "small",
+    srcs = glob([
+        "Support/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "pass_tests",
+    size = "small",
+    srcs = glob([
+        "Pass/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:Analysis",
+        "//aiir:Debug",
+        "//aiir:FuncDialect",
+        "//aiir:IR",
+        "//aiir:Pass",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "rewrite_tests",
+    size = "small",
+    srcs = glob([
+        "Rewrite/*.cpp",
+    ]),
+    deps = [
+        "//aiir:IR",
+        "//aiir:Rewrite",
+        "//aiir:SideEffectInterfaces",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "dialect_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//aiir:Dialect",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "amdgpu_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/AMDGPU/*.cpp",
+    ]),
+    deps = [
+        "//aiir:AMDGPUUtils",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "memref_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/MemRef/*.cpp",
+    ]),
+    deps = [
+        "//llvm:TestingSupport",
+        "//aiir:IR",
+        "//aiir:MemRefDialect",
+        "//aiir:SideEffectInterfaces",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "scf_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/SCF/*.cpp",
+    ]),
+    deps = [
+        "//aiir:AffineDialect",
+        "//aiir:ArithDialect",
+        "//aiir:DialectUtils",
+        "//aiir:FuncDialect",
+        "//aiir:IR",
+        "//aiir:LoopLikeInterface",
+        "//aiir:Parser",
+        "//aiir:SCFDialect",
+        "//aiir:SCFUtils",
+        "//aiir:SideEffectInterfaces",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "sparse_tensor_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/SparseTensor/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:SideEffectInterfaces",
+        "//aiir:SparseTensorUtils",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "spirv_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/SPIRV/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:IR",
+        "//aiir:SPIRVBinaryUtils",
+        "//aiir:SPIRVDeserialization",
+        "//aiir:SPIRVDialect",
+        "//aiir:SPIRVSerialization",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "transform_dialect_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/Transform/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:BytecodeReader",
+        "//aiir:FuncDialect",
+        "//aiir:IR",
+        "//aiir:AiirOptLib",
+        "//aiir:Parser",
+        "//aiir:Pass",
+        "//aiir:Support",
+        "//aiir:TransformDebugExtension",
+        "//aiir:TransformDialect",
+        "//aiir:TransformDialectTransforms",
+        "//aiir/test:TestTransformDialect",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "dialect_utils_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/Utils/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:DialectUtils",
+        "//aiir:IR",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+gentbl_cc_library(
+    name = "EnumsIncGen",
+    tbl_outs = {
+        "TableGen/EnumsGenTest.h.inc": ["-gen-enum-decls"],
+        "TableGen/EnumsGenTest.cpp.inc": ["-gen-enum-defs"],
+    },
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "TableGen/enums.td",
+    deps = [
+        "//aiir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PassIncGen",
+    tbl_outs = {"TableGen/PassGenTest.h.inc": ["-gen-pass-decls"]},
+    tblgen = "//aiir:aiir-tblgen",
+    td_file = "TableGen/passes.td",
+    deps = [
+        "//aiir:PassBaseTdFiles",
+        "//aiir:RewritePassBaseTdFiles",
+    ],
+)
+
+cc_test(
+    name = "tablegen_tests",
+    size = "small",
+    srcs = glob([
+        "TableGen/*.cpp",
+    ]) + [
+        "TableGen/EnumsGenTest.cpp.inc",
+        "TableGen/EnumsGenTest.h.inc",
+    ],
+    includes = ["TableGen/"],
+    deps = [
+        ":EnumsIncGen",
+        ":PassIncGen",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:IR",
+        "//aiir:Pass",
+        "//aiir:Support",
+        "//aiir:TableGen",
+        "//aiir/test:TestDialect",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "transforms_test",
+    size = "small",
+    srcs = glob([
+        "Transforms/*.cpp",
+    ]),
+    deps = [
+        "//aiir:AffineAnalysis",
+        "//aiir:BytecodeReader",
+        "//aiir:IR",
+        "//aiir:Parser",
+        "//aiir:Pass",
+        "//aiir:SideEffectInterfaces",
+        "//aiir:TransformUtils",
+        "//aiir:Transforms",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "analysis_tests",
+    size = "small",
+    srcs = glob([
+        "Analysis/*/*.cpp",
+        "Analysis/*/*.h",
+    ]),
+    deps = [
+        "//llvm:TestingSupport",
+        "//aiir:AffineAnalysis",
+        "//aiir:Analysis",
+        "//aiir:AsmParser",
+        "//aiir:IR",
+        "//aiir:Parser",
+        "//aiir:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "bytecode_tests",
+    size = "small",
+    srcs = glob([
+        "Bytecode/*.cpp",
+    ]),
+    deps = [
+        "//llvm:Support",
+        "//aiir:BytecodeReader",
+        "//aiir:BytecodeWriter",
+        "//aiir:IR",
+        "//aiir:Parser",
+        "//aiir:SideEffectInterfaces",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "conversion_tests",
+    size = "small",
+    srcs = glob([
+        "Conversion/*/*.cpp",
+    ]),
+    deps = [
+        "//aiir:ArithDialect",
+        "//aiir:IR",
+        "//aiir:PDLToPDLInterp",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_engine_tests",
+    size = "small",
+    srcs = glob([
+        "ExecutionEngine/*.cpp",
+    ]),
+    tags = [
+        # MSAN does not work with JIT.
+        "nomsan",
+    ],
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//aiir:AllPassesAndDialects",
+        "//aiir:Analysis",
+        "//aiir:ArithToLLVM",
+        "//aiir:BuiltinToLLVMIRTranslation",
+        "//aiir:BytecodeReader",
+        "//aiir:ExecutionEngine",
+        "//aiir:FuncDialect",
+        "//aiir:FuncToLLVM",
+        "//aiir:IR",
+        "//aiir:LLVMToLLVMIRTranslation",
+        "//aiir:LinalgTransforms",
+        "//aiir:MemRefToLLVM",
+        "//aiir:Parser",
+        "//aiir:Pass",
+        "//aiir:ReconcileUnrealizedCasts",
+        "//aiir:RegisterAllDialects",
+        "//aiir:ToLLVMIRTranslation",
+        "//aiir:VectorToLLVM",
+        "//aiir:VectorToSCF",
+        "//aiir:aiir_c_runner_utils",
+        "//aiir:aiir_runner_utils",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)

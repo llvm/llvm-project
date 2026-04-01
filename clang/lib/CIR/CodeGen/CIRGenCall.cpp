@@ -15,7 +15,7 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/TypeSize.h"
@@ -53,8 +53,8 @@ cir::FuncType CIRGenTypes::getFunctionType(GlobalDecl gd) {
 }
 
 cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
-  mlir::Type resultType = convertType(info.getReturnType());
-  SmallVector<mlir::Type, 8> argTypes;
+  aiir::Type resultType = convertType(info.getReturnType());
+  SmallVector<aiir::Type, 8> argTypes;
   argTypes.reserve(info.getNumRequiredArgs());
 
   for (const CanQualType &argType : info.requiredArguments())
@@ -85,7 +85,7 @@ CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
   return *this;
 }
 
-void CIRGenFunction::emitAggregateStore(mlir::Value value, Address dest) {
+void CIRGenFunction::emitAggregateStore(aiir::Value value, Address dest) {
   // In classic codegen:
   // Function to store a first-class aggregate into memory. We prefer to
   // store the elements rather than the aggregate to be more friendly to
@@ -97,13 +97,13 @@ void CIRGenFunction::emitAggregateStore(mlir::Value value, Address dest) {
 
   // Stored result for the callers of this function expected to be in the same
   // scope as the value, don't make assumptions about current insertion point.
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  aiir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(value.getDefiningOp());
   builder.createStore(*currSrcLoc, value, dest);
 }
 
 static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
-                                               mlir::NamedAttrList &attrs,
+                                               aiir::NamedAttrList &attrs,
                                                const FunctionProtoType *fpt) {
   if (!fpt)
     return;
@@ -111,11 +111,11 @@ static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
   if (!isUnresolvedExceptionSpec(fpt->getExceptionSpecType()) &&
       fpt->isNothrow())
     attrs.set(cir::CIRDialect::getNoThrowAttrName(),
-              mlir::UnitAttr::get(builder.getContext()));
+              aiir::UnitAttr::get(builder.getContext()));
 }
 
-static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
-                                   mlir::NamedAttrList &attrs,
+static void addNoBuiltinAttributes(aiir::AIIRContext &ctx,
+                                   aiir::NamedAttrList &attrs,
                                    const LangOptions &langOpts,
                                    const NoBuiltinAttr *nba = nullptr) {
   // First, handle the language options passed through -fno-builtin.
@@ -126,13 +126,13 @@ static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
     // -fno-builtin disables them all.
     // Empty attribute means 'all'.
     attrs.set(cir::CIRDialect::getNoBuiltinsAttrName(),
-              mlir::ArrayAttr::get(&ctx, {}));
+              aiir::ArrayAttr::get(&ctx, {}));
     return;
   }
 
-  llvm::SetVector<mlir::Attribute> nbFuncs;
+  llvm::SetVector<aiir::Attribute> nbFuncs;
   auto addNoBuiltinAttr = [&ctx, &nbFuncs](StringRef builtinName) {
-    nbFuncs.insert(mlir::StringAttr::get(&ctx, builtinName));
+    nbFuncs.insert(aiir::StringAttr::get(&ctx, builtinName));
   };
 
   // Then, add attributes for builtins specified through -fno-builtin-<name>.
@@ -145,7 +145,7 @@ static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
 
   if (!nbFuncs.empty())
     attrs.set(cir::CIRDialect::getNoBuiltinsAttrName(),
-              mlir::ArrayAttr::get(&ctx, nbFuncs.getArrayRef()));
+              aiir::ArrayAttr::get(&ctx, nbFuncs.getArrayRef()));
 }
 
 /// Add denormal-fp-math and denormal-fp-math-f32 as appropriate for the
@@ -153,7 +153,7 @@ static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
 /// -f32 case.
 static void addDenormalModeAttrs(llvm::DenormalMode fpDenormalMode,
                                  llvm::DenormalMode fp32DenormalMode,
-                                 mlir::NamedAttrList &attrs) {
+                                 aiir::NamedAttrList &attrs) {
   // TODO(cir): Classic-codegen sets the denormal modes here. There are two
   // values, both with a string, but it seems that perhaps we could combine
   // these into a single attribute?  It seems a little silly to have two so
@@ -165,7 +165,7 @@ static void addDenormalModeAttrs(llvm::DenormalMode fpDenormalMode,
 /// attributes in the linked library.
 static void
 addMergeableDefaultFunctionAttributes(const CodeGenOptions &codeGenOpts,
-                                      mlir::NamedAttrList &attrs) {
+                                      aiir::NamedAttrList &attrs) {
   addDenormalModeAttrs(codeGenOpts.FPDenormalMode, codeGenOpts.FP32DenormalMode,
                        attrs);
 }
@@ -200,18 +200,18 @@ getZeroCallUsedRegsKindStr(llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind k) {
 /// -mlink-builtin-bitcode and should not simply overwrite any existing
 /// attributes in the linked library.
 static void addTrivialDefaultFunctionAttributes(
-    mlir::MLIRContext *mlirCtx, StringRef name, bool hasOptNoneAttr,
+    aiir::AIIRContext *aiirCtx, StringRef name, bool hasOptNoneAttr,
     const CodeGenOptions &codeGenOpts, const LangOptions &langOpts,
-    bool attrOnCallSite, mlir::NamedAttrList &attrs) {
+    bool attrOnCallSite, aiir::NamedAttrList &attrs) {
   // TODO(cir): Handle optimize attribute flag here.
   // OptimizeNoneAttr takes precedence over -Os or -Oz. No warning needed.
   if (!hasOptNoneAttr) {
     if (codeGenOpts.OptimizeSize)
       attrs.set(cir::CIRDialect::getOptimizeForSizeAttrName(),
-                mlir::UnitAttr::get(mlirCtx));
+                aiir::UnitAttr::get(aiirCtx));
     if (codeGenOpts.OptimizeSize == 2)
       attrs.set(cir::CIRDialect::getMinSizeAttrName(),
-                mlir::UnitAttr::get(mlirCtx));
+                aiir::UnitAttr::get(aiirCtx));
   }
 
   // TODO(cir): Classic codegen adds 'DisableRedZone', 'indirect-tls-seg-refs'
@@ -221,11 +221,11 @@ static void addTrivialDefaultFunctionAttributes(
     // Add the 'nobuiltin' tag, which is different from 'no-builtins'.
     if (!codeGenOpts.SimplifyLibCalls || langOpts.isNoBuiltinFunc(name))
       attrs.set(cir::CIRDialect::getNoBuiltinAttrName(),
-                mlir::UnitAttr::get(mlirCtx));
+                aiir::UnitAttr::get(aiirCtx));
 
     if (!codeGenOpts.TrapFuncName.empty())
       attrs.set(cir::CIRDialect::getTrapFuncNameAttrName(),
-                mlir::StringAttr::get(mlirCtx, codeGenOpts.TrapFuncName));
+                aiir::StringAttr::get(aiirCtx, codeGenOpts.TrapFuncName));
   } else {
     // TODO(cir): Set frame pointer attribute here.
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
@@ -245,7 +245,7 @@ static void addTrivialDefaultFunctionAttributes(
       attrs.erase(cir::CIRDialect::getZeroCallUsedRegsAttrName());
     else
       attrs.set(cir::CIRDialect::getZeroCallUsedRegsAttrName(),
-                mlir::StringAttr::get(mlirCtx,
+                aiir::StringAttr::get(aiirCtx,
                                       getZeroCallUsedRegsKindStr(
                                           codeGenOpts.getZeroCallUsedRegs())));
   }
@@ -257,7 +257,7 @@ static void addTrivialDefaultFunctionAttributes(
     // applied around them).  LLVM will remove this attribute where it safely
     // can.
     attrs.set(cir::CIRDialect::getConvergentAttrName(),
-              mlir::UnitAttr::get(mlirCtx));
+              aiir::UnitAttr::get(aiirCtx));
   }
 
   // TODO(cir): Classic codegen adds 'nounwind' here in a bunch of offload
@@ -265,27 +265,27 @@ static void addTrivialDefaultFunctionAttributes(
 
   if (codeGenOpts.SaveRegParams && !attrOnCallSite)
     attrs.set(cir::CIRDialect::getSaveRegParamsAttrName(),
-              mlir::UnitAttr::get(mlirCtx));
+              aiir::UnitAttr::get(aiirCtx));
 
   // These come in the form of an optional equality sign, so make sure we pass
   // these on correctly. These will eventually just be passed through to
   // LLVM-IR, but we want to put them all in 1 array to simplify the
-  // LLVM-MLIR dialect.
-  SmallVector<mlir::NamedAttribute> defaultFuncAttrs;
+  // LLVM-AIIR dialect.
+  SmallVector<aiir::NamedAttribute> defaultFuncAttrs;
   llvm::transform(
       codeGenOpts.DefaultFunctionAttrs, std::back_inserter(defaultFuncAttrs),
-      [mlirCtx](llvm::StringRef arg) {
+      [aiirCtx](llvm::StringRef arg) {
         auto [var, value] = arg.split('=');
         auto valueAttr =
             value.empty()
-                ? cast<mlir::Attribute>(mlir::UnitAttr::get(mlirCtx))
-                : cast<mlir::Attribute>(mlir::StringAttr::get(mlirCtx, value));
-        return mlir::NamedAttribute(var, valueAttr);
+                ? cast<aiir::Attribute>(aiir::UnitAttr::get(aiirCtx))
+                : cast<aiir::Attribute>(aiir::StringAttr::get(aiirCtx, value));
+        return aiir::NamedAttribute(var, valueAttr);
       });
 
   if (!defaultFuncAttrs.empty())
     attrs.set(cir::CIRDialect::getDefaultFuncAttrsAttrName(),
-              mlir::DictionaryAttr::get(mlirCtx, defaultFuncAttrs));
+              aiir::DictionaryAttr::get(aiirCtx, defaultFuncAttrs));
 
   // TODO(cir): Do branch protection attributes here.
 }
@@ -297,9 +297,9 @@ static void addTrivialDefaultFunctionAttributes(
 void CIRGenModule::addDefaultFunctionAttributes(StringRef name,
                                                 bool hasOptNoneAttr,
                                                 bool attrOnCallSite,
-                                                mlir::NamedAttrList &attrs) {
+                                                aiir::NamedAttrList &attrs) {
 
-  addTrivialDefaultFunctionAttributes(&getMLIRContext(), name, hasOptNoneAttr,
+  addTrivialDefaultFunctionAttributes(&getAIIRContext(), name, hasOptNoneAttr,
                                       codeGenOpts, langOpts, attrOnCallSite,
                                       attrs);
 
@@ -314,15 +314,15 @@ void CIRGenModule::addDefaultFunctionAttributes(StringRef name,
 /// Construct the CIR attribute list of a function or call.
 void CIRGenModule::constructAttributeList(
     llvm::StringRef name, const CIRGenFunctionInfo &info,
-    CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
-    llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
-    mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
+    CIRGenCalleeInfo calleeInfo, aiir::NamedAttrList &attrs,
+    llvm::MutableArrayRef<aiir::NamedAttrList> argAttrs,
+    aiir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
     cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
   assert(!cir::MissingFeatures::opCallCallConv());
   sideEffect = cir::SideEffect::All;
 
   auto addUnitAttr = [&](llvm::StringRef name) {
-    attrs.set(name, mlir::UnitAttr::get(&getMLIRContext()));
+    attrs.set(name, aiir::UnitAttr::get(&getAIIRContext()));
   };
 
   if (info.isNoReturn())
@@ -396,7 +396,7 @@ void CIRGenModule::constructAttributeList(
     }
 
     attrs.set(cir::CIRDialect::getSideEffectAttrName(),
-              cir::SideEffectAttr::get(&getMLIRContext(), sideEffect));
+              cir::SideEffectAttr::get(&getAIIRContext(), sideEffect));
 
     // TODO(cir): When doing 'return attrs' we need to cover the Restrict and
     // ReturnsNonNull attributes here.
@@ -432,7 +432,7 @@ void CIRGenModule::constructAttributeList(
       llvm::StringRef kernelName = getMangledName(
           kernel.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
       auto attr =
-          cir::CUDAKernelNameAttr::get(&getMLIRContext(), kernelName.str());
+          cir::CUDAKernelNameAttr::get(&getAIIRContext(), kernelName.str());
       attrs.set(attr.getMnemonic(), attr);
     }
 
@@ -453,7 +453,7 @@ void CIRGenModule::constructAttributeList(
     }
   }
 
-  addNoBuiltinAttributes(getMLIRContext(), attrs, getLangOpts(), nba);
+  addNoBuiltinAttributes(getAIIRContext(), attrs, getLangOpts(), nba);
 
   bool hasOptNoneAttr = targetDecl && targetDecl->hasAttr<OptimizeNoneAttr>();
   addDefaultFunctionAttributes(name, hasOptNoneAttr, attrOnCallSite, attrs);
@@ -473,8 +473,8 @@ void CIRGenModule::constructAttributeList(
           targetDecl->getAttr<ZeroCallUsedRegsAttr>()->getZeroCallUsedRegs();
       attrs.set(
           cir::CIRDialect::getZeroCallUsedRegsAttrName(),
-          mlir::StringAttr::get(
-              &getMLIRContext(),
+          aiir::StringAttr::get(
+              &getAIIRContext(),
               ZeroCallUsedRegsAttr::ConvertZeroCallUsedRegsKindToStr(kind)));
     }
 
@@ -539,7 +539,7 @@ bool CIRGenModule::mayDropFunctionReturn(const ASTContext &context,
 static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
                              const cir::CIRDataLayout &layout,
                              const cir::ABIArgInfo &argInfo) {
-  mlir::Type ty = types.convertTypeForMem(clangTy);
+  aiir::Type ty = types.convertTypeForMem(clangTy);
   assert(!cir::MissingFeatures::abiArgInfo());
   if (argInfo.isIndirect() || argInfo.isIndirectAliased())
     return true;
@@ -585,7 +585,7 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
 
 void CIRGenModule::constructFunctionReturnAttributes(
     const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
-    mlir::NamedAttrList &retAttrs) {
+    aiir::NamedAttrList &retAttrs) {
   // Collect attributes from arguments and return values.
   QualType retTy = info.getReturnType();
   const cir::ABIArgInfo retInfo = info.getReturnInfo();
@@ -594,8 +594,8 @@ void CIRGenModule::constructFunctionReturnAttributes(
   if (codeGenOpts.EnableNoundefAttrs && hasStrictReturn(retTy, targetDecl) &&
       !retTy->isVoidType() &&
       determineNoUndef(retTy, getTypes(), layout, retInfo))
-    retAttrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
-                 mlir::UnitAttr::get(&getMLIRContext()));
+    retAttrs.set(aiir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                 aiir::UnitAttr::get(&getAIIRContext()));
 
   // TODO(cir): classic codegen adds a bunch of attributes based on
   // calling-convention lowering results.  However, since calling conventions
@@ -608,17 +608,17 @@ void CIRGenModule::constructFunctionReturnAttributes(
     if (const auto *refTy = retTy->getAs<ReferenceType>()) {
       QualType pointeeTy = refTy->getPointeeType();
       if (!pointeeTy->isIncompleteType() && pointeeTy->isConstantSizeType())
-        retAttrs.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
+        retAttrs.set(aiir::LLVM::LLVMDialect::getDereferenceableAttrName(),
                      builder.getI64IntegerAttr(
                          getMinimumObjectSize(pointeeTy).getQuantity()));
 
       if (getTypes().getTargetAddressSpace(pointeeTy) == 0 &&
           !codeGenOpts.NullPointerIsValid)
-        retAttrs.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
-                     mlir::UnitAttr::get(&getMLIRContext()));
+        retAttrs.set(aiir::LLVM::LLVMDialect::getNonNullAttrName(),
+                     aiir::UnitAttr::get(&getAIIRContext()));
 
       if (pointeeTy->isObjectType())
-        retAttrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
+        retAttrs.set(aiir::LLVM::LLVMDialect::getAlignAttrName(),
                      builder.getI64IntegerAttr(
                          getNaturalPointeeTypeAlignment(retTy).getQuantity()));
     }
@@ -627,7 +627,7 @@ void CIRGenModule::constructFunctionReturnAttributes(
 
 void CIRGenModule::constructFunctionArgumentAttributes(
     const CIRGenFunctionInfo &info, bool isThunk,
-    llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs) {
+    llvm::MutableArrayRef<aiir::NamedAttrList> argAttrs) {
   assert(!cir::MissingFeatures::abiArgInfo());
   // TODO(cir): classic codegen does a lot of work here based on the ABIArgInfo
   // to set things based on calling convention.
@@ -643,22 +643,22 @@ void CIRGenModule::constructFunctionArgumentAttributes(
 
       if (!codeGenOpts.NullPointerIsValid &&
           getTypes().getTargetAddressSpace(thisPtrTy) == 0) {
-        argAttrs[0].set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
+        argAttrs[0].set(aiir::LLVM::LLVMDialect::getDereferenceableAttrName(),
                         builder.getI64IntegerAttr(
                             getMinimumObjectSize(thisTy).getQuantity()));
-        argAttrs[0].set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
-                        mlir::UnitAttr::get(&getMLIRContext()));
+        argAttrs[0].set(aiir::LLVM::LLVMDialect::getNonNullAttrName(),
+                        aiir::UnitAttr::get(&getAIIRContext()));
       } else {
         uint64_t bytes = getMinimumObjectSize(thisTy).getQuantity();
 
         if (bytes != 0)
           argAttrs[0].set(
-              mlir::LLVM::LLVMDialect::getDereferenceableOrNullAttrName(),
+              aiir::LLVM::LLVMDialect::getDereferenceableOrNullAttrName(),
               builder.getI64IntegerAttr(bytes));
       }
 
       argAttrs[0].set(
-          mlir::LLVM::LLVMDialect::getAlignAttrName(),
+          aiir::LLVM::LLVMDialect::getAlignAttrName(),
           builder.getI64IntegerAttr(
               getNaturalPointeeTypeAlignment(thisPtrTy).getQuantity()));
 
@@ -684,8 +684,8 @@ void CIRGenModule::constructFunctionArgumentAttributes(
 
     if (codeGenOpts.EnableNoundefAttrs &&
         determineNoUndef(argType, getTypes(), layout, argInfo))
-      argAttrList.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
-                      mlir::UnitAttr::get(&getMLIRContext()));
+      argAttrList.set(aiir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                      aiir::UnitAttr::get(&getAIIRContext()));
 
     assert(!cir::MissingFeatures::abiArgInfo());
     // TODO(cir): there is plenty of other attributes here added due to ABI
@@ -695,16 +695,16 @@ void CIRGenModule::constructFunctionArgumentAttributes(
     if (const auto *refTy = argType->getAs<ReferenceType>()) {
       QualType pointeeTy = refTy->getPointeeType();
       if (!pointeeTy->isIncompleteType() && pointeeTy->isConstantSizeType())
-        argAttrList.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
+        argAttrList.set(aiir::LLVM::LLVMDialect::getDereferenceableAttrName(),
                         builder.getI64IntegerAttr(
                             getMinimumObjectSize(pointeeTy).getQuantity()));
       if (getTypes().getTargetAddressSpace(pointeeTy) == 0 &&
           !codeGenOpts.NullPointerIsValid)
-        argAttrList.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
-                        mlir::UnitAttr::get(&getMLIRContext()));
+        argAttrList.set(aiir::LLVM::LLVMDialect::getNonNullAttrName(),
+                        aiir::UnitAttr::get(&getAIIRContext()));
       if (pointeeTy->isObjectType())
         argAttrList.set(
-            mlir::LLVM::LLVMDialect::getAlignAttrName(),
+            aiir::LLVM::LLVMDialect::getAlignAttrName(),
             builder.getI64IntegerAttr(
                 getNaturalPointeeTypeAlignment(argType).getQuantity()));
     }
@@ -1023,7 +1023,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
   return arrangeFreeFunctionType(funcTy.castAs<FunctionProtoType>());
 }
 
-RValue CallArg::getRValue(CIRGenFunction &cgf, mlir::Location loc) const {
+RValue CallArg::getRValue(CIRGenFunction &cgf, aiir::Location loc) const {
   if (!hasLV)
     return rv;
   LValue copy = cgf.makeAddrLValue(cgf.createMemTemp(ty, loc), ty);
@@ -1043,13 +1043,13 @@ void CIRGenFunction::emitNonNullArgCheck(RValue rv, QualType argType,
 }
 
 static cir::CIRCallOpInterface
-emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
-               cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
+emitCallLikeOp(CIRGenFunction &cgf, aiir::Location callLoc,
+               cir::FuncType indirectFuncTy, aiir::Value indirectFuncVal,
                cir::FuncOp directFuncOp,
-               const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
-               const mlir::NamedAttrList &attrs,
-               llvm::ArrayRef<mlir::NamedAttrList> argAttrs,
-               const mlir::NamedAttrList &retAttrs) {
+               const SmallVectorImpl<aiir::Value> &cirCallArgs, bool isInvoke,
+               const aiir::NamedAttrList &attrs,
+               llvm::ArrayRef<aiir::NamedAttrList> argAttrs,
+               const aiir::NamedAttrList &retAttrs) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
@@ -1091,11 +1091,11 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                mlir::Location loc) {
+                                aiir::Location loc) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
 
-  SmallVector<mlir::Value, 16> cirCallArgs(args.size());
+  SmallVector<aiir::Value, 16> cirCallArgs(args.size());
 
   assert(!cir::MissingFeatures::emitLifetimeMarkers());
 
@@ -1106,16 +1106,16 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     // Insert a padding argument to ensure proper alignment.
     assert(!cir::MissingFeatures::opCallPaddingArgs());
 
-    mlir::Type argType = convertType(canQualArgType);
-    if (!mlir::isa<cir::RecordType>(argType) &&
-        !mlir::isa<cir::ComplexType>(argType)) {
-      mlir::Value v;
+    aiir::Type argType = convertType(canQualArgType);
+    if (!aiir::isa<cir::RecordType>(argType) &&
+        !aiir::isa<cir::ComplexType>(argType)) {
+      aiir::Value v;
       if (arg.isAggregate())
         cgm.errorNYI(loc, "emitCall: aggregate call argument");
       v = arg.getKnownRValue().getValue();
 
       // We might have to widen integers, but we should never truncate.
-      if (argType != v.getType() && mlir::isa<cir::IntType>(v.getType()))
+      if (argType != v.getType() && aiir::isa<cir::IntType>(v.getType()))
         cgm.errorNYI(loc, "emitCall: widening integer call argument");
 
       // If the argument doesn't match, perform a bitcast to coerce it. This
@@ -1136,9 +1136,9 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      mlir::Type srcTy = src.getElementType();
+      aiir::Type srcTy = src.getElementType();
       // FIXME(cir): get proper location for each argument.
-      mlir::Location argLoc = loc;
+      aiir::Location argLoc = loc;
 
       // If the source type is smaller than the destination type of the
       // coerce-to logic, copy the source value into a temp alloca the size
@@ -1173,13 +1173,13 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   }
 
   const CIRGenCallee &concreteCallee = callee.prepareConcreteCallee(*this);
-  mlir::Operation *calleePtr = concreteCallee.getFunctionPointer();
+  aiir::Operation *calleePtr = concreteCallee.getFunctionPointer();
 
   assert(!cir::MissingFeatures::opCallInAlloca());
 
-  mlir::NamedAttrList attrs;
-  std::vector<mlir::NamedAttrList> argAttrs(funcInfo.arguments().size());
-  mlir::NamedAttrList retAttrs;
+  aiir::NamedAttrList attrs;
+  std::vector<aiir::NamedAttrList> argAttrs(funcInfo.arguments().size());
+  aiir::NamedAttrList retAttrs;
   StringRef funcName;
   if (auto calleeFuncOp = dyn_cast<cir::FuncOp>(calleePtr))
     funcName = calleeFuncOp.getName();
@@ -1193,24 +1193,24 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                              /*attrOnCallSite=*/true, /*isThunk=*/false);
 
   cir::FuncType indirectFuncTy;
-  mlir::Value indirectFuncVal;
+  aiir::Value indirectFuncVal;
   cir::FuncOp directFuncOp;
   if (auto fnOp = dyn_cast<cir::FuncOp>(calleePtr)) {
     directFuncOp = fnOp;
-  } else if (auto getGlobalOp = mlir::dyn_cast<cir::GetGlobalOp>(calleePtr)) {
+  } else if (auto getGlobalOp = aiir::dyn_cast<cir::GetGlobalOp>(calleePtr)) {
     // FIXME(cir): This peephole optimization avoids indirect calls for
     // builtins. This should be fixed in the builtin declaration instead by
     // not emitting an unecessary get_global in the first place.
     // However, this is also used for no-prototype functions.
-    mlir::Operation *globalOp = cgm.getGlobalValue(getGlobalOp.getName());
+    aiir::Operation *globalOp = cgm.getGlobalValue(getGlobalOp.getName());
     assert(globalOp && "undefined global function");
-    directFuncOp = mlir::cast<cir::FuncOp>(globalOp);
+    directFuncOp = aiir::cast<cir::FuncOp>(globalOp);
   } else {
-    [[maybe_unused]] mlir::ValueTypeRange<mlir::ResultRange> resultTypes =
+    [[maybe_unused]] aiir::ValueTypeRange<aiir::ResultRange> resultTypes =
         calleePtr->getResultTypes();
     [[maybe_unused]] auto funcPtrTy =
-        mlir::dyn_cast<cir::PointerType>(resultTypes.front());
-    assert(funcPtrTy && mlir::isa<cir::FuncType>(funcPtrTy.getPointee()) &&
+        aiir::dyn_cast<cir::PointerType>(resultTypes.front());
+    assert(funcPtrTy && aiir::isa<cir::FuncType>(funcPtrTy.getPointee()) &&
            "expected pointer to function");
 
     indirectFuncTy = cirFuncTy;
@@ -1224,7 +1224,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   bool cannotThrow = attrs.getNamed("nothrow").has_value();
   bool isInvoke = !cannotThrow && isCatchOrCleanupRequired();
 
-  mlir::Location callLoc = loc;
+  aiir::Location callLoc = loc;
   cir::CIRCallOpInterface theCall =
       emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
                      cirCallArgs, isInvoke, attrs, argAttrs, retAttrs);
@@ -1235,7 +1235,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::opCallMustTail());
   assert(!cir::MissingFeatures::opCallReturn());
 
-  mlir::Type retCIRTy = convertType(retTy);
+  aiir::Type retCIRTy = convertType(retTy);
   if (isa<cir::VoidType>(retCIRTy))
     return getUndefRValue(retTy);
   switch (getEvaluationKind(retTy)) {
@@ -1245,7 +1245,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     if (!destPtr.isValid())
       destPtr = createMemTemp(retTy, callLoc, getCounterAggTmpAsString());
 
-    mlir::ResultRange results = theCall->getOpResults();
+    aiir::ResultRange results = theCall->getOpResults();
     assert(results.size() <= 1 && "multiple returns from a call");
 
     SourceLocRAIIObject loc{*this, callLoc};
@@ -1253,7 +1253,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     return RValue::getAggregate(destPtr);
   }
   case cir::TEK_Scalar: {
-    mlir::ResultRange results = theCall->getOpResults();
+    aiir::ResultRange results = theCall->getOpResults();
     assert(results.size() == 1 && "unexpected number of returns");
 
     // If the argument doesn't match, perform a bitcast to coerce it. This
@@ -1261,14 +1261,14 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     if (results[0].getType() != retCIRTy)
       cgm.errorNYI(loc, "bitcast on function return value");
 
-    mlir::Region *region = builder.getBlock()->getParent();
+    aiir::Region *region = builder.getBlock()->getParent();
     if (region != theCall->getParentRegion())
       cgm.errorNYI(loc, "function calls with cleanup");
 
     return RValue::get(results[0]);
   }
   case cir::TEK_Complex: {
-    mlir::ResultRange results = theCall->getOpResults();
+    aiir::ResultRange results = theCall->getOpResults();
     assert(!results.empty() &&
            "Expected at least one result for complex rvalue");
     return RValue::getComplex(results[0]);
@@ -1278,7 +1278,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 }
 
 void CallArg::copyInto(CIRGenFunction &cgf, Address addr,
-                       mlir::Location loc) const {
+                       aiir::Location loc) const {
   LValue dst = cgf.makeAddrLValue(addr, ty);
   if (!hasLV && rv.isScalar())
     cgf.cgm.errorNYI(loc, "copyInto scalar value");
@@ -1289,10 +1289,10 @@ void CallArg::copyInto(CIRGenFunction &cgf, Address addr,
   isUsed = true;
 }
 
-mlir::Value CIRGenFunction::emitRuntimeCall(mlir::Location loc,
+aiir::Value CIRGenFunction::emitRuntimeCall(aiir::Location loc,
                                             cir::FuncOp callee,
-                                            ArrayRef<mlir::Value> args,
-                                            mlir::NamedAttrList attrs) {
+                                            ArrayRef<aiir::Value> args,
+                                            aiir::NamedAttrList attrs) {
   // TODO(cir): set the calling convention to this runtime call.
   assert(!cir::MissingFeatures::opFuncCallingConv());
 

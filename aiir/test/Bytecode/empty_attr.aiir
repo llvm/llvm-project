@@ -1,0 +1,5 @@
+// RUN: aiir-opt -emit-bytecode %s | aiir-opt | FileCheck %s
+
+// CHECK: module
+// CHECK: foo.asdf = 0 : i0
+module attributes { foo.asdf = 0 : i0 } { }

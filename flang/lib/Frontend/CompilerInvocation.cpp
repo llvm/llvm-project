@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -762,8 +762,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     if (dashX.isUnknown())
       dashX = llvm::StringSwitch<InputKind>(xValue)
                   .Case("ir", Language::LLVM_IR)
-                  .Case("fir", Language::MLIR)
-                  .Case("mlir", Language::MLIR)
+                  .Case("fir", Language::AIIR)
+                  .Case("aiir", Language::AIIR)
                   .Default(Language::Unknown);
 
     if (dashX.isUnknown())
@@ -1510,7 +1510,7 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
   llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
   CodeGenOptions &opts = invoc.getCodeGenOpts();
 
-  // TODO: support --dependent-lib on other platforms when MLIR supports
+  // TODO: support --dependent-lib on other platforms when AIIR supports
   //       !llvm.dependent.lib
   if (args.hasArg(clang::options::OPT_dependent_lib) && !triple.isOSWindows()) {
     const unsigned diagID =
@@ -1693,13 +1693,13 @@ bool CompilerInvocation::createFromArgs(
   success &= parseOpenMPArgs(invoc, args, diags);
   success &= parseDiagArgs(invoc, args, diags);
 
-  // Collect LLVM (-mllvm) and MLIR (-mmlir) options.
+  // Collect LLVM (-mllvm) and AIIR (-maiir) options.
   // NOTE: Try to avoid adding any options directly to `llvmArgs` or
-  // `mlirArgs`. Instead, you can use
+  // `aiirArgs`. Instead, you can use
   //    * `-mllvm <your-llvm-option>`, or
-  //    * `-mmlir <your-mlir-option>`.
+  //    * `-maiir <your-aiir-option>`.
   invoc.frontendOpts.llvmArgs = args.getAllArgValues(clang::options::OPT_mllvm);
-  invoc.frontendOpts.mlirArgs = args.getAllArgValues(clang::options::OPT_mmlir);
+  invoc.frontendOpts.aiirArgs = args.getAllArgValues(clang::options::OPT_maiir);
 
   success &= parseLangOptionsArgs(invoc, args, diags);
 

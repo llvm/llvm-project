@@ -11,66 +11,66 @@
 #include "gtest/gtest.h"
 
 TEST_F(RuntimeCallTest, genAllTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value all = fir::runtime::genAll(*firBuilder, loc, undef, dim);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value all = fir::runtime::genAll(*firBuilder, loc, undef, dim);
   checkCallOp(all.getDefiningOp(), "_FortranAAll", 2);
 }
 
 TEST_F(RuntimeCallTest, genAllDescriptorTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   fir::runtime::genAllDescriptor(*firBuilder, loc, result, mask, dim);
   checkCallOpFromResultBox(result, "_FortranAAllDim", 3);
 }
 
 TEST_F(RuntimeCallTest, genAnyTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value any = fir::runtime::genAny(*firBuilder, loc, undef, dim);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value any = fir::runtime::genAny(*firBuilder, loc, undef, dim);
   checkCallOp(any.getDefiningOp(), "_FortranAAny", 2);
 }
 
 TEST_F(RuntimeCallTest, genAnyDescriptorTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   fir::runtime::genAnyDescriptor(*firBuilder, loc, result, mask, dim);
   checkCallOpFromResultBox(result, "_FortranAAnyDim", 3);
 }
 
 TEST_F(RuntimeCallTest, genCountTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value count = fir::runtime::genCount(*firBuilder, loc, undef, dim);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value count = fir::runtime::genCount(*firBuilder, loc, undef, dim);
   checkCallOp(count.getDefiningOp(), "_FortranACount", 2);
 }
 
 TEST_F(RuntimeCallTest, genCountDimTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value kind = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value kind = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   fir::runtime::genCountDim(*firBuilder, loc, result, mask, dim, kind);
   checkCallOpFromResultBox(result, "_FortranACountDim", 4);
 }
 
 void testGenMaxVal(
-    fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
-  mlir::Location loc = builder.getUnknownLoc();
-  mlir::Type seqTy =
+    fir::FirOpBuilder &builder, aiir::Type eleTy, llvm::StringRef fctName) {
+  aiir::Location loc = builder.getUnknownLoc();
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value max = fir::runtime::genMaxval(builder, loc, undef, mask);
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value max = fir::runtime::genMaxval(builder, loc, undef, mask);
   checkCallOp(max.getDefiningOp(), fctName, 3);
 }
 
@@ -88,14 +88,14 @@ TEST_F(RuntimeCallTest, genMaxValTest) {
 }
 
 void testGenMinVal(
-    fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
-  mlir::Location loc = builder.getUnknownLoc();
-  mlir::Type seqTy =
+    fir::FirOpBuilder &builder, aiir::Type eleTy, llvm::StringRef fctName) {
+  aiir::Location loc = builder.getUnknownLoc();
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value min = fir::runtime::genMinval(builder, loc, undef, mask);
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value min = fir::runtime::genMinval(builder, loc, undef, mask);
   checkCallOp(min.getDefiningOp(), fctName, 3);
 }
 
@@ -113,32 +113,32 @@ TEST_F(RuntimeCallTest, genMinValTest) {
 }
 
 TEST_F(RuntimeCallTest, genParityTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value parity = fir::runtime::genParity(*firBuilder, loc, undef, dim);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value undef = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value parity = fir::runtime::genParity(*firBuilder, loc, undef, dim);
   checkCallOp(parity.getDefiningOp(), "_FortranAParity", 2);
 }
 
 TEST_F(RuntimeCallTest, genParityDescriptorTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
-  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value result = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value mask = fir::UndefOp::create(*firBuilder, loc, seqTy10);
+  aiir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   fir::runtime::genParityDescriptor(*firBuilder, loc, result, mask, dim);
   checkCallOpFromResultBox(result, "_FortranAParityDim", 3);
 }
 
 void testGenSum(
-    fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
-  mlir::Location loc = builder.getUnknownLoc();
-  mlir::Type seqTy =
+    fir::FirOpBuilder &builder, aiir::Type eleTy, llvm::StringRef fctName) {
+  aiir::Location loc = builder.getUnknownLoc();
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value sum = fir::runtime::genSum(builder, loc, undef, mask, result);
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value sum = fir::runtime::genSum(builder, loc, undef, mask, result);
   if (fir::isa_complex(eleTy))
     checkCallOpFromResultBox(result, fctName, 4);
   else
@@ -162,15 +162,15 @@ TEST_F(RuntimeCallTest, genSumTest) {
 }
 
 void testGenProduct(
-    fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
-  mlir::Location loc = builder.getUnknownLoc();
-  mlir::Type seqTy =
+    fir::FirOpBuilder &builder, aiir::Type eleTy, llvm::StringRef fctName) {
+  aiir::Location loc = builder.getUnknownLoc();
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value prod =
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value prod =
       fir::runtime::genProduct(builder, loc, undef, mask, result);
   if (fir::isa_complex(eleTy))
     checkCallOpFromResultBox(result, fctName, 4);
@@ -195,16 +195,16 @@ TEST_F(RuntimeCallTest, genProduct) {
 }
 
 void testGenDotProduct(
-    fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
-  mlir::Location loc = builder.getUnknownLoc();
-  mlir::Type seqTy =
+    fir::FirOpBuilder &builder, aiir::Type eleTy, llvm::StringRef fctName) {
+  aiir::Location loc = builder.getUnknownLoc();
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value b = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value result =
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value b = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value result =
       fir::UndefOp::create(builder, loc, fir::ReferenceType::get(eleTy));
-  mlir::Value prod = fir::runtime::genDotProduct(builder, loc, a, b, result);
+  aiir::Value prod = fir::runtime::genDotProduct(builder, loc, a, b, result);
   if (fir::isa_complex(eleTy))
     checkCallOpFromResultBox(result, fctName, 3);
   else
@@ -227,20 +227,20 @@ TEST_F(RuntimeCallTest, genDotProduct) {
   testGenDotProduct(*firBuilder, c16Ty, "_FortranACppDotProductComplex16");
 }
 
-void checkGenMxxloc(fir::FirOpBuilder &builder, mlir::Type eleTy,
-    void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
-        mlir::Value, mlir::Value, mlir::Value, mlir::Value),
+void checkGenMxxloc(fir::FirOpBuilder &builder, aiir::Type eleTy,
+    void (*genFct)(fir::FirOpBuilder &, aiir::Location, aiir::Value,
+        aiir::Value, aiir::Value, aiir::Value, aiir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
-  mlir::Location loc = builder.getUnknownLoc();
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Type seqTy =
+  aiir::Location loc = builder.getUnknownLoc();
+  aiir::Type i32Ty = builder.getI32Type();
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value kind = builder.createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value back = builder.createIntegerConstant(loc, i32Ty, 1);
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value kind = builder.createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value back = builder.createIntegerConstant(loc, i32Ty, 1);
   genFct(builder, loc, result, a, mask, kind, back);
   checkCallOpFromResultBox(result, fctName, nbArgs);
 }
@@ -300,20 +300,20 @@ TEST_F(RuntimeCallTest, genMinlocTest) {
 }
 
 void checkGenMxxlocDim(fir::FirOpBuilder &builder,
-    void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
-        mlir::Value, mlir::Value, mlir::Value, mlir::Value, mlir::Value),
+    void (*genFct)(fir::FirOpBuilder &, aiir::Location, aiir::Value,
+        aiir::Value, aiir::Value, aiir::Value, aiir::Value, aiir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
-  mlir::Location loc = builder.getUnknownLoc();
+  aiir::Location loc = builder.getUnknownLoc();
   auto i32Ty = builder.getI32Type();
-  mlir::Type seqTy =
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value kind = builder.createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value dim = builder.createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value back = builder.createIntegerConstant(loc, i32Ty, 1);
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value kind = builder.createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value dim = builder.createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value back = builder.createIntegerConstant(loc, i32Ty, 1);
   genFct(builder, loc, result, a, dim, mask, kind, back);
   checkCallOpFromResultBox(result, fctName, nbArgs);
 }
@@ -329,17 +329,17 @@ TEST_F(RuntimeCallTest, genMinlocDimTest) {
 }
 
 void checkGenMxxvalChar(fir::FirOpBuilder &builder,
-    void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
-        mlir::Value, mlir::Value),
+    void (*genFct)(fir::FirOpBuilder &, aiir::Location, aiir::Value,
+        aiir::Value, aiir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
-  mlir::Location loc = builder.getUnknownLoc();
+  aiir::Location loc = builder.getUnknownLoc();
   auto i32Ty = builder.getI32Type();
-  mlir::Type seqTy =
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
   genFct(builder, loc, result, a, mask);
   checkCallOpFromResultBox(result, fctName, nbArgs);
 }
@@ -355,18 +355,18 @@ TEST_F(RuntimeCallTest, genMinvalCharTest) {
 }
 
 void checkGen4argsDim(fir::FirOpBuilder &builder,
-    void (*genFct)(fir::FirOpBuilder &, mlir::Location, mlir::Value,
-        mlir::Value, mlir::Value, mlir::Value),
+    void (*genFct)(fir::FirOpBuilder &, aiir::Location, aiir::Value,
+        aiir::Value, aiir::Value, aiir::Value),
     llvm::StringRef fctName, unsigned nbArgs) {
-  mlir::Location loc = builder.getUnknownLoc();
+  aiir::Location loc = builder.getUnknownLoc();
   auto i32Ty = builder.getI32Type();
-  mlir::Type seqTy =
+  aiir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
-  mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
-  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
-  mlir::Value dim = builder.createIntegerConstant(loc, i32Ty, 1);
+  aiir::Type refSeqTy = fir::ReferenceType::get(seqTy);
+  aiir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  aiir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  aiir::Value dim = builder.createIntegerConstant(loc, i32Ty, 1);
   genFct(builder, loc, result, a, dim, mask);
   checkCallOpFromResultBox(result, fctName, nbArgs);
 }

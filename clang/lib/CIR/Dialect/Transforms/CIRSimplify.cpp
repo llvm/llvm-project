@@ -7,24 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Block.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Region.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/Block.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/IR/Region.h"
+#include "aiir/Support/LogicalResult.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/ADT/SmallVector.h"
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
-namespace mlir {
+namespace aiir {
 #define GEN_PASS_DEF_CIRSIMPLIFY
 #include "clang/CIR/Dialect/Passes.h.inc"
-} // namespace mlir
+} // namespace aiir
 
 //===----------------------------------------------------------------------===//
 // Rewrite patterns
@@ -59,18 +59,18 @@ struct SimplifyTernary final : public OpRewritePattern<TernaryOp> {
   LogicalResult matchAndRewrite(TernaryOp op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1)
-      return mlir::failure();
+      return aiir::failure();
 
     if (!isSimpleTernaryBranch(op.getTrueRegion()) ||
         !isSimpleTernaryBranch(op.getFalseRegion()))
-      return mlir::failure();
+      return aiir::failure();
 
     cir::YieldOp trueBranchYieldOp =
-        mlir::cast<cir::YieldOp>(op.getTrueRegion().front().getTerminator());
+        aiir::cast<cir::YieldOp>(op.getTrueRegion().front().getTerminator());
     cir::YieldOp falseBranchYieldOp =
-        mlir::cast<cir::YieldOp>(op.getFalseRegion().front().getTerminator());
-    mlir::Value trueValue = trueBranchYieldOp.getArgs()[0];
-    mlir::Value falseValue = falseBranchYieldOp.getArgs()[0];
+        aiir::cast<cir::YieldOp>(op.getFalseRegion().front().getTerminator());
+    aiir::Value trueValue = trueBranchYieldOp.getArgs()[0];
+    aiir::Value falseValue = falseBranchYieldOp.getArgs()[0];
 
     rewriter.inlineBlockBefore(&op.getTrueRegion().front(), op);
     rewriter.inlineBlockBefore(&op.getFalseRegion().front(), op);
@@ -79,16 +79,16 @@ struct SimplifyTernary final : public OpRewritePattern<TernaryOp> {
     rewriter.replaceOpWithNewOp<cir::SelectOp>(op, op.getCond(), trueValue,
                                                falseValue);
 
-    return mlir::success();
+    return aiir::success();
   }
 
 private:
-  bool isSimpleTernaryBranch(mlir::Region &region) const {
+  bool isSimpleTernaryBranch(aiir::Region &region) const {
     if (!region.hasOneBlock())
       return false;
 
-    mlir::Block &onlyBlock = region.front();
-    mlir::Block::OpListType &ops = onlyBlock.getOperations();
+    aiir::Block &onlyBlock = region.front();
+    aiir::Block::OpListType &ops = onlyBlock.getOperations();
 
     // The region/block could only contain at most 2 operations.
     if (ops.size() > 2)
@@ -101,7 +101,7 @@ private:
 
     // Check whether the region/block contains a cir.const followed by a
     // cir.yield that yields the value.
-    auto yieldOp = mlir::cast<cir::YieldOp>(onlyBlock.getTerminator());
+    auto yieldOp = aiir::cast<cir::YieldOp>(onlyBlock.getTerminator());
     auto yieldValueDefOp =
         yieldOp.getArgs()[0].getDefiningOp<cir::ConstantOp>();
     return yieldValueDefOp && yieldValueDefOp->getBlock() == &onlyBlock;
@@ -134,27 +134,27 @@ struct SimplifySelect : public OpRewritePattern<SelectOp> {
     auto trueValueOp = op.getTrueValue().getDefiningOp<cir::ConstantOp>();
     auto falseValueOp = op.getFalseValue().getDefiningOp<cir::ConstantOp>();
     if (!trueValueOp || !falseValueOp)
-      return mlir::failure();
+      return aiir::failure();
 
     auto trueValue = trueValueOp.getValueAttr<cir::BoolAttr>();
     auto falseValue = falseValueOp.getValueAttr<cir::BoolAttr>();
     if (!trueValue || !falseValue)
-      return mlir::failure();
+      return aiir::failure();
 
     // cir.select if %0 then #true else #false -> %0
     if (trueValue.getValue() && !falseValue.getValue()) {
       rewriter.replaceAllUsesWith(op, op.getCondition());
       rewriter.eraseOp(op);
-      return mlir::success();
+      return aiir::success();
     }
 
     // cir.select if %0 then #false else #true -> cir.not %0
     if (!trueValue.getValue() && falseValue.getValue()) {
       rewriter.replaceOpWithNewOp<cir::NotOp>(op, op.getCondition());
-      return mlir::success();
+      return aiir::success();
     }
 
-    return mlir::failure();
+    return aiir::failure();
   }
 };
 
@@ -195,14 +195,14 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
   LogicalResult matchAndRewrite(SwitchOp op,
                                 PatternRewriter &rewriter) const override {
 
-    LogicalResult changed = mlir::failure();
+    LogicalResult changed = aiir::failure();
     SmallVector<CaseOp, 8> cases;
     SmallVector<CaseOp, 4> cascadingCases;
-    SmallVector<mlir::Attribute, 4> cascadingCaseValues;
+    SmallVector<aiir::Attribute, 4> cascadingCaseValues;
 
     op.collectCases(cases);
     if (cases.empty())
-      return mlir::failure();
+      return aiir::failure();
 
     auto flushMergedOps = [&]() {
       for (CaseOp &c : cascadingCases)
@@ -216,7 +216,7 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
         target.setValueAttr(rewriter.getArrayAttr(cascadingCaseValues));
         target.setKind(CaseOpKind::Anyof);
       });
-      changed = mlir::success();
+      changed = aiir::success();
     };
 
     for (CaseOp c : cases) {
@@ -263,23 +263,23 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
   using OpRewritePattern<VecSplatOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(VecSplatOp op,
                                 PatternRewriter &rewriter) const override {
-    mlir::Value splatValue = op.getValue();
+    aiir::Value splatValue = op.getValue();
     auto constant = splatValue.getDefiningOp<cir::ConstantOp>();
     if (!constant)
-      return mlir::failure();
+      return aiir::failure();
 
     auto value = constant.getValue();
-    if (!mlir::isa_and_nonnull<cir::IntAttr>(value) &&
-        !mlir::isa_and_nonnull<cir::FPAttr>(value))
-      return mlir::failure();
+    if (!aiir::isa_and_nonnull<cir::IntAttr>(value) &&
+        !aiir::isa_and_nonnull<cir::FPAttr>(value))
+      return aiir::failure();
 
     cir::VectorType resultType = op.getResult().getType();
-    SmallVector<mlir::Attribute, 16> elements(resultType.getSize(), value);
+    SmallVector<aiir::Attribute, 16> elements(resultType.getSize(), value);
     auto constVecAttr = cir::ConstVectorAttr::get(
-        resultType, mlir::ArrayAttr::get(getContext(), elements));
+        resultType, aiir::ArrayAttr::get(getContext(), elements));
 
     rewriter.replaceOpWithNewOp<cir::ConstantOp>(op, constVecAttr);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -323,6 +323,6 @@ void CIRSimplifyPass::runOnOperation() {
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::createCIRSimplifyPass() {
+std::unique_ptr<Pass> aiir::createCIRSimplifyPass() {
   return std::make_unique<CIRSimplifyPass>();
 }

@@ -19,21 +19,21 @@ set(deps)
 
 if(CLANG_ENABLE_CIR)
   list(APPEND deps
-    MLIRBuiltinOpsIncGen
+    AIIRBuiltinOpsIncGen
   )
   list(APPEND link_libs
     clangCIRFrontendAction
-    MLIRCIRTransforms
-    MLIRIR
-    MLIRPass
+    AIIRCIRTransforms
+    AIIRIR
+    AIIRPass
     )
   list(APPEND deps
-    MLIRBuiltinLocationAttributesIncGen
-    MLIRBuiltinTypeInterfacesIncGen
+    AIIRBuiltinLocationAttributesIncGen
+    AIIRBuiltinTypeInterfacesIncGen
     )
 
-  include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
-  include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
+  include_directories(${LLVM_MAIN_SRC_DIR}/../aiir/include)
+  include_directories(${CMAKE_BINARY_DIR}/tools/aiir/include)
 endif()
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
@@ -54,6 +54,6 @@ add_clang_library(clangFrontendTool
   )
 
 if(CLANG_ENABLE_CIR)
-  target_include_directories(clangFrontendTool PRIVATE ${LLVM_MAIN_SRC_DIR}/../mlir/include)
-  target_include_directories(clangFrontendTool PRIVATE ${CMAKE_BINARY_DIR}/tools/mlir/include)
+  target_include_directories(clangFrontendTool PRIVATE ${LLVM_MAIN_SRC_DIR}/../aiir/include)
+  target_include_directories(clangFrontendTool PRIVATE ${CMAKE_BINARY_DIR}/tools/aiir/include)
 endif()

@@ -1,0 +1,519 @@
+//===- DialectQuant.cpp - 'quant' dialect submodule -----------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include <vector>
+
+#include "aiir-c/Dialect/Quant.h"
+#include "aiir-c/IR.h"
+#include "aiir/Bindings/Python/IRCore.h"
+#include "aiir/Bindings/Python/Nanobind.h"
+#include "aiir/Bindings/Python/NanobindAdaptors.h"
+
+#include <aiir/Bindings/Python/IRAttributes.h>
+
+namespace nb = nanobind;
+using namespace aiir::python::nanobind_adaptors;
+
+namespace aiir {
+namespace python {
+namespace AIIR_BINDINGS_PYTHON_DOMAIN {
+namespace quant {
+//===-------------------------------------------------------------------===//
+// QuantizedType
+//===-------------------------------------------------------------------===//
+
+struct QuantizedType : PyConcreteType<QuantizedType> {
+  static constexpr IsAFunctionTy isaFunction = aiirTypeIsAQuantizedType;
+  static constexpr const char *pyClassName = "QuantizedType";
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "default_minimum_for_integer",
+        [](bool isSigned, unsigned integralWidth) {
+          return aiirQuantizedTypeGetDefaultMinimumForInteger(isSigned,
+                                                              integralWidth);
+        },
+        "Default minimum value for the integer with the specified signedness "
+        "and "
+        "bit width.",
+        nb::arg("is_signed"), nb::arg("integral_width"));
+    c.def_static(
+        "default_maximum_for_integer",
+        [](bool isSigned, unsigned integralWidth) {
+          return aiirQuantizedTypeGetDefaultMaximumForInteger(isSigned,
+                                                              integralWidth);
+        },
+        "Default maximum value for the integer with the specified signedness "
+        "and "
+        "bit width.",
+        nb::arg("is_signed"), nb::arg("integral_width"));
+    c.def_prop_ro(
+        "expressed_type",
+        [](QuantizedType &type) {
+          return PyType(type.getContext(),
+                        aiirQuantizedTypeGetExpressedType(type))
+              .maybeDownCast();
+        },
+        "Type expressed by this quantized type.");
+    c.def_prop_ro(
+        "flags",
+        [](const QuantizedType &type) {
+          return aiirQuantizedTypeGetFlags(type);
+        },
+        "Flags of this quantized type (named accessors should be preferred to "
+        "this)");
+    c.def_prop_ro(
+        "is_signed",
+        [](const QuantizedType &type) {
+          return aiirQuantizedTypeIsSigned(type);
+        },
+        "Signedness of this quantized type.");
+    c.def_prop_ro(
+        "storage_type",
+        [](QuantizedType &type) {
+          return PyType(type.getContext(),
+                        aiirQuantizedTypeGetStorageType(type))
+              .maybeDownCast();
+        },
+        "Storage type backing this quantized type.");
+    c.def_prop_ro(
+        "storage_type_min",
+        [](const QuantizedType &type) {
+          return aiirQuantizedTypeGetStorageTypeMin(type);
+        },
+        "The minimum value held by the storage type of this quantized type.");
+    c.def_prop_ro(
+        "storage_type_max",
+        [](const QuantizedType &type) {
+          return aiirQuantizedTypeGetStorageTypeMax(type);
+        },
+        "The maximum value held by the storage type of this quantized type.");
+    c.def_prop_ro(
+        "storage_type_integral_width",
+        [](const QuantizedType &type) {
+          return aiirQuantizedTypeGetStorageTypeIntegralWidth(type);
+        },
+        "The bitwidth of the storage type of this quantized type.");
+    c.def(
+        "is_compatible_expressed_type",
+        [](const QuantizedType &type, const PyType &candidate) {
+          return aiirQuantizedTypeIsCompatibleExpressedType(type, candidate);
+        },
+        "Checks whether the candidate type can be expressed by this quantized "
+        "type.",
+        nb::arg("candidate"));
+    c.def_prop_ro(
+        "quantized_element_type",
+        [](QuantizedType &type) {
+          return PyType(type.getContext(),
+                        aiirQuantizedTypeGetQuantizedElementType(type))
+              .maybeDownCast();
+        },
+        "Element type of this quantized type expressed as quantized type.");
+    c.def(
+        "cast_from_storage_type",
+        [](QuantizedType &type, const PyType &candidate) {
+          AiirType castResult =
+              aiirQuantizedTypeCastFromStorageType(type, candidate);
+          if (!aiirTypeIsNull(castResult))
+            return QuantizedType(type.getContext(), castResult);
+          throw nb::type_error("Invalid cast.");
+        },
+        "Casts from a type based on the storage type of this quantized type to "
+        "a "
+        "corresponding type based on the quantized type. Raises TypeError if "
+        "the "
+        "cast is not valid.",
+        nb::arg("candidate"));
+    c.def_static(
+        "cast_to_storage_type",
+        [](PyType &type) {
+          AiirType castResult = aiirQuantizedTypeCastToStorageType(type);
+          if (!aiirTypeIsNull(castResult))
+            return PyType(type.getContext(), castResult).maybeDownCast();
+          throw nb::type_error("Invalid cast.");
+        },
+        "Casts from a type based on a quantized type to a corresponding type "
+        "based on the storage type of this quantized type. Raises TypeError if "
+        "the cast is not valid.",
+        nb::arg("type"));
+    c.def(
+        "cast_from_expressed_type",
+        [](QuantizedType &type, const PyType &candidate) {
+          AiirType castResult =
+              aiirQuantizedTypeCastFromExpressedType(type, candidate);
+          if (!aiirTypeIsNull(castResult))
+            return PyType(type.getContext(), castResult).maybeDownCast();
+          throw nb::type_error("Invalid cast.");
+        },
+        "Casts from a type based on the expressed type of this quantized type "
+        "to "
+        "a corresponding type based on the quantized type. Raises TypeError if "
+        "the cast is not valid.",
+        nb::arg("candidate"));
+    c.def_static(
+        "cast_to_expressed_type",
+        [](PyType &type) {
+          AiirType castResult = aiirQuantizedTypeCastToExpressedType(type);
+          if (!aiirTypeIsNull(castResult))
+            return PyType(type.getContext(), castResult).maybeDownCast();
+          throw nb::type_error("Invalid cast.");
+        },
+        "Casts from a type based on a quantized type to a corresponding type "
+        "based on the expressed type of this quantized type. Raises TypeError "
+        "if "
+        "the cast is not valid.",
+        nb::arg("type"));
+    c.def(
+        "cast_expressed_to_storage_type",
+        [](QuantizedType &type, const PyType &candidate) {
+          AiirType castResult =
+              aiirQuantizedTypeCastExpressedToStorageType(type, candidate);
+          if (!aiirTypeIsNull(castResult))
+            return PyType(type.getContext(), castResult).maybeDownCast();
+          throw nb::type_error("Invalid cast.");
+        },
+        "Casts from a type based on the expressed type of this quantized type "
+        "to "
+        "a corresponding type based on the storage type. Raises TypeError if "
+        "the "
+        "cast is not valid.",
+        nb::arg("candidate"));
+  }
+};
+
+//===-------------------------------------------------------------------===//
+// AnyQuantizedType
+//===-------------------------------------------------------------------===//
+
+struct AnyQuantizedType : PyConcreteType<AnyQuantizedType, QuantizedType> {
+  static constexpr IsAFunctionTy isaFunction = aiirTypeIsAAnyQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      aiirAnyQuantizedTypeGetTypeID;
+  static constexpr const char *pyClassName = "AnyQuantizedType";
+  static inline const AiirStringRef name = aiirAnyQuantizedTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](unsigned flags, const PyType &storageType,
+           const PyType &expressedType, int64_t storageTypeMin,
+           int64_t storageTypeMax, DefaultingPyAiirContext context) {
+          return AnyQuantizedType(
+              context->getRef(),
+              aiirAnyQuantizedTypeGet(flags, storageType, expressedType,
+                                      storageTypeMin, storageTypeMax));
+        },
+        "Gets an instance of AnyQuantizedType in the same context as the "
+        "provided storage type.",
+        nb::arg("flags"), nb::arg("storage_type"), nb::arg("expressed_type"),
+        nb::arg("storage_type_min"), nb::arg("storage_type_max"),
+        nb::arg("context") = nb::none());
+  }
+};
+
+//===-------------------------------------------------------------------===//
+// UniformQuantizedType
+//===-------------------------------------------------------------------===//
+
+struct UniformQuantizedType
+    : PyConcreteType<UniformQuantizedType, QuantizedType> {
+  static constexpr IsAFunctionTy isaFunction = aiirTypeIsAUniformQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      aiirUniformQuantizedTypeGetTypeID;
+  static constexpr const char *pyClassName = "UniformQuantizedType";
+  static inline const AiirStringRef name = aiirUniformQuantizedTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](unsigned flags, const PyType &storageType,
+           const PyType &expressedType, double scale, int64_t zeroPoint,
+           int64_t storageTypeMin, int64_t storageTypeMax,
+           DefaultingPyAiirContext context) {
+          return UniformQuantizedType(
+              context->getRef(),
+              aiirUniformQuantizedTypeGet(flags, storageType, expressedType,
+                                          scale, zeroPoint, storageTypeMin,
+                                          storageTypeMax));
+        },
+        "Gets an instance of UniformQuantizedType in the same context as the "
+        "provided storage type.",
+        nb::arg("flags"), nb::arg("storage_type"), nb::arg("expressed_type"),
+        nb::arg("scale"), nb::arg("zero_point"), nb::arg("storage_type_min"),
+        nb::arg("storage_type_max"), nb::arg("context") = nb::none());
+    c.def_prop_ro(
+        "scale",
+        [](const UniformQuantizedType &type) {
+          return aiirUniformQuantizedTypeGetScale(type);
+        },
+        "The scale designates the difference between the real values "
+        "corresponding to consecutive quantized values differing by 1.");
+    c.def_prop_ro(
+        "zero_point",
+        [](const UniformQuantizedType &type) {
+          return aiirUniformQuantizedTypeGetZeroPoint(type);
+        },
+        "The storage value corresponding to the real value 0 in the affine "
+        "equation.");
+    c.def_prop_ro(
+        "is_fixed_point",
+        [](const UniformQuantizedType &type) {
+          return aiirUniformQuantizedTypeIsFixedPoint(type);
+        },
+        "Fixed point values are real numbers divided by a scale.");
+  }
+};
+
+//===-------------------------------------------------------------------===//
+// UniformQuantizedPerAxisType
+//===-------------------------------------------------------------------===//
+
+struct UniformQuantizedPerAxisType
+    : PyConcreteType<UniformQuantizedPerAxisType, QuantizedType> {
+  static constexpr IsAFunctionTy isaFunction =
+      aiirTypeIsAUniformQuantizedPerAxisType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      aiirUniformQuantizedPerAxisTypeGetTypeID;
+  static constexpr const char *pyClassName = "UniformQuantizedPerAxisType";
+  static inline const AiirStringRef name =
+      aiirUniformQuantizedPerAxisTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](unsigned flags, const PyType &storageType,
+           const PyType &expressedType, std::vector<double> scales,
+           std::vector<int64_t> zeroPoints, int32_t quantizedDimension,
+           int64_t storageTypeMin, int64_t storageTypeMax,
+           DefaultingPyAiirContext context) {
+          if (scales.size() != zeroPoints.size())
+            throw nb::value_error(
+                "Mismatching number of scales and zero points.");
+          auto nDims = static_cast<intptr_t>(scales.size());
+          return UniformQuantizedPerAxisType(
+              context->getRef(),
+              aiirUniformQuantizedPerAxisTypeGet(
+                  flags, storageType, expressedType, nDims, scales.data(),
+                  zeroPoints.data(), quantizedDimension, storageTypeMin,
+                  storageTypeMax));
+        },
+        "Gets an instance of UniformQuantizedPerAxisType in the same context "
+        "as "
+        "the provided storage type.",
+        nb::arg("flags"), nb::arg("storage_type"), nb::arg("expressed_type"),
+        nb::arg("scales"), nb::arg("zero_points"),
+        nb::arg("quantized_dimension"), nb::arg("storage_type_min"),
+        nb::arg("storage_type_max"), nb::arg("context") = nb::none());
+    c.def_prop_ro(
+        "scales",
+        [](const UniformQuantizedPerAxisType &type) {
+          intptr_t nDim = aiirUniformQuantizedPerAxisTypeGetNumDims(type);
+          std::vector<double> scales;
+          scales.reserve(nDim);
+          for (intptr_t i = 0; i < nDim; ++i) {
+            double scale = aiirUniformQuantizedPerAxisTypeGetScale(type, i);
+            scales.push_back(scale);
+          }
+          return scales;
+        },
+        "The scales designate the difference between the real values "
+        "corresponding to consecutive quantized values differing by 1. The ith "
+        "scale corresponds to the ith slice in the quantized_dimension.");
+    c.def_prop_ro(
+        "zero_points",
+        [](const UniformQuantizedPerAxisType &type) {
+          intptr_t nDim = aiirUniformQuantizedPerAxisTypeGetNumDims(type);
+          std::vector<int64_t> zeroPoints;
+          zeroPoints.reserve(nDim);
+          for (intptr_t i = 0; i < nDim; ++i) {
+            int64_t zeroPoint =
+                aiirUniformQuantizedPerAxisTypeGetZeroPoint(type, i);
+            zeroPoints.push_back(zeroPoint);
+          }
+          return zeroPoints;
+        },
+        "the storage values corresponding to the real value 0 in the affine "
+        "equation. The ith zero point corresponds to the ith slice in the "
+        "quantized_dimension.");
+    c.def_prop_ro(
+        "quantized_dimension",
+        [](const UniformQuantizedPerAxisType &type) {
+          return aiirUniformQuantizedPerAxisTypeGetQuantizedDimension(type);
+        },
+        "Specifies the dimension of the shape that the scales and zero points "
+        "correspond to.");
+    c.def_prop_ro(
+        "is_fixed_point",
+        [](const UniformQuantizedPerAxisType &type) {
+          return aiirUniformQuantizedPerAxisTypeIsFixedPoint(type);
+        },
+        "Fixed point values are real numbers divided by a scale.");
+  }
+};
+
+//===-------------------------------------------------------------------===//
+// UniformQuantizedSubChannelType
+//===-------------------------------------------------------------------===//
+
+struct UniformQuantizedSubChannelType
+    : PyConcreteType<UniformQuantizedSubChannelType, QuantizedType> {
+  static constexpr IsAFunctionTy isaFunction =
+      aiirTypeIsAUniformQuantizedSubChannelType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      aiirUniformQuantizedSubChannelTypeGetTypeID;
+  static constexpr const char *pyClassName = "UniformQuantizedSubChannelType";
+  static inline const AiirStringRef name =
+      aiirUniformQuantizedSubChannelTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](unsigned flags, const PyType &storageType,
+           const PyType &expressedType, PyAttribute scales,
+           PyAttribute zeroPoints, std::vector<int32_t> quantizedDimensions,
+           std::vector<int64_t> blockSizes, int64_t storageTypeMin,
+           int64_t storageTypeMax, DefaultingPyAiirContext context) {
+          return UniformQuantizedSubChannelType(
+              context->getRef(),
+              aiirUniformQuantizedSubChannelTypeGet(
+                  flags, storageType, expressedType, scales, zeroPoints,
+                  static_cast<intptr_t>(blockSizes.size()),
+                  quantizedDimensions.data(), blockSizes.data(), storageTypeMin,
+                  storageTypeMax));
+        },
+        "Gets an instance of UniformQuantizedSubChannel in the same context as "
+        "the provided storage type.",
+        nb::arg("flags"), nb::arg("storage_type"), nb::arg("expressed_type"),
+        nb::arg("scales"), nb::arg("zero_points"),
+        nb::arg("quantized_dimensions"), nb::arg("block_sizes"),
+        nb::arg("storage_type_min"), nb::arg("storage_type_max"),
+        nb::arg("context") = nb::none());
+    c.def_prop_ro(
+        "quantized_dimensions",
+        [](const UniformQuantizedSubChannelType &type) {
+          intptr_t nDim =
+              aiirUniformQuantizedSubChannelTypeGetNumBlockSizes(type);
+          std::vector<int32_t> quantizedDimensions;
+          quantizedDimensions.reserve(nDim);
+          for (intptr_t i = 0; i < nDim; ++i) {
+            quantizedDimensions.push_back(
+                aiirUniformQuantizedSubChannelTypeGetQuantizedDimension(type,
+                                                                        i));
+          }
+          return quantizedDimensions;
+        },
+        "Gets the quantized dimensions. Each element in the returned list "
+        "represents an axis of the quantized data tensor that has a specified "
+        "block size. The order of elements corresponds to the order of block "
+        "sizes returned by 'block_sizes' method. It means that the data tensor "
+        "is quantized along the i-th dimension in the returned list using the "
+        "i-th block size from block_sizes method.");
+    c.def_prop_ro(
+        "block_sizes",
+        [](const UniformQuantizedSubChannelType &type) {
+          intptr_t nDim =
+              aiirUniformQuantizedSubChannelTypeGetNumBlockSizes(type);
+          std::vector<int64_t> blockSizes;
+          blockSizes.reserve(nDim);
+          for (intptr_t i = 0; i < nDim; ++i) {
+            blockSizes.push_back(
+                aiirUniformQuantizedSubChannelTypeGetBlockSize(type, i));
+          }
+          return blockSizes;
+        },
+        "Gets the block sizes for the quantized dimensions. The i-th element "
+        "in "
+        "the returned list corresponds to the block size for the i-th "
+        "dimension "
+        "in the list returned by quantized_dimensions method.");
+    c.def_prop_ro(
+        "scales",
+        [](UniformQuantizedSubChannelType &type) {
+          return PyDenseElementsAttribute(
+              type.getContext(),
+              aiirUniformQuantizedSubChannelTypeGetScales(type));
+        },
+        "The scales of the quantized type.");
+    c.def_prop_ro(
+        "zero_points",
+        [](UniformQuantizedSubChannelType &type) {
+          return PyDenseElementsAttribute(
+              type.getContext(),
+              aiirUniformQuantizedSubChannelTypeGetZeroPoints(type));
+        },
+        "The zero points of the quantized type.");
+  }
+};
+
+//===-------------------------------------------------------------------===//
+// CalibratedQuantizedType
+//===-------------------------------------------------------------------===//
+
+struct CalibratedQuantizedType
+    : PyConcreteType<CalibratedQuantizedType, QuantizedType> {
+  static constexpr IsAFunctionTy isaFunction =
+      aiirTypeIsACalibratedQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      aiirCalibratedQuantizedTypeGetTypeID;
+  static constexpr const char *pyClassName = "CalibratedQuantizedType";
+  static inline const AiirStringRef name = aiirCalibratedQuantizedTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](const PyType &expressedType, double min, double max,
+           DefaultingPyAiirContext context) {
+          return CalibratedQuantizedType(
+              context->getRef(),
+              aiirCalibratedQuantizedTypeGet(expressedType, min, max));
+        },
+        "Gets an instance of CalibratedQuantizedType in the same context as "
+        "the "
+        "provided expressed type.",
+        nb::arg("expressed_type"), nb::arg("min"), nb::arg("max"),
+        nb::arg("context") = nb::none());
+    c.def_prop_ro("min", [](const PyType &type) {
+      return aiirCalibratedQuantizedTypeGetMin(type);
+    });
+    c.def_prop_ro("max", [](const PyType &type) {
+      return aiirCalibratedQuantizedTypeGetMax(type);
+    });
+  }
+};
+
+static void populateDialectQuantSubmodule(nb::module_ &m) {
+  QuantizedType::bind(m);
+
+  // Set the FLAG_SIGNED class attribute after binding QuantizedType
+  auto quantizedTypeClass = m.attr("QuantizedType");
+  quantizedTypeClass.attr("FLAG_SIGNED") = aiirQuantizedTypeGetSignedFlag();
+
+  AnyQuantizedType::bind(m);
+  UniformQuantizedType::bind(m);
+  UniformQuantizedPerAxisType::bind(m);
+  UniformQuantizedSubChannelType::bind(m);
+  CalibratedQuantizedType::bind(m);
+}
+} // namespace quant
+} // namespace AIIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace aiir
+
+NB_MODULE(_aiirDialectsQuant, m) {
+  m.doc() = "AIIR Quantization dialect";
+
+  aiir::python::AIIR_BINDINGS_PYTHON_DOMAIN::quant::
+      populateDialectQuantSubmodule(m);
+}

@@ -12,13 +12,13 @@
 #include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
-namespace mlir {
+namespace aiir {
 #define GEN_PASS_DEF_GOTOSOLVER
 #include "clang/CIR/Dialect/Passes.h.inc"
-} // namespace mlir
+} // namespace aiir
 
 namespace {
 
@@ -28,12 +28,12 @@ struct GotoSolverPass : public impl::GotoSolverBase<GotoSolverPass> {
 };
 
 static void process(cir::FuncOp func) {
-  mlir::OpBuilder rewriter(func.getContext());
+  aiir::OpBuilder rewriter(func.getContext());
   llvm::StringMap<Block *> labels;
   llvm::SmallVector<cir::GotoOp, 4> gotos;
   llvm::SmallSet<StringRef, 4> blockAddrLabel;
 
-  func.getBody().walk([&](mlir::Operation *op) {
+  func.getBody().walk([&](aiir::Operation *op) {
     if (auto lab = dyn_cast<cir::LabelOp>(op)) {
       labels.try_emplace(lab.getLabel(), lab->getBlock());
     } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
@@ -55,7 +55,7 @@ static void process(cir::FuncOp func) {
   }
 
   for (auto goTo : gotos) {
-    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    aiir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(goTo);
     Block *dest = labels[goTo.getLabel()];
     cir::BrOp::create(rewriter, goTo.getLoc(), dest);
@@ -70,6 +70,6 @@ void GotoSolverPass::runOnOperation() {
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::createGotoSolverPass() {
+std::unique_ptr<Pass> aiir::createGotoSolverPass() {
   return std::make_unique<GotoSolverPass>();
 }

@@ -9,26 +9,26 @@
 #ifndef FORTRAN_OPTIMIZER_OPENACC_PASSES
 #define FORTRAN_OPTIMIZER_OPENACC_PASSES
 
-include "mlir/Pass/PassBase.td"
+include "aiir/Pass/PassBase.td"
 
 def ACCInitializeFIRAnalyses
-    : Pass<"acc-initialize-fir-analyses", "mlir::ModuleOp"> {
+    : Pass<"acc-initialize-fir-analyses", "aiir::ModuleOp"> {
   let summary = "Initialize FIR analyses for OpenACC passes";
   let description = [{
     This pass initializes analyses that can be used by subsequent OpenACC passes
     in the pipeline. It creates and caches the OpenACCSupport analysis with a
     FIR-specific implementation that can handle FIR types and operations.
     It also initializes FIR's AliasAnalysis for use in OpenACC passes.
-    This pass needs to rerun if any analyses were invalidated by MLIR's framework.
+    This pass needs to rerun if any analyses were invalidated by AIIR's framework.
   }];
   // In addition to pre-registering the needed analyses, this pass also
   // pre-registers the dialects that various OpenACC passes may generate.
   let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
-      "mlir::acc::OpenACCDialect"];
+      "aiir::acc::OpenACCDialect"];
 }
 
 def ACCRecipeBufferization
-    : Pass<"fir-acc-recipe-bufferization", "mlir::ModuleOp"> {
+    : Pass<"fir-acc-recipe-bufferization", "aiir::ModuleOp"> {
   let summary = "Rewrite acc.*.recipe box values to ref<box> and update uses";
   let description = [{
     Bufferizes OpenACC recipes that operate on fir.box<T> so their type and
@@ -50,7 +50,7 @@ def ACCRecipeBufferization
 }
 
 def ACCUseDeviceCanonicalizer
-    : Pass<"acc-use-device-canonicalizer", "mlir::func::FuncOp"> {
+    : Pass<"acc-use-device-canonicalizer", "aiir::func::FuncOp"> {
   let summary = "Canonicalize acc.use_device operations for FIR box types";
   let description = [{
     This pass canonicalizes the use_device clause on a host_data construct such
@@ -67,11 +67,11 @@ def ACCUseDeviceCanonicalizer
     The pass also removes unused use_device clauses, reducing the number of
     runtime calls.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+  let dependentDialects = ["aiir::acc::OpenACCDialect", "fir::FIROpsDialect"];
 }
 
 def ACCDeclareActionConversion
-    : Pass<"acc-declare-action-conversion", "mlir::ModuleOp"> {
+    : Pass<"acc-declare-action-conversion", "aiir::ModuleOp"> {
   let summary = "Convert acc declare action attributes to function calls";
   let description = [{
     Implements OpenACC specification (section 2.13.2 in OpenACC 3.4) for
@@ -84,7 +84,7 @@ def ACCDeclareActionConversion
 }
 
 def ACCOptimizeFirstprivateMap
-    : Pass<"acc-optimize-firstprivate-map", "mlir::func::FuncOp"> {
+    : Pass<"acc-optimize-firstprivate-map", "aiir::func::FuncOp"> {
   let summary = "Optimize firstprivate mapping";
   let description = [{
     This pass optimizes acc firstprivate mapping operations by hoisting
@@ -92,7 +92,7 @@ def ACCOptimizeFirstprivateMap
     pass-by-value instead of using global memory mapping through the
     runtime.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+  let dependentDialects = ["aiir::acc::OpenACCDialect", "fir::FIROpsDialect"];
 }
 
 #endif // FORTRAN_OPTIMIZER_OPENACC_PASSES

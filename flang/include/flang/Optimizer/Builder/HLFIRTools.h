@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +24,7 @@ namespace fir {
 class FirOpBuilder;
 }
 
-namespace mlir {
+namespace aiir {
 class IRMapping;
 }
 
@@ -39,24 +39,24 @@ class YieldElementOp;
 
 /// Is this a Fortran variable for which the defining op carrying the Fortran
 /// attributes is visible?
-inline bool isFortranVariableWithAttributes(mlir::Value value) {
+inline bool isFortranVariableWithAttributes(aiir::Value value) {
   return value.getDefiningOp<fir::FortranVariableOpInterface>();
 }
 
 /// Is this a Fortran expression value, or a Fortran variable for which the
 /// defining op carrying the Fortran attributes is visible?
-inline bool isFortranEntityWithAttributes(mlir::Value value) {
+inline bool isFortranEntityWithAttributes(aiir::Value value) {
   return isFortranValue(value) || isFortranVariableWithAttributes(value);
 }
 
-class Entity : public mlir::Value {
+class Entity : public aiir::Value {
 public:
-  explicit Entity(mlir::Value value) : mlir::Value(value) {
+  explicit Entity(aiir::Value value) : aiir::Value(value) {
     assert(isFortranEntity(value) &&
            "must be a value representing a Fortran value or variable like");
   }
   Entity(fir::FortranVariableOpInterface variable)
-      : mlir::Value(variable.getBase()) {}
+      : aiir::Value(variable.getBase()) {}
   bool isValue() const { return isFortranValue(*this); }
   bool isVariable() const { return !isValue(); }
   bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
@@ -79,13 +79,13 @@ public:
 
   /// Return the rank of this entity or -1 if it is an assumed rank.
   int getRank() const {
-    mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
+    aiir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
+    if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(type)) {
       if (seqTy.hasUnknownShape())
         return -1;
       return seqTy.getDimension();
     }
-    if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
+    if (auto exprType = aiir::dyn_cast<hlfir::ExprType>(type))
       return exprType.getRank();
     return 0;
   }
@@ -93,10 +93,10 @@ public:
 
   bool isPolymorphic() const { return hlfir::isPolymorphicType(getType()); }
 
-  mlir::Type getFortranElementType() const {
+  aiir::Type getFortranElementType() const {
     return hlfir::getFortranElementType(getType());
   }
-  mlir::Type getElementOrSequenceType() const {
+  aiir::Type getElementOrSequenceType() const {
     return hlfir::getFortranElementOrSequenceType(getType());
   }
   /// Return the fir.class or fir.box type needed to describe this entity.
@@ -108,18 +108,18 @@ public:
   }
 
   bool hasLengthParameters() const {
-    mlir::Type eleTy = getFortranElementType();
-    return mlir::isa<fir::CharacterType>(eleTy) ||
+    aiir::Type eleTy = getFortranElementType();
+    return aiir::isa<fir::CharacterType>(eleTy) ||
            fir::isRecordWithTypeParameters(eleTy);
   }
 
   bool isCharacter() const {
-    return mlir::isa<fir::CharacterType>(getFortranElementType());
+    return aiir::isa<fir::CharacterType>(getFortranElementType());
   }
 
   bool hasIntrinsicType() const {
-    mlir::Type eleTy = getFortranElementType();
-    return fir::isa_trivial(eleTy) || mlir::isa<fir::CharacterType>(eleTy);
+    aiir::Type eleTy = getFortranElementType();
+    return fir::isa_trivial(eleTy) || aiir::isa<fir::CharacterType>(eleTy);
   }
 
   bool isDerivedWithLengthParameters() const {
@@ -153,7 +153,7 @@ public:
   // variable was dereferenced from (if it is visible).
   fir::FortranVariableOpInterface
   getMaybeDereferencedVariableInterface() const {
-    mlir::Value base = *this;
+    aiir::Value base = *this;
     if (auto loadOp = base.getDefiningOp<fir::LoadOp>())
       base = loadOp.getMemref();
     return base.getDefiningOp<fir::FortranVariableOpInterface>();
@@ -176,9 +176,9 @@ public:
     return varIface ? varIface.isPointer() : false;
   }
 
-  // Get the entity as an mlir SSA value containing all the shape, type
+  // Get the entity as an aiir SSA value containing all the shape, type
   // parameters and dynamic shape information.
-  mlir::Value getBase() const { return *this; }
+  aiir::Value getBase() const { return *this; }
 
   // Get the entity as a FIR base. This may not carry the shape and type
   // parameters information, and even when it is a box with shape information.
@@ -187,17 +187,17 @@ public:
   // information, or has access to it in other ways. Its advantage is that
   // it will never be a fir.box for explicit shape arrays, leading to simpler
   // FIR code generation.
-  mlir::Value getFirBase() const;
+  aiir::Value getFirBase() const;
 };
 
-/// Wrapper over an mlir::Value that can be viewed as a Fortran entity.
+/// Wrapper over an aiir::Value that can be viewed as a Fortran entity.
 /// This provides some Fortran specific helpers as well as a guarantee
-/// in the compiler source that a certain mlir::Value must be a Fortran
+/// in the compiler source that a certain aiir::Value must be a Fortran
 /// entity, and if it is a variable, its defining operation carrying its
 /// Fortran attributes must be visible.
 class EntityWithAttributes : public Entity {
 public:
-  explicit EntityWithAttributes(mlir::Value value) : Entity(value) {
+  explicit EntityWithAttributes(aiir::Value value) : Entity(value) {
     assert(isFortranEntityWithAttributes(value) &&
            "must be a value representing a Fortran value or variable");
   }
@@ -215,7 +215,7 @@ public:
 /// code after the end of the fir::ExtendedValue use.
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
-translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
+translateToExtendedValue(aiir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity, bool contiguousHint = false,
                          bool keepScalarOptionalBoxed = false);
 
@@ -223,16 +223,16 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 /// It may generates IR to unbox fir.boxchar, but has otherwise no side effects
 /// on the IR.
 fir::ExtendedValue
-translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
+translateToExtendedValue(aiir::Location loc, fir::FirOpBuilder &builder,
                          fir::FortranVariableOpInterface fortranVariable,
                          bool forceHlfirBase = false);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
 fir::FortranVariableOpInterface
-genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
+genDeclare(aiir::Location loc, fir::FirOpBuilder &builder,
            const fir::ExtendedValue &exv, llvm::StringRef name,
            fir::FortranVariableFlagsAttr flags,
-           mlir::Value dummyScope = nullptr, mlir::Value storage = nullptr,
+           aiir::Value dummyScope = nullptr, aiir::Value storage = nullptr,
            std::uint64_t storageOffset = 0,
            cuf::DataAttributeAttr dataAttr = {}, unsigned dummyArgNo = 0);
 
@@ -240,28 +240,28 @@ genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
 /// The type of the variable must be provided so that scalar logicals are
 /// properly typed when placed in memory.
 hlfir::AssociateOp
-genAssociateExpr(mlir::Location loc, fir::FirOpBuilder &builder,
-                 hlfir::Entity value, mlir::Type variableType,
+genAssociateExpr(aiir::Location loc, fir::FirOpBuilder &builder,
+                 hlfir::Entity value, aiir::Type variableType,
                  llvm::StringRef name,
-                 std::optional<mlir::NamedAttribute> attr = std::nullopt);
+                 std::optional<aiir::NamedAttribute> attr = std::nullopt);
 
 /// Get the raw address of a variable (simple fir.ref/fir.ptr, or fir.heap
 /// value). The returned value should be used with care, it does not contain any
 /// stride, shape, and type parameter information. For pointers and
 /// allocatables, this returns the address of the target.
-mlir::Value genVariableRawAddress(mlir::Location loc,
+aiir::Value genVariableRawAddress(aiir::Location loc,
                                   fir::FirOpBuilder &builder,
                                   hlfir::Entity var);
 
 /// Get a fir.boxchar for character scalar or array variable (the shape is lost
 /// for arrays).
-mlir::Value genVariableBoxChar(mlir::Location loc, fir::FirOpBuilder &builder,
+aiir::Value genVariableBoxChar(aiir::Location loc, fir::FirOpBuilder &builder,
                                hlfir::Entity var);
 
 /// Get or create a fir.box or fir.class from a variable.
 /// A fir.box with different attributes that \p var can be created
 /// using \p forceBoxType.
-hlfir::Entity genVariableBox(mlir::Location loc, fir::FirOpBuilder &builder,
+hlfir::Entity genVariableBox(aiir::Location loc, fir::FirOpBuilder &builder,
                              hlfir::Entity var,
                              fir::BaseBoxType forceBoxType = {});
 
@@ -269,96 +269,96 @@ hlfir::Entity genVariableBox(mlir::Location loc, fir::FirOpBuilder &builder,
 /// allocatables if needed). Do nothing if the entity is already a value, and
 /// only dereference pointers and allocatables if it is not a scalar entity
 /// of numerical or logical type.
-Entity loadTrivialScalar(mlir::Location loc, fir::FirOpBuilder &builder,
+Entity loadTrivialScalar(aiir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity);
 
 /// If \p entity is a POINTER or ALLOCATABLE, dereference it and return the
 /// target entity. Return \p entity otherwise.
-hlfir::Entity derefPointersAndAllocatables(mlir::Location loc,
+hlfir::Entity derefPointersAndAllocatables(aiir::Location loc,
                                            fir::FirOpBuilder &builder,
                                            Entity entity);
 
 /// Get element entity(oneBasedIndices) if entity is an array, or return entity
 /// if it is a scalar. The indices are one based. If the entity has non default
 /// lower bounds, the function will adapt the indices in the indexing operation.
-hlfir::Entity getElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
-                           Entity entity, mlir::ValueRange oneBasedIndices);
+hlfir::Entity getElementAt(aiir::Location loc, fir::FirOpBuilder &builder,
+                           Entity entity, aiir::ValueRange oneBasedIndices);
 /// Compute the lower and upper bounds of an entity.
-llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
-genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
+llvm::SmallVector<std::pair<aiir::Value, aiir::Value>>
+genBounds(aiir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 /// Compute the lower and upper bounds given a fir.shape or fir.shape_shift
 /// (fir.shift is not allowed here).
-llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
-genBounds(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape);
+llvm::SmallVector<std::pair<aiir::Value, aiir::Value>>
+genBounds(aiir::Location loc, fir::FirOpBuilder &builder, aiir::Value shape);
 
 /// Generate lower bounds from a shape. If \p shape is null or is a fir.shape,
 /// the returned vector will contain \p rank ones.
-llvm::SmallVector<mlir::Value> genLowerbounds(mlir::Location loc,
+llvm::SmallVector<aiir::Value> genLowerbounds(aiir::Location loc,
                                               fir::FirOpBuilder &builder,
-                                              mlir::Value shape, unsigned rank);
+                                              aiir::Value shape, unsigned rank);
 
 /// Compute fir.shape<> (no lower bounds) for an entity.
-mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
+aiir::Value genShape(aiir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity);
 
 /// Compute the extent of \p entity in dimension \p dim. Crashes
 /// if dim is bigger than the entity's rank.
-mlir::Value genExtent(mlir::Location loc, fir::FirOpBuilder &builder,
+aiir::Value genExtent(aiir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity entity, unsigned dim);
 
 /// Compute the lower bound of \p entity in dimension \p dim. Crashes
 /// if dim is bigger than the entity's rank.
-mlir::Value genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
+aiir::Value genLBound(aiir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity entity, unsigned dim);
 
 /// Generate a vector of extents with index type from a fir.shape
 /// of fir.shape_shift value.
-llvm::SmallVector<mlir::Value> getIndexExtents(mlir::Location loc,
+llvm::SmallVector<aiir::Value> getIndexExtents(aiir::Location loc,
                                                fir::FirOpBuilder &builder,
-                                               mlir::Value shape);
+                                               aiir::Value shape);
 
 /// Return explicit extents. If the base is a fir.box, this won't read it to
 /// return the extents and will instead return an empty vector.
-llvm::SmallVector<mlir::Value>
-getExplicitExtentsFromShape(mlir::Value shape, fir::FirOpBuilder &builder);
+llvm::SmallVector<aiir::Value>
+getExplicitExtentsFromShape(aiir::Value shape, fir::FirOpBuilder &builder);
 
 /// Read length parameters into result if this entity has any.
-void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
+void genLengthParameters(aiir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity,
-                         llvm::SmallVectorImpl<mlir::Value> &result);
+                         llvm::SmallVectorImpl<aiir::Value> &result);
 
 /// Get the length of a character entity. Crashes if the entity is not
 /// a character entity.
-mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
+aiir::Value genCharLength(aiir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
 
 /// Return character length if known at compile time. Unlike genCharLength
 /// it does not create any new op as specifically is intended for analysis.
 std::optional<std::int64_t> getCharLengthIfConst(Entity entity);
 
-mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
-                    Entity entity, mlir::Type resultType);
+aiir::Value genRank(aiir::Location loc, fir::FirOpBuilder &builder,
+                    Entity entity, aiir::Type resultType);
 
 /// Return the fir base, shape, and type parameters for a variable. Note that
 /// type parameters are only added if the entity is not a box and the type
 /// parameters is not a constant in the base type. This matches the arguments
 /// expected by fir.embox/fir.array_coor.
-std::pair<mlir::Value, mlir::Value> genVariableFirBaseShapeAndParams(
-    mlir::Location loc, fir::FirOpBuilder &builder, Entity entity,
-    llvm::SmallVectorImpl<mlir::Value> &typeParams);
+std::pair<aiir::Value, aiir::Value> genVariableFirBaseShapeAndParams(
+    aiir::Location loc, fir::FirOpBuilder &builder, Entity entity,
+    llvm::SmallVectorImpl<aiir::Value> &typeParams);
 
 /// Get the variable type for an element of an array type entity. Returns the
 /// input entity type if it is scalar. Will crash if the entity is not a
 /// variable.
-mlir::Type getVariableElementType(hlfir::Entity variable);
+aiir::Type getVariableElementType(hlfir::Entity variable);
 /// Get the entity type for an element of an array entity. Returns the
 /// input type if it is a scalar. If the entity is a variable, this
 /// is like getVariableElementType, otherwise, this will return a value
 /// type (that may be an hlfir.expr type).
-mlir::Type getEntityElementType(hlfir::Entity entity);
+aiir::Type getEntityElementType(hlfir::Entity entity);
 
 using ElementalKernelGenerator = std::function<hlfir::Entity(
-    mlir::Location, fir::FirOpBuilder &, mlir::ValueRange)>;
+    aiir::Location, fir::FirOpBuilder &, aiir::ValueRange)>;
 /// Generate an hlfir.elementalOp given call back to generate the element
 /// value at for each iteration.
 /// If exprType is specified, this will be the return type of the elemental op.
@@ -366,16 +366,16 @@ using ElementalKernelGenerator = std::function<hlfir::Entity(
 /// from the given \p elementType and \p shape, and the type is polymorphic
 /// if \p polymorphicMold is present.
 hlfir::ElementalOp genElementalOp(
-    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Type elementType,
-    mlir::Value shape, mlir::ValueRange typeParams,
+    aiir::Location loc, fir::FirOpBuilder &builder, aiir::Type elementType,
+    aiir::Value shape, aiir::ValueRange typeParams,
     const ElementalKernelGenerator &genKernel, bool isUnordered = false,
-    mlir::Value polymorphicMold = {}, mlir::Type exprType = mlir::Type{});
+    aiir::Value polymorphicMold = {}, aiir::Type exprType = aiir::Type{});
 
 /// Structure to describe a loop nest.
 struct LoopNest {
-  mlir::Operation *outerOp = nullptr;
-  mlir::Block *body = nullptr;
-  llvm::SmallVector<mlir::Value> oneBasedIndices;
+  aiir::Operation *outerOp = nullptr;
+  aiir::Block *body = nullptr;
+  llvm::SmallVector<aiir::Value> oneBasedIndices;
 };
 
 /// Generate a fir.do_loop nest looping from 1 to extents[i].
@@ -385,12 +385,12 @@ struct LoopNest {
 /// NOTE: genLoopNestWithReductions() should be used in favor
 /// of this method, though, it cannot generate OpenMP workshare
 /// loop constructs currently.
-LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                     mlir::ValueRange extents, bool isUnordered = false,
+LoopNest genLoopNest(aiir::Location loc, fir::FirOpBuilder &builder,
+                     aiir::ValueRange extents, bool isUnordered = false,
                      bool emitWorkshareLoop = false,
                      bool couldVectorize = true);
-inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                            mlir::Value shape, bool isUnordered = false,
+inline LoopNest genLoopNest(aiir::Location loc, fir::FirOpBuilder &builder,
+                            aiir::Value shape, bool isUnordered = false,
                             bool emitWorkshareLoop = false,
                             bool couldVectorize = true) {
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
@@ -403,8 +403,8 @@ inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
 /// induction variables. The second set of values are the values
 /// of the reductions on entry to the innermost loop.
 /// The callback must return the updated values of the reductions.
-using ReductionLoopBodyGenerator = std::function<llvm::SmallVector<mlir::Value>(
-    mlir::Location, fir::FirOpBuilder &, mlir::ValueRange, mlir::ValueRange)>;
+using ReductionLoopBodyGenerator = std::function<llvm::SmallVector<aiir::Value>(
+    aiir::Location, fir::FirOpBuilder &, aiir::ValueRange, aiir::ValueRange)>;
 
 /// Generate a loop nest loopong from 1 to \p extents[i] and reducing
 /// a set of values.
@@ -423,9 +423,9 @@ using ReductionLoopBodyGenerator = std::function<llvm::SmallVector<mlir::Value>(
 /// in case any parallel constructs are present around the point
 /// of the loop nest insertion, or if the function decides
 /// to use any worksharing loop constructs for the loop nest.
-llvm::SmallVector<mlir::Value> genLoopNestWithReductions(
-    mlir::Location loc, fir::FirOpBuilder &builder, mlir::ValueRange extents,
-    mlir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
+llvm::SmallVector<aiir::Value> genLoopNestWithReductions(
+    aiir::Location loc, fir::FirOpBuilder &builder, aiir::ValueRange extents,
+    aiir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
     bool isUnordered = false);
 
 /// Inline the body of an hlfir.elemental at the current insertion point
@@ -433,10 +433,10 @@ llvm::SmallVector<mlir::Value> genLoopNestWithReductions(
 /// of one element of the elemental expression. Return the YieldElementOp
 /// whose value argument is the element value.
 /// The original hlfir::ElementalOp is left untouched.
-hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
+hlfir::YieldElementOp inlineElementalOp(aiir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         hlfir::ElementalOp elemental,
-                                        mlir::ValueRange oneBasedIndices);
+                                        aiir::ValueRange oneBasedIndices);
 
 /// Inline the body of an hlfir.elemental or hlfir.elemental_addr without
 /// cloning the resulting hlfir.yield_element/hlfir.yield, and return the cloned
@@ -445,10 +445,10 @@ hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
 /// current context and uses values that have been cloned already. A callback is
 /// provided to indicate if an hlfir.apply inside the hlfir.elemental must be
 /// immediately replaced by the inlining of the applied hlfir.elemental.
-mlir::Value inlineElementalOp(
-    mlir::Location loc, fir::FirOpBuilder &builder,
-    hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
-    mlir::IRMapping &mapper,
+aiir::Value inlineElementalOp(
+    aiir::Location loc, fir::FirOpBuilder &builder,
+    hlfir::ElementalOpInterface elemental, aiir::ValueRange oneBasedIndices,
+    aiir::IRMapping &mapper,
     const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
 
 /// Generate an element-by-element assignment from \p rhs to \p lhs for arrays
@@ -462,13 +462,13 @@ mlir::Value inlineElementalOp(
 /// the LHS and RHS elements and is in charge of generating the combination and
 /// assignment logic.
 void genNoAliasArrayAssignment(
-    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    aiir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop = false,
     bool temporaryLHS = false,
-    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
-                       hlfir::Entity, mlir::ArrayAttr)>
+    std::function<void(aiir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, aiir::ArrayAttr)>
         *scalarCombineAndAssign = nullptr,
-    mlir::ArrayAttr accessGroups = {});
+    aiir::ArrayAttr accessGroups = {});
 
 /// Generate an assignment from \p rhs to \p lhs when they are known not to
 /// alias. Handles both arrays and scalars: for arrays, delegates to
@@ -476,20 +476,20 @@ void genNoAliasArrayAssignment(
 /// scalar types and falls back to hlfir.assign otherwise.
 /// Allocatable LHS must be allocated with the right shape and parameters.
 void genNoAliasAssignment(
-    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    aiir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop = false,
     bool temporaryLHS = false,
-    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
-                       hlfir::Entity, mlir::ArrayAttr accessGroups)>
+    std::function<void(aiir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, aiir::ArrayAttr accessGroups)>
         *scalarCombineAndAssign = nullptr,
-    mlir::ArrayAttr accessGroups = {});
+    aiir::ArrayAttr accessGroups = {});
 inline void genNoAliasAssignment(
-    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    aiir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
-    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
-                       hlfir::Entity, mlir::ArrayAttr)>
+    std::function<void(aiir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, aiir::ArrayAttr)>
         scalarCombineAndAssign,
-    mlir::ArrayAttr accessGroups = {}) {
+    aiir::ArrayAttr accessGroups = {}) {
   genNoAliasAssignment(loc, builder, rhs, lhs, emitWorkshareLoop, temporaryLHS,
                        &scalarCombineAndAssign, accessGroups);
 }
@@ -499,9 +499,9 @@ inline void genNoAliasAssignment(
 /// operating on this new temporary.  returns the temporary and whether the
 /// temporary is heap or stack allocated.
 std::pair<hlfir::Entity, bool>
-computeEvaluateOpInNewTemp(mlir::Location, fir::FirOpBuilder &,
+computeEvaluateOpInNewTemp(aiir::Location, fir::FirOpBuilder &,
                            hlfir::EvaluateInMemoryOp evalInMem,
-                           mlir::Value shape, mlir::ValueRange typeParams);
+                           aiir::Value shape, aiir::ValueRange typeParams);
 
 // Clone the body of the hlfir.eval_in_mem operating on this the provided
 // storage.  The provided storage must be a contiguous "raw" memory reference
@@ -509,23 +509,23 @@ computeEvaluateOpInNewTemp(mlir::Location, fir::FirOpBuilder &,
 // No runtime check is inserted by this utility to enforce that. It is also
 // usually invalid to provide some storage that is already addressed directly
 // or indirectly inside the hlfir.eval_in_mem body.
-void computeEvaluateOpIn(mlir::Location, fir::FirOpBuilder &,
-                         hlfir::EvaluateInMemoryOp, mlir::Value storage);
+void computeEvaluateOpIn(aiir::Location, fir::FirOpBuilder &,
+                         hlfir::EvaluateInMemoryOp, aiir::Value storage);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
-convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
+convertToValue(aiir::Location loc, fir::FirOpBuilder &builder,
                hlfir::Entity entity);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
-convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
-                 hlfir::Entity entity, mlir::Type targetType);
+convertToAddress(aiir::Location loc, fir::FirOpBuilder &builder,
+                 hlfir::Entity entity, aiir::Type targetType);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
-convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             hlfir::Entity entity, mlir::Type targetType);
+convertToBox(aiir::Location loc, fir::FirOpBuilder &builder,
+             hlfir::Entity entity, aiir::Type targetType);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
-hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
+hlfir::ElementalOp cloneToElementalOp(aiir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       hlfir::ElementalAddrOp elementalAddrOp);
 
@@ -545,16 +545,16 @@ bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 ///
 /// If the returned bool is true, callers are responsible for arranging cleanup
 /// (e.g., generating destruction/deallocation code at an appropriate point).
-std::pair<hlfir::Entity, bool> createTempFromMold(mlir::Location loc,
+std::pair<hlfir::Entity, bool> createTempFromMold(aiir::Location loc,
                                                   fir::FirOpBuilder &builder,
                                                   hlfir::Entity mold);
 
 // TODO: this does not support polymorphic molds
-hlfir::Entity createStackTempFromMold(mlir::Location loc,
+hlfir::Entity createStackTempFromMold(aiir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       hlfir::Entity mold);
 
-hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
+hlfir::EntityWithAttributes convertCharacterKind(aiir::Location loc,
                                                  fir::FirOpBuilder &builder,
                                                  hlfir::Entity scalarChar,
                                                  int toKind);
@@ -568,25 +568,25 @@ hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
 /// It is valid to call this helper if \p source is an array. If a conversion is
 /// inserted for arrays, a clean-up will be returned. If no conversion is
 /// needed, the source is returned.
-/// Beware that the resulting entity mlir type may not be toType: it will be a
+/// Beware that the resulting entity aiir type may not be toType: it will be a
 /// Fortran entity with the same Fortran category and KIND.
 /// If preserveLowerBounds is set, the returned entity will have the same lower
 /// bounds as \p source.
 std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
-genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
-                      hlfir::Entity source, mlir::Type toType,
+genTypeAndKindConvert(aiir::Location loc, fir::FirOpBuilder &builder,
+                      hlfir::Entity source, aiir::Type toType,
                       bool preserveLowerBounds);
 
 /// A shortcut for loadTrivialScalar(getElementAt()),
 /// which designates and loads an element of an array.
-Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
-                     Entity entity, mlir::ValueRange oneBasedIndices);
+Entity loadElementAt(aiir::Location loc, fir::FirOpBuilder &builder,
+                     Entity entity, aiir::ValueRange oneBasedIndices);
 
 /// Return a vector of extents for the given entity.
 /// The function creates new operations, but tries to clean-up
 /// after itself.
-llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
-genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
+llvm::SmallVector<aiir::Value, Fortran::common::maxRank>
+genExtentsVector(aiir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 
 /// Generate an hlfir.designate that produces an 1D section
 /// of \p array using \p oneBasedIndices and \p dim:
@@ -595,11 +595,11 @@ genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 ///
 /// The caller provides the pre-computed \p lbounds, \p extents
 /// and \p typeParams of the array.
-Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
+Entity gen1DSection(aiir::Location loc, fir::FirOpBuilder &builder,
                     Entity array, int64_t dim,
-                    mlir::ArrayRef<mlir::Value> extents,
-                    mlir::ValueRange oneBasedIndices,
-                    mlir::ArrayRef<mlir::Value> typeParams);
+                    aiir::ArrayRef<aiir::Value> extents,
+                    aiir::ValueRange oneBasedIndices,
+                    aiir::ArrayRef<aiir::Value> typeParams);
 
 /// Return true iff the given hlfir.designate produces
 /// a contiguous part of the memref object given that it is
@@ -612,7 +612,7 @@ bool designatePreservesContinuity(hlfir::DesignateOp op);
 /// otherwise, it must be contiguous in the innermost dimension.
 /// This function is an extension of hlfir::Entity::isSimplyContiguous(),
 /// and it can be used on pure FIR representation as well as on HLFIR.
-bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
+bool isSimplyContiguous(aiir::Value base, bool checkWhole = true);
 
 } // namespace hlfir
 

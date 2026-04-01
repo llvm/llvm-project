@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Converts CIR directly to LLVM IR, similar to mlir-translate or LLVM llc.
+// Converts CIR directly to LLVM IR, similar to aiir-translate or LLVM llc.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/InitAllTranslations.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Target/LLVMIR/Dialect/All.h"
-#include "mlir/Target/LLVMIR/Import.h"
-#include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
-#include "mlir/Tools/mlir-translate/Translation.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/InitAllTranslations.h"
+#include "aiir/Support/LogicalResult.h"
+#include "aiir/Target/LLVMIR/Dialect/All.h"
+#include "aiir/Target/LLVMIR/Import.h"
+#include "aiir/Tools/aiir-translate/AiirTranslateMain.h"
+#include "aiir/Tools/aiir-translate/Translation.h"
 
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Host.h"
@@ -37,7 +37,7 @@
 
 namespace cir {
 namespace direct {
-extern void registerCIRDialectTranslation(mlir::DialectRegistry &registry);
+extern void registerCIRDialectTranslation(aiir::DialectRegistry &registry);
 } // namespace direct
 
 namespace {
@@ -65,7 +65,7 @@ llvm::cl::opt<std::string>
                                       "it's not available in the module"),
                        llvm::cl::init(""));
 
-std::string prepareCIRModuleTriple(mlir::ModuleOp mod) {
+std::string prepareCIRModuleTriple(aiir::ModuleOp mod) {
   std::string triple = targetTripleOption;
 
   // Treat "" as the default target machine.
@@ -76,11 +76,11 @@ std::string prepareCIRModuleTriple(mlir::ModuleOp mod) {
   }
 
   mod->setAttr(cir::CIRDialect::getTripleAttrName(),
-               mlir::StringAttr::get(mod.getContext(), triple));
+               aiir::StringAttr::get(mod.getContext(), triple));
   return triple;
 }
 
-llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
+llvm::LogicalResult prepareCIRModuleDataLayout(aiir::ModuleOp mod,
                                                llvm::StringRef rawTriple) {
   auto *context = mod.getContext();
 
@@ -106,21 +106,21 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   std::string layoutString = targetInfo->getDataLayoutString();
 
   // Registered dialects may not be loaded yet, ensure they are.
-  context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
-                       mlir::omp::OpenMPDialect>();
+  context->loadDialect<aiir::DLTIDialect, aiir::LLVM::LLVMDialect,
+                       aiir::omp::OpenMPDialect>();
 
-  mlir::DataLayoutSpecInterface dlSpec =
-      mlir::translateDataLayout(llvm::DataLayout(layoutString), context);
-  mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+  aiir::DataLayoutSpecInterface dlSpec =
+      aiir::translateDataLayout(llvm::DataLayout(layoutString), context);
+  mod->setAttr(aiir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 
   return llvm::success();
 }
 
 /// Prepare requirements like cir.triple and data layout.
-llvm::LogicalResult prepareCIRModuleForTranslation(mlir::ModuleOp mod) {
-  auto modTriple = mod->getAttrOfType<mlir::StringAttr>(
+llvm::LogicalResult prepareCIRModuleForTranslation(aiir::ModuleOp mod) {
+  auto modTriple = mod->getAttrOfType<aiir::StringAttr>(
       cir::CIRDialect::getTripleAttrName());
-  auto modDataLayout = mod->getAttr(mlir::DLTIDialect::kDataLayoutAttrName);
+  auto modDataLayout = mod->getAttr(aiir::DLTIDialect::kDataLayoutAttrName);
   bool hasTargetOption = targetTripleOption.getNumOccurrences() > 0;
 
   // Skip the situation where nothing should be done.
@@ -149,30 +149,30 @@ void registerToLLVMTranslation() {
       llvm::cl::desc("Disable calling convention lowering pass"),
       llvm::cl::init(false));
 
-  mlir::TranslateFromMLIRRegistration registration(
+  aiir::TranslateFromAIIRRegistration registration(
       "cir-to-llvmir", "Translate CIR to LLVMIR",
-      [](mlir::Operation *op, mlir::raw_ostream &output) {
-        auto cirModule = llvm::dyn_cast<mlir::ModuleOp>(op);
+      [](aiir::Operation *op, aiir::raw_ostream &output) {
+        auto cirModule = llvm::dyn_cast<aiir::ModuleOp>(op);
 
-        if (mlir::failed(cir::prepareCIRModuleForTranslation(cirModule)))
-          return mlir::failure();
+        if (aiir::failed(cir::prepareCIRModuleForTranslation(cirModule)))
+          return aiir::failure();
 
         llvm::LLVMContext llvmContext;
         std::unique_ptr<llvm::Module> llvmModule =
             cir::direct::lowerDirectlyFromCIRToLLVMIR(cirModule, llvmContext);
         if (!llvmModule)
-          return mlir::failure();
+          return aiir::failure();
         llvmModule->print(output, nullptr);
-        return mlir::success();
+        return aiir::success();
       },
-      [](mlir::DialectRegistry &registry) {
-        registry.insert<mlir::DLTIDialect, mlir::func::FuncDialect>();
-        mlir::registerAllToLLVMIRTranslations(registry);
+      [](aiir::DialectRegistry &registry) {
+        registry.insert<aiir::DLTIDialect, aiir::func::FuncDialect>();
+        aiir::registerAllToLLVMIRTranslations(registry);
         cir::direct::registerCIRDialectTranslation(registry);
       });
 }
 
 int main(int argc, char **argv) {
   registerToLLVMTranslation();
-  return failed(mlir::mlirTranslateMain(argc, argv, "CIR Translation Tool"));
+  return failed(aiir::aiirTranslateMain(argc, argv, "CIR Translation Tool"));
 }

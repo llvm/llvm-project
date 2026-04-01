@@ -1,5 +1,5 @@
 // RUN: fir-opt --add-debug-info="split-dwarf-file=test.dwo"  \
-// RUN:         --mlir-print-debuginfo %s -o - | FileCheck %s
+// RUN:         --aiir-print-debuginfo %s -o - | FileCheck %s
 
 module {
   func.func @test() {

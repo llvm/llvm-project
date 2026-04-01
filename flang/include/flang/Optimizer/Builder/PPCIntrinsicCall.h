@@ -11,7 +11,7 @@
 
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "mlir/Dialect/Math/IR/Math.h"
+#include "aiir/Dialect/Math/IR/Math.h"
 
 namespace fir {
 
@@ -154,21 +154,21 @@ enum class MMAHandlerOp {
 // sign of eleTy if eleTy is signed/unsigned integer. Helps with vector type
 // conversions.
 struct VecTypeInfo {
-  mlir::Type eleTy;
+  aiir::Type eleTy;
   uint64_t len;
 
-  mlir::Type toFirVectorType() { return fir::VectorType::get(len, eleTy); }
+  aiir::Type toFirVectorType() { return fir::VectorType::get(len, eleTy); }
 
   // We need a builder to do the signless element conversion.
-  mlir::Type toMlirVectorType(mlir::MLIRContext *context) {
+  aiir::Type toAiirVectorType(aiir::AIIRContext *context) {
     // Will convert to eleTy to signless int if eleTy is signed/unsigned int.
     auto convEleTy{getConvertedElementType(context, eleTy)};
-    return mlir::VectorType::get(len, convEleTy);
+    return aiir::VectorType::get(len, convEleTy);
   }
 
-  bool isFloat32() { return mlir::isa<mlir::Float32Type>(eleTy); }
+  bool isFloat32() { return aiir::isa<aiir::Float32Type>(eleTy); }
 
-  bool isFloat64() { return mlir::isa<mlir::Float64Type>(eleTy); }
+  bool isFloat64() { return aiir::isa<aiir::Float64Type>(eleTy); }
 
   bool isFloat() { return isFloat32() || isFloat64(); }
 };
@@ -179,48 +179,48 @@ struct VecTypeInfo {
 
 // Returns a VecTypeInfo with element type and length of given fir vector type.
 // Preserves signness of fir vector type if element type of integer.
-static inline VecTypeInfo getVecTypeFromFirType(mlir::Type firTy) {
-  assert(mlir::isa<fir::VectorType>(firTy));
+static inline VecTypeInfo getVecTypeFromFirType(aiir::Type firTy) {
+  assert(aiir::isa<fir::VectorType>(firTy));
   VecTypeInfo vecTyInfo;
-  vecTyInfo.eleTy = mlir::dyn_cast<fir::VectorType>(firTy).getElementType();
-  vecTyInfo.len = mlir::dyn_cast<fir::VectorType>(firTy).getLen();
+  vecTyInfo.eleTy = aiir::dyn_cast<fir::VectorType>(firTy).getElementType();
+  vecTyInfo.len = aiir::dyn_cast<fir::VectorType>(firTy).getLen();
   return vecTyInfo;
 }
 
-static inline VecTypeInfo getVecTypeFromFir(mlir::Value firVec) {
+static inline VecTypeInfo getVecTypeFromFir(aiir::Value firVec) {
   return getVecTypeFromFirType(firVec.getType());
 }
 
 // Calculates the vector length and returns a VecTypeInfo with element type and
 // length.
-static inline VecTypeInfo getVecTypeFromEle(mlir::Value ele) {
+static inline VecTypeInfo getVecTypeFromEle(aiir::Value ele) {
   VecTypeInfo vecTyInfo;
   vecTyInfo.eleTy = ele.getType();
   vecTyInfo.len = 16 / (vecTyInfo.eleTy.getIntOrFloatBitWidth() / 8);
   return vecTyInfo;
 }
 
-// Converts array of fir vectors to mlir vectors.
-static inline llvm::SmallVector<mlir::Value, 4>
-convertVecArgs(fir::FirOpBuilder &builder, mlir::Location loc,
-               VecTypeInfo vecTyInfo, llvm::SmallVector<mlir::Value, 4> args) {
-  llvm::SmallVector<mlir::Value, 4> newArgs;
-  auto ty{vecTyInfo.toMlirVectorType(builder.getContext())};
-  assert(ty && "unknown mlir vector type");
+// Converts array of fir vectors to aiir vectors.
+static inline llvm::SmallVector<aiir::Value, 4>
+convertVecArgs(fir::FirOpBuilder &builder, aiir::Location loc,
+               VecTypeInfo vecTyInfo, llvm::SmallVector<aiir::Value, 4> args) {
+  llvm::SmallVector<aiir::Value, 4> newArgs;
+  auto ty{vecTyInfo.toAiirVectorType(builder.getContext())};
+  assert(ty && "unknown aiir vector type");
   for (size_t i = 0; i < args.size(); i++)
     newArgs.push_back(builder.createConvert(loc, ty, args[i]));
   return newArgs;
 }
 
 // This overload method is used only if arguments are of different types.
-static inline llvm::SmallVector<mlir::Value, 4>
-convertVecArgs(fir::FirOpBuilder &builder, mlir::Location loc,
+static inline llvm::SmallVector<aiir::Value, 4>
+convertVecArgs(fir::FirOpBuilder &builder, aiir::Location loc,
                llvm::SmallVectorImpl<VecTypeInfo> &vecTyInfo,
-               llvm::SmallVector<mlir::Value, 4> args) {
-  llvm::SmallVector<mlir::Value, 4> newArgs;
+               llvm::SmallVector<aiir::Value, 4> args) {
+  llvm::SmallVector<aiir::Value, 4> newArgs;
   for (size_t i = 0; i < args.size(); i++) {
-    mlir::Type ty{vecTyInfo[i].toMlirVectorType(builder.getContext())};
-    assert(ty && "unknown mlir vector type");
+    aiir::Type ty{vecTyInfo[i].toAiirVectorType(builder.getContext())};
+    assert(ty && "unknown aiir vector type");
     newArgs.push_back(builder.createConvert(loc, ty, args[i]));
   }
   return newArgs;
@@ -229,7 +229,7 @@ convertVecArgs(fir::FirOpBuilder &builder, mlir::Location loc,
 struct PPCIntrinsicLibrary : IntrinsicLibrary {
 
   // Constructors.
-  explicit PPCIntrinsicLibrary(fir::FirOpBuilder &builder, mlir::Location loc)
+  explicit PPCIntrinsicLibrary(fir::FirOpBuilder &builder, aiir::Location loc)
       : IntrinsicLibrary(builder, loc) {}
   PPCIntrinsicLibrary() = delete;
   PPCIntrinsicLibrary(const PPCIntrinsicLibrary &) = delete;
@@ -247,63 +247,63 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   template <bool isImm>
   void genMtfsf(llvm::ArrayRef<fir::ExtendedValue>);
 
-  fir::ExtendedValue genVecAbs(mlir::Type resultType,
+  fir::ExtendedValue genVecAbs(aiir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   template <VecOp>
   fir::ExtendedValue
-  genVecAddAndMulSubXor(mlir::Type resultType,
+  genVecAddAndMulSubXor(aiir::Type resultType,
                         llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecCmp(mlir::Type resultType,
+  fir::ExtendedValue genVecCmp(aiir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecConvert(mlir::Type resultType,
+  fir::ExtendedValue genVecConvert(aiir::Type resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecAnyCompare(mlir::Type resultType,
+  fir::ExtendedValue genVecAnyCompare(aiir::Type resultType,
                                       llvm::ArrayRef<fir::ExtendedValue> args);
 
-  fir::ExtendedValue genVecExtract(mlir::Type resultType,
+  fir::ExtendedValue genVecExtract(aiir::Type resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args);
 
-  fir::ExtendedValue genVecInsert(mlir::Type resultType,
+  fir::ExtendedValue genVecInsert(aiir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecMerge(mlir::Type resultType,
+  fir::ExtendedValue genVecMerge(aiir::Type resultType,
                                  llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecPerm(mlir::Type resultType,
+  fir::ExtendedValue genVecPerm(aiir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args);
 
-  fir::ExtendedValue genVecXlGrp(mlir::Type resultType,
+  fir::ExtendedValue genVecXlGrp(aiir::Type resultType,
                                  llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecLdCallGrp(mlir::Type resultType,
+  fir::ExtendedValue genVecLdCallGrp(aiir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecLdNoCallGrp(mlir::Type resultType,
+  fir::ExtendedValue genVecLdNoCallGrp(aiir::Type resultType,
                                        llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecLvsGrp(mlir::Type resultType,
+  fir::ExtendedValue genVecLvsGrp(aiir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecNmaddMsub(mlir::Type resultType,
+  fir::ExtendedValue genVecNmaddMsub(aiir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
-  fir::ExtendedValue genVecShift(mlir::Type,
+  fir::ExtendedValue genVecShift(aiir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
 
-  fir::ExtendedValue genVecSel(mlir::Type resultType,
+  fir::ExtendedValue genVecSel(aiir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
@@ -313,10 +313,10 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   void genVecXStore(llvm::ArrayRef<fir::ExtendedValue>);
 
   template <VecOp vop>
-  fir::ExtendedValue genVecSplat(mlir::Type resultType,
+  fir::ExtendedValue genVecSplat(aiir::Type resultType,
                                  llvm::ArrayRef<fir::ExtendedValue> args);
 
-  fir::ExtendedValue genVecXlds(mlir::Type resultType,
+  fir::ExtendedValue genVecXlds(aiir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args);
 };
 

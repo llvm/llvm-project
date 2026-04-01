@@ -10,8 +10,8 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "objc_lib
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
-load("//mlir:build_defs.bzl", "cc_headers_only")
-load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("//aiir:build_defs.bzl", "cc_headers_only")
+load("//aiir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],

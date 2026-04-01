@@ -41,7 +41,7 @@ void test_explicit_type_matches_lambda_param(Base *base) {
 }
 
 void test_value_type_switch() {
-  // TypeSwitch on value types (not pointers) -- common in MLIR.
+  // TypeSwitch on value types (not pointers) -- common in AIIR.
   struct Type {};
   struct Float16Type : Type {};
 

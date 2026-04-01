@@ -13,7 +13,7 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
 #define CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
 
-include "mlir/IR/OpBase.td"
+include "aiir/IR/OpBase.td"
 
 def CIR_Dialect : Dialect {
   let name = "cir";
@@ -82,9 +82,9 @@ def CIR_Dialect : Dialect {
     void registerAttributes();
     void registerTypes();
 
-    mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
-    void printType(mlir::Type type,
-                   mlir::DialectAsmPrinter &printer) const override;
+    aiir::Type parseType(aiir::DialectAsmParser &parser) const override;
+    void printType(aiir::Type type,
+                   aiir::DialectAsmPrinter &printer) const override;
   }];
 }
 

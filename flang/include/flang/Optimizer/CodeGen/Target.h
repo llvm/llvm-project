@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,14 +15,14 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "aiir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "aiir/IR/BuiltinTypes.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <tuple>
 #include <vector>
 
-namespace mlir {
+namespace aiir {
 class DataLayout;
 }
 
@@ -68,33 +68,33 @@ private:
 class CodeGenSpecifics {
 public:
   using Attributes = details::Attributes;
-  using TypeAndAttr = std::tuple<mlir::Type, Attributes>;
+  using TypeAndAttr = std::tuple<aiir::Type, Attributes>;
   using Marshalling = std::vector<TypeAndAttr>;
 
   static std::unique_ptr<CodeGenSpecifics>
-  get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
-      llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
-      const mlir::DataLayout &dl);
+  get(aiir::AIIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
+      llvm::StringRef targetCPU, aiir::LLVM::TargetFeaturesAttr targetFeatures,
+      const aiir::DataLayout &dl);
 
   static std::unique_ptr<CodeGenSpecifics>
-  get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
-      llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
-      const mlir::DataLayout &dl, llvm::StringRef tuneCPU);
+  get(aiir::AIIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
+      llvm::StringRef targetCPU, aiir::LLVM::TargetFeaturesAttr targetFeatures,
+      const aiir::DataLayout &dl, llvm::StringRef tuneCPU);
 
-  static TypeAndAttr getTypeAndAttr(mlir::Type t) { return TypeAndAttr{t, {}}; }
+  static TypeAndAttr getTypeAndAttr(aiir::Type t) { return TypeAndAttr{t, {}}; }
 
-  CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
+  CodeGenSpecifics(aiir::AIIRContext *ctx, llvm::Triple &&trp,
                    KindMapping &&kindMap, llvm::StringRef targetCPU,
-                   mlir::LLVM::TargetFeaturesAttr targetFeatures,
-                   const mlir::DataLayout &dl)
+                   aiir::LLVM::TargetFeaturesAttr targetFeatures,
+                   const aiir::DataLayout &dl)
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
         targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl},
         tuneCPU{""} {}
 
-  CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
+  CodeGenSpecifics(aiir::AIIRContext *ctx, llvm::Triple &&trp,
                    KindMapping &&kindMap, llvm::StringRef targetCPU,
-                   mlir::LLVM::TargetFeaturesAttr targetFeatures,
-                   const mlir::DataLayout &dl, llvm::StringRef tuneCPU)
+                   aiir::LLVM::TargetFeaturesAttr targetFeatures,
+                   const aiir::DataLayout &dl, llvm::StringRef tuneCPU)
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
         targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl},
         tuneCPU{tuneCPU} {}
@@ -103,39 +103,39 @@ public:
   virtual ~CodeGenSpecifics() {}
 
   /// Type presentation of a `complex<ele>` type value in memory.
-  virtual mlir::Type complexMemoryType(mlir::Type eleTy) const = 0;
+  virtual aiir::Type complexMemoryType(aiir::Type eleTy) const = 0;
 
   /// Type representation of a `complex<eleTy>` type argument when passed by
   /// value. An argument value may need to be passed as a (safe) reference
   /// argument.
-  virtual Marshalling complexArgumentType(mlir::Location loc,
-                                          mlir::Type eleTy) const = 0;
+  virtual Marshalling complexArgumentType(aiir::Location loc,
+                                          aiir::Type eleTy) const = 0;
 
   /// Type representation of a `complex<eleTy>` type return value. Such a return
   /// value may need to be converted to a hidden reference argument.
-  virtual Marshalling complexReturnType(mlir::Location loc,
-                                        mlir::Type eleTy) const = 0;
+  virtual Marshalling complexReturnType(aiir::Location loc,
+                                        aiir::Type eleTy) const = 0;
 
   /// Type presentation of a `boxchar<n>` type value in memory.
-  virtual mlir::Type boxcharMemoryType(mlir::Type eleTy) const = 0;
+  virtual aiir::Type boxcharMemoryType(aiir::Type eleTy) const = 0;
 
   /// Type representation of a `fir.type<T>` type argument when passed by
   /// value. It may have to be split into several arguments, or be passed
   /// as a byval reference argument (on the stack).
   virtual Marshalling
-  structArgumentType(mlir::Location loc, fir::RecordType recTy,
+  structArgumentType(aiir::Location loc, fir::RecordType recTy,
                      const Marshalling &previousArguments) const = 0;
 
   /// Type representation of a `fir.type<T>` type argument when returned by
   /// value. Such value may need to be converted to a hidden reference argument.
-  virtual Marshalling structReturnType(mlir::Location loc,
+  virtual Marshalling structReturnType(aiir::Location loc,
                                        fir::RecordType eleTy) const = 0;
 
   /// Type representation of a `boxchar<n>` type argument when passed by value.
   /// An argument value may need to be passed as a (safe) reference argument.
-  virtual Marshalling boxcharArgumentType(mlir::Type eleTy) const = 0;
+  virtual Marshalling boxcharArgumentType(aiir::Type eleTy) const = 0;
 
-  // Compute ABI rules for an integer argument of the given mlir::IntegerType
+  // Compute ABI rules for an integer argument of the given aiir::IntegerType
   // \p argTy. Note that this methods is supposed to be called for
   // arguments passed by value not via reference, e.g. the 'i1' argument here:
   //   declare i1 @_FortranAioOutputLogical(ptr, i1)
@@ -165,13 +165,13 @@ public:
   // seem to be signed except for CFI_type_Bool/bool that is supported
   // via signless 'i1', but that is treated as unsigned type by clang
   // (e.g. 'bool' arguments are using 'zeroext' ABI).
-  virtual Marshalling integerArgumentType(mlir::Location loc,
-                                          mlir::IntegerType argTy) const = 0;
+  virtual Marshalling integerArgumentType(aiir::Location loc,
+                                          aiir::IntegerType argTy) const = 0;
 
   // By default, integer argument and return values use the same
   // zero/sign extension rules.
-  virtual Marshalling integerReturnType(mlir::Location loc,
-                                        mlir::IntegerType argTy) const = 0;
+  virtual Marshalling integerReturnType(aiir::Location loc,
+                                        aiir::IntegerType argTy) const = 0;
 
   // Returns width in bits of C/C++ 'int' type size.
   virtual unsigned char getCIntTypeWidth() const = 0;
@@ -179,22 +179,22 @@ public:
   llvm::StringRef getTargetCPU() const { return targetCPU; }
   llvm::StringRef getTuneCPU() const { return tuneCPU; }
 
-  mlir::LLVM::TargetFeaturesAttr getTargetFeatures() const {
+  aiir::LLVM::TargetFeaturesAttr getTargetFeatures() const {
     return targetFeatures;
   }
 
-  const mlir::DataLayout &getDataLayout() const {
+  const aiir::DataLayout &getDataLayout() const {
     assert(dataLayout && "dataLayout must be set");
     return *dataLayout;
   }
 
 protected:
-  mlir::MLIRContext &context;
+  aiir::AIIRContext &context;
   llvm::Triple triple;
   KindMapping kindMap;
   llvm::StringRef targetCPU;
-  mlir::LLVM::TargetFeaturesAttr targetFeatures;
-  const mlir::DataLayout *dataLayout = nullptr;
+  aiir::LLVM::TargetFeaturesAttr targetFeatures;
+  const aiir::DataLayout *dataLayout = nullptr;
   llvm::StringRef tuneCPU;
 };
 

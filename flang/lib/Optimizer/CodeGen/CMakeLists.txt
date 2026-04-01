@@ -32,21 +32,21 @@ add_flang_library(FIRCodeGen
   Remarks
   TargetParser
 
-  MLIR_LIBS
-  MLIRComplexToLLVM
-  MLIRComplexToROCDLLibraryCalls
-  MLIRComplexToStandard
-  MLIRGPUDialect
-  MLIRIndexToLLVM
-  MLIRMathToFuncs
-  MLIRMathToLLVM
-  MLIRMathToLibm
-  MLIRMathToNVVM
-  MLIRMathToROCDL
-  MLIROpenMPToLLVM
-  MLIROpenACCDialect
-  MLIRBuiltinToLLVMIRTranslation
-  MLIRLLVMToLLVMIRTranslation
-  MLIRTargetLLVMIRExport
-  MLIRVectorToLLVM
+  AIIR_LIBS
+  AIIRComplexToLLVM
+  AIIRComplexToROCDLLibraryCalls
+  AIIRComplexToStandard
+  AIIRGPUDialect
+  AIIRIndexToLLVM
+  AIIRMathToFuncs
+  AIIRMathToLLVM
+  AIIRMathToLibm
+  AIIRMathToNVVM
+  AIIRMathToROCDL
+  AIIROpenMPToLLVM
+  AIIROpenACCDialect
+  AIIRBuiltinToLLVMIRTranslation
+  AIIRLLVMToLLVMIRTranslation
+  AIIRTargetLLVMIRExport
+  AIIRVectorToLLVM
 )

@@ -19,7 +19,7 @@ import sys
 PROJECT_DEPENDENCIES = {
     "llvm": set(),
     "clang": {"llvm"},
-    "CIR": {"clang", "mlir"},
+    "CIR": {"clang", "aiir"},
     "bolt": {"clang", "lld", "llvm"},
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
@@ -30,7 +30,7 @@ PROJECT_DEPENDENCIES = {
     "lldb": {"llvm", "clang"},
     "libclc": {"llvm", "clang"},
     "lld": {"llvm"},
-    "mlir": {"llvm"},
+    "aiir": {"llvm"},
     "polly": {"llvm"},
 }
 
@@ -45,13 +45,13 @@ DEPENDENTS_TO_TEST = {
         "clang-tools-extra",
         "lld",
         "lldb",
-        "mlir",
+        "aiir",
         "polly",
         "flang",
     },
     "lld": {"bolt", "cross-project-tests"},
     "clang": {"clang-tools-extra", "cross-project-tests", "lldb"},
-    "mlir": {"flang"},
+    "aiir": {"flang"},
     # Test everything if ci scripts are changed.
     ".ci": {
         "llvm",
@@ -61,7 +61,7 @@ DEPENDENTS_TO_TEST = {
         "lldb",
         "bolt",
         "clang-tools-extra",
-        "mlir",
+        "aiir",
         "polly",
         "flang",
         "openmp",
@@ -150,7 +150,7 @@ PROJECT_CHECK_TARGETS = {
     "libclc": "check-libclc",
     "lld": "check-lld",
     "lldb": "check-lldb",
-    "mlir": "check-mlir",
+    "aiir": "check-aiir",
     "openmp": "check-openmp",
     "polly": "check-polly",
     "lit": "check-lit",

@@ -1,5 +1,5 @@
 
-// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --aiir-print-debuginfo %s | FileCheck %s
 // REQUIRES: system-linux || system-aix
 
 // Test for included functions that have a different debug location than the current file

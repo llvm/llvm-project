@@ -3,10 +3,10 @@ add_clang_library(CIROpenACCSupport
   RegisterOpenACCExtensions.cpp
 
   DEPENDS
-  MLIRCIRTypeConstraintsIncGen
+  AIIRCIRTypeConstraintsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRCIR
-  MLIROpenACCDialect
+  AIIRIR
+  AIIRCIR
+  AIIROpenACCDialect
   )

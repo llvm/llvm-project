@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -mmlir -mlir-print-ir-before=cir-canonicalize -Wno-unused-value -Wno-constant-conversion -Wno-literal-conversion -fclangir -emit-cir %s -o %t.cir 2> %t-before.cir
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -maiir -aiir-print-ir-before=cir-canonicalize -Wno-unused-value -Wno-constant-conversion -Wno-literal-conversion -fclangir -emit-cir %s -o %t.cir 2> %t-before.cir
 // Note: The "before" check intentionally uses the same CIR check prefixes to
 //       verify that the IR is folded during code generation and not during
 //       canonicalization. In a few cases, it is necessary to match an unused

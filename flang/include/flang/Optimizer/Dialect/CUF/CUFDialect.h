@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_OPTIMIZER_DIALECT_CUF_CUFDIALECT_H
 #define FORTRAN_OPTIMIZER_DIALECT_CUF_CUFDIALECT_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/SymbolTable.h"
-#include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "aiir/Bytecode/BytecodeOpInterface.h"
+#include "aiir/IR/Dialect.h"
+#include "aiir/IR/SymbolTable.h"
+#include "aiir/Interfaces/CallInterfaces.h"
+#include "aiir/Interfaces/FunctionInterfaces.h"
+#include "aiir/Interfaces/LoopLikeInterface.h"
+#include "aiir/Interfaces/SideEffectInterfaces.h"
 
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h.inc"
 

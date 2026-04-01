@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 //
@@ -339,7 +339,7 @@ struct Evaluation : EvaluationVariant {
   // is indicated by the isUnstructured member flag, which may be set on a
   // statement and propagated to enclosing constructs. This distinction allows
   // a structured IF or DO statement to be materialized with custom structured
-  // FIR operations. An unstructured statement is materialized as mlir
+  // FIR operations. An unstructured statement is materialized as aiir
   // operation sequences that include explicit branches.
   //
   // The block member is set for statements that begin a new block. This
@@ -370,7 +370,7 @@ struct Evaluation : EvaluationVariant {
   bool isUnstructured{false};  // evaluation has unstructured control flow
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
   bool activeConstruct{false}; // temporarily set for some constructs
-  mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
+  aiir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };
 
@@ -735,7 +735,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   bool mayModifyRoundingMode{false};
   bool mayModifyUnderflowMode{false};
   /// Terminal basic block (if any)
-  mlir::Block *finalBlock{};
+  aiir::Block *finalBlock{};
   HostAssociations hostAssociations;
   /// Preserved USE statements for debug info generation
   std::list<Fortran::semantics::PreservedUseStmt> preservedUseStmts;

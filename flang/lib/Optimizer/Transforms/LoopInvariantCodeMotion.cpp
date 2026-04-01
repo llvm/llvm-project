@@ -18,8 +18,8 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 
@@ -37,7 +37,7 @@ static llvm::cl::opt<bool> disableFlangLICM(
 
 namespace {
 
-using namespace mlir;
+using namespace aiir;
 
 /// The pass tries to hoist loop invariant operations with only
 /// MemoryEffects::Read effects (MemoryEffects::Write support
@@ -118,7 +118,7 @@ static bool isNonOptionalScalar(Value location) {
         return false;
       }
 
-      // In case of MLIR inlining and ASSOCIATE an [hl]fir.declare
+      // In case of AIIR inlining and ASSOCIATE an [hl]fir.declare
       // may declare a scalar variable that is actually a "view"
       // of an array element. Originally, such [hl]fir.declare
       // would be located inside the loop preventing the hoisting.

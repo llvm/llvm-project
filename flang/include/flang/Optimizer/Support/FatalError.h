@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_FATALERROR_H
 #define FORTRAN_OPTIMIZER_SUPPORT_FATALERROR_H
 
-#include "mlir/IR/Diagnostics.h"
+#include "aiir/IR/Diagnostics.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace fir {
@@ -22,10 +22,10 @@ namespace fir {
 /// and immediately interrupt flang. If `genCrashDiag` is true, then
 /// the execution is aborted and the backtrace is printed, otherwise,
 /// flang exits with non-zero exit code and without backtrace printout.
-[[noreturn]] inline void emitFatalError(mlir::Location loc,
+[[noreturn]] inline void emitFatalError(aiir::Location loc,
                                         const llvm::Twine &message,
                                         bool genCrashDiag = true) {
-  mlir::emitError(loc, message);
+  aiir::emitError(loc, message);
   llvm::report_fatal_error("aborting", genCrashDiag);
 }
 

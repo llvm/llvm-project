@@ -14,8 +14,8 @@
 #define FIR_DIALECT_FIR_ATTRS
 
 include "flang/Optimizer/Dialect/FIRDialect.td"
-include "mlir/Dialect/OpenACC/OpenACCAttributes.td"
-include "mlir/IR/EnumAttr.td"
+include "aiir/Dialect/OpenACC/OpenACCAttributes.td"
+include "aiir/IR/EnumAttr.td"
 
 class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
 
@@ -136,7 +136,7 @@ def fir_ReduceAttr : fir_Attr<"Reduce"> {
   let assemblyFormat = "`<` $reduce_operation `>`";
 }
 
-// mlir::SideEffects::Resource for modelling operations which add debugging information
+// aiir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
 
 def fir_LowerBoundModifierAttribute : I32EnumAttr<
@@ -257,8 +257,8 @@ def fir_UseRenameAttr : fir_Attr<"UseRename"> {
     local name and a symbol reference to the module variable.
   }];
 
-  let parameters = (ins "mlir::StringAttr":$local_name,
-      "mlir::FlatSymbolRefAttr":$symbol);
+  let parameters = (ins "aiir::StringAttr":$local_name,
+      "aiir::FlatSymbolRefAttr":$symbol);
 
   let assemblyFormat = "`<` $local_name `,` $symbol `>`";
 }
@@ -269,7 +269,7 @@ def fir_UseRenameAttr : fir_Attr<"UseRename"> {
 def fir_OpenACCFortranVariableInfoAttr
     : AttrDef<FIROpsDialect, "OpenACCFortranVariableInfo",
               [OpenACC_IsVariableInfoAttr],
-              "::mlir::acc::VariableInfoAttr"> {
+              "::aiir::acc::VariableInfoAttr"> {
   let mnemonic = "acc_var_info";
   let parameters = (ins "bool":$mayBeOptional);
   let assemblyFormat = "`<` struct(params) `>`";

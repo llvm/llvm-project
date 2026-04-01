@@ -601,7 +601,7 @@ its enabled sub-projects. Nearly all of these variable names begin with
 
   The full list is:
 
-  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly``
+  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;aiir;openmp;polly``
 
   .. note::
     Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They

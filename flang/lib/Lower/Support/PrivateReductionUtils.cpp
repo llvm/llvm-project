@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,8 +28,8 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/symbol.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/Location.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/Location.h"
 #include "llvm/Support/CommandLine.h"
 
 static llvm::cl::opt<bool> enableGPUHeapAlloc(
@@ -48,13 +48,13 @@ static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
 }
 
 static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
-                                mlir::Location loc, mlir::Type argType,
-                                mlir::Region &cleanupRegion,
+                                aiir::Location loc, aiir::Type argType,
+                                aiir::Region &cleanupRegion,
                                 const Fortran::semantics::Symbol *sym,
                                 bool isDoConcurrent) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   assert(cleanupRegion.empty());
-  mlir::Block *block = builder.createBlock(&cleanupRegion, cleanupRegion.end(),
+  aiir::Block *block = builder.createBlock(&cleanupRegion, cleanupRegion.end(),
                                            {argType}, {loc});
   builder.setInsertionPointToEnd(block);
 
@@ -65,17 +65,17 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
                         /*genCrashDiag=*/true);
   };
 
-  mlir::Type valTy = fir::unwrapRefType(argType);
+  aiir::Type valTy = fir::unwrapRefType(argType);
   const bool argIsVolatile = fir::isa_volatile_type(argType);
-  if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
+  if (auto boxTy = aiir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
     // TODO: what about undoing init of unboxed derived types?
-    if (auto recTy = mlir::dyn_cast<fir::RecordType>(
+    if (auto recTy = aiir::dyn_cast<fir::RecordType>(
             fir::unwrapSequenceType(fir::dyn_cast_ptrOrBoxEleTy(boxTy)))) {
-      mlir::Type eleTy = boxTy.getEleTy();
-      if (mlir::isa<fir::PointerType, fir::HeapType>(eleTy)) {
-        mlir::Type mutableBoxTy =
+      aiir::Type eleTy = boxTy.getEleTy();
+      if (aiir::isa<fir::PointerType, fir::HeapType>(eleTy)) {
+        aiir::Type mutableBoxTy =
             fir::ReferenceType::get(fir::BoxType::get(eleTy), argIsVolatile);
-        mlir::Value converted =
+        aiir::Value converted =
             builder.createConvert(loc, mutableBoxTy, block->getArgument(0));
         if (recTy.getNumLenParams() > 0)
           TODO(loc, "Deallocate box with length parameters");
@@ -85,7 +85,7 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
         if (isDoConcurrent)
           fir::YieldOp::create(builder, loc);
         else
-          mlir::omp::YieldOp::create(builder, loc);
+          aiir::omp::YieldOp::create(builder, loc);
         return;
       }
     }
@@ -94,23 +94,23 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     // Fortran::lower::genDeallocateIfAllocated (not done now to avoid test
     // churn)
 
-    mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
-    assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
+    aiir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
+    assert(aiir::isa<fir::BaseBoxType>(arg.getType()));
 
     // Extract address from the box for deallocation.
     // The FIR type system doesn't necessarily know that this is a mutable
     // box if we allocated the thread local array on the heap to avoid looped
     // stack allocations.
-    mlir::Value addr =
+    aiir::Value addr =
         hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
 
     // Deallocate if allocated
-    mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
+    aiir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
     fir::IfOp ifOp =
         fir::IfOp::create(builder, loc, isAllocated, /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
-    mlir::Value cast = builder.createConvert(
+    aiir::Value cast = builder.createConvert(
         loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())), addr);
     fir::FreeMemOp::create(builder, loc, cast);
 
@@ -128,7 +128,7 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     if (isDoConcurrent)
       fir::YieldOp::create(builder, loc);
     else
-      mlir::omp::YieldOp::create(builder, loc);
+      aiir::omp::YieldOp::create(builder, loc);
     return;
   }
 
@@ -136,13 +136,13 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
   // Note: This is distinct from !fir.box<!fir.char<>> which is handled above.
   // BoxChar is a special tuple type (addr, len) used when character length
   // is only known at runtime.
-  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
+  if (auto boxCharTy = aiir::dyn_cast<fir::BoxCharType>(argType)) {
     auto [addr, len] =
         fir::factory::CharacterExprHelper{builder, loc}.createUnboxChar(
             block->getArgument(0));
 
     // convert addr to a heap type so it can be used with fir::FreeMemOp
-    auto refTy = mlir::cast<fir::ReferenceType>(addr.getType());
+    auto refTy = aiir::cast<fir::ReferenceType>(addr.getType());
     auto heapTy = fir::HeapType::get(refTy.getEleTy());
     addr = builder.createConvert(loc, heapTy, addr);
 
@@ -150,7 +150,7 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     if (isDoConcurrent)
       fir::YieldOp::create(builder, loc);
     else
-      mlir::omp::YieldOp::create(builder, loc);
+      aiir::omp::YieldOp::create(builder, loc);
 
     return;
   }
@@ -159,17 +159,17 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
 }
 
 fir::ShapeShiftOp Fortran::lower::getShapeShift(
-    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box,
+    fir::FirOpBuilder &builder, aiir::Location loc, aiir::Value box,
     bool cannotHaveNonDefaultLowerBounds, bool useDefaultLowerBounds) {
-  fir::SequenceType sequenceType = mlir::cast<fir::SequenceType>(
+  fir::SequenceType sequenceType = aiir::cast<fir::SequenceType>(
       hlfir::getFortranElementOrSequenceType(box.getType()));
   const unsigned rank = sequenceType.getDimension();
 
-  llvm::SmallVector<mlir::Value> lbAndExtents;
+  llvm::SmallVector<aiir::Value> lbAndExtents;
   lbAndExtents.reserve(rank * 2);
-  mlir::Type idxTy = builder.getIndexType();
+  aiir::Type idxTy = builder.getIndexType();
 
-  mlir::Value oneVal;
+  aiir::Value oneVal;
   auto one = [&] {
     if (!oneVal)
       oneVal = builder.createIntegerConstant(loc, idxTy, 1);
@@ -186,7 +186,7 @@ fir::ShapeShiftOp Fortran::lower::getShapeShift(
     for (int64_t extent : sequenceType.getShape()) {
       assert(extent != sequenceType.getUnknownExtent());
       lbAndExtents.push_back(one());
-      mlir::Value extentVal = builder.createIntegerConstant(loc, idxTy, extent);
+      aiir::Value extentVal = builder.createIntegerConstant(loc, idxTy, extent);
       lbAndExtents.push_back(extentVal);
     }
   } else {
@@ -194,7 +194,7 @@ fir::ShapeShiftOp Fortran::lower::getShapeShift(
       // TODO: ideally we want to hoist box reads out of the critical section.
       // We could do this by having box dimensions in block arguments like
       // OpenACC does
-      mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
+      aiir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
       auto dimInfo =
           fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box, dim);
       lbAndExtents.push_back(useDefaultLowerBounds ? one()
@@ -217,19 +217,19 @@ fir::ShapeShiftOp Fortran::lower::getShapeShift(
 // fir.class<...<!fir.type<>>>
 // If the type doesn't match , this does nothing
 static void initializeIfDerivedTypeBox(fir::FirOpBuilder &builder,
-                                       mlir::Location loc, mlir::Value newBox,
-                                       mlir::Value moldBox, bool hasInitializer,
+                                       aiir::Location loc, aiir::Value newBox,
+                                       aiir::Value moldBox, bool hasInitializer,
                                        bool isFirstPrivate) {
   assert(moldBox.getType() == newBox.getType());
-  fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(newBox.getType());
-  fir::ClassType classTy = mlir::dyn_cast<fir::ClassType>(newBox.getType());
+  fir::BoxType boxTy = aiir::dyn_cast<fir::BoxType>(newBox.getType());
+  fir::ClassType classTy = aiir::dyn_cast<fir::ClassType>(newBox.getType());
   if (!boxTy && !classTy)
     return;
 
   // remove pointer and array types in the middle
-  mlir::Type eleTy = boxTy ? boxTy.getElementType() : classTy.getEleTy();
-  mlir::Type derivedTy = fir::unwrapRefType(eleTy);
-  if (auto array = mlir::dyn_cast<fir::SequenceType>(derivedTy))
+  aiir::Type eleTy = boxTy ? boxTy.getElementType() : classTy.getEleTy();
+  aiir::Type derivedTy = fir::unwrapRefType(eleTy);
+  if (auto array = aiir::dyn_cast<fir::SequenceType>(derivedTy))
     derivedTy = array.getElementType();
 
   if (!fir::isa_derived(derivedTy))
@@ -242,9 +242,9 @@ static void initializeIfDerivedTypeBox(fir::FirOpBuilder &builder,
     fir::runtime::genDerivedTypeInitializeClone(builder, loc, newBox, moldBox);
 }
 
-static void getLengthParameters(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value moldArg,
-                                llvm::SmallVectorImpl<mlir::Value> &lenParams) {
+static void getLengthParameters(fir::FirOpBuilder &builder, aiir::Location loc,
+                                aiir::Value moldArg,
+                                llvm::SmallVectorImpl<aiir::Value> &lenParams) {
   // We pass derived types unboxed and so are not self-contained entities.
   // Assume that unboxed derived types won't need length paramters.
   if (!hlfir::isFortranEntity(moldArg))
@@ -257,7 +257,7 @@ static void getLengthParameters(fir::FirOpBuilder &builder, mlir::Location loc,
   // The verifier for EmboxOp doesn't allow length parameters when the the
   // character already has static LEN. genLengthParameters may still return them
   // in this case.
-  auto strTy = mlir::dyn_cast<fir::CharacterType>(
+  auto strTy = aiir::dyn_cast<fir::CharacterType>(
       fir::getFortranElementType(moldArg.getType()));
 
   if (strTy && strTy.hasConstantLen())
@@ -278,22 +278,22 @@ isDerivedTypeNeedingInitialization(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
-static mlir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
-                                            mlir::Location loc,
-                                            mlir::Value moldArg) {
-  mlir::Type moldType = fir::unwrapRefType(moldArg.getType());
-  mlir::Type eleType = fir::dyn_cast_ptrOrBoxEleTy(moldType);
+static aiir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
+                                            aiir::Location loc,
+                                            aiir::Value moldArg) {
+  aiir::Type moldType = fir::unwrapRefType(moldArg.getType());
+  aiir::Type eleType = fir::dyn_cast_ptrOrBoxEleTy(moldType);
   fir::SequenceType seqTy =
-      mlir::dyn_cast_if_present<fir::SequenceType>(eleType);
+      aiir::dyn_cast_if_present<fir::SequenceType>(eleType);
   if (!seqTy)
-    return mlir::Value{};
+    return aiir::Value{};
 
   unsigned rank = seqTy.getShape().size();
-  mlir::Value zero =
+  aiir::Value zero =
       builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-  mlir::SmallVector<mlir::Value> dims;
+  aiir::SmallVector<aiir::Value> dims;
   dims.resize(rank, zero);
-  mlir::Type shapeTy = fir::ShapeType::get(builder.getContext(), rank);
+  aiir::Type shapeTy = fir::ShapeType::get(builder.getContext(), rank);
   return fir::ShapeOp::create(builder, loc, shapeTy, dims);
 }
 
@@ -304,10 +304,10 @@ using namespace Fortran::lower;
 class PopulateInitAndCleanupRegionsHelper {
 public:
   PopulateInitAndCleanupRegionsHelper(
-      Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-      mlir::Type argType, mlir::Value scalarInitValue,
-      mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
-      mlir::Block *initBlock, mlir::Region &cleanupRegion,
+      Fortran::lower::AbstractConverter &converter, aiir::Location loc,
+      aiir::Type argType, aiir::Value scalarInitValue,
+      aiir::Value allocatedPrivVarArg, aiir::Value moldArg,
+      aiir::Block *initBlock, aiir::Region &cleanupRegion,
       DeclOperationKind kind, const Fortran::semantics::Symbol *sym,
       bool cannotHaveLowerBounds, bool isDoConcurrent)
       : converter{converter}, builder{converter.getFirOpBuilder()}, loc{loc},
@@ -325,13 +325,13 @@ private:
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &builder;
 
-  mlir::Location loc;
+  aiir::Location loc;
 
   /// The type of the block arguments passed into the init and cleanup regions
-  mlir::Type argType;
+  aiir::Type argType;
 
   /// argType stripped of any references
-  mlir::Type valType;
+  aiir::Type valType;
 
   /// sclarInitValue:      The value scalars should be initialized to (only
   ///                      valid for reductions).
@@ -340,13 +340,13 @@ private:
   /// moldArg:             The original variable.
   /// loadedMoldArg:       The original variable, loaded. Access via
   ///                      getLoadedMoldArg().
-  mlir::Value scalarInitValue, allocatedPrivVarArg, moldArg, loadedMoldArg;
+  aiir::Value scalarInitValue, allocatedPrivVarArg, moldArg, loadedMoldArg;
 
   /// The first block in the init region.
-  mlir::Block *initBlock;
+  aiir::Block *initBlock;
 
   /// The region to insert clanup code into.
-  mlir::Region &cleanupRegion;
+  aiir::Region &cleanupRegion;
 
   /// The kind of operation we are generating init/cleanup regions for.
   DeclOperationKind kind;
@@ -355,7 +355,7 @@ private:
   const Fortran::semantics::Symbol *sym;
 
   /// Any length parameters which have been fetched for the type
-  mlir::SmallVector<mlir::Value> lenParams;
+  aiir::SmallVector<aiir::Value> lenParams;
 
   /// If the source variable being privatized definitely can't have non-default
   /// lower bounds then we don't need to generate code to read them.
@@ -363,11 +363,11 @@ private:
 
   bool isDoConcurrent;
 
-  void createYield(mlir::Value ret) {
+  void createYield(aiir::Value ret) {
     if (isDoConcurrent)
       fir::YieldOp::create(builder, loc, ret);
     else
-      mlir::omp::YieldOp::create(builder, loc, ret);
+      aiir::omp::YieldOp::create(builder, loc, ret);
   }
 
   void initTrivialType() {
@@ -394,7 +394,7 @@ private:
   fir::IfOp handleNullAllocatable();
 
   // Do this lazily so that we don't load it when it is not used.
-  inline mlir::Value getLoadedMoldArg() {
+  inline aiir::Value getLoadedMoldArg() {
     if (loadedMoldArg)
       return loadedMoldArg;
     loadedMoldArg = builder.loadIfRef(loc, moldArg);
@@ -414,12 +414,12 @@ void PopulateInitAndCleanupRegionsHelper::initBoxedPrivatePointer(
   // we need a shape with the right rank so that the embox op is lowered
   // to an llvm struct of the right type. This returns nullptr if the types
   // aren't right.
-  mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
+  aiir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
   // Just incase, do initialize the box with a null value
-  mlir::Value null = builder.createNullConstant(loc, boxTy.getEleTy());
-  mlir::Value nullBox;
+  aiir::Value null = builder.createNullConstant(loc, boxTy.getEleTy());
+  aiir::Value nullBox;
   nullBox = fir::EmboxOp::create(builder, loc, boxTy, null, shape,
-                                 /*slice=*/mlir::Value{}, lenParams);
+                                 /*slice=*/aiir::Value{}, lenParams);
   fir::StoreOp::create(builder, loc, nullBox, allocatedPrivVarArg);
   createYield(allocatedPrivVarArg);
 }
@@ -436,18 +436,18 @@ void PopulateInitAndCleanupRegionsHelper::initBoxedPrivatePointer(
 /// }
 /// omp.yield %box_alloca
 fir::IfOp PopulateInitAndCleanupRegionsHelper::handleNullAllocatable() {
-  mlir::Value addr = fir::BoxAddrOp::create(builder, loc, getLoadedMoldArg());
-  mlir::Value isNotAllocated = builder.genIsNullAddr(loc, addr);
+  aiir::Value addr = fir::BoxAddrOp::create(builder, loc, getLoadedMoldArg());
+  aiir::Value isNotAllocated = builder.genIsNullAddr(loc, addr);
   fir::IfOp ifOp = fir::IfOp::create(builder, loc, isNotAllocated,
                                      /*withElseRegion=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   // Just embox the null address and return.
   // We have to give the embox a shape so that the LLVM box structure has the
   // right rank. This returns an empty value if the types don't match.
-  mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
+  aiir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
 
   auto nullBox = fir::EmboxOp::create(builder, loc, valType, addr, shape,
-                                      /*slice=*/mlir::Value{}, lenParams);
+                                      /*slice=*/aiir::Value{}, lenParams);
   if (sym) {
     unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
     if (idx != kDefaultAllocator)
@@ -460,8 +460,8 @@ fir::IfOp PopulateInitAndCleanupRegionsHelper::handleNullAllocatable() {
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
     fir::BaseBoxType boxTy, bool needsInitialization) {
   bool isAllocatableOrPointer =
-      mlir::isa<fir::HeapType, fir::PointerType>(boxTy.getEleTy());
-  mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
+      aiir::isa<fir::HeapType, fir::PointerType>(boxTy.getEleTy());
+  aiir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
   fir::IfOp ifUnallocated{nullptr};
   if (isAllocatableOrPointer) {
     ifUnallocated = handleNullAllocatable();
@@ -469,7 +469,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
   }
 
   bool shouldAllocateOnStack = shouldAllocateTempOnStack(boxTy);
-  mlir::Value valAlloc =
+  aiir::Value valAlloc =
       (shouldAllocateOnStack)
           ? builder.createTemporary(loc, innerTy, /*name=*/{},
                                     /*shape=*/{}, lenParams)
@@ -478,9 +478,9 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
 
   if (scalarInitValue)
     builder.createStoreWithConvert(loc, scalarInitValue, valAlloc);
-  mlir::Value box = fir::EmboxOp::create(builder, loc, valType, valAlloc,
-                                         /*shape=*/mlir::Value{},
-                                         /*slice=*/mlir::Value{}, lenParams);
+  aiir::Value box = fir::EmboxOp::create(builder, loc, valType, valAlloc,
+                                         /*shape=*/aiir::Value{},
+                                         /*slice=*/aiir::Value{}, lenParams);
   initializeIfDerivedTypeBox(
       builder, loc, box, getLoadedMoldArg(), needsInitialization,
       /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivateOrLocalInit);
@@ -502,13 +502,13 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
 bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack(
     fir::BaseBoxType boxTy) const {
   auto offloadMod =
-      llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(*builder.getModule());
+      llvm::dyn_cast<aiir::omp::OffloadModuleInterface>(*builder.getModule());
   // On the GPU, always allocate on the stack unless the user explicitly
   // specifies otherwise since heap allocatins are very expensive.
   bool isGPU = offloadMod && offloadMod.getIsGPU();
   if (isGPU && enableGPUHeapAlloc) {
     // Check if it is adjustable array
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy())) {
+    if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(boxTy.getEleTy())) {
       if (seqTy.hasUnknownShape() || seqTy.hasDynamicExtents()) {
         return false;
       }
@@ -520,7 +520,7 @@ bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack(
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     fir::BaseBoxType boxTy, bool needsInitialization) {
   bool isAllocatableOrPointer =
-      mlir::isa<fir::HeapType, fir::PointerType>(boxTy.getEleTy());
+      aiir::isa<fir::HeapType, fir::PointerType>(boxTy.getEleTy());
   getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);
 
   fir::IfOp ifUnallocated{nullptr};
@@ -537,11 +537,11 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   if (source.isPolymorphic()) {
     fir::ShapeShiftOp shape =
         getShapeShift(builder, loc, source, cannotHaveNonDefaultLowerBounds);
-    mlir::Type arrayType = source.getElementOrSequenceType();
-    mlir::Value allocatedArray = fir::AllocMemOp::create(
-        builder, loc, arrayType, /*typeparams=*/mlir::ValueRange{},
+    aiir::Type arrayType = source.getElementOrSequenceType();
+    aiir::Value allocatedArray = fir::AllocMemOp::create(
+        builder, loc, arrayType, /*typeparams=*/aiir::ValueRange{},
         shape.getExtents());
-    mlir::Value firClass = fir::EmboxOp::create(builder, loc, source.getType(),
+    aiir::Value firClass = fir::EmboxOp::create(builder, loc, source.getType(),
                                                 allocatedArray, shape);
     initializeIfDerivedTypeBox(
         builder, loc, firClass, source, needsInitialization,
@@ -550,7 +550,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     if (ifUnallocated)
       builder.setInsertionPointAfter(ifUnallocated);
     createYield(allocatedPrivVarArg);
-    mlir::OpBuilder::InsertionGuard guard(builder);
+    aiir::OpBuilder::InsertionGuard guard(builder);
     createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
                         isDoConcurrent);
     return;
@@ -567,7 +567,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     // do this for allocatable boxes because they might have been re-allocated
     // in the body of the loop/parallel region
     if (needsDealloc) {
-      mlir::OpBuilder::InsertionGuard guard(builder);
+      aiir::OpBuilder::InsertionGuard guard(builder);
       createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
                           isDoConcurrent);
     } else {
@@ -579,19 +579,19 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
 
   // Put the temporary inside of a box:
   // hlfir::genVariableBox doesn't handle non-default lower bounds
-  mlir::Value box;
+  aiir::Value box;
   fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, getLoadedMoldArg(),
                                                cannotHaveNonDefaultLowerBounds);
-  mlir::Type boxType = getLoadedMoldArg().getType();
-  if (mlir::isa<fir::BaseBoxType>(temp.getType()))
+  aiir::Type boxType = getLoadedMoldArg().getType();
+  if (aiir::isa<fir::BaseBoxType>(temp.getType()))
     // the box created by the declare form createTempFromMold is missing
     // lower bounds info
     box = fir::ReboxOp::create(builder, loc, boxType, temp, shapeShift,
-                               /*shift=*/mlir::Value{});
+                               /*shift=*/aiir::Value{});
   else
     box = fir::EmboxOp::create(builder, loc, boxType, temp, shapeShift,
-                               /*slice=*/mlir::Value{},
-                               /*typeParams=*/llvm::ArrayRef<mlir::Value>{});
+                               /*slice=*/aiir::Value{},
+                               /*typeParams=*/llvm::ArrayRef<aiir::Value>{});
 
   if (scalarInitValue)
     hlfir::AssignOp::create(builder, loc, scalarInitValue, box);
@@ -608,7 +608,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
 
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxchar(
     fir::BoxCharType boxCharTy) {
-  mlir::Type eleTy = boxCharTy.getEleTy();
+  aiir::Type eleTy = boxCharTy.getEleTy();
   builder.setInsertionPointToStart(initBlock);
   fir::factory::CharacterExprHelper charExprHelper{builder, loc};
   auto [addr, len] = charExprHelper.createUnboxChar(moldArg);
@@ -622,9 +622,9 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxchar(
   // parameters fetched above.
   // TODO: this deviates from the intended design for delayed task
   // execution.
-  mlir::Value privateAddr = builder.createHeapTemporary(
+  aiir::Value privateAddr = builder.createHeapTemporary(
       loc, eleTy, /*name=*/{}, /*shape=*/{}, /*lenParams=*/len);
-  mlir::Value boxChar = charExprHelper.createEmboxChar(privateAddr, len);
+  aiir::Value boxChar = charExprHelper.createEmboxChar(privateAddr, len);
 
   createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
                       isDoConcurrent);
@@ -636,10 +636,10 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxchar(
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupUnboxedDerivedType(
     bool needsInitialization) {
   builder.setInsertionPointToStart(initBlock);
-  mlir::Type boxedTy = fir::BoxType::get(valType);
-  mlir::Value newBox =
+  aiir::Type boxedTy = fir::BoxType::get(valType);
+  aiir::Value newBox =
       fir::EmboxOp::create(builder, loc, boxedTy, allocatedPrivVarArg);
-  mlir::Value moldBox = fir::EmboxOp::create(builder, loc, boxedTy, moldArg);
+  aiir::Value moldBox = fir::EmboxOp::create(builder, loc, boxedTy, moldArg);
   initializeIfDerivedTypeBox(builder, loc, newBox, moldBox, needsInitialization,
                              /*isFirstPrivate=*/kind ==
                                  DeclOperationKind::FirstPrivateOrLocalInit);
@@ -662,7 +662,7 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
   // Boxed types (like allocatable characters) may not be valid entities yet.
   if (hlfir::isFortranEntity(moldArg) && hlfir::Entity{moldArg}.isAssumedRank())
     TODO(loc, "Privatization of assumed rank variable");
-  mlir::Type valTy = fir::unwrapRefType(argType);
+  aiir::Type valTy = fir::unwrapRefType(argType);
 
   if (fir::isa_trivial(valTy)) {
     initTrivialType();
@@ -672,12 +672,12 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
   bool needsInitialization =
       sym ? isDerivedTypeNeedingInitialization(sym->GetUltimate()) : false;
 
-  if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
+  if (auto boxTy = aiir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
     builder.setInsertionPointToEnd(initBlock);
 
     // For CUDA device allocatables, allocate the descriptor in managed
     // memory so that CUF kernels can access it from the GPU.
-    if (sym && mlir::isa<fir::HeapType>(boxTy.getEleTy())) {
+    if (sym && aiir::isa<fir::HeapType>(boxTy.getEleTy())) {
       unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
       if (idx != kDefaultAllocator) {
         cuf::DataAttributeAttr dataAttr =
@@ -687,8 +687,8 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
             cuf::AllocOp::create(builder, loc, valTy,
                                  /*uniq_name=*/llvm::StringRef{},
                                  /*bindc_name=*/llvm::StringRef{}, dataAttr,
-                                 /*typeparams=*/mlir::ValueRange{},
-                                 /*shape=*/mlir::ValueRange{})
+                                 /*typeparams=*/aiir::ValueRange{},
+                                 /*shape=*/aiir::ValueRange{})
                 .getResult();
       }
     }
@@ -697,12 +697,12 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);
 
     if (isPrivatization(kind) &&
-        mlir::isa<fir::PointerType>(boxTy.getEleTy())) {
+        aiir::isa<fir::PointerType>(boxTy.getEleTy())) {
       initBoxedPrivatePointer(boxTy);
       return;
     }
 
-    mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
+    aiir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     bool isDerived = fir::isa_derived(innerTy);
     bool isChar = fir::isa_char(innerTy);
     if (fir::isa_trivial(innerTy) || isDerived || isChar) {
@@ -716,14 +716,14 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     }
 
     innerTy = fir::extractSequenceType(boxTy);
-    if (!innerTy || !mlir::isa<fir::SequenceType>(innerTy))
+    if (!innerTy || !aiir::isa<fir::SequenceType>(innerTy))
       TODO(loc, "Unsupported boxed type for reduction/privatization");
     initAndCleanupBoxedArray(boxTy, needsInitialization);
     return;
   }
 
   // Unboxed types:
-  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(valTy)) {
+  if (auto boxCharTy = aiir::dyn_cast<fir::BoxCharType>(valTy)) {
     initAndCleanupBoxchar(boxCharTy);
     return;
   }
@@ -746,10 +746,10 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
 }
 
 void Fortran::lower::populateByRefInitAndCleanupRegions(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    mlir::Type argType, mlir::Value scalarInitValue, mlir::Block *initBlock,
-    mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
-    mlir::Region &cleanupRegion, DeclOperationKind kind,
+    Fortran::lower::AbstractConverter &converter, aiir::Location loc,
+    aiir::Type argType, aiir::Value scalarInitValue, aiir::Block *initBlock,
+    aiir::Value allocatedPrivVarArg, aiir::Value moldArg,
+    aiir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym, bool cannotHaveLowerBounds,
     bool isDoConcurrent) {
   PopulateInitAndCleanupRegionsHelper helper(
@@ -764,8 +764,8 @@ void Fortran::lower::populateByRefInitAndCleanupRegions(
   // force us to insert additional barriers and so should be avoided where
   // possible.
   if (moldArg.hasOneUse()) {
-    mlir::Operation *user = *moldArg.getUsers().begin();
-    if (auto load = mlir::dyn_cast<fir::LoadOp>(user))
+    aiir::Operation *user = *moldArg.getUsers().begin();
+    if (auto load = aiir::dyn_cast<fir::LoadOp>(user))
       if (load.use_empty())
         load.erase();
   }

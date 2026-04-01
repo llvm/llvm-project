@@ -1,6 +1,6 @@
 add_subdirectory(TargetLowering)
 
-add_clang_library(MLIRCIRTransforms
+add_clang_library(AIIRCIRTransforms
   CIRCanonicalize.cpp
   CIRSimplify.cpp
   CXXABILowering.cpp
@@ -13,18 +13,18 @@ add_clang_library(MLIRCIRTransforms
   IdiomRecognizer.cpp
 
   DEPENDS
-  MLIRCIRPassIncGen
+  AIIRCIRPassIncGen
 
   LINK_LIBS PUBLIC
   clangAST
   clangBasic
 
-  MLIRAnalysis
-  MLIRIR
-  MLIRPass
-  MLIRTransformUtils
+  AIIRAnalysis
+  AIIRIR
+  AIIRPass
+  AIIRTransformUtils
 
-  MLIRCIR
-  MLIRCIRInterfaces
-  MLIRCIRTargetLowering
+  AIIRCIR
+  AIIRCIRInterfaces
+  AIIRCIRTargetLowering
 )

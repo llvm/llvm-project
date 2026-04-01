@@ -28,10 +28,10 @@ func.func private @dump(!fir.box<!fir.array<2x!fir.char<1>>>)
 // CHECK-LABEL:   llvm.func @substring_dyn_base(
 // CHECK-SAME:                                  %[[VAL_0:.*]]: !llvm.ptr,
 // CHECK-SAME:                                  %[[VAL_1:.*]]: i64) {
-// CHECK:           %[[VAL_5:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:           llvm.mlir.constant(1 : i64) : i64
-// CHECK:           llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_30:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_5:.*]] = llvm.aiir.constant(1 : index) : i64
+// CHECK:           llvm.aiir.constant(1 : i64) : i64
+// CHECK:           llvm.aiir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_30:.*]] = llvm.aiir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_31:.*]] = llvm.mul %[[VAL_30]], %[[VAL_1]]  : i64
 // CHECK:           %[[VAL_42:.*]] = llvm.mul %[[VAL_31]], %[[VAL_5]]  : i64
 // CHECK:           %[[VAL_43:.*]] = llvm.insertvalue %[[VAL_42]], %{{.*}}[7, 0, 2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>

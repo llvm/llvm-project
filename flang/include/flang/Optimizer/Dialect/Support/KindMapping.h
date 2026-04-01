@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_KINDMAPPING_H
 #define FORTRAN_OPTIMIZER_SUPPORT_KINDMAPPING_H
 
-#include "mlir/IR/OpDefinition.h"
+#include "aiir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Type.h"
 
@@ -50,24 +50,24 @@ public:
   using KindTy = unsigned;
   using Bitsize = unsigned;
   using LLVMTypeID = llvm::Type::TypeID;
-  using MatchResult = mlir::ParseResult;
+  using MatchResult = aiir::ParseResult;
 
   /// KindMapping constructor with both the kind map and default kinds read from
   /// command-line options.
-  explicit KindMapping(mlir::MLIRContext *context);
+  explicit KindMapping(aiir::AIIRContext *context);
   /// KindMapping constructor taking a `defs` argument to specify the default
   /// kinds for intrinsic types. To set the default kinds, an ArrayRef of 6
   /// KindTy must be passed. The kinds must be the given in the following order:
   /// CHARACTER, COMPLEX, DOUBLE PRECISION, INTEGER, LOGICAL, and REAL.  The
   /// kind map is read from command-line options, if given.
-  explicit KindMapping(mlir::MLIRContext *context, llvm::ArrayRef<KindTy> defs);
+  explicit KindMapping(aiir::AIIRContext *context, llvm::ArrayRef<KindTy> defs);
   /// KindMapping constructor taking an optional `defs` argument to specify the
   /// default kinds for intrinsic types. To set the default kinds, an ArrayRef
   /// of 6 KindTy must be passed. The kinds must be the given in the following
   /// order: CHARACTER, COMPLEX, DOUBLE PRECISION, INTEGER, LOGICAL, and REAL.
-  explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
+  explicit KindMapping(aiir::AIIRContext *context, llvm::StringRef map,
                        llvm::ArrayRef<KindTy> defs = {});
-  explicit KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
+  explicit KindMapping(aiir::AIIRContext *context, llvm::StringRef map,
                        llvm::StringRef defs)
       : KindMapping{context, map, toDefaultKinds(defs)} {}
 
@@ -89,7 +89,7 @@ public:
   /// Get the LLVM Type::TypeID of !fir.complex<kind>
   LLVMTypeID getComplexTypeID(KindTy kind) const;
 
-  mlir::MLIRContext *getContext() const { return context; }
+  aiir::AIIRContext *getContext() const { return context; }
 
   /// Get the float semantics of !fir.real<kind>
   const llvm::fltSemantics &getFloatSemantics(KindTy kind) const;
@@ -126,7 +126,7 @@ private:
   MatchResult parse(llvm::StringRef kindMap);
   llvm::LogicalResult setDefaultKinds(llvm::ArrayRef<KindTy> defs);
 
-  mlir::MLIRContext *context;
+  aiir::AIIRContext *context;
   llvm::DenseMap<std::pair<char, KindTy>, Bitsize> intMap;
   llvm::DenseMap<std::pair<char, KindTy>, LLVMTypeID> floatMap;
   llvm::DenseMap<char, KindTy> defaultMap;

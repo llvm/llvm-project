@@ -40,8 +40,8 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 #include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace fir {
 #define GEN_PASS_DEF_LOWERREPACKARRAYSPASS
@@ -51,13 +51,13 @@ namespace fir {
 #define DEBUG_TYPE "lower-repack-arrays"
 
 namespace {
-class PackArrayConversion : public mlir::OpRewritePattern<fir::PackArrayOp> {
+class PackArrayConversion : public aiir::OpRewritePattern<fir::PackArrayOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(fir::PackArrayOp op,
-                  mlir::PatternRewriter &rewriter) const override;
+                  aiir::PatternRewriter &rewriter) const override;
 
 private:
   static constexpr llvm::StringRef bufferName = ".repacked";
@@ -67,29 +67,29 @@ private:
   // type parameters. The new box has the same shape as the original
   // array. If useStack is true, then the temporary will be allocated
   // in stack memory (when possible).
-  static mlir::Value allocateTempBuffer(fir::FirOpBuilder &builder,
-                                        mlir::Location loc, bool useStack,
-                                        mlir::Value origBox,
-                                        llvm::ArrayRef<mlir::Value> lbounds,
-                                        llvm::ArrayRef<mlir::Value> extents,
-                                        llvm::ArrayRef<mlir::Value> typeParams);
+  static aiir::Value allocateTempBuffer(fir::FirOpBuilder &builder,
+                                        aiir::Location loc, bool useStack,
+                                        aiir::Value origBox,
+                                        llvm::ArrayRef<aiir::Value> lbounds,
+                                        llvm::ArrayRef<aiir::Value> extents,
+                                        llvm::ArrayRef<aiir::Value> typeParams);
 
   // Generate value of fir::BaseBoxType that represents the result
   // of the given fir.pack_array operation. The original box
   // is assumed to be present (though, it may represent an empty array).
-  static mlir::FailureOr<mlir::Value> genRepackedBox(fir::FirOpBuilder &builder,
-                                                     mlir::Location loc,
+  static aiir::FailureOr<aiir::Value> genRepackedBox(fir::FirOpBuilder &builder,
+                                                     aiir::Location loc,
                                                      fir::PackArrayOp packOp);
 };
 
 class UnpackArrayConversion
-    : public mlir::OpRewritePattern<fir::UnpackArrayOp> {
+    : public aiir::OpRewritePattern<fir::UnpackArrayOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult
+  aiir::LogicalResult
   matchAndRewrite(fir::UnpackArrayOp op,
-                  mlir::PatternRewriter &rewriter) const override;
+                  aiir::PatternRewriter &rewriter) const override;
 };
 } // anonymous namespace
 
@@ -106,7 +106,7 @@ public:
 // Adding the polymorpic mold to fir.alloca and then using
 // Fortran runtime to compute the allocation size could probably
 // resolve this limitation.
-static bool canAllocateTempOnStack(mlir::Value box) {
+static bool canAllocateTempOnStack(aiir::Value box) {
   return !fir::isPolymorphicType(box.getType());
 }
 
@@ -121,7 +121,7 @@ static bool repackIsSafe(OP op) {
     // We currently support only the attributes for which
     // isDynamicallySafe() returns false.
     for (auto attr : *isSafeAttrs) {
-      auto iface = mlir::cast<fir::SafeTempArrayCopyAttrInterface>(attr);
+      auto iface = aiir::cast<fir::SafeTempArrayCopyAttrInterface>(attr);
       if (iface.isDynamicallySafe())
         TODO(op.getLoc(), "dynamically safe array repacking");
       else
@@ -131,24 +131,24 @@ static bool repackIsSafe(OP op) {
   return isSafe;
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
-                                     mlir::PatternRewriter &rewriter) const {
-  mlir::Value box = op.getArray();
+                                     aiir::PatternRewriter &rewriter) const {
+  aiir::Value box = op.getArray();
   // If repacking is not safe, then just use the original box.
   if (!repackIsSafe(op)) {
     rewriter.replaceOp(op, box);
-    return mlir::success();
+    return aiir::success();
   }
 
-  mlir::Location loc = op.getLoc();
+  aiir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
   if (op.getMaxSize() || op.getMaxElementSize() || op.getMinStride())
     TODO(loc, "fir.pack_array with constraints");
   if (op.getHeuristics() != fir::PackArrayHeuristics::None)
     TODO(loc, "fir.pack_array with heuristics");
 
-  auto boxType = mlir::cast<fir::BaseBoxType>(box.getType());
+  auto boxType = aiir::cast<fir::BaseBoxType>(box.getType());
 
   // For now we have to always check if the box is present.
   auto isPresent =
@@ -159,7 +159,7 @@ PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   // The box is present.
   auto newBox = genRepackedBox(builder, loc, op);
-  if (mlir::failed(newBox))
+  if (aiir::failed(newBox))
     return newBox;
   fir::ResultOp::create(builder, loc, *newBox);
 
@@ -168,20 +168,20 @@ PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
   fir::ResultOp::create(builder, loc, box);
 
   rewriter.replaceOp(op, ifOp.getResult(0));
-  return mlir::success();
+  return aiir::success();
 }
 
-mlir::Value PackArrayConversion::allocateTempBuffer(
-    fir::FirOpBuilder &builder, mlir::Location loc, bool useStack,
-    mlir::Value origBox, llvm::ArrayRef<mlir::Value> lbounds,
-    llvm::ArrayRef<mlir::Value> extents,
-    llvm::ArrayRef<mlir::Value> typeParams) {
-  auto tempType = mlir::cast<fir::SequenceType>(
+aiir::Value PackArrayConversion::allocateTempBuffer(
+    fir::FirOpBuilder &builder, aiir::Location loc, bool useStack,
+    aiir::Value origBox, llvm::ArrayRef<aiir::Value> lbounds,
+    llvm::ArrayRef<aiir::Value> extents,
+    llvm::ArrayRef<aiir::Value> typeParams) {
+  auto tempType = aiir::cast<fir::SequenceType>(
       fir::extractSequenceType(origBox.getType()));
   assert(tempType.getDimension() == extents.size() &&
          "number of extents does not match the rank");
 
-  mlir::Value shape = builder.genShape(loc, extents);
+  aiir::Value shape = builder.genShape(loc, extents);
   auto [base, isHeapAllocation] = builder.createArrayTemp(
       loc, tempType, shape, extents, typeParams,
       fir::FirOpBuilder::genTempDeclareOp,
@@ -194,8 +194,8 @@ mlir::Value PackArrayConversion::allocateTempBuffer(
   if (useStack && canAllocateTempOnStack(origBox))
     assert(!isHeapAllocation && "temp must have been allocated on the stack");
 
-  mlir::Type ptrType = base.getType();
-  if (auto tempBoxType = mlir::dyn_cast<fir::BaseBoxType>(ptrType)) {
+  aiir::Type ptrType = base.getType();
+  if (auto tempBoxType = aiir::dyn_cast<fir::BaseBoxType>(ptrType)) {
     // We need to reset the CFI_attribute_allocatable before
     // returning the temporary box to avoid any mishandling
     // of the temporary box in Fortran runtime.
@@ -213,12 +213,12 @@ mlir::Value PackArrayConversion::allocateTempBuffer(
   // must be storage compatible.
   bool useDynamicType = fir::isBoxedRecordType(origBox.getType()) ||
                         fir::isPolymorphicType(origBox.getType());
-  mlir::Type tempBoxType =
+  aiir::Type tempBoxType =
       fir::wrapInClassOrBoxType(fir::unwrapRefType(ptrType),
                                 /*isPolymorphic=*/useDynamicType);
   // Use the shape with proper lower bounds for the final box.
   shape = builder.genShape(loc, lbounds, extents);
-  mlir::Value newBox =
+  aiir::Value newBox =
       builder.createBox(loc, tempBoxType, base, shape, /*slice=*/nullptr,
                         typeParams, useDynamicType ? origBox : nullptr);
   // The new box might be !fir.class, while the original might be
@@ -226,35 +226,35 @@ mlir::Value PackArrayConversion::allocateTempBuffer(
   return builder.createConvert(loc, origBox.getType(), newBox);
 }
 
-mlir::FailureOr<mlir::Value>
+aiir::FailureOr<aiir::Value>
 PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, fir::PackArrayOp op) {
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::Value box = op.getArray();
+                                    aiir::Location loc, fir::PackArrayOp op) {
+  aiir::OpBuilder::InsertionGuard guard(builder);
+  aiir::Value box = op.getArray();
 
-  llvm::SmallVector<mlir::Value> typeParams(op.getTypeparams().begin(),
+  llvm::SmallVector<aiir::Value> typeParams(op.getTypeparams().begin(),
                                             op.getTypeparams().end());
-  auto boxType = mlir::cast<fir::BaseBoxType>(box.getType());
-  mlir::Type indexType = builder.getIndexType();
+  auto boxType = aiir::cast<fir::BaseBoxType>(box.getType());
+  aiir::Type indexType = builder.getIndexType();
 
   // If type parameters are not specified by fir.pack_array,
   // figure out how many of them we need to read from the box.
   unsigned numTypeParams = 0;
   if (typeParams.size() == 0) {
     if (auto recordType =
-            mlir::dyn_cast<fir::RecordType>(boxType.unwrapInnerType()))
+            aiir::dyn_cast<fir::RecordType>(boxType.unwrapInnerType()))
       if (recordType.getNumLenParams() != 0)
         TODO(loc,
              "allocating temporary for a parameterized derived type array");
 
     if (auto charType =
-            mlir::dyn_cast<fir::CharacterType>(boxType.unwrapInnerType())) {
+            aiir::dyn_cast<fir::CharacterType>(boxType.unwrapInnerType())) {
       if (charType.hasDynamicLen()) {
         // Read one length parameter from the box.
         numTypeParams = 1;
       } else {
         // Place the constant length into typeParams.
-        mlir::Value length =
+        aiir::Value length =
             builder.createIntegerConstant(loc, indexType, charType.getLen());
         typeParams.push_back(length);
       }
@@ -270,7 +270,7 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
   auto isNotEmpty =
       fir::IsPresentOp::create(builder, loc, builder.getI1Type(), dataAddr);
   auto doPack =
-      mlir::arith::AndIOp::create(builder, loc, isNotContiguous, isNotEmpty);
+      aiir::arith::AndIOp::create(builder, loc, isNotContiguous, isNotEmpty);
 
   fir::IfOp ifOp =
       fir::IfOp::create(builder, loc, boxType, doPack, /*withElseRegion=*/true);
@@ -285,16 +285,16 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
   // Get lower bounds and extents from the box.
-  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> lbounds, extents;
+  llvm::SmallVector<aiir::Value, Fortran::common::maxRank> lbounds, extents;
   fir::factory::genDimInfoFromBox(builder, loc, box, &lbounds, &extents,
                                   /*strides=*/nullptr);
   // Get the type parameters from the box, if needed.
   if (numTypeParams != 0) {
     if (auto charType =
-            mlir::dyn_cast<fir::CharacterType>(boxType.unwrapInnerType()))
+            aiir::dyn_cast<fir::CharacterType>(boxType.unwrapInnerType()))
       if (charType.hasDynamicLen()) {
         fir::factory::CharacterExprHelper charHelper(builder, loc);
-        mlir::Value len = charHelper.readLengthFromBox(box, charType);
+        aiir::Value len = charHelper.readLengthFromBox(box, charType);
         typeParams.push_back(builder.createConvert(loc, indexType, len));
       }
 
@@ -303,7 +303,7 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
                             << op.getOperation() << '\n';
   }
 
-  mlir::Value tempBox = allocateTempBuffer(builder, loc, op.getStack(), box,
+  aiir::Value tempBox = allocateTempBuffer(builder, loc, op.getStack(), box,
                                            lbounds, extents, typeParams);
   if (!op.getNoCopy())
     fir::runtime::genShallowCopy(builder, loc, tempBox, box,
@@ -313,34 +313,34 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
   return ifOp.getResult(0);
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
-                                       mlir::PatternRewriter &rewriter) const {
+                                       aiir::PatternRewriter &rewriter) const {
   // If repacking is not safe, then just remove the operation.
   if (!repackIsSafe(op)) {
     rewriter.eraseOp(op);
-    return mlir::success();
+    return aiir::success();
   }
 
-  mlir::Location loc = op.getLoc();
+  aiir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
-  mlir::Type predicateType = builder.getI1Type();
-  mlir::Value tempBox = op.getTemp();
-  mlir::Value originalBox = op.getOriginal();
+  aiir::Type predicateType = builder.getI1Type();
+  aiir::Value tempBox = op.getTemp();
+  aiir::Value originalBox = op.getOriginal();
 
   // For now we have to always check if the box is present.
   auto isPresent =
       fir::IsPresentOp::create(builder, loc, predicateType, originalBox);
 
   builder.genIfThen(loc, isPresent).genThen([&]() {
-    mlir::Type addrType =
+    aiir::Type addrType =
         fir::HeapType::get(fir::extractSequenceType(tempBox.getType()));
-    mlir::Value tempAddr =
+    aiir::Value tempAddr =
         fir::BoxAddrOp::create(builder, loc, addrType, tempBox);
-    mlir::Value originalAddr =
+    aiir::Value originalAddr =
         fir::BoxAddrOp::create(builder, loc, addrType, originalBox);
 
-    auto isNotSame = builder.genPtrCompare(loc, mlir::arith::CmpIPredicate::ne,
+    auto isNotSame = builder.genPtrCompare(loc, aiir::arith::CmpIPredicate::ne,
                                            tempAddr, originalAddr);
     builder.genIfThen(loc, isNotSame)
         .genThen([&]() {
@@ -362,7 +362,7 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
         .setUnlikelyIfWeights();
   });
   rewriter.eraseOp(op);
-  return mlir::success();
+  return aiir::success();
 }
 
 namespace {
@@ -374,17 +374,17 @@ public:
 
   void runOnOperation() override final {
     auto *context = &getContext();
-    mlir::ModuleOp module = getOperation();
-    mlir::RewritePatternSet patterns(context);
+    aiir::ModuleOp module = getOperation();
+    aiir::RewritePatternSet patterns(context);
     patterns.insert<PackArrayConversion>(context);
     patterns.insert<UnpackArrayConversion>(context);
-    mlir::GreedyRewriteConfig config;
+    aiir::GreedyRewriteConfig config;
     config.setRegionSimplificationLevel(
-        mlir::GreedySimplifyRegionLevel::Disabled);
+        aiir::GreedySimplifyRegionLevel::Disabled);
     (void)applyPatternsGreedily(module, std::move(patterns), config);
   }
 
-  void getDependentDialects(mlir::DialectRegistry &registry) const override {
+  void getDependentDialects(aiir::DialectRegistry &registry) const override {
     fir::acc::registerTransformationalAttrsDependentDialects(registry);
     fir::omp::registerTransformationalAttrsDependentDialects(registry);
   }

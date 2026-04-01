@@ -198,7 +198,7 @@ The function `ClassIs` implements the dynamic type comparison.
 bool RTNAME(ClassIs)(const Descriptor &, const typeInfo::DerivedType &);
 ```
 
-**FIR** (lower level FIR/MLIR after conversion to an if-then-else ladder)
+**FIR** (lower level FIR/AIIR after conversion to an if-then-else ladder)
 ```
 module  {
   func @f(%arg0: !fir.class<!fir.ptr<!fir.type<_QFTpoint{x:f32,y:f32}>>>) -> () {

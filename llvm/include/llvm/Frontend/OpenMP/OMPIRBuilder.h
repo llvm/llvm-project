@@ -1619,7 +1619,7 @@ public:
                            vfs::FileSystem &VFS, StringRef ParentName = "");
 
   /// Enum class for the RedctionGen CallBack type to be used.
-  enum class ReductionGenCBKind { Clang, MLIR };
+  enum class ReductionGenCBKind { Clang, AIIR };
 
   /// ReductionGen CallBack for Clang
   ///
@@ -1635,7 +1635,7 @@ public:
       std::function<InsertPointTy(InsertPointTy CodeGenIP, unsigned Index,
                                   Value **LHS, Value **RHS, Function *CurFn)>;
 
-  /// ReductionGen CallBack for MLIR
+  /// ReductionGen CallBack for AIIR
   ///
   /// \param CodeGenIP InsertPoint for CodeGen.
   /// \param LHS Pass in the LHS Value to be used for CodeGen.
@@ -2025,7 +2025,7 @@ private:
   /// Emits reduction function.
   /// \param ReducerName Name of the function calling the reduction.
   /// \param ReductionInfos Array type containing the ReductionOps.
-  /// \param ReductionGenCBKind Optional param to specify Clang or MLIR
+  /// \param ReductionGenCBKind Optional param to specify Clang or AIIR
   ///                           CodeGenCB kind.
   /// \param FuncAttrs Optional param to specify any function attributes that
   ///                  need to be copied to the new function.
@@ -2034,7 +2034,7 @@ private:
   Expected<Function *> createReductionFunction(
       StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
       ArrayRef<bool> IsByRef,
-      ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
+      ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::AIIR,
       AttributeList FuncAttrs = {});
 
 public:
@@ -2304,7 +2304,7 @@ public:
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       ArrayRef<bool> IsByRef, bool IsNoWait = false,
       bool IsTeamsReduction = false,
-      ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
+      ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::AIIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);
 
@@ -3955,7 +3955,7 @@ public:
   /// The body of the loop is produced by calling \p BodyGen with the insertion
   /// point for the loop body and the induction variable.
   /// Unlike createCanonicalLoop(), this function is intended for \p BodyGen
-  /// that may perform region lowering (e.g., translating MLIR regions) and are
+  /// that may perform region lowering (e.g., translating AIIR regions) and are
   /// not guaranteed to preserve the canonical skeleton's body terminator. In
   /// particular:
   ///
@@ -4153,7 +4153,7 @@ private:
   BasicBlock *Latch = nullptr;
   BasicBlock *Exit = nullptr;
 
-  // Hold the MLIR value for the `lastiter` of the canonical loop.
+  // Hold the AIIR value for the `lastiter` of the canonical loop.
   Value *LastIter = nullptr;
 
   /// Add the control blocks of this loop to \p BBs.

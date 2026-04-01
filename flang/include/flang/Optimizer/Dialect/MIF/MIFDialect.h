@@ -9,15 +9,15 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_MIF_MIFDIALECT_H
 #define FORTRAN_OPTIMIZER_DIALECT_MIF_MIFDIALECT_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/SymbolTable.h"
-#include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
+#include "aiir/Bytecode/BytecodeOpInterface.h"
+#include "aiir/IR/Dialect.h"
+#include "aiir/IR/OpDefinition.h"
+#include "aiir/IR/OpImplementation.h"
+#include "aiir/IR/SymbolTable.h"
+#include "aiir/Interfaces/CallInterfaces.h"
+#include "aiir/Interfaces/InferTypeOpInterface.h"
+#include "aiir/Interfaces/SideEffectInterfaces.h"
+#include "aiir/Interfaces/VectorInterfaces.h"
 
 //===----------------------------------------------------------------------===//
 // MIFDialect

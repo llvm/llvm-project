@@ -1,6 +1,6 @@
 ! REQUIRES: flang-supports-f128-math
 ! RUN: bbc %s -o - | tco | FileCheck %s
-! RUN: %flang -emit-llvm -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
+! RUN: %flang -emit-llvm -S -maiir -disable-external-name-interop %s -o - | FileCheck %s
 
 ! CHECK: @__BLNK__ = common global [8 x i8] zeroinitializer
 ! CHECK: @co1_ = common global [16 x i8] zeroinitializer, align 16

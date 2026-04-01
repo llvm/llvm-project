@@ -11,10 +11,10 @@
 #include "gtest/gtest.h"
 
 TEST_F(RuntimeCallTest, genExitTest) {
-  mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value status = firBuilder->createIntegerConstant(loc, i32Ty, 0);
+  aiir::Location loc = firBuilder->getUnknownLoc();
+  aiir::Value status = firBuilder->createIntegerConstant(loc, i32Ty, 0);
   fir::runtime::genExit(*firBuilder, loc, status);
-  mlir::Block *block = firBuilder->getBlock();
+  aiir::Block *block = firBuilder->getBlock();
   EXPECT_TRUE(block) << "Failed to retrieve the block!";
   checkBlockForCallOp(block, "_FortranAExit", 1);
 }

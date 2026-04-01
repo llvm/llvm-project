@@ -13,7 +13,7 @@
 #ifndef CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD
 #define CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD
 
-include "mlir/IR/OpBase.td"
+include "aiir/IR/OpBase.td"
 
 def CIR_IntTypeInterface : TypeInterface<"IntTypeInterface"> {
   let description = [{

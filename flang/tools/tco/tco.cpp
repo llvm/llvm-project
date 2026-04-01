@@ -20,13 +20,13 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Tools/CrossToolHelpers.h"
-#include "mlir/IR/AsmState.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/Passes.h"
+#include "aiir/IR/AsmState.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/Parser/Parser.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassManager.h"
+#include "aiir/Transforms/Passes.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
@@ -77,14 +77,14 @@ static cl::opt<bool> codeGenLLVM(
     cl::desc("Run only CodeGen passes and translate FIR to LLVM IR"),
     cl::init(false));
 
-static cl::opt<bool> emitFinalMLIR(
-    "emit-final-mlir",
-    cl::desc("Only translate FIR to MLIR, do not lower to LLVM IR"),
+static cl::opt<bool> emitFinalAIIR(
+    "emit-final-aiir",
+    cl::desc("Only translate FIR to AIIR, do not lower to LLVM IR"),
     cl::init(false));
 
 static cl::opt<bool>
-    simplifyMLIR("simplify-mlir",
-                 cl::desc("Run CSE and canonicalization on MLIR output"),
+    simplifyAIIR("simplify-aiir",
+                 cl::desc("Run CSE and canonicalization on AIIR output"),
                  cl::init(false));
 
 // Enabled by default to accurately reflect -O2
@@ -93,7 +93,7 @@ static cl::opt<bool> enableAliasAnalysis("enable-aa",
                                          cl::init(true));
 
 static cl::opt<bool> testGeneratorMode(
-    "test-gen", cl::desc("-emit-final-mlir -simplify-mlir -enable-aa=false"),
+    "test-gen", cl::desc("-emit-final-aiir -simplify-aiir -enable-aa=false"),
     cl::init(false));
 
 static cl::opt<Fortran::common::FPMaxminBehavior> fpMaxminBehavior(
@@ -115,7 +115,7 @@ static cl::opt<Fortran::common::FPMaxminBehavior> fpMaxminBehavior(
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
 
-static void printModule(mlir::ModuleOp mod, raw_ostream &output) {
+static void printModule(aiir::ModuleOp mod, raw_ostream &output) {
   output << mod << '\n';
 }
 
@@ -137,34 +137,34 @@ getOptimizationLevel(unsigned level) {
 
 // compile a .fir file
 static llvm::LogicalResult
-compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
+compileFIR(const aiir::PassPipelineCLParser &passPipeline) {
   // check that there is a file to load
   ErrorOr<std::unique_ptr<MemoryBuffer>> fileOrErr =
       MemoryBuffer::getFileOrSTDIN(inputFilename);
 
   if (std::error_code EC = fileOrErr.getError()) {
     errs() << "Could not open file: " << EC.message() << '\n';
-    return mlir::failure();
+    return aiir::failure();
   }
 
   // load the file into a module
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
-  mlir::DialectRegistry registry;
+  aiir::DialectRegistry registry;
   fir::support::registerDialects(registry);
   fir::support::addFIRExtensions(registry);
-  mlir::MLIRContext context(registry);
+  aiir::AIIRContext context(registry);
   fir::support::loadDialects(context);
   fir::support::registerLLVMTranslation(context);
-  auto owningRef = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
+  auto owningRef = aiir::parseSourceFile<aiir::ModuleOp>(sourceMgr, &context);
 
   if (!owningRef) {
     errs() << "Error can't load file " << inputFilename << '\n';
-    return mlir::failure();
+    return aiir::failure();
   }
-  if (mlir::failed(owningRef->verifyInvariants())) {
+  if (aiir::failed(owningRef->verifyInvariants())) {
     errs() << "Error verifying FIR module\n";
-    return mlir::failure();
+    return aiir::failure();
   }
 
   std::error_code ec;
@@ -179,30 +179,30 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   fir::setTargetFeatures(*owningRef, targetFeatures);
   // tco is a testing tool, so it will happily use the target independent
   // data layout if none is on the module.
-  fir::support::setMLIRDataLayoutFromAttributes(*owningRef,
+  fir::support::setAIIRDataLayoutFromAttributes(*owningRef,
                                                 /*allowDefaultLayout=*/true);
-  mlir::PassManager pm((*owningRef)->getName(),
-                       mlir::OpPassManager::Nesting::Implicit);
+  aiir::PassManager pm((*owningRef)->getName(),
+                       aiir::OpPassManager::Nesting::Implicit);
   pm.enableVerifier(/*verifyPasses=*/true);
-  (void)mlir::applyPassManagerCLOptions(pm);
+  (void)aiir::applyPassManagerCLOptions(pm);
   if (emitFir) {
     // parse the input and pretty-print it back out
     // -emit-fir intentionally disables all the passes
   } else if (passPipeline.hasAnyOccurrences()) {
     auto errorHandler = [&](const Twine &msg) {
-      mlir::emitError(mlir::UnknownLoc::get(pm.getContext())) << msg;
-      return mlir::failure();
+      aiir::emitError(aiir::UnknownLoc::get(pm.getContext())) << msg;
+      return aiir::failure();
     };
-    if (mlir::failed(passPipeline.addToPipeline(pm, errorHandler)))
-      return mlir::failure();
+    if (aiir::failed(passPipeline.addToPipeline(pm, errorHandler)))
+      return aiir::failure();
   } else {
     std::optional<llvm::OptimizationLevel> level =
         getOptimizationLevel(OptLevel);
     if (!level) {
       errs() << "Error invalid optimization level\n";
-      return mlir::failure();
+      return aiir::failure();
     }
-    MLIRToLLVMPassPipelineConfig config(*level);
+    AIIRToLLVMPassPipelineConfig config(*level);
     config.fpMaxminBehavior = fpMaxminBehavior.getValue();
     // TODO: config.StackArrays should be set here?
     config.EnableOpenMP = true;  // assume the input contains OpenMP
@@ -214,31 +214,31 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     } else {
       // Run tco with O2 by default.
       fir::registerDefaultInlinerPass(config);
-      fir::createMLIRToLLVMPassPipeline(pm, config);
+      fir::createAIIRToLLVMPassPipeline(pm, config);
     }
-    if (simplifyMLIR || testGeneratorMode) {
-      pm.addPass(mlir::createCanonicalizerPass());
-      pm.addPass(mlir::createCSEPass());
+    if (simplifyAIIR || testGeneratorMode) {
+      pm.addPass(aiir::createCanonicalizerPass());
+      pm.addPass(aiir::createCSEPass());
     }
-    if (!emitFinalMLIR && !testGeneratorMode)
+    if (!emitFinalAIIR && !testGeneratorMode)
       fir::addLLVMDialectToLLVMPass(pm, out.os());
   }
 
   // run the pass manager
-  if (mlir::succeeded(pm.run(*owningRef))) {
+  if (aiir::succeeded(pm.run(*owningRef))) {
     // passes ran successfully, so keep the output
-    if ((emitFir || passPipeline.hasAnyOccurrences() || emitFinalMLIR ||
+    if ((emitFir || passPipeline.hasAnyOccurrences() || emitFinalAIIR ||
          testGeneratorMode) &&
         !codeGenLLVM)
       printModule(*owningRef, out.os());
     out.keep();
-    return mlir::success();
+    return aiir::success();
   }
 
   // pass manager failed
   printModule(*owningRef, errs());
   errs() << "\n\nFAILED: " << inputFilename << '\n';
-  return mlir::failure();
+  return aiir::failure();
 }
 
 int main(int argc, char **argv) {
@@ -247,12 +247,12 @@ int main(int argc, char **argv) {
   disableExternalNameConversion = true;
 
   [[maybe_unused]] InitLLVM y(argc, argv);
-  fir::support::registerMLIRPassesForFortranTools();
+  fir::support::registerAIIRPassesForFortranTools();
   fir::registerOptCodeGenPasses();
   fir::registerOptTransformPasses();
-  mlir::registerMLIRContextCLOptions();
-  mlir::registerPassManagerCLOptions();
-  mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
+  aiir::registerAIIRContextCLOptions();
+  aiir::registerPassManagerCLOptions();
+  aiir::PassPipelineCLParser passPipe("", "Compiler passes to run");
   cl::ParseCommandLineOptions(argc, argv, "Tilikum Crossing Optimizer\n");
-  return mlir::failed(compileFIR(passPipe));
+  return aiir::failed(compileFIR(passPipe));
 }

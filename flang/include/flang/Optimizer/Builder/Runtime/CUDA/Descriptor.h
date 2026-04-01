@@ -9,11 +9,11 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_CUDA_DESCRIPTOR_H_
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_CUDA_DESCRIPTOR_H_
 
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Value.h"
 
-namespace mlir {
+namespace aiir {
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -23,13 +23,13 @@ namespace fir::runtime::cuda {
 
 /// Generate runtime call to sync the doublce descriptor referenced by
 /// \p hostPtr.
-void genSyncGlobalDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value hostPtr);
+void genSyncGlobalDescriptor(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value hostPtr);
 
 /// Generate runtime call to check the section of a descriptor and raise an
 /// error if it is not contiguous.
-void genDescriptorCheckSection(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value desc);
+void genDescriptorCheckSection(fir::FirOpBuilder &builder, aiir::Location loc,
+                               aiir::Value desc);
 
 } // namespace fir::runtime::cuda
 

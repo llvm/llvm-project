@@ -126,7 +126,7 @@ subroutine call_foo5(i)
 end subroutine
 
 
-! Test when there is no definition (declaration at the end of the mlir module)
+! Test when there is no definition (declaration at the end of the aiir module)
 ! First use gives the function type
 
 ! call, pass

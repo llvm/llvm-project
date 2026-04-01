@@ -27,24 +27,24 @@
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/Value.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/RegionUtils.h"
+#include "aiir/Analysis/SliceAnalysis.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/Value.h"
+#include "aiir/Transforms/DialectConversion.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Transforms/RegionUtils.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/LLVMIR/LLVMTypes.h>
-#include <mlir/Dialect/Utils/IndexingUtils.h>
-#include <mlir/IR/BlockSupport.h>
-#include <mlir/IR/BuiltinOps.h>
-#include <mlir/IR/Diagnostics.h>
-#include <mlir/IR/IRMapping.h>
-#include <mlir/IR/PatternMatch.h>
-#include <mlir/Interfaces/SideEffectInterfaces.h>
-#include <mlir/Support/LLVM.h>
+#include <aiir/Dialect/Arith/IR/Arith.h>
+#include <aiir/Dialect/LLVMIR/LLVMTypes.h>
+#include <aiir/Dialect/Utils/IndexingUtils.h>
+#include <aiir/IR/BlockSupport.h>
+#include <aiir/IR/BuiltinOps.h>
+#include <aiir/IR/Diagnostics.h>
+#include <aiir/IR/IRMapping.h>
+#include <aiir/IR/PatternMatch.h>
+#include <aiir/Interfaces/SideEffectInterfaces.h>
+#include <aiir/Support/LLVM.h>
 #include <optional>
 #include <variant>
 
@@ -55,7 +55,7 @@ namespace flangomp {
 
 #define DEBUG_TYPE "lower-workdistribute"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
@@ -298,18 +298,18 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
 
 /// Generate omp.parallel operation with an empty region.
 static void genParallelOp(Location loc, OpBuilder &rewriter, bool composite) {
-  auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc);
+  auto parallelOp = aiir::omp::ParallelOp::create(rewriter, loc);
   parallelOp.setComposite(composite);
   rewriter.createBlock(&parallelOp.getRegion());
-  rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
+  rewriter.setInsertionPoint(aiir::omp::TerminatorOp::create(rewriter, loc));
   return;
 }
 
 /// Generate omp.distribute operation with an empty region.
 static void genDistributeOp(Location loc, OpBuilder &rewriter, bool composite) {
-  mlir::omp::DistributeOperands distributeClauseOps;
+  aiir::omp::DistributeOperands distributeClauseOps;
   auto distributeOp =
-      mlir::omp::DistributeOp::create(rewriter, loc, distributeClauseOps);
+      aiir::omp::DistributeOp::create(rewriter, loc, distributeClauseOps);
   distributeOp.setComposite(composite);
   auto distributeBlock = rewriter.createBlock(&distributeOp.getRegion());
   rewriter.setInsertionPointToStart(distributeBlock);
@@ -319,7 +319,7 @@ static void genDistributeOp(Location loc, OpBuilder &rewriter, bool composite) {
 /// Generate loop nest clause operands from fir.do_loop operation.
 static void
 genLoopNestClauseOps(OpBuilder &rewriter, fir::DoLoopOp loop,
-                     mlir::omp::LoopNestOperands &loopNestClauseOps) {
+                     aiir::omp::LoopNestOperands &loopNestClauseOps) {
   assert(loopNestClauseOps.loopLowerBounds.empty() &&
          "Loop nest bounds were already emitted!");
   loopNestClauseOps.loopLowerBounds.push_back(loop.getLowerBound());
@@ -330,28 +330,28 @@ genLoopNestClauseOps(OpBuilder &rewriter, fir::DoLoopOp loop,
 
 /// Generate omp.wsloop operation with an empty region and
 /// clone the body of fir.do_loop operation inside the loop nest region.
-static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
-                        const mlir::omp::LoopNestOperands &clauseOps,
+static void genWsLoopOp(aiir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
+                        const aiir::omp::LoopNestOperands &clauseOps,
                         bool composite) {
 
-  auto wsloopOp = mlir::omp::WsloopOp::create(rewriter, doLoop.getLoc());
+  auto wsloopOp = aiir::omp::WsloopOp::create(rewriter, doLoop.getLoc());
   wsloopOp.setComposite(composite);
   rewriter.createBlock(&wsloopOp.getRegion());
 
   auto loopNestOp =
-      mlir::omp::LoopNestOp::create(rewriter, doLoop.getLoc(), clauseOps);
+      aiir::omp::LoopNestOp::create(rewriter, doLoop.getLoc(), clauseOps);
 
   // Clone the loop's body inside the loop nest construct using the
   // mapped values.
   rewriter.cloneRegionBefore(doLoop.getRegion(), loopNestOp.getRegion(),
                              loopNestOp.getRegion().begin());
   Block *clonedBlock = &loopNestOp.getRegion().back();
-  mlir::Operation *terminatorOp = clonedBlock->getTerminator();
+  aiir::Operation *terminatorOp = clonedBlock->getTerminator();
 
   // Erase fir.result op of do loop and create yield op.
   if (auto resultOp = dyn_cast<fir::ResultOp>(terminatorOp)) {
     rewriter.setInsertionPoint(terminatorOp);
-    mlir::omp::YieldOp::create(rewriter, doLoop->getLoc());
+    aiir::omp::YieldOp::create(rewriter, doLoop->getLoc());
     terminatorOp->erase();
   }
 }
@@ -402,7 +402,7 @@ workdistributeDoLower(omp::WorkdistributeOp workdistribute,
     // Generate the nested parallel, distribute, wsloop and loop_nest ops.
     genParallelOp(wdLoc, rewriter, true);
     genDistributeOp(wdLoc, rewriter, true);
-    mlir::omp::LoopNestOperands loopNestClauseOps;
+    aiir::omp::LoopNestOperands loopNestClauseOps;
     genLoopNestClauseOps(rewriter, doLoop, loopNestClauseOps);
     genWsLoopOp(rewriter, doLoop, loopNestClauseOps, true);
     workdistribute.erase();
@@ -719,17 +719,17 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   SmallVector<Value> outerMapInfos;
   // Create new mapinfo ops for the inner target region
   for (auto mapInfo : mapInfos) {
-    mlir::omp::ClauseMapFlags originalMapType = mapInfo.getMapType();
+    aiir::omp::ClauseMapFlags originalMapType = mapInfo.getMapType();
     auto originalCaptureType = mapInfo.getMapCaptureType();
-    mlir::omp::ClauseMapFlags newMapType;
-    mlir::omp::VariableCaptureKind newCaptureType;
+    aiir::omp::ClauseMapFlags newMapType;
+    aiir::omp::VariableCaptureKind newCaptureType;
     // For bycopy, we keep the same map type and capture type
     // For byref, we change the map type to none and keep the capture type
-    if (originalCaptureType == mlir::omp::VariableCaptureKind::ByCopy) {
+    if (originalCaptureType == aiir::omp::VariableCaptureKind::ByCopy) {
       newMapType = originalMapType;
       newCaptureType = originalCaptureType;
-    } else if (originalCaptureType == mlir::omp::VariableCaptureKind::ByRef) {
-      newMapType = mlir::omp::ClauseMapFlags::storage;
+    } else if (originalCaptureType == aiir::omp::VariableCaptureKind::ByRef) {
+      newMapType = aiir::omp::ClauseMapFlags::storage;
       newCaptureType = originalCaptureType;
       outerMapInfos.push_back(mapInfo);
     } else {
@@ -753,7 +753,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       omp::TargetDataOp::create(rewriter, loc, device, ifExpr, outerMapInfos,
                                 deviceAddrVars, devicePtrVars);
   auto taregtDataBlock = rewriter.createBlock(&targetDataOp.getRegion());
-  mlir::omp::TerminatorOp::create(rewriter, loc);
+  aiir::omp::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(taregtDataBlock);
   // Create the inner target op
   auto newTargetOp = omp::TargetOp::create(
@@ -815,7 +815,7 @@ static Type getPtrTypeForOmp(Type ty) {
 /// allocateTempOmpVar allocates a temporary variable for OpenMP mapping
 static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
                                      RewriterBase &rewriter) {
-  MLIRContext &ctx = *ty.getContext();
+  AIIRContext &ctx = *ty.getContext();
   Value alloc;
   Type allocType;
   auto llvmPtrTy = LLVM::LLVMPointerType::get(&ctx);
@@ -831,7 +831,7 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
     alloc = fir::AllocaOp::create(rewriter, loc, allocType);
   }
   // Lambda to create mapinfo ops
-  auto getMapInfo = [&](mlir::omp::ClauseMapFlags mappingFlags,
+  auto getMapInfo = [&](aiir::omp::ClauseMapFlags mappingFlags,
                         const char *name) {
     return omp::MapInfoOp::create(
         rewriter, loc, alloc.getType(), alloc, TypeAttr::get(allocType),
@@ -840,16 +840,16 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
             omp::VariableCaptureKind::ByRef),
         /*varPtrPtr=*/Value{},
         /*members=*/SmallVector<Value>{},
-        /*member_index=*/mlir::ArrayAttr{},
+        /*member_index=*/aiir::ArrayAttr{},
         /*bounds=*/ValueRange(),
-        /*mapperId=*/mlir::FlatSymbolRefAttr(),
+        /*mapperId=*/aiir::FlatSymbolRefAttr(),
         /*name=*/rewriter.getStringAttr(name), rewriter.getBoolAttr(false));
   };
   // Create mapinfo ops.
-  auto mapInfoFrom = getMapInfo(mlir::omp::ClauseMapFlags::from,
+  auto mapInfoFrom = getMapInfo(aiir::omp::ClauseMapFlags::from,
                                 "__flang_workdistribute_from");
   auto mapInfoTo =
-      getMapInfo(mlir::omp::ClauseMapFlags::to, "__flang_workdistribute_to");
+      getMapInfo(aiir::omp::ClauseMapFlags::to, "__flang_workdistribute_to");
   return TempOmpVar{mapInfoFrom, mapInfoTo};
 }
 
@@ -999,17 +999,17 @@ static void reloadCacheAndRecompute(
 /// Given a teamsOp, navigate down the nested structure to find the
 /// innermost LoopNestOp. The expected nesting is:
 /// teams -> parallel -> distribute -> wsloop -> loop_nest
-static mlir::omp::LoopNestOp getLoopNestFromTeams(mlir::omp::TeamsOp teamsOp) {
+static aiir::omp::LoopNestOp getLoopNestFromTeams(aiir::omp::TeamsOp teamsOp) {
   if (teamsOp.getRegion().empty())
     return nullptr;
   // Ensure the teams region has a single block.
   if (teamsOp.getRegion().getBlocks().size() != 1)
     return nullptr;
   // Find parallel op inside teams
-  mlir::omp::ParallelOp parallelOp = nullptr;
+  aiir::omp::ParallelOp parallelOp = nullptr;
   // Look for the parallel op in the teams region
   for (auto &op : teamsOp.getRegion().front()) {
-    if (auto parallel = dyn_cast<mlir::omp::ParallelOp>(op)) {
+    if (auto parallel = dyn_cast<aiir::omp::ParallelOp>(op)) {
       parallelOp = parallel;
       break;
     }
@@ -1018,9 +1018,9 @@ static mlir::omp::LoopNestOp getLoopNestFromTeams(mlir::omp::TeamsOp teamsOp) {
     return nullptr;
 
   // Find distribute op inside parallel
-  mlir::omp::DistributeOp distributeOp = nullptr;
+  aiir::omp::DistributeOp distributeOp = nullptr;
   for (auto &op : parallelOp.getRegion().front()) {
-    if (auto distribute = dyn_cast<mlir::omp::DistributeOp>(op)) {
+    if (auto distribute = dyn_cast<aiir::omp::DistributeOp>(op)) {
       distributeOp = distribute;
       break;
     }
@@ -1029,9 +1029,9 @@ static mlir::omp::LoopNestOp getLoopNestFromTeams(mlir::omp::TeamsOp teamsOp) {
     return nullptr;
 
   // Find wsloop op inside distribute
-  mlir::omp::WsloopOp wsloopOp = nullptr;
+  aiir::omp::WsloopOp wsloopOp = nullptr;
   for (auto &op : distributeOp.getRegion().front()) {
-    if (auto wsloop = dyn_cast<mlir::omp::WsloopOp>(op)) {
+    if (auto wsloop = dyn_cast<aiir::omp::WsloopOp>(op)) {
       wsloopOp = wsloop;
       break;
     }
@@ -1041,7 +1041,7 @@ static mlir::omp::LoopNestOp getLoopNestFromTeams(mlir::omp::TeamsOp teamsOp) {
 
   // Find loop_nest op inside wsloop
   for (auto &op : wsloopOp.getRegion().front()) {
-    if (auto loopNest = dyn_cast<mlir::omp::LoopNestOp>(op)) {
+    if (auto loopNest = dyn_cast<aiir::omp::LoopNestOp>(op)) {
       return loopNest;
     }
   }
@@ -1050,11 +1050,11 @@ static mlir::omp::LoopNestOp getLoopNestFromTeams(mlir::omp::TeamsOp teamsOp) {
 }
 
 /// Generate LLVM constant operations for i32 and i64 types.
-static mlir::LLVM::ConstantOp
-genI32Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
-  mlir::Type i32Ty = rewriter.getI32Type();
-  mlir::IntegerAttr attr = rewriter.getI32IntegerAttr(value);
-  return mlir::LLVM::ConstantOp::create(rewriter, loc, i32Ty, attr);
+static aiir::LLVM::ConstantOp
+genI32Constant(aiir::Location loc, aiir::RewriterBase &rewriter, int value) {
+  aiir::Type i32Ty = rewriter.getI32Type();
+  aiir::IntegerAttr attr = rewriter.getI32IntegerAttr(value);
+  return aiir::LLVM::ConstantOp::create(rewriter, loc, i32Ty, attr);
 }
 
 /// Given a box descriptor, extract the base address of the data it describes.
@@ -1121,7 +1121,7 @@ static Value genDescriptorGetDataSizeInBytes(fir::FirOpBuilder &builder,
          "Unknown type passed to genDescriptorGetElementSize");
   Value eleSize = genDescriptorGetEleSize(builder, loc, box);
   Value totalElements = genDescriptorGetTotalElements(builder, loc, box);
-  return mlir::arith::MulIOp::create(builder, loc, totalElements, eleSize);
+  return aiir::arith::MulIOp::create(builder, loc, totalElements, eleSize);
 }
 
 /// Generate a call to the OpenMP runtime function `omp_get_mapped_ptr` to
@@ -1129,29 +1129,29 @@ static Value genDescriptorGetDataSizeInBytes(fir::FirOpBuilder &builder,
 /// number. If no mapping exists, the original host pointer is returned.
 /// Signature:
 ///   void *omp_get_mapped_ptr(void *host_ptr, int device_num);
-static mlir::Value genOmpGetMappedPtrIfPresent(fir::FirOpBuilder &builder,
-                                               mlir::Location loc,
-                                               mlir::Value hostPtr,
-                                               mlir::Value deviceNum,
-                                               mlir::ModuleOp module) {
+static aiir::Value genOmpGetMappedPtrIfPresent(fir::FirOpBuilder &builder,
+                                               aiir::Location loc,
+                                               aiir::Value hostPtr,
+                                               aiir::Value deviceNum,
+                                               aiir::ModuleOp module) {
   auto *context = builder.getContext();
   auto voidPtrType = fir::LLVMPointerType::get(context, builder.getI8Type());
   auto i32Type = builder.getI32Type();
   auto funcName = "omp_get_mapped_ptr";
-  auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcName);
+  auto funcOp = module.lookupSymbol<aiir::func::FuncOp>(funcName);
 
   if (!funcOp) {
     auto funcType =
-        mlir::FunctionType::get(context, {voidPtrType, i32Type}, {voidPtrType});
+        aiir::FunctionType::get(context, {voidPtrType, i32Type}, {voidPtrType});
 
-    mlir::OpBuilder::InsertionGuard guard(builder);
+    aiir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(module.getBody());
 
-    funcOp = mlir::func::FuncOp::create(builder, loc, funcName, funcType);
+    funcOp = aiir::func::FuncOp::create(builder, loc, funcName, funcType);
     funcOp.setPrivate();
   }
 
-  llvm::SmallVector<mlir::Value> args;
+  llvm::SmallVector<aiir::Value> args;
   args.push_back(fir::ConvertOp::create(builder, loc, voidPtrType, hostPtr));
   args.push_back(fir::ConvertOp::create(builder, loc, i32Type, deviceNum));
   auto callOp = fir::CallOp::create(builder, loc, funcOp, args);
@@ -1171,29 +1171,29 @@ static mlir::Value genOmpGetMappedPtrIfPresent(fir::FirOpBuilder &builder,
 ///                         size_t dst_offset, size_t src_offset,
 ///                         int dst_device, int src_device);
 static void genOmpTargetMemcpyCall(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value dst,
-                                   mlir::Value src, mlir::Value length,
-                                   mlir::Value dstOffset, mlir::Value srcOffset,
-                                   mlir::Value device, mlir::ModuleOp module) {
+                                   aiir::Location loc, aiir::Value dst,
+                                   aiir::Value src, aiir::Value length,
+                                   aiir::Value dstOffset, aiir::Value srcOffset,
+                                   aiir::Value device, aiir::ModuleOp module) {
   auto *context = builder.getContext();
   auto funcName = "omp_target_memcpy";
   auto voidPtrType = fir::LLVMPointerType::get(context, builder.getI8Type());
   auto sizeTType = builder.getI64Type(); // assuming size_t is 64-bit
   auto i32Type = builder.getI32Type();
-  auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcName);
+  auto funcOp = module.lookupSymbol<aiir::func::FuncOp>(funcName);
 
   if (!funcOp) {
-    mlir::OpBuilder::InsertionGuard guard(builder);
+    aiir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(module.getBody());
-    llvm::SmallVector<mlir::Type> argTypes = {
+    llvm::SmallVector<aiir::Type> argTypes = {
         voidPtrType, voidPtrType, sizeTType, sizeTType,
         sizeTType,   i32Type,     i32Type};
-    auto funcType = mlir::FunctionType::get(context, argTypes, {i32Type});
-    funcOp = mlir::func::FuncOp::create(builder, loc, funcName, funcType);
+    auto funcType = aiir::FunctionType::get(context, argTypes, {i32Type});
+    funcOp = aiir::func::FuncOp::create(builder, loc, funcName, funcType);
     funcOp.setPrivate();
   }
 
-  llvm::SmallVector<mlir::Value> args{dst,       src,    length, dstOffset,
+  llvm::SmallVector<aiir::Value> args{dst,       src,    length, dstOffset,
                                       srcOffset, device, device};
   fir::CallOp::create(builder, loc, funcOp, args);
   return;
@@ -1205,25 +1205,25 @@ static void genOmpTargetMemcpyCall(fir::FirOpBuilder &builder,
 /// Fortran array descriptors, retrieving their mapped device pointers (if any),
 /// and invoking `omp_target_memcpy` to copy the data on the device.
 static void genFortranAssignOmpReplacement(fir::FirOpBuilder &builder,
-                                           mlir::Location loc,
+                                           aiir::Location loc,
                                            fir::CallOp callOp,
-                                           mlir::Value device,
-                                           mlir::ModuleOp module) {
+                                           aiir::Value device,
+                                           aiir::ModuleOp module) {
   assert(callOp.getNumResults() == 0 &&
          "Expected _FortranAAssign to have no results");
   assert(callOp.getNumOperands() >= 2 &&
          "Expected _FortranAAssign to have at least two operands");
 
   // Extract the source and destination pointers from the call operands.
-  mlir::Value dest = callOp.getOperand(0);
-  mlir::Value src = callOp.getOperand(1);
+  aiir::Value dest = callOp.getOperand(0);
+  aiir::Value src = callOp.getOperand(1);
 
   // Get the base addresses of the source and destination arrays.
-  mlir::Value srcBase = genDescriptorGetBaseAddress(builder, loc, src);
-  mlir::Value destBase = genDescriptorGetBaseAddress(builder, loc, dest);
+  aiir::Value srcBase = genDescriptorGetBaseAddress(builder, loc, src);
+  aiir::Value destBase = genDescriptorGetBaseAddress(builder, loc, dest);
 
   // Get the total size in bytes of the data to be copied.
-  mlir::Value srcDataSize = genDescriptorGetDataSizeInBytes(builder, loc, src);
+  aiir::Value srcDataSize = genDescriptorGetDataSizeInBytes(builder, loc, src);
 
   // Retrieve the mapped device pointers for source and destination.
   // If no mapping exists, the original host pointer is used.
@@ -1252,7 +1252,7 @@ struct HostEvalVars {
 /// version. Also hoists and replaces fir.allocmem with omp.target_allocmem and
 /// fir.freemem with omp.target_freemem
 static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
-                                mlir::ModuleOp module,
+                                aiir::ModuleOp module,
                                 struct HostEvalVars &hostEvalVars) {
   OpBuilder::InsertionGuard guard(rewriter);
   Block *targetBlock = &targetOp.getRegion().front();
@@ -1391,7 +1391,7 @@ static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
         rewriter.setInsertionPoint(op);
         fir::FirOpBuilder builder{rewriter, op};
 
-        mlir::Location loc = runtimeCall.getLoc();
+        aiir::Location loc = runtimeCall.getLoc();
         genFortranAssignOmpReplacement(builder, loc, runtimeCall, device,
                                        module);
         rewriter.eraseOp(op);
@@ -1691,7 +1691,7 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
 /// of values as needed.
 static FailureOr<SplitResult> isolateOp(Operation *splitBeforeOp,
                                         bool splitAfter, RewriterBase &rewriter,
-                                        mlir::ModuleOp module,
+                                        aiir::ModuleOp module,
                                         bool isTargetDevice) {
   auto targetOp = cast<omp::TargetOp>(splitBeforeOp->getParentOp());
   assert(targetOp);
@@ -1748,7 +1748,7 @@ static FailureOr<SplitResult> isolateOp(Operation *splitBeforeOp,
 /// Recursively fission target ops until no more nested ops can be isolated.
 static LogicalResult fissionTarget(omp::TargetOp targetOp,
                                    RewriterBase &rewriter,
-                                   mlir::ModuleOp module, bool isTargetDevice) {
+                                   aiir::ModuleOp module, bool isTargetDevice) {
   auto tuple = getNestedOpToIsolate(targetOp);
   if (!tuple) {
     LLVM_DEBUG(llvm::dbgs() << " No op to isolate\n");
@@ -1784,12 +1784,12 @@ class LowerWorkdistributePass
     : public flangomp::impl::LowerWorkdistributeBase<LowerWorkdistributePass> {
 public:
   void runOnOperation() override {
-    MLIRContext &context = getContext();
+    AIIRContext &context = getContext();
     auto moduleOp = getOperation();
     bool changed = false;
     SetVector<omp::TargetOp> targetOpsToProcess;
     auto verify =
-        moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+        moduleOp->walk([&](aiir::omp::WorkdistributeOp workdistribute) {
           if (failed(verifyTargetTeamsWorkdistribute(workdistribute)))
             return WalkResult::interrupt();
           return WalkResult::advance();
@@ -1798,7 +1798,7 @@ public:
       return signalPassFailure();
 
     auto fission =
-        moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+        moduleOp->walk([&](aiir::omp::WorkdistributeOp workdistribute) {
           auto res = fissionWorkdistribute(workdistribute);
           if (failed(res))
             return WalkResult::interrupt();
@@ -1809,7 +1809,7 @@ public:
       return signalPassFailure();
 
     auto rtCallLower =
-        moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+        moduleOp->walk([&](aiir::omp::WorkdistributeOp workdistribute) {
           auto res = workdistributeRuntimeCallLower(workdistribute,
                                                     targetOpsToProcess);
           if (failed(res))
@@ -1820,16 +1820,16 @@ public:
     if (rtCallLower.wasInterrupted())
       return signalPassFailure();
 
-    moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+    moduleOp->walk([&](aiir::omp::WorkdistributeOp workdistribute) {
       changed |= workdistributeDoLower(workdistribute, targetOpsToProcess);
     });
 
-    moduleOp->walk([&](mlir::omp::TeamsOp teams) {
+    moduleOp->walk([&](aiir::omp::TeamsOp teams) {
       changed |= teamsWorkdistributeToSingleOp(teams, targetOpsToProcess);
     });
     if (changed) {
       bool isTargetDevice =
-          llvm::cast<mlir::omp::OffloadModuleInterface>(*moduleOp)
+          llvm::cast<aiir::omp::OffloadModuleInterface>(*moduleOp)
               .getIsTargetDevice();
       IRRewriter rewriter(&context);
       for (auto targetOp : targetOpsToProcess) {

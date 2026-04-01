@@ -14,7 +14,7 @@
 #ifndef FLANG_OPTIMIZER_TRANSFORMS_PASSES
 #define FLANG_OPTIMIZER_TRANSFORMS_PASSES
 
-include "mlir/Pass/PassBase.td"
+include "aiir/Pass/PassBase.td"
 
 def AbstractResultOpt
   : Pass<"abstract-result"> {
@@ -25,7 +25,7 @@ def AbstractResultOpt
     including the pre-cg rewrite pass.
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+    "fir::FIROpsDialect", "aiir::func::FuncDialect"
   ];
   let options = [
     Option<"passResultAsBox", "abstract-result-as-box",
@@ -35,7 +35,7 @@ def AbstractResultOpt
   ];
 }
 
-def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
+def AffineDialectPromotion : Pass<"promote-to-affine", "::aiir::func::FuncOp"> {
   let summary = "Promotes `fir.{do_loop,if}` to `affine.{for,if}`.";
   let description = [{
     Convert fir operations which satisfy affine constraints to the affine
@@ -56,12 +56,12 @@ def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createPromoteToAffinePass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect",
-    "mlir::affine::AffineDialect"
+    "fir::FIROpsDialect", "aiir::func::FuncDialect",
+    "aiir::affine::AffineDialect"
   ];
 }
 
-def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
+def AffineDialectDemotion : Pass<"demote-affine", "::aiir::func::FuncOp"> {
   let summary = "Converts `affine.{load,store}` back to fir operations";
   let description = [{
     Affine dialect's default lowering for loads and stores is different from
@@ -71,8 +71,8 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createAffineDemotionPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect",
-    "mlir::affine::AffineDialect"
+    "fir::FIROpsDialect", "aiir::func::FuncDialect",
+    "aiir::affine::AffineDialect"
   ];
 }
 
@@ -82,7 +82,7 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
     Convert FIR structured control flow ops to SCF dialect.
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::scf::SCFDialect"
+    "fir::FIROpsDialect", "aiir::scf::SCFDialect"
   ];
   let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
                         /*default=*/"false",
@@ -93,12 +93,12 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let summary = "Annotate constant operands to all FIR operations";
   let description = [{
-    The MLIR canonicalizer makes a distinction between constants based on how
+    The AIIR canonicalizer makes a distinction between constants based on how
     they are packaged in the IR. A constant value is wrapped in an Attr and that
     Attr can be attached to an Op. There is a distinguished Op, ConstantOp, that
     merely has one of these Attr attached.
 
-    The MLIR canonicalizer treats constants referenced by an Op and constants
+    The AIIR canonicalizer treats constants referenced by an Op and constants
     referenced through a ConstantOp as having distinct semantics. This pass
     eliminates that distinction, so hashconsing of Ops, basic blocks, etc.
     behaves as one would expect.
@@ -107,7 +107,7 @@ def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
+def ArrayValueCopy : Pass<"array-value-copy", "::aiir::func::FuncOp"> {
   let summary = "Convert array value operations to memory operations.";
   let description = [{
     Transform the set of array value primitives to a memory-based array
@@ -160,7 +160,7 @@ def CFGConversion : Pass<"cfg-conversion"> {
     This pass is required before code gen to the LLVM IR dialect.
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+    "fir::FIROpsDialect", "aiir::func::FuncDialect"
   ];
   let options = [
     Option<"forceLoopToExecuteOnce", "always-execute-loop-body", "bool",
@@ -172,7 +172,7 @@ def CFGConversion : Pass<"cfg-conversion"> {
   ];
 }
 
-def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
+def ExternalNameConversion : Pass<"external-name-interop", "aiir::ModuleOp"> {
   let summary = "Convert name for external interoperability";
   let description = [{
     Demangle FIR internal name and mangle them for external interoperability.
@@ -185,7 +185,7 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
 }
 
 def CompilerGeneratedNamesConversion : Pass<"compiler-generated-names",
-    "mlir::ModuleOp"> {
+    "aiir::ModuleOp"> {
   let summary = "Convert names of compiler generated globals";
   let description = [{
     Transforms names of compiler generated globals to avoid
@@ -202,7 +202,7 @@ def CompilerGeneratedNamesConversion : Pass<"compiler-generated-names",
   }];
 }
 
-def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> {
+def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::aiir::func::FuncOp"> {
   let summary =
     "Perform store/load forwarding and potentially removing dead stores.";
   let description = [{
@@ -211,40 +211,40 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   }];
   let constructor = "::fir::createMemDataFlowOptPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+    "fir::FIROpsDialect", "aiir::func::FuncDialect"
   ];
 }
 
-def FIRToMemRef : Pass<"fir-to-memref", "::mlir::func::FuncOp"> {
+def FIRToMemRef : Pass<"fir-to-memref", "::aiir::func::FuncOp"> {
   let summary = "Convert FIR memory operations to MemRef dialect";
   let description = [{
-    Lower FIR memory operations (`fir.alloca`, `fir.load`, `fir.store`, 'fir.array_coor', and etc.) to MLIR's MemRef core dialect.
+    Lower FIR memory operations (`fir.alloca`, `fir.load`, `fir.store`, 'fir.array_coor', and etc.) to AIIR's MemRef core dialect.
   }];
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::arith::ArithDialect",
-                           "mlir::memref::MemRefDialect"];
+  let dependentDialects = ["fir::FIROpsDialect", "aiir::arith::ArithDialect",
+                           "aiir::memref::MemRefDialect"];
 }
 
-// This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
+// This needs to be a "aiir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
-def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
+def AddDebugInfo : Pass<"add-debug-info", "aiir::ModuleOp"> {
   let summary = "Add the debug info";
   let description = [{
     Emit debug info that can be understood by llvm.
   }];
   let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect",
-    "mlir::DLTIDialect"
+    "fir::FIROpsDialect", "aiir::func::FuncDialect", "aiir::LLVM::LLVMDialect",
+    "aiir::DLTIDialect"
   ];
   let options = [
     Option<"debugLevel", "debug-level",
-           "mlir::LLVM::DIEmissionKind",
-           /*default=*/"mlir::LLVM::DIEmissionKind::Full",
+           "aiir::LLVM::DIEmissionKind",
+           /*default=*/"aiir::LLVM::DIEmissionKind::Full",
            "debug level",
            [{::llvm::cl::values(
-            clEnumValN(mlir::LLVM::DIEmissionKind::Full, "Full", "Emit full debug info"),
-            clEnumValN(mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "Emit line tables only"),
-            clEnumValN(mlir::LLVM::DIEmissionKind::None, "None", "Emit no debug information")
+            clEnumValN(aiir::LLVM::DIEmissionKind::Full, "Full", "Emit full debug info"),
+            clEnumValN(aiir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "Emit line tables only"),
+            clEnumValN(aiir::LLVM::DIEmissionKind::None, "None", "Emit no debug information")
           )}]
            >,
     Option<"isOptimized", "is-optimized",
@@ -271,11 +271,11 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
   ];
 }
 
-// This needs to be a "mlir::ModuleOp" pass, because it inserts simplified
-// functions into the module, which is invalid if a finer grain mlir::Operation
+// This needs to be a "aiir::ModuleOp" pass, because it inserts simplified
+// functions into the module, which is invalid if a finer grain aiir::Operation
 // is used as the pass specification says to not touch things outside hte scope
 // of the operation being processed.
-def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
+def SimplifyIntrinsics : Pass<"simplify-intrinsics", "aiir::ModuleOp"> {
   let summary = "Intrinsics simplification";
   let description = [{
     Qualifying intrinsics calls are replaced with calls to a specialized and
@@ -290,7 +290,7 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
   ];
 }
 
-def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
+def MemoryAllocationOpt : Pass<"memory-allocation-opt", "aiir::func::FuncOp"> {
   let summary = "Convert stack to heap allocations and vice versa.";
   let description = [{
     Convert stack allocations to heap allocations and vice versa based on
@@ -307,8 +307,8 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   ];
 }
 
-// This needs to be a "mlir::ModuleOp" pass, because it inserts global constants
-def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt", "mlir::ModuleOp"> {
+// This needs to be a "aiir::ModuleOp" pass, because it inserts global constants
+def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt", "aiir::ModuleOp"> {
   let summary = "Convert constant function arguments to global constants.";
   let description = [{
     Convert scalar literals of function arguments to global constants.
@@ -316,14 +316,14 @@ def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def StackArrays : Pass<"stack-arrays", "mlir::func::FuncOp"> {
+def StackArrays : Pass<"stack-arrays", "aiir::func::FuncOp"> {
   let summary = "Move local array allocations from heap memory into stack memory";
   let description = [{
     Convert heap allocations for arrays, even those of unknown size, into stack
     allocations.
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect"
+    "fir::FIROpsDialect", "aiir::DLTIDialect", "aiir::LLVM::LLVMDialect"
   ];
 }
 
@@ -333,10 +333,10 @@ def StackReclaim : Pass<"stack-reclaim"> {
     Insert stacksave/stackrestore in loop region to reclaim alloca done in its
     scope.
   }];
-  let dependentDialects = [ "mlir::LLVM::LLVMDialect" ];
+  let dependentDialects = [ "aiir::LLVM::LLVMDialect" ];
 }
 
-def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
+def AddAliasTags : Pass<"fir-add-alias-tags", "aiir::ModuleOp"> {
   let summary = "Add tbaa tags to operations that implement FirAliasAnalysisOpInterface";
   let description = [{
     TBAA (type based alias analysis) is one method to pass pointer alias information
@@ -348,15 +348,15 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
     the source of values much eaiser). The other TBAA tags need to be applied to
     box loads and stores which are implicit in FIR and so cannot be annotated
     until codegen.
-    TODO: this is currently a pass on mlir::ModuleOp to avoid parallelism. In
+    TODO: this is currently a pass on aiir::ModuleOp to avoid parallelism. In
     theory, each operation could be considered in prallel, so long as there
-    aren't races adding new tags to the mlir context.
+    aren't races adding new tags to the aiir context.
   }];
   // The pass inserts TBAA attributes from LLVM dialect.
-  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
+  let dependentDialects = ["aiir::LLVM::LLVMDialect"];
 }
 
-def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
+def SimplifyRegionLite : Pass<"simplify-region-lite", "aiir::ModuleOp"> {
   let summary = "Region simplification";
   let description = [{
     Run region DCE and erase unreachable blocks in regions.
@@ -372,11 +372,11 @@ def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
     the limit for constant exponent value that defines the cases
     when pow(x, constant) is transformed into a set of multiplications, etc.).
   }];
-  let dependentDialects = [ "mlir::math::MathDialect" ];
+  let dependentDialects = [ "aiir::math::MathDialect" ];
   let constructor = "::fir::createAlgebraicSimplificationPass()";
 }
 
-def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
+def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "aiir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
@@ -384,11 +384,11 @@ def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
     introducing an intermediate FIR level that simplifies code geneation. 
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+    "fir::FIROpsDialect", "aiir::func::FuncDialect"
   ];
 }
 
-def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
+def LoopVersioning : Pass<"loop-versioning", "aiir::func::FuncOp"> {
   let summary = "Loop Versioning";
   let description = [{
     Loop Versioning pass adds a check and two variants of a loop when the input
@@ -396,10 +396,10 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
+  let dependentDialects = [ "fir::FIROpsDialect", "aiir::DLTIDialect" ];
 }
 
-def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
+def VScaleAttr : Pass<"vscale-attr", "aiir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{
      Set an attribute for the vscale range on functions, to allow scalable
@@ -412,7 +412,7 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   ];
 }
 
-def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
+def FunctionAttr : Pass<"function-attr", "aiir::func::FuncOp"> {
   let summary = "Pass that adds function attributes expected at LLVM IR level";
   let description = [{ This feature introduces a general attribute aimed at
      customizing function characteristics. 
@@ -426,14 +426,14 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
   }];
   let options =
       [Option<"framePointerKind", "frame-pointer",
-              "mlir::LLVM::framePointerKind::FramePointerKind",
-              /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
+              "aiir::LLVM::framePointerKind::FramePointerKind",
+              /*default=*/"aiir::LLVM::framePointerKind::FramePointerKind{}",
               "frame pointer", [{::llvm::cl::values(
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::None, "None", ""),
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf, "NonLeaf", ""),
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", ""),
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeafNoReserve, "NonLeafNoReserve", "")
+            clEnumValN(aiir::LLVM::framePointerKind::FramePointerKind::None, "None", ""),
+            clEnumValN(aiir::LLVM::framePointerKind::FramePointerKind::NonLeaf, "NonLeaf", ""),
+            clEnumValN(aiir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
+            clEnumValN(aiir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", ""),
+            clEnumValN(aiir::LLVM::framePointerKind::FramePointerKind::NonLeafNoReserve, "NonLeafNoReserve", "")
           )}]>,
        Option<"instrumentFunctionEntry", "instrument-function-entry",
               "std::string", /*default=*/"",
@@ -474,7 +474,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
   ];
 }
 
-def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
+def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "aiir::ModuleOp"> {
   let summary =
     "Simplify operations on assumed-rank types";
   let description = [{
@@ -482,50 +482,50 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
     introducing an intermediate FIR level that simplifies code generation. 
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+    "fir::FIROpsDialect", "aiir::func::FuncDialect"
   ];
 }
 
-def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
+def CUFAllocationConversion : Pass<"cuf-allocation-convert", "aiir::ModuleOp"> {
   let summary = "Convert allocation related CUF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect"];
 }
 
-def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
+def CUFOpConversion : Pass<"cuf-convert", "aiir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::gpu::GPUDialect",
-                           "mlir::DLTIDialect"];
+  let dependentDialects = ["fir::FIROpsDialect", "aiir::gpu::GPUDialect",
+                           "aiir::DLTIDialect"];
 }
 
-def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
+def CUFOpConversionLate : Pass<"cuf-convert-late", "aiir::ModuleOp"> {
   let summary = "Convert CUF operations to runtime calls late in the pipeline";
   let dependentDialects = ["fir::FIROpsDialect"];
 }
 
 def CUFDeviceGlobal :
-    Pass<"cuf-device-global", "mlir::ModuleOp"> {
+    Pass<"cuf-device-global", "aiir::ModuleOp"> {
   let summary = "Flag globals used in device function with data attribute";
   let dependentDialects = [
-    "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
+    "cuf::CUFDialect", "aiir::gpu::GPUDialect", "aiir::NVVM::NVVMDialect"
   ];
 }
 
-def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
+def CUFAddConstructor : Pass<"cuf-add-constructor", "aiir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
-    "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
+    "cuf::CUFDialect", "aiir::func::FuncDialect", "aiir::DLTIDialect"
   ];
 }
 
-def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
+def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "aiir::ModuleOp"> {
   let summary = "Convert some GPU operations lowered from CUF to runtime calls";
   let dependentDialects = [
-    "mlir::LLVM::LLVMDialect", "mlir::DLTIDialect"
+    "aiir::LLVM::LLVMDialect", "aiir::DLTIDialect"
   ];
 }
 
 def CUFComputeSharedMemoryOffsetsAndSize
-    : Pass<"cuf-compute-shared-memory", "mlir::ModuleOp"> {
+    : Pass<"cuf-compute-shared-memory", "aiir::ModuleOp"> {
   let summary = "Create the shared memory global variable and set offsets";
 
   let description = [{
@@ -535,17 +535,17 @@ def CUFComputeSharedMemoryOffsetsAndSize
   }];
 
   let dependentDialects = [
-    "cuf::CUFDialect", "fir::FIROpsDialect", "mlir::gpu::GPUDialect",
-    "mlir::DLTIDialect"
+    "cuf::CUFDialect", "fir::FIROpsDialect", "aiir::gpu::GPUDialect",
+    "aiir::DLTIDialect"
   ];
 }
 
 def CUFDeviceFuncTransform
-    : Pass<"cuf-transform-device-func", "::mlir::ModuleOp"> {
+    : Pass<"cuf-transform-device-func", "::aiir::ModuleOp"> {
   let summary = "Transform device function to GPU func";
-  let dependentDialects = ["mlir::gpu::GPUDialect",
-                           "mlir::cf::ControlFlowDialect",
-                           "mlir::NVVM::NVVMDialect"];
+  let dependentDialects = ["aiir::gpu::GPUDialect",
+                           "aiir::cf::ControlFlowDialect",
+                           "aiir::NVVM::NVVMDialect"];
   let options = [Option<"computeCap", "compute-capability", "int",
                         /*default=*/"0", "CUDA compute capability version">];
 }
@@ -566,17 +566,17 @@ def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
 }
 
 def CUFPredefinedVarToGPU
-    : Pass<"cuf-predefined-var-to-gpu", "::mlir::func::FuncOp"> {
+    : Pass<"cuf-predefined-var-to-gpu", "::aiir::func::FuncOp"> {
   let summary = "Transform predefined variables to GPU operations";
   let description = [{
     Change the predefined variables injected in the device function to their
     corresponding NVVM dialect operations.
   }];
-  let dependentDialects = ["mlir::NVVM::NVVMDialect"];
+  let dependentDialects = ["aiir::NVVM::NVVMDialect"];
 }
 
 def SetRuntimeCallAttributes
-    : Pass<"set-runtime-call-attrs", "mlir::func::FuncOp"> {
+    : Pass<"set-runtime-call-attrs", "aiir::func::FuncOp"> {
   let summary = "Set Fortran runtime fir.call attributes targeting LLVM IR";
   let description = [{
     This pass sets different attributes for Fortran runtime calls
@@ -584,11 +584,11 @@ def SetRuntimeCallAttributes
     For the time being, the meaning of these attributes is not
     strictly defined for HLFIR/FIR.
   }];
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+  let dependentDialects = ["fir::FIROpsDialect", "aiir::LLVM::LLVMDialect"];
 }
 
 def GenRuntimeCallsForTest
-    : Pass<"gen-runtime-calls-for-test", "mlir::ModuleOp"> {
+    : Pass<"gen-runtime-calls-for-test", "aiir::ModuleOp"> {
   let summary =
       "Print FIR containing declarations/calls of Fortran runtime functions";
   let description = [{
@@ -605,10 +605,10 @@ def GenRuntimeCallsForTest
               "functions. If it is set to false, then only the declarations "
               "are generated.">,
   ];
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect"];
+  let dependentDialects = ["fir::FIROpsDialect", "aiir::func::FuncDialect"];
 }
 
-def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
+def SimplifyFIROperations : Pass<"simplify-fir-operations", "aiir::ModuleOp"> {
   let summary = "Simplifies complex FIR operations";
   let description = [{
     Expands complex FIR operations into their equivalent using
@@ -622,19 +622,19 @@ def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
       "Prefer expanding without using Fortran runtime calls.">];
 }
 
-def ConvertComplexPow : Pass<"convert-complex-pow", "mlir::ModuleOp"> {
+def ConvertComplexPow : Pass<"convert-complex-pow", "aiir::ModuleOp"> {
   let summary = "Convert complex.pow operations to library calls";
   let description = [{
     Replace `complex.pow` operations with calls to the appropriate
     Fortran runtime or libm functions.
   }];
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect",
-                           "mlir::complex::ComplexDialect",
-                           "mlir::arith::ArithDialect"];
+  let dependentDialects = ["fir::FIROpsDialect", "aiir::func::FuncDialect",
+                           "aiir::complex::ComplexDialect",
+                           "aiir::arith::ArithDialect"];
 }
 
 def OptimizeArrayRepacking
-    : Pass<"optimize-array-repacking", "mlir::func::FuncOp"> {
+    : Pass<"optimize-array-repacking", "aiir::func::FuncOp"> {
   let summary = "Optimizes redundant array repacking operations";
   let description = [{
     If the source of fir.pack_array is known to be contiguous,
@@ -643,12 +643,12 @@ def OptimizeArrayRepacking
   }];
 }
 
-def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
+def MIFOpConversion : Pass<"mif-convert", "aiir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+  let dependentDialects = ["fir::FIROpsDialect", "aiir::LLVM::LLVMDialect"];
 }
 
-def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
+def LoopInvariantCodeMotion : Pass<"flang-licm", "::aiir::func::FuncOp"> {
   let summary = "Hoist invariants from loops";
   let description = [{
     Hoist invariants from loops. This is a FIR-specific version of loop

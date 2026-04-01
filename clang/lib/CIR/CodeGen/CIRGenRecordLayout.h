@@ -99,7 +99,7 @@ struct CIRGenBitFieldInfo {
   llvm::StringRef name;
 
   // The actual storage type for the bitfield
-  mlir::Type storageType;
+  aiir::Type storageType;
 
   CIRGenBitFieldInfo()
       : offset(), size(), isSigned(), storageSize(), volatileOffset(),

@@ -20,14 +20,14 @@ public:
 
     llvm::ArrayRef<fir::KindTy> defs;
     fir::KindMapping kindMap(&context, defs);
-    mlir::OpBuilder builder(&context);
+    aiir::OpBuilder builder(&context);
     auto loc = builder.getUnknownLoc();
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    moduleOp = mlir::ModuleOp::create(builder, loc);
+    moduleOp = aiir::ModuleOp::create(builder, loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+    aiir::func::FuncOp func = aiir::func::FuncOp::create(
         builder, loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
@@ -35,33 +35,33 @@ public:
     firBuilder = std::make_unique<fir::FirOpBuilder>(builder, kindMap);
   }
 
-  mlir::Value createDeclare(fir::ExtendedValue exv) {
+  aiir::Value createDeclare(fir::ExtendedValue exv) {
     return hlfir::genDeclare(getLoc(), *firBuilder, exv,
         "x" + std::to_string(varCounter++), fir::FortranVariableFlagsAttr{})
         .getBase();
   }
 
-  mlir::Value createConstant(std::int64_t cst) {
-    mlir::Type indexType = firBuilder->getIndexType();
-    return mlir::arith::ConstantOp::create(*firBuilder, getLoc(), indexType,
+  aiir::Value createConstant(std::int64_t cst) {
+    aiir::Type indexType = firBuilder->getIndexType();
+    return aiir::arith::ConstantOp::create(*firBuilder, getLoc(), indexType,
         firBuilder->getIntegerAttr(indexType, cst));
   }
 
-  mlir::Location getLoc() { return firBuilder->getUnknownLoc(); }
+  aiir::Location getLoc() { return firBuilder->getUnknownLoc(); }
   fir::FirOpBuilder &getBuilder() { return *firBuilder; }
 
   int varCounter = 0;
-  mlir::MLIRContext context;
-  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
+  aiir::AIIRContext context;
+  aiir::OwningOpRef<aiir::ModuleOp> moduleOp;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 };
 
 TEST_F(HLFIRToolsTest, testScalarRoundTrip) {
   auto &builder = getBuilder();
-  mlir::Location loc = getLoc();
-  mlir::Type f32Type = mlir::Float32Type::get(&context);
-  mlir::Type scalarf32Type = builder.getRefType(f32Type);
-  mlir::Value scalarf32Addr = fir::UndefOp::create(builder, loc, scalarf32Type);
+  aiir::Location loc = getLoc();
+  aiir::Type f32Type = aiir::Float32Type::get(&context);
+  aiir::Type scalarf32Type = builder.getRefType(f32Type);
+  aiir::Value scalarf32Addr = fir::UndefOp::create(builder, loc, scalarf32Type);
   fir::ExtendedValue scalarf32{scalarf32Addr};
   hlfir::EntityWithAttributes scalarf32Entity(createDeclare(scalarf32));
   auto [scalarf32Result, cleanup] =
@@ -76,16 +76,16 @@ TEST_F(HLFIRToolsTest, testScalarRoundTrip) {
 
 TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
   auto &builder = getBuilder();
-  mlir::Location loc = getLoc();
-  llvm::SmallVector<mlir::Value> extents{
+  aiir::Location loc = getLoc();
+  llvm::SmallVector<aiir::Value> extents{
       createConstant(20), createConstant(30)};
-  llvm::SmallVector<mlir::Value> lbounds{
+  llvm::SmallVector<aiir::Value> lbounds{
       createConstant(-1), createConstant(-2)};
 
-  mlir::Type f32Type = mlir::Float32Type::get(&context);
-  mlir::Type seqf32Type = builder.getVarLenSeqTy(f32Type, 2);
-  mlir::Type arrayf32Type = builder.getRefType(seqf32Type);
-  mlir::Value arrayf32Addr = fir::UndefOp::create(builder, loc, arrayf32Type);
+  aiir::Type f32Type = aiir::Float32Type::get(&context);
+  aiir::Type seqf32Type = builder.getVarLenSeqTy(f32Type, 2);
+  aiir::Type arrayf32Type = builder.getRefType(seqf32Type);
+  aiir::Value arrayf32Addr = fir::UndefOp::create(builder, loc, arrayf32Type);
   fir::ArrayBoxValue arrayf32{arrayf32Addr, extents, lbounds};
   hlfir::EntityWithAttributes arrayf32Entity(createDeclare(arrayf32));
   auto [arrayf32Result, cleanup] =
@@ -93,8 +93,8 @@ TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
   auto *res = arrayf32Result.getBoxOf<fir::ArrayBoxValue>();
   EXPECT_FALSE(cleanup.has_value());
   ASSERT_NE(res, nullptr);
-  // gtest has a terrible time printing mlir::Value in case of failing
-  // EXPECT_EQ(mlir::Value, mlir::Value). So use EXPECT_TRUE instead.
+  // gtest has a terrible time printing aiir::Value in case of failing
+  // EXPECT_EQ(aiir::Value, aiir::Value). So use EXPECT_TRUE instead.
   EXPECT_TRUE(fir::getBase(*res) == arrayf32Entity.getFirBase());
   ASSERT_EQ(res->getExtents().size(), arrayf32.getExtents().size());
   for (unsigned i = 0; i < arrayf32.getExtents().size(); ++i)
@@ -108,11 +108,11 @@ TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
 
 TEST_F(HLFIRToolsTest, testScalarCharRoundTrip) {
   auto &builder = getBuilder();
-  mlir::Location loc = getLoc();
-  mlir::Value len = createConstant(42);
-  mlir::Type charType = fir::CharacterType::getUnknownLen(&context, 1);
-  mlir::Type scalarCharType = builder.getRefType(charType);
-  mlir::Value scalarCharAddr =
+  aiir::Location loc = getLoc();
+  aiir::Value len = createConstant(42);
+  aiir::Type charType = fir::CharacterType::getUnknownLen(&context, 1);
+  aiir::Type scalarCharType = builder.getRefType(charType);
+  aiir::Value scalarCharAddr =
       fir::UndefOp::create(builder, loc, scalarCharType);
   fir::CharBoxValue scalarChar{scalarCharAddr, len};
   hlfir::EntityWithAttributes scalarCharEntity(createDeclare(scalarChar));
@@ -129,16 +129,16 @@ TEST_F(HLFIRToolsTest, testScalarCharRoundTrip) {
 
 TEST_F(HLFIRToolsTest, testArrayCharRoundTrip) {
   auto &builder = getBuilder();
-  mlir::Location loc = getLoc();
-  llvm::SmallVector<mlir::Value> extents{
+  aiir::Location loc = getLoc();
+  llvm::SmallVector<aiir::Value> extents{
       createConstant(20), createConstant(30)};
-  llvm::SmallVector<mlir::Value> lbounds{
+  llvm::SmallVector<aiir::Value> lbounds{
       createConstant(-1), createConstant(-2)};
-  mlir::Value len = createConstant(42);
-  mlir::Type charType = fir::CharacterType::getUnknownLen(&context, 1);
-  mlir::Type seqCharType = builder.getVarLenSeqTy(charType, 2);
-  mlir::Type arrayCharType = builder.getRefType(seqCharType);
-  mlir::Value arrayCharAddr = fir::UndefOp::create(builder, loc, arrayCharType);
+  aiir::Value len = createConstant(42);
+  aiir::Type charType = fir::CharacterType::getUnknownLen(&context, 1);
+  aiir::Type seqCharType = builder.getVarLenSeqTy(charType, 2);
+  aiir::Type arrayCharType = builder.getRefType(seqCharType);
+  aiir::Value arrayCharAddr = fir::UndefOp::create(builder, loc, arrayCharType);
   fir::CharArrayBoxValue arrayChar{arrayCharAddr, len, extents, lbounds};
   hlfir::EntityWithAttributes arrayCharEntity(createDeclare(arrayChar));
   auto [arrayCharResult, cleanup] =
@@ -146,8 +146,8 @@ TEST_F(HLFIRToolsTest, testArrayCharRoundTrip) {
   auto *res = arrayCharResult.getBoxOf<fir::CharArrayBoxValue>();
   EXPECT_FALSE(cleanup.has_value());
   ASSERT_NE(res, nullptr);
-  // gtest has a terrible time printing mlir::Value in case of failing
-  // EXPECT_EQ(mlir::Value, mlir::Value). So use EXPECT_TRUE instead.
+  // gtest has a terrible time printing aiir::Value in case of failing
+  // EXPECT_EQ(aiir::Value, aiir::Value). So use EXPECT_TRUE instead.
   EXPECT_TRUE(fir::getBase(*res) == arrayCharEntity.getFirBase());
   EXPECT_TRUE(res->getLen() == arrayChar.getLen());
   ASSERT_EQ(res->getExtents().size(), arrayChar.getExtents().size());
@@ -162,16 +162,16 @@ TEST_F(HLFIRToolsTest, testArrayCharRoundTrip) {
 
 TEST_F(HLFIRToolsTest, testArrayCharBoxRoundTrip) {
   auto &builder = getBuilder();
-  mlir::Location loc = getLoc();
-  llvm::SmallVector<mlir::Value> lbounds{
+  aiir::Location loc = getLoc();
+  llvm::SmallVector<aiir::Value> lbounds{
       createConstant(-1), createConstant(-2)};
-  mlir::Value len = createConstant(42);
-  mlir::Type charType = fir::CharacterType::getUnknownLen(&context, 1);
-  mlir::Type seqCharType = builder.getVarLenSeqTy(charType, 2);
-  mlir::Type arrayCharBoxType = fir::BoxType::get(seqCharType);
-  mlir::Value arrayCharAddr =
+  aiir::Value len = createConstant(42);
+  aiir::Type charType = fir::CharacterType::getUnknownLen(&context, 1);
+  aiir::Type seqCharType = builder.getVarLenSeqTy(charType, 2);
+  aiir::Type arrayCharBoxType = fir::BoxType::get(seqCharType);
+  aiir::Value arrayCharAddr =
       fir::UndefOp::create(builder, loc, arrayCharBoxType);
-  llvm::SmallVector<mlir::Value> explicitTypeParams{len};
+  llvm::SmallVector<aiir::Value> explicitTypeParams{len};
   fir::BoxValue arrayChar{arrayCharAddr, lbounds, explicitTypeParams};
   hlfir::EntityWithAttributes arrayCharEntity(createDeclare(arrayChar));
   auto [arrayCharResult, cleanup] =
@@ -179,8 +179,8 @@ TEST_F(HLFIRToolsTest, testArrayCharBoxRoundTrip) {
   auto *res = arrayCharResult.getBoxOf<fir::BoxValue>();
   EXPECT_FALSE(cleanup.has_value());
   ASSERT_NE(res, nullptr);
-  // gtest has a terrible time printing mlir::Value in case of failing
-  // EXPECT_EQ(mlir::Value, mlir::Value). So use EXPECT_TRUE instead.
+  // gtest has a terrible time printing aiir::Value in case of failing
+  // EXPECT_EQ(aiir::Value, aiir::Value). So use EXPECT_TRUE instead.
   EXPECT_TRUE(fir::getBase(*res) == arrayCharEntity.getFirBase());
   ASSERT_EQ(res->getExplicitParameters().size(),
       arrayChar.getExplicitParameters().size());

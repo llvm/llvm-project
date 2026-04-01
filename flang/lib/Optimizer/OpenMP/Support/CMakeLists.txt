@@ -1,4 +1,4 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
 
 add_flang_library(FIROpenMPSupport
   FIROpenMPAttributes.cpp
@@ -13,9 +13,9 @@ add_flang_library(FIROpenMPSupport
   FIRBuilder
   FIRDialect
 
-  MLIR_DEPS
-  MLIROpenMPDialect
+  AIIR_DEPS
+  AIIROpenMPDialect
 
-  MLIR_LIBS
-  MLIROpenMPDialect
+  AIIR_LIBS
+  AIIROpenMPDialect
 )

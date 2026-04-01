@@ -16,7 +16,7 @@ LLVM Flang compiler uses an extended CFI descriptor data structure to represent 
 
 During the offload execution a variable data (i.e. the memory holding the actual value of the variable) can be transferred between the host and the device using explicit OpenACC constructs.  Fortran language does not expose the descriptor representation to the user, but the accesses of variables with descriptors on the device may still be done using the descriptor data.  Thus, the implementations must implicitly manage the data transfers of the descriptors along with the transfers of the actual values of the variables.
 
-The MLIR OpenACC dialect is language agnostic so that it can work for Fortran and C/C++ with OpenACC.  The dialect should provide means for expressing the logic for data and descriptor management for the offload data environment.
+The AIIR OpenACC dialect is language agnostic so that it can work for Fortran and C/C++ with OpenACC.  The dialect should provide means for expressing the logic for data and descriptor management for the offload data environment.
 
 The chapter numbering in this document refers to:
 
@@ -328,9 +328,9 @@ Pointer attachment for POINTER and ALLOCATABLE variables is a "composite" runtim
 * Copying data from the host to the device to update the device copy of the descriptor: this data may include the device address of the data, the descriptor data describing the element size, dimensions, etc.
 * Descriptors with an F18 addendum may also require mapping the data pointed to by the addendum pointer(s) and attaching this pointer(s) into the device copy of the descriptor.
 
-## Representing pointer attachment in MLIR OpenACC dialect
+## Representing pointer attachment in AIIR OpenACC dialect
 
-The Fortran pointer attachment logic specified by OpenACC is not trivial, and in order to be expressed in a language independent MLIR OpenACC dialect we propose to use recipes for delegating the complexity of the implementation to Flang's runtime.
+The Fortran pointer attachment logic specified by OpenACC is not trivial, and in order to be expressed in a language independent AIIR OpenACC dialect we propose to use recipes for delegating the complexity of the implementation to Flang's runtime.
 
 ```Fortran
   !$acc enter data attach(d%p)

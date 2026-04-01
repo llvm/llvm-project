@@ -31,14 +31,14 @@ add_flang_library(FIRDialect
   AsmPrinter
   Remarks
 
-  MLIR_DEPS
-  MLIRIR
+  AIIR_DEPS
+  AIIRIR
 
-  MLIR_LIBS
-  MLIRArithDialect
-  MLIROpenACCDialect
-  MLIRBuiltinToLLVMIRTranslation
-  MLIROpenMPToLLVM
-  MLIRLLVMToLLVMIRTranslation
-  MLIRTargetLLVMIRExport
+  AIIR_LIBS
+  AIIRArithDialect
+  AIIROpenACCDialect
+  AIIRBuiltinToLLVMIRTranslation
+  AIIROpenMPToLLVM
+  AIIRLLVMToLLVMIRTranslation
+  AIIRTargetLLVMIRExport
 )

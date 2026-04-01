@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Builder routines for constructing the FIR dialect of MLIR. As FIR is a
-// dialect of MLIR, it makes extensive use of MLIR interfaces and MLIR's coding
-// style (https://mlir.llvm.org/getting_started/DeveloperGuide/) is used in this
+// Builder routines for constructing the FIR dialect of AIIR. As FIR is a
+// dialect of AIIR, it makes extensive use of AIIR interfaces and AIIR's coding
+// style (https://aiir.llvm.org/getting_started/DeveloperGuide/) is used in this
 // module.
 //
 //===----------------------------------------------------------------------===//
@@ -18,11 +18,11 @@
 
 #include <optional>
 
-namespace mlir {
+namespace aiir {
 class Location;
 class Type;
 class Value;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class CharBoxValue;
@@ -30,95 +30,95 @@ class FirOpBuilder;
 
 namespace runtime {
 
-mlir::Value genAssociated(fir::FirOpBuilder &, mlir::Location,
-                          mlir::Value pointer, mlir::Value target);
+aiir::Value genAssociated(fir::FirOpBuilder &, aiir::Location,
+                          aiir::Value pointer, aiir::Value target);
 
-void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
-                         mlir::Value pointer, mlir::Value target);
-void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
-                                  mlir::Value pointer, mlir::Value target,
-                                  mlir::Value bounds, bool isMonomorphic);
+void genPointerAssociate(fir::FirOpBuilder &, aiir::Location,
+                         aiir::Value pointer, aiir::Value target);
+void genPointerAssociateRemapping(fir::FirOpBuilder &, aiir::Location,
+                                  aiir::Value pointer, aiir::Value target,
+                                  aiir::Value bounds, bool isMonomorphic);
 
-mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
-void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
+aiir::Value genCpuTime(fir::FirOpBuilder &, aiir::Location);
+void genDateAndTime(fir::FirOpBuilder &, aiir::Location,
                     std::optional<fir::CharBoxValue> date,
                     std::optional<fir::CharBoxValue> time,
-                    std::optional<fir::CharBoxValue> zone, mlir::Value values);
+                    std::optional<fir::CharBoxValue> zone, aiir::Value values);
 
-mlir::Value genDsecnds(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value refTime);
+aiir::Value genDsecnds(fir::FirOpBuilder &builder, aiir::Location loc,
+                       aiir::Value refTime);
 
-void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
-              mlir::Value values, mlir::Value time);
+void genEtime(fir::FirOpBuilder &builder, aiir::Location loc,
+              aiir::Value values, aiir::Value time);
 
-void genFlush(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value unit);
+void genFlush(fir::FirOpBuilder &builder, aiir::Location loc, aiir::Value unit);
 
-void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
+void genFree(fir::FirOpBuilder &builder, aiir::Location loc, aiir::Value ptr);
 
-mlir::Value genFseek(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value unit, mlir::Value offset, mlir::Value whence);
-mlir::Value genFtell(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value unit);
+aiir::Value genFseek(fir::FirOpBuilder &builder, aiir::Location loc,
+                     aiir::Value unit, aiir::Value offset, aiir::Value whence);
+aiir::Value genFtell(fir::FirOpBuilder &builder, aiir::Location loc,
+                     aiir::Value unit);
 
-mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
-mlir::Value genGetGID(fir::FirOpBuilder &, mlir::Location);
+aiir::Value genGetUID(fir::FirOpBuilder &, aiir::Location);
+aiir::Value genGetGID(fir::FirOpBuilder &, aiir::Location);
 
-mlir::Value genMalloc(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value size);
+aiir::Value genMalloc(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value size);
 
-void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
-                   mlir::Value imageDistinct);
-void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
-void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
-                   mlir::Value put, mlir::Value get);
+void genRandomInit(fir::FirOpBuilder &, aiir::Location, aiir::Value repeatable,
+                   aiir::Value imageDistinct);
+void genRandomNumber(fir::FirOpBuilder &, aiir::Location, aiir::Value harvest);
+void genRandomSeed(fir::FirOpBuilder &, aiir::Location, aiir::Value size,
+                   aiir::Value put, aiir::Value get);
 
 /// generate rename runtime call
-void genRename(fir::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value path1, mlir::Value path2, mlir::Value status);
+void genRename(fir::FirOpBuilder &builder, aiir::Location loc,
+               aiir::Value path1, aiir::Value path2, aiir::Value status);
 
-mlir::Value genSecnds(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value refTime);
+aiir::Value genSecnds(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value refTime);
 
 /// generate time runtime call
-mlir::Value genTime(fir::FirOpBuilder &builder, mlir::Location loc);
+aiir::Value genTime(fir::FirOpBuilder &builder, aiir::Location loc);
 
 /// generate runtime call to transfer intrinsic with no size argument
-void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
-                 mlir::Value resultBox, mlir::Value sourceBox,
-                 mlir::Value moldBox);
+void genTransfer(fir::FirOpBuilder &builder, aiir::Location loc,
+                 aiir::Value resultBox, aiir::Value sourceBox,
+                 aiir::Value moldBox);
 
 /// generate runtime call to transfer intrinsic with size argument
-void genTransferSize(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value resultBox, mlir::Value sourceBox,
-                     mlir::Value moldBox, mlir::Value size);
+void genTransferSize(fir::FirOpBuilder &builder, aiir::Location loc,
+                     aiir::Value resultBox, aiir::Value sourceBox,
+                     aiir::Value moldBox, aiir::Value size);
 
 /// generate system_clock runtime call/s
-/// all intrinsic arguments are optional and may appear here as mlir::Value{}
-void genSystemClock(fir::FirOpBuilder &, mlir::Location, mlir::Value count,
-                    mlir::Value rate, mlir::Value max);
+/// all intrinsic arguments are optional and may appear here as aiir::Value{}
+void genSystemClock(fir::FirOpBuilder &, aiir::Location, aiir::Value count,
+                    aiir::Value rate, aiir::Value max);
 
 // generate signal runtime call
 // CALL SIGNAL(NUMBER, HANDLER [, STATUS])
 // status can be {} or a value. It may also be dynamically absent
-void genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value number, mlir::Value handler, mlir::Value status);
+void genSignal(fir::FirOpBuilder &builder, aiir::Location loc,
+               aiir::Value number, aiir::Value handler, aiir::Value status);
 
 /// generate sleep runtime call
-void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
-              mlir::Value seconds);
+void genSleep(fir::FirOpBuilder &builder, aiir::Location loc,
+              aiir::Value seconds);
 
 /// generate chdir runtime call
-mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value name);
+aiir::Value genChdir(fir::FirOpBuilder &builder, aiir::Location loc,
+                     aiir::Value name);
 
-mlir::Value genIrand(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value i);
-mlir::Value genRand(fir::FirOpBuilder &builder, mlir::Location loc,
-                    mlir::Value i);
+aiir::Value genIrand(fir::FirOpBuilder &builder, aiir::Location loc,
+                     aiir::Value i);
+aiir::Value genRand(fir::FirOpBuilder &builder, aiir::Location loc,
+                    aiir::Value i);
 
 /// generate dump of a descriptor
-void genShowDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value descriptor);
+void genShowDescriptor(fir::FirOpBuilder &builder, aiir::Location loc,
+                       aiir::Value descriptor);
 
 } // namespace runtime
 } // namespace fir

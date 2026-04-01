@@ -61,7 +61,7 @@ class Test(unittest.TestCase):
                 "e241573d5972d34a323fa5c64774c4207340beb3",
                 "\n".join(
                     (
-                        "[mlir] NFC: remove IntegerValueSet / MutableIntegerSet",
+                        "[aiir] NFC: remove IntegerValueSet / MutableIntegerSet",
                         "",
                         "Summary:",
                         "- these are unused and really not needed now given flat "

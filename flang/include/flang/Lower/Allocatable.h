@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,11 +18,11 @@
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "llvm/ADT/StringRef.h"
 
-namespace mlir {
+namespace aiir {
 class Value;
 class ValueRange;
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -48,39 +48,39 @@ bool isArraySectionWithoutVectorSubscript(const SomeExpr &expr);
 
 /// Lower an allocate statement to fir.
 void genAllocateStmt(AbstractConverter &converter,
-                     const parser::AllocateStmt &stmt, mlir::Location loc);
+                     const parser::AllocateStmt &stmt, aiir::Location loc);
 
 /// Lower a deallocate statement to fir.
 void genDeallocateStmt(AbstractConverter &converter,
-                       const parser::DeallocateStmt &stmt, mlir::Location loc);
+                       const parser::DeallocateStmt &stmt, aiir::Location loc);
 
 void genDeallocateBox(AbstractConverter &converter,
-                      const fir::MutableBoxValue &box, mlir::Location loc,
+                      const fir::MutableBoxValue &box, aiir::Location loc,
                       const Fortran::semantics::Symbol *sym = nullptr,
-                      mlir::Value declaredTypeDesc = {});
+                      aiir::Value declaredTypeDesc = {});
 
 /// Deallocate an allocatable if it is allocated at the end of its lifetime.
 void genDeallocateIfAllocated(AbstractConverter &converter,
                               const fir::MutableBoxValue &box,
-                              mlir::Location loc,
+                              aiir::Location loc,
                               const Fortran::semantics::Symbol *sym = nullptr);
 
 /// Create a MutableBoxValue for an allocatable or pointer entity.
 /// If the variables is a local variable that is not a dummy, it will be
 /// initialized to unallocated/diassociated status.
 fir::MutableBoxValue
-createMutableBox(AbstractConverter &converter, mlir::Location loc,
-                 const pft::Variable &var, mlir::Value boxAddr,
-                 mlir::ValueRange nonDeferredParams, bool alwaysUseBox,
+createMutableBox(AbstractConverter &converter, aiir::Location loc,
+                 const pft::Variable &var, aiir::Value boxAddr,
+                 aiir::ValueRange nonDeferredParams, bool alwaysUseBox,
                  unsigned allocator = kDefaultAllocator);
 
 /// Assign a boxed value to a boxed variable, \p box (known as a
 /// MutableBoxValue). Expression \p source will be lowered to build the
 /// assignment. If \p lbounds is not empty, it is used to define the result's
 /// lower bounds. Otherwise, the lower bounds from \p source will be used.
-void associateMutableBox(AbstractConverter &converter, mlir::Location loc,
+void associateMutableBox(AbstractConverter &converter, aiir::Location loc,
                          const fir::MutableBoxValue &box,
-                         const SomeExpr &source, mlir::ValueRange lbounds,
+                         const SomeExpr &source, aiir::ValueRange lbounds,
                          StatementContext &stmtCtx);
 
 /// Is \p expr a reference to an entity with the ALLOCATABLE attribute?
@@ -91,13 +91,13 @@ bool isWholePointer(const SomeExpr &expr);
 
 /// Read the length from \p box for an assumed length character allocatable or
 /// pointer dummy argument given by \p sym.
-mlir::Value getAssumedCharAllocatableOrPointerLen(
-    fir::FirOpBuilder &builder, mlir::Location loc,
-    const Fortran::semantics::Symbol &sym, mlir::Value box);
+aiir::Value getAssumedCharAllocatableOrPointerLen(
+    fir::FirOpBuilder &builder, aiir::Location loc,
+    const Fortran::semantics::Symbol &sym, aiir::Value box);
 
 /// Retrieve the address of a type descriptor from its derived type spec.
-mlir::Value
-getTypeDescAddr(AbstractConverter &converter, mlir::Location loc,
+aiir::Value
+getTypeDescAddr(AbstractConverter &converter, aiir::Location loc,
                 const Fortran::semantics::DerivedTypeSpec &typeSpec);
 
 } // namespace lower

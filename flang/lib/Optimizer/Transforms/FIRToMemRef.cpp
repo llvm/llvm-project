@@ -43,28 +43,28 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/Block.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dominance.h"
-#include "mlir/IR/Location.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Region.h"
-#include "mlir/IR/Value.h"
-#include "mlir/IR/ValueRange.h"
-#include "mlir/IR/Verifier.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "aiir/Dialect/Arith/IR/Arith.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/MemRef/IR/MemRef.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/SCF/IR/SCF.h"
+#include "aiir/IR/Block.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinTypes.h"
+#include "aiir/IR/Dominance.h"
+#include "aiir/IR/Location.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/IR/Region.h"
+#include "aiir/IR/Value.h"
+#include "aiir/IR/ValueRange.h"
+#include "aiir/IR/Verifier.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Support/LLVM.h"
+#include "aiir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -76,7 +76,7 @@
 
 #define DEBUG_TYPE "fir-to-memref"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace fir {
 
@@ -171,7 +171,7 @@ private:
 
   bool memrefIsDeviceData(Operation *memref) const;
 
-  mlir::Attribute findCudaDataAttr(Value val) const;
+  aiir::Attribute findCudaDataAttr(Value val) const;
 
   Value materializeBoxAddressIfNeeded(Value basePtr, PatternRewriter &rewriter,
                                       Location loc) const;
@@ -180,7 +180,7 @@ private:
 void FIRToMemRef::populateShapeAndShift(SmallVectorImpl<Value> &shapeVec,
                                         SmallVectorImpl<Value> &shiftVec,
                                         fir::ShapeShiftOp shift) const {
-  for (mlir::OperandRange::iterator i = shift.getPairs().begin(),
+  for (aiir::OperandRange::iterator i = shift.getPairs().begin(),
                                     endIter = shift.getPairs().end();
        i != endIter;) {
     shiftVec.push_back(*i++);
@@ -221,7 +221,7 @@ bool FIRToMemRef::memrefIsDeviceData(Operation *memref) const {
   return cuf::hasDeviceDataAttr(memref);
 }
 
-mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
+aiir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
   Value currentVal = val;
   llvm::SmallPtrSet<Operation *, 8> visited;
 
@@ -360,8 +360,8 @@ bool FIRToMemRef::memrefIsOptional(Operation *op) const {
       return true;
   }
 
-  for (mlir::Value result : op->getResults())
-    for (mlir::Operation *userOp : result.getUsers())
+  for (aiir::Value result : op->getResults())
+    for (aiir::Operation *userOp : result.getUsers())
       if (isa<fir::IsPresentOp>(userOp))
         return true;
 
@@ -383,18 +383,18 @@ static Value castTypeToIndexType(Value originalValue,
                                     originalValue);
 }
 
-static bool shouldUseBoundaryBitcast(mlir::Type fromTy, mlir::Type toTy) {
-  auto isBitcastCompatibleScalarType = [](mlir::Type ty) {
-    return mlir::isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>(
+static bool shouldUseBoundaryBitcast(aiir::Type fromTy, aiir::Type toTy) {
+  auto isBitcastCompatibleScalarType = [](aiir::Type ty) {
+    return aiir::isa<aiir::IntegerType, aiir::FloatType, fir::LogicalType>(
                ty) ||
-           (mlir::isa<fir::CharacterType>(ty) &&
-            mlir::cast<fir::CharacterType>(ty).getLen() ==
+           (aiir::isa<fir::CharacterType>(ty) &&
+            aiir::cast<fir::CharacterType>(ty).getLen() ==
                 fir::CharacterType::singleton());
   };
-  auto getKnownScalarBitWidth = [](mlir::Type ty) -> std::optional<unsigned> {
-    if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
+  auto getKnownScalarBitWidth = [](aiir::Type ty) -> std::optional<unsigned> {
+    if (auto intTy = aiir::dyn_cast<aiir::IntegerType>(ty))
       return intTy.getWidth();
-    if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(ty))
+    if (auto floatTy = aiir::dyn_cast<aiir::FloatType>(ty))
       return floatTy.getWidth();
     return std::nullopt;
   };
@@ -415,9 +415,9 @@ static bool shouldUseBoundaryBitcast(mlir::Type fromTy, mlir::Type toTy) {
   return true;
 }
 
-static mlir::Value createTypeConversion(PatternRewriter &rewriter,
-                                        mlir::Location loc, mlir::Type toTy,
-                                        mlir::Value value) {
+static aiir::Value createTypeConversion(PatternRewriter &rewriter,
+                                        aiir::Location loc, aiir::Type toTy,
+                                        aiir::Value value) {
   if (shouldUseBoundaryBitcast(value.getType(), toTy))
     return fir::BitcastOp::create(rewriter, loc, toTy, value);
   return fir::ConvertOp::create(rewriter, loc, toTy, value);
@@ -455,7 +455,7 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
   for (int i = 0; i < rank; ++i) {
     Value step = isSliced ? sliceStrides[i] : one;
     Operation *stepOp = step.getDefiningOp();
-    if (stepOp && mlir::isa_and_nonnull<fir::UndefOp>(stepOp)) {
+    if (stepOp && aiir::isa_and_nonnull<fir::UndefOp>(stepOp)) {
       Value shift = isShifted ? shiftVec[i] : one;
       Value sliceLb = isSliced ? sliceLbs[i] : shift;
       Value offset = arith::SubIOp::create(rewriter, loc, sliceLb, shift);
@@ -1084,7 +1084,7 @@ void FIRToMemRef::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Enter FIRToMemRef()\n");
 
   func::FuncOp op = getOperation();
-  MLIRContext *context = op.getContext();
+  AIIRContext *context = op.getContext();
   ModuleOp mod = op->getParentOfType<ModuleOp>();
   FIRToMemRefTypeConverter typeConverter(mod);
 

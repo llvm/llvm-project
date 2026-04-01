@@ -1,6 +1,6 @@
 ! Tests delayed privatization for `targets ... private(..)` for allocatables.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --enable-delayed-privatization-staging \
 ! RUN:   -o - %s 2>&1 | FileCheck %s --check-prefix=CPU
 
 ! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging -o - %s 2>&1 \
@@ -9,7 +9,7 @@
 ! RUN: %if amdgpu-registered-target %{ \
 ! RUN:   %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir  \
 ! RUN:     -fopenmp -fopenmp-is-target-device \
-! RUN:     -mmlir --enable-delayed-privatization-staging \
+! RUN:     -maiir --enable-delayed-privatization-staging \
 ! RUN:     -o - %s 2>&1 | \
 ! RUN:   FileCheck %s --check-prefix=GPU  \
 ! RUN: %}

@@ -12,17 +12,17 @@
 
 #include "TargetLowering/LowerModule.h"
 
-#include "mlir/Support/LLVM.h"
+#include "aiir/Support/LLVM.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
-namespace mlir {
+namespace aiir {
 #define GEN_PASS_DEF_TARGETLOWERING
 #include "clang/CIR/Dialect/Passes.h.inc"
-} // namespace mlir
+} // namespace aiir
 
 namespace {
 
@@ -34,10 +34,10 @@ struct TargetLoweringPass
 
 } // namespace
 
-static void convertSyncScopeIfPresent(mlir::Operation *op,
+static void convertSyncScopeIfPresent(aiir::Operation *op,
                                       cir::LowerModule &lowerModule) {
   auto syncScopeAttr =
-      mlir::cast_if_present<cir::SyncScopeKindAttr>(op->getAttr("sync_scope"));
+      aiir::cast_if_present<cir::SyncScopeKindAttr>(op->getAttr("sync_scope"));
   if (syncScopeAttr) {
     cir::SyncScopeKind convertedSyncScope =
         lowerModule.getTargetLoweringInfo().convertSyncScope(
@@ -48,7 +48,7 @@ static void convertSyncScopeIfPresent(mlir::Operation *op,
 }
 
 void TargetLoweringPass::runOnOperation() {
-  auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
+  auto mod = aiir::cast<aiir::ModuleOp>(getOperation());
   std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
   // If lower module is not available, skip the target lowering pass.
   if (!lowerModule) {
@@ -57,13 +57,13 @@ void TargetLoweringPass::runOnOperation() {
     return;
   }
 
-  mod->walk([&](mlir::Operation *op) {
-    if (mlir::isa<cir::LoadOp, cir::StoreOp, cir::AtomicXchgOp,
+  mod->walk([&](aiir::Operation *op) {
+    if (aiir::isa<cir::LoadOp, cir::StoreOp, cir::AtomicXchgOp,
                   cir::AtomicCmpXchgOp, cir::AtomicFetchOp>(op))
       convertSyncScopeIfPresent(op, *lowerModule);
   });
 }
 
-std::unique_ptr<Pass> mlir::createTargetLoweringPass() {
+std::unique_ptr<Pass> aiir::createTargetLoweringPass() {
   return std::make_unique<TargetLoweringPass>();
 }

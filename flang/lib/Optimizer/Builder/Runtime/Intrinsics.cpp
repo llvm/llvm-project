@@ -32,50 +32,50 @@ namespace {
 struct ForcedRandomNumberReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(RandomNumber16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
+    return [](aiir::AIIRContext *ctx) {
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::runtime::getModel<const char *>()(ctx);
       auto intTy = fir::runtime::getModel<int>()(ctx);
       ;
-      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy}, {});
+      return aiir::FunctionType::get(ctx, {boxTy, strTy, intTy}, {});
     };
   }
 };
 } // namespace
 
-mlir::Value fir::runtime::genAssociated(fir::FirOpBuilder &builder,
-                                        mlir::Location loc, mlir::Value pointer,
-                                        mlir::Value target) {
-  mlir::func::FuncOp func =
+aiir::Value fir::runtime::genAssociated(fir::FirOpBuilder &builder,
+                                        aiir::Location loc, aiir::Value pointer,
+                                        aiir::Value target) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(PointerIsAssociatedWith)>(loc,
                                                                      builder);
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target);
   return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
-mlir::Value fir::runtime::genCpuTime(fir::FirOpBuilder &builder,
-                                     mlir::Location loc) {
-  mlir::func::FuncOp func =
+aiir::Value fir::runtime::genCpuTime(fir::FirOpBuilder &builder,
+                                     aiir::Location loc) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(CpuTime)>(loc, builder);
-  return fir::CallOp::create(builder, loc, func, mlir::ValueRange{})
+  return fir::CallOp::create(builder, loc, func, aiir::ValueRange{})
       .getResult(0);
 }
 
 void fir::runtime::genDateAndTime(fir::FirOpBuilder &builder,
-                                  mlir::Location loc,
+                                  aiir::Location loc,
                                   std::optional<fir::CharBoxValue> date,
                                   std::optional<fir::CharBoxValue> time,
                                   std::optional<fir::CharBoxValue> zone,
-                                  mlir::Value values) {
-  mlir::func::FuncOp callee =
+                                  aiir::Value values) {
+  aiir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(DateAndTime)>(loc, builder);
-  mlir::FunctionType funcTy = callee.getFunctionType();
-  mlir::Type idxTy = builder.getIndexType();
-  mlir::Value zero;
-  auto splitArg = [&](std::optional<fir::CharBoxValue> arg, mlir::Value &buffer,
-                      mlir::Value &len) {
+  aiir::FunctionType funcTy = callee.getFunctionType();
+  aiir::Type idxTy = builder.getIndexType();
+  aiir::Value zero;
+  auto splitArg = [&](std::optional<fir::CharBoxValue> arg, aiir::Value &buffer,
+                      aiir::Value &len) {
     if (arg) {
       buffer = arg->getBuffer();
       len = arg->getLen();
@@ -86,117 +86,117 @@ void fir::runtime::genDateAndTime(fir::FirOpBuilder &builder,
       len = zero;
     }
   };
-  mlir::Value dateBuffer;
-  mlir::Value dateLen;
+  aiir::Value dateBuffer;
+  aiir::Value dateLen;
   splitArg(date, dateBuffer, dateLen);
-  mlir::Value timeBuffer;
-  mlir::Value timeLen;
+  aiir::Value timeBuffer;
+  aiir::Value timeLen;
   splitArg(time, timeBuffer, timeLen);
-  mlir::Value zoneBuffer;
-  mlir::Value zoneLen;
+  aiir::Value zoneBuffer;
+  aiir::Value zoneLen;
   splitArg(zone, zoneBuffer, zoneLen);
 
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, funcTy.getInput(7));
 
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, funcTy, dateBuffer, dateLen, timeBuffer, timeLen,
       zoneBuffer, zoneLen, sourceFile, sourceLine, values);
   fir::CallOp::create(builder, loc, callee, args);
 }
 
-mlir::Value fir::runtime::genDsecnds(fir::FirOpBuilder &builder,
-                                     mlir::Location loc, mlir::Value refTime) {
+aiir::Value fir::runtime::genDsecnds(fir::FirOpBuilder &builder,
+                                     aiir::Location loc, aiir::Value refTime) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Dsecnds)>(loc, builder);
 
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
 
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
 
-  llvm::SmallVector<mlir::Value> args = {refTime, sourceFile, sourceLine};
+  llvm::SmallVector<aiir::Value> args = {refTime, sourceFile, sourceLine};
   args = fir::runtime::createArguments(builder, loc, runtimeFuncTy, args);
 
   return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
 
-void fir::runtime::genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Value values, mlir::Value time) {
+void fir::runtime::genEtime(fir::FirOpBuilder &builder, aiir::Location loc,
+                            aiir::Value values, aiir::Value time) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Etime)>(loc, builder);
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
 
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(3));
 
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, values, time, sourceFile, sourceLine);
   fir::CallOp::create(builder, loc, runtimeFunc, args);
 }
 
-void fir::runtime::genFlush(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Value unit) {
+void fir::runtime::genFlush(fir::FirOpBuilder &builder, aiir::Location loc,
+                            aiir::Value unit) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Flush)>(loc, builder);
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFunc.getFunctionType(), unit);
 
   fir::CallOp::create(builder, loc, runtimeFunc, args);
 }
 
-void fir::runtime::genFree(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value ptr) {
+void fir::runtime::genFree(fir::FirOpBuilder &builder, aiir::Location loc,
+                           aiir::Value ptr) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Free)>(loc, builder);
-  mlir::Type intPtrTy = builder.getIntPtrType();
+  aiir::Type intPtrTy = builder.getIntPtrType();
 
   fir::CallOp::create(builder, loc, runtimeFunc,
                       builder.createConvert(loc, intPtrTy, ptr));
 }
 
-mlir::Value fir::runtime::genFseek(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value unit,
-                                   mlir::Value offset, mlir::Value whence) {
+aiir::Value fir::runtime::genFseek(fir::FirOpBuilder &builder,
+                                   aiir::Location loc, aiir::Value unit,
+                                   aiir::Value offset, aiir::Value whence) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Fseek)>(loc, builder);
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
-  llvm::SmallVector<mlir::Value> args =
+  llvm::SmallVector<aiir::Value> args =
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, unit, offset,
                                     whence, sourceFile, sourceLine);
   return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
   ;
 }
 
-mlir::Value fir::runtime::genFtell(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value unit) {
+aiir::Value fir::runtime::genFtell(fir::FirOpBuilder &builder,
+                                   aiir::Location loc, aiir::Value unit) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Ftell)>(loc, builder);
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
-  llvm::SmallVector<mlir::Value> args =
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  llvm::SmallVector<aiir::Value> args =
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, unit);
   return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
 
-mlir::Value fir::runtime::genGetGID(fir::FirOpBuilder &builder,
-                                    mlir::Location loc) {
+aiir::Value fir::runtime::genGetGID(fir::FirOpBuilder &builder,
+                                    aiir::Location loc) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(GetGID)>(loc, builder);
 
   return fir::CallOp::create(builder, loc, runtimeFunc).getResult(0);
 }
 
-mlir::Value fir::runtime::genGetUID(fir::FirOpBuilder &builder,
-                                    mlir::Location loc) {
+aiir::Value fir::runtime::genGetUID(fir::FirOpBuilder &builder,
+                                    aiir::Location loc) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(GetUID)>(loc, builder);
 
   return fir::CallOp::create(builder, loc, runtimeFunc).getResult(0);
 }
 
-mlir::Value fir::runtime::genMalloc(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, mlir::Value size) {
+aiir::Value fir::runtime::genMalloc(fir::FirOpBuilder &builder,
+                                    aiir::Location loc, aiir::Value size) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Malloc)>(loc, builder);
   auto argTy = runtimeFunc.getArgumentTypes()[0];
@@ -205,19 +205,19 @@ mlir::Value fir::runtime::genMalloc(fir::FirOpBuilder &builder,
       .getResult(0);
 }
 
-void fir::runtime::genRandomInit(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Value repeatable,
-                                 mlir::Value imageDistinct) {
-  mlir::func::FuncOp func =
+void fir::runtime::genRandomInit(fir::FirOpBuilder &builder, aiir::Location loc,
+                                 aiir::Value repeatable,
+                                 aiir::Value imageDistinct) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(RandomInit)>(loc, builder);
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), repeatable, imageDistinct);
   fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genRandomNumber(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value harvest) {
-  mlir::func::FuncOp func;
+                                   aiir::Location loc, aiir::Value harvest) {
+  aiir::func::FuncOp func;
   auto boxEleTy = fir::dyn_cast_ptrOrBoxEleTy(harvest.getType());
   auto eleTy = fir::unwrapSequenceType(boxEleTy);
   if (eleTy.isF128()) {
@@ -226,25 +226,25 @@ void fir::runtime::genRandomNumber(fir::FirOpBuilder &builder,
     func = fir::runtime::getRuntimeFunc<mkRTKey(RandomNumber)>(loc, builder);
   }
 
-  mlir::FunctionType funcTy = func.getFunctionType();
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::FunctionType funcTy = func.getFunctionType();
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, funcTy, harvest, sourceFile, sourceLine);
   fir::CallOp::create(builder, loc, func, args);
 }
 
-void fir::runtime::genRandomSeed(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Value size, mlir::Value put,
-                                 mlir::Value get) {
+void fir::runtime::genRandomSeed(fir::FirOpBuilder &builder, aiir::Location loc,
+                                 aiir::Value size, aiir::Value put,
+                                 aiir::Value get) {
   bool sizeIsPresent =
-      !mlir::isa_and_nonnull<fir::AbsentOp>(size.getDefiningOp());
+      !aiir::isa_and_nonnull<fir::AbsentOp>(size.getDefiningOp());
   bool putIsPresent =
-      !mlir::isa_and_nonnull<fir::AbsentOp>(put.getDefiningOp());
+      !aiir::isa_and_nonnull<fir::AbsentOp>(put.getDefiningOp());
   bool getIsPresent =
-      !mlir::isa_and_nonnull<fir::AbsentOp>(get.getDefiningOp());
-  mlir::func::FuncOp func;
+      !aiir::isa_and_nonnull<fir::AbsentOp>(get.getDefiningOp());
+  aiir::func::FuncOp func;
   int staticArgCount = sizeIsPresent + putIsPresent + getIsPresent;
   if (staticArgCount == 0) {
     func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedDefaultPut)>(loc,
@@ -252,11 +252,11 @@ void fir::runtime::genRandomSeed(fir::FirOpBuilder &builder, mlir::Location loc,
     fir::CallOp::create(builder, loc, func);
     return;
   }
-  mlir::FunctionType funcTy;
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine;
-  mlir::Value argBox;
-  llvm::SmallVector<mlir::Value> args;
+  aiir::FunctionType funcTy;
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine;
+  aiir::Value argBox;
+  llvm::SmallVector<aiir::Value> args;
   if (staticArgCount > 1) {
     func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeed)>(loc, builder);
     funcTy = func.getFunctionType();
@@ -285,93 +285,93 @@ void fir::runtime::genRandomSeed(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// generate rename runtime call
-void fir::runtime::genRename(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value path1, mlir::Value path2,
-                             mlir::Value status) {
+void fir::runtime::genRename(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value path1, aiir::Value path2,
+                             aiir::Value status) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Rename)>(loc, builder);
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
 
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(4));
 
-  llvm::SmallVector<mlir::Value> args =
+  llvm::SmallVector<aiir::Value> args =
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, path1, path2,
                                     status, sourceFile, sourceLine);
   fir::CallOp::create(builder, loc, runtimeFunc, args);
 }
 
-mlir::Value fir::runtime::genSecnds(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, mlir::Value refTime) {
+aiir::Value fir::runtime::genSecnds(fir::FirOpBuilder &builder,
+                                    aiir::Location loc, aiir::Value refTime) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Secnds)>(loc, builder);
 
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
 
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
 
-  llvm::SmallVector<mlir::Value> args = {refTime, sourceFile, sourceLine};
+  llvm::SmallVector<aiir::Value> args = {refTime, sourceFile, sourceLine};
   args = fir::runtime::createArguments(builder, loc, runtimeFuncTy, args);
 
   return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
 
 /// generate runtime call to time intrinsic
-mlir::Value fir::runtime::genTime(fir::FirOpBuilder &builder,
-                                  mlir::Location loc) {
+aiir::Value fir::runtime::genTime(fir::FirOpBuilder &builder,
+                                  aiir::Location loc) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(time)>(loc, builder);
-  return fir::CallOp::create(builder, loc, func, mlir::ValueRange{})
+  return fir::CallOp::create(builder, loc, func, aiir::ValueRange{})
       .getResult(0);
 }
 
 /// generate runtime call to transfer intrinsic with no size argument
-void fir::runtime::genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value resultBox, mlir::Value sourceBox,
-                               mlir::Value moldBox) {
+void fir::runtime::genTransfer(fir::FirOpBuilder &builder, aiir::Location loc,
+                               aiir::Value resultBox, aiir::Value sourceBox,
+                               aiir::Value moldBox) {
 
-  mlir::func::FuncOp func =
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(Transfer)>(loc, builder);
-  mlir::FunctionType fTy = func.getFunctionType();
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::FunctionType fTy = func.getFunctionType();
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, sourceBox, moldBox, sourceFile, sourceLine);
   fir::CallOp::create(builder, loc, func, args);
 }
 
 /// generate runtime call to transfer intrinsic with size argument
 void fir::runtime::genTransferSize(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value resultBox,
-                                   mlir::Value sourceBox, mlir::Value moldBox,
-                                   mlir::Value size) {
-  mlir::func::FuncOp func =
+                                   aiir::Location loc, aiir::Value resultBox,
+                                   aiir::Value sourceBox, aiir::Value moldBox,
+                                   aiir::Value size) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(TransferSize)>(loc, builder);
-  mlir::FunctionType fTy = func.getFunctionType();
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::FunctionType fTy = func.getFunctionType();
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
-  llvm::SmallVector<mlir::Value> args =
+  llvm::SmallVector<aiir::Value> args =
       fir::runtime::createArguments(builder, loc, fTy, resultBox, sourceBox,
                                     moldBox, sourceFile, sourceLine, size);
   fir::CallOp::create(builder, loc, func, args);
 }
 
 /// generate system_clock runtime call/s
-/// all intrinsic arguments are optional and may appear here as mlir::Value{}
+/// all intrinsic arguments are optional and may appear here as aiir::Value{}
 void fir::runtime::genSystemClock(fir::FirOpBuilder &builder,
-                                  mlir::Location loc, mlir::Value count,
-                                  mlir::Value rate, mlir::Value max) {
-  auto makeCall = [&](mlir::func::FuncOp func, mlir::Value arg) {
-    mlir::Type type = arg.getType();
+                                  aiir::Location loc, aiir::Value count,
+                                  aiir::Value rate, aiir::Value max) {
+  auto makeCall = [&](aiir::func::FuncOp func, aiir::Value arg) {
+    aiir::Type type = arg.getType();
     fir::IfOp ifOp{};
     const bool isOptionalArg =
         fir::valueHasFirAttribute(arg, fir::getOptionalAttrName());
-    if (mlir::dyn_cast<fir::PointerType>(type) ||
-        mlir::dyn_cast<fir::HeapType>(type)) {
+    if (aiir::dyn_cast<fir::PointerType>(type) ||
+        aiir::dyn_cast<fir::HeapType>(type)) {
       // Check for a disassociated pointer or an unallocated allocatable.
       assert(!isOptionalArg && "invalid optional argument");
       ifOp = fir::IfOp::create(builder, loc, builder.genIsNotNullAddr(loc, arg),
@@ -384,16 +384,16 @@ void fir::runtime::genSystemClock(fir::FirOpBuilder &builder,
     }
     if (ifOp)
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    mlir::Type kindTy = func.getFunctionType().getInput(0);
+    aiir::Type kindTy = func.getFunctionType().getInput(0);
     int integerKind = 8;
     if (auto intType =
-            mlir::dyn_cast<mlir::IntegerType>(fir::unwrapRefType(type)))
+            aiir::dyn_cast<aiir::IntegerType>(fir::unwrapRefType(type)))
       integerKind = intType.getWidth() / 8;
-    mlir::Value kind = builder.createIntegerConstant(loc, kindTy, integerKind);
-    mlir::Value res =
-        fir::CallOp::create(builder, loc, func, mlir::ValueRange{kind})
+    aiir::Value kind = builder.createIntegerConstant(loc, kindTy, integerKind);
+    aiir::Value res =
+        fir::CallOp::create(builder, loc, func, aiir::ValueRange{kind})
             .getResult(0);
-    mlir::Value castRes =
+    aiir::Value castRes =
         builder.createConvert(loc, fir::dyn_cast_ptrEleTy(type), res);
     fir::StoreOp::create(builder, loc, castRes, arg);
     if (ifOp)
@@ -411,36 +411,36 @@ void fir::runtime::genSystemClock(fir::FirOpBuilder &builder,
 // CALL SIGNAL(NUMBER, HANDLER [, STATUS])
 // The definition of the SIGNAL intrinsic allows HANDLER to be a function
 // pointer or an integer. STATUS can be dynamically optional
-void fir::runtime::genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value number, mlir::Value handler,
-                             mlir::Value status) {
-  assert(mlir::isa<mlir::IntegerType>(number.getType()));
-  mlir::Type int64 = builder.getIntegerType(64);
+void fir::runtime::genSignal(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value number, aiir::Value handler,
+                             aiir::Value status) {
+  assert(aiir::isa<aiir::IntegerType>(number.getType()));
+  aiir::Type int64 = builder.getIntegerType(64);
   number = fir::ConvertOp::create(builder, loc, int64, number);
 
-  mlir::Type handlerUnwrappedTy = fir::unwrapRefType(handler.getType());
-  if (mlir::isa_and_nonnull<mlir::IntegerType>(handlerUnwrappedTy)) {
+  aiir::Type handlerUnwrappedTy = fir::unwrapRefType(handler.getType());
+  if (aiir::isa_and_nonnull<aiir::IntegerType>(handlerUnwrappedTy)) {
     // pass the integer as a function pointer like one would to signal(2)
     handler = fir::LoadOp::create(builder, loc, handler);
-    mlir::Type fnPtrTy = fir::LLVMPointerType::get(
-        mlir::FunctionType::get(handler.getContext(), {}, {}));
+    aiir::Type fnPtrTy = fir::LLVMPointerType::get(
+        aiir::FunctionType::get(handler.getContext(), {}, {}));
     handler = fir::ConvertOp::create(builder, loc, fnPtrTy, handler);
   } else {
-    assert(mlir::isa<fir::BoxProcType>(handler.getType()));
+    assert(aiir::isa<fir::BoxProcType>(handler.getType()));
     handler = fir::BoxAddrOp::create(builder, loc, handler);
   }
 
-  mlir::func::FuncOp func{
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(Signal)>(loc, builder)};
-  mlir::Value stat =
-      fir::CallOp::create(builder, loc, func, mlir::ValueRange{number, handler})
+  aiir::Value stat =
+      fir::CallOp::create(builder, loc, func, aiir::ValueRange{number, handler})
           ->getResult(0);
 
   // return status code via status argument (if present)
   if (status) {
-    assert(mlir::isa<mlir::IntegerType>(fir::unwrapRefType(status.getType())));
+    assert(aiir::isa<aiir::IntegerType>(fir::unwrapRefType(status.getType())));
     // status might be dynamically optional, so test if it is present
-    mlir::Value isPresent =
+    aiir::Value isPresent =
         IsPresentOp::create(builder, loc, builder.getI1Type(), status);
     builder.genIfOp(loc, /*results=*/{}, isPresent, /*withElseRegion=*/false)
         .genThen([&]() {
@@ -452,52 +452,52 @@ void fir::runtime::genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
   }
 }
 
-void fir::runtime::genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Value seconds) {
-  mlir::Type int64 = builder.getIntegerType(64);
+void fir::runtime::genSleep(fir::FirOpBuilder &builder, aiir::Location loc,
+                            aiir::Value seconds) {
+  aiir::Type int64 = builder.getIntegerType(64);
   seconds = fir::ConvertOp::create(builder, loc, int64, seconds);
-  mlir::func::FuncOp func{
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(Sleep)>(loc, builder)};
   fir::CallOp::create(builder, loc, func, seconds);
 }
 
 /// generate chdir runtime call
-mlir::Value fir::runtime::genChdir(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value name) {
-  mlir::func::FuncOp func{
+aiir::Value fir::runtime::genChdir(fir::FirOpBuilder &builder,
+                                   aiir::Location loc, aiir::Value name) {
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(Chdir)>(loc, builder)};
-  llvm::SmallVector<mlir::Value> args =
+  llvm::SmallVector<aiir::Value> args =
       fir::runtime::createArguments(builder, loc, func.getFunctionType(), name);
   return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
-mlir::Value fir::runtime::genIrand(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value i) {
+aiir::Value fir::runtime::genIrand(fir::FirOpBuilder &builder,
+                                   aiir::Location loc, aiir::Value i) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Irand)>(loc, builder);
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
 
-  llvm::SmallVector<mlir::Value> args =
+  llvm::SmallVector<aiir::Value> args =
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, i);
   return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
 
-mlir::Value fir::runtime::genRand(fir::FirOpBuilder &builder,
-                                  mlir::Location loc, mlir::Value i) {
+aiir::Value fir::runtime::genRand(fir::FirOpBuilder &builder,
+                                  aiir::Location loc, aiir::Value i) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Rand)>(loc, builder);
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
 
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
 
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, i, sourceFile, sourceLine);
   return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
 
 void fir::runtime::genShowDescriptor(fir::FirOpBuilder &builder,
-                                     mlir::Location loc, mlir::Value descAddr) {
-  mlir::func::FuncOp func{
+                                     aiir::Location loc, aiir::Value descAddr) {
+  aiir::func::FuncOp func{
       fir::runtime::getRuntimeFunc<mkRTKey(ShowDescriptor)>(loc, builder)};
   fir::CallOp::create(builder, loc, func, descAddr);
 }

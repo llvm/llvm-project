@@ -50,11 +50,11 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Value.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/IR/Value.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 
@@ -65,7 +65,7 @@ namespace fir::acc {
 
 #define DEBUG_TYPE "acc-use-device-canonicalizer"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
@@ -145,7 +145,7 @@ private:
   void collectUseDeviceUsersToUpdate(
       acc::UseDeviceOp useDeviceOp, acc::HostDataOp hostDataOp,
       SmallVectorImpl<Operation *> &usersToUpdate) const {
-    for (mlir::Operation *user : useDeviceOp->getUsers())
+    for (aiir::Operation *user : useDeviceOp->getUsers())
       if (hostDataOp.getRegion().isAncestor(user->getParentRegion()))
         usersToUpdate.push_back(user);
   }
@@ -281,7 +281,7 @@ private:
     // Replace all uses of the original `acc.use_device` operation inside the
     // `acc.host_data` region with the new memory location containing the box
     // with device pointer
-    for (mlir::Operation *user : usersToUpdate)
+    for (aiir::Operation *user : usersToUpdate)
       user->replaceUsesOfWith(useDeviceOp.getResult(), newMemLoc);
 
     // Remove the use_device operation if it is no longer needed.
@@ -368,7 +368,7 @@ private:
 
     // Replace all uses of the original `acc.use_device` operation inside the
     // `acc.host_data` region with the new box containing device pointer
-    for (mlir::Operation *user : usersToUpdate)
+    for (aiir::Operation *user : usersToUpdate)
       user->replaceUsesOfWith(useDeviceOp.getResult(), newBoxWithDevicePtr);
 
     // Remove the use_device operation if it is no longer needed.
@@ -388,7 +388,7 @@ class ACCUseDeviceCanonicalizer
           ACCUseDeviceCanonicalizer> {
 public:
   void runOnOperation() override {
-    MLIRContext *context = getOperation()->getContext();
+    AIIRContext *context = getOperation()->getContext();
 
     RewritePatternSet patterns(context);
 
@@ -407,6 +407,6 @@ public:
 
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::acc::createACCUseDeviceCanonicalizerPass() {
+std::unique_ptr<aiir::Pass> fir::acc::createACCUseDeviceCanonicalizerPass() {
   return std::make_unique<ACCUseDeviceCanonicalizer>();
 }

@@ -13,8 +13,8 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/ADT/Twine.h"
 #include <string>
 
@@ -30,9 +30,9 @@ namespace {
 /// Names of LLVM dialect function properties on `func.func` must use the
 /// `llvm.` prefix so convert-func-to-llvm can recognize them and lower them
 /// into `llvm.func` properties (bare ODS names are ignored as legacy spellings)
-static mlir::StringAttr getLlvmFuncPropertyAttrName(mlir::MLIRContext *ctx,
-                                                    mlir::StringAttr baseName) {
-  return mlir::StringAttr::get(ctx, llvm::Twine("llvm.") + baseName.getValue());
+static aiir::StringAttr getLlvmFuncPropertyAttrName(aiir::AIIRContext *ctx,
+                                                    aiir::StringAttr baseName) {
+  return aiir::StringAttr::get(ctx, llvm::Twine("llvm.") + baseName.getValue());
 }
 
 class FunctionAttrPass : public fir::impl::FunctionAttrBase<FunctionAttrPass> {
@@ -46,7 +46,7 @@ public:
 
 void FunctionAttrPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "=== Begin " DEBUG_TYPE " ===\n");
-  mlir::func::FuncOp func = getOperation();
+  aiir::func::FuncOp func = getOperation();
 
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
 
@@ -56,20 +56,20 @@ void FunctionAttrPass::runOnOperation() {
 
   if ((isFromModule || !func.isDeclaration()) &&
       !fir::hasBindcAttr(func.getOperation())) {
-    llvm::StringRef nocapture = mlir::LLVM::LLVMDialect::getNoCaptureAttrName();
-    llvm::StringRef noalias = mlir::LLVM::LLVMDialect::getNoAliasAttrName();
-    mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
+    llvm::StringRef nocapture = aiir::LLVM::LLVMDialect::getNoCaptureAttrName();
+    llvm::StringRef noalias = aiir::LLVM::LLVMDialect::getNoAliasAttrName();
+    aiir::UnitAttr unitAttr = aiir::UnitAttr::get(func.getContext());
 
     for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
       bool isNoCapture = false;
       bool isNoAlias = false;
-      if (mlir::isa<fir::ReferenceType>(argType) &&
+      if (aiir::isa<fir::ReferenceType>(argType) &&
           !func.getArgAttr(index, fir::getTargetAttrName()) &&
           !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
           !func.getArgAttr(index, fir::getVolatileAttrName())) {
         isNoCapture = true;
         isNoAlias = !fir::isPointerType(argType);
-      } else if (mlir::isa<fir::BaseBoxType>(argType)) {
+      } else if (aiir::isa<fir::BaseBoxType>(argType)) {
         // !fir.box arguments will be passed as descriptor pointers
         // at LLVM IR dialect level - they cannot be captured,
         // and cannot alias with anything within the function.
@@ -82,47 +82,47 @@ void FunctionAttrPass::runOnOperation() {
     }
   }
 
-  mlir::MLIRContext *context = &getContext();
+  aiir::AIIRContext *context = &getContext();
   auto llvmFuncOpName =
-      mlir::OperationName(mlir::LLVM::LLVMFuncOp::getOperationName(), context);
+      aiir::OperationName(aiir::LLVM::LLVMFuncOp::getOperationName(), context);
 
-  if (framePointerKind != mlir::LLVM::framePointerKind::FramePointerKind::None)
+  if (framePointerKind != aiir::LLVM::framePointerKind::FramePointerKind::None)
     func->setAttr(
         getLlvmFuncPropertyAttrName(
             context,
-            mlir::LLVM::LLVMFuncOp::getFramePointerAttrName(llvmFuncOpName)),
-        mlir::LLVM::FramePointerKindAttr::get(context, framePointerKind));
+            aiir::LLVM::LLVMFuncOp::getFramePointerAttrName(llvmFuncOpName)),
+        aiir::LLVM::FramePointerKindAttr::get(context, framePointerKind));
 
   if (!instrumentFunctionEntry.empty())
     func->setAttr(
         getLlvmFuncPropertyAttrName(
-            context, mlir::LLVM::LLVMFuncOp::getInstrumentFunctionEntryAttrName(
+            context, aiir::LLVM::LLVMFuncOp::getInstrumentFunctionEntryAttrName(
                          llvmFuncOpName)),
-        mlir::StringAttr::get(context, instrumentFunctionEntry));
+        aiir::StringAttr::get(context, instrumentFunctionEntry));
   if (!instrumentFunctionExit.empty())
     func->setAttr(
         getLlvmFuncPropertyAttrName(
-            context, mlir::LLVM::LLVMFuncOp::getInstrumentFunctionExitAttrName(
+            context, aiir::LLVM::LLVMFuncOp::getInstrumentFunctionExitAttrName(
                          llvmFuncOpName)),
-        mlir::StringAttr::get(context, instrumentFunctionExit));
+        aiir::StringAttr::get(context, instrumentFunctionExit));
   if (noSignedZerosFPMath)
     func->setAttr(
         getLlvmFuncPropertyAttrName(
-            context, mlir::LLVM::LLVMFuncOp::getNoSignedZerosFpMathAttrName(
+            context, aiir::LLVM::LLVMFuncOp::getNoSignedZerosFpMathAttrName(
                          llvmFuncOpName)),
-        mlir::BoolAttr::get(context, true));
+        aiir::BoolAttr::get(context, true));
   if (!reciprocals.empty())
     func->setAttr(
         getLlvmFuncPropertyAttrName(
-            context, mlir::LLVM::LLVMFuncOp::getReciprocalEstimatesAttrName(
+            context, aiir::LLVM::LLVMFuncOp::getReciprocalEstimatesAttrName(
                          llvmFuncOpName)),
-        mlir::StringAttr::get(context, reciprocals));
+        aiir::StringAttr::get(context, reciprocals));
   if (!preferVectorWidth.empty())
     func->setAttr(
         getLlvmFuncPropertyAttrName(
-            context, mlir::LLVM::LLVMFuncOp::getPreferVectorWidthAttrName(
+            context, aiir::LLVM::LLVMFuncOp::getPreferVectorWidthAttrName(
                          llvmFuncOpName)),
-        mlir::StringAttr::get(context, preferVectorWidth));
+        aiir::StringAttr::get(context, preferVectorWidth));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }

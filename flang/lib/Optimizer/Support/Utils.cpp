@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,8 +16,8 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 
 fir::TypeInfoOp fir::lookupTypeInfoOp(fir::RecordType recordType,
-                                      mlir::ModuleOp module,
-                                      const mlir::SymbolTable *symbolTable) {
+                                      aiir::ModuleOp module,
+                                      const aiir::SymbolTable *symbolTable) {
   // fir.type_info was created with the mangled name of the derived type.
   // It is the same as the name in the related fir.type, except when a pass
   // lowered the fir.type (e.g., when lowering fir.boxproc type if the type has
@@ -29,8 +29,8 @@ fir::TypeInfoOp fir::lookupTypeInfoOp(fir::RecordType recordType,
 }
 
 fir::TypeInfoOp fir::lookupTypeInfoOp(llvm::StringRef name,
-                                      mlir::ModuleOp module,
-                                      const mlir::SymbolTable *symbolTable) {
+                                      aiir::ModuleOp module,
+                                      const aiir::SymbolTable *symbolTable) {
   if (symbolTable)
     if (auto typeInfo = symbolTable->lookup<fir::TypeInfoOp>(name))
       return typeInfo;
@@ -39,7 +39,7 @@ fir::TypeInfoOp fir::lookupTypeInfoOp(llvm::StringRef name,
 
 std::optional<llvm::ArrayRef<int64_t>> fir::getComponentLowerBoundsIfNonDefault(
     fir::RecordType recordType, llvm::StringRef component,
-    mlir::ModuleOp module, const mlir::SymbolTable *symbolTable) {
+    aiir::ModuleOp module, const aiir::SymbolTable *symbolTable) {
   fir::TypeInfoOp typeInfo =
       fir::lookupTypeInfoOp(recordType, module, symbolTable);
   if (!typeInfo || typeInfo.getComponentInfo().empty())
@@ -52,8 +52,8 @@ std::optional<llvm::ArrayRef<int64_t>> fir::getComponentLowerBoundsIfNonDefault(
 }
 
 std::optional<bool>
-fir::isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
-                              const mlir::SymbolTable *symbolTable) {
+fir::isRecordWithFinalRoutine(fir::RecordType recordType, aiir::ModuleOp module,
+                              const aiir::SymbolTable *symbolTable) {
   fir::TypeInfoOp typeInfo =
       fir::lookupTypeInfoOp(recordType, module, symbolTable);
   if (!typeInfo)
@@ -61,30 +61,30 @@ fir::isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
   return !typeInfo.getNoFinal();
 }
 
-mlir::LLVM::ConstantOp
-fir::genConstantIndex(mlir::Location loc, mlir::Type ity,
-                      mlir::ConversionPatternRewriter &rewriter,
+aiir::LLVM::ConstantOp
+fir::genConstantIndex(aiir::Location loc, aiir::Type ity,
+                      aiir::ConversionPatternRewriter &rewriter,
                       std::int64_t offset) {
   auto cattr = rewriter.getI64IntegerAttr(offset);
-  return mlir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
+  return aiir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
 }
 
-mlir::Value
-fir::computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
-                            mlir::Type idxTy,
-                            mlir::ConversionPatternRewriter &rewriter,
-                            const mlir::DataLayout &dataLayout) {
+aiir::Value
+fir::computeElementDistance(aiir::Location loc, aiir::Type llvmObjectType,
+                            aiir::Type idxTy,
+                            aiir::ConversionPatternRewriter &rewriter,
+                            const aiir::DataLayout &dataLayout) {
   llvm::TypeSize size = dataLayout.getTypeSize(llvmObjectType);
   unsigned short alignment = dataLayout.getTypeABIAlignment(llvmObjectType);
   std::int64_t distance = llvm::alignTo(size, alignment);
   return fir::genConstantIndex(loc, idxTy, rewriter, distance);
 }
 
-mlir::Value
-fir::genAllocationScaleSize(mlir::Location loc, mlir::Type dataTy,
-                            mlir::Type ity,
-                            mlir::ConversionPatternRewriter &rewriter) {
-  auto seqTy = mlir::dyn_cast<fir::SequenceType>(dataTy);
+aiir::Value
+fir::genAllocationScaleSize(aiir::Location loc, aiir::Type dataTy,
+                            aiir::Type ity,
+                            aiir::ConversionPatternRewriter &rewriter) {
+  auto seqTy = aiir::dyn_cast<fir::SequenceType>(dataTy);
   fir::SequenceType::Extent constSize = 1;
   if (seqTy) {
     int constRows = seqTy.getConstantRows();
@@ -100,34 +100,34 @@ fir::genAllocationScaleSize(mlir::Location loc, mlir::Type dataTy,
   }
 
   if (constSize != 1) {
-    mlir::Value constVal{
+    aiir::Value constVal{
         fir::genConstantIndex(loc, ity, rewriter, constSize).getResult()};
     return constVal;
   }
   return nullptr;
 }
 
-mlir::Value fir::integerCast(const fir::LLVMTypeConverter &converter,
-                             mlir::Location loc,
-                             mlir::ConversionPatternRewriter &rewriter,
-                             mlir::Type ty, mlir::Value val, bool fold) {
+aiir::Value fir::integerCast(const fir::LLVMTypeConverter &converter,
+                             aiir::Location loc,
+                             aiir::ConversionPatternRewriter &rewriter,
+                             aiir::Type ty, aiir::Value val, bool fold) {
   auto valTy = val.getType();
   // If the value was not yet lowered, lower its type so that it can
   // be used in getPrimitiveTypeSizeInBits.
-  if (!mlir::isa<mlir::IntegerType>(valTy))
+  if (!aiir::isa<aiir::IntegerType>(valTy))
     valTy = converter.convertType(valTy);
-  auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
-  auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
+  auto toSize = aiir::LLVM::getPrimitiveTypeSizeInBits(ty);
+  auto fromSize = aiir::LLVM::getPrimitiveTypeSizeInBits(valTy);
   if (fold) {
     if (toSize < fromSize)
-      return rewriter.createOrFold<mlir::LLVM::TruncOp>(loc, ty, val);
+      return rewriter.createOrFold<aiir::LLVM::TruncOp>(loc, ty, val);
     if (toSize > fromSize)
-      return rewriter.createOrFold<mlir::LLVM::SExtOp>(loc, ty, val);
+      return rewriter.createOrFold<aiir::LLVM::SExtOp>(loc, ty, val);
   } else {
     if (toSize < fromSize)
-      return mlir::LLVM::TruncOp::create(rewriter, loc, ty, val);
+      return aiir::LLVM::TruncOp::create(rewriter, loc, ty, val);
     if (toSize > fromSize)
-      return mlir::LLVM::SExtOp::create(rewriter, loc, ty, val);
+      return aiir::LLVM::SExtOp::create(rewriter, loc, ty, val);
   }
   return val;
 }

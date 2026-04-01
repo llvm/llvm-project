@@ -13,7 +13,7 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Runtime/character.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
 
 using namespace Fortran::runtime;
 
@@ -22,9 +22,9 @@ using namespace Fortran::runtime;
 /// arguments (string1, string2, back, kind).
 template <typename FN>
 static void genCharacterSearch(FN func, fir::FirOpBuilder &builder,
-                               mlir::Location loc, mlir::Value resultBox,
-                               mlir::Value string1Box, mlir::Value string2Box,
-                               mlir::Value backBox, mlir::Value kind) {
+                               aiir::Location loc, aiir::Value resultBox,
+                               aiir::Value string1Box, aiir::Value string2Box,
+                               aiir::Value backBox, aiir::Value kind) {
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -38,16 +38,16 @@ static void genCharacterSearch(FN func, fir::FirOpBuilder &builder,
 }
 
 /// Helper function to recover the KIND from the FIR type.
-static int discoverKind(mlir::Type ty) {
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(ty))
+static int discoverKind(aiir::Type ty) {
+  if (auto charTy = aiir::dyn_cast<fir::CharacterType>(ty))
     return charTy.getFKind();
   if (auto eleTy = fir::dyn_cast_ptrEleTy(ty))
     return discoverKind(eleTy);
-  if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(ty))
+  if (auto arrTy = aiir::dyn_cast<fir::SequenceType>(ty))
     return discoverKind(arrTy.getEleTy());
-  if (auto boxTy = mlir::dyn_cast<fir::BoxCharType>(ty))
+  if (auto boxTy = aiir::dyn_cast<fir::BoxCharType>(ty))
     return discoverKind(boxTy.getEleTy());
-  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
+  if (auto boxTy = aiir::dyn_cast<fir::BoxType>(ty))
     return discoverKind(boxTy.getEleTy());
   llvm_unreachable("unexpected character type");
 }
@@ -60,11 +60,11 @@ static int discoverKind(mlir::Type ty) {
 ///
 /// \p resultBox must be an unallocated allocatable used for the temporary
 /// result.  \p StringBox must be a fir.box describing the adjustr string
-/// argument.  The \p adjustFunc should be a mlir::func::FuncOp for the
+/// argument.  The \p adjustFunc should be a aiir::func::FuncOp for the
 /// appropriate runtime entry function.
-static void genAdjust(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value resultBox, mlir::Value stringBox,
-                      mlir::func::FuncOp &adjustFunc) {
+static void genAdjust(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value resultBox, aiir::Value stringBox,
+                      aiir::func::FuncOp &adjustFunc) {
 
   auto fTy = adjustFunc.getFunctionType();
   auto sourceLine =
@@ -75,32 +75,32 @@ static void genAdjust(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::CallOp::create(builder, loc, adjustFunc, args);
 }
 
-void fir::runtime::genAdjustL(fir::FirOpBuilder &builder, mlir::Location loc,
-                              mlir::Value resultBox, mlir::Value stringBox) {
+void fir::runtime::genAdjustL(fir::FirOpBuilder &builder, aiir::Location loc,
+                              aiir::Value resultBox, aiir::Value stringBox) {
   auto adjustFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Adjustl)>(loc, builder);
   genAdjust(builder, loc, resultBox, stringBox, adjustFunc);
 }
 
-void fir::runtime::genAdjustR(fir::FirOpBuilder &builder, mlir::Location loc,
-                              mlir::Value resultBox, mlir::Value stringBox) {
+void fir::runtime::genAdjustR(fir::FirOpBuilder &builder, aiir::Location loc,
+                              aiir::Value resultBox, aiir::Value stringBox) {
   auto adjustFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Adjustr)>(loc, builder);
   genAdjust(builder, loc, resultBox, stringBox, adjustFunc);
 }
 
-mlir::Value
-fir::runtime::genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::arith::CmpIPredicate cmp,
-                             mlir::Value lhsBuff, mlir::Value lhsLen,
-                             mlir::Value rhsBuff, mlir::Value rhsLen) {
+aiir::Value
+fir::runtime::genCharCompare(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::arith::CmpIPredicate cmp,
+                             aiir::Value lhsBuff, aiir::Value lhsLen,
+                             aiir::Value rhsBuff, aiir::Value rhsLen) {
   int lhsKind = discoverKind(lhsBuff.getType());
   int rhsKind = discoverKind(rhsBuff.getType());
   if (lhsKind != rhsKind) {
     fir::emitFatalError(loc, "runtime does not support comparison of different "
                              "CHARACTER kind values");
   }
-  mlir::func::FuncOp func;
+  aiir::func::FuncOp func;
   switch (lhsKind) {
   case 1:
     func = fir::runtime::getRuntimeFunc<mkRTKey(CharacterCompareScalar1)>(
@@ -123,11 +123,11 @@ fir::runtime::genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
                                             lhsLen, rhsLen);
   auto tri = fir::CallOp::create(builder, loc, func, args).getResult(0);
   auto zero = builder.createIntegerConstant(loc, tri.getType(), 0);
-  return mlir::arith::CmpIOp::create(builder, loc, cmp, tri, zero);
+  return aiir::arith::CmpIOp::create(builder, loc, cmp, tri, zero);
 }
 
-static mlir::Value allocateIfNotInMemory(fir::FirOpBuilder &builder,
-                                         mlir::Location loc, mlir::Value base) {
+static aiir::Value allocateIfNotInMemory(fir::FirOpBuilder &builder,
+                                         aiir::Location loc, aiir::Value base) {
   if (fir::isa_ref_type(base.getType()))
     return base;
   auto mem =
@@ -136,9 +136,9 @@ static mlir::Value allocateIfNotInMemory(fir::FirOpBuilder &builder,
   return mem;
 }
 
-mlir::Value fir::runtime::genCharCompare(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::arith::CmpIPredicate cmp,
+aiir::Value fir::runtime::genCharCompare(fir::FirOpBuilder &builder,
+                                         aiir::Location loc,
+                                         aiir::arith::CmpIPredicate cmp,
                                          const fir::ExtendedValue &lhs,
                                          const fir::ExtendedValue &rhs) {
   auto lhsBuffer = allocateIfNotInMemory(builder, loc, fir::getBase(lhs));
@@ -147,9 +147,9 @@ mlir::Value fir::runtime::genCharCompare(fir::FirOpBuilder &builder,
                         rhsBuffer, fir::getLen(rhs));
 }
 
-void fir::runtime::genFCString(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value resultBox, mlir::Value stringBox,
-                               mlir::Value asis) {
+void fir::runtime::genFCString(fir::FirOpBuilder &builder, aiir::Location loc,
+                               aiir::Value resultBox, aiir::Value stringBox,
+                               aiir::Value asis) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(FCString)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -160,13 +160,13 @@ void fir::runtime::genFCString(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::CallOp::create(builder, loc, func, args);
 }
 
-mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, int kind,
-                                   mlir::Value stringBase,
-                                   mlir::Value stringLen,
-                                   mlir::Value substringBase,
-                                   mlir::Value substringLen, mlir::Value back) {
-  mlir::func::FuncOp indexFunc;
+aiir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
+                                   aiir::Location loc, int kind,
+                                   aiir::Value stringBase,
+                                   aiir::Value stringLen,
+                                   aiir::Value substringBase,
+                                   aiir::Value substringLen, aiir::Value back) {
+  aiir::func::FuncOp indexFunc;
   switch (kind) {
   case 1:
     indexFunc = fir::runtime::getRuntimeFunc<mkRTKey(Index1)>(loc, builder);
@@ -188,11 +188,11 @@ mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
   return fir::CallOp::create(builder, loc, indexFunc, args).getResult(0);
 }
 
-mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
-                                   mlir::Location loc,
+aiir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
+                                   aiir::Location loc,
                                    const fir::ExtendedValue &str,
                                    const fir::ExtendedValue &substr,
-                                   mlir::Value back) {
+                                   aiir::Value back) {
   assert(!substr.getBoxOf<fir::BoxValue>() && !str.getBoxOf<fir::BoxValue>() &&
          "shall use genIndexDescriptor version");
   auto strBuffer = allocateIfNotInMemory(builder, loc, fir::getBase(str));
@@ -203,18 +203,18 @@ mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
 }
 
 void fir::runtime::genIndexDescriptor(fir::FirOpBuilder &builder,
-                                      mlir::Location loc, mlir::Value resultBox,
-                                      mlir::Value stringBox,
-                                      mlir::Value substringBox,
-                                      mlir::Value backOpt, mlir::Value kind) {
+                                      aiir::Location loc, aiir::Value resultBox,
+                                      aiir::Value stringBox,
+                                      aiir::Value substringBox,
+                                      aiir::Value backOpt, aiir::Value kind) {
   auto indexFunc = fir::runtime::getRuntimeFunc<mkRTKey(Index)>(loc, builder);
   genCharacterSearch(indexFunc, builder, loc, resultBox, stringBox,
                      substringBox, backOpt, kind);
 }
 
-void fir::runtime::genRepeat(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value resultBox, mlir::Value stringBox,
-                             mlir::Value ncopies) {
+void fir::runtime::genRepeat(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value resultBox, aiir::Value stringBox,
+                             aiir::Value ncopies) {
   auto repeatFunc = fir::runtime::getRuntimeFunc<mkRTKey(Repeat)>(loc, builder);
   auto fTy = repeatFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -226,8 +226,8 @@ void fir::runtime::genRepeat(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::CallOp::create(builder, loc, repeatFunc, args);
 }
 
-void fir::runtime::genTrim(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value resultBox, mlir::Value stringBox) {
+void fir::runtime::genTrim(fir::FirOpBuilder &builder, aiir::Location loc,
+                           aiir::Value resultBox, aiir::Value stringBox) {
   auto trimFunc = fir::runtime::getRuntimeFunc<mkRTKey(Trim)>(loc, builder);
   auto fTy = trimFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -240,20 +240,20 @@ void fir::runtime::genTrim(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 void fir::runtime::genScanDescriptor(fir::FirOpBuilder &builder,
-                                     mlir::Location loc, mlir::Value resultBox,
-                                     mlir::Value stringBox, mlir::Value setBox,
-                                     mlir::Value backBox, mlir::Value kind) {
+                                     aiir::Location loc, aiir::Value resultBox,
+                                     aiir::Value stringBox, aiir::Value setBox,
+                                     aiir::Value backBox, aiir::Value kind) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Scan)>(loc, builder);
   genCharacterSearch(func, builder, loc, resultBox, stringBox, setBox, backBox,
                      kind);
 }
 
-mlir::Value fir::runtime::genScan(fir::FirOpBuilder &builder,
-                                  mlir::Location loc, int kind,
-                                  mlir::Value stringBase, mlir::Value stringLen,
-                                  mlir::Value setBase, mlir::Value setLen,
-                                  mlir::Value back) {
-  mlir::func::FuncOp func;
+aiir::Value fir::runtime::genScan(fir::FirOpBuilder &builder,
+                                  aiir::Location loc, int kind,
+                                  aiir::Value stringBase, aiir::Value stringLen,
+                                  aiir::Value setBase, aiir::Value setLen,
+                                  aiir::Value back) {
+  aiir::func::FuncOp func;
   switch (kind) {
   case 1:
     func = fir::runtime::getRuntimeFunc<mkRTKey(Scan1)>(loc, builder);
@@ -275,19 +275,19 @@ mlir::Value fir::runtime::genScan(fir::FirOpBuilder &builder,
 }
 
 void fir::runtime::genVerifyDescriptor(fir::FirOpBuilder &builder,
-                                       mlir::Location loc,
-                                       mlir::Value resultBox,
-                                       mlir::Value stringBox,
-                                       mlir::Value setBox, mlir::Value backBox,
-                                       mlir::Value kind) {
+                                       aiir::Location loc,
+                                       aiir::Value resultBox,
+                                       aiir::Value stringBox,
+                                       aiir::Value setBox, aiir::Value backBox,
+                                       aiir::Value kind) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Verify)>(loc, builder);
   genCharacterSearch(func, builder, loc, resultBox, stringBox, setBox, backBox,
                      kind);
 }
 
-void fir::runtime::genTokenize(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value tokensBox, mlir::Value separatorBox,
-                               mlir::Value stringBox, mlir::Value setBox) {
+void fir::runtime::genTokenize(fir::FirOpBuilder &builder, aiir::Location loc,
+                               aiir::Value tokensBox, aiir::Value separatorBox,
+                               aiir::Value stringBox, aiir::Value setBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Tokenize)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -300,8 +300,8 @@ void fir::runtime::genTokenize(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 void fir::runtime::genTokenizePositions(
-    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value firstBox,
-    mlir::Value lastBox, mlir::Value stringBox, mlir::Value setBox) {
+    fir::FirOpBuilder &builder, aiir::Location loc, aiir::Value firstBox,
+    aiir::Value lastBox, aiir::Value stringBox, aiir::Value setBox) {
   auto func =
       fir::runtime::getRuntimeFunc<mkRTKey(TokenizePositions)>(loc, builder);
   auto fTy = func.getFunctionType();
@@ -314,12 +314,12 @@ void fir::runtime::genTokenizePositions(
   fir::CallOp::create(builder, loc, func, args);
 }
 
-mlir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, int kind,
-                                    mlir::Value stringBase,
-                                    mlir::Value stringLen, mlir::Value setBase,
-                                    mlir::Value setLen, mlir::Value back) {
-  mlir::func::FuncOp func;
+aiir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
+                                    aiir::Location loc, int kind,
+                                    aiir::Value stringBase,
+                                    aiir::Value stringLen, aiir::Value setBase,
+                                    aiir::Value setLen, aiir::Value back) {
+  aiir::func::FuncOp func;
   switch (kind) {
   case 1:
     func = fir::runtime::getRuntimeFunc<mkRTKey(Verify1)>(loc, builder);
@@ -340,13 +340,13 @@ mlir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
   return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
-mlir::Value fir::runtime::genSplit(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, int kind,
-                                   mlir::Value stringBase,
-                                   mlir::Value stringLen, mlir::Value setBase,
-                                   mlir::Value setLen, mlir::Value pos,
-                                   mlir::Value back) {
-  mlir::func::FuncOp func;
+aiir::Value fir::runtime::genSplit(fir::FirOpBuilder &builder,
+                                   aiir::Location loc, int kind,
+                                   aiir::Value stringBase,
+                                   aiir::Value stringLen, aiir::Value setBase,
+                                   aiir::Value setLen, aiir::Value pos,
+                                   aiir::Value back) {
+  aiir::func::FuncOp func;
   switch (kind) {
   case 1:
     func = fir::runtime::getRuntimeFunc<mkRTKey(Split1)>(loc, builder);

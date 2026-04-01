@@ -1,5 +1,5 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY AIIR_EXTENSION_LIBS)
 
 add_flang_library(flangFrontend
   CompilerInstance.cpp
@@ -68,17 +68,17 @@ add_flang_library(flangFrontend
   FrontendOpenACC
   FrontendOpenMP
 
-  MLIR_DEPS
-  MLIRIR
+  AIIR_DEPS
+  AIIRIR
   ${dialect_libs}
   ${extension_libs}
 
-  MLIR_LIBS
-  MLIRTransforms
-  MLIRBuiltinToLLVMIRTranslation
-  MLIRLLVMToLLVMIRTranslation
-  MLIRSCFToControlFlow
-  MLIRTargetLLVMIRImport
+  AIIR_LIBS
+  AIIRTransforms
+  AIIRBuiltinToLLVMIRTranslation
+  AIIRLLVMToLLVMIRTranslation
+  AIIRSCFToControlFlow
+  AIIRTargetLLVMIRImport
   ${dialect_libs}
   ${extension_libs}
 

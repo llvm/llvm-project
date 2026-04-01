@@ -14,10 +14,10 @@
 #ifndef FORTRAN_DIALECT_FIRCG_OPS
 #define FORTRAN_DIALECT_FIRCG_OPS
 
-include "mlir/IR/SymbolInterfaces.td"
+include "aiir/IR/SymbolInterfaces.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
-include "mlir/IR/BuiltinAttributes.td"
+include "aiir/IR/BuiltinAttributes.td"
 
 def fircg_Dialect : Dialect {
   let name = "fircg";

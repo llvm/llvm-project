@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_LOWER_SUPPORT_VERIFIER_H
 #define FORTRAN_LOWER_SUPPORT_VERIFIER_H
 
-#include "mlir/IR/Verifier.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/IR/Verifier.h"
+#include "aiir/Pass/Pass.h"
 
 namespace Fortran::lower {
 
 /// A verification pass to verify the output from the bridge. This provides a
 /// little bit of glue to run a verifier pass directly.
 class VerifierPass
-    : public mlir::PassWrapper<VerifierPass, mlir::OperationPass<>> {
+    : public aiir::PassWrapper<VerifierPass, aiir::OperationPass<>> {
   void runOnOperation() override final {
-    if (mlir::failed(mlir::verify(getOperation())))
+    if (aiir::failed(aiir::verify(getOperation())))
       signalPassFailure();
     markAllAnalysesPreserved();
   }

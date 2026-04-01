@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,8 +18,8 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
-#include "mlir/IR/Iterators.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "aiir/IR/Iterators.h"
+#include "aiir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 
@@ -34,14 +34,14 @@ namespace fir {
 
 #define DEBUG_TYPE "flang-codegen-rewrite"
 
-static void populateShape(llvm::SmallVectorImpl<mlir::Value> &vec,
+static void populateShape(llvm::SmallVectorImpl<aiir::Value> &vec,
                           fir::ShapeOp shape) {
   vec.append(shape.getExtents().begin(), shape.getExtents().end());
 }
 
 // Operands of fir.shape_shift split into two vectors.
-static void populateShapeAndShift(llvm::SmallVectorImpl<mlir::Value> &shapeVec,
-                                  llvm::SmallVectorImpl<mlir::Value> &shiftVec,
+static void populateShapeAndShift(llvm::SmallVectorImpl<aiir::Value> &shapeVec,
+                                  llvm::SmallVectorImpl<aiir::Value> &shiftVec,
                                   fir::ShapeShiftOp shift) {
   for (auto i = shift.getPairs().begin(), endIter = shift.getPairs().end();
        i != endIter;) {
@@ -50,7 +50,7 @@ static void populateShapeAndShift(llvm::SmallVectorImpl<mlir::Value> &shapeVec,
   }
 }
 
-static void populateShift(llvm::SmallVectorImpl<mlir::Value> &vec,
+static void populateShift(llvm::SmallVectorImpl<aiir::Value> &vec,
                           fir::ShiftOp shift) {
   vec.append(shift.getOrigins().begin(), shift.getOrigins().end());
 }
@@ -76,67 +76,67 @@ namespace {
 /// (!fir.ref<!fir.array<?xi32>>, index, index, index, index, index) ->
 /// !fir.box<!fir.array<?xi32>>
 /// ```
-class EmboxConversion : public mlir::OpRewritePattern<fir::EmboxOp> {
+class EmboxConversion : public aiir::OpRewritePattern<fir::EmboxOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(fir::EmboxOp embox,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     // If the embox does not include a shape, then do not convert it
     if (auto shapeVal = embox.getShape())
       return rewriteDynamicShape(embox, rewriter, shapeVal);
-    if (mlir::isa<fir::ClassType>(embox.getType()))
+    if (aiir::isa<fir::ClassType>(embox.getType()))
       TODO(embox.getLoc(), "embox conversion for fir.class type");
-    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(embox.getType()))
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy()))
+    if (auto boxTy = aiir::dyn_cast<fir::BoxType>(embox.getType()))
+      if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(boxTy.getEleTy()))
         if (!seqTy.hasDynamicExtents())
           return rewriteStaticShape(embox, rewriter, seqTy);
-    return mlir::failure();
+    return aiir::failure();
   }
 
   llvm::LogicalResult rewriteStaticShape(fir::EmboxOp embox,
-                                         mlir::PatternRewriter &rewriter,
+                                         aiir::PatternRewriter &rewriter,
                                          fir::SequenceType seqTy) const {
     auto loc = embox.getLoc();
-    llvm::SmallVector<mlir::Value> shapeOpers;
+    llvm::SmallVector<aiir::Value> shapeOpers;
     auto idxTy = rewriter.getIndexType();
     for (auto ext : seqTy.getShape()) {
       auto iAttr = rewriter.getIndexAttr(ext);
       auto extVal =
-          mlir::arith::ConstantOp::create(rewriter, loc, idxTy, iAttr);
+          aiir::arith::ConstantOp::create(rewriter, loc, idxTy, iAttr);
       shapeOpers.push_back(extVal);
     }
     auto xbox = fir::cg::XEmboxOp::create(
         rewriter, loc, embox.getType(), embox.getMemref(), shapeOpers,
-        mlir::ValueRange{}, mlir::ValueRange{}, mlir::ValueRange{},
-        mlir::ValueRange{}, embox.getTypeparams(), embox.getSourceBox(),
+        aiir::ValueRange{}, aiir::ValueRange{}, aiir::ValueRange{},
+        aiir::ValueRange{}, embox.getTypeparams(), embox.getSourceBox(),
         embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
-    return mlir::success();
+    return aiir::success();
   }
 
   llvm::LogicalResult rewriteDynamicShape(fir::EmboxOp embox,
-                                          mlir::PatternRewriter &rewriter,
-                                          mlir::Value shapeVal) const {
+                                          aiir::PatternRewriter &rewriter,
+                                          aiir::Value shapeVal) const {
     auto loc = embox.getLoc();
-    llvm::SmallVector<mlir::Value> shapeOpers;
-    llvm::SmallVector<mlir::Value> shiftOpers;
-    if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp())) {
+    llvm::SmallVector<aiir::Value> shapeOpers;
+    llvm::SmallVector<aiir::Value> shiftOpers;
+    if (auto shapeOp = aiir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp())) {
       populateShape(shapeOpers, shapeOp);
     } else {
       auto shiftOp =
-          mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp());
+          aiir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp());
       assert(shiftOp && "shape is neither fir.shape nor fir.shape_shift");
       populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
     }
-    llvm::SmallVector<mlir::Value> sliceOpers;
-    llvm::SmallVector<mlir::Value> subcompOpers;
-    llvm::SmallVector<mlir::Value> substrOpers;
+    llvm::SmallVector<aiir::Value> sliceOpers;
+    llvm::SmallVector<aiir::Value> subcompOpers;
+    llvm::SmallVector<aiir::Value> substrOpers;
     if (auto s = embox.getSlice())
       if (auto sliceOp =
-              mlir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
+              aiir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
         sliceOpers.assign(sliceOp.getTriples().begin(),
                           sliceOp.getTriples().end());
         subcompOpers.assign(sliceOp.getFields().begin(),
@@ -151,7 +151,7 @@ public:
         embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -167,34 +167,34 @@ public:
 /// %5 = fircg.ext_rebox %3(%13) origin %12 : (!fir.box<!fir.array<?xi32>>,
 /// index, index) -> !fir.box<!fir.array<?xi32>>
 /// ```
-class ReboxConversion : public mlir::OpRewritePattern<fir::ReboxOp> {
+class ReboxConversion : public aiir::OpRewritePattern<fir::ReboxOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(fir::ReboxOp rebox,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     auto loc = rebox.getLoc();
-    llvm::SmallVector<mlir::Value> shapeOpers;
-    llvm::SmallVector<mlir::Value> shiftOpers;
+    llvm::SmallVector<aiir::Value> shapeOpers;
+    llvm::SmallVector<aiir::Value> shiftOpers;
     if (auto shapeVal = rebox.getShape()) {
-      if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
+      if (auto shapeOp = aiir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
         populateShape(shapeOpers, shapeOp);
       else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
+                   aiir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
         populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
       else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
+                   aiir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
         populateShift(shiftOpers, shiftOp);
       else
-        return mlir::failure();
+        return aiir::failure();
     }
-    llvm::SmallVector<mlir::Value> sliceOpers;
-    llvm::SmallVector<mlir::Value> subcompOpers;
-    llvm::SmallVector<mlir::Value> substrOpers;
+    llvm::SmallVector<aiir::Value> sliceOpers;
+    llvm::SmallVector<aiir::Value> subcompOpers;
+    llvm::SmallVector<aiir::Value> substrOpers;
     if (auto s = rebox.getSlice())
       if (auto sliceOp =
-              mlir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
+              aiir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
         sliceOpers.append(sliceOp.getTriples().begin(),
                           sliceOp.getTriples().end());
         subcompOpers.append(sliceOp.getFields().begin(),
@@ -209,7 +209,7 @@ public:
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << rebox << " to " << xRebox << '\n');
     rewriter.replaceOp(rebox, xRebox.getOperation()->getResults());
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -226,33 +226,33 @@ public:
 /// (!fir.ref<!fir.array<?xi32>>, index, index, index, index, index, index) ->
 /// !fir.ref<i32>
 /// ```
-class ArrayCoorConversion : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
+class ArrayCoorConversion : public aiir::OpRewritePattern<fir::ArrayCoorOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(fir::ArrayCoorOp arrCoor,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     auto loc = arrCoor.getLoc();
-    llvm::SmallVector<mlir::Value> shapeOpers;
-    llvm::SmallVector<mlir::Value> shiftOpers;
+    llvm::SmallVector<aiir::Value> shapeOpers;
+    llvm::SmallVector<aiir::Value> shiftOpers;
     if (auto shapeVal = arrCoor.getShape()) {
-      if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
+      if (auto shapeOp = aiir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
         populateShape(shapeOpers, shapeOp);
       else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
+                   aiir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
         populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
       else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
+                   aiir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
         populateShift(shiftOpers, shiftOp);
       else
-        return mlir::failure();
+        return aiir::failure();
     }
-    llvm::SmallVector<mlir::Value> sliceOpers;
-    llvm::SmallVector<mlir::Value> subcompOpers;
+    llvm::SmallVector<aiir::Value> sliceOpers;
+    llvm::SmallVector<aiir::Value> subcompOpers;
     if (auto s = arrCoor.getSlice())
       if (auto sliceOp =
-              mlir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
+              aiir::dyn_cast_or_null<fir::SliceOp>(s.getDefiningOp())) {
         sliceOpers.append(sliceOp.getTriples().begin(),
                           sliceOp.getTriples().end());
         subcompOpers.append(sliceOp.getFields().begin(),
@@ -268,43 +268,43 @@ public:
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << arrCoor << " to " << xArrCoor << '\n');
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());
-    return mlir::success();
+    return aiir::success();
   }
 };
 
-class DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
+class DeclareOpConversion : public aiir::OpRewritePattern<fir::DeclareOp> {
   bool preserveDeclare;
 
 public:
   using OpRewritePattern::OpRewritePattern;
-  DeclareOpConversion(mlir::MLIRContext *ctx, bool preserveDecl)
+  DeclareOpConversion(aiir::AIIRContext *ctx, bool preserveDecl)
       : OpRewritePattern(ctx), preserveDeclare(preserveDecl) {}
 
   llvm::LogicalResult
   matchAndRewrite(fir::DeclareOp declareOp,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     if (!preserveDeclare) {
       rewriter.replaceOp(declareOp, declareOp.getMemref());
-      return mlir::success();
+      return aiir::success();
     }
     auto loc = declareOp.getLoc();
-    llvm::SmallVector<mlir::Value> shapeOpers;
-    llvm::SmallVector<mlir::Value> shiftOpers;
+    llvm::SmallVector<aiir::Value> shapeOpers;
+    llvm::SmallVector<aiir::Value> shiftOpers;
     if (auto shapeVal = declareOp.getShape()) {
-      if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
+      if (auto shapeOp = aiir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
         populateShape(shapeOpers, shapeOp);
       else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
+                   aiir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
         populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
       else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
+                   aiir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
         populateShift(shiftOpers, shiftOp);
       else
-        return mlir::failure();
+        return aiir::failure();
     }
     // Extract dummy_arg_no attribute if present
-    mlir::IntegerAttr dummyArgNoAttr;
-    if (auto attr = declareOp->getAttrOfType<mlir::IntegerAttr>("dummy_arg_no"))
+    aiir::IntegerAttr dummyArgNoAttr;
+    if (auto attr = declareOp->getAttrOfType<aiir::IntegerAttr>("dummy_arg_no"))
       dummyArgNoAttr = attr;
     // FIXME: Add FortranAttrs and CudaAttrs
     auto xDeclOp = fir::cg::XDeclareOp::create(
@@ -315,28 +315,28 @@ public:
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << declareOp << " to " << xDeclOp << '\n');
     rewriter.replaceOp(declareOp, xDeclOp.getOperation()->getResults());
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 class DummyScopeOpConversion
-    : public mlir::OpRewritePattern<fir::DummyScopeOp> {
+    : public aiir::OpRewritePattern<fir::DummyScopeOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(fir::DummyScopeOp dummyScopeOp,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::UndefOp>(dummyScopeOp,
                                               dummyScopeOp.getType());
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 /// Simple DCE to erase fir.shape/shift/slice/unused shape operands after this
 /// pass (fir.shape and like have no codegen).
-/// mlir::RegionDCE is expensive and requires running
-/// mlir::eraseUnreachableBlocks. It does things that are not needed here, like
+/// aiir::RegionDCE is expensive and requires running
+/// aiir::eraseUnreachableBlocks. It does things that are not needed here, like
 /// removing unused block arguments. fir.shape/shift/slice cannot be block
 /// arguments.
 /// This helper does a naive backward walk of the IR. It is not even guaranteed
@@ -344,10 +344,10 @@ public:
 /// what is done here, fir.shape/shift/slice have no usages anymore. The
 /// backward walk allows getting rid of most of the unused operands, it is not a
 /// problem to leave some in the weird cases.
-static void simpleDCE(mlir::RewriterBase &rewriter, mlir::Operation *op) {
-  op->walk<mlir::WalkOrder::PostOrder, mlir::ReverseIterator>(
-      [&](mlir::Operation *subOp) {
-        if (mlir::isOpTriviallyDead(subOp))
+static void simpleDCE(aiir::RewriterBase &rewriter, aiir::Operation *op) {
+  op->walk<aiir::WalkOrder::PostOrder, aiir::ReverseIterator>(
+      [&](aiir::Operation *subOp) {
+        if (aiir::isOpTriviallyDead(subOp))
           rewriter.eraseOp(subOp);
       });
 }
@@ -357,39 +357,39 @@ public:
   using CodeGenRewriteBase<CodeGenRewrite>::CodeGenRewriteBase;
 
   void runOnOperation() override final {
-    mlir::ModuleOp mod = getOperation();
+    aiir::ModuleOp mod = getOperation();
 
     auto &context = getContext();
-    mlir::ConversionTarget target(context);
-    target.addLegalDialect<mlir::arith::ArithDialect, fir::FIROpsDialect,
-                           fir::FIRCodeGenDialect, mlir::func::FuncDialect>();
+    aiir::ConversionTarget target(context);
+    target.addLegalDialect<aiir::arith::ArithDialect, fir::FIROpsDialect,
+                           fir::FIRCodeGenDialect, aiir::func::FuncDialect>();
     target.addIllegalOp<fir::ArrayCoorOp>();
     target.addIllegalOp<fir::ReboxOp>();
     target.addIllegalOp<fir::DeclareOp>();
     target.addIllegalOp<fir::DummyScopeOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
       return !(embox.getShape() ||
-               mlir::isa<fir::SequenceType>(
-                   mlir::cast<fir::BaseBoxType>(embox.getType()).getEleTy()));
+               aiir::isa<fir::SequenceType>(
+                   aiir::cast<fir::BaseBoxType>(embox.getType()).getEleTy()));
     });
-    mlir::RewritePatternSet patterns(&context);
+    aiir::RewritePatternSet patterns(&context);
     fir::populatePreCGRewritePatterns(patterns, preserveDeclare);
-    if (mlir::failed(
-            mlir::applyPartialConversion(mod, target, std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(&context),
+    if (aiir::failed(
+            aiir::applyPartialConversion(mod, target, std::move(patterns)))) {
+      aiir::emitError(aiir::UnknownLoc::get(&context),
                       "error in running the pre-codegen conversions");
       signalPassFailure();
       return;
     }
     // Erase any residual (fir.shape, fir.slice...).
-    mlir::IRRewriter rewriter(&context);
+    aiir::IRRewriter rewriter(&context);
     simpleDCE(rewriter, mod.getOperation());
   }
 };
 
 } // namespace
 
-void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
+void fir::populatePreCGRewritePatterns(aiir::RewritePatternSet &patterns,
                                        bool preserveDeclare) {
   patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
                   DummyScopeOpConversion>(patterns.getContext());

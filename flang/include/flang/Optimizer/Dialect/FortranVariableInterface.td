@@ -13,7 +13,7 @@
 #ifndef FORTRANVARIABLEINTERFACE
 #define FORTRANVARIABLEINTERFACE
 
-include "mlir/IR/OpBase.td"
+include "aiir/IR/OpBase.td"
 
 
 def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
@@ -25,12 +25,12 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
   let methods =
       [InterfaceMethod<
            /*desc=*/"Get the address produced by the definition",
-           /*retTy=*/"mlir::Value",
+           /*retTy=*/"aiir::Value",
            /*methodName=*/"getBase",
            /*args=*/(ins),
            /*methodBody=*/[{}],
            /*defaultImplementation=*/[{
-        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        ConcreteOp op = aiir::cast<ConcreteOp>(this->getOperation());
         return op.getResult();
       }]>,
        InterfaceMethod<
@@ -40,27 +40,27 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
            /*args=*/(ins),
            /*methodBody=*/[{}],
            /*defaultImplementation=*/[{
-        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        ConcreteOp op = aiir::cast<ConcreteOp>(this->getOperation());
         return op.getFortran_attrs();
       }]>,
        InterfaceMethod<
            /*desc=*/"Get the shape of the variable. May be a null value.",
-           /*retTy=*/"mlir::Value",
+           /*retTy=*/"aiir::Value",
            /*methodName=*/"getShape",
            /*args=*/(ins),
            /*methodBody=*/[{}],
            /*defaultImplementation=*/[{
-        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        ConcreteOp op = aiir::cast<ConcreteOp>(this->getOperation());
         return op.getShape();
       }]>,
        InterfaceMethod<
            /*desc=*/"Get explicit type parameters of the variable",
-           /*retTy=*/"mlir::OperandRange",
+           /*retTy=*/"aiir::OperandRange",
            /*methodName=*/"getExplicitTypeParams",
            /*args=*/(ins),
            /*methodBody=*/[{}],
            /*defaultImplementation=*/[{
-        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        ConcreteOp op = aiir::cast<ConcreteOp>(this->getOperation());
         return op.getTypeparams();
       }]>,
        InterfaceMethod<
@@ -70,7 +70,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
            /*args=*/(ins "fir::FortranVariableFlagsEnum":$flags),
            /*methodBody=*/[{}],
            /*defaultImplementation=*/[{
-        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        ConcreteOp op = aiir::cast<ConcreteOp>(this->getOperation());
         op.setFortran_attrs(fir::FortranVariableFlagsAttr::get(op->getContext(), flags));
       }]>,
   ];
@@ -79,27 +79,27 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Get the sequence type or scalar value type corresponding to this
     /// variable.
-    mlir::Type getElementOrSequenceType() {
-      mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getBase().getType()));
-      if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(type))
+    aiir::Type getElementOrSequenceType() {
+      aiir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getBase().getType()));
+      if (auto boxCharType = aiir::dyn_cast<fir::BoxCharType>(type))
         return boxCharType.getEleTy();
       return type;
     }
 
     /// Get the scalar value type corresponding to this variable.
-    mlir::Type getElementType() {
+    aiir::Type getElementType() {
       return fir::unwrapSequenceType(getElementOrSequenceType());
     }
 
     /// Is the variable an array?
     bool isArray() {
-      return mlir::isa<fir::SequenceType>(getElementOrSequenceType());
+      return aiir::isa<fir::SequenceType>(getElementOrSequenceType());
     }
 
     /// Return the rank of the entity if it is known at compile time.
     std::optional<unsigned> getRank() {
       if (auto sequenceType =
-            mlir::dyn_cast<fir::SequenceType>(getElementOrSequenceType())) {
+            aiir::dyn_cast<fir::SequenceType>(getElementOrSequenceType())) {
         if (sequenceType.hasUnknownShape())
           return {};
         return sequenceType.getDimension();
@@ -153,7 +153,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is this a Fortran character variable?
     bool isCharacter() {
-      return mlir::isa<fir::CharacterType>(getElementType());
+      return aiir::isa<fir::CharacterType>(getElementType());
     }
 
     /// Is this a Fortran character variable with an explicit length?
@@ -162,14 +162,14 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     }
 
     /// Return the length of explicit length character variable.
-    mlir::Value getExplicitCharLen() {
+    aiir::Value getExplicitCharLen() {
       assert(hasExplicitCharLen() && "must be an explicit length character");
       return getExplicitTypeParams()[0];
     }
 
     /// Is this variable represented as a fir.box or fir.class value?
     bool isBoxValue() {
-      return mlir::isa<fir::BaseBoxType>(getBase().getType());
+      return aiir::isa<fir::BaseBoxType>(getBase().getType());
     }
 
     /// Is this variable represented as a fir.box or fir.class address?
@@ -219,7 +219,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     }
 
     /// Interface verifier imlementation for declare operations.
-    llvm::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
+    llvm::LogicalResult verifyDeclareLikeOpImpl(aiir::Value memRef);
 
   }];
 
@@ -253,12 +253,12 @@ def fir_FortranVariableStorageOpInterface
   let methods =
       [InterfaceMethod<
            /*desc=*/"Returns the raw address of the physical storage",
-           /*retTy=*/"mlir::Value",
+           /*retTy=*/"aiir::Value",
            /*methodName=*/"getStorage",
            /*args=*/(ins),
            /*methodBody=*/[{}],
            /*defaultImplementation=*/[{
-        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        ConcreteOp op = aiir::cast<ConcreteOp>(this->getOperation());
         return op.getStorage();
       }]>,
        InterfaceMethod<
@@ -269,7 +269,7 @@ def fir_FortranVariableStorageOpInterface
            /*args=*/(ins),
            /*methodBody=*/[{}],
            /*defaultImplementation=*/[{
-        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        ConcreteOp op = aiir::cast<ConcreteOp>(this->getOperation());
         return op.getStorageOffset();
       }]>,
   ];
@@ -304,9 +304,9 @@ def fir_FortranObjectViewOpInterface
       [InterfaceMethod<
            /*desc=*/
            [{ Returns the operand which the given OpResult is based on. }],
-           /*retTy=*/"::mlir::Value",
+           /*retTy=*/"::aiir::Value",
            /*methodName=*/"getViewSource",
-           /*args=*/(ins "::mlir::OpResult":$resultView),
+           /*args=*/(ins "::aiir::OpResult":$resultView),
            /*methodBody=*/"",
            /*defaultImplementation=*/[{
         assert($_op.getOperation() == resultView.getOwner() &&
@@ -324,7 +324,7 @@ def fir_FortranObjectViewOpInterface
       }],
            /*retTy=*/"std::optional<std::int64_t>",
            /*methodName=*/"getViewOffset",
-           /*args=*/(ins "::mlir::OpResult":$resultView),
+           /*args=*/(ins "::aiir::OpResult":$resultView),
            /*methodBody=*/"",
            /*defaultImplementation=*/[{
         assert($_op.getOperation() == resultView.getOwner() &&

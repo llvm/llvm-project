@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Helper routines for constructing the FIR dialect of MLIR for PowerPC
-// intrinsics. Extensive use of MLIR interfaces and MLIR's coding style
-// (https://mlir.llvm.org/getting_started/DeveloperGuide/) is used in this
+// Helper routines for constructing the FIR dialect of AIIR for PowerPC
+// intrinsics. Extensive use of AIIR interfaces and AIIR's coding style
+// (https://aiir.llvm.org/getting_started/DeveloperGuide/) is used in this
 // module.
 //
 //===----------------------------------------------------------------------===//
@@ -20,9 +20,9 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Runtime/entry-names.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "aiir/Dialect/Index/IR/IndexOps.h"
+#include "aiir/Dialect/SCF/IR/SCF.h"
+#include "aiir/Dialect/Vector/IR/VectorOps.h"
 
 namespace fir {
 
@@ -185,12 +185,12 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      /*isElemental=*/false},
     {"all_sync",
      static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
-         &CI::genVoteSync<mlir::NVVM::VoteSyncKind::all>),
+         &CI::genVoteSync<aiir::NVVM::VoteSyncKind::all>),
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"any_sync",
      static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
-         &CI::genVoteSync<mlir::NVVM::VoteSyncKind::any>),
+         &CI::genVoteSync<aiir::NVVM::VoteSyncKind::any>),
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"atomicadd_r4x2",
@@ -335,7 +335,7 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      false},
     {"ballot_sync",
      static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
-         &CI::genVoteSync<mlir::NVVM::VoteSyncKind::ballot>),
+         &CI::genVoteSync<aiir::NVVM::VoteSyncKind::ballot>),
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"barrier_arrive",
@@ -365,12 +365,12 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      /*isElemental=*/false},
     {"clock",
      static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
-         &CI::genNVVMTime<mlir::NVVM::ClockOp>),
+         &CI::genNVVMTime<aiir::NVVM::ClockOp>),
      {},
      /*isElemental=*/false},
     {"clock64",
      static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
-         &CI::genNVVMTime<mlir::NVVM::Clock64Op>),
+         &CI::genNVVMTime<aiir::NVVM::Clock64Op>),
      {},
      /*isElemental=*/false},
     {"cluster_block_index",
@@ -415,7 +415,7 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      /*isElemental=*/false},
     {"globaltimer",
      static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
-         &CI::genNVVMTime<mlir::NVVM::GlobalTimerOp>),
+         &CI::genNVVMTime<aiir::NVVM::GlobalTimerOp>),
      {},
      /*isElemental=*/false},
     {"match_all_syncjd",
@@ -516,17 +516,17 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      /*isElemental=*/false},
     {"threadfence",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
-         &CI::genThreadFence<mlir::NVVM::MemScopeKind::GPU>),
+         &CI::genThreadFence<aiir::NVVM::MemScopeKind::GPU>),
      {},
      /*isElemental=*/false},
     {"threadfence_block",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
-         &CI::genThreadFence<mlir::NVVM::MemScopeKind::CTA>),
+         &CI::genThreadFence<aiir::NVVM::MemScopeKind::CTA>),
      {},
      /*isElemental=*/false},
     {"threadfence_system",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
-         &CI::genThreadFence<mlir::NVVM::MemScopeKind::SYS>),
+         &CI::genThreadFence<aiir::NVVM::MemScopeKind::SYS>),
      {},
      /*isElemental=*/false},
     {"tma_bulk_commit_group",
@@ -666,58 +666,58 @@ const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name) {
                                                                   : nullptr;
 }
 
-static mlir::Value convertPtrToNVVMSpace(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::Value barrier,
-                                         mlir::NVVM::NVVMMemorySpace space) {
-  mlir::Value llvmPtr = fir::ConvertOp::create(
-      builder, loc, mlir::LLVM::LLVMPointerType::get(builder.getContext()),
+static aiir::Value convertPtrToNVVMSpace(fir::FirOpBuilder &builder,
+                                         aiir::Location loc,
+                                         aiir::Value barrier,
+                                         aiir::NVVM::NVVMMemorySpace space) {
+  aiir::Value llvmPtr = fir::ConvertOp::create(
+      builder, loc, aiir::LLVM::LLVMPointerType::get(builder.getContext()),
       barrier);
-  mlir::Value addrCast = mlir::LLVM::AddrSpaceCastOp::create(
+  aiir::Value addrCast = aiir::LLVM::AddrSpaceCastOp::create(
       builder, loc,
-      mlir::LLVM::LLVMPointerType::get(builder.getContext(),
+      aiir::LLVM::LLVMPointerType::get(builder.getContext(),
                                        static_cast<unsigned>(space)),
       llvmPtr);
   return addrCast;
 }
 
-static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
-                                mlir::LLVM::AtomicBinOp binOp, mlir::Value arg0,
-                                mlir::Value arg1) {
-  auto llvmPointerType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+static aiir::Value genAtomBinOp(fir::FirOpBuilder &builder, aiir::Location &loc,
+                                aiir::LLVM::AtomicBinOp binOp, aiir::Value arg0,
+                                aiir::Value arg1) {
+  auto llvmPointerType = aiir::LLVM::LLVMPointerType::get(builder.getContext());
   arg0 = builder.createConvert(loc, llvmPointerType, arg0);
-  return mlir::LLVM::AtomicRMWOp::create(builder, loc, binOp, arg0, arg1,
-                                         mlir::LLVM::AtomicOrdering::seq_cst);
+  return aiir::LLVM::AtomicRMWOp::create(builder, loc, binOp, arg0, arg1,
+                                         aiir::LLVM::AtomicOrdering::seq_cst);
 }
 
 // ATOMICADD
-mlir::Value
-CUDAIntrinsicLibrary::genAtomicAdd(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genAtomicAdd(aiir::Type resultType,
+                                   llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  mlir::LLVM::AtomicBinOp binOp =
-      mlir::isa<mlir::IntegerType>(args[1].getType())
-          ? mlir::LLVM::AtomicBinOp::add
-          : mlir::LLVM::AtomicBinOp::fadd;
+  aiir::LLVM::AtomicBinOp binOp =
+      aiir::isa<aiir::IntegerType>(args[1].getType())
+          ? aiir::LLVM::AtomicBinOp::add
+          : aiir::LLVM::AtomicBinOp::fadd;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
 fir::ExtendedValue
-CUDAIntrinsicLibrary::genAtomicAddR2(mlir::Type resultType,
+CUDAIntrinsicLibrary::genAtomicAddR2(aiir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
 
-  mlir::Value a = fir::getBase(args[0]);
+  aiir::Value a = fir::getBase(args[0]);
 
-  if (mlir::isa<fir::BaseBoxType>(a.getType())) {
+  if (aiir::isa<fir::BaseBoxType>(a.getType())) {
     a = fir::BoxAddrOp::create(builder, loc, a);
   }
 
   auto loc = builder.getUnknownLoc();
   auto f16Ty = builder.getF16Type();
   auto i32Ty = builder.getI32Type();
-  auto vecF16Ty = mlir::VectorType::get({2}, f16Ty);
-  mlir::Type idxTy = builder.getIndexType();
+  auto vecF16Ty = aiir::VectorType::get({2}, f16Ty);
+  aiir::Type idxTy = builder.getIndexType();
   auto f16RefTy = fir::ReferenceType::get(f16Ty);
   auto zero = builder.createIntegerConstant(loc, idxTy, 0);
   auto one = builder.createIntegerConstant(loc, idxTy, 1);
@@ -727,156 +727,156 @@ CUDAIntrinsicLibrary::genAtomicAddR2(mlir::Type resultType,
                                            fir::getBase(args[1]), one);
   auto v1 = fir::LoadOp::create(builder, loc, v1Coord);
   auto v2 = fir::LoadOp::create(builder, loc, v2Coord);
-  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecF16Ty);
-  mlir::Value vec1 = mlir::LLVM::InsertElementOp::create(
+  aiir::Value undef = aiir::LLVM::UndefOp::create(builder, loc, vecF16Ty);
+  aiir::Value vec1 = aiir::LLVM::InsertElementOp::create(
       builder, loc, undef, v1, builder.createIntegerConstant(loc, i32Ty, 0));
-  mlir::Value vec2 = mlir::LLVM::InsertElementOp::create(
+  aiir::Value vec2 = aiir::LLVM::InsertElementOp::create(
       builder, loc, vec1, v2, builder.createIntegerConstant(loc, i32Ty, 1));
-  auto res = genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, vec2);
-  auto i32VecTy = mlir::VectorType::get({1}, i32Ty);
-  mlir::Value vecI32 =
-      mlir::vector::BitCastOp::create(builder, loc, i32VecTy, res);
-  return mlir::vector::ExtractOp::create(builder, loc, vecI32,
-                                         mlir::ArrayRef<int64_t>{0});
+  auto res = genAtomBinOp(builder, loc, aiir::LLVM::AtomicBinOp::fadd, a, vec2);
+  auto i32VecTy = aiir::VectorType::get({1}, i32Ty);
+  aiir::Value vecI32 =
+      aiir::vector::BitCastOp::create(builder, loc, i32VecTy, res);
+  return aiir::vector::ExtractOp::create(builder, loc, vecI32,
+                                         aiir::ArrayRef<int64_t>{0});
 }
 
 // ATOMICADDVECTOR
 template <int extent>
 fir::ExtendedValue CUDAIntrinsicLibrary::genAtomicAddVector(
-    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+    aiir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  mlir::Value res = fir::AllocaOp::create(
+  aiir::Value res = fir::AllocaOp::create(
       builder, loc, fir::SequenceType::get({extent}, resultType));
-  mlir::Value a = fir::getBase(args[0]);
-  if (mlir::isa<fir::BaseBoxType>(a.getType())) {
+  aiir::Value a = fir::getBase(args[0]);
+  if (aiir::isa<fir::BaseBoxType>(a.getType())) {
     a = fir::BoxAddrOp::create(builder, loc, a);
   }
-  auto vecTy = mlir::VectorType::get({extent}, resultType);
+  auto vecTy = aiir::VectorType::get({extent}, resultType);
   auto refTy = fir::ReferenceType::get(resultType);
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Type idxTy = builder.getIndexType();
+  aiir::Type i32Ty = builder.getI32Type();
+  aiir::Type idxTy = builder.getIndexType();
 
   // Extract the values from the array.
-  llvm::SmallVector<mlir::Value> values;
+  llvm::SmallVector<aiir::Value> values;
   for (unsigned i = 0; i < extent; ++i) {
-    mlir::Value pos = builder.createIntegerConstant(loc, idxTy, i);
-    mlir::Value coord = fir::CoordinateOp::create(builder, loc, refTy,
+    aiir::Value pos = builder.createIntegerConstant(loc, idxTy, i);
+    aiir::Value coord = fir::CoordinateOp::create(builder, loc, refTy,
                                                   fir::getBase(args[1]), pos);
-    mlir::Value value = fir::LoadOp::create(builder, loc, coord);
+    aiir::Value value = fir::LoadOp::create(builder, loc, coord);
     values.push_back(value);
   }
   // Pack extracted values into a vector to call the atomic add.
-  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecTy);
+  aiir::Value undef = aiir::LLVM::UndefOp::create(builder, loc, vecTy);
   for (unsigned i = 0; i < extent; ++i) {
-    mlir::Value insert = mlir::LLVM::InsertElementOp::create(
+    aiir::Value insert = aiir::LLVM::InsertElementOp::create(
         builder, loc, undef, values[i],
         builder.createIntegerConstant(loc, i32Ty, i));
     undef = insert;
   }
   // Atomic operation with a vector of values.
-  mlir::Value add =
-      genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::fadd, a, undef);
+  aiir::Value add =
+      genAtomBinOp(builder, loc, aiir::LLVM::AtomicBinOp::fadd, a, undef);
   // Store results in the result array.
   for (unsigned i = 0; i < extent; ++i) {
-    mlir::Value r = mlir::LLVM::ExtractElementOp::create(
+    aiir::Value r = aiir::LLVM::ExtractElementOp::create(
         builder, loc, add, builder.createIntegerConstant(loc, i32Ty, i));
-    mlir::Value c = fir::CoordinateOp::create(
+    aiir::Value c = fir::CoordinateOp::create(
         builder, loc, refTy, res, builder.createIntegerConstant(loc, idxTy, i));
     fir::StoreOp::create(builder, loc, r, c);
   }
-  mlir::Value ext = builder.createIntegerConstant(loc, idxTy, extent);
+  aiir::Value ext = builder.createIntegerConstant(loc, idxTy, extent);
   return fir::ArrayBoxValue(res, {ext});
 }
 
 // ATOMICADDVECTOR4x4
 fir::ExtendedValue CUDAIntrinsicLibrary::genAtomicAddVector4x4(
-    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+    aiir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  mlir::Value a = fir::getBase(args[0]);
-  if (mlir::isa<fir::BaseBoxType>(a.getType()))
+  aiir::Value a = fir::getBase(args[0]);
+  if (aiir::isa<fir::BaseBoxType>(a.getType()))
     a = fir::BoxAddrOp::create(builder, loc, a);
 
   const unsigned extent = 4;
-  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
-  mlir::Value ptr = builder.createConvert(loc, llvmPtrTy, a);
-  mlir::Type f32Ty = builder.getF32Type();
-  mlir::Type idxTy = builder.getIndexType();
-  mlir::Type refTy = fir::ReferenceType::get(f32Ty);
-  llvm::SmallVector<mlir::Value> values;
+  auto llvmPtrTy = aiir::LLVM::LLVMPointerType::get(builder.getContext());
+  aiir::Value ptr = builder.createConvert(loc, llvmPtrTy, a);
+  aiir::Type f32Ty = builder.getF32Type();
+  aiir::Type idxTy = builder.getIndexType();
+  aiir::Type refTy = fir::ReferenceType::get(f32Ty);
+  llvm::SmallVector<aiir::Value> values;
   for (unsigned i = 0; i < extent; ++i) {
-    mlir::Value pos = builder.createIntegerConstant(loc, idxTy, i);
-    mlir::Value coord = fir::CoordinateOp::create(builder, loc, refTy,
+    aiir::Value pos = builder.createIntegerConstant(loc, idxTy, i);
+    aiir::Value coord = fir::CoordinateOp::create(builder, loc, refTy,
                                                   fir::getBase(args[1]), pos);
-    mlir::Value value = fir::LoadOp::create(builder, loc, coord);
+    aiir::Value value = fir::LoadOp::create(builder, loc, coord);
     values.push_back(value);
   }
 
-  auto inlinePtx = mlir::NVVM::InlinePtxOp::create(
+  auto inlinePtx = aiir::NVVM::InlinePtxOp::create(
       builder, loc, {f32Ty, f32Ty, f32Ty, f32Ty},
       {ptr, values[0], values[1], values[2], values[3]}, {},
       "atom.add.v4.f32 {%0, %1, %2, %3}, [%4], {%5, %6, %7, %8};", {});
 
-  llvm::SmallVector<mlir::Value> results;
+  llvm::SmallVector<aiir::Value> results;
   results.push_back(inlinePtx.getResult(0));
   results.push_back(inlinePtx.getResult(1));
   results.push_back(inlinePtx.getResult(2));
   results.push_back(inlinePtx.getResult(3));
 
-  mlir::Type vecF32Ty = mlir::VectorType::get({extent}, f32Ty);
-  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecF32Ty);
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::Type vecF32Ty = aiir::VectorType::get({extent}, f32Ty);
+  aiir::Value undef = aiir::LLVM::UndefOp::create(builder, loc, vecF32Ty);
+  aiir::Type i32Ty = builder.getI32Type();
   for (unsigned i = 0; i < extent; ++i)
-    undef = mlir::LLVM::InsertElementOp::create(
+    undef = aiir::LLVM::InsertElementOp::create(
         builder, loc, undef, results[i],
         builder.createIntegerConstant(loc, i32Ty, i));
 
   auto i128Ty = builder.getIntegerType(128);
-  auto i128VecTy = mlir::VectorType::get({1}, i128Ty);
-  mlir::Value vec128 =
-      mlir::vector::BitCastOp::create(builder, loc, i128VecTy, undef);
-  return mlir::vector::ExtractOp::create(builder, loc, vec128,
-                                         mlir::ArrayRef<int64_t>{0});
+  auto i128VecTy = aiir::VectorType::get({1}, i128Ty);
+  aiir::Value vec128 =
+      aiir::vector::BitCastOp::create(builder, loc, i128VecTy, undef);
+  return aiir::vector::ExtractOp::create(builder, loc, vec128,
+                                         aiir::ArrayRef<int64_t>{0});
 }
 
-mlir::Value
-CUDAIntrinsicLibrary::genAtomicAnd(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genAtomicAnd(aiir::Type resultType,
+                                   llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+  assert(aiir::isa<aiir::IntegerType>(args[1].getType()));
 
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::_and;
+  aiir::LLVM::AtomicBinOp binOp = aiir::LLVM::AtomicBinOp::_and;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
-mlir::Value
-CUDAIntrinsicLibrary::genAtomicOr(mlir::Type resultType,
-                                  llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genAtomicOr(aiir::Type resultType,
+                                  llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+  assert(aiir::isa<aiir::IntegerType>(args[1].getType()));
 
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::_or;
+  aiir::LLVM::AtomicBinOp binOp = aiir::LLVM::AtomicBinOp::_or;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
 // ATOMICCAS
 fir::ExtendedValue
-CUDAIntrinsicLibrary::genAtomicCas(mlir::Type resultType,
+CUDAIntrinsicLibrary::genAtomicCas(aiir::Type resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
-  auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
-  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
+  auto successOrdering = aiir::LLVM::AtomicOrdering::acq_rel;
+  auto failureOrdering = aiir::LLVM::AtomicOrdering::monotonic;
+  auto llvmPtrTy = aiir::LLVM::LLVMPointerType::get(resultType.getContext());
 
-  mlir::Value arg0 = fir::getBase(args[0]);
-  mlir::Value arg1 = fir::getBase(args[1]);
-  mlir::Value arg2 = fir::getBase(args[2]);
+  aiir::Value arg0 = fir::getBase(args[0]);
+  aiir::Value arg1 = fir::getBase(args[1]);
+  aiir::Value arg2 = fir::getBase(args[2]);
 
-  auto bitCastFloat = [&](mlir::Value arg) -> mlir::Value {
-    if (mlir::isa<mlir::Float32Type>(arg.getType()))
-      return mlir::LLVM::BitcastOp::create(builder, loc, builder.getI32Type(),
+  auto bitCastFloat = [&](aiir::Value arg) -> aiir::Value {
+    if (aiir::isa<aiir::Float32Type>(arg.getType()))
+      return aiir::LLVM::BitcastOp::create(builder, loc, builder.getI32Type(),
                                            arg);
-    if (mlir::isa<mlir::Float64Type>(arg.getType()))
-      return mlir::LLVM::BitcastOp::create(builder, loc, builder.getI64Type(),
+    if (aiir::isa<aiir::Float64Type>(arg.getType()))
+      return aiir::LLVM::BitcastOp::create(builder, loc, builder.getI64Type(),
                                            arg);
     return arg;
   };
@@ -890,113 +890,113 @@ CUDAIntrinsicLibrary::genAtomicCas(mlir::Type resultType,
   }
 
   auto address =
-      mlir::UnrealizedConversionCastOp::create(builder, loc, llvmPtrTy, arg0)
+      aiir::UnrealizedConversionCastOp::create(builder, loc, llvmPtrTy, arg0)
           .getResult(0);
-  auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
+  auto cmpxchg = aiir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  mlir::Value boolResult =
-      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  aiir::Value boolResult =
+      aiir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
   return builder.createConvert(loc, resultType, boolResult);
 }
 
-mlir::Value
-CUDAIntrinsicLibrary::genAtomicDec(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genAtomicDec(aiir::Type resultType,
+                                   llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+  assert(aiir::isa<aiir::IntegerType>(args[1].getType()));
 
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::udec_wrap;
+  aiir::LLVM::AtomicBinOp binOp = aiir::LLVM::AtomicBinOp::udec_wrap;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
 // ATOMICEXCH
 fir::ExtendedValue
-CUDAIntrinsicLibrary::genAtomicExch(mlir::Type resultType,
+CUDAIntrinsicLibrary::genAtomicExch(aiir::Type resultType,
                                     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  mlir::Value arg0 = fir::getBase(args[0]);
-  mlir::Value arg1 = fir::getBase(args[1]);
+  aiir::Value arg0 = fir::getBase(args[0]);
+  aiir::Value arg1 = fir::getBase(args[1]);
   assert(arg1.getType().isIntOrFloat());
 
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
+  aiir::LLVM::AtomicBinOp binOp = aiir::LLVM::AtomicBinOp::xchg;
   return genAtomBinOp(builder, loc, binOp, arg0, arg1);
 }
 
-mlir::Value
-CUDAIntrinsicLibrary::genAtomicInc(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genAtomicInc(aiir::Type resultType,
+                                   llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+  assert(aiir::isa<aiir::IntegerType>(args[1].getType()));
 
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::uinc_wrap;
+  aiir::LLVM::AtomicBinOp binOp = aiir::LLVM::AtomicBinOp::uinc_wrap;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
-mlir::Value
-CUDAIntrinsicLibrary::genAtomicMax(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genAtomicMax(aiir::Type resultType,
+                                   llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
 
-  mlir::LLVM::AtomicBinOp binOp =
-      mlir::isa<mlir::IntegerType>(args[1].getType())
-          ? mlir::LLVM::AtomicBinOp::max
-          : mlir::LLVM::AtomicBinOp::fmax;
+  aiir::LLVM::AtomicBinOp binOp =
+      aiir::isa<aiir::IntegerType>(args[1].getType())
+          ? aiir::LLVM::AtomicBinOp::max
+          : aiir::LLVM::AtomicBinOp::fmax;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
-mlir::Value
-CUDAIntrinsicLibrary::genAtomicMin(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genAtomicMin(aiir::Type resultType,
+                                   llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
 
-  mlir::LLVM::AtomicBinOp binOp =
-      mlir::isa<mlir::IntegerType>(args[1].getType())
-          ? mlir::LLVM::AtomicBinOp::min
-          : mlir::LLVM::AtomicBinOp::fmin;
+  aiir::LLVM::AtomicBinOp binOp =
+      aiir::isa<aiir::IntegerType>(args[1].getType())
+          ? aiir::LLVM::AtomicBinOp::min
+          : aiir::LLVM::AtomicBinOp::fmin;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
 // ATOMICSUB
-mlir::Value
-CUDAIntrinsicLibrary::genAtomicSub(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genAtomicSub(aiir::Type resultType,
+                                   llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  mlir::LLVM::AtomicBinOp binOp =
-      mlir::isa<mlir::IntegerType>(args[1].getType())
-          ? mlir::LLVM::AtomicBinOp::sub
-          : mlir::LLVM::AtomicBinOp::fsub;
+  aiir::LLVM::AtomicBinOp binOp =
+      aiir::isa<aiir::IntegerType>(args[1].getType())
+          ? aiir::LLVM::AtomicBinOp::sub
+          : aiir::LLVM::AtomicBinOp::fsub;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
 // ATOMICXOR
 fir::ExtendedValue
-CUDAIntrinsicLibrary::genAtomicXor(mlir::Type resultType,
+CUDAIntrinsicLibrary::genAtomicXor(aiir::Type resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  mlir::Value arg0 = fir::getBase(args[0]);
-  mlir::Value arg1 = fir::getBase(args[1]);
-  return genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::_xor, arg0, arg1);
+  aiir::Value arg0 = fir::getBase(args[0]);
+  aiir::Value arg1 = fir::getBase(args[1]);
+  return genAtomBinOp(builder, loc, aiir::LLVM::AtomicBinOp::_xor, arg0, arg1);
 }
 
 // BARRIER_ARRIVE
-mlir::Value
-CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
-                                       llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genBarrierArrive(aiir::Type resultType,
+                                       llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 1);
-  mlir::Value barrier = convertPtrToNVVMSpace(
-      builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
+  aiir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, args[0], aiir::NVVM::NVVMMemorySpace::Shared);
+  return aiir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
       .getResult(0);
 }
 
 // BARRIER_ARRIBVE_CNT
-mlir::Value
-CUDAIntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
-                                          llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genBarrierArriveCnt(aiir::Type resultType,
+                                          llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  mlir::Value barrier = convertPtrToNVVMSpace(
-      builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  return mlir::NVVM::InlinePtxOp::create(builder, loc, {resultType},
+  aiir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, args[0], aiir::NVVM::NVVMMemorySpace::Shared);
+  return aiir::NVVM::InlinePtxOp::create(builder, loc, {resultType},
                                          {barrier, args[1]}, {},
                                          "mbarrier.arrive.expect_tx.release."
                                          "cta.shared::cta.b64 %0, [%1], %2;",
@@ -1008,42 +1008,42 @@ CUDAIntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
 void CUDAIntrinsicLibrary::genBarrierInit(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  mlir::Value barrier = convertPtrToNVVMSpace(
-      builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::NVVM::MBarrierInitOp::create(builder, loc, barrier,
+  aiir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, fir::getBase(args[0]), aiir::NVVM::NVVMMemorySpace::Shared);
+  aiir::NVVM::MBarrierInitOp::create(builder, loc, barrier,
                                      fir::getBase(args[1]), {});
-  auto kind = mlir::NVVM::ProxyKindAttr::get(
-      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
-  auto space = mlir::NVVM::SharedSpaceAttr::get(
-      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
-  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
+  auto kind = aiir::NVVM::ProxyKindAttr::get(
+      builder.getContext(), aiir::NVVM::ProxyKind::async_shared);
+  auto space = aiir::NVVM::SharedSpaceAttr::get(
+      builder.getContext(), aiir::NVVM::SharedSpace::shared_cta);
+  aiir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
 }
 
 // BARRIER_TRY_WAIT
-mlir::Value
-CUDAIntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
-                                        llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genBarrierTryWait(aiir::Type resultType,
+                                        llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+  aiir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  aiir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
   fir::StoreOp::create(builder, loc, zero, res);
-  mlir::Value ns =
+  aiir::Value ns =
       builder.createIntegerConstant(loc, builder.getI32Type(), 1000000);
-  mlir::Value load = fir::LoadOp::create(builder, loc, res);
-  auto whileOp = mlir::scf::WhileOp::create(
-      builder, loc, mlir::TypeRange{resultType}, mlir::ValueRange{load});
-  mlir::Block *beforeBlock = builder.createBlock(&whileOp.getBefore());
-  mlir::Value beforeArg = beforeBlock->addArgument(resultType, loc);
+  aiir::Value load = fir::LoadOp::create(builder, loc, res);
+  auto whileOp = aiir::scf::WhileOp::create(
+      builder, loc, aiir::TypeRange{resultType}, aiir::ValueRange{load});
+  aiir::Block *beforeBlock = builder.createBlock(&whileOp.getBefore());
+  aiir::Value beforeArg = beforeBlock->addArgument(resultType, loc);
   builder.setInsertionPointToStart(beforeBlock);
-  mlir::Value condition = mlir::arith::CmpIOp::create(
-      builder, loc, mlir::arith::CmpIPredicate::eq, beforeArg, zero);
-  mlir::scf::ConditionOp::create(builder, loc, condition, beforeArg);
-  mlir::Block *afterBlock = builder.createBlock(&whileOp.getAfter());
+  aiir::Value condition = aiir::arith::CmpIOp::create(
+      builder, loc, aiir::arith::CmpIPredicate::eq, beforeArg, zero);
+  aiir::scf::ConditionOp::create(builder, loc, condition, beforeArg);
+  aiir::Block *afterBlock = builder.createBlock(&whileOp.getAfter());
   afterBlock->addArgument(resultType, loc);
   builder.setInsertionPointToStart(afterBlock);
-  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  auto llvmPtrTy = aiir::LLVM::LLVMPointerType::get(builder.getContext());
   auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
-  mlir::Value ret = mlir::NVVM::InlinePtxOp::create(
+  aiir::Value ret = aiir::NVVM::InlinePtxOp::create(
                         builder, loc, {resultType}, {barrier, args[1], ns}, {},
                         "{\n"
                         "  .reg .pred p;\n"
@@ -1052,19 +1052,19 @@ CUDAIntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
                         "}",
                         {})
                         .getResult(0);
-  mlir::scf::YieldOp::create(builder, loc, ret);
+  aiir::scf::YieldOp::create(builder, loc, ret);
   builder.setInsertionPointAfter(whileOp);
   return whileOp.getResult(0);
 }
 
 // BARRIER_TRY_WAIT_SLEEP
-mlir::Value
-CUDAIntrinsicLibrary::genBarrierTryWaitSleep(mlir::Type resultType,
-                                             llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genBarrierTryWaitSleep(aiir::Type resultType,
+                                             llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 3);
-  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  auto llvmPtrTy = aiir::LLVM::LLVMPointerType::get(builder.getContext());
   auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
-  return mlir::NVVM::InlinePtxOp::create(
+  return aiir::NVVM::InlinePtxOp::create(
              builder, loc, {resultType}, {barrier, args[1], args[2]}, {},
              "{\n"
              "  .reg .pred p;\n"
@@ -1075,68 +1075,68 @@ CUDAIntrinsicLibrary::genBarrierTryWaitSleep(mlir::Type resultType,
       .getResult(0);
 }
 
-static void insertValueAtPos(fir::FirOpBuilder &builder, mlir::Location loc,
-                             fir::RecordType recTy, mlir::Value base,
-                             mlir::Value dim, unsigned fieldPos) {
+static void insertValueAtPos(fir::FirOpBuilder &builder, aiir::Location loc,
+                             fir::RecordType recTy, aiir::Value base,
+                             aiir::Value dim, unsigned fieldPos) {
   auto fieldName = recTy.getTypeList()[fieldPos].first;
-  mlir::Type fieldTy = recTy.getTypeList()[fieldPos].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(base.getContext());
-  mlir::Value fieldIndex =
+  aiir::Type fieldTy = recTy.getTypeList()[fieldPos].second;
+  aiir::Type fieldIndexType = fir::FieldType::get(base.getContext());
+  aiir::Value fieldIndex =
       fir::FieldIndexOp::create(builder, loc, fieldIndexType, fieldName, recTy,
-                                /*typeParams=*/mlir::ValueRange{});
-  mlir::Value coord = fir::CoordinateOp::create(
+                                /*typeParams=*/aiir::ValueRange{});
+  aiir::Value coord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(fieldTy), base, fieldIndex);
   fir::StoreOp::create(builder, loc, dim, coord);
 }
 
 // CLUSTER_BLOCK_INDEX
-mlir::Value
-CUDAIntrinsicLibrary::genClusterBlockIndex(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genClusterBlockIndex(aiir::Type resultType,
+                                           llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  auto recTy = aiir::cast<fir::RecordType>(resultType);
   assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Value x = mlir::NVVM::BlockInClusterIdXOp::create(builder, loc, i32Ty);
-  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-  x = mlir::arith::AddIOp::create(builder, loc, x, one);
+  aiir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  aiir::Type i32Ty = builder.getI32Type();
+  aiir::Value x = aiir::NVVM::BlockInClusterIdXOp::create(builder, loc, i32Ty);
+  aiir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  x = aiir::arith::AddIOp::create(builder, loc, x, one);
   insertValueAtPos(builder, loc, recTy, res, x, 0);
-  mlir::Value y = mlir::NVVM::BlockInClusterIdYOp::create(builder, loc, i32Ty);
-  y = mlir::arith::AddIOp::create(builder, loc, y, one);
+  aiir::Value y = aiir::NVVM::BlockInClusterIdYOp::create(builder, loc, i32Ty);
+  y = aiir::arith::AddIOp::create(builder, loc, y, one);
   insertValueAtPos(builder, loc, recTy, res, y, 1);
-  mlir::Value z = mlir::NVVM::BlockInClusterIdZOp::create(builder, loc, i32Ty);
-  z = mlir::arith::AddIOp::create(builder, loc, z, one);
+  aiir::Value z = aiir::NVVM::BlockInClusterIdZOp::create(builder, loc, i32Ty);
+  z = aiir::arith::AddIOp::create(builder, loc, z, one);
   insertValueAtPos(builder, loc, recTy, res, z, 2);
   return res;
 }
 
 // CLUSTER_DIM_BLOCKS
-mlir::Value
-CUDAIntrinsicLibrary::genClusterDimBlocks(mlir::Type resultType,
-                                          llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genClusterDimBlocks(aiir::Type resultType,
+                                          llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  auto recTy = aiir::cast<fir::RecordType>(resultType);
   assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Value x = mlir::NVVM::ClusterDimBlocksXOp::create(builder, loc, i32Ty);
+  aiir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  aiir::Type i32Ty = builder.getI32Type();
+  aiir::Value x = aiir::NVVM::ClusterDimBlocksXOp::create(builder, loc, i32Ty);
   insertValueAtPos(builder, loc, recTy, res, x, 0);
-  mlir::Value y = mlir::NVVM::ClusterDimBlocksYOp::create(builder, loc, i32Ty);
+  aiir::Value y = aiir::NVVM::ClusterDimBlocksYOp::create(builder, loc, i32Ty);
   insertValueAtPos(builder, loc, recTy, res, y, 1);
-  mlir::Value z = mlir::NVVM::ClusterDimBlocksZOp::create(builder, loc, i32Ty);
+  aiir::Value z = aiir::NVVM::ClusterDimBlocksZOp::create(builder, loc, i32Ty);
   insertValueAtPos(builder, loc, recTy, res, z, 2);
   return res;
 }
 
 // CUDASETSTREAMDEFAULT
 fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStream(
-    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+    aiir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::Value stream = fir::getBase(args[0]);
-  mlir::Type i64Ty = builder.getI64Type();
+  aiir::Value stream = fir::getBase(args[0]);
+  aiir::Type i64Ty = builder.getI64Type();
   auto ctx = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
+  aiir::FunctionType ftype = aiir::FunctionType::get(ctx, {i64Ty}, {resTy});
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFSetDefaultStream), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {stream});
@@ -1145,21 +1145,21 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStream(
 
 // CUDASETSTREAMARRAY
 fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStreamArray(
-    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+    aiir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  mlir::Value arg = fir::getBase(args[0]);
-  mlir::Value stream = fir::getBase(args[1]);
+  aiir::Value arg = fir::getBase(args[0]);
+  aiir::Value stream = fir::getBase(args[1]);
 
-  if (mlir::isa<fir::BaseBoxType>(arg.getType()))
+  if (aiir::isa<fir::BaseBoxType>(arg.getType()))
     arg = fir::BoxAddrOp::create(builder, loc, arg);
-  mlir::Type i64Ty = builder.getI64Type();
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::Type i64Ty = builder.getI64Type();
+  aiir::Type i32Ty = builder.getI32Type();
   auto ctx = builder.getContext();
-  mlir::Type voidPtrTy =
-      fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(ctx, {voidPtrTy, i64Ty}, {i32Ty});
-  mlir::Value voidPtr = builder.createConvert(loc, voidPtrTy, arg);
+  aiir::Type voidPtrTy =
+      fir::LLVMPointerType::get(ctx, aiir::IntegerType::get(ctx, 8));
+  aiir::FunctionType ftype =
+      aiir::FunctionType::get(ctx, {voidPtrTy, i64Ty}, {i32Ty});
+  aiir::Value voidPtr = builder.createConvert(loc, voidPtrTy, arg);
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFSetAssociatedStream), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {voidPtr, stream});
@@ -1168,12 +1168,12 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStreamArray(
 
 // CUDASTREAMDESTROY
 fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAStreamDestroy(
-    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+    aiir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::Value stream = fir::getBase(args[0]);
-  mlir::Type i64Ty = builder.getI64Type();
+  aiir::Value stream = fir::getBase(args[0]);
+  aiir::Type i64Ty = builder.getI64Type();
   auto ctx = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
+  aiir::FunctionType ftype = aiir::FunctionType::get(ctx, {i64Ty}, {resTy});
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFStreamDestroy), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {stream});
@@ -1182,12 +1182,12 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAStreamDestroy(
 
 // CUDASTREAMSYNCHRONIZE
 fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAStreamSynchronize(
-    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+    aiir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::Value stream = fir::getBase(args[0]);
-  mlir::Type i64Ty = builder.getI64Type();
+  aiir::Value stream = fir::getBase(args[0]);
+  aiir::Type i64Ty = builder.getI64Type();
   auto ctx = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
+  aiir::FunctionType ftype = aiir::FunctionType::get(ctx, {i64Ty}, {resTy});
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFStreamSynchronize), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {stream});
@@ -1195,11 +1195,11 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAStreamSynchronize(
 }
 
 // CUDASTREAMSYNCHRONIZENULL
-mlir::Value CUDAIntrinsicLibrary::genCUDAStreamSynchronizeNull(
-    mlir::Type resTy, llvm::ArrayRef<mlir::Value> args) {
+aiir::Value CUDAIntrinsicLibrary::genCUDAStreamSynchronizeNull(
+    aiir::Type resTy, llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0);
   auto ctx = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {}, {resTy});
+  aiir::FunctionType ftype = aiir::FunctionType::get(ctx, {}, {resTy});
   auto funcOp = builder.createFunction(
       loc, RTNAME_STRING(CUFStreamSynchronizeNull), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {});
@@ -1208,15 +1208,15 @@ mlir::Value CUDAIntrinsicLibrary::genCUDAStreamSynchronizeNull(
 
 // CUDAGETDEFAULTSTREAMARG
 fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAGetDefaultStreamArg(
-    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+    aiir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::Value devptr = fir::getBase(args[0]);
-  mlir::Type i64Ty = builder.getI64Type();
+  aiir::Value devptr = fir::getBase(args[0]);
+  aiir::Type i64Ty = builder.getI64Type();
   auto ctx = builder.getContext();
-  mlir::Type voidPtrTy =
-      fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
-  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {voidPtrTy}, {i64Ty});
-  mlir::Value voidPtr = builder.createConvert(loc, voidPtrTy, devptr);
+  aiir::Type voidPtrTy =
+      fir::LLVMPointerType::get(ctx, aiir::IntegerType::get(ctx, 8));
+  aiir::FunctionType ftype = aiir::FunctionType::get(ctx, {voidPtrTy}, {i64Ty});
+  aiir::Value voidPtr = builder.createConvert(loc, voidPtrTy, devptr);
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFGetAssociatedStream), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {voidPtr});
@@ -1224,12 +1224,12 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAGetDefaultStreamArg(
 }
 
 // CUDAGETDEFAULTSTREAMNULL
-mlir::Value CUDAIntrinsicLibrary::genCUDAGetDefaultStreamNull(
-    mlir::Type resultType, llvm::ArrayRef<mlir::Value> args) {
+aiir::Value CUDAIntrinsicLibrary::genCUDAGetDefaultStreamNull(
+    aiir::Type resultType, llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0);
-  mlir::Type i64Ty = builder.getI64Type();
+  aiir::Type i64Ty = builder.getI64Type();
   auto ctx = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {}, {i64Ty});
+  aiir::FunctionType ftype = aiir::FunctionType::get(ctx, {}, {i64Ty});
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFGetDefaultStream), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {});
@@ -1240,132 +1240,132 @@ mlir::Value CUDAIntrinsicLibrary::genCUDAGetDefaultStreamNull(
 void CUDAIntrinsicLibrary::genFenceProxyAsync(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 0);
-  auto kind = mlir::NVVM::ProxyKindAttr::get(
-      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
-  auto space = mlir::NVVM::SharedSpaceAttr::get(
-      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
-  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
+  auto kind = aiir::NVVM::ProxyKindAttr::get(
+      builder.getContext(), aiir::NVVM::ProxyKind::async_shared);
+  auto space = aiir::NVVM::SharedSpaceAttr::get(
+      builder.getContext(), aiir::NVVM::SharedSpace::shared_cta);
+  aiir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
 }
 
 // __LDCA, __LDCS, __LDLU, __LDCV
 template <const char *fctName, int extent>
 fir::ExtendedValue
-CUDAIntrinsicLibrary::genLDXXFunc(mlir::Type resultType,
+CUDAIntrinsicLibrary::genLDXXFunc(aiir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::Type resTy = fir::SequenceType::get(extent, resultType);
-  mlir::Value arg = fir::getBase(args[0]);
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resTy);
-  if (mlir::isa<fir::BaseBoxType>(arg.getType()))
+  aiir::Type resTy = fir::SequenceType::get(extent, resultType);
+  aiir::Value arg = fir::getBase(args[0]);
+  aiir::Value res = fir::AllocaOp::create(builder, loc, resTy);
+  if (aiir::isa<fir::BaseBoxType>(arg.getType()))
     arg = fir::BoxAddrOp::create(builder, loc, arg);
-  mlir::Type refResTy = fir::ReferenceType::get(resTy);
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
+  aiir::Type refResTy = fir::ReferenceType::get(resTy);
+  aiir::FunctionType ftype =
+      aiir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
   auto funcOp = builder.createFunction(loc, fctName, ftype);
-  llvm::SmallVector<mlir::Value> funcArgs;
+  llvm::SmallVector<aiir::Value> funcArgs;
   funcArgs.push_back(res);
   funcArgs.push_back(arg);
   fir::CallOp::create(builder, loc, funcOp, funcArgs);
-  mlir::Value ext =
+  aiir::Value ext =
       builder.createIntegerConstant(loc, builder.getIndexType(), extent);
   return fir::ArrayBoxValue(res, {ext});
 }
 
 // CLOCK, CLOCK64, GLOBALTIMER
 template <typename OpTy>
-mlir::Value
-CUDAIntrinsicLibrary::genNVVMTime(mlir::Type resultType,
-                                  llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genNVVMTime(aiir::Type resultType,
+                                  llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0 && "expect no arguments");
   return OpTy::create(builder, loc, resultType).getResult();
 }
 
 // MATCH_ALL_SYNC
-mlir::Value
-CUDAIntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
-                                      llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genMatchAllSync(aiir::Type resultType,
+                                      llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 3);
   bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
 
-  mlir::Type i1Ty = builder.getI1Type();
-  mlir::MLIRContext *context = builder.getContext();
+  aiir::Type i1Ty = builder.getI1Type();
+  aiir::AIIRContext *context = builder.getContext();
 
-  mlir::Value arg1 = args[1];
+  aiir::Value arg1 = args[1];
   if (arg1.getType().isF32() || arg1.getType().isF64())
     arg1 = fir::ConvertOp::create(
         builder, loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
 
-  mlir::Type retTy =
-      mlir::LLVM::LLVMStructType::getLiteral(context, {resultType, i1Ty});
+  aiir::Type retTy =
+      aiir::LLVM::LLVMStructType::getLiteral(context, {resultType, i1Ty});
   auto match =
-      mlir::NVVM::MatchSyncOp::create(builder, loc, retTy, args[0], arg1,
-                                      mlir::NVVM::MatchSyncKind::all)
+      aiir::NVVM::MatchSyncOp::create(builder, loc, retTy, args[0], arg1,
+                                      aiir::NVVM::MatchSyncKind::all)
           .getResult();
-  auto value = mlir::LLVM::ExtractValueOp::create(builder, loc, match, 0);
-  auto pred = mlir::LLVM::ExtractValueOp::create(builder, loc, match, 1);
-  auto conv = mlir::LLVM::ZExtOp::create(builder, loc, resultType, pred);
+  auto value = aiir::LLVM::ExtractValueOp::create(builder, loc, match, 0);
+  auto pred = aiir::LLVM::ExtractValueOp::create(builder, loc, match, 1);
+  auto conv = aiir::LLVM::ZExtOp::create(builder, loc, resultType, pred);
   fir::StoreOp::create(builder, loc, conv, args[2]);
   return value;
 }
 
 // MATCH_ANY_SYNC
-mlir::Value
-CUDAIntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
-                                      llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genMatchAnySync(aiir::Type resultType,
+                                      llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
   bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
 
-  mlir::Value arg1 = args[1];
+  aiir::Value arg1 = args[1];
   if (arg1.getType().isF32() || arg1.getType().isF64())
     arg1 = fir::ConvertOp::create(
         builder, loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
 
-  return mlir::NVVM::MatchSyncOp::create(builder, loc, resultType, args[0],
-                                         arg1, mlir::NVVM::MatchSyncKind::any)
+  return aiir::NVVM::MatchSyncOp::create(builder, loc, resultType, args[0],
+                                         arg1, aiir::NVVM::MatchSyncKind::any)
       .getResult();
 }
 
 // SYNCTHREADS
 void CUDAIntrinsicLibrary::genSyncThreads(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  mlir::NVVM::Barrier0Op::create(builder, loc);
+  aiir::NVVM::Barrier0Op::create(builder, loc);
 }
 
 // SYNCTHREADS_AND
-mlir::Value
-CUDAIntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
-                                        llvm::ArrayRef<mlir::Value> args) {
-  mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
+aiir::Value
+CUDAIntrinsicLibrary::genSyncThreadsAnd(aiir::Type resultType,
+                                        llvm::ArrayRef<aiir::Value> args) {
+  aiir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
+  return aiir::NVVM::BarrierOp::create(
              builder, loc, resultType, {}, {},
-             mlir::NVVM::BarrierReductionAttr::get(
-                 builder.getContext(), mlir::NVVM::BarrierReduction::AND),
+             aiir::NVVM::BarrierReductionAttr::get(
+                 builder.getContext(), aiir::NVVM::BarrierReduction::AND),
              arg)
       .getResult(0);
 }
 
 // SYNCTHREADS_COUNT
-mlir::Value
-CUDAIntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
-                                          llvm::ArrayRef<mlir::Value> args) {
-  mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
+aiir::Value
+CUDAIntrinsicLibrary::genSyncThreadsCount(aiir::Type resultType,
+                                          llvm::ArrayRef<aiir::Value> args) {
+  aiir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
+  return aiir::NVVM::BarrierOp::create(
              builder, loc, resultType, {}, {},
-             mlir::NVVM::BarrierReductionAttr::get(
-                 builder.getContext(), mlir::NVVM::BarrierReduction::POPC),
+             aiir::NVVM::BarrierReductionAttr::get(
+                 builder.getContext(), aiir::NVVM::BarrierReduction::POPC),
              arg)
       .getResult(0);
 }
 
 // SYNCTHREADS_OR
-mlir::Value
-CUDAIntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
-                                       llvm::ArrayRef<mlir::Value> args) {
-  mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
+aiir::Value
+CUDAIntrinsicLibrary::genSyncThreadsOr(aiir::Type resultType,
+                                       llvm::ArrayRef<aiir::Value> args) {
+  aiir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
+  return aiir::NVVM::BarrierOp::create(
              builder, loc, resultType, {}, {},
-             mlir::NVVM::BarrierReductionAttr::get(
-                 builder.getContext(), mlir::NVVM::BarrierReduction::OR),
+             aiir::NVVM::BarrierReductionAttr::get(
+                 builder.getContext(), aiir::NVVM::BarrierReduction::OR),
              arg)
       .getResult(0);
 }
@@ -1374,41 +1374,41 @@ CUDAIntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
 void CUDAIntrinsicLibrary::genSyncWarp(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::NVVM::SyncWarpOp::create(builder, loc, fir::getBase(args[0]));
+  aiir::NVVM::SyncWarpOp::create(builder, loc, fir::getBase(args[0]));
 }
 
 // THIS_CLUSTER
-mlir::Value
-CUDAIntrinsicLibrary::genThisCluster(mlir::Type resultType,
-                                     llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genThisCluster(aiir::Type resultType,
+                                     llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  auto recTy = aiir::cast<fir::RecordType>(resultType);
   assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  aiir::Type i32Ty = builder.getI32Type();
 
   // SIZE
-  mlir::Value size = mlir::NVVM::ClusterDim::create(builder, loc, i32Ty);
+  aiir::Value size = aiir::NVVM::ClusterDim::create(builder, loc, i32Ty);
   auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
+  aiir::Type sizeFieldTy = recTy.getTypeList()[1].second;
+  aiir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
+  aiir::Value sizeFieldIndex = fir::FieldIndexOp::create(
       builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
+      /*typeParams=*/aiir::ValueRange{});
+  aiir::Value sizeCoord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
   fir::StoreOp::create(builder, loc, size, sizeCoord);
 
   // RANK
-  mlir::Value rank = mlir::NVVM::ClusterId::create(builder, loc, i32Ty);
-  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
+  aiir::Value rank = aiir::NVVM::ClusterId::create(builder, loc, i32Ty);
+  aiir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  rank = aiir::arith::AddIOp::create(builder, loc, rank, one);
   auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
+  aiir::Type rankFieldTy = recTy.getTypeList()[2].second;
+  aiir::Value rankFieldIndex = fir::FieldIndexOp::create(
       builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
+      /*typeParams=*/aiir::ValueRange{});
+  aiir::Value rankCoord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
   fir::StoreOp::create(builder, loc, rank, rankCoord);
 
@@ -1416,240 +1416,240 @@ CUDAIntrinsicLibrary::genThisCluster(mlir::Type resultType,
 }
 
 // THIS_GRID
-mlir::Value
-CUDAIntrinsicLibrary::genThisGrid(mlir::Type resultType,
-                                  llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genThisGrid(aiir::Type resultType,
+                                  llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  auto recTy = aiir::cast<fir::RecordType>(resultType);
   assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  aiir::Type i32Ty = builder.getI32Type();
 
-  mlir::Value threadIdX = mlir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
-  mlir::Value threadIdY = mlir::NVVM::ThreadIdYOp::create(builder, loc, i32Ty);
-  mlir::Value threadIdZ = mlir::NVVM::ThreadIdZOp::create(builder, loc, i32Ty);
+  aiir::Value threadIdX = aiir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
+  aiir::Value threadIdY = aiir::NVVM::ThreadIdYOp::create(builder, loc, i32Ty);
+  aiir::Value threadIdZ = aiir::NVVM::ThreadIdZOp::create(builder, loc, i32Ty);
 
-  mlir::Value blockIdX = mlir::NVVM::BlockIdXOp::create(builder, loc, i32Ty);
-  mlir::Value blockIdY = mlir::NVVM::BlockIdYOp::create(builder, loc, i32Ty);
-  mlir::Value blockIdZ = mlir::NVVM::BlockIdZOp::create(builder, loc, i32Ty);
+  aiir::Value blockIdX = aiir::NVVM::BlockIdXOp::create(builder, loc, i32Ty);
+  aiir::Value blockIdY = aiir::NVVM::BlockIdYOp::create(builder, loc, i32Ty);
+  aiir::Value blockIdZ = aiir::NVVM::BlockIdZOp::create(builder, loc, i32Ty);
 
-  mlir::Value blockDimX = mlir::NVVM::BlockDimXOp::create(builder, loc, i32Ty);
-  mlir::Value blockDimY = mlir::NVVM::BlockDimYOp::create(builder, loc, i32Ty);
-  mlir::Value blockDimZ = mlir::NVVM::BlockDimZOp::create(builder, loc, i32Ty);
-  mlir::Value gridDimX = mlir::NVVM::GridDimXOp::create(builder, loc, i32Ty);
-  mlir::Value gridDimY = mlir::NVVM::GridDimYOp::create(builder, loc, i32Ty);
-  mlir::Value gridDimZ = mlir::NVVM::GridDimZOp::create(builder, loc, i32Ty);
+  aiir::Value blockDimX = aiir::NVVM::BlockDimXOp::create(builder, loc, i32Ty);
+  aiir::Value blockDimY = aiir::NVVM::BlockDimYOp::create(builder, loc, i32Ty);
+  aiir::Value blockDimZ = aiir::NVVM::BlockDimZOp::create(builder, loc, i32Ty);
+  aiir::Value gridDimX = aiir::NVVM::GridDimXOp::create(builder, loc, i32Ty);
+  aiir::Value gridDimY = aiir::NVVM::GridDimYOp::create(builder, loc, i32Ty);
+  aiir::Value gridDimZ = aiir::NVVM::GridDimZOp::create(builder, loc, i32Ty);
 
   // this_grid.size = ((blockDim.z * gridDim.z) * (blockDim.y * gridDim.y)) *
   // (blockDim.x * gridDim.x);
-  mlir::Value resZ =
-      mlir::arith::MulIOp::create(builder, loc, blockDimZ, gridDimZ);
-  mlir::Value resY =
-      mlir::arith::MulIOp::create(builder, loc, blockDimY, gridDimY);
-  mlir::Value resX =
-      mlir::arith::MulIOp::create(builder, loc, blockDimX, gridDimX);
-  mlir::Value resZY = mlir::arith::MulIOp::create(builder, loc, resZ, resY);
-  mlir::Value size = mlir::arith::MulIOp::create(builder, loc, resZY, resX);
+  aiir::Value resZ =
+      aiir::arith::MulIOp::create(builder, loc, blockDimZ, gridDimZ);
+  aiir::Value resY =
+      aiir::arith::MulIOp::create(builder, loc, blockDimY, gridDimY);
+  aiir::Value resX =
+      aiir::arith::MulIOp::create(builder, loc, blockDimX, gridDimX);
+  aiir::Value resZY = aiir::arith::MulIOp::create(builder, loc, resZ, resY);
+  aiir::Value size = aiir::arith::MulIOp::create(builder, loc, resZY, resX);
 
   // tmp = ((blockIdx.z * gridDim.y * gridDim.x) + (blockIdx.y * gridDim.x)) +
   //   blockIdx.x;
   // this_group.rank = tmp * ((blockDim.x * blockDim.y) * blockDim.z) +
   //   ((threadIdx.z * blockDim.y) * blockDim.x) +
   //   (threadIdx.y * blockDim.x) + threadIdx.x + 1;
-  mlir::Value r1 =
-      mlir::arith::MulIOp::create(builder, loc, blockIdZ, gridDimY);
-  mlir::Value r2 = mlir::arith::MulIOp::create(builder, loc, r1, gridDimX);
-  mlir::Value r3 =
-      mlir::arith::MulIOp::create(builder, loc, blockIdY, gridDimX);
-  mlir::Value r2r3 = mlir::arith::AddIOp::create(builder, loc, r2, r3);
-  mlir::Value tmp = mlir::arith::AddIOp::create(builder, loc, r2r3, blockIdX);
+  aiir::Value r1 =
+      aiir::arith::MulIOp::create(builder, loc, blockIdZ, gridDimY);
+  aiir::Value r2 = aiir::arith::MulIOp::create(builder, loc, r1, gridDimX);
+  aiir::Value r3 =
+      aiir::arith::MulIOp::create(builder, loc, blockIdY, gridDimX);
+  aiir::Value r2r3 = aiir::arith::AddIOp::create(builder, loc, r2, r3);
+  aiir::Value tmp = aiir::arith::AddIOp::create(builder, loc, r2r3, blockIdX);
 
-  mlir::Value bXbY =
-      mlir::arith::MulIOp::create(builder, loc, blockDimX, blockDimY);
-  mlir::Value bXbYbZ =
-      mlir::arith::MulIOp::create(builder, loc, bXbY, blockDimZ);
-  mlir::Value tZbY =
-      mlir::arith::MulIOp::create(builder, loc, threadIdZ, blockDimY);
-  mlir::Value tZbYbX =
-      mlir::arith::MulIOp::create(builder, loc, tZbY, blockDimX);
-  mlir::Value tYbX =
-      mlir::arith::MulIOp::create(builder, loc, threadIdY, blockDimX);
-  mlir::Value rank = mlir::arith::MulIOp::create(builder, loc, tmp, bXbYbZ);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, tZbYbX);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, tYbX);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, threadIdX);
-  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
+  aiir::Value bXbY =
+      aiir::arith::MulIOp::create(builder, loc, blockDimX, blockDimY);
+  aiir::Value bXbYbZ =
+      aiir::arith::MulIOp::create(builder, loc, bXbY, blockDimZ);
+  aiir::Value tZbY =
+      aiir::arith::MulIOp::create(builder, loc, threadIdZ, blockDimY);
+  aiir::Value tZbYbX =
+      aiir::arith::MulIOp::create(builder, loc, tZbY, blockDimX);
+  aiir::Value tYbX =
+      aiir::arith::MulIOp::create(builder, loc, threadIdY, blockDimX);
+  aiir::Value rank = aiir::arith::MulIOp::create(builder, loc, tmp, bXbYbZ);
+  rank = aiir::arith::AddIOp::create(builder, loc, rank, tZbYbX);
+  rank = aiir::arith::AddIOp::create(builder, loc, rank, tYbX);
+  rank = aiir::arith::AddIOp::create(builder, loc, rank, threadIdX);
+  aiir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  rank = aiir::arith::AddIOp::create(builder, loc, rank, one);
 
   auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
+  aiir::Type sizeFieldTy = recTy.getTypeList()[1].second;
+  aiir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
+  aiir::Value sizeFieldIndex = fir::FieldIndexOp::create(
       builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
+      /*typeParams=*/aiir::ValueRange{});
+  aiir::Value sizeCoord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
   fir::StoreOp::create(builder, loc, size, sizeCoord);
 
   auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
+  aiir::Type rankFieldTy = recTy.getTypeList()[2].second;
+  aiir::Value rankFieldIndex = fir::FieldIndexOp::create(
       builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
+      /*typeParams=*/aiir::ValueRange{});
+  aiir::Value rankCoord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
   fir::StoreOp::create(builder, loc, rank, rankCoord);
   return res;
 }
 
 // THIS_THREAD_BLOCK
-mlir::Value
-CUDAIntrinsicLibrary::genThisThreadBlock(mlir::Type resultType,
-                                         llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genThisThreadBlock(aiir::Type resultType,
+                                         llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  auto recTy = aiir::cast<fir::RecordType>(resultType);
   assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  aiir::Type i32Ty = builder.getI32Type();
 
   // this_thread_block%size = blockDim.z * blockDim.y * blockDim.x;
-  mlir::Value blockDimX = mlir::NVVM::BlockDimXOp::create(builder, loc, i32Ty);
-  mlir::Value blockDimY = mlir::NVVM::BlockDimYOp::create(builder, loc, i32Ty);
-  mlir::Value blockDimZ = mlir::NVVM::BlockDimZOp::create(builder, loc, i32Ty);
-  mlir::Value size =
-      mlir::arith::MulIOp::create(builder, loc, blockDimZ, blockDimY);
-  size = mlir::arith::MulIOp::create(builder, loc, size, blockDimX);
+  aiir::Value blockDimX = aiir::NVVM::BlockDimXOp::create(builder, loc, i32Ty);
+  aiir::Value blockDimY = aiir::NVVM::BlockDimYOp::create(builder, loc, i32Ty);
+  aiir::Value blockDimZ = aiir::NVVM::BlockDimZOp::create(builder, loc, i32Ty);
+  aiir::Value size =
+      aiir::arith::MulIOp::create(builder, loc, blockDimZ, blockDimY);
+  size = aiir::arith::MulIOp::create(builder, loc, size, blockDimX);
 
   // this_thread_block%rank = ((threadIdx.z * blockDim.y) * blockDim.x) +
   //   (threadIdx.y * blockDim.x) + threadIdx.x + 1;
-  mlir::Value threadIdX = mlir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
-  mlir::Value threadIdY = mlir::NVVM::ThreadIdYOp::create(builder, loc, i32Ty);
-  mlir::Value threadIdZ = mlir::NVVM::ThreadIdZOp::create(builder, loc, i32Ty);
-  mlir::Value r1 =
-      mlir::arith::MulIOp::create(builder, loc, threadIdZ, blockDimY);
-  mlir::Value r2 = mlir::arith::MulIOp::create(builder, loc, r1, blockDimX);
-  mlir::Value r3 =
-      mlir::arith::MulIOp::create(builder, loc, threadIdY, blockDimX);
-  mlir::Value r2r3 = mlir::arith::AddIOp::create(builder, loc, r2, r3);
-  mlir::Value rank = mlir::arith::AddIOp::create(builder, loc, r2r3, threadIdX);
-  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
+  aiir::Value threadIdX = aiir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
+  aiir::Value threadIdY = aiir::NVVM::ThreadIdYOp::create(builder, loc, i32Ty);
+  aiir::Value threadIdZ = aiir::NVVM::ThreadIdZOp::create(builder, loc, i32Ty);
+  aiir::Value r1 =
+      aiir::arith::MulIOp::create(builder, loc, threadIdZ, blockDimY);
+  aiir::Value r2 = aiir::arith::MulIOp::create(builder, loc, r1, blockDimX);
+  aiir::Value r3 =
+      aiir::arith::MulIOp::create(builder, loc, threadIdY, blockDimX);
+  aiir::Value r2r3 = aiir::arith::AddIOp::create(builder, loc, r2, r3);
+  aiir::Value rank = aiir::arith::AddIOp::create(builder, loc, r2r3, threadIdX);
+  aiir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  rank = aiir::arith::AddIOp::create(builder, loc, rank, one);
 
   auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
+  aiir::Type sizeFieldTy = recTy.getTypeList()[1].second;
+  aiir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
+  aiir::Value sizeFieldIndex = fir::FieldIndexOp::create(
       builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
+      /*typeParams=*/aiir::ValueRange{});
+  aiir::Value sizeCoord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
   fir::StoreOp::create(builder, loc, size, sizeCoord);
 
   auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
+  aiir::Type rankFieldTy = recTy.getTypeList()[2].second;
+  aiir::Value rankFieldIndex = fir::FieldIndexOp::create(
       builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
+      /*typeParams=*/aiir::ValueRange{});
+  aiir::Value rankCoord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
   fir::StoreOp::create(builder, loc, rank, rankCoord);
   return res;
 }
 
 // THIS_WARP
-mlir::Value
-CUDAIntrinsicLibrary::genThisWarp(mlir::Type resultType,
-                                  llvm::ArrayRef<mlir::Value> args) {
+aiir::Value
+CUDAIntrinsicLibrary::genThisWarp(aiir::Type resultType,
+                                  llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
+  auto recTy = aiir::cast<fir::RecordType>(resultType);
   assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
+  aiir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  aiir::Type i32Ty = builder.getI32Type();
 
   // coalesced_group%size = 32
-  mlir::Value size = builder.createIntegerConstant(loc, i32Ty, 32);
+  aiir::Value size = builder.createIntegerConstant(loc, i32Ty, 32);
   auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
+  aiir::Type sizeFieldTy = recTy.getTypeList()[1].second;
+  aiir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
+  aiir::Value sizeFieldIndex = fir::FieldIndexOp::create(
       builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
+      /*typeParams=*/aiir::ValueRange{});
+  aiir::Value sizeCoord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
   fir::StoreOp::create(builder, loc, size, sizeCoord);
 
   // coalesced_group%rank = threadIdx.x & 31 + 1
-  mlir::Value threadIdX = mlir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
-  mlir::Value mask = builder.createIntegerConstant(loc, i32Ty, 31);
-  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value masked =
-      mlir::arith::AndIOp::create(builder, loc, threadIdX, mask);
-  mlir::Value rank = mlir::arith::AddIOp::create(builder, loc, masked, one);
+  aiir::Value threadIdX = aiir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
+  aiir::Value mask = builder.createIntegerConstant(loc, i32Ty, 31);
+  aiir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  aiir::Value masked =
+      aiir::arith::AndIOp::create(builder, loc, threadIdX, mask);
+  aiir::Value rank = aiir::arith::AddIOp::create(builder, loc, masked, one);
   auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
+  aiir::Type rankFieldTy = recTy.getTypeList()[2].second;
+  aiir::Value rankFieldIndex = fir::FieldIndexOp::create(
       builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
+      /*typeParams=*/aiir::ValueRange{});
+  aiir::Value rankCoord = fir::CoordinateOp::create(
       builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
   fir::StoreOp::create(builder, loc, rank, rankCoord);
   return res;
 }
 
 // THREADFENCE, THREADFENCE_BLOCK, THREADFENCE_SYSTEM
-template <mlir::NVVM::MemScopeKind scope>
+template <aiir::NVVM::MemScopeKind scope>
 void CUDAIntrinsicLibrary::genThreadFence(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 0);
-  mlir::NVVM::MembarOp::create(builder, loc, scope);
+  aiir::NVVM::MembarOp::create(builder, loc, scope);
 }
 
 // TMA_BULK_COMMIT_GROUP
 void CUDAIntrinsicLibrary::genTMABulkCommitGroup(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 0);
-  mlir::NVVM::CpAsyncBulkCommitGroupOp::create(builder, loc);
+  aiir::NVVM::CpAsyncBulkCommitGroupOp::create(builder, loc);
 }
 
 // TMA_BULK_G2S
 void CUDAIntrinsicLibrary::genTMABulkG2S(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  mlir::Value barrier = convertPtrToNVVMSpace(
-      builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::Value dst =
+  aiir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, fir::getBase(args[0]), aiir::NVVM::NVVMMemorySpace::Shared);
+  aiir::Value dst =
       convertPtrToNVVMSpace(builder, loc, fir::getBase(args[2]),
-                            mlir::NVVM::NVVMMemorySpace::SharedCluster);
-  mlir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
-                                          mlir::NVVM::NVVMMemorySpace::Global);
-  mlir::NVVM::CpAsyncBulkGlobalToSharedClusterOp::create(
+                            aiir::NVVM::NVVMMemorySpace::SharedCluster);
+  aiir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
+                                          aiir::NVVM::NVVMMemorySpace::Global);
+  aiir::NVVM::CpAsyncBulkGlobalToSharedClusterOp::create(
       builder, loc, dst, src, barrier, fir::getBase(args[3]), {}, {});
 }
 
-static void setAlignment(mlir::Value ptr, unsigned alignment) {
-  if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(ptr.getDefiningOp()))
-    if (auto sharedOp = mlir::dyn_cast<cuf::SharedMemoryOp>(
+static void setAlignment(aiir::Value ptr, unsigned alignment) {
+  if (auto declareOp = aiir::dyn_cast<hlfir::DeclareOp>(ptr.getDefiningOp()))
+    if (auto sharedOp = aiir::dyn_cast<cuf::SharedMemoryOp>(
             declareOp.getMemref().getDefiningOp()))
       sharedOp.setAlignment(alignment);
 }
 
-static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value barrier, mlir::Value src,
-                           mlir::Value dst, mlir::Value nelem,
-                           mlir::Value eleSize) {
-  mlir::Value size = mlir::arith::MulIOp::create(builder, loc, nelem, eleSize);
-  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+static void genTMABulkLoad(fir::FirOpBuilder &builder, aiir::Location loc,
+                           aiir::Value barrier, aiir::Value src,
+                           aiir::Value dst, aiir::Value nelem,
+                           aiir::Value eleSize) {
+  aiir::Value size = aiir::arith::MulIOp::create(builder, loc, nelem, eleSize);
+  auto llvmPtrTy = aiir::LLVM::LLVMPointerType::get(builder.getContext());
   barrier = builder.createConvert(loc, llvmPtrTy, barrier);
   setAlignment(dst, kTMAAlignment);
   dst = builder.createConvert(loc, llvmPtrTy, dst);
   src = builder.createConvert(loc, llvmPtrTy, src);
-  mlir::NVVM::InlinePtxOp::create(
-      builder, loc, mlir::TypeRange{}, {dst, src, size, barrier}, {},
+  aiir::NVVM::InlinePtxOp::create(
+      builder, loc, aiir::TypeRange{}, {dst, src, size, barrier}, {},
       "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], "
       "[%1], %2, [%3];",
       {});
-  mlir::NVVM::InlinePtxOp::create(
-      builder, loc, mlir::TypeRange{}, {barrier, size}, {},
+  aiir::NVVM::InlinePtxOp::create(
+      builder, loc, aiir::TypeRange{}, {barrier, size}, {},
       "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;", {});
 }
 
@@ -1657,7 +1657,7 @@ static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
 void CUDAIntrinsicLibrary::genTMABulkLoadC4(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 8);
   genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                  fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
@@ -1667,7 +1667,7 @@ void CUDAIntrinsicLibrary::genTMABulkLoadC4(
 void CUDAIntrinsicLibrary::genTMABulkLoadC8(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 16);
   genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                  fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
@@ -1677,7 +1677,7 @@ void CUDAIntrinsicLibrary::genTMABulkLoadC8(
 void CUDAIntrinsicLibrary::genTMABulkLoadI4(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 4);
   genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                  fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
@@ -1687,7 +1687,7 @@ void CUDAIntrinsicLibrary::genTMABulkLoadI4(
 void CUDAIntrinsicLibrary::genTMABulkLoadI8(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 8);
   genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                  fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
@@ -1697,7 +1697,7 @@ void CUDAIntrinsicLibrary::genTMABulkLoadI8(
 void CUDAIntrinsicLibrary::genTMABulkLoadR2(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 2);
   genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                  fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
@@ -1707,7 +1707,7 @@ void CUDAIntrinsicLibrary::genTMABulkLoadR2(
 void CUDAIntrinsicLibrary::genTMABulkLoadR4(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 4);
   genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                  fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
@@ -1717,7 +1717,7 @@ void CUDAIntrinsicLibrary::genTMABulkLoadR4(
 void CUDAIntrinsicLibrary::genTMABulkLoadR8(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 8);
   genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                  fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
@@ -1727,33 +1727,33 @@ void CUDAIntrinsicLibrary::genTMABulkLoadR8(
 void CUDAIntrinsicLibrary::genTMABulkS2G(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[0]),
-                                          mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::Value dst = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
-                                          mlir::NVVM::NVVMMemorySpace::Global);
-  mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(
+  aiir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[0]),
+                                          aiir::NVVM::NVVMMemorySpace::Shared);
+  aiir::Value dst = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
+                                          aiir::NVVM::NVVMMemorySpace::Global);
+  aiir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(
       builder, loc, dst, src, fir::getBase(args[2]), {}, {});
 
-  mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
+  aiir::NVVM::InlinePtxOp::create(builder, loc, aiir::TypeRange{}, {}, {},
                                   "cp.async.bulk.commit_group;", {});
-  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
+  aiir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
                                              builder.getI32IntegerAttr(0), {});
 }
 
-static void genTMABulkStore(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Value src, mlir::Value dst, mlir::Value count,
-                            mlir::Value eleSize) {
-  mlir::Value size = mlir::arith::MulIOp::create(builder, loc, eleSize, count);
+static void genTMABulkStore(fir::FirOpBuilder &builder, aiir::Location loc,
+                            aiir::Value src, aiir::Value dst, aiir::Value count,
+                            aiir::Value eleSize) {
+  aiir::Value size = aiir::arith::MulIOp::create(builder, loc, eleSize, count);
   setAlignment(src, kTMAAlignment);
   src = convertPtrToNVVMSpace(builder, loc, src,
-                              mlir::NVVM::NVVMMemorySpace::Shared);
+                              aiir::NVVM::NVVMMemorySpace::Shared);
   dst = convertPtrToNVVMSpace(builder, loc, dst,
-                              mlir::NVVM::NVVMMemorySpace::Global);
-  mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(builder, loc, dst, src,
+                              aiir::NVVM::NVVMMemorySpace::Global);
+  aiir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(builder, loc, dst, src,
                                                      size, {}, {});
-  mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
+  aiir::NVVM::InlinePtxOp::create(builder, loc, aiir::TypeRange{}, {}, {},
                                   "cp.async.bulk.commit_group;", {});
-  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
+  aiir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
                                              builder.getI32IntegerAttr(0), {});
 }
 
@@ -1761,7 +1761,7 @@ static void genTMABulkStore(fir::FirOpBuilder &builder, mlir::Location loc,
 void CUDAIntrinsicLibrary::genTMABulkStoreC4(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 8);
   genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                   fir::getBase(args[2]), eleSize);
@@ -1771,7 +1771,7 @@ void CUDAIntrinsicLibrary::genTMABulkStoreC4(
 void CUDAIntrinsicLibrary::genTMABulkStoreC8(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 16);
   genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                   fir::getBase(args[2]), eleSize);
@@ -1781,7 +1781,7 @@ void CUDAIntrinsicLibrary::genTMABulkStoreC8(
 void CUDAIntrinsicLibrary::genTMABulkStoreI4(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 4);
   genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                   fir::getBase(args[2]), eleSize);
@@ -1791,7 +1791,7 @@ void CUDAIntrinsicLibrary::genTMABulkStoreI4(
 void CUDAIntrinsicLibrary::genTMABulkStoreI8(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 8);
   genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                   fir::getBase(args[2]), eleSize);
@@ -1801,7 +1801,7 @@ void CUDAIntrinsicLibrary::genTMABulkStoreI8(
 void CUDAIntrinsicLibrary::genTMABulkStoreR2(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 2);
   genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                   fir::getBase(args[2]), eleSize);
@@ -1811,7 +1811,7 @@ void CUDAIntrinsicLibrary::genTMABulkStoreR2(
 void CUDAIntrinsicLibrary::genTMABulkStoreR4(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 4);
   genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                   fir::getBase(args[2]), eleSize);
@@ -1821,7 +1821,7 @@ void CUDAIntrinsicLibrary::genTMABulkStoreR4(
 void CUDAIntrinsicLibrary::genTMABulkStoreR8(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  mlir::Value eleSize =
+  aiir::Value eleSize =
       builder.createIntegerConstant(loc, builder.getI32Type(), 8);
   genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
                   fir::getBase(args[2]), eleSize);
@@ -1832,22 +1832,22 @@ void CUDAIntrinsicLibrary::genTMABulkWaitGroup(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 0);
   auto group = builder.getIntegerAttr(builder.getI32Type(), 0);
-  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc, group, {});
+  aiir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc, group, {});
 }
 
 // ALL_SYNC, ANY_SYNC, BALLOT_SYNC
-template <mlir::NVVM::VoteSyncKind kind>
-mlir::Value
-CUDAIntrinsicLibrary::genVoteSync(mlir::Type resultType,
-                                  llvm::ArrayRef<mlir::Value> args) {
+template <aiir::NVVM::VoteSyncKind kind>
+aiir::Value
+CUDAIntrinsicLibrary::genVoteSync(aiir::Type resultType,
+                                  llvm::ArrayRef<aiir::Value> args) {
   assert(args.size() == 2);
-  mlir::Value arg1 =
+  aiir::Value arg1 =
       fir::ConvertOp::create(builder, loc, builder.getI1Type(), args[1]);
-  mlir::Type resTy = kind == mlir::NVVM::VoteSyncKind::ballot
+  aiir::Type resTy = kind == aiir::NVVM::VoteSyncKind::ballot
                          ? builder.getI32Type()
                          : builder.getI1Type();
   auto voteRes =
-      mlir::NVVM::VoteSyncOp::create(builder, loc, resTy, args[0], arg1, kind)
+      aiir::NVVM::VoteSyncOp::create(builder, loc, resTy, args[0], arg1, kind)
           .getResult();
   return fir::ConvertOp::create(builder, loc, resultType, voteRes);
 }

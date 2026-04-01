@@ -88,18 +88,18 @@ fir.global internal @_QFEi {omp.declare_target =
 This would look similar for function style `operations`.
 
 The application and access of this attribute is aided by an OpenMP Dialect
-MLIR Interface named `DeclareTargetInterface`, which can be utilised on
+AIIR Interface named `DeclareTargetInterface`, which can be utilised on
 operations to access the appropriate interface functions, e.g.:
 
 ```C++
 auto declareTargetGlobal =
-llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(Op.getOperation());
+llvm::dyn_cast<aiir::omp::DeclareTargetInterface>(Op.getOperation());
 declareTargetGlobal.isDeclareTarget();
 ```
 
 ## Declare Target Fortran OpenMP Lowering
 
-The initial lowering of `declare target` to MLIR for both use-cases is done
+The initial lowering of `declare target` to AIIR for both use-cases is done
 inside of the usual OpenMP lowering in flang/lib/Lower/OpenMP.cpp. However,
 some direct calls to `declare target` related functions from Flang's
 lowering bridge in flang/lib/Lower/Bridge.cpp are made.

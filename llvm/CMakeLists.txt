@@ -104,7 +104,7 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;cross-project-tests;lld;lldb;mlir;polly")
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;cross-project-tests;lld;lldb;aiir;polly")
 
 # The libc and compiler-rt projects are not part of LLVM_ALL_PROJECTS, because
 # it is preferred to use LLVM_ENABLE_RUNTIMES for them instead.
@@ -153,9 +153,9 @@ foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
 endforeach()
 
 if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
-  if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(STATUS "Enabling MLIR as a dependency to flang")
-    list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+  if (NOT "aiir" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling AIIR as a dependency to flang")
+    list(APPEND LLVM_ENABLE_PROJECTS "aiir")
   endif()
 
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)

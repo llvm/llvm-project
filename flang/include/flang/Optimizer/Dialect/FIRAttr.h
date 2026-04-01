@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 
-#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
-#include "mlir/IR/BuiltinAttributes.h"
+#include "aiir/Dialect/OpenACC/OpenACCVariableInfo.h"
+#include "aiir/IR/BuiltinAttributes.h"
 
-namespace mlir {
+namespace aiir {
 class DialectAsmParser;
 class DialectAsmPrinter;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 
@@ -33,36 +33,36 @@ struct TypeAttributeStorage;
 using KindTy = unsigned;
 
 class ExactTypeAttr
-    : public mlir::Attribute::AttrBase<ExactTypeAttr, mlir::Attribute,
+    : public aiir::Attribute::AttrBase<ExactTypeAttr, aiir::Attribute,
                                        detail::TypeAttributeStorage> {
 public:
   using Base::Base;
-  using ValueType = mlir::Type;
+  using ValueType = aiir::Type;
 
   static constexpr llvm::StringLiteral name = "fir.type_is";
   static constexpr llvm::StringRef getAttrName() { return "type_is"; }
-  static ExactTypeAttr get(mlir::Type value);
+  static ExactTypeAttr get(aiir::Type value);
 
-  mlir::Type getType() const;
+  aiir::Type getType() const;
 };
 
 class SubclassAttr
-    : public mlir::Attribute::AttrBase<SubclassAttr, mlir::Attribute,
+    : public aiir::Attribute::AttrBase<SubclassAttr, aiir::Attribute,
                                        detail::TypeAttributeStorage> {
 public:
   using Base::Base;
-  using ValueType = mlir::Type;
+  using ValueType = aiir::Type;
 
   static constexpr llvm::StringLiteral name = "fir.class_is";
   static constexpr llvm::StringRef getAttrName() { return "class_is"; }
-  static SubclassAttr get(mlir::Type value);
+  static SubclassAttr get(aiir::Type value);
 
-  mlir::Type getType() const;
+  aiir::Type getType() const;
 };
 
 /// Attribute which can be applied to a fir.allocmem operation, specifying that
 /// the allocation may not be moved to the heap by passes
-class MustBeHeapAttr : public mlir::BoolAttr {
+class MustBeHeapAttr : public aiir::BoolAttr {
 public:
   using BoolAttr::BoolAttr;
 
@@ -77,14 +77,14 @@ public:
 /// A case selector of `CASE (n:m)` corresponds to any value from `n` to `m` and
 /// is encoded as `#fir.interval, %n, %m`.
 class ClosedIntervalAttr
-    : public mlir::Attribute::AttrBase<ClosedIntervalAttr, mlir::Attribute,
-                                       mlir::AttributeStorage> {
+    : public aiir::Attribute::AttrBase<ClosedIntervalAttr, aiir::Attribute,
+                                       aiir::AttributeStorage> {
 public:
   using Base::Base;
 
   static constexpr llvm::StringLiteral name = "fir.interval";
   static constexpr llvm::StringRef getAttrName() { return "interval"; }
-  static ClosedIntervalAttr get(mlir::MLIRContext *ctxt);
+  static ClosedIntervalAttr get(aiir::AIIRContext *ctxt);
 };
 
 /// An upper bound is an open interval (including the bound value) as given as
@@ -92,14 +92,14 @@ public:
 /// A case selector of `CASE (:m)` corresponds to any value up to and including
 /// `m` and is encoded as `#fir.upper, %m`.
 class UpperBoundAttr
-    : public mlir::Attribute::AttrBase<UpperBoundAttr, mlir::Attribute,
-                                       mlir::AttributeStorage> {
+    : public aiir::Attribute::AttrBase<UpperBoundAttr, aiir::Attribute,
+                                       aiir::AttributeStorage> {
 public:
   using Base::Base;
 
   static constexpr llvm::StringLiteral name = "fir.upper";
   static constexpr llvm::StringRef getAttrName() { return "upper"; }
-  static UpperBoundAttr get(mlir::MLIRContext *ctxt);
+  static UpperBoundAttr get(aiir::AIIRContext *ctxt);
 };
 
 /// A lower bound is an open interval (including the bound value) as given as
@@ -107,14 +107,14 @@ public:
 /// A case selector of `CASE (n:)` corresponds to any value down to and
 /// including `n` and is encoded as `#fir.lower, %n`.
 class LowerBoundAttr
-    : public mlir::Attribute::AttrBase<LowerBoundAttr, mlir::Attribute,
-                                       mlir::AttributeStorage> {
+    : public aiir::Attribute::AttrBase<LowerBoundAttr, aiir::Attribute,
+                                       aiir::AttributeStorage> {
 public:
   using Base::Base;
 
   static constexpr llvm::StringLiteral name = "fir.lower";
   static constexpr llvm::StringRef getAttrName() { return "lower"; }
-  static LowerBoundAttr get(mlir::MLIRContext *ctxt);
+  static LowerBoundAttr get(aiir::AIIRContext *ctxt);
 };
 
 /// A pointer interval is a closed interval as given as an ssa-value. The
@@ -122,22 +122,22 @@ public:
 /// A case selector of `CASE (p)` corresponds to exactly the value `p` and is
 /// encoded as `#fir.point, %p`.
 class PointIntervalAttr
-    : public mlir::Attribute::AttrBase<PointIntervalAttr, mlir::Attribute,
-                                       mlir::AttributeStorage> {
+    : public aiir::Attribute::AttrBase<PointIntervalAttr, aiir::Attribute,
+                                       aiir::AttributeStorage> {
 public:
   using Base::Base;
 
   static constexpr llvm::StringLiteral name = "fir.point";
   static constexpr llvm::StringRef getAttrName() { return "point"; }
-  static PointIntervalAttr get(mlir::MLIRContext *ctxt);
+  static PointIntervalAttr get(aiir::AIIRContext *ctxt);
 };
 
-/// A real attribute is used to workaround MLIR's default parsing of a real
+/// A real attribute is used to workaround AIIR's default parsing of a real
 /// constant.
 /// `#fir.real<10, 3.14>` is used to introduce a real constant of value `3.14`
 /// with a kind of `10`.
 class RealAttr
-    : public mlir::Attribute::AttrBase<RealAttr, mlir::Attribute,
+    : public aiir::Attribute::AttrBase<RealAttr, aiir::Attribute,
                                        detail::RealAttributeStorage> {
 public:
   using Base::Base;
@@ -145,18 +145,18 @@ public:
 
   static constexpr llvm::StringLiteral name = "fir.real";
   static constexpr llvm::StringRef getAttrName() { return "real"; }
-  static RealAttr get(mlir::MLIRContext *ctxt, const ValueType &key);
+  static RealAttr get(aiir::AIIRContext *ctxt, const ValueType &key);
 
   KindTy getFKind() const;
   llvm::APFloat getValue() const;
 };
 
-mlir::Attribute parseFirAttribute(FIROpsDialect *dialect,
-                                  mlir::DialectAsmParser &parser,
-                                  mlir::Type type);
+aiir::Attribute parseFirAttribute(FIROpsDialect *dialect,
+                                  aiir::DialectAsmParser &parser,
+                                  aiir::Type type);
 
-void printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
-                       mlir::DialectAsmPrinter &p);
+void printFirAttribute(FIROpsDialect *dialect, aiir::Attribute attr,
+                       aiir::DialectAsmPrinter &p);
 
 } // namespace fir
 

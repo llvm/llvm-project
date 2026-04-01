@@ -1,5 +1,5 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY AIIR_EXTENSION_LIBS)
 
 set(LLVM_LINK_COMPONENTS
   TargetParser
@@ -56,7 +56,7 @@ endif()
 target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${LIBS})
-mlir_target_link_libraries(FlangOptimizerTests
+aiir_target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${dialect_libs}
   ${extension_libs}

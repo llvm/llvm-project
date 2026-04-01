@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -mmlir -mlir-print-op-generic -o - | FileCheck %s
-!RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=51 %s -mlir-print-op-generic -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -maiir -aiir-print-op-generic -o - | FileCheck %s
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=51 %s -aiir-print-op-generic -o - | FileCheck %s
 
 ! Check that we don't generate member information for the descriptor of `a`
 ! on entry to the target region.

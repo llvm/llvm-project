@@ -11,29 +11,29 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/LLVMIR/NVVMDialect.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
 /// Retrieve or create the CUDA Fortran GPU module in the give in \p mod.
-mlir::gpu::GPUModuleOp cuf::getOrCreateGPUModule(mlir::ModuleOp mod,
-                                                 mlir::SymbolTable &symTab) {
-  if (auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName))
+aiir::gpu::GPUModuleOp cuf::getOrCreateGPUModule(aiir::ModuleOp mod,
+                                                 aiir::SymbolTable &symTab) {
+  if (auto gpuMod = symTab.lookup<aiir::gpu::GPUModuleOp>(cudaDeviceModuleName))
     return gpuMod;
 
   auto *ctx = mod.getContext();
-  mod->setAttr(mlir::gpu::GPUDialect::getContainerModuleAttrName(),
-               mlir::UnitAttr::get(ctx));
+  mod->setAttr(aiir::gpu::GPUDialect::getContainerModuleAttrName(),
+               aiir::UnitAttr::get(ctx));
 
-  mlir::OpBuilder builder(ctx);
-  auto gpuMod = mlir::gpu::GPUModuleOp::create(builder, mod.getLoc(),
+  aiir::OpBuilder builder(ctx);
+  auto gpuMod = aiir::gpu::GPUModuleOp::create(builder, mod.getLoc(),
                                                cudaDeviceModuleName);
-  mlir::Block::iterator insertPt(mod.getBodyRegion().front().end());
+  aiir::Block::iterator insertPt(mod.getBodyRegion().front().end());
   symTab.insert(gpuMod, insertPt);
   return gpuMod;
 }
 
-bool cuf::isCUDADeviceContext(mlir::Operation *op) {
+bool cuf::isCUDADeviceContext(aiir::Operation *op) {
   if (!op || !op->getParentRegion())
     return false;
   return isCUDADeviceContext(*op->getParentRegion());
@@ -44,15 +44,15 @@ bool cuf::isCUDADeviceContext(mlir::Operation *op) {
 // for it.
 // If the insertion point is inside an OpenACC region op, it is considered
 // device context.
-bool cuf::isCUDADeviceContext(mlir::Region &region,
+bool cuf::isCUDADeviceContext(aiir::Region &region,
                               bool isDoConcurrentOffloadEnabled) {
   if (region.getParentOfType<cuf::KernelOp>())
     return true;
-  if (region.getParentOfType<mlir::acc::ComputeRegionOpInterface>())
+  if (region.getParentOfType<aiir::acc::ComputeRegionOpInterface>())
     return true;
-  if (region.getParentOfType<mlir::acc::HostDataOp>())
+  if (region.getParentOfType<aiir::acc::HostDataOp>())
     return true;
-  if (auto funcOp = region.getParentOfType<mlir::func::FuncOp>()) {
+  if (auto funcOp = region.getParentOfType<aiir::func::FuncOp>()) {
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                 cuf::getProcAttrName())) {
@@ -80,10 +80,10 @@ bool cuf::isRegisteredDeviceGlobal(fir::GlobalOp op) {
   return isRegisteredDeviceAttr(op.getDataAttr());
 }
 
-void cuf::genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder) {
+void cuf::genPointerSync(const aiir::Value box, fir::FirOpBuilder &builder) {
   if (auto declareOp = box.getDefiningOp<hlfir::DeclareOp>()) {
     if (auto addrOfOp = declareOp.getMemref().getDefiningOp<fir::AddrOfOp>()) {
-      auto mod = addrOfOp->getParentOfType<mlir::ModuleOp>();
+      auto mod = addrOfOp->getParentOfType<aiir::ModuleOp>();
       if (auto globalOp =
               mod.lookupSymbol<fir::GlobalOp>(addrOfOp.getSymbol())) {
         if (cuf::isRegisteredDeviceGlobal(globalOp)) {
@@ -95,40 +95,40 @@ void cuf::genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder) {
   }
 }
 
-int cuf::computeElementByteSize(mlir::Location loc, mlir::Type type,
+int cuf::computeElementByteSize(aiir::Location loc, aiir::Type type,
                                 fir::KindMapping &kindMap,
                                 bool emitErrorOnFailure) {
   auto eleTy = fir::unwrapSequenceType(type);
-  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)})
+  if (auto t{aiir::dyn_cast<aiir::IntegerType>(eleTy)})
     return t.getWidth() / 8;
-  if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)})
+  if (auto t{aiir::dyn_cast<aiir::FloatType>(eleTy)})
     return t.getWidth() / 8;
-  if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)})
+  if (auto t{aiir::dyn_cast<fir::LogicalType>(eleTy)})
     return kindMap.getLogicalBitsize(t.getFKind()) / 8;
-  if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
+  if (auto t{aiir::dyn_cast<aiir::ComplexType>(eleTy)}) {
     int elemSize =
-        mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
+        aiir::cast<aiir::FloatType>(t.getElementType()).getWidth() / 8;
     return 2 * elemSize;
   }
-  if (auto t{mlir::dyn_cast<fir::CharacterType>(eleTy)})
+  if (auto t{aiir::dyn_cast<fir::CharacterType>(eleTy)})
     return kindMap.getCharacterBitsize(t.getFKind()) / 8;
   if (emitErrorOnFailure)
-    mlir::emitError(loc, "unsupported type");
+    aiir::emitError(loc, "unsupported type");
   return 0;
 }
 
-mlir::Value cuf::computeElementCount(mlir::PatternRewriter &rewriter,
-                                     mlir::Location loc,
-                                     mlir::Value shapeOperand,
-                                     mlir::Type seqType,
-                                     mlir::Type targetType) {
+aiir::Value cuf::computeElementCount(aiir::PatternRewriter &rewriter,
+                                     aiir::Location loc,
+                                     aiir::Value shapeOperand,
+                                     aiir::Type seqType,
+                                     aiir::Type targetType) {
   if (shapeOperand) {
     // Dynamic extent - extract from shape operand
-    llvm::SmallVector<mlir::Value> extents;
+    llvm::SmallVector<aiir::Value> extents;
     if (auto shapeOp =
-            mlir::dyn_cast<fir::ShapeOp>(shapeOperand.getDefiningOp())) {
+            aiir::dyn_cast<fir::ShapeOp>(shapeOperand.getDefiningOp())) {
       extents = shapeOp.getExtents();
-    } else if (auto shapeShiftOp = mlir::dyn_cast<fir::ShapeShiftOp>(
+    } else if (auto shapeShiftOp = aiir::dyn_cast<fir::ShapeShiftOp>(
                    shapeOperand.getDefiningOp())) {
       for (auto i : llvm::enumerate(shapeShiftOp.getPairs()))
         if (i.index() & 1)
@@ -136,24 +136,24 @@ mlir::Value cuf::computeElementCount(mlir::PatternRewriter &rewriter,
     }
 
     if (extents.empty())
-      return mlir::Value();
+      return aiir::Value();
 
     // Compute total element count by multiplying all dimensions
-    mlir::Value count =
+    aiir::Value count =
         fir::ConvertOp::create(rewriter, loc, targetType, extents[0]);
     for (unsigned i = 1; i < extents.size(); ++i) {
       auto operand =
           fir::ConvertOp::create(rewriter, loc, targetType, extents[i]);
-      count = mlir::arith::MulIOp::create(rewriter, loc, count, operand);
+      count = aiir::arith::MulIOp::create(rewriter, loc, count, operand);
     }
     return count;
   } else {
     // Static extent - use constant array size
-    if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(seqType)) {
-      mlir::IntegerAttr attr =
+    if (auto seqTy = aiir::dyn_cast_or_null<fir::SequenceType>(seqType)) {
+      aiir::IntegerAttr attr =
           rewriter.getIntegerAttr(targetType, seqTy.getConstantArraySize());
-      return mlir::arith::ConstantOp::create(rewriter, loc, targetType, attr);
+      return aiir::arith::ConstantOp::create(rewriter, loc, targetType, attr);
     }
   }
-  return mlir::Value();
+  return aiir::Value();
 }

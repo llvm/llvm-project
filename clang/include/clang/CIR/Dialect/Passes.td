@@ -9,7 +9,7 @@
 #ifndef CLANG_CIR_DIALECT_PASSES_TD
 #define CLANG_CIR_DIALECT_PASSES_TD
 
-include "mlir/Pass/PassBase.td"
+include "aiir/Pass/PassBase.td"
 
 def CIRCanonicalize : Pass<"cir-canonicalize"> {
   let summary = "Performs CIR canonicalization";
@@ -25,7 +25,7 @@ def CIRCanonicalize : Pass<"cir-canonicalize"> {
     `cir-simplify` pass.
   }];
 
-  let constructor = "mlir::createCIRCanonicalizePass()";
+  let constructor = "aiir::createCIRCanonicalizePass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
@@ -44,7 +44,7 @@ def CIRSimplify : Pass<"cir-simplify"> {
     Example transformations include ternary expression folding and code hoisting
     while preserving program semantics.
   }];
-  let constructor = "mlir::createCIRSimplifyPass()";
+  let constructor = "aiir::createCIRSimplifyPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
@@ -54,7 +54,7 @@ def HoistAllocas : Pass<"cir-hoist-allocas"> {
     This pass hoist all non-dynamic allocas to the entry of the function.
     This is helpful for later code generation.
   }];
-  let constructor = "mlir::createHoistAllocasPass()";
+  let constructor = "aiir::createHoistAllocasPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
@@ -68,7 +68,7 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
     In other words, this pass removes such CIR operations like IfOp, LoopOp,
     ScopeOp and etc. and produces a flat CIR.
   }];
-  let constructor = "mlir::createCIRFlattenCFGPass()";
+  let constructor = "aiir::createCIRFlattenCFGPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
@@ -78,11 +78,11 @@ def GotoSolver : Pass<"cir-goto-solver"> {
     This pass transforms CIR and replaces goto-s with branch
     operations to the proper blocks.
   }];
-  let constructor = "mlir::createGotoSolverPass()";
+  let constructor = "aiir::createGotoSolverPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def CXXABILowering : Pass<"cir-cxxabi-lowering", "mlir::ModuleOp"> {
+def CXXABILowering : Pass<"cir-cxxabi-lowering", "aiir::ModuleOp"> {
   let summary = "Lower CIR according to C++ ABI requirements";
   let description = [{
     This pass lowers CIR operations and types that represent high-level C/C++
@@ -92,11 +92,11 @@ def CXXABILowering : Pass<"cir-cxxabi-lowering", "mlir::ModuleOp"> {
     See the description of the `TargetLowering` pass for the difference between
     this pass and the `TargetLowering` pass.
   }];
-  let constructor = "mlir::createCXXABILoweringPass()";
+  let constructor = "aiir::createCXXABILoweringPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def TargetLowering : Pass<"cir-target-lowering", "mlir::ModuleOp"> {
+def TargetLowering : Pass<"cir-target-lowering", "aiir::ModuleOp"> {
   let summary = "Lower CIR to a target-specific form";
   let description = [{
     This pass lowers CIR operations from a target-agnostic form to a
@@ -146,11 +146,11 @@ def TargetLowering : Pass<"cir-target-lowering", "mlir::ModuleOp"> {
     to take a pointer to the struct type instead, and update the function body
     and the call sites accordingly.
   }];
-  let constructor = "mlir::createTargetLoweringPass()";
+  let constructor = "aiir::createTargetLoweringPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def CIREHABILowering : Pass<"cir-eh-abi-lowering", "mlir::ModuleOp"> {
+def CIREHABILowering : Pass<"cir-eh-abi-lowering", "aiir::ModuleOp"> {
   let summary = "Lower flattened CIR EH operations to target-specific ABI form";
   let description = [{
     This pass lowers the ABI-agnostic exception handling operations produced by
@@ -169,7 +169,7 @@ def CIREHABILowering : Pass<"cir-eh-abi-lowering", "mlir::ModuleOp"> {
     If a non-Itanium ABI is specified, the pass emits a diagnostic indicating
     that the target is not yet implemented.
   }];
-  let constructor = "mlir::createCIREHABILoweringPass()";
+  let constructor = "aiir::createCIREHABILoweringPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
@@ -180,18 +180,18 @@ def LoweringPrepare : Pass<"cir-lowering-prepare"> {
     This pass does preparation work for lowering to other dialects. For example,
     it may expand the global variable initialziation in a more ABI-friendly form.
   }];
-  let constructor = "mlir::createLoweringPreparePass()";
+  let constructor = "aiir::createLoweringPreparePass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def IdiomRecognizer : Pass<"cir-idiom-recognizer", "mlir::ModuleOp"> {
+def IdiomRecognizer : Pass<"cir-idiom-recognizer", "aiir::ModuleOp"> {
   let summary = "Raise calls to C/C++ libraries to CIR operations";
   let description = [{
     This pass recognizes idiomatic C++ usage and captures information about C++
     standard library containers, library functions calls, and types into CIR
     operations, attributes and types.
   }];
-  let constructor = "mlir::createIdiomRecognizerPass()";
+  let constructor = "aiir::createIdiomRecognizerPass()";
   let dependentDialects = ["cir::CIRDialect"];
 }
 

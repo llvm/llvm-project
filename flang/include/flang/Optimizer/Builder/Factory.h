@@ -17,13 +17,13 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/iterator_range.h"
 
-namespace mlir {
+namespace aiir {
 class Location;
 class Value;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir::factory {
 
@@ -40,12 +40,12 @@ constexpr llvm::StringRef attrFortranArrayOffsets() {
 /// is longer than the source, move the entire source character and pad the
 /// destination with spaces as needed.
 template <typename B>
-void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
-                      mlir::Value dstLen, B &builder, mlir::Location loc) {
+void genCharacterCopy(aiir::Value src, aiir::Value srcLen, aiir::Value dst,
+                      aiir::Value dstLen, B &builder, aiir::Location loc) {
   auto srcTy =
-      mlir::cast<fir::CharacterType>(fir::dyn_cast_ptrEleTy(src.getType()));
+      aiir::cast<fir::CharacterType>(fir::dyn_cast_ptrEleTy(src.getType()));
   auto dstTy =
-      mlir::cast<fir::CharacterType>(fir::dyn_cast_ptrEleTy(dst.getType()));
+      aiir::cast<fir::CharacterType>(fir::dyn_cast_ptrEleTy(dst.getType()));
   if (!srcLen && !dstLen && srcTy.getFKind() == dstTy.getFKind() &&
       srcTy.getLen() == dstTy.getLen()) {
     // same size, so just use load and store
@@ -53,23 +53,23 @@ void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
     fir::StoreOp::create(builder, loc, load, dst);
     return;
   }
-  auto zero = mlir::arith::ConstantIndexOp::create(builder, loc, 0);
-  auto one = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
+  auto zero = aiir::arith::ConstantIndexOp::create(builder, loc, 0);
+  auto one = aiir::arith::ConstantIndexOp::create(builder, loc, 1);
   auto toArrayTy = [&](fir::CharacterType ty) {
     return fir::ReferenceType::get(fir::SequenceType::get(
         fir::SequenceType::ShapeRef{fir::SequenceType::getUnknownExtent()},
         fir::CharacterType::getSingleton(ty.getContext(), ty.getFKind())));
   };
   auto toEleTy = [&](fir::ReferenceType ty) {
-    auto seqTy = mlir::cast<fir::SequenceType>(ty.getEleTy());
-    return mlir::cast<fir::CharacterType>(seqTy.getEleTy());
+    auto seqTy = aiir::cast<fir::SequenceType>(ty.getEleTy());
+    return aiir::cast<fir::CharacterType>(seqTy.getEleTy());
   };
   auto toCoorTy = [&](fir::ReferenceType ty) {
     return fir::ReferenceType::get(toEleTy(ty));
   };
   if (!srcLen && !dstLen && srcTy.getLen() >= dstTy.getLen()) {
     auto upper =
-        mlir::arith::ConstantIndexOp::create(builder, loc, dstTy.getLen() - 1);
+        aiir::arith::ConstantIndexOp::create(builder, loc, dstTy.getLen() - 1);
     auto loop = fir::DoLoopOp::create(builder, loc, zero, upper, one);
     auto insPt = builder.saveInsertionPoint();
     builder.setInsertionPointToStart(loop.getBody());
@@ -82,7 +82,7 @@ void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
     auto cdst = fir::ConvertOp::create(builder, loc, cdstTy, dst);
     auto out = fir::CoordinateOp::create(builder, loc, toCoorTy(cdstTy), cdst,
                                          loop.getInductionVar());
-    mlir::Value cast =
+    aiir::Value cast =
         srcTy.getFKind() == dstTy.getFKind()
             ? load.getResult()
             : fir::ConvertOp::create(builder, loc, toEleTy(cdstTy), load)
@@ -91,26 +91,26 @@ void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
     builder.restoreInsertionPoint(insPt);
     return;
   }
-  auto minusOne = [&](mlir::Value v) -> mlir::Value {
-    return mlir::arith::SubIOp::create(
+  auto minusOne = [&](aiir::Value v) -> aiir::Value {
+    return aiir::arith::SubIOp::create(
         builder, loc, fir::ConvertOp::create(builder, loc, one.getType(), v),
         one);
   };
-  mlir::Value len = dstLen ? minusOne(dstLen)
-                           : mlir::arith::ConstantIndexOp::create(
+  aiir::Value len = dstLen ? minusOne(dstLen)
+                           : aiir::arith::ConstantIndexOp::create(
                                  builder, loc, dstTy.getLen() - 1)
                                  .getResult();
   auto loop = fir::DoLoopOp::create(builder, loc, zero, len, one);
   auto insPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(loop.getBody());
-  mlir::Value slen =
+  aiir::Value slen =
       srcLen
           ? fir::ConvertOp::create(builder, loc, one.getType(), srcLen)
                 .getResult()
-          : mlir::arith::ConstantIndexOp::create(builder, loc, srcTy.getLen())
+          : aiir::arith::ConstantIndexOp::create(builder, loc, srcTy.getLen())
                 .getResult();
   auto cond =
-      mlir::arith::CmpIOp::create(builder, loc, mlir::arith::CmpIPredicate::slt,
+      aiir::arith::CmpIOp::create(builder, loc, aiir::arith::CmpIPredicate::slt,
                                   loop.getInductionVar(), slen);
   auto ifOp = fir::IfOp::create(builder, loc, cond, /*withElse=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -123,7 +123,7 @@ void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
   auto cdst = fir::ConvertOp::create(builder, loc, cdstTy, dst);
   auto out = fir::CoordinateOp::create(builder, loc, toCoorTy(cdstTy), cdst,
                                        loop.getInductionVar());
-  mlir::Value cast =
+  aiir::Value cast =
       srcTy.getFKind() == dstTy.getFKind()
           ? load.getResult()
           : fir::ConvertOp::create(builder, loc, toEleTy(cdstTy), load)
@@ -141,14 +141,14 @@ void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
 
 /// Get extents from fir.shape/fir.shape_shift op. Empty result if
 /// \p shapeVal is empty or is a fir.shift.
-inline llvm::SmallVector<mlir::Value> getExtents(mlir::Value shapeVal) {
+inline llvm::SmallVector<aiir::Value> getExtents(aiir::Value shapeVal) {
   if (shapeVal)
     if (auto *shapeOp = shapeVal.getDefiningOp()) {
-      if (auto shOp = mlir::dyn_cast<fir::ShapeOp>(shapeOp)) {
+      if (auto shOp = aiir::dyn_cast<fir::ShapeOp>(shapeOp)) {
         auto operands = shOp.getExtents();
         return {operands.begin(), operands.end()};
       }
-      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
+      if (auto shOp = aiir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
         auto operands = shOp.getExtents();
         return {operands.begin(), operands.end()};
       }
@@ -158,14 +158,14 @@ inline llvm::SmallVector<mlir::Value> getExtents(mlir::Value shapeVal) {
 
 /// Get origins from fir.shape_shift/fir.shift op. Empty result if
 /// \p shapeVal is empty or is a fir.shape.
-inline llvm::SmallVector<mlir::Value> getOrigins(mlir::Value shapeVal) {
+inline llvm::SmallVector<aiir::Value> getOrigins(aiir::Value shapeVal) {
   if (shapeVal)
     if (auto *shapeOp = shapeVal.getDefiningOp()) {
-      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
+      if (auto shOp = aiir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
         auto operands = shOp.getOrigins();
         return {operands.begin(), operands.end()};
       }
-      if (auto shOp = mlir::dyn_cast<fir::ShiftOp>(shapeOp)) {
+      if (auto shOp = aiir::dyn_cast<fir::ShiftOp>(shapeOp)) {
         auto operands = shOp.getOrigins();
         return {operands.begin(), operands.end()};
       }
@@ -179,20 +179,20 @@ inline llvm::SmallVector<mlir::Value> getOrigins(mlir::Value shapeVal) {
 /// particular path into the array value and must already correspond to the
 /// structure of an element.
 template <typename B>
-llvm::SmallVector<mlir::Value>
-originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
-                 mlir::Value shapeVal, mlir::ValueRange indices) {
-  llvm::SmallVector<mlir::Value> result;
+llvm::SmallVector<aiir::Value>
+originateIndices(aiir::Location loc, B &builder, aiir::Type memTy,
+                 aiir::Value shapeVal, aiir::ValueRange indices) {
+  llvm::SmallVector<aiir::Value> result;
   auto origins = getOrigins(shapeVal);
   if (origins.empty()) {
-    assert(!shapeVal || mlir::isa<fir::ShapeOp>(shapeVal.getDefiningOp()));
+    assert(!shapeVal || aiir::isa<fir::ShapeOp>(shapeVal.getDefiningOp()));
     auto ty = fir::dyn_cast_ptrOrBoxEleTy(memTy);
-    assert(ty && mlir::isa<fir::SequenceType>(ty));
-    auto seqTy = mlir::cast<fir::SequenceType>(ty);
-    auto one = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
+    assert(ty && aiir::isa<fir::SequenceType>(ty));
+    auto seqTy = aiir::cast<fir::SequenceType>(ty);
+    auto one = aiir::arith::ConstantIndexOp::create(builder, loc, 1);
     const auto dimension = seqTy.getDimension();
     if (shapeVal) {
-      assert(dimension == mlir::cast<fir::ShapeOp>(shapeVal.getDefiningOp())
+      assert(dimension == aiir::cast<fir::ShapeOp>(shapeVal.getDefiningOp())
                               .getType()
                               .getRank());
     }
@@ -200,7 +200,7 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
       if (i.index() < dimension) {
         assert(fir::isa_integer(i.value().getType()));
         result.push_back(
-            mlir::arith::AddIOp::create(builder, loc, i.value(), one));
+            aiir::arith::AddIOp::create(builder, loc, i.value(), one));
       } else {
         result.push_back(i.value());
       }
@@ -211,7 +211,7 @@ originateIndices(mlir::Location loc, B &builder, mlir::Type memTy,
   unsigned origOff = 0;
   for (auto i : llvm::enumerate(indices)) {
     if (i.index() < dimension)
-      result.push_back(mlir::arith::AddIOp::create(builder, loc, i.value(),
+      result.push_back(aiir::arith::AddIOp::create(builder, loc, i.value(),
                                                    origins[origOff++]));
     else
       result.push_back(i.value());

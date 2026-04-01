@@ -1,0 +1,15 @@
+set(LLVM_TARGET_DEFINITIONS UBOps.td)
+aiir_tablegen(UBOps.h.inc -gen-op-decls)
+aiir_tablegen(UBOps.cpp.inc -gen-op-defs)
+aiir_tablegen(UBOpsDialect.h.inc -gen-dialect-decls)
+aiir_tablegen(UBOpsDialect.cpp.inc -gen-dialect-defs)
+aiir_tablegen(UBOpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=ub)
+aiir_tablegen(UBOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=ub)
+add_aiir_dialect_tablegen_target(AIIRUBOpsIncGen)
+
+add_aiir_doc(UBOps UBOps Dialects/ -gen-dialect-doc)
+
+set(LLVM_TARGET_DEFINITIONS UBOpsInterfaces.td)
+aiir_tablegen(UBOpsInterfaces.h.inc -gen-attr-interface-decls)
+aiir_tablegen(UBOpsInterfaces.cpp.inc -gen-attr-interface-defs)
+add_aiir_dialect_tablegen_target(AIIRUBOpsInterfacesIncGen)

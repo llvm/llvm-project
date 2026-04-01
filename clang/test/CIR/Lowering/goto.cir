@@ -1,4 +1,4 @@
-// RUN: cir-opt %s --pass-pipeline='builtin.module(cir-to-llvm,canonicalize{region-simplify=disabled})' -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s --pass-pipeline='builtin.module(cir-to-llvm,canonicalize{region-simplify=disabled})' -o - | FileCheck %s -check-prefix=AIIR
 
 !s32i = !cir.int<s, 32>
 
@@ -29,22 +29,22 @@ module {
     cir.br ^bb1
   }
 
-// MLIR:  llvm.func @gotoFromIf
-// MLIR:    %[[#Minus_one:]] = llvm.mlir.constant(-1 : i32) : i32
-// MLIR:    %[[#Zero:]] = llvm.mlir.constant(0 : i32) : i32
-// MLIR:    llvm.cond_br {{.*}}, ^bb[[#COND_YES:]], ^bb[[#COND_NO:]]
-// MLIR:  ^bb[[#COND_YES]]:
-// MLIR:    llvm.br ^bb[[#GOTO_BLK:]]
-// MLIR:   ^bb[[#COND_NO]]:
-// MLIR:    llvm.br ^bb[[#BLK:]]
-// MLIR:  ^bb[[#BLK]]:
-// MLIR:    llvm.store %[[#Zero]], %[[#Ret_val_addr:]] {{.*}}: i32, !llvm.ptr
-// MLIR:    llvm.br ^bb[[#RETURN:]]
-// MLIR:  ^bb[[#RETURN]]:
-// MLIR:    %[[#Ret_val:]] = llvm.load %[[#Ret_val_addr]] {alignment = 4 : i64} : !llvm.ptr -> i32
-// MLIR:    llvm.return %[[#Ret_val]] : i32
-// MLIR:  ^bb[[#GOTO_BLK]]:
-// MLIR:    llvm.store %[[#Minus_one]], %[[#Ret_val_addr]] {{.*}}: i32, !llvm.ptr
-// MLIR:    llvm.br ^bb[[#RETURN]]
-// MLIR: }
+// AIIR:  llvm.func @gotoFromIf
+// AIIR:    %[[#Minus_one:]] = llvm.aiir.constant(-1 : i32) : i32
+// AIIR:    %[[#Zero:]] = llvm.aiir.constant(0 : i32) : i32
+// AIIR:    llvm.cond_br {{.*}}, ^bb[[#COND_YES:]], ^bb[[#COND_NO:]]
+// AIIR:  ^bb[[#COND_YES]]:
+// AIIR:    llvm.br ^bb[[#GOTO_BLK:]]
+// AIIR:   ^bb[[#COND_NO]]:
+// AIIR:    llvm.br ^bb[[#BLK:]]
+// AIIR:  ^bb[[#BLK]]:
+// AIIR:    llvm.store %[[#Zero]], %[[#Ret_val_addr:]] {{.*}}: i32, !llvm.ptr
+// AIIR:    llvm.br ^bb[[#RETURN:]]
+// AIIR:  ^bb[[#RETURN]]:
+// AIIR:    %[[#Ret_val:]] = llvm.load %[[#Ret_val_addr]] {alignment = 4 : i64} : !llvm.ptr -> i32
+// AIIR:    llvm.return %[[#Ret_val]] : i32
+// AIIR:  ^bb[[#GOTO_BLK]]:
+// AIIR:    llvm.store %[[#Minus_one]], %[[#Ret_val_addr]] {{.*}}: i32, !llvm.ptr
+// AIIR:    llvm.br ^bb[[#RETURN]]
+// AIIR: }
 }

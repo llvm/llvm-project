@@ -11,11 +11,11 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Transforms/MemoryUtils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Diagnostics.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/Passes.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/Diagnostics.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/DialectConversion.h"
+#include "aiir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace fir {
@@ -38,7 +38,7 @@ keepStackAllocation(fir::AllocaOp alloca,
     return false;
   // TODO: use data layout to reason in terms of byte size to cover all "big"
   // entities, which may be scalar derived types.
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(alloca.getInType())) {
+  if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(alloca.getInType())) {
     if (!fir::hasDynamicSize(seqTy)) {
       std::int64_t numberOfElements = 1;
       for (std::int64_t i : seqTy.getShape()) {
@@ -58,9 +58,9 @@ keepStackAllocation(fir::AllocaOp alloca,
   return true;
 }
 
-static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
+static aiir::Value genAllocmem(aiir::OpBuilder &builder, fir::AllocaOp alloca,
                                bool deallocPointsDominateAlloc) {
-  mlir::Type varTy = alloca.getInType();
+  aiir::Type varTy = alloca.getInType();
   auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
     if (opt)
       return *opt;
@@ -76,8 +76,8 @@ static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
   return heap;
 }
 
-static void genFreemem(mlir::Location loc, mlir::OpBuilder &builder,
-                       mlir::Value allocmem) {
+static void genFreemem(aiir::Location loc, aiir::OpBuilder &builder,
+                       aiir::Value allocmem) {
   [[maybe_unused]] auto free = fir::FreeMemOp::create(builder, loc, allocmem);
   LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: add free " << free
                           << " for " << allocmem << '\n');
@@ -121,8 +121,8 @@ public:
   void runOnOperation() override {
     auto *context = &getContext();
     auto func = getOperation();
-    mlir::RewritePatternSet patterns(context);
-    mlir::ConversionTarget target(*context);
+    aiir::RewritePatternSet patterns(context);
+    aiir::ConversionTarget target(*context);
 
     useCommandLineOptions();
     LLVM_DEBUG(llvm::dbgs()
@@ -141,7 +141,7 @@ public:
       }
       return res;
     };
-    mlir::IRRewriter rewriter(context);
+    aiir::IRRewriter rewriter(context);
     fir::replaceAllocas(rewriter, func.getOperation(), tryReplacing,
                         genAllocmem, genFreemem);
   }

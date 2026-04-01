@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,8 +16,8 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 
 /// FIR codegen dialect constructor.
-fir::FIRCodeGenDialect::FIRCodeGenDialect(mlir::MLIRContext *ctx)
-    : mlir::Dialect("fircg", ctx, mlir::TypeID::get<FIRCodeGenDialect>()) {
+fir::FIRCodeGenDialect::FIRCodeGenDialect(aiir::AIIRContext *ctx)
+    : aiir::Dialect("fircg", ctx, aiir::TypeID::get<FIRCodeGenDialect>()) {
   addOperations<
 #define GET_OP_LIST
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.cpp.inc"
@@ -41,14 +41,14 @@ unsigned fir::cg::XEmboxOp::getOutRank() {
 }
 
 unsigned fir::cg::XReboxOp::getOutRank() {
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+  if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(
           fir::dyn_cast_ptrOrBoxEleTy(getType())))
     return seqTy.getDimension();
   return 0;
 }
 
 unsigned fir::cg::XReboxOp::getRank() {
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+  if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(
           fir::dyn_cast_ptrOrBoxEleTy(getBox().getType())))
     return seqTy.getDimension();
   return 0;
@@ -56,8 +56,8 @@ unsigned fir::cg::XReboxOp::getRank() {
 
 unsigned fir::cg::XArrayCoorOp::getRank() {
   auto memrefTy = getMemref().getType();
-  if (mlir::isa<fir::BaseBoxType>(memrefTy))
-    if (auto seqty = mlir::dyn_cast<fir::SequenceType>(
+  if (aiir::isa<fir::BaseBoxType>(memrefTy))
+    if (auto seqty = aiir::dyn_cast<fir::SequenceType>(
             fir::dyn_cast_ptrOrBoxEleTy(memrefTy)))
       return seqty.getDimension();
   return getShape().size();

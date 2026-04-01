@@ -75,7 +75,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 
 // -----
 
-// Fortran source compiled with -mmlir -inline-all:
+// Fortran source compiled with -maiir -inline-all:
 // subroutine test3
 //   real :: a, b
 //   common /common3/ a, b
@@ -135,7 +135,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 
 // -----
 
-// Fortran source compiled with -mmlir -inline-all:
+// Fortran source compiled with -maiir -inline-all:
 // subroutine test4
 //   real :: a, b
 //   common /common4/ a, b

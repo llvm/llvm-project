@@ -10,18 +10,18 @@ Fortran includes support for complex number types and a set of operators and
 intrinsics that work on these types. Some of those operations are complicated
 and require runtime function calls to implement.
 
-This document outlines a design for generating these operations using the MLIR
+This document outlines a design for generating these operations using the AIIR
 complex dialect while avoiding cross-platform ABI issues.
 
 ## FIR Representation
 
-MLIR contains a complex dialect, similar to the Math dialect also used for
+AIIR contains a complex dialect, similar to the Math dialect also used for
 lowering some integer and floating point operations in Flang. Conversion between
-fir.complex types and MLIR complex types is supported.
+fir.complex types and AIIR complex types is supported.
 
 As a result at the FIR level, complex operations can be represented as
-conversions from the fir.complex type to the equivalent MLIR complex type, use
-of the MLIR operation and a conversion back.
+conversions from the fir.complex type to the equivalent AIIR complex type, use
+of the AIIR operation and a conversion back.
 
 This is similar to the way the math intrinsics are lowered, as proposed [here][1]
 
@@ -50,25 +50,25 @@ func.func @_QPpow_self(%arg0: !fir.ref<!fir.complex<4>>) -> !fir.complex<4> {
   }
 ```
 
-Some operations are currently missing in the MLIR complex dialect that we would
+Some operations are currently missing in the AIIR complex dialect that we would
 want to use here, such as powi and the hyperbolic trigonometry functions.
 For the missing operations we call directly to libm where possible, for powi
 we provide an implementation in the flang runtime.
 
 ## Lowering
 
-The MLIR complex dialect supports lowering either by emitting calls to the
+The AIIR complex dialect supports lowering either by emitting calls to the
 complex functions in libm (ComplexToLibm), or through lowering to the standard
-dialect (ComplexToStandard). However, as MLIR has no target awareness, the
+dialect (ComplexToStandard). However, as AIIR has no target awareness, the
 lowering to libm functions suffers from ABI incompatibilities on some platforms.
 As such the custom lowering to the standard dialect is used. This may be
 something to revisit in future if performance could be improved by using the
 libm functions.
 
-Similarly to the numerical lowering through the math dialect, certain MLIR
+Similarly to the numerical lowering through the math dialect, certain AIIR
 optimisations could violate the precise floating point model, so when that is
 requested lowering manually emits calls to libm, rather than going through the
-MLIR complex dialect.
+AIIR complex dialect.
 
 The ComplexToStandard dialect does still call into libm for some floating
 point math operations, however these don't have the same ABI issues as the
@@ -76,7 +76,7 @@ complex libm functions.
 
 The flang driver option `-fcomplex-arithmetic=` allows you to select whether
 complex number division is lowered to function calls or to the `complex.div`
-operation in the MLIR complex dialect. To avoid the ABI issues mentioned above,
+operation in the AIIR complex dialect. To avoid the ABI issues mentioned above,
 the choice of function calls or the `complex.div` operation is made during the
 lowering phase. The behavior of this option is as follows:
 

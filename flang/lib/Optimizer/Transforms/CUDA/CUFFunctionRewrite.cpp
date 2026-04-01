@@ -12,15 +12,15 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/ValueRange.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Dialect/GPU/IR/GPUDialect.h"
+#include "aiir/IR/BuiltinTypes.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/IR/ValueRange.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Support/LogicalResult.h"
+#include "aiir/Transforms/DialectConversion.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -34,21 +34,21 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
 using genFunctionType =
-    std::function<mlir::Value(mlir::PatternRewriter &, fir::CallOp op)>;
+    std::function<aiir::Value(aiir::PatternRewriter &, fir::CallOp op)>;
 
 class CallConversion : public OpRewritePattern<fir::CallOp> {
 public:
-  CallConversion(MLIRContext *context)
+  CallConversion(AIIRContext *context)
       : OpRewritePattern<fir::CallOp>(context) {}
 
   LogicalResult
   matchAndRewrite(fir::CallOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     auto callee = op.getCallee();
     if (!callee)
       return failure();
@@ -56,7 +56,7 @@ public:
 
     if (genMappings_.contains(name)) {
       auto fct = genMappings_.find(name);
-      mlir::Value result = fct->second(rewriter, op);
+      aiir::Value result = fct->second(rewriter, op);
       if (result)
         rewriter.replaceOp(op, result);
       else
@@ -67,13 +67,13 @@ public:
   }
 
 private:
-  static mlir::Value genOnDevice(mlir::PatternRewriter &rewriter,
+  static aiir::Value genOnDevice(aiir::PatternRewriter &rewriter,
                                  fir::CallOp op) {
     assert(op.getArgs().size() == 0 && "expect 0 arguments");
-    mlir::Location loc = op.getLoc();
+    aiir::Location loc = op.getLoc();
     unsigned inGPUMod = op->getParentOfType<gpu::GPUModuleOp>() ? 1 : 0;
-    mlir::Type i1Ty = rewriter.getIntegerType(1);
-    mlir::Value t = mlir::arith::ConstantOp::create(
+    aiir::Type i1Ty = rewriter.getIntegerType(1);
+    aiir::Value t = aiir::arith::ConstantOp::create(
         rewriter, loc, i1Ty, rewriter.getIntegerAttr(i1Ty, inGPUMod));
     return fir::ConvertOp::create(rewriter, loc, op.getResult(0).getType(), t);
   }
@@ -87,13 +87,13 @@ class CUFFunctionRewrite
 public:
   void runOnOperation() override {
     auto *ctx = &getContext();
-    mlir::RewritePatternSet patterns(ctx);
+    aiir::RewritePatternSet patterns(ctx);
 
     patterns.insert<CallConversion>(patterns.getContext());
 
-    if (mlir::failed(
-            mlir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(ctx),
+    if (aiir::failed(
+            aiir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      aiir::emitError(aiir::UnknownLoc::get(ctx),
                       "error in CUFFunctionRewrite op conversion\n");
       signalPassFailure();
     }

@@ -9,10 +9,10 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ASSIGN_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ASSIGN_H
 
-namespace mlir {
+namespace aiir {
 class Value;
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -25,15 +25,15 @@ namespace fir::runtime {
 /// \p destBox Fortran descriptor may be modified if destBox is an allocatable
 /// according to Fortran allocatable assignment rules, otherwise it is not
 /// modified.
-void genAssign(fir::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value destBox, mlir::Value sourceBox);
+void genAssign(fir::FirOpBuilder &builder, aiir::Location loc,
+               aiir::Value destBox, aiir::Value sourceBox);
 
 /// Generate runtime call to AssignPolymorphic \p sourceBox to \p destBox.
 /// \p destBox must be a fir.ref<fir.box<T>> and \p sourceBox a fir.box<T>.
 /// \p destBox Fortran descriptor may be modified if destBox is an allocatable
 /// according to Fortran allocatable assignment rules.
-void genAssignPolymorphic(fir::FirOpBuilder &builder, mlir::Location loc,
-                          mlir::Value destBox, mlir::Value sourceBox);
+void genAssignPolymorphic(fir::FirOpBuilder &builder, aiir::Location loc,
+                          aiir::Value destBox, aiir::Value sourceBox);
 
 /// Generate runtime call to AssignExplicitLengthCharacter to assign
 /// \p sourceBox to \p destBox where \p destBox is a whole allocatable character
@@ -45,23 +45,23 @@ void genAssignPolymorphic(fir::FirOpBuilder &builder, mlir::Location loc,
 /// \p destBox Fortran descriptor may be modified if destBox is an allocatable
 /// according to Fortran allocatable assignment rules.
 void genAssignExplicitLengthCharacter(fir::FirOpBuilder &builder,
-                                      mlir::Location loc, mlir::Value destBox,
-                                      mlir::Value sourceBox);
+                                      aiir::Location loc, aiir::Value destBox,
+                                      aiir::Value sourceBox);
 
 /// Generate runtime call to assign \p sourceBox to \p destBox.
 /// \p destBox must be a fir.ref<fir.box<T>> and \p sourceBox a fir.box<T>.
 /// \p destBox Fortran descriptor may be modified if destBox is an allocatable
 /// according to Fortran allocatable assignment rules, otherwise it is not
 /// modified.
-void genAssignTemporary(fir::FirOpBuilder &builder, mlir::Location loc,
-                        mlir::Value destBox, mlir::Value sourceBox);
+void genAssignTemporary(fir::FirOpBuilder &builder, aiir::Location loc,
+                        aiir::Value destBox, aiir::Value sourceBox);
 
 /// Generate runtime call to "CopyInAssign" runtime API.
-void genCopyInAssign(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value tempBoxAddr, mlir::Value varBoxAddr);
+void genCopyInAssign(fir::FirOpBuilder &builder, aiir::Location loc,
+                     aiir::Value tempBoxAddr, aiir::Value varBoxAddr);
 /// Generate runtime call to "CopyOutAssign" runtime API.
-void genCopyOutAssign(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value varBoxAddr, mlir::Value tempBoxAddr);
+void genCopyOutAssign(fir::FirOpBuilder &builder, aiir::Location loc,
+                      aiir::Value varBoxAddr, aiir::Value tempBoxAddr);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ASSIGN_H

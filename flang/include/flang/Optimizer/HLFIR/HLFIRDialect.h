@@ -15,14 +15,14 @@
 #define FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/IR/Dialect.h"
+#include "aiir/IR/Dialect.h"
 
 namespace hlfir {
 /// Is this a type that can be used for an HLFIR variable ?
-bool isFortranVariableType(mlir::Type);
-bool isFortranScalarCharacterType(mlir::Type);
-bool isFortranScalarCharacterExprType(mlir::Type);
-bool isFortranArrayCharacterExprType(mlir::Type);
+bool isFortranVariableType(aiir::Type);
+bool isFortranScalarCharacterType(aiir::Type);
+bool isFortranScalarCharacterExprType(aiir::Type);
+bool isFortranArrayCharacterExprType(aiir::Type);
 } // namespace hlfir
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h.inc"
@@ -37,57 +37,57 @@ bool isFortranArrayCharacterExprType(mlir::Type);
 
 namespace hlfir {
 /// Get the element type of a Fortran entity type.
-inline mlir::Type getFortranElementType(mlir::Type type) {
+inline aiir::Type getFortranElementType(aiir::Type type) {
   type = fir::unwrapSequenceType(
       fir::unwrapPassByRefType(fir::unwrapRefType(type)));
-  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
+  if (auto exprType = aiir::dyn_cast<hlfir::ExprType>(type))
     return exprType.getEleTy();
-  if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(type))
+  if (auto boxCharType = aiir::dyn_cast<fir::BoxCharType>(type))
     return boxCharType.getEleTy();
   return type;
 }
 
 /// If this is the type of a Fortran array entity, get the related
 /// fir.array type. Otherwise, returns the Fortran element typeof the entity.
-inline mlir::Type getFortranElementOrSequenceType(mlir::Type type) {
+inline aiir::Type getFortranElementOrSequenceType(aiir::Type type) {
   type = fir::unwrapPassByRefType(fir::unwrapRefType(type));
-  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type)) {
+  if (auto exprType = aiir::dyn_cast<hlfir::ExprType>(type)) {
     if (exprType.isArray())
       return fir::SequenceType::get(exprType.getShape(), exprType.getEleTy());
     return exprType.getEleTy();
   }
-  if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(type))
+  if (auto boxCharType = aiir::dyn_cast<fir::BoxCharType>(type))
     return boxCharType.getEleTy();
   return type;
 }
 
 /// Build the hlfir.expr type for the value held in a variable of type \p
 /// variableType.
-mlir::Type getExprType(mlir::Type variableType);
+aiir::Type getExprType(aiir::Type variableType);
 
 /// Is this a fir.box or fir.class address type?
-inline bool isBoxAddressType(mlir::Type type) {
+inline bool isBoxAddressType(aiir::Type type) {
   type = fir::dyn_cast_ptrEleTy(type);
-  return type && mlir::isa<fir::BaseBoxType>(type);
+  return type && aiir::isa<fir::BaseBoxType>(type);
 }
 
 /// Is this a fir.box or fir.class address or value type?
-inline bool isBoxAddressOrValueType(mlir::Type type) {
-  return mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(type));
+inline bool isBoxAddressOrValueType(aiir::Type type) {
+  return aiir::isa<fir::BaseBoxType>(fir::unwrapRefType(type));
 }
 
-inline bool isPolymorphicType(mlir::Type type) {
-  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
+inline bool isPolymorphicType(aiir::Type type) {
+  if (auto exprType = aiir::dyn_cast<hlfir::ExprType>(type))
     return exprType.isPolymorphic();
   return fir::isPolymorphicType(type);
 }
 
 /// Is this the FIR type of a Fortran procedure pointer?
-inline bool isFortranProcedurePointerType(mlir::Type type) {
+inline bool isFortranProcedurePointerType(aiir::Type type) {
   return fir::isBoxProcAddressType(type);
 }
 
-inline bool isFortranPointerObjectType(mlir::Type type) {
+inline bool isFortranPointerObjectType(aiir::Type type) {
   auto boxTy =
       llvm::dyn_cast_or_null<fir::BaseBoxType>(fir::dyn_cast_ptrEleTy(type));
   return boxTy && boxTy.isPointer();
@@ -95,49 +95,49 @@ inline bool isFortranPointerObjectType(mlir::Type type) {
 
 /// Is this an SSA value type for the value of a Fortran procedure
 /// designator ?
-inline bool isFortranProcedureValue(mlir::Type type) {
-  return mlir::isa<fir::BoxProcType>(type) ||
-         (mlir::isa<mlir::TupleType>(type) &&
+inline bool isFortranProcedureValue(aiir::Type type) {
+  return aiir::isa<fir::BoxProcType>(type) ||
+         (aiir::isa<aiir::TupleType>(type) &&
           fir::isCharacterProcedureTuple(type, /*acceptRawFunc=*/false));
 }
 
 /// Is this an SSA value type for the value of a Fortran expression?
-inline bool isFortranValueType(mlir::Type type) {
-  return mlir::isa<hlfir::ExprType>(type) || fir::isa_trivial(type) ||
+inline bool isFortranValueType(aiir::Type type) {
+  return aiir::isa<hlfir::ExprType>(type) || fir::isa_trivial(type) ||
          isFortranProcedureValue(type);
 }
 
 /// Is this the value of a Fortran expression in an SSA value form?
-inline bool isFortranValue(mlir::Value value) {
+inline bool isFortranValue(aiir::Value value) {
   return isFortranValueType(value.getType());
 }
 
 /// Is this a Fortran variable?
-/// Note that by "variable", it must be understood that the mlir::Value is
+/// Note that by "variable", it must be understood that the aiir::Value is
 /// a memory value of a storage that can be reason about as a Fortran object
 /// (its bounds, shape, and type parameters, if any, are retrievable).
-/// This does not imply that the mlir::Value points to a variable from the
+/// This does not imply that the aiir::Value points to a variable from the
 /// original source or can be legally defined: temporaries created to store
 /// expression values are considered to be variables, and so are PARAMETERs
 /// global constant address.
-inline bool isFortranEntity(mlir::Value value) {
+inline bool isFortranEntity(aiir::Value value) {
   return isFortranValue(value) || isFortranVariableType(value.getType());
 }
 
-bool isFortranScalarNumericalType(mlir::Type);
-bool isFortranNumericalArrayObject(mlir::Type);
-bool isFortranNumericalOrLogicalArrayObject(mlir::Type);
-bool isFortranArrayObject(mlir::Type);
-bool isFortranLogicalArrayObject(mlir::Type);
-bool isPassByRefOrIntegerType(mlir::Type);
-bool isI1Type(mlir::Type);
+bool isFortranScalarNumericalType(aiir::Type);
+bool isFortranNumericalArrayObject(aiir::Type);
+bool isFortranNumericalOrLogicalArrayObject(aiir::Type);
+bool isFortranArrayObject(aiir::Type);
+bool isFortranLogicalArrayObject(aiir::Type);
+bool isPassByRefOrIntegerType(aiir::Type);
+bool isI1Type(aiir::Type);
 // scalar i1 or logical, or sequence of logical (via (boxed?) array or expr)
-bool isMaskArgument(mlir::Type);
-bool isPolymorphicObject(mlir::Type);
+bool isMaskArgument(aiir::Type);
+bool isPolymorphicObject(aiir::Type);
 
 /// If an expression's extents are known at compile time, generate a fir.shape
 /// for this expression. Otherwise return {}
-mlir::Value genExprShape(mlir::OpBuilder &builder, const mlir::Location &loc,
+aiir::Value genExprShape(aiir::OpBuilder &builder, const aiir::Location &loc,
                          const hlfir::ExprType &expr);
 
 /// Return true iff `ty` may have allocatable component.
@@ -145,10 +145,10 @@ mlir::Value genExprShape(mlir::OpBuilder &builder, const mlir::Location &loc,
 /// depends on HLFIRDialect component. FIRType.cpp itself is part of FIRDialect
 /// that cannot depend on HLFIRBuilder (there will be a cyclic dependency).
 /// This has to be cleaned up, when HLFIR is the default.
-bool mayHaveAllocatableComponent(mlir::Type ty);
+bool mayHaveAllocatableComponent(aiir::Type ty);
 
 /// Scalar integer or a sequence of integers (via boxed array or expr).
-bool isFortranIntegerScalarOrArrayObject(mlir::Type type);
+bool isFortranIntegerScalarOrArrayObject(aiir::Type type);
 
 } // namespace hlfir
 

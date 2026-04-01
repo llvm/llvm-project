@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,22 +15,22 @@
 
 namespace fir {
 
-using MinlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
-    fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,
-    mlir::Value, mlir::Value, const llvm::SmallVectorImpl<mlir::Value> &)>;
-using InitValGeneratorTy = llvm::function_ref<mlir::Value(
-    fir::FirOpBuilder &, mlir::Location, const mlir::Type &)>;
-using AddrGeneratorTy = llvm::function_ref<mlir::Value(
-    fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,
-    mlir::Value)>;
+using MinlocBodyOpGeneratorTy = llvm::function_ref<aiir::Value(
+    fir::FirOpBuilder &, aiir::Location, const aiir::Type &, aiir::Value,
+    aiir::Value, aiir::Value, const llvm::SmallVectorImpl<aiir::Value> &)>;
+using InitValGeneratorTy = llvm::function_ref<aiir::Value(
+    fir::FirOpBuilder &, aiir::Location, const aiir::Type &)>;
+using AddrGeneratorTy = llvm::function_ref<aiir::Value(
+    fir::FirOpBuilder &, aiir::Location, const aiir::Type &, aiir::Value,
+    aiir::Value)>;
 
 // Produces a loop nest for a Minloc intrinsic.
-void genMinMaxlocReductionLoop(fir::FirOpBuilder &builder, mlir::Value array,
+void genMinMaxlocReductionLoop(fir::FirOpBuilder &builder, aiir::Value array,
                                fir::InitValGeneratorTy initVal,
                                fir::MinlocBodyOpGeneratorTy genBody,
                                fir::AddrGeneratorTy getAddrFn, unsigned rank,
-                               mlir::Type elementType, mlir::Location loc,
-                               mlir::Type maskElemType, mlir::Value resultArr,
+                               aiir::Type elementType, aiir::Location loc,
+                               aiir::Type maskElemType, aiir::Value resultArr,
                                bool maskMayBeLogicalScalar);
 
 } // namespace fir

@@ -14,112 +14,112 @@
 #define FLANG_OPTIMIZER_OPENACC_FIROPENACCTYPEINTERFACES_H_
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
 namespace fir::acc {
 
 template <typename T>
 struct OpenACCPointerLikeModel
-    : public mlir::acc::PointerLikeType::ExternalModel<
+    : public aiir::acc::PointerLikeType::ExternalModel<
           OpenACCPointerLikeModel<T>, T> {
-  mlir::Type getElementType(mlir::Type pointer) const {
-    return mlir::cast<T>(pointer).getElementType();
+  aiir::Type getElementType(aiir::Type pointer) const {
+    return aiir::cast<T>(pointer).getElementType();
   }
-  mlir::acc::VariableTypeCategory
-  getPointeeTypeCategory(mlir::Type pointer,
-                         mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
-                         mlir::Type varType) const;
+  aiir::acc::VariableTypeCategory
+  getPointeeTypeCategory(aiir::Type pointer,
+                         aiir::TypedValue<aiir::acc::PointerLikeType> varPtr,
+                         aiir::Type varType) const;
 
-  mlir::Value genAllocate(mlir::Type pointer, mlir::OpBuilder &builder,
-                          mlir::Location loc, llvm::StringRef varName,
-                          mlir::Type varType, mlir::Value originalVar,
+  aiir::Value genAllocate(aiir::Type pointer, aiir::OpBuilder &builder,
+                          aiir::Location loc, llvm::StringRef varName,
+                          aiir::Type varType, aiir::Value originalVar,
                           bool &needsFree) const;
 
-  bool genFree(mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-               mlir::TypedValue<mlir::acc::PointerLikeType> varToFree,
-               mlir::Value allocRes, mlir::Type varType) const;
+  bool genFree(aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+               aiir::TypedValue<aiir::acc::PointerLikeType> varToFree,
+               aiir::Value allocRes, aiir::Type varType) const;
 
-  bool genCopy(mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-               mlir::TypedValue<mlir::acc::PointerLikeType> destination,
-               mlir::TypedValue<mlir::acc::PointerLikeType> source,
-               mlir::Type varType) const;
+  bool genCopy(aiir::Type pointer, aiir::OpBuilder &builder, aiir::Location loc,
+               aiir::TypedValue<aiir::acc::PointerLikeType> destination,
+               aiir::TypedValue<aiir::acc::PointerLikeType> source,
+               aiir::Type varType) const;
 
-  mlir::Value genLoad(mlir::Type pointer, mlir::OpBuilder &builder,
-                      mlir::Location loc,
-                      mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
-                      mlir::Type valueType) const;
+  aiir::Value genLoad(aiir::Type pointer, aiir::OpBuilder &builder,
+                      aiir::Location loc,
+                      aiir::TypedValue<aiir::acc::PointerLikeType> srcPtr,
+                      aiir::Type valueType) const;
 
-  bool genStore(mlir::Type pointer, mlir::OpBuilder &builder,
-                mlir::Location loc, mlir::Value valueToStore,
-                mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+  bool genStore(aiir::Type pointer, aiir::OpBuilder &builder,
+                aiir::Location loc, aiir::Value valueToStore,
+                aiir::TypedValue<aiir::acc::PointerLikeType> destPtr) const;
 
-  bool isDeviceData(mlir::Type pointer, mlir::Value var) const;
+  bool isDeviceData(aiir::Type pointer, aiir::Value var) const;
 };
 
 template <typename T>
 struct OpenACCMappableModel
-    : public mlir::acc::MappableType::ExternalModel<OpenACCMappableModel<T>,
+    : public aiir::acc::MappableType::ExternalModel<OpenACCMappableModel<T>,
                                                     T> {
-  mlir::TypedValue<mlir::acc::PointerLikeType> getVarPtr(::mlir::Type type,
-                                                         mlir::Value var) const;
+  aiir::TypedValue<aiir::acc::PointerLikeType> getVarPtr(::aiir::Type type,
+                                                         aiir::Value var) const;
 
   std::optional<llvm::TypeSize>
-  getSizeInBytes(mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-                 const mlir::DataLayout &dataLayout) const;
+  getSizeInBytes(aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+                 const aiir::DataLayout &dataLayout) const;
 
   std::optional<int64_t>
-  getOffsetInBytes(mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-                   const mlir::DataLayout &dataLayout) const;
+  getOffsetInBytes(aiir::Type type, aiir::Value var, aiir::ValueRange accBounds,
+                   const aiir::DataLayout &dataLayout) const;
 
-  bool hasUnknownDimensions(mlir::Type type) const;
+  bool hasUnknownDimensions(aiir::Type type) const;
 
-  llvm::SmallVector<mlir::Value>
-  generateAccBounds(mlir::Type type, mlir::Value var,
-                    mlir::OpBuilder &builder) const;
+  llvm::SmallVector<aiir::Value>
+  generateAccBounds(aiir::Type type, aiir::Value var,
+                    aiir::OpBuilder &builder) const;
 
-  mlir::acc::VariableTypeCategory getTypeCategory(mlir::Type type,
-                                                  mlir::Value var) const;
+  aiir::acc::VariableTypeCategory getTypeCategory(aiir::Type type,
+                                                  aiir::Value var) const;
 
-  mlir::acc::VariableInfoAttr
-  genPrivateVariableInfo(mlir::Type type,
-                         mlir::TypedValue<mlir::acc::MappableType> var) const;
+  aiir::acc::VariableInfoAttr
+  genPrivateVariableInfo(aiir::Type type,
+                         aiir::TypedValue<aiir::acc::MappableType> var) const;
 
-  mlir::Value generatePrivateInit(mlir::Type type, mlir::OpBuilder &builder,
-                                  mlir::Location loc,
-                                  mlir::TypedValue<mlir::acc::MappableType> var,
+  aiir::Value generatePrivateInit(aiir::Type type, aiir::OpBuilder &builder,
+                                  aiir::Location loc,
+                                  aiir::TypedValue<aiir::acc::MappableType> var,
                                   llvm::StringRef varName,
-                                  mlir::ValueRange extents, mlir::Value initVal,
-                                  mlir::acc::VariableInfoAttr varInfo,
+                                  aiir::ValueRange extents, aiir::Value initVal,
+                                  aiir::acc::VariableInfoAttr varInfo,
                                   bool &needsDestroy) const;
 
-  bool generatePrivateDestroy(mlir::Type type, mlir::OpBuilder &builder,
-                              mlir::Location loc, mlir::Value privatized,
-                              mlir::ValueRange bounds,
-                              mlir::acc::VariableInfoAttr varInfo) const;
+  bool generatePrivateDestroy(aiir::Type type, aiir::OpBuilder &builder,
+                              aiir::Location loc, aiir::Value privatized,
+                              aiir::ValueRange bounds,
+                              aiir::acc::VariableInfoAttr varInfo) const;
 
-  bool generateCopy(mlir::Type type, mlir::OpBuilder &mlirBuilder,
-                    mlir::Location loc,
-                    mlir::TypedValue<mlir::acc::MappableType> source,
-                    mlir::TypedValue<mlir::acc::MappableType> dest,
-                    mlir::ValueRange bounds,
-                    mlir::acc::VariableInfoAttr varInfo) const;
+  bool generateCopy(aiir::Type type, aiir::OpBuilder &aiirBuilder,
+                    aiir::Location loc,
+                    aiir::TypedValue<aiir::acc::MappableType> source,
+                    aiir::TypedValue<aiir::acc::MappableType> dest,
+                    aiir::ValueRange bounds,
+                    aiir::acc::VariableInfoAttr varInfo) const;
 
-  bool generateCombiner(mlir::Type type, mlir::OpBuilder &mlirBuilder,
-                        mlir::Location loc,
-                        mlir::TypedValue<mlir::acc::MappableType> dest,
-                        mlir::TypedValue<mlir::acc::MappableType> source,
-                        mlir::ValueRange bounds,
-                        mlir::acc::ReductionOperator op,
-                        mlir::Attribute fastmathFlags) const;
+  bool generateCombiner(aiir::Type type, aiir::OpBuilder &aiirBuilder,
+                        aiir::Location loc,
+                        aiir::TypedValue<aiir::acc::MappableType> dest,
+                        aiir::TypedValue<aiir::acc::MappableType> source,
+                        aiir::ValueRange bounds,
+                        aiir::acc::ReductionOperator op,
+                        aiir::Attribute fastmathFlags) const;
 
-  bool isDeviceData(mlir::Type type, mlir::Value var) const;
+  bool isDeviceData(aiir::Type type, aiir::Value var) const;
 };
 
 struct OpenACCReducibleLogicalModel
-    : public mlir::acc::ReducibleType::ExternalModel<
+    : public aiir::acc::ReducibleType::ExternalModel<
           OpenACCReducibleLogicalModel, fir::LogicalType> {
-  std::optional<mlir::arith::AtomicRMWKind>
-  getAtomicRMWKind(mlir::Type type, mlir::acc::ReductionOperator redOp) const;
+  std::optional<aiir::arith::AtomicRMWKind>
+  getAtomicRMWKind(aiir::Type type, aiir::acc::ReductionOperator redOp) const;
 };
 
 } // namespace fir::acc

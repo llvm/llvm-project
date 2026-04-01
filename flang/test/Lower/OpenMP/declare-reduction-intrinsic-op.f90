@@ -1,4 +1,4 @@
-! RUN: not %flang_fc1 -emit-mlir -fopenmp %s -o - 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -emit-aiir -fopenmp %s -o - 2>&1 | FileCheck %s
 
 program test
   type t

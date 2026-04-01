@@ -14,18 +14,18 @@
 #define CLANG_CIR_INTERFACES_CIRLOOPOPINTERFACE_H
 
 #include "llvm/ADT/APInt.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
+#include "aiir/IR/BuiltinTypes.h"
+#include "aiir/IR/OpDefinition.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/Interfaces/ControlFlowInterfaces.h"
+#include "aiir/Interfaces/LoopLikeInterface.h"
 
 using llvm::APInt;
 namespace cir {
 namespace detail {
 
 /// Verify invariants of the LoopOpInterface.
-mlir::LogicalResult verifyLoopOpInterface(::mlir::Operation *op);
+aiir::LogicalResult verifyLoopOpInterface(::aiir::Operation *op);
 
 } // namespace detail
 } // namespace cir

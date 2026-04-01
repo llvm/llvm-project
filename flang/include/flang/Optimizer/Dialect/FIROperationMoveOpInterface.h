@@ -13,13 +13,13 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIR_OPERATION_MOVE_OP_INTERFACE_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIR_OPERATION_MOVE_OP_INTERFACE_H
 
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/Operation.h"
+#include "aiir/IR/OpDefinition.h"
+#include "aiir/IR/Operation.h"
 #include "llvm/Support/LogicalResult.h"
 
 namespace fir::detail {
 /// Verify invariants of OperationMoveOpInterface.
-llvm::LogicalResult verifyOperationMoveOpInterface(mlir::Operation *op);
+llvm::LogicalResult verifyOperationMoveOpInterface(aiir::Operation *op);
 } // namespace fir::detail
 
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h.inc"
@@ -29,14 +29,14 @@ namespace fir {
 /// operation from the 'descendant' operation into operation 'op'.
 /// If 'candidate' is nullptr, then the caller is querying whether
 /// any operation from any descendant can be moved into this operation.
-bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
-                           mlir::Operation *candidate);
+bool canMoveFromDescendant(aiir::Operation *op, aiir::Operation *descendant,
+                           aiir::Operation *candidate);
 
 /// Returns true if it is allowed to move the given 'candidate'
 /// operation out of operation 'op'. If 'candidate' is nullptr,
 /// then the caller is querying whether any operation can be moved
 /// out of this operation.
-bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate);
+bool canMoveOutOf(aiir::Operation *op, aiir::Operation *candidate);
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIR_OPERATION_MOVE_OP_INTERFACE_H

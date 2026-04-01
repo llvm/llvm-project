@@ -17,7 +17,7 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-std::optional<mlir::Value>
+std::optional<aiir::Value>
 CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   if (builtinID == Builtin::BI__builtin_cpu_supports ||
       builtinID == Builtin::BI__builtin_cpu_init ||
@@ -25,12 +25,12 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("unimplemented RISC-V builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return aiir::Value{};
   }
 
   StringRef intrinsicName;
-  mlir::Type returnType;
-  llvm::SmallVector<mlir::Value> ops;
+  aiir::Type returnType;
+  llvm::SmallVector<aiir::Value> ops;
 
   // `iceArguments` is a bitmap indicating whether the argument at the i-th bit
   // is required to be a constant integer expression.
@@ -87,7 +87,7 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("unimplemented RISC-V builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return aiir::Value{};
   }
 
   // Zihintpause
@@ -129,12 +129,12 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("unimplemented RISC-V builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return aiir::Value{};
   }
 
     // TODO: Handle vector builtins in tablegen.
   }
 
-  mlir::Location loc = getLoc(e->getSourceRange());
+  aiir::Location loc = getLoc(e->getSourceRange());
   return builder.emitIntrinsicCallOp(loc, intrinsicName, returnType, ops);
 }

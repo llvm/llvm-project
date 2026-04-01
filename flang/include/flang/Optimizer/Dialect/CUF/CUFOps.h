@@ -13,8 +13,8 @@
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/OpDefinition.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/IR/OpDefinition.h"
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h.inc"

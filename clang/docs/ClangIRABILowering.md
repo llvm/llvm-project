@@ -4,19 +4,19 @@
 
 This design describes calling convention lowering that builds on the LLVM ABI
 Lowering Library in `llvm/lib/ABI/`: we use its `abi::Type*` and target ABI
-logic and add an MLIR integration layer (ABITypeMapper, ABI lowering pass, and
+logic and add an AIIR integration layer (ABITypeMapper, ABI lowering pass, and
 dialect rewriters).  The framework relies on the LLVM ABI library as the single
-source of truth for ABI classification.  MLIR dialects use it via an adapter
+source of truth for ABI classification.  AIIR dialects use it via an adapter
 layer.  The design provides a way to perform ABI-compliant calling convention
-lowering that can be used by any MLIR dialect that implements the necessary
+lowering that can be used by any AIIR dialect that implements the necessary
 interfaces.  Inputs are high-level function signatures in CIR, FIR, or other
-MLIR dialect.  Outputs are ABI-lowered signatures and call sites.  Lowering
-runs as an MLIR pass in the compilation pipeline.
+AIIR dialect.  Outputs are ABI-lowered signatures and call sites.  Lowering
+runs as an AIIR pass in the compilation pipeline.
 
 ### 1.1 Design Goals
 
-Building on the LLVM ABI library and adding an MLIR integration layer avoids
-duplicating complex ABI logic across MLIR dialects, reduces maintenance, and
+Building on the LLVM ABI library and adding an AIIR integration layer avoids
+duplicating complex ABI logic across AIIR dialects, reduces maintenance, and
 keeps a single source of ABI compliance in `llvm/lib/ABI/`.  The separation
 between the ABI library (classification) and dialect-specific ABIRewriteContext
 (rewriting) enables clearer testing and a straightforward migration path from
@@ -27,7 +27,7 @@ A central goal is that generated code be call-compatible with Classic Clang
 CodeGen and other compilers.  Parity is with Classic Clang CodeGen output,
 not only with the incubator.  Success means CIR correctly lowers x86_64 and
 AArch64 calling conventions with full ABI compliance using the LLVM ABI library
-and MLIR integration layer; FIR can adopt the same infrastructure with minimal
+and AIIR integration layer; FIR can adopt the same infrastructure with minimal
 dialect-specific adaptation (e.g.  cdecl when calling C from Fortran).  ABI
 compliance will be validated through differential testing against Classic Clang
 CodeGen, and performance overhead should remain under 5% compared to a direct,
@@ -74,16 +74,16 @@ Classic Clang CodeGen (located in `clang/lib/CodeGen/`) transforms calling
 conventions during the AST-to-LLVM-IR lowering process.  This implementation is
 mature and well-tested, handling all supported targets with comprehensive ABI
 coverage.  However, it's tightly coupled to both Clang's AST representation and
-LLVM IR, making it difficult to reuse for MLIR-based frontends.
+LLVM IR, making it difficult to reuse for AIIR-based frontends.
 
 #### CIR Incubator
 
 The CIR incubator includes a calling convention lowering pass in
 `clang/lib/CIR/Dialect/Transforms/TargetLowering/` that transforms CIR
-operations into ABI-lowered CIR operations as an MLIR pass.  This implementation
-successfully adapted logic from Classic Clang CodeGen to work within the MLIR
+operations into ABI-lowered CIR operations as an AIIR pass.  This implementation
+successfully adapted logic from Classic Clang CodeGen to work within the AIIR
 framework.  However, it relies on CIR-specific types and operations, preventing
-reuse by other MLIR dialects.
+reuse by other AIIR dialects.
 
 #### LLVM ABI Lowering Library
 
@@ -100,12 +100,12 @@ x86_64, BPF) and provides QualTypeMapper for Clang to map `QualType` to
 Our approach is to complete and extend this library and use it as the single
 source of truth for ABI classification.  One implementation in one place reduces
 duplication, simplifies bug fixes, and creates a path for Classic Clang CodeGen
-to use the same logic in the future.  MLIR dialects (CIR, FIR, and others) will
+to use the same logic in the future.  AIIR dialects (CIR, FIR, and others) will
 use the library via an adapter layer rather than reimplementing ABI logic.
 
 **Current state.** The x86_64 implementation is largely complete and under
 review.  AArch64 and some other targets are not yet implemented; there is no
-MLIR integration today.  The work is being upstreamed in smaller parts (e.g.
+AIIR integration today.  The work is being upstreamed in smaller parts (e.g.
 [PR 158329](https://github.com/llvm/llvm-project/pull/158329)); progress is
 limited by reviewer bandwidth.  The overhead of the shadow type system
 (converting to and from `abi::Type*`) has been measured at under 0.1% for clang
@@ -113,13 +113,13 @@ limited by reviewer bandwidth.  The overhead of the shadow type system
 library being merged upstream or our contributions to it being accepted.
 
 **Our approach.** The approach is to complete and extend the ABI library (e.g.
-AArch64, review feedback, tests) and add an **MLIR integration layer** so that
-MLIR dialects can use it:
+AArch64, review feedback, tests) and add an **AIIR integration layer** so that
+AIIR dialects can use it:
 
-- **ABITypeMapper**: maps `mlir::Type` to `abi::Type*`, analogous to
+- **ABITypeMapper**: maps `aiir::Type` to `abi::Type*`, analogous to
   QualTypeMapper for Clang.
 
-- **MLIR ABI lowering pass**: uses the library's `ABIInfo` for classification,
+- **AIIR ABI lowering pass**: uses the library's `ABIInfo` for classification,
   then performs dialect-specific rewriting via `ABIRewriteContext` for CIR, FIR,
   and other dialects.
 
@@ -128,7 +128,7 @@ We do not upstream the incubator's CIR-specific ABI implementation as the
 long-term solution; we port useful algorithms into the ABI library where
 appropriate.
 
-### 2.3 Requirements for MLIR Dialects
+### 2.3 Requirements for AIIR Dialects
 
 CIR needs to lower C/C++ calling conventions correctly, with initial support for
 x86_64 and AArch64 targets.  It must handle structs, unions, and complex types,
@@ -147,8 +147,8 @@ architectures, and comprehensive testability and validation capabilities.
 (x86_64, BPF, and eventually AArch64 and others).  This is the single place
 where ABI rules are implemented.
 
-**MLIR side.** To use this library from MLIR dialects we add an integration
-layer: (1) **ABITypeMapper** maps `mlir::Type` to `abi::Type*` (analogous to
+**AIIR side.** To use this library from AIIR dialects we add an integration
+layer: (1) **ABITypeMapper** maps `aiir::Type` to `abi::Type*` (analogous to
 QualTypeMapper for Clang).  (2) A **generic ABI lowering pass** invokes the
 library's `ABIInfo` for classification, then (3) performs **dialect-specific
 rewriting** via the `ABIRewriteContext` interface—each dialect (CIR, FIR, etc.)
@@ -158,7 +158,7 @@ dialect-specific.
 
 The following diagram shows the layering.  At the top, the ABI library holds
 the ABI logic.  In the middle, adapters connect frontends to it: Classic Clang
-CodeGen uses QualTypeMapper; MLIR uses ABITypeMapper and the ABI lowering pass.
+CodeGen uses QualTypeMapper; AIIR uses ABITypeMapper and the ABI lowering pass.
 At the bottom, each dialect implements `ABIRewriteContext` only; FIR is shown as
 a consumer for cdecl/C interop (e.g. calling C from Fortran).
 
@@ -172,7 +172,7 @@ a consumer for cdecl/C interop (e.g. calling C from Fortran).
             │                                   │
             ▼                                   ▼
 ┌───────────────────────┐         ┌───────────────────────────────┐
-│  Classic CodeGen      │         │  MLIR adapter                 │
+│  Classic CodeGen      │         │  AIIR adapter                 │
 │  QualTypeMapper       │         │  ABITypeMapper + ABI pass     │
 └───────────────────────┘         └───────────────────────────────┘
                                                 │
@@ -192,12 +192,12 @@ a consumer for cdecl/C interop (e.g. calling C from Fortran).
 
 The following diagram shows how the design builds on the ABI library (Section
 3).  At the top, the ABI library holds the classification logic.  The middle
-layer adapts MLIR to the ABI library: ABITypeMapper converts `mlir::Type` to
-`abi::Type*`, and the MLIR ABI lowering pass invokes the library's `ABIInfo` and
+layer adapts AIIR to the ABI library: ABITypeMapper converts `aiir::Type` to
+`abi::Type*`, and the AIIR ABI lowering pass invokes the library's `ABIInfo` and
 uses the classification
 to drive rewriting.  At the bottom, each dialect implements only
 `ABIRewriteContext` for operation creation; there is no separate type
-abstraction layer in MLIR for classification—that lives in the ABI library.
+abstraction layer in AIIR for classification—that lives in the ABI library.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -208,8 +208,8 @@ abstraction layer in MLIR for classification—that lives in the ABI library.
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  MLIR adapter                                                           │
-│  ABITypeMapper (mlir::Type → abi::Type*)  +  MLIR ABI lowering pass     │
+│  AIIR adapter                                                           │
+│  ABITypeMapper (aiir::Type → abi::Type*)  +  AIIR ABI lowering pass     │
 │  (1) Map types  (2) Call ABIInfo  (3) Drive rewriting from              │
 │  classification result                                                  │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -222,7 +222,7 @@ abstraction layer in MLIR for classification—that lives in the ABI library.
               │ Context    │    │ Context    │    │            │
               └────────────┘    └────────────┘    └────────────┘
               Dialect-specific operation creation only (no type
-              abstraction for classification in MLIR)
+              abstraction for classification in AIIR)
 ```
 
 ### 4.2 ABI Library, Adapter, and Dialect Layers
@@ -231,12 +231,12 @@ The architecture has three parts.  **The ABI library** (`llvm/lib/ABI/`) is the
 single source of truth for ABI classification: it operates on `abi::Type*` and
 produces classification results (e.g.  ABIArgInfo, ABIFunctionInfo).
 Target-specific `ABIInfo` implementations (X86_64, AArch64, etc.) live there.
-The **adapter layer** is MLIR-specific: ABITypeMapper maps `mlir::Type` to
-`abi::Type*`, and the MLIR ABI lowering pass (1) maps types, (2) calls the
+The **adapter layer** is AIIR-specific: ABITypeMapper maps `aiir::Type` to
+`abi::Type*`, and the AIIR ABI lowering pass (1) maps types, (2) calls the
 library's ABIInfo, and (3) uses the classification to drive rewriting.  The
 **dialect layer** is only ABIRewriteContext: each dialect (CIR, FIR) implements
 operation creation (createFunction, createCall, createExtractValue, etc.).
-There is no type abstraction layer in MLIR for classification; type queries for
+There is no type abstraction layer in AIIR for classification; type queries for
 ABI are performed on `abi::Type*` inside the ABI library.
 
 ### 4.3 Key Components
@@ -245,19 +245,19 @@ The framework is built from the following components.  **The ABI library**
 (`llvm/lib/ABI/`) provides the single source of truth for ABI classification:
 the `abi::Type*` type system, the `ABIInfo` base and target-specific
 implementations (e.g.  X86_64, AArch64), and the classification result types
-(e.g.  ABIArgInfo, ABIFunctionInfo).  **ABITypeMapper** maps `mlir::Type` to
-`abi::Type*` so that MLIR dialect types can be classified by the ABI library.
+(e.g.  ABIArgInfo, ABIFunctionInfo).  **ABITypeMapper** maps `aiir::Type` to
+`abi::Type*` so that AIIR dialect types can be classified by the ABI library.
 Dialects with custom types do not need a new interface for this: the mapper
-relies on existing MLIR type interfaces (e.g.  `DataLayoutTypeInterface`) for
+relies on existing AIIR type interfaces (e.g.  `DataLayoutTypeInterface`) for
 size and alignment, and pattern-matches on standard type categories (integers,
 floats, pointers, structs, arrays, vectors) to build `abi::Type*`.
-The **MLIR ABI lowering pass** orchestrates the flow: it uses ABITypeMapper,
+The **AIIR ABI lowering pass** orchestrates the flow: it uses ABITypeMapper,
 calls the library's ABIInfo, and drives rewriting from the classification
 result.  **ABIRewriteContext** is the dialect-specific interface for operation
 creation (each dialect implements it to produce e.g.  cir.call, fir.call).  A
 **target registry** (or equivalent) is used to select the appropriate ABIInfo
 for the compilation target.  There is no ABITypeInterface or separate "ABIInfo
-in MLIR"; classification lives entirely in the ABI library.
+in AIIR"; classification lives entirely in the ABI library.
 
 ### 4.4 ABI Lowering Flow: How the Pieces Fit Together
 
@@ -267,7 +267,7 @@ interfaces and components work together.
 #### Step 1: Function Signature Analysis
 
 The ABI lowering pass begins by analyzing the function signature.  Function
-operations are identified via MLIR's `FunctionOpInterface`, which provides
+operations are identified via AIIR's `FunctionOpInterface`, which provides
 access to the function type, argument types, and return types.  The pass
 extracts the parameter types and return type to prepare them for
 classification.  At this stage, the types are still in their
@@ -283,9 +283,9 @@ Input: func @foo(%arg0: !cir.int<u, 32>,
 
 #### Step 2: Type Mapping via ABITypeMapper
 
-For each argument and the return type, the pass maps `mlir::Type` to
+For each argument and the return type, the pass maps `aiir::Type` to
 `abi::Type*` using ABITypeMapper.  The mapper produces the representation that
-the library's ABIInfo expects; optionally, it can map back to MLIR types for coercion
+the library's ABIInfo expects; optionally, it can map back to AIIR types for coercion
 types when needed.
 
 ```cpp
@@ -306,7 +306,7 @@ The library's target-specific `ABIInfo` (e.g.  X86_64) performs classification o
 and ABIArgInfo as defined in `llvm/lib/ABI/`):
 
 ```cpp
-// The MLIR ABI lowering pass obtains the ABIInfo from the target
+// The AIIR ABI lowering pass obtains the ABIInfo from the target
 // registry based on the module's target triple (see Section 5.2).
 llvm::abi::ABIInfo *abiInfo = getABIInfo();  // e.g. X86_64
 llvm::abi::ABIFunctionInfo abiFI;
@@ -386,7 +386,7 @@ Value result = ctx.createLoad(loc, sretPtr);
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ Step 1: Extract Types                                           │
-│   For each parameter: mlir::Type                                │
+│   For each parameter: aiir::Type                                │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
@@ -428,8 +428,8 @@ Value result = ctx.createLoad(loc, sretPtr);
 #### Key Interactions Between Components
 
 Classification lives in the ABI library: `ABIInfo` operates on `abi::Type*` and produces
-classification results (e.g.  ABIArgInfo, ABIFunctionInfo).  MLIR types reach
-the ABI library only via ABITypeMapper, which converts `mlir::Type` to `abi::Type*`.  The
+classification results (e.g.  ABIArgInfo, ABIFunctionInfo).  AIIR types reach
+the ABI library only via ABITypeMapper, which converts `aiir::Type` to `abi::Type*`.  The
 lowering pass (1) maps types with ABITypeMapper, (2) calls the library's ABIInfo to
 get classification, and (3) uses that result to drive rewriting through the
 dialect's ABIRewriteContext.
@@ -484,62 +484,62 @@ dialect independently.
 
 We use the library's target selection or registry to obtain the appropriate ABIInfo for
 the compilation target (e.g.  X86_64, AArch64).  We do not introduce a separate
-MLIR TargetRegistry unless the MLIR ABI pass needs it for pass options or
-configuration.  The dependency direction is: the MLIR ABI pass depends on
-`llvm/lib/ABI`; there is no reverse dependency from the ABI library to MLIR dialects.
+AIIR TargetRegistry unless the AIIR ABI pass needs it for pass options or
+configuration.  The dependency direction is: the AIIR ABI pass depends on
+`llvm/lib/ABI`; there is no reverse dependency from the ABI library to AIIR dialects.
 
 ## 6. Open Questions
 
 The following items are open for discussion.  This section may be revised,
 shortened, or removed before final merge.
 
-### 6.1 How to Handle clang::TargetInfo Dependency in MLIR?
+### 6.1 How to Handle clang::TargetInfo Dependency in AIIR?
 
 The CIR incubator currently uses `clang::TargetInfo` to query target-specific
 properties needed for ABI decisions, such as pointer width, alignment,
 endianness, and calling convention availability.  Moving this functionality to
-MLIR dialect-agnostic infrastructure raises an architectural question: should
-MLIR code depend on a Clang library, or should it use MLIR-based mechanisms?
+AIIR dialect-agnostic infrastructure raises an architectural question: should
+AIIR code depend on a Clang library, or should it use AIIR-based mechanisms?
 
 Three approaches are under consideration.
 
-1.  Continue using `clang::TargetInfo` directly, accepting an MLIR→Clang
+1.  Continue using `clang::TargetInfo` directly, accepting an AIIR→Clang
    dependency for this target-specific infrastructure.  This approach requires
    no additional implementation since it already works in the CIR incubator,
    and `clang::TargetInfo` provides comprehensive, battle-tested coverage of
    all target properties.  However, it creates a dependency relationship that
-   may violate MLIR's architectural principle of being a peer to Clang rather
+   may violate AIIR's architectural principle of being a peer to Clang rather
    than dependent on it.
 
-2.  Combine `llvm::Triple` with MLIR's `DataLayoutInterface`, supplemented by
+2.  Combine `llvm::Triple` with AIIR's `DataLayoutInterface`, supplemented by
    module-level attributes for ABI-specific properties not covered by the data
    layout.  This approach maintains clean layering with no Clang dependency and
-   follows MLIR patterns, but requires defining approximately 10-15 additional
+   follows AIIR patterns, but requires defining approximately 10-15 additional
    attributes and some upfront design work.
 
-3.  Create a new `mlir::target::TargetInfo` abstraction with minimal methods
+3.  Create a new `aiir::target::TargetInfo` abstraction with minimal methods
    tailored specifically for ABI needs (approximately 15-20 methods).  This
    provides clean layering without Clang dependency but requires implementing
    and maintaining target-specific code that duplicates some knowledge from
    `clang::TargetInfo`.
 
-Option 2 is recommended as the preferred approach.  It maintains MLIR's
-independence from Clang, which is important for MLIR's mission to be reusable by
+Option 2 is recommended as the preferred approach.  It maintains AIIR's
+independence from Clang, which is important for AIIR's mission to be reusable by
 non-Clang frontends like Rust, Julia, and Swift.  Target information is input
 metadata rather than an output format, so it should be expressible through
-MLIR's existing mechanisms rather than requiring external dependencies.  Option
+AIIR's existing mechanisms rather than requiring external dependencies.  Option
 3 serves as an acceptable fallback if Option 2 proves insufficient during
 prototyping, while Option 1 is not recommended due to the architectural concerns
-around MLIR depending on Clang.
+around AIIR depending on Clang.
 
 ### 6.2 Scope: C Calling Convention vs.  Arbitrary Calling Conventions
 
 This design focuses on the **C calling convention layer** (e.g. cdecl, System V,
 AAPCS).  C++ ABI concerns such as non-trivial copy constructors or destructors
 are largely handled elsewhere in the compilation pipeline; the ABI library and
-MLIR integration layer address how arguments and return values are passed at the
+AIIR integration layer address how arguments and return values are passed at the
 C ABI boundary.  An open question is whether the design should remain explicitly
 scoped to C calling conventions only, or be general enough to support arbitrary
 calling conventions (e.g. vectorcall, preserve_most) via extensible interfaces.
 Clarifying this scope will guide the design of the LLVM ABI library integration
-and the MLIR pass.
+and the AIIR pass.

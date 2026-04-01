@@ -1,0 +1,24 @@
+# AIIR transform dialect standalone example.
+
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_binary(
+    name = "aiir-transform-opt",
+    srcs = ["aiir-transform-opt.cpp"],
+    deps = [
+        "//llvm:Support",
+        "//aiir:AllExtensions",
+        "//aiir:AllPassesAndDialects",
+        "//aiir:IR",
+        "//aiir:AiirOptLib",
+        "//aiir:Parser",
+        "//aiir:RegisterAllDialects",
+        "//aiir:RegisterAllExtensions",
+        "//aiir:RegisterAllPasses",
+        "//aiir:Support",
+        "//aiir:TransformDialect",
+        "//aiir:TransformDialectTransforms",
+    ],
+)

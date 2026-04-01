@@ -19,11 +19,11 @@ add_flang_library(CUFDialect
   AsmPrinter
   Remarks
 
-  MLIR_DEPS
-  MLIRIR
+  AIIR_DEPS
+  AIIRIR
 
-  MLIR_LIBS
-  MLIRIR
-  MLIRGPUDialect
-  MLIRTargetLLVMIRExport
+  AIIR_LIBS
+  AIIRIR
+  AIIRGPUDialect
+  AIIRTargetLLVMIRExport
 )

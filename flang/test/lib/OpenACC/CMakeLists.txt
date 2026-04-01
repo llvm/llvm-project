@@ -13,17 +13,17 @@ add_flang_library(FIRTestOpenACCInterfaces
   FIROpenACCSupport
   FIRSupport
 
-  MLIR_DEPS
-  MLIRDLTIDialect
-  MLIRIR
-  MLIROpenACCDialect
-  MLIRPass
-  MLIRSupport
+  AIIR_DEPS
+  AIIRDLTIDialect
+  AIIRIR
+  AIIROpenACCDialect
+  AIIRPass
+  AIIRSupport
 
-  MLIR_LIBS
-  MLIRDLTIDialect
-  MLIRIR
-  MLIROpenACCDialect
-  MLIRPass
-  MLIRSupport
+  AIIR_LIBS
+  AIIRDLTIDialect
+  AIIRIR
+  AIIROpenACCDialect
+  AIIRPass
+  AIIRSupport
 )

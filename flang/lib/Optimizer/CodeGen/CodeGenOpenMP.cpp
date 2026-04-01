@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,12 +22,12 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
-#include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "aiir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "aiir/Conversion/LLVMCommon/Pattern.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/Transforms/DialectConversion.h"
 
 using namespace fir;
 
@@ -42,10 +42,10 @@ namespace {
 /// expected to either be processed by the conversion infrastructure or already
 /// contain ops compatible with LLVM dialect types.
 template <typename OpType>
-class OpenMPFIROpConversion : public mlir::ConvertOpToLLVMPattern<OpType> {
+class OpenMPFIROpConversion : public aiir::ConvertOpToLLVMPattern<OpType> {
 public:
   explicit OpenMPFIROpConversion(const fir::LLVMTypeConverter &lowering)
-      : mlir::ConvertOpToLLVMPattern<OpType>(lowering) {}
+      : aiir::ConvertOpToLLVMPattern<OpType>(lowering) {}
 
   const fir::LLVMTypeConverter &lowerTy() const {
     return *static_cast<const fir::LLVMTypeConverter *>(
@@ -57,40 +57,40 @@ public:
 // Dialect lowering, this allows FIR specific lowering of types, required for
 // descriptors of allocatables currently.
 struct MapInfoOpConversion
-    : public OpenMPFIROpConversion<mlir::omp::MapInfoOp> {
+    : public OpenMPFIROpConversion<aiir::omp::MapInfoOp> {
   using OpenMPFIROpConversion::OpenMPFIROpConversion;
 
-  mlir::omp::MapBoundsOp
-  createBoundsForCharString(mlir::ConversionPatternRewriter &rewriter,
-                            unsigned int len, mlir::Location loc) const {
-    mlir::Type i64Ty = rewriter.getIntegerType(64);
-    auto lBound = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 0);
+  aiir::omp::MapBoundsOp
+  createBoundsForCharString(aiir::ConversionPatternRewriter &rewriter,
+                            unsigned int len, aiir::Location loc) const {
+    aiir::Type i64Ty = rewriter.getIntegerType(64);
+    auto lBound = aiir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 0);
     auto uBoundAndExt =
-        mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, len - 1);
-    auto stride = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 1);
-    auto baseLb = mlir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 1);
-    auto mapBoundType = rewriter.getType<mlir::omp::MapBoundsType>();
-    return mlir::omp::MapBoundsOp::create(rewriter, loc, mapBoundType, lBound,
+        aiir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, len - 1);
+    auto stride = aiir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 1);
+    auto baseLb = aiir::LLVM::ConstantOp::create(rewriter, loc, i64Ty, 1);
+    auto mapBoundType = rewriter.getType<aiir::omp::MapBoundsType>();
+    return aiir::omp::MapBoundsOp::create(rewriter, loc, mapBoundType, lBound,
                                           uBoundAndExt, uBoundAndExt, stride,
                                           /*strideInBytes*/ false, baseLb);
   }
 
   llvm::LogicalResult
-  matchAndRewrite(mlir::omp::MapInfoOp curOp, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    const mlir::TypeConverter *converter = getTypeConverter();
-    llvm::SmallVector<mlir::Type> resTypes;
+  matchAndRewrite(aiir::omp::MapInfoOp curOp, OpAdaptor adaptor,
+                  aiir::ConversionPatternRewriter &rewriter) const override {
+    const aiir::TypeConverter *converter = getTypeConverter();
+    llvm::SmallVector<aiir::Type> resTypes;
     if (failed(converter->convertTypes(curOp->getResultTypes(), resTypes)))
-      return mlir::failure();
+      return aiir::failure();
 
-    llvm::SmallVector<mlir::NamedAttribute> newAttrs;
-    mlir::omp::MapBoundsOp mapBoundsOp;
-    for (mlir::NamedAttribute attr : curOp->getAttrs()) {
-      if (auto typeAttr = mlir::dyn_cast<mlir::TypeAttr>(attr.getValue())) {
-        mlir::Type newAttr;
+    llvm::SmallVector<aiir::NamedAttribute> newAttrs;
+    aiir::omp::MapBoundsOp mapBoundsOp;
+    for (aiir::NamedAttribute attr : curOp->getAttrs()) {
+      if (auto typeAttr = aiir::dyn_cast<aiir::TypeAttr>(attr.getValue())) {
+        aiir::Type newAttr;
         if (fir::isTypeWithDescriptor(typeAttr.getValue())) {
           newAttr = lowerTy().convertBoxTypeAsStruct(
-              mlir::cast<fir::BaseBoxType>(typeAttr.getValue()));
+              aiir::cast<fir::BaseBoxType>(typeAttr.getValue()));
         } else if (fir::isa_char_string(fir::unwrapSequenceType(
                        fir::unwrapPassByRefType(typeAttr.getValue()))) &&
                    !characterWithDynamicLen(
@@ -139,18 +139,18 @@ struct MapInfoOpConversion
           // bounds which it is capable of handling without any special
           // casing.
           // TODO: Handle dynamic LEN characters.
-          if (auto ct = mlir::dyn_cast_or_null<fir::CharacterType>(
+          if (auto ct = aiir::dyn_cast_or_null<fir::CharacterType>(
                   fir::unwrapSequenceType(typeAttr.getValue()))) {
             newAttr = converter->convertType(
                 fir::unwrapSequenceType(typeAttr.getValue()));
-            if (auto type = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(newAttr))
+            if (auto type = aiir::dyn_cast<aiir::LLVM::LLVMArrayType>(newAttr))
               newAttr = type.getElementType();
             // We do not generate MapBoundsOps for the device pass, as
             // MapBoundsOps are not generated for the device pass, as
             // they're unused in the device lowering.
             auto offloadMod =
-                llvm::dyn_cast_or_null<mlir::omp::OffloadModuleInterface>(
-                    *curOp->getParentOfType<mlir::ModuleOp>());
+                llvm::dyn_cast_or_null<aiir::omp::OffloadModuleInterface>(
+                    *curOp->getParentOfType<aiir::ModuleOp>());
             if (!offloadMod.getIsTargetDevice())
               mapBoundsOp = createBoundsForCharString(rewriter, ct.getLen(),
                                                       curOp.getLoc());
@@ -160,21 +160,21 @@ struct MapInfoOpConversion
         } else {
           newAttr = converter->convertType(typeAttr.getValue());
         }
-        newAttrs.emplace_back(attr.getName(), mlir::TypeAttr::get(newAttr));
+        newAttrs.emplace_back(attr.getName(), aiir::TypeAttr::get(newAttr));
       } else {
         newAttrs.push_back(attr);
       }
     }
 
-    auto newOp = rewriter.replaceOpWithNewOp<mlir::omp::MapInfoOp>(
+    auto newOp = rewriter.replaceOpWithNewOp<aiir::omp::MapInfoOp>(
         curOp, resTypes, adaptor.getOperands(), newAttrs);
     if (mapBoundsOp) {
       rewriter.startOpModification(newOp);
-      newOp.getBoundsMutable().append(mlir::ValueRange{mapBoundsOp});
+      newOp.getBoundsMutable().append(aiir::ValueRange{mapBoundsOp});
       rewriter.finalizeOpModification(newOp);
     }
 
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -183,21 +183,21 @@ struct MapInfoOpConversion
 // for boxes because the OpenMP dialect conversion doesn't know anything about
 // FIR types.
 struct PrivateClauseOpConversion
-    : public OpenMPFIROpConversion<mlir::omp::PrivateClauseOp> {
+    : public OpenMPFIROpConversion<aiir::omp::PrivateClauseOp> {
   using OpenMPFIROpConversion::OpenMPFIROpConversion;
 
   llvm::LogicalResult
-  matchAndRewrite(mlir::omp::PrivateClauseOp curOp, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
+  matchAndRewrite(aiir::omp::PrivateClauseOp curOp, OpAdaptor adaptor,
+                  aiir::ConversionPatternRewriter &rewriter) const override {
     const fir::LLVMTypeConverter &converter = lowerTy();
-    mlir::Type convertedAllocType;
-    if (auto box = mlir::dyn_cast<fir::BaseBoxType>(curOp.getType())) {
+    aiir::Type convertedAllocType;
+    if (auto box = aiir::dyn_cast<fir::BaseBoxType>(curOp.getType())) {
       // In LLVM codegen fir.box<> == fir.ref<fir.box<>> == llvm.ptr
       // Here we really do want the actual structure
       if (box.isAssumedRank())
         TODO(curOp->getLoc(), "Privatize an assumed rank array");
       unsigned rank = 0;
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+      if (auto seqTy = aiir::dyn_cast<fir::SequenceType>(
               fir::unwrapRefType(box.getEleTy())))
         rank = seqTy.getShape().size();
       convertedAllocType = converter.convertBoxTypeAsStruct(box, rank);
@@ -205,51 +205,51 @@ struct PrivateClauseOpConversion
       convertedAllocType = converter.convertType(adaptor.getType());
     }
     if (!convertedAllocType)
-      return mlir::failure();
+      return aiir::failure();
     rewriter.startOpModification(curOp);
     curOp.setType(convertedAllocType);
     rewriter.finalizeOpModification(curOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 // Convert FIR type to LLVM without turning fir.box<T> into memory
 // reference.
-static mlir::Type convertObjectType(const fir::LLVMTypeConverter &converter,
-                                    mlir::Type firType) {
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(firType))
+static aiir::Type convertObjectType(const fir::LLVMTypeConverter &converter,
+                                    aiir::Type firType) {
+  if (auto boxTy = aiir::dyn_cast<fir::BaseBoxType>(firType))
     return converter.convertBoxTypeAsStruct(boxTy);
   return converter.convertType(firType);
 }
 
 // FIR Op specific conversion for TargetAllocMemOp
 struct TargetAllocMemOpConversion
-    : public OpenMPFIROpConversion<mlir::omp::TargetAllocMemOp> {
+    : public OpenMPFIROpConversion<aiir::omp::TargetAllocMemOp> {
   using OpenMPFIROpConversion::OpenMPFIROpConversion;
 
   llvm::LogicalResult
-  matchAndRewrite(mlir::omp::TargetAllocMemOp allocmemOp, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::Type heapTy = allocmemOp.getAllocatedType();
-    mlir::Location loc = allocmemOp.getLoc();
+  matchAndRewrite(aiir::omp::TargetAllocMemOp allocmemOp, OpAdaptor adaptor,
+                  aiir::ConversionPatternRewriter &rewriter) const override {
+    aiir::Type heapTy = allocmemOp.getAllocatedType();
+    aiir::Location loc = allocmemOp.getLoc();
     auto ity = lowerTy().indexType();
-    mlir::Type dataTy = fir::unwrapRefType(heapTy);
-    mlir::Type llvmObjectTy = convertObjectType(lowerTy(), dataTy);
+    aiir::Type dataTy = fir::unwrapRefType(heapTy);
+    aiir::Type llvmObjectTy = convertObjectType(lowerTy(), dataTy);
     if (fir::isRecordWithTypeParameters(fir::unwrapSequenceType(dataTy)))
       TODO(loc, "omp.target_allocmem codegen of derived type with length "
                 "parameters");
-    mlir::Value size = fir::computeElementDistance(
+    aiir::Value size = fir::computeElementDistance(
         loc, llvmObjectTy, ity, rewriter, lowerTy().getDataLayout());
     if (auto scaleSize = fir::genAllocationScaleSize(
             loc, allocmemOp.getInType(), ity, rewriter))
-      size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
-    for (mlir::Value opnd : adaptor.getOperands().drop_front())
-      size = mlir::LLVM::MulOp::create(
+      size = aiir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
+    for (aiir::Value opnd : adaptor.getOperands().drop_front())
+      size = aiir::LLVM::MulOp::create(
           rewriter, loc, ity, size,
           integerCast(lowerTy(), loc, rewriter, ity, opnd));
     auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
     auto mallocTy =
-        mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
+        aiir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
     if (mallocTyWidth != ity.getIntOrFloatBitWidth())
       size = integerCast(lowerTy(), loc, rewriter, mallocTy, size);
     rewriter.modifyOpInPlace(allocmemOp, [&]() {
@@ -257,28 +257,28 @@ struct TargetAllocMemOpConversion
       allocmemOp.getTypeparamsMutable().clear();
       allocmemOp.getTypeparamsMutable().append(size);
     });
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 struct DeclareMapperOpConversion
-    : public OpenMPFIROpConversion<mlir::omp::DeclareMapperOp> {
+    : public OpenMPFIROpConversion<aiir::omp::DeclareMapperOp> {
   using OpenMPFIROpConversion::OpenMPFIROpConversion;
 
   llvm::LogicalResult
-  matchAndRewrite(mlir::omp::DeclareMapperOp curOp, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
+  matchAndRewrite(aiir::omp::DeclareMapperOp curOp, OpAdaptor adaptor,
+                  aiir::ConversionPatternRewriter &rewriter) const override {
     rewriter.startOpModification(curOp);
     curOp.setType(convertObjectType(lowerTy(), curOp.getType()));
     rewriter.finalizeOpModification(curOp);
-    return mlir::success();
+    return aiir::success();
   }
 };
 
 } // namespace
 
 void fir::populateOpenMPFIRToLLVMConversionPatterns(
-    const LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, aiir::RewritePatternSet &patterns) {
   patterns.add<MapInfoOpConversion>(converter);
   patterns.add<PrivateClauseOpConversion>(converter);
   patterns.add<TargetAllocMemOpConversion>(converter);

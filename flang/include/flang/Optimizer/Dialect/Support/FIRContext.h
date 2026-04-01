@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 /// Setters and getters for associating context with an instance of a ModuleOp.
@@ -17,14 +17,14 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_FIRCONTEXT_H
 #define FORTRAN_OPTIMIZER_SUPPORT_FIRCONTEXT_H
 
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "aiir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
 
-namespace mlir {
+namespace aiir {
 class ModuleOp;
 class Operation;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class KindMapping;
@@ -32,75 +32,75 @@ struct NameUniquer;
 
 /// Set the target triple for the module. `triple` must not be deallocated while
 /// module `mod` is still live.
-void setTargetTriple(mlir::ModuleOp mod, llvm::StringRef triple);
+void setTargetTriple(aiir::ModuleOp mod, llvm::StringRef triple);
 
 /// Get the Triple instance from the Module or return the default Triple.
-llvm::Triple getTargetTriple(mlir::ModuleOp mod);
+llvm::Triple getTargetTriple(aiir::ModuleOp mod);
 
 /// Set the kind mapping for the module. `kindMap` must not be deallocated while
 /// module `mod` is still live.
-void setKindMapping(mlir::ModuleOp mod, KindMapping &kindMap);
+void setKindMapping(aiir::ModuleOp mod, KindMapping &kindMap);
 
 /// Get the KindMapping instance from the Module. If none was set, returns a
 /// default.
-KindMapping getKindMapping(mlir::ModuleOp mod);
+KindMapping getKindMapping(aiir::ModuleOp mod);
 
 /// Get the KindMapping instance that is in effect for the specified
 /// operation. The KindMapping is taken from the operation itself,
 /// if the operation is a ModuleOp, or from its parent ModuleOp.
 /// If a ModuleOp cannot be reached, the function returns default KindMapping.
-KindMapping getKindMapping(mlir::Operation *op);
+KindMapping getKindMapping(aiir::Operation *op);
 
 /// Set the target CPU for the module. `cpu` must not be deallocated while
 /// module `mod` is still live.
-void setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
+void setTargetCPU(aiir::ModuleOp mod, llvm::StringRef cpu);
 
 /// Get the target CPU string from the Module or return a null reference.
-llvm::StringRef getTargetCPU(mlir::ModuleOp mod);
+llvm::StringRef getTargetCPU(aiir::ModuleOp mod);
 
 /// Sets whether Denormal Mode can be ignored or not for lowering of floating
 /// point atomic operations.
-void setAtomicIgnoreDenormalMode(mlir::ModuleOp mod, bool value);
+void setAtomicIgnoreDenormalMode(aiir::ModuleOp mod, bool value);
 /// Gets whether Denormal Mode can be ignored or not for lowering of floating
 /// point atomic operations.
-bool getAtomicIgnoreDenormalMode(mlir::ModuleOp mod);
+bool getAtomicIgnoreDenormalMode(aiir::ModuleOp mod);
 /// Sets whether fine grained memory can be used or not for lowering of atomic
 /// operations.
-void setAtomicFineGrainedMemory(mlir::ModuleOp mod, bool value);
+void setAtomicFineGrainedMemory(aiir::ModuleOp mod, bool value);
 /// Gets whether fine grained memory can be used or not for lowering of atomic
 /// operations.
-bool getAtomicFineGrainedMemory(mlir::ModuleOp mod);
+bool getAtomicFineGrainedMemory(aiir::ModuleOp mod);
 /// Sets whether remote memory can be used or not for lowering of atomic
 /// operations.
-void setAtomicRemoteMemory(mlir::ModuleOp mod, bool value);
+void setAtomicRemoteMemory(aiir::ModuleOp mod, bool value);
 /// Gets whether remote memory can be used or not for lowering of atomic
 /// operations.
-bool getAtomicRemoteMemory(mlir::ModuleOp mod);
+bool getAtomicRemoteMemory(aiir::ModuleOp mod);
 
 /// Set the tune CPU for the module. `cpu` must not be deallocated while
 /// module `mod` is still live.
-void setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
+void setTuneCPU(aiir::ModuleOp mod, llvm::StringRef cpu);
 
 /// Get the tune CPU string from the Module or return a null reference.
-llvm::StringRef getTuneCPU(mlir::ModuleOp mod);
+llvm::StringRef getTuneCPU(aiir::ModuleOp mod);
 
 /// Set the target features for the module.
-void setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features);
+void setTargetFeatures(aiir::ModuleOp mod, llvm::StringRef features);
 
 /// Get the target features from the Module.
-mlir::LLVM::TargetFeaturesAttr getTargetFeatures(mlir::ModuleOp mod);
+aiir::LLVM::TargetFeaturesAttr getTargetFeatures(aiir::ModuleOp mod);
 
 /// Set the compiler identifier for the module.
-void setIdent(mlir::ModuleOp mod, llvm::StringRef ident);
+void setIdent(aiir::ModuleOp mod, llvm::StringRef ident);
 
 /// Get the compiler identifier from the Module.
-llvm::StringRef getIdent(mlir::ModuleOp mod);
+llvm::StringRef getIdent(aiir::ModuleOp mod);
 
 /// Set the command line used in this invocation.
-void setCommandline(mlir::ModuleOp mod, llvm::StringRef cmdLine);
+void setCommandline(aiir::ModuleOp mod, llvm::StringRef cmdLine);
 
 /// Get the command line used in this invocation.
-llvm::StringRef getCommandline(mlir::ModuleOp mod);
+llvm::StringRef getCommandline(aiir::ModuleOp mod);
 
 /// Helper for determining the target from the host, etc. Tools may use this
 /// function to provide a consistent interpretation of the `--target=<string>`

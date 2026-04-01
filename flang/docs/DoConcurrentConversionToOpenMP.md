@@ -66,7 +66,7 @@ contains **only** the following:
   1. The operations needed to assign/update the outer loop's induction variable.
   1. The inner loop itself.
 
-So the MLIR structure for the above example looks similar to the following:
+So the AIIR structure for the above example looks similar to the following:
 ```
   fir.do_loop %i_idx = %34 to %36 step %c1 unordered {
     %i_idx_2 = fir.convert %i_idx : (index) -> i32
@@ -137,7 +137,7 @@ Given the following loop:
 
 #### Mapping to `host`
 
-Mapping this loop to the `host`, generates MLIR operations of the following
+Mapping this loop to the `host`, generates AIIR operations of the following
 structure:
 
 ```
@@ -263,9 +263,9 @@ implementation in later upstreaming patches.
 This section describes some of the open questions/issues that are not tackled yet
 even in the downstream implementation.
 
-### Separate MLIR op for `do concurrent`
+### Separate AIIR op for `do concurrent`
 
-At the moment, both increment and concurrent loops are represented by one MLIR
+At the moment, both increment and concurrent loops are represented by one AIIR
 op: `fir.do_loop`; where we differentiate concurrent loops with the `unordered`
 attribute. This is not ideal since the `fir.do_loop` op support only single
 iteration ranges. Consequently, to model multi-range `do concurrent` loops, flang
@@ -317,7 +317,7 @@ as well.
 #### Supporting reductions
 
 Similar to locality specifiers, mapping reductions from `do concurrent` to OpenMP
-is also still an open TODO. We can potentially extend the MLIR infrastructure
+is also still an open TODO. We can potentially extend the AIIR infrastructure
 proposed in the previous section to share reduction records among the different
 relevant dialects as well.
 

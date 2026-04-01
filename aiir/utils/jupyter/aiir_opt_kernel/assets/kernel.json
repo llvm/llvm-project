@@ -1,0 +1,15 @@
+{
+    "argv": [
+        "python3", "-m", "aiir_opt_kernel", "-f", "{connection_file}"
+    ],
+    "display_name": "AiirOpt",
+    "language": "aiir",
+    "codemirror_mode": "aiir",
+    "language_info": {
+        "name": "aiir",
+        "codemirror_mode": "aiir",
+        "mimetype": "text/x-aiir",
+        "file_extension": ".aiir",
+        "pygments_lexer": "text"
+    }
+}

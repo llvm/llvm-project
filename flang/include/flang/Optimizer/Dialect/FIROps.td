@@ -14,11 +14,11 @@
 #ifndef FORTRAN_DIALECT_FIR_OPS
 #define FORTRAN_DIALECT_FIR_OPS
 
-include "mlir/Dialect/Arith/IR/ArithBase.td"
-include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
-include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
-include "mlir/Interfaces/MemorySlotInterfaces.td"
-include "mlir/Interfaces/ViewLikeInterface.td"
+include "aiir/Dialect/Arith/IR/ArithBase.td"
+include "aiir/Dialect/Arith/IR/ArithOpsInterfaces.td"
+include "aiir/Dialect/LLVMIR/LLVMAttrDefs.td"
+include "aiir/Interfaces/MemorySlotInterfaces.td"
+include "aiir/Interfaces/ViewLikeInterface.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
@@ -26,7 +26,7 @@ include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
 include "flang/Optimizer/Dialect/FirAliasTagOpInterface.td"
 include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.td"
-include "mlir/IR/BuiltinAttributes.td"
+include "aiir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
@@ -43,9 +43,9 @@ class fir_SimpleOp<string mnemonic, list<Trait> traits>
 }
 
 def fir_OneResultOpBuilder : OpBuilder<(ins
-    "mlir::Type":$resultType,
-    "mlir::ValueRange":$operands,
-    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
+    "aiir::Type":$resultType,
+    "aiir::ValueRange":$operands,
+    CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes),
   [{
     if (resultType)
       $_state.addTypes(resultType);
@@ -173,34 +173,34 @@ def fir_AllocaOp : fir_Op<"alloca", [
   let hasVerifier = 1;
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
-      "llvm::StringRef":$bindcName, CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
+    OpBuilder<(ins "aiir::Type":$inType, "llvm::StringRef":$uniqName,
+      "llvm::StringRef":$bindcName, CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "aiir::Type":$inType, "llvm::StringRef":$uniqName,
       "llvm::StringRef":$bindcName, "bool":$pinned,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
-      "bool":$pinned, CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "mlir::Type":$inType, "bool":$pinned,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "mlir::Type":$inType,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "aiir::Type":$inType, "llvm::StringRef":$uniqName,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "aiir::Type":$inType, "llvm::StringRef":$uniqName,
+      "bool":$pinned, CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "aiir::Type":$inType, "bool":$pinned,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "aiir::Type":$inType,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>];
 
   let extraClassDeclaration = [{
-    mlir::Type getAllocatedType();
+    aiir::Type getAllocatedType();
     bool hasLenParams() { return !getTypeparams().empty(); }
     bool hasShapeOperands() { return !getShape().empty(); }
     bool isDynamic() {return hasLenParams() || hasShapeOperands();}
@@ -208,12 +208,12 @@ def fir_AllocaOp : fir_Op<"alloca", [
     operand_range getLenParams() { return getTypeparams(); }
     unsigned numShapeOperands() { return getShape().size(); }
     operand_range getShapeOperands() { return getShape(); }
-    static mlir::Type getRefTy(mlir::Type ty);
+    static aiir::Type getRefTy(aiir::Type ty);
     /// Is this an operation that owns the alloca directly made in its region?
-    static bool ownsNestedAlloca(mlir::Operation* op);
+    static bool ownsNestedAlloca(aiir::Operation* op);
     /// Get the parent region that owns this alloca. Nullptr if none can be
     /// identified.
-    mlir::Region* getOwnerRegion();
+    aiir::Region* getOwnerRegion();
   }];
 }
 
@@ -245,28 +245,28 @@ def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$in_type, "llvm::StringRef":$uniq_name,
-      "llvm::StringRef":$bindc_name, CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "mlir::Type":$in_type, "llvm::StringRef":$uniq_name,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "mlir::Type":$in_type,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::ValueRange", "{}">:$shape,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+    OpBuilder<(ins "aiir::Type":$in_type, "llvm::StringRef":$uniq_name,
+      "llvm::StringRef":$bindc_name, CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "aiir::Type":$in_type, "llvm::StringRef":$uniq_name,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "aiir::Type":$in_type,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>];
 
   let extraClassDeclaration = [{
-    mlir::Type getAllocatedType();
+    aiir::Type getAllocatedType();
     bool hasLenParams() { return !getTypeparams().empty(); }
     bool hasShapeOperands() { return !getShape().empty(); }
     unsigned numLenParams() { return getTypeparams().size(); }
     operand_range getLenParams() { return getTypeparams(); }
     unsigned numShapeOperands() { return getShape().size(); }
     operand_range getShapeOperands() { return getShape(); }
-    static mlir::Type getRefTy(mlir::Type ty);
+    static aiir::Type getRefTy(aiir::Type ty);
   }];
 }
 
@@ -316,13 +316,13 @@ def fir_LoadOp : fir_OneResultOp<"load", [
       OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
       OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
-  let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
-                  OpBuilder<(ins "mlir::Type":$resTy, "mlir::Value":$refVal)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$refVal)>,
+                  OpBuilder<(ins "aiir::Type":$resTy, "aiir::Value":$refVal)>];
 
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
+    static aiir::ParseResult getElementOf(aiir::Type &ele, aiir::Type ref);
   }];
 }
 
@@ -353,13 +353,13 @@ def fir_StoreOp : fir_Op<"store", [
       OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
       OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
-  let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$value, "aiir::Value":$memref)>];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static mlir::Type elementType(mlir::Type refType);
+    static aiir::Type elementType(aiir::Type refType);
   }];
 }
 
@@ -425,8 +425,8 @@ def fir_CopyOp : fir_Op<"copy", [DeclareOpInterfaceMethods<MemoryEffectsOpInterf
                        AnyRefOfConstantSizeAggregateType:$destination,
                        OptionalAttr<UnitAttr>:$no_overlap);
 
-  let builders = [OpBuilder<(ins "mlir::Value":$source,
-                                 "mlir::Value":$destination,
+  let builders = [OpBuilder<(ins "aiir::Value":$source,
+                                 "aiir::Value":$destination,
                                   CArg<"bool", "false">:$no_overlap)>];
 
   let assemblyFormat = [{
@@ -586,7 +586,7 @@ class fir_SwitchTerminatorOp<string mnemonic, list<Trait> traits = []> :
   let successors = (successor VariadicSuccessor<AnySuccessor>:$targets);
 
   string extraSwitchClassDeclaration = [{
-    using Conditions = mlir::Value;
+    using Conditions = aiir::Value;
 
     static constexpr llvm::StringRef getCasesAttr() { return "case_tags"; }
 
@@ -596,36 +596,36 @@ class fir_SwitchTerminatorOp<string mnemonic, list<Trait> traits = []> :
     }
 
     // The selector is the value being tested to determine the destination
-    mlir::Value getSelector(llvm::ArrayRef<mlir::Value> operands) {
+    aiir::Value getSelector(llvm::ArrayRef<aiir::Value> operands) {
       return operands[0];
     }
-    mlir::Value getSelector(mlir::ValueRange operands) {
+    aiir::Value getSelector(aiir::ValueRange operands) {
       return operands.front();
     }
 
     // The number of blocks that may be branched to
     unsigned getNumDest() { return (*this)->getNumSuccessors(); }
 
-    std::optional<mlir::OperandRange> getCompareOperands(unsigned cond);
-    std::optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
-        llvm::ArrayRef<mlir::Value> operands, unsigned cond);
-    std::optional<mlir::ValueRange> getCompareOperands(
-        mlir::ValueRange operands, unsigned cond);
+    std::optional<aiir::OperandRange> getCompareOperands(unsigned cond);
+    std::optional<llvm::ArrayRef<aiir::Value>> getCompareOperands(
+        llvm::ArrayRef<aiir::Value> operands, unsigned cond);
+    std::optional<aiir::ValueRange> getCompareOperands(
+        aiir::ValueRange operands, unsigned cond);
 
-    std::optional<llvm::ArrayRef<mlir::Value>> getSuccessorOperands(
-        llvm::ArrayRef<mlir::Value> operands, unsigned cond);
-    std::optional<mlir::ValueRange> getSuccessorOperands(
-        mlir::ValueRange operands, unsigned cond);
+    std::optional<llvm::ArrayRef<aiir::Value>> getSuccessorOperands(
+        llvm::ArrayRef<aiir::Value> operands, unsigned cond);
+    std::optional<aiir::ValueRange> getSuccessorOperands(
+        aiir::ValueRange operands, unsigned cond);
 
     // Helper function to deal with Optional operand forms
-    void printSuccessorAtIndex(mlir::OpAsmPrinter &p, unsigned i) {
+    void printSuccessorAtIndex(aiir::OpAsmPrinter &p, unsigned i) {
       auto *succ = getSuccessor(i);
       auto ops = getSuccessorOperands(i);
       p.printSuccessorAndUseList(succ, ops.getForwardedOperands());
     }
 
-    mlir::ArrayAttr getCases() {
-      return (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr());
+    aiir::ArrayAttr getCases() {
+      return (*this)->getAttrOfType<aiir::ArrayAttr>(getCasesAttr());
     }
 
     unsigned targetOffsetSize();
@@ -636,14 +636,14 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     list<Trait> traits = []> : fir_SwitchTerminatorOp<mnemonic, traits> {
 
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<(ins "mlir::Value":$selector,
+  let builders = [OpBuilder<(ins "aiir::Value":$selector,
     "llvm::ArrayRef<int64_t>":$compareOperands,
-    "llvm::ArrayRef<mlir::Block *>":$destinations,
-    CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
-    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
+    "llvm::ArrayRef<aiir::Block *>":$destinations,
+    CArg<"llvm::ArrayRef<aiir::ValueRange>", "{}">:$destOperands,
+    CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes),
     [{
       $_state.addOperands(selector);
-      llvm::SmallVector<mlir::Attribute> ivalues;
+      llvm::SmallVector<aiir::Attribute> ivalues;
       for (auto iv : compareOperands)
         ivalues.push_back($_builder.getI64IntegerAttr(iv));
       ivalues.push_back($_builder.getUnitAttr());
@@ -743,18 +743,18 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "mlir::Value":$selector,
-      "llvm::ArrayRef<mlir::Attribute>":$compareAttrs,
-      "llvm::ArrayRef<mlir::ValueRange>":$cmpOperands,
-      "llvm::ArrayRef<mlir::Block *>":$destinations,
-      CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "mlir::Value":$selector,
-      "llvm::ArrayRef<mlir::Attribute>":$compareAttrs,
-      "llvm::ArrayRef<mlir::Value>":$cmpOpList,
-      "llvm::ArrayRef<mlir::Block *>":$destinations,
-      CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+    OpBuilder<(ins "aiir::Value":$selector,
+      "llvm::ArrayRef<aiir::Attribute>":$compareAttrs,
+      "llvm::ArrayRef<aiir::ValueRange>":$cmpOperands,
+      "llvm::ArrayRef<aiir::Block *>":$destinations,
+      CArg<"llvm::ArrayRef<aiir::ValueRange>", "{}">:$destOperands,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "aiir::Value":$selector,
+      "llvm::ArrayRef<aiir::Attribute>":$compareAttrs,
+      "llvm::ArrayRef<aiir::Value>":$cmpOpList,
+      "llvm::ArrayRef<aiir::Block *>":$destinations,
+      CArg<"llvm::ArrayRef<aiir::ValueRange>", "{}">:$destOperands,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -785,11 +785,11 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
   }];
 
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<(ins "mlir::Value":$selector,
-    "llvm::ArrayRef<mlir::Attribute>":$typeOperands,
-    "llvm::ArrayRef<mlir::Block *>":$destinations,
-    CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$destOperands,
-    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$selector,
+    "llvm::ArrayRef<aiir::Attribute>":$typeOperands,
+    "llvm::ArrayRef<aiir::Block *>":$destinations,
+    CArg<"llvm::ArrayRef<aiir::ValueRange>", "{}">:$destOperands,
+    CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -895,14 +895,14 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
   let results = (outs BoxOrClassType);
 
   let builders = [
-    OpBuilder<(ins "llvm::ArrayRef<mlir::Type>":$resultTypes,
-      "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
-      CArg<"mlir::Value", "{}">:$slice,
-      CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::Value", "{}">:$sourceBox,
-      CArg<"mlir::IntegerAttr", "{}">:$allocator_idx),
+    OpBuilder<(ins "llvm::ArrayRef<aiir::Type>":$resultTypes,
+      "aiir::Value":$memref, CArg<"aiir::Value", "{}">:$shape,
+      CArg<"aiir::Value", "{}">:$slice,
+      CArg<"aiir::ValueRange", "{}">:$typeparams,
+      CArg<"aiir::Value", "{}">:$sourceBox,
+      CArg<"aiir::IntegerAttr", "{}">:$allocator_idx),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    typeparams, sourceBox, mlir::AffineMapAttr{},
+                    typeparams, sourceBox, aiir::AffineMapAttr{},
                     allocator_idx); }]>
   ];
 
@@ -922,11 +922,11 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
           + numLenParams();
     }
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+    aiir::Value getViewSource(aiir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult);
 
     // Interface method for ConditionallySpeculatable.
-    mlir::Speculation::Speculatability getSpeculatability();
+    aiir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -985,11 +985,11 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
 
   let extraClassDeclaration = [{
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getBox(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+    aiir::Value getViewSource(aiir::OpResult) { return getBox(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult);
 
     // Interface method for ConditionallySpeculatable.
-    mlir::Speculation::Speculatability getSpeculatability();
+    aiir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1164,15 +1164,15 @@ def fir_BoxAddrOp
 
   let hasFolder = 1;
 
-  let builders = [OpBuilder<(ins "mlir::Value":$val)>];
+  let builders = [OpBuilder<(ins "aiir::Value":$val)>];
 
   let extraClassDeclaration = [{
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getVal(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+    aiir::Value getViewSource(aiir::OpResult) { return getVal(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult);
 
     // Interface method for ConditionallySpeculatable.
-    mlir::Speculation::Speculatability getSpeculatability();
+    aiir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1224,12 +1224,12 @@ def fir_BoxDimsOp
   }];
 
   let extraClassDeclaration = [{
-    mlir::Type getTupleType();
-    mlir::Value getLowerBound() {return getResult(0);};
-    mlir::Value getExtent() {return getResult(1);};
-    mlir::Value getByteStride() {return getResult(2);};
+    aiir::Type getTupleType();
+    aiir::Value getLowerBound() {return getResult(0);};
+    aiir::Value getExtent() {return getResult(1);};
+    aiir::Value getByteStride() {return getResult(2);};
     // Interface method for ConditionallySpeculatable.
-    mlir::Speculation::Speculatability getSpeculatability();
+    aiir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1546,7 +1546,7 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    std::vector<mlir::Value> getExtents();
+    std::vector<aiir::Value> getExtents();
   }];
 }
 
@@ -1896,8 +1896,8 @@ def fir_ArrayCoorOp
   let hasCanonicalizer = 1;
   let extraClassDeclaration = [{
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+    aiir::Value getViewSource(aiir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult);
   }];
 }
 
@@ -1947,21 +1947,21 @@ def fir_CoordinateOp
   let hasVerifier = 1;
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$resultType,
-      "mlir::Value":$ref, "mlir::ValueRange":$coor)>,
-    OpBuilder<(ins "mlir::Type":$resultType,
-      "mlir::Value":$ref, "llvm::ArrayRef<fir::IntOrValue>":$coor)>
+    OpBuilder<(ins "aiir::Type":$resultType,
+      "aiir::Value":$ref, "aiir::ValueRange":$coor)>,
+    OpBuilder<(ins "aiir::Type":$resultType,
+      "aiir::Value":$ref, "llvm::ArrayRef<fir::IntOrValue>":$coor)>
   ];
   let extraClassDeclaration = [{
     constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
     CoordinateIndicesAdaptor getIndices();
 
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getRef(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+    aiir::Value getViewSource(aiir::OpResult) { return getRef(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult);
 
     // Interface method for ConditionallySpeculatable.
-    mlir::Speculation::Speculatability getSpeculatability();
+    aiir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -2020,13 +2020,13 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [Pure]> {
   let hasCustomAssemblyFormat = 1;
 
   let builders = [OpBuilder<(ins "llvm::StringRef":$fieldName,
-      "mlir::Type":$recTy, CArg<"mlir::ValueRange","{}">:$operands)>];
+      "aiir::Type":$recTy, CArg<"aiir::ValueRange","{}">:$operands)>];
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getFieldAttrName() { return "field_id"; }
     static constexpr llvm::StringRef getTypeAttrName() { return "on_type"; }
     llvm::StringRef getFieldName() { return getFieldId(); }
-    llvm::SmallVector<mlir::Attribute> getAttributes();
+    llvm::SmallVector<aiir::Attribute> getAttributes();
   }];
 }
 
@@ -2056,7 +2056,7 @@ def fir_ShapeOp : fir_Op<"shape", [Pure]> {
 
   let hasVerifier = 1;
 
-  let builders = [OpBuilder<(ins "mlir::ValueRange":$extents)>];
+  let builders = [OpBuilder<(ins "aiir::ValueRange":$extents)>];
 }
 
 def fir_ShapeShiftOp : fir_Op<"shape_shift", [Pure]> {
@@ -2090,8 +2090,8 @@ def fir_ShapeShiftOp : fir_Op<"shape_shift", [Pure]> {
 
   let extraClassDeclaration = [{
     // Logically unzip the origins from the extent values.
-    std::vector<mlir::Value> getOrigins() {
-      std::vector<mlir::Value> result;
+    std::vector<aiir::Value> getOrigins() {
+      std::vector<aiir::Value> result;
       for (auto i : llvm::enumerate(getPairs()))
         if (!(i.index() & 1))
           result.push_back(i.value());
@@ -2099,8 +2099,8 @@ def fir_ShapeShiftOp : fir_Op<"shape_shift", [Pure]> {
     }
 
     // Logically unzip the extents from the origin values.
-    std::vector<mlir::Value> getExtents() {
-      std::vector<mlir::Value> result;
+    std::vector<aiir::Value> getExtents() {
+      std::vector<aiir::Value> result;
       for (auto i : llvm::enumerate(getPairs()))
         if (i.index() & 1)
           result.push_back(i.value());
@@ -2186,16 +2186,16 @@ def fir_SliceOp : fir_Op<"slice", [Pure, AttrSizedOperandSegments]> {
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::ValueRange":$triples,
-      CArg<"mlir::ValueRange", "{}">:$fields,
-      CArg<"mlir::ValueRange", "{}">:$substr)>
+    OpBuilder<(ins "aiir::ValueRange":$triples,
+      CArg<"aiir::ValueRange", "{}">:$fields,
+      CArg<"aiir::ValueRange", "{}">:$substr)>
   ];
 
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     unsigned getOutRank() { return getOutputRank(getTriples()); }
-    static unsigned getOutputRank(mlir::ValueRange triples);
+    static unsigned getOutputRank(aiir::ValueRange triples);
   }];
 }
 
@@ -2293,13 +2293,13 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoMemoryEffect]> {
   let hasCustomAssemblyFormat = 1;
 
   let builders = [OpBuilder<(ins "llvm::StringRef":$fieldName,
-      "mlir::Type":$recTy, CArg<"mlir::ValueRange","{}">:$operands)>];
+      "aiir::Type":$recTy, CArg<"aiir::ValueRange","{}">:$operands)>];
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getFieldAttrName() { return "field_id"; }
     static constexpr llvm::StringRef getTypeAttrName() { return "on_type"; }
     llvm::StringRef getParamName() { return getFieldId(); }
-    llvm::SmallVector<mlir::Attribute> getAttributes();
+    llvm::SmallVector<aiir::Attribute> getAttributes();
   }];
 }
 
@@ -2343,7 +2343,7 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
   let summary = "generalized loop operation";
   let description = [{
     Generalized high-level looping construct. This operation is similar to
-    MLIR's `scf.for`.
+    AIIR's `scf.for`.
 
     ```
       %l = arith.constant 0 : index
@@ -2380,35 +2380,35 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
-      "mlir::Value":$step, CArg<"bool", "false">:$unordered,
+    OpBuilder<(ins "aiir::Value":$lowerBound, "aiir::Value":$upperBound,
+      "aiir::Value":$step, CArg<"bool", "false">:$unordered,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "{}">:$iterArgs,
-      CArg<"mlir::ValueRange", "{}">:$reduceOperands,
-      CArg<"llvm::ArrayRef<mlir::Attribute>", "{}">:$reduceAttrs,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
+      CArg<"aiir::ValueRange", "{}">:$iterArgs,
+      CArg<"aiir::ValueRange", "{}">:$reduceOperands,
+      CArg<"llvm::ArrayRef<aiir::Attribute>", "{}">:$reduceAttrs,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>
   ];
 
   let extraClassDeclaration = [{
-    mlir::Value getInductionVar() { return getBody()->getArgument(0); }
-    mlir::OpBuilder getBodyBuilder() {
-      return mlir::OpBuilder(getBody(), std::prev(getBody()->end()));
+    aiir::Value getInductionVar() { return getBody()->getArgument(0); }
+    aiir::OpBuilder getBodyBuilder() {
+      return aiir::OpBuilder(getBody(), std::prev(getBody()->end()));
     }
-    mlir::Block::BlockArgListType getRegionIterArgs() {
+    aiir::Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
-    mlir::Operation::operand_range getIterOperands() {
+    aiir::Operation::operand_range getIterOperands() {
       return getOperands()
           .drop_front(getNumControlOperands() + getNumReduceOperands());
     }
-    llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
+    llvm::MutableArrayRef<aiir::OpOperand> getInitsMutable() {
       return getOperation()->getOpOperands()
           .drop_front(getNumControlOperands() + getNumReduceOperands());
     }
 
-    void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
-    void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }
-    void setStep(mlir::Value step) { (*this)->setOperand(2, step); }
+    void setLowerBound(aiir::Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(aiir::Value bound) { (*this)->setOperand(1, bound); }
+    void setStep(aiir::Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
@@ -2426,7 +2426,7 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     }
     /// Get Number of variadic operands
     unsigned getNumOperands(unsigned idx) {
-      auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
+      auto segments = (*this)->getAttrOfType<aiir::DenseI32ArrayAttr>(
         getOperandSegmentSizeAttr());
       return static_cast<unsigned>(segments[idx]);
     }
@@ -2440,16 +2440,16 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     }
 
     /// Get the body of the loop
-    mlir::Block *getBody() { return &getRegion().front(); }
+    aiir::Block *getBody() { return &getRegion().front(); }
 
     void setUnordered() {
-      setUnorderedAttr(mlir::UnitAttr::get(getContext()));
+      setUnorderedAttr(aiir::UnitAttr::get(getContext()));
     }
 
-    mlir::BlockArgument iterArgToBlockArg(mlir::Value iterArg);
-    void resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
+    aiir::BlockArgument iterArgToBlockArg(aiir::Value iterArg);
+    void resultToSourceOps(llvm::SmallVectorImpl<aiir::Value> &results,
                            unsigned resultNum);
-    mlir::Value blockArgToSourceOp(unsigned blockArgNum);
+    aiir::Value blockArgToSourceOp(unsigned blockArgNum);
   }];
 }
 
@@ -2488,24 +2488,24 @@ def fir_IfOp
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "mlir::Value":$cond, "bool":$withElseRegion)>,
-    OpBuilder<(ins "mlir::TypeRange":$resultTypes, "mlir::Value":$cond,
+    OpBuilder<(ins "aiir::Value":$cond, "bool":$withElseRegion)>,
+    OpBuilder<(ins "aiir::TypeRange":$resultTypes, "aiir::Value":$cond,
         "bool":$withElseRegion)>
   ];
 
   let extraClassDeclaration = [{
-    mlir::OpBuilder getThenBodyBuilder() {
+    aiir::OpBuilder getThenBodyBuilder() {
       assert(!getThenRegion().empty() && "Unexpected empty 'where' region.");
-      mlir::Block &body = getThenRegion().front();
-      return mlir::OpBuilder(&body, std::prev(body.end()));
+      aiir::Block &body = getThenRegion().front();
+      return aiir::OpBuilder(&body, std::prev(body.end()));
     }
-    mlir::OpBuilder getElseBodyBuilder() {
+    aiir::OpBuilder getElseBodyBuilder() {
       assert(!getElseRegion().empty() && "Unexpected empty 'other' region.");
-      mlir::Block &body = getElseRegion().front();
-      return mlir::OpBuilder(&body, std::prev(body.end()));
+      aiir::Block &body = getElseRegion().front();
+      return aiir::OpBuilder(&body, std::prev(body.end()));
     }
 
-    void resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
+    void resultToSourceOps(llvm::SmallVectorImpl<aiir::Value> &results,
                            unsigned resultNum);
 
     /// Returns the display name string for the region_weights attribute.
@@ -2569,37 +2569,37 @@ def fir_IterWhileOp : region_Op<"iterate_while",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
-      "mlir::Value":$step, "mlir::Value":$iterate,
+    OpBuilder<(ins "aiir::Value":$lowerBound, "aiir::Value":$upperBound,
+      "aiir::Value":$step, "aiir::Value":$iterate,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "{}">:$iterArgs,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
+      CArg<"aiir::ValueRange", "{}">:$iterArgs,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attributes)>
   ];
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getFinalValueAttrNameStr() {
       return "finalValue";
     }
-    mlir::Block *getBody() { return &getRegion().front(); }
-    mlir::Value getIterateVar() { return getBody()->getArgument(1); }
-    mlir::Value getInductionVar() { return getBody()->getArgument(0); }
-    mlir::OpBuilder getBodyBuilder() {
-      return mlir::OpBuilder(getBody(), std::prev(getBody()->end()));
+    aiir::Block *getBody() { return &getRegion().front(); }
+    aiir::Value getIterateVar() { return getBody()->getArgument(1); }
+    aiir::Value getInductionVar() { return getBody()->getArgument(0); }
+    aiir::OpBuilder getBodyBuilder() {
+      return aiir::OpBuilder(getBody(), std::prev(getBody()->end()));
     }
-    mlir::Block::BlockArgListType getRegionIterArgs() {
+    aiir::Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
-    mlir::Operation::operand_range getIterOperands() {
+    aiir::Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
     }
-    llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
+    llvm::MutableArrayRef<aiir::OpOperand> getInitsMutable() {
       return
           getOperation()->getOpOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
-    void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }
-    void setStep(mlir::Value step) { (*this)->setOperand(2, step); }
+    void setLowerBound(aiir::Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(aiir::Value bound) { (*this)->setOperand(1, bound); }
+    void setStep(aiir::Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
@@ -2616,10 +2616,10 @@ def fir_IterWhileOp : region_Op<"iterate_while",
       return (*this)->getNumOperands() - getNumControlOperands();
     }
 
-    mlir::BlockArgument iterArgToBlockArg(mlir::Value iterArg);
-    void resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
+    aiir::BlockArgument iterArgToBlockArg(aiir::Value iterArg);
+    void resultToSourceOps(llvm::SmallVectorImpl<aiir::Value> &results,
                            unsigned resultNum);
-    mlir::Value blockArgToSourceOp(unsigned blockArgNum);
+    aiir::Value blockArgToSourceOp(unsigned blockArgNum);
   }];
 }
 
@@ -2650,57 +2650,57 @@ def fir_CallOp : fir_Op<"call",
       OptionalAttr<fir_FortranInlineAttr>:$inline_attr,
       OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups,
       DefaultValuedAttr<Arith_FastMathAttr,
-                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+                        "::aiir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs Variadic<AnyType>);
 
   let hasCustomAssemblyFormat = 1;
 
   let builders = [
-    OpBuilder<(ins "mlir::func::FuncOp":$callee,
-        CArg<"mlir::ValueRange", "{}">:$operands)>,
-    OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
-        "llvm::ArrayRef<mlir::Type>":$results,
-        CArg<"mlir::ValueRange", "{}">:$operands)>,
+    OpBuilder<(ins "aiir::func::FuncOp":$callee,
+        CArg<"aiir::ValueRange", "{}">:$operands)>,
+    OpBuilder<(ins "aiir::SymbolRefAttr":$callee,
+        "llvm::ArrayRef<aiir::Type>":$results,
+        CArg<"aiir::ValueRange", "{}">:$operands)>,
     OpBuilder<(ins "llvm::StringRef":$callee,
-        "llvm::ArrayRef<mlir::Type>":$results,
-        CArg<"mlir::ValueRange", "{}">:$operands),
+        "llvm::ArrayRef<aiir::Type>":$results,
+        CArg<"aiir::ValueRange", "{}">:$operands),
     [{
       build($_builder, $_state,
-          mlir::SymbolRefAttr::get($_builder.getContext(), callee), results,
+          aiir::SymbolRefAttr::get($_builder.getContext(), callee), results,
           operands);
     }]>];
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getCalleeAttrNameStr() { return "callee"; }
 
-    mlir::FunctionType getFunctionType();
+    aiir::FunctionType getFunctionType();
 
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
-      if ((*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+      if ((*this)->getAttrOfType<aiir::SymbolRefAttr>(getCalleeAttrName()))
         return {arg_operand_begin(), arg_operand_end()};
       return {arg_operand_begin() + 1, arg_operand_end()};
     }
 
-    mlir::MutableOperandRange getArgOperandsMutable() {
-      if ((*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+    aiir::MutableOperandRange getArgOperandsMutable() {
+      if ((*this)->getAttrOfType<aiir::SymbolRefAttr>(getCalleeAttrName()))
         return getArgsMutable();
-      return mlir::MutableOperandRange(*this, 1, getArgs().size() - 1);
+      return aiir::MutableOperandRange(*this, 1, getArgs().size() - 1);
     }
 
     operand_iterator arg_operand_begin() { return operand_begin(); }
     operand_iterator arg_operand_end() { return operand_end(); }
 
     /// Return the callee of this operation.
-    mlir::CallInterfaceCallable getCallableForCallee() {
+    aiir::CallInterfaceCallable getCallableForCallee() {
       if (auto calling =
-          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+          (*this)->getAttrOfType<aiir::SymbolRefAttr>(getCalleeAttrName()))
         return calling;
       return getOperand(0);
     }
 
     /// Set the callee for this operation.
-    void setCalleeFromCallable(mlir::CallInterfaceCallable callee);
+    void setCalleeFromCallable(aiir::CallInterfaceCallable callee);
   }];
 }
 
@@ -2743,7 +2743,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
   }];
 
   let extraClassDeclaration = [{
-    mlir::FunctionType getFunctionType();
+    aiir::FunctionType getFunctionType();
     operand_range getArgOperands() {
       return {arg_operand_begin(), arg_operand_end()};
     }
@@ -2794,9 +2794,9 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoMemoryEffect]> {
     static constexpr const char *xlist() { return "xlist"; }
 
     // Get the LEN attribute of this character constant
-    mlir::Attribute getSize() { return (*this)->getAttr(size()); }
+    aiir::Attribute getSize() { return (*this)->getAttr(size()); }
     // Get the string value of this character constant
-    mlir::Attribute getValue() {
+    aiir::Attribute getValue() {
       if (auto attr = (*this)->getAttr(value()))
         return attr;
       return (*this)->getAttr(xlist());
@@ -2833,7 +2833,7 @@ class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_ArithmeticOp<mnemonic, traits>,
       Arguments<(ins AnyFirComplex:$lhs, AnyFirComplex:$rhs,
           DefaultValuedAttr<Arith_FastMathAttr,
-                            "::mlir::arith::FastMathFlags::none">:$fastmath)>;
+                            "::aiir::arith::FastMathFlags::none">:$fastmath)>;
 
 def fir_AddcOp : ComplexArithmeticOp<"addc",
     [Commutative, DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
@@ -2857,14 +2857,14 @@ def fir_CmpcOp : fir_Op<"cmpc",
   let arguments = (ins
       AnyFirComplex:$lhs,
       AnyFirComplex:$rhs,
-      DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
+      DefaultValuedAttr<Arith_FastMathAttr, "::aiir::arith::FastMathFlags::none">:$fastmath);
 
   let results = (outs AnyLogicalLike);
 
   let hasCustomAssemblyFormat = 1;
 
-  let builders = [OpBuilder<(ins "mlir::arith::CmpFPredicate":$predicate,
-    "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+  let builders = [OpBuilder<(ins "aiir::arith::CmpFPredicate":$predicate,
+    "aiir::Value":$lhs, "aiir::Value":$rhs), [{
       buildCmpCOp($_builder, $_state, predicate, lhs, rhs);
   }]>];
 
@@ -2873,12 +2873,12 @@ def fir_CmpcOp : fir_Op<"cmpc",
       return "predicate";
     }
 
-    mlir::arith::CmpFPredicate getPredicate() {
-      return (mlir::arith::CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
+    aiir::arith::CmpFPredicate getPredicate() {
+      return (aiir::arith::CmpFPredicate)(*this)->getAttrOfType<aiir::IntegerAttr>(
           getPredicateAttrName()).getInt();
     }
 
-    static mlir::arith::CmpFPredicate getPredicateByName(llvm::StringRef name);
+    static aiir::arith::CmpFPredicate getPredicateByName(llvm::StringRef name);
   }];
 }
 
@@ -2955,22 +2955,22 @@ def fir_ConvertOp
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static bool isInteger(mlir::Type ty);
-    static bool isIntegerCompatible(mlir::Type ty);
-    static bool isFloatCompatible(mlir::Type ty);
-    static bool isPointerCompatible(mlir::Type ty);
-    static bool canBeConverted(mlir::Type inType, mlir::Type outType);
-    static bool areVectorsCompatible(mlir::Type inTy, mlir::Type outTy);
+    static bool isInteger(aiir::Type ty);
+    static bool isIntegerCompatible(aiir::Type ty);
+    static bool isFloatCompatible(aiir::Type ty);
+    static bool isPointerCompatible(aiir::Type ty);
+    static bool canBeConverted(aiir::Type inType, aiir::Type outType);
+    static bool areVectorsCompatible(aiir::Type inTy, aiir::Type outTy);
 
     // ViewLikeOpInterface methods:
-    mlir::Value getViewSource() { return getValue(); }
+    aiir::Value getViewSource() { return getValue(); }
 
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+    aiir::Value getViewSource(aiir::OpResult) { return getValue(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult) { return 0; }
 
     // Interface method for ConditionallySpeculatable.
-    mlir::Speculation::Speculatability getSpeculatability();
+    aiir::Speculation::Speculatability getSpeculatability();
   }];
   let hasCanonicalizer = 1;
 }
@@ -3003,15 +3003,15 @@ def fir_BitcastOp : fir_SimpleOneResultOp<"bitcast", [Pure]> {
   let hasVerifier = 1;
 }
 
-def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
-    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType, "
-              "fir::UnsignedType, fir::LogicalType, mlir::FloatType, "
-              "mlir::ComplexType, "
-              "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
+def FortranTypeAttr : Attr<And<[CPred<"aiir::isa<aiir::TypeAttr>($_self)">,
+    Or<[CPred<"aiir::isa<fir::CharacterType, fir::IntegerType, "
+              "fir::UnsignedType, fir::LogicalType, aiir::FloatType, "
+              "aiir::ComplexType, "
+              "fir::RecordType>(aiir::cast<aiir::TypeAttr>($_self).getValue())"
     >]>]>, "Fortran surface type"> {
-  let storageType = [{ ::mlir::TypeAttr }];
-  let returnType = "mlir::Type";
-  let convertFromStorage = "mlir::cast<mlir::Type>($_self.getValue())";
+  let storageType = [{ ::aiir::TypeAttr }];
+  let returnType = "aiir::Type";
+  let convertFromStorage = "aiir::cast<aiir::Type>($_self.getValue())";
 }
 
 def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
@@ -3031,7 +3031,7 @@ def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
-  let builders = [OpBuilder<(ins "mlir::TypeAttr":$inty)>];
+  let builders = [OpBuilder<(ins "aiir::TypeAttr":$inty)>];
 }
 
 def fir_NoReassocOp : fir_OneResultOp<"no_reassoc",
@@ -3103,53 +3103,53 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
+    OpBuilder<(ins "llvm::StringRef":$name, "aiir::Type":$type,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
-      "bool":$isTarget, "mlir::Type":$type,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
-    OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      CArg<"mlir::StringAttr", "{}">:$linkage,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
+      "bool":$isTarget, "aiir::Type":$type,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attrs)>,
+    OpBuilder<(ins "llvm::StringRef":$name, "aiir::Type":$type,
+      CArg<"aiir::StringAttr", "{}">:$linkage,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
       "bool":$isTarget,
-      "mlir::Type":$type, CArg<"mlir::StringAttr", "{}">:$linkage,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
-    OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      "mlir::Attribute":$initVal, CArg<"mlir::StringAttr", "{}">:$linkage,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
+      "aiir::Type":$type, CArg<"aiir::StringAttr", "{}">:$linkage,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attrs)>,
+    OpBuilder<(ins "llvm::StringRef":$name, "aiir::Type":$type,
+      "aiir::Attribute":$initVal, CArg<"aiir::StringAttr", "{}">:$linkage,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
-      "bool":$isTarget, "mlir::Type":$type, "mlir::Attribute":$initVal,
-      CArg<"mlir::StringAttr", "{}">:$linkage,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
+      "bool":$isTarget, "aiir::Type":$type, "aiir::Attribute":$initVal,
+      CArg<"aiir::StringAttr", "{}">:$linkage,
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = [{
     /// The semantic type of the global
-    mlir::Type resultType();
+    aiir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
-    mlir::Attribute getValueOrNull() { return getInitVal().value_or(mlir::Attribute()); }
+    aiir::Attribute getValueOrNull() { return getInitVal().value_or(aiir::Attribute()); }
 
     /// Append the next initializer value to the `GlobalOp` to construct
     /// the variable's initial value.
-    void appendInitialValue(mlir::Operation *op);
+    void appendInitialValue(aiir::Operation *op);
 
     /// A GlobalOp has one block.
-    mlir::Block &getBlock() { return getRegion().front(); }
+    aiir::Block &getBlock() { return getRegion().front(); }
 
     /// Determine if `linkage` is a supported keyword
-    static mlir::ParseResult verifyValidLinkage(llvm::StringRef linkage);
+    static aiir::ParseResult verifyValidLinkage(llvm::StringRef linkage);
 
     bool hasInitializationBody() {
       return ((*this)->getNumRegions() == 1) && !getRegion().empty() &&
-        !mlir::isa<fir::FirEndOp>(getBlock().front());
+        !aiir::isa<fir::FirEndOp>(getBlock().front());
     }
 
-    mlir::FlatSymbolRefAttr getSymbol() {
-      return mlir::FlatSymbolRefAttr::get(getContext(),
-          (*this)->getAttrOfType<mlir::StringAttr>(
-              mlir::SymbolTable::getSymbolAttrName()).getValue());
+    aiir::FlatSymbolRefAttr getSymbol() {
+      return aiir::FlatSymbolRefAttr::get(getContext(),
+          (*this)->getAttrOfType<aiir::StringAttr>(
+              aiir::SymbolTable::getSymbolAttrName()).getValue());
     }
 
     bool isInitialized() {
@@ -3292,7 +3292,7 @@ def fir_TypeInfoOp : fir_Op<"type_info",
 
   let builders = [
     OpBuilder<(ins "fir::RecordType":$type, "fir::RecordType":$parent_type,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>
+      CArg<"llvm::ArrayRef<aiir::NamedAttribute>", "{}">:$attrs)>
   ];
 
   let assemblyFormat = [{
@@ -3305,11 +3305,11 @@ def fir_TypeInfoOp : fir_Op<"type_info",
 
   let extraClassDeclaration = [{
     fir::RecordType getRecordType() {
-      return mlir::cast<fir::RecordType>(getType());
+      return aiir::cast<fir::RecordType>(getType());
     }
     fir::RecordType getIfParentType() {
       if (auto parentType = getParentType())
-        return mlir::cast<fir::RecordType>(*parentType);
+        return aiir::cast<fir::RecordType>(*parentType);
       return {};
     }
     std::optional<llvm::StringRef> getIfParentName() {
@@ -3491,8 +3491,8 @@ def fir_DeclareOp
 
   let extraClassDeclaration = [{
     // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+    aiir::Value getViewSource(aiir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(aiir::OpResult) { return 0; }
   }];
 
   let hasVerifier = 1;
@@ -3575,7 +3575,7 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$boxRef, "fir::BoxFieldAttr":$field)>
+    OpBuilder<(ins "aiir::Value":$boxRef, "fir::BoxFieldAttr":$field)>
   ];
 }
 
@@ -3589,7 +3589,7 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
     operations representing declarations of dummy arguments of a subroutine
     use the result of this operation. This allows recognizing the references
     of these dummy arguments as belonging to the same runtime instance
-    of the subroutine even after MLIR inlining. Thus, the Fortran aliasing
+    of the subroutine even after AIIR inlining. Thus, the Fortran aliasing
     rules might be applied to those references based on the original
     declarations of the dummy arguments.
     For example:
@@ -3605,7 +3605,7 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
         end subroutine inner
       end subroutine test
     ```
-    After MLIR inlining this may look like this:
+    After AIIR inlining this may look like this:
     ```
       func.func @_QPtest(
           %arg0: !fir.ref<f32> {fir.target},
@@ -3686,7 +3686,7 @@ def fir_PackArrayOp
         Even though the array is fully represented with a box, the explicit
         length parameters might be specified to simplify computing
         the size of the array's element in compilation time (e.g. constant
-        length parameters might be propagated after MLIR inlining).
+        length parameters might be propagated after AIIR inlining).
       - optional constraints attributes:
         * max_size is an unsigned integer attribute specifying the maximum
           byte size of an array that is eligible for repacking.
@@ -3889,7 +3889,7 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
     referenced by other dialect ops.
 
     The `type` attribute is the type of the value being localized. This type
-    will be implicitly allocated in MLIR->LLVMIR conversion and passed as the
+    will be implicitly allocated in AIIR->LLVMIR conversion and passed as the
     second argument to the init region. Therefore the type of arguments to
     the regions should be a type which represents a pointer to `type`.
 
@@ -3914,18 +3914,18 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
   }];
 
   let extraClassDeclaration = [{
-    mlir::BlockArgument getInitMoldArg() {
+    aiir::BlockArgument getInitMoldArg() {
       auto &region = getInitRegion();
       return region.empty() ? nullptr : region.getArgument(0);
     }
-    mlir::BlockArgument getInitPrivateArg() {
+    aiir::BlockArgument getInitPrivateArg() {
       auto &region = getInitRegion();
       return region.empty() ? nullptr : region.getArgument(1);
     }
 
     /// Returns true if the init region might read from the mold argument
     bool initReadsFromMold() {
-      mlir::BlockArgument moldArg = getInitMoldArg();
+      aiir::BlockArgument moldArg = getInitMoldArg();
       return moldArg && !moldArg.use_empty();
     }
 
@@ -3934,9 +3934,9 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
     /// type (pointing to the type allocated by this op).
     /// This method will return Type{nullptr} if there are no nested
     /// regions.
-    mlir::Type getArgType() {
-      for (mlir::Region *region : getRegions())
-        for (mlir::Type ty : region->getArgumentTypes())
+    aiir::Type getArgType() {
+      for (aiir::Region *region : getRegions())
+        for (aiir::Type ty : region->getArgumentTypes())
           return ty;
       return nullptr;
     }
@@ -3986,7 +3986,7 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
          boxed-value. This is used, in particular, for GPU reductions in order
          know where partial reduction results are stored in remote lanes.
 
-    Note that the MLIR type system does not allow for type-polymorphic
+    Note that the AIIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
     element and accumulator types.
 
@@ -4018,32 +4018,32 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
                        "( `data_ptr_ptr` $dataPtrPtrRegion^ )? ";
 
   let extraClassDeclaration = [{
-    mlir::BlockArgument getAllocMoldArg() {
+    aiir::BlockArgument getAllocMoldArg() {
       auto &region = getAllocRegion();
       return region.empty() ? nullptr : region.getArgument(0);
     }
-    mlir::BlockArgument getInitializerMoldArg() {
+    aiir::BlockArgument getInitializerMoldArg() {
       return getInitializerRegion().getArgument(0);
     }
-    mlir::BlockArgument getInitializerAllocArg() {
+    aiir::BlockArgument getInitializerAllocArg() {
       return getAllocRegion().empty() ?
           nullptr : getInitializerRegion().getArgument(1);
     }
-    mlir::BlockArgument getReductionLhsArg() {
+    aiir::BlockArgument getReductionLhsArg() {
       return getReductionRegion().getArgument(0);
     }
-    mlir::BlockArgument getReductionRhsArg() {
+    aiir::BlockArgument getReductionRhsArg() {
       return getReductionRegion().getArgument(1);
     }
-    mlir::BlockArgument getAtomicReductionLhsArg() {
+    aiir::BlockArgument getAtomicReductionLhsArg() {
       auto &region = getAtomicReductionRegion();
       return region.empty() ? nullptr : region.getArgument(0);
     }
-    mlir::BlockArgument getAtomicReductionRhsArg() {
+    aiir::BlockArgument getAtomicReductionRhsArg() {
       auto &region = getAtomicReductionRegion();
       return region.empty() ? nullptr : region.getArgument(1);
     }
-    mlir::BlockArgument getCleanupAllocArg() {
+    aiir::BlockArgument getCleanupAllocArg() {
       auto &region = getCleanupRegion();
       return region.empty() ? nullptr : region.getArgument(0);
     }
@@ -4201,16 +4201,16 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
       return getLocalOperandsStart() + getNumLocalOperands();
     }
 
-    mlir::Block::BlockArgListType getInductionVars() {
+    aiir::Block::BlockArgListType getInductionVars() {
       return getBody()->getArguments().slice(0, getNumInductionVars());
     }
 
-    mlir::Block::BlockArgListType getRegionLocalArgs() {
+    aiir::Block::BlockArgListType getRegionLocalArgs() {
       return getBody()->getArguments().slice(getNumInductionVars(),
                                              getNumLocalOperands());
     }
 
-    mlir::Block::BlockArgListType getRegionReduceArgs() {
+    aiir::Block::BlockArgListType getRegionReduceArgs() {
       return getBody()->getArguments().slice(getNumInductionVars()
                                                + getNumLocalOperands(),
                                              getNumReduceOperands());

@@ -9,7 +9,7 @@
 #ifndef FORTRAN_UTILS_OPENMP_H_
 #define FORTRAN_UTILS_OPENMP_H_
 
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace fir {
 class FirOpBuilder;
@@ -24,18 +24,18 @@ namespace Fortran::utils::openmp {
 /// correspond to operation arguments in the OpenMPOps.td file, see op docs for
 /// more details.
 ///
-/// \param [in] builder - MLIR operation builder.
+/// \param [in] builder - AIIR operation builder.
 /// \param [in] loc     - Source location of the created op.
-mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
-    mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
-    llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
-    llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
-    mlir::omp::ClauseMapFlags mapType,
-    mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
+aiir::omp::MapInfoOp createMapInfoOp(aiir::OpBuilder &builder,
+    aiir::Location loc, aiir::Value baseAddr, aiir::Value varPtrPtr,
+    llvm::StringRef name, llvm::ArrayRef<aiir::Value> bounds,
+    llvm::ArrayRef<aiir::Value> members, aiir::ArrayAttr membersIndex,
+    aiir::omp::ClauseMapFlags mapType,
+    aiir::omp::VariableCaptureKind mapCaptureType, aiir::Type retTy,
     bool partialMap = false,
-    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
+    aiir::FlatSymbolRefAttr mapperId = aiir::FlatSymbolRefAttr());
 
-/// For an mlir value that does not have storage, allocate temporary storage
+/// For an aiir value that does not have storage, allocate temporary storage
 /// (outside the target region), store the value in that storage, and map the
 /// storage to the target region.
 ///
@@ -46,8 +46,8 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
 /// op.
 ///
 /// \returns The loaded mapped value inside the target region.
-mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
-    mlir::omp::TargetOp targetOp, mlir::Value val,
+aiir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
+    aiir::omp::TargetOp targetOp, aiir::Value val,
     llvm::StringRef name = "tmp.map");
 
 /// For values used inside a target region but defined outside, either clone
@@ -59,13 +59,13 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
 /// \param targetOp     - The target that needs to be extended by clones and/or
 /// maps.
 void cloneOrMapRegionOutsiders(
-    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp);
+    fir::FirOpBuilder &firOpBuilder, aiir::omp::TargetOp targetOp);
 
 using RecordMemberMapperMangler =
     std::function<void(std::string &mapperId, llvm::StringRef memberName)>;
 
-mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
-    fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
+aiir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
+    fir::FirOpBuilder &firOpBuilder, aiir::Location loc,
     fir::RecordType recordType, llvm::StringRef mapperNameStr,
     RecordMemberMapperMangler mangler = {});
 } // namespace Fortran::utils::openmp

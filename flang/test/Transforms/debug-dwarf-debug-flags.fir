@@ -1,6 +1,6 @@
 // Test the dwarf-debug-flags option will show up in the generated debug info.
 // RUN: fir-opt --add-debug-info="debug-level=Full dwarf-debug-flags=\"-grecord-command-line -O2\"" \
-// RUN:   --mlir-print-debuginfo %s | FileCheck --check-prefix=CHECK-FLAGS %s
+// RUN:   --aiir-print-debuginfo %s | FileCheck --check-prefix=CHECK-FLAGS %s
 
 module {
   func.func @_QPs() {

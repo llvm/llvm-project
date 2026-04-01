@@ -13,8 +13,8 @@
 ! CHECK-DRIVER: "-ftime-report"
 
 ! CHECK-COMMON: Flang execution timing report
-! CHECK-COMMON: MLIR generation
-! CHECK-COMMON: MLIR translation/optimization
+! CHECK-COMMON: AIIR generation
+! CHECK-COMMON: AIIR translation/optimization
 ! CHECK-COMMON: LLVM IR generation
 ! CHECK-COMMON: LLVM IR optimizations
 ! CHECK-COMMON: Assembly/Object code generation

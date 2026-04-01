@@ -6,26 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinOps.h"
 #include "llvm/TargetParser/Host.h"
 
-void fir::setTargetTriple(mlir::ModuleOp mod, llvm::StringRef triple) {
+void fir::setTargetTriple(aiir::ModuleOp mod, llvm::StringRef triple) {
   auto target = fir::determineTargetTriple(triple);
-  mod->setAttr(mlir::LLVM::LLVMDialect::getTargetTripleAttrName(),
-               mlir::StringAttr::get(mod.getContext(), target));
+  mod->setAttr(aiir::LLVM::LLVMDialect::getTargetTripleAttrName(),
+               aiir::StringAttr::get(mod.getContext(), target));
 }
 
-llvm::Triple fir::getTargetTriple(mlir::ModuleOp mod) {
-  if (auto target = mod->getAttrOfType<mlir::StringAttr>(
-          mlir::LLVM::LLVMDialect::getTargetTripleAttrName()))
+llvm::Triple fir::getTargetTriple(aiir::ModuleOp mod) {
+  if (auto target = mod->getAttrOfType<aiir::StringAttr>(
+          aiir::LLVM::LLVMDialect::getTargetTripleAttrName()))
     return llvm::Triple(target.getValue());
   return llvm::Triple(llvm::sys::getDefaultTargetTriple());
 }
@@ -33,45 +33,45 @@ llvm::Triple fir::getTargetTriple(mlir::ModuleOp mod) {
 static constexpr const char *kindMapName = "fir.kindmap";
 static constexpr const char *defKindName = "fir.defaultkind";
 
-void fir::setKindMapping(mlir::ModuleOp mod, fir::KindMapping &kindMap) {
+void fir::setKindMapping(aiir::ModuleOp mod, fir::KindMapping &kindMap) {
   auto *ctx = mod.getContext();
-  mod->setAttr(kindMapName, mlir::StringAttr::get(ctx, kindMap.mapToString()));
+  mod->setAttr(kindMapName, aiir::StringAttr::get(ctx, kindMap.mapToString()));
   auto defs = kindMap.defaultsToString();
-  mod->setAttr(defKindName, mlir::StringAttr::get(ctx, defs));
+  mod->setAttr(defKindName, aiir::StringAttr::get(ctx, defs));
 }
 
-fir::KindMapping fir::getKindMapping(mlir::ModuleOp mod) {
+fir::KindMapping fir::getKindMapping(aiir::ModuleOp mod) {
   auto *ctx = mod.getContext();
-  if (auto defs = mod->getAttrOfType<mlir::StringAttr>(defKindName)) {
+  if (auto defs = mod->getAttrOfType<aiir::StringAttr>(defKindName)) {
     auto defVals = fir::KindMapping::toDefaultKinds(defs.getValue());
-    if (auto maps = mod->getAttrOfType<mlir::StringAttr>(kindMapName))
+    if (auto maps = mod->getAttrOfType<aiir::StringAttr>(kindMapName))
       return fir::KindMapping(ctx, maps.getValue(), defVals);
     return fir::KindMapping(ctx, defVals);
   }
   return fir::KindMapping(ctx);
 }
 
-fir::KindMapping fir::getKindMapping(mlir::Operation *op) {
-  auto moduleOp = mlir::dyn_cast<mlir::ModuleOp>(op);
+fir::KindMapping fir::getKindMapping(aiir::Operation *op) {
+  auto moduleOp = aiir::dyn_cast<aiir::ModuleOp>(op);
   if (moduleOp)
     return getKindMapping(moduleOp);
 
-  moduleOp = op->getParentOfType<mlir::ModuleOp>();
+  moduleOp = op->getParentOfType<aiir::ModuleOp>();
   return getKindMapping(moduleOp);
 }
 
 static constexpr const char *targetCpuName = "fir.target_cpu";
 
-void fir::setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
+void fir::setTargetCPU(aiir::ModuleOp mod, llvm::StringRef cpu) {
   if (cpu.empty())
     return;
 
   auto *ctx = mod.getContext();
-  mod->setAttr(targetCpuName, mlir::StringAttr::get(ctx, cpu));
+  mod->setAttr(targetCpuName, aiir::StringAttr::get(ctx, cpu));
 }
 
-llvm::StringRef fir::getTargetCPU(mlir::ModuleOp mod) {
-  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(targetCpuName))
+llvm::StringRef fir::getTargetCPU(aiir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<aiir::StringAttr>(targetCpuName))
     return attr.getValue();
 
   return {};
@@ -79,68 +79,68 @@ llvm::StringRef fir::getTargetCPU(mlir::ModuleOp mod) {
 
 static constexpr const char *tuneCpuName = "fir.tune_cpu";
 
-void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
+void fir::setTuneCPU(aiir::ModuleOp mod, llvm::StringRef cpu) {
   if (cpu.empty())
     return;
 
   auto *ctx = mod.getContext();
 
-  mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
+  mod->setAttr(tuneCpuName, aiir::StringAttr::get(ctx, cpu));
 }
 
 static constexpr const char *atomicIgnoreDenormalModeName =
     "fir.atomic_ignore_denormal_mode";
 
-void fir::setAtomicIgnoreDenormalMode(mlir::ModuleOp mod, bool value) {
+void fir::setAtomicIgnoreDenormalMode(aiir::ModuleOp mod, bool value) {
   if (value) {
     auto *ctx = mod.getContext();
-    mod->setAttr(atomicIgnoreDenormalModeName, mlir::UnitAttr::get(ctx));
+    mod->setAttr(atomicIgnoreDenormalModeName, aiir::UnitAttr::get(ctx));
   } else {
     if (mod->hasAttr(atomicIgnoreDenormalModeName))
       mod->removeAttr(atomicIgnoreDenormalModeName);
   }
 }
 
-bool fir::getAtomicIgnoreDenormalMode(mlir::ModuleOp mod) {
+bool fir::getAtomicIgnoreDenormalMode(aiir::ModuleOp mod) {
   return mod->hasAttr(atomicIgnoreDenormalModeName);
 }
 
 static constexpr const char *atomicFineGrainedMemoryName =
     "fir.atomic_fine_grained_memory";
 
-void fir::setAtomicFineGrainedMemory(mlir::ModuleOp mod, bool value) {
+void fir::setAtomicFineGrainedMemory(aiir::ModuleOp mod, bool value) {
   if (value) {
     auto *ctx = mod.getContext();
-    mod->setAttr(atomicFineGrainedMemoryName, mlir::UnitAttr::get(ctx));
+    mod->setAttr(atomicFineGrainedMemoryName, aiir::UnitAttr::get(ctx));
   } else {
     if (mod->hasAttr(atomicFineGrainedMemoryName))
       mod->removeAttr(atomicFineGrainedMemoryName);
   }
 }
 
-bool fir::getAtomicFineGrainedMemory(mlir::ModuleOp mod) {
+bool fir::getAtomicFineGrainedMemory(aiir::ModuleOp mod) {
   return mod->hasAttr(atomicFineGrainedMemoryName);
 }
 
 static constexpr const char *atomicRemoteMemoryName =
     "fir.atomic_remote_memory";
 
-void fir::setAtomicRemoteMemory(mlir::ModuleOp mod, bool value) {
+void fir::setAtomicRemoteMemory(aiir::ModuleOp mod, bool value) {
   if (value) {
     auto *ctx = mod.getContext();
-    mod->setAttr(atomicRemoteMemoryName, mlir::UnitAttr::get(ctx));
+    mod->setAttr(atomicRemoteMemoryName, aiir::UnitAttr::get(ctx));
   } else {
     if (mod->hasAttr(atomicRemoteMemoryName))
       mod->removeAttr(atomicRemoteMemoryName);
   }
 }
 
-bool fir::getAtomicRemoteMemory(mlir::ModuleOp mod) {
+bool fir::getAtomicRemoteMemory(aiir::ModuleOp mod) {
   return mod->hasAttr(atomicRemoteMemoryName);
 }
 
-llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
-  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(tuneCpuName))
+llvm::StringRef fir::getTuneCPU(aiir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<aiir::StringAttr>(tuneCpuName))
     return attr.getValue();
 
   return {};
@@ -148,51 +148,51 @@ llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
 
 static constexpr const char *targetFeaturesName = "fir.target_features";
 
-void fir::setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features) {
+void fir::setTargetFeatures(aiir::ModuleOp mod, llvm::StringRef features) {
   if (features.empty())
     return;
 
   auto *ctx = mod.getContext();
   mod->setAttr(targetFeaturesName,
-               mlir::LLVM::TargetFeaturesAttr::get(ctx, features));
+               aiir::LLVM::TargetFeaturesAttr::get(ctx, features));
 }
 
-mlir::LLVM::TargetFeaturesAttr fir::getTargetFeatures(mlir::ModuleOp mod) {
-  if (auto attr = mod->getAttrOfType<mlir::LLVM::TargetFeaturesAttr>(
+aiir::LLVM::TargetFeaturesAttr fir::getTargetFeatures(aiir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<aiir::LLVM::TargetFeaturesAttr>(
           targetFeaturesName))
     return attr;
 
   return {};
 }
 
-void fir::setIdent(mlir::ModuleOp mod, llvm::StringRef ident) {
+void fir::setIdent(aiir::ModuleOp mod, llvm::StringRef ident) {
   if (ident.empty())
     return;
 
-  mlir::MLIRContext *ctx = mod.getContext();
-  mod->setAttr(mlir::LLVM::LLVMDialect::getIdentAttrName(),
-               mlir::StringAttr::get(ctx, ident));
+  aiir::AIIRContext *ctx = mod.getContext();
+  mod->setAttr(aiir::LLVM::LLVMDialect::getIdentAttrName(),
+               aiir::StringAttr::get(ctx, ident));
 }
 
-llvm::StringRef fir::getIdent(mlir::ModuleOp mod) {
-  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(
-          mlir::LLVM::LLVMDialect::getIdentAttrName()))
+llvm::StringRef fir::getIdent(aiir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<aiir::StringAttr>(
+          aiir::LLVM::LLVMDialect::getIdentAttrName()))
     return attr;
   return {};
 }
 
-void fir::setCommandline(mlir::ModuleOp mod, llvm::StringRef cmdLine) {
+void fir::setCommandline(aiir::ModuleOp mod, llvm::StringRef cmdLine) {
   if (cmdLine.empty())
     return;
 
-  mlir::MLIRContext *ctx = mod.getContext();
-  mod->setAttr(mlir::LLVM::LLVMDialect::getCommandlineAttrName(),
-               mlir::StringAttr::get(ctx, cmdLine));
+  aiir::AIIRContext *ctx = mod.getContext();
+  mod->setAttr(aiir::LLVM::LLVMDialect::getCommandlineAttrName(),
+               aiir::StringAttr::get(ctx, cmdLine));
 }
 
-llvm::StringRef fir::getCommandline(mlir::ModuleOp mod) {
-  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(
-          mlir::LLVM::LLVMDialect::getCommandlineAttrName()))
+llvm::StringRef fir::getCommandline(aiir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<aiir::StringAttr>(
+          aiir::LLVM::LLVMDialect::getCommandlineAttrName()))
     return attr;
   return {};
 }

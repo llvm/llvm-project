@@ -13,7 +13,7 @@
 #ifndef CLANG_LIB_CIR_CODEGEN_CIRGENVTABLES_H
 #define CLANG_LIB_CIR_CODEGEN_CIRGENVTABLES_H
 
-#include "mlir/IR/Types.h"
+#include "aiir/IR/Types.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -51,12 +51,12 @@ class CIRGenVTables {
   /// Cache for the deleted virtual member call function.
   cir::FuncOp deletedVirtualFn = nullptr;
 
-  mlir::Attribute
+  aiir::Attribute
   getVTableComponent(const VTableLayout &layout, unsigned componentIndex,
-                     mlir::Attribute rtti, unsigned &nextVTableThunkIndex,
+                     aiir::Attribute rtti, unsigned &nextVTableThunkIndex,
                      unsigned vtableAddressPoint, bool vtableHasLocalLinkage);
 
-  mlir::Type getVTableComponentType();
+  aiir::Type getVTableComponentType();
 
 public:
   CIRGenVTables(CIRGenModule &cgm);
@@ -65,7 +65,7 @@ public:
   /// global initializer.
   void createVTableInitializer(cir::GlobalOp &vtable,
                                const clang::VTableLayout &layout,
-                               mlir::Attribute rtti,
+                               aiir::Attribute rtti,
                                bool vtableHasLocalLinkage);
 
   clang::ItaniumVTableContext &getItaniumVTableContext() {

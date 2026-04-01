@@ -106,7 +106,7 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
   FieldDecl *field = memberInit->getAnyMember();
   QualType fieldType = field->getType();
 
-  mlir::Value thisPtr = cgf.loadCXXThis();
+  aiir::Value thisPtr = cgf.loadCXXThis();
   CanQualType recordTy = cgf.getContext().getCanonicalTagType(classDecl);
 
   // If a base constructor is being emitted, create an LValue that has the
@@ -216,7 +216,7 @@ static bool baseInitializerUsesThis(ASTContext &c, const Expr *init) {
 ///
 /// The object pointed to by 'thisAddr' is assumed to be non-null.
 Address CIRGenFunction::getAddressOfDirectBaseInCompleteClass(
-    mlir::Location loc, Address thisAddr, const CXXRecordDecl *derived,
+    aiir::Location loc, Address thisAddr, const CXXRecordDecl *derived,
     const CXXRecordDecl *base, bool baseIsVirtual) {
   // 'thisAddr' must be a pointer (in some address space) to Derived.
   assert(thisAddr.getElementType() == convertType(derived));
@@ -234,7 +234,7 @@ Address CIRGenFunction::getAddressOfDirectBaseInCompleteClass(
                                      /*assumeNotNull=*/true);
 }
 
-void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
+void CIRGenFunction::emitBaseInitializer(aiir::Location loc,
                                          const CXXRecordDecl *classDecl,
                                          CXXCtorInitializer *baseInit) {
   assert(curFuncDecl && "loading 'this' without a func declaration?");
@@ -318,7 +318,7 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
       llvm::make_range(virtualBaseEnd, nonVirtualBaseEnd);
   auto memberInits = llvm::make_range(nonVirtualBaseEnd, allInits.end());
 
-  const mlir::Value oldThisValue = cxxThisValue;
+  const aiir::Value oldThisValue = cxxThisValue;
 
   auto emitInitializer = [&](CXXCtorInitializer *baseInit) {
     if (cgm.getCodeGenOpts().StrictVTablePointers &&
@@ -367,15 +367,15 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
 }
 
 static Address applyNonVirtualAndVirtualOffset(
-    mlir::Location loc, CIRGenFunction &cgf, Address addr,
-    CharUnits nonVirtualOffset, mlir::Value virtualOffset,
+    aiir::Location loc, CIRGenFunction &cgf, Address addr,
+    CharUnits nonVirtualOffset, aiir::Value virtualOffset,
     const CXXRecordDecl *derivedClass, const CXXRecordDecl *nearestVBase,
-    mlir::Type baseValueTy = {}, bool assumeNotNull = true) {
+    aiir::Type baseValueTy = {}, bool assumeNotNull = true) {
   // Assert that we have something to do.
   assert(!nonVirtualOffset.isZero() || virtualOffset != nullptr);
 
   // Compute the offset from the static and dynamic components.
-  mlir::Value baseOffset;
+  aiir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
     if (virtualOffset) {
       cgf.cgm.errorNYI(
@@ -396,10 +396,10 @@ static Address applyNonVirtualAndVirtualOffset(
   // Apply the base offset.  cir.ptr_stride adjusts by a number of elements,
   // not bytes.  So the pointer must be cast to a byte pointer and back.
 
-  mlir::Value ptr = addr.getPointer();
-  mlir::Type charPtrType = cgf.cgm.uInt8PtrTy;
-  mlir::Value charPtr = cgf.getBuilder().createBitcast(ptr, charPtrType);
-  mlir::Value adjusted = cir::PtrStrideOp::create(
+  aiir::Value ptr = addr.getPointer();
+  aiir::Type charPtrType = cgf.cgm.uInt8PtrTy;
+  aiir::Value charPtr = cgf.getBuilder().createBitcast(ptr, charPtrType);
+  aiir::Value adjusted = cir::PtrStrideOp::create(
       cgf.getBuilder(), loc, charPtrType, charPtr, baseOffset);
   ptr = cgf.getBuilder().createBitcast(adjusted, ptr.getType());
 
@@ -418,10 +418,10 @@ static Address applyNonVirtualAndVirtualOffset(
   return Address(ptr, alignment);
 }
 
-void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
+void CIRGenFunction::initializeVTablePointer(aiir::Location loc,
                                              const VPtr &vptr) {
   // Compute the address point.
-  mlir::Value vtableAddressPoint =
+  aiir::Value vtableAddressPoint =
       cgm.getCXXABI().getVTableAddressPointInStructor(
           *this, vptr.vtableClass, vptr.base, vptr.nearestVBase);
 
@@ -429,10 +429,10 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
     return;
 
   // Compute where to store the address point.
-  mlir::Value virtualOffset{};
+  aiir::Value virtualOffset{};
   CharUnits nonVirtualOffset = CharUnits::Zero();
 
-  mlir::Type baseValueTy;
+  aiir::Type baseValueTy;
   if (cgm.getCXXABI().isVirtualOffsetNeededForVTableField(*this, vptr)) {
     // We need to use the virtual base offset offset because the virtual base
     // might have a different offset in the most derived class.
@@ -467,7 +467,7 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   assert(!cir::MissingFeatures::createInvariantGroup());
 }
 
-void CIRGenFunction::initializeVTablePointers(mlir::Location loc,
+void CIRGenFunction::initializeVTablePointers(aiir::Location loc,
                                               const CXXRecordDecl *rd) {
   // Ignore classes without a vtable.
   if (!rd->isDynamicClass())
@@ -604,7 +604,7 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
 }
 
 Address CIRGenFunction::emitCXXMemberDataPointerAddress(
-    const Expr *e, Address base, mlir::Value memberPtr,
+    const Expr *e, Address base, aiir::Value memberPtr,
     const MemberPointerType *memberPtrType, LValueBaseInfo *baseInfo) {
   assert(!cir::MissingFeatures::cxxABI());
 
@@ -693,7 +693,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     Address arrayBegin, const CXXConstructExpr *e, bool newPointerIsChecked,
     bool zeroInitialize) {
   QualType elementType;
-  mlir::Value numElements = emitArrayLength(arrayType, elementType, arrayBegin);
+  aiir::Value numElements = emitArrayLength(arrayType, elementType, arrayBegin);
   emitCXXAggrConstructorCall(ctor, numElements, arrayBegin, e,
                              newPointerIsChecked, zeroInitialize);
 }
@@ -708,7 +708,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
 /// \param zeroInitialize true if each element should be
 ///   zero-initialized before it is constructed
 void CIRGenFunction::emitCXXAggrConstructorCall(
-    const CXXConstructorDecl *ctor, mlir::Value numElements, Address arrayBase,
+    const CXXConstructorDecl *ctor, aiir::Value numElements, Address arrayBase,
     const CXXConstructExpr *e, bool newPointerIsChecked, bool zeroInitialize) {
   // It's legal for numElements to be zero.  This can happen both
   // dynamically, because x can be zero in 'new A[x]', and statically,
@@ -716,11 +716,11 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
 
-  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
-  mlir::Type elementType = arrayTy.getElementType();
+  auto arrayTy = aiir::cast<cir::ArrayType>(arrayBase.getElementType());
+  aiir::Type elementType = arrayTy.getElementType();
 
   // This might be a multi-dimensional array. Find the innermost element type.
-  while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
+  while (auto maybeArrayTy = aiir::dyn_cast<cir::ArrayType>(elementType))
     elementType = maybeArrayTy.getElementType();
   cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
@@ -774,12 +774,12 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     }
 
     // Emit the constructor call that will execute for every array element.
-    mlir::Value arrayOp =
+    aiir::Value arrayOp =
         builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
     cir::ArrayCtor::create(
         builder, *currSrcLoc, arrayOp,
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          mlir::BlockArgument arg =
+        [&](aiir::OpBuilder &b, aiir::Location loc) {
+          aiir::BlockArgument arg =
               b.getInsertionBlock()->addArgument(ptrToElmType, loc);
           Address curAddr = Address(arg, elementType, eltAlignment);
           assert(!cir::MissingFeatures::sanitizers());
@@ -953,7 +953,7 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
 }
 
 namespace {
-mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
+aiir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
                                   const CXXDestructorDecl *dd) {
   if (Expr *thisArg = dd->getOperatorDeleteThisArg())
     return cgf.emitScalarExpr(thisArg);
@@ -1124,7 +1124,7 @@ void CIRGenFunction::emitCXXDestructorCall(const CXXDestructorDecl *dd,
                                      delegating, thisAddr, thisTy);
 }
 
-mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
+aiir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
                                             bool delegating) {
   if (!cgm.getCXXABI().needsVTTParameter(gd))
     return nullptr;
@@ -1154,28 +1154,28 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
     assert(subVTTIndex != 0 && "Sub-VTT index must be greater than zero!");
   }
 
-  mlir::Location loc = cgm.getLoc(rd->getBeginLoc());
+  aiir::Location loc = cgm.getLoc(rd->getBeginLoc());
   if (cgm.getCXXABI().needsVTTParameter(curGD)) {
     // A VTT parameter was passed to the constructor, use it.
-    mlir::Value vtt = loadCXXVTT();
+    aiir::Value vtt = loadCXXVTT();
     return builder.createVTTAddrPoint(loc, vtt.getType(), vtt, subVTTIndex);
   } else {
     // We're the complete constructor, so get the VTT by name.
     cir::GlobalOp vtt = cgm.getVTables().getAddrOfVTT(rd);
     return builder.createVTTAddrPoint(
         loc, builder.getPointerTo(cgm.voidPtrTy),
-        mlir::FlatSymbolRefAttr::get(vtt.getSymNameAttr()), subVTTIndex);
+        aiir::FlatSymbolRefAttr::get(vtt.getSymNameAttr()), subVTTIndex);
   }
 }
 
 Address CIRGenFunction::getAddressOfDerivedClass(
-    mlir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
+    aiir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
     llvm::iterator_range<CastExpr::path_const_iterator> path,
     bool nullCheckValue) {
   assert(!path.empty() && "Base path should not be empty!");
 
   QualType derivedTy = getContext().getCanonicalTagType(derived);
-  mlir::Type derivedValueTy = convertType(derivedTy);
+  aiir::Type derivedValueTy = convertType(derivedTy);
   CharUnits nonVirtualOffset =
       cgm.computeNonVirtualBaseClassOffset(derived, path);
 
@@ -1218,7 +1218,7 @@ Address CIRGenFunction::getAddressOfBaseClass(
   }
 
   // Get the base pointer type.
-  mlir::Type baseValueTy = convertType((path.end()[-1])->getType());
+  aiir::Type baseValueTy = convertType((path.end()[-1])->getType());
   assert(!cir::MissingFeatures::addressSpace());
 
   // If there is no virtual base, use cir.base_class_addr.  It takes care of
@@ -1232,7 +1232,7 @@ Address CIRGenFunction::getAddressOfBaseClass(
   assert(!cir::MissingFeatures::sanitizers());
 
   // Compute the virtual offset.
-  mlir::Value virtualOffset = nullptr;
+  aiir::Value virtualOffset = nullptr;
   if (vBase) {
     virtualOffset = cgm.getCXXABI().getVirtualBaseClassOffset(
         getLoc(loc), *this, value, derived, vBase);
@@ -1263,7 +1263,7 @@ bool CIRGenFunction::shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd) {
   return false;
 }
 
-mlir::Value CIRGenFunction::getVTablePtr(mlir::Location loc, Address thisAddr,
+aiir::Value CIRGenFunction::getVTablePtr(aiir::Location loc, Address thisAddr,
                                          const CXXRecordDecl *rd) {
   auto vtablePtr =
       cir::VTableGetVPtrOp::create(builder, loc, thisAddr.getPointer());
@@ -1289,7 +1289,7 @@ void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
   CallArgList args;
   Address thisAddr = thisAVS.getAddress();
   QualType thisType = d->getThisType();
-  mlir::Value thisPtr = thisAddr.getPointer();
+  aiir::Value thisPtr = thisAddr.getPointer();
 
   assert(!cir::MissingFeatures::addressSpace());
 

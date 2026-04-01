@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/Region.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/Region.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
@@ -29,13 +29,13 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
-namespace mlir {
+namespace aiir {
 #define GEN_PASS_DEF_IDIOMRECOGNIZER
 #include "clang/CIR/Dialect/Passes.h.inc"
-} // namespace mlir
+} // namespace aiir
 
 namespace {
 
@@ -84,12 +84,12 @@ void IdiomRecognizerPass::runOnOperation() {
   });
 }
 
-std::unique_ptr<Pass> mlir::createIdiomRecognizerPass() {
+std::unique_ptr<Pass> aiir::createIdiomRecognizerPass() {
   return std::make_unique<IdiomRecognizerPass>();
 }
 
 std::unique_ptr<Pass>
-mlir::createIdiomRecognizerPass(clang::ASTContext *astCtx) {
+aiir::createIdiomRecognizerPass(clang::ASTContext *astCtx) {
   auto pass = std::make_unique<IdiomRecognizerPass>();
   pass->setASTContext(astCtx);
   return std::move(pass);

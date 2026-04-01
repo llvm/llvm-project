@@ -12,30 +12,30 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 #include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
-using namespace mlir::acc;
+using namespace aiir::acc;
 
 template <typename Op, typename TermOp>
-mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
-    mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+aiir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
+    aiir::Location start, aiir::Location end, OpenACCDirectiveKind dirKind,
     llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *associatedStmt) {
-  mlir::LogicalResult res = mlir::success();
+  aiir::LogicalResult res = aiir::success();
 
-  llvm::SmallVector<mlir::Type> retTy;
-  llvm::SmallVector<mlir::Value> operands;
+  llvm::SmallVector<aiir::Type> retTy;
+  llvm::SmallVector<aiir::Value> operands;
   auto op = Op::create(builder, start, retTy, operands);
 
   emitOpenACCClauses(op, dirKind, clauses);
 
   {
-    mlir::Block &block = op.getRegion().emplaceBlock();
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    aiir::Block &block = op.getRegion().emplaceBlock();
+    aiir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPointToEnd(&block);
 
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
@@ -49,47 +49,47 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
 namespace {
 template <typename Op> struct CombinedType;
 template <> struct CombinedType<ParallelOp> {
-  static constexpr mlir::acc::CombinedConstructsType value =
-      mlir::acc::CombinedConstructsType::ParallelLoop;
+  static constexpr aiir::acc::CombinedConstructsType value =
+      aiir::acc::CombinedConstructsType::ParallelLoop;
 };
 template <> struct CombinedType<SerialOp> {
-  static constexpr mlir::acc::CombinedConstructsType value =
-      mlir::acc::CombinedConstructsType::SerialLoop;
+  static constexpr aiir::acc::CombinedConstructsType value =
+      aiir::acc::CombinedConstructsType::SerialLoop;
 };
 template <> struct CombinedType<KernelsOp> {
-  static constexpr mlir::acc::CombinedConstructsType value =
-      mlir::acc::CombinedConstructsType::KernelsLoop;
+  static constexpr aiir::acc::CombinedConstructsType value =
+      aiir::acc::CombinedConstructsType::KernelsLoop;
 };
 } // namespace
 
 template <typename Op, typename TermOp>
-mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
-    mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+aiir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
+    aiir::Location start, aiir::Location end, OpenACCDirectiveKind dirKind,
     llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *loopStmt) {
-  mlir::LogicalResult res = mlir::success();
+  aiir::LogicalResult res = aiir::success();
 
-  llvm::SmallVector<mlir::Type> retTy;
-  llvm::SmallVector<mlir::Value> operands;
+  llvm::SmallVector<aiir::Type> retTy;
+  llvm::SmallVector<aiir::Value> operands;
 
   auto computeOp = Op::create(builder, start, retTy, operands);
   computeOp.setCombinedAttr(builder.getUnitAttr());
-  mlir::acc::LoopOp loopOp;
+  aiir::acc::LoopOp loopOp;
 
   // First, emit the bodies of both operations, with the loop inside the body of
   // the combined construct.
   {
-    mlir::Block &block = computeOp.getRegion().emplaceBlock();
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    aiir::Block &block = computeOp.getRegion().emplaceBlock();
+    aiir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPointToEnd(&block);
 
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
     auto loopOp = LoopOp::create(builder, start, retTy, operands);
-    loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
+    loopOp.setCombinedAttr(aiir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), CombinedType<Op>::value));
 
     {
-      mlir::Block &innerBlock = loopOp.getRegion().emplaceBlock();
-      mlir::OpBuilder::InsertionGuard guardCase(builder);
+      aiir::Block &innerBlock = loopOp.getRegion().emplaceBlock();
+      aiir::OpBuilder::InsertionGuard guardCase(builder);
       builder.setInsertionPointToEnd(&innerBlock);
 
       LexicalScope ls{*this, start, builder.getInsertionBlock()};
@@ -97,7 +97,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
 
       res = emitStmt(loopStmt, /*useCurrentScope=*/true);
 
-      mlir::acc::YieldOp::create(builder, end);
+      aiir::acc::YieldOp::create(builder, end);
     }
 
     emitOpenACCClauses(computeOp, loopOp, dirKind, clauses);
@@ -112,89 +112,89 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
 
 template <typename Op>
 Op CIRGenFunction::emitOpenACCOp(
-    mlir::Location start, OpenACCDirectiveKind dirKind,
+    aiir::Location start, OpenACCDirectiveKind dirKind,
     llvm::ArrayRef<const OpenACCClause *> clauses) {
-  llvm::SmallVector<mlir::Type> retTy;
-  llvm::SmallVector<mlir::Value> operands;
+  llvm::SmallVector<aiir::Type> retTy;
+  llvm::SmallVector<aiir::Value> operands;
   auto op = Op::create(builder, start, retTy, operands);
 
   emitOpenACCClauses(op, dirKind, clauses);
   return op;
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location end = getLoc(s.getSourceRange().getEnd());
 
   switch (s.getDirectiveKind()) {
   case OpenACCDirectiveKind::Parallel:
-    return emitOpenACCOpAssociatedStmt<ParallelOp, mlir::acc::YieldOp>(
+    return emitOpenACCOpAssociatedStmt<ParallelOp, aiir::acc::YieldOp>(
         start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
   case OpenACCDirectiveKind::Serial:
-    return emitOpenACCOpAssociatedStmt<SerialOp, mlir::acc::YieldOp>(
+    return emitOpenACCOpAssociatedStmt<SerialOp, aiir::acc::YieldOp>(
         start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
   case OpenACCDirectiveKind::Kernels:
-    return emitOpenACCOpAssociatedStmt<KernelsOp, mlir::acc::TerminatorOp>(
+    return emitOpenACCOpAssociatedStmt<KernelsOp, aiir::acc::TerminatorOp>(
         start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
   default:
     llvm_unreachable("invalid compute construct kind");
   }
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location end = getLoc(s.getSourceRange().getEnd());
 
-  return emitOpenACCOpAssociatedStmt<DataOp, mlir::acc::TerminatorOp>(
+  return emitOpenACCOpAssociatedStmt<DataOp, aiir::acc::TerminatorOp>(
       start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
   emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.clauses());
-  return mlir::success();
+  return aiir::success();
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCSetConstruct(const OpenACCSetConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
   emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.clauses());
-  return mlir::success();
+  return aiir::success();
 }
 
-mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
+aiir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
   emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(), s.clauses());
-  return mlir::success();
+  return aiir::success();
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
   auto waitOp = emitOpenACCOp<WaitOp>(start, s.getDirectiveKind(), s.clauses());
 
   auto createIntExpr = [this](const Expr *intExpr) {
-    mlir::Value expr = emitScalarExpr(intExpr);
-    mlir::Location exprLoc = cgm.getLoc(intExpr->getBeginLoc());
+    aiir::Value expr = emitScalarExpr(intExpr);
+    aiir::Location exprLoc = cgm.getLoc(intExpr->getBeginLoc());
 
-    mlir::IntegerType targetType = mlir::IntegerType::get(
-        &getMLIRContext(), getContext().getIntWidth(intExpr->getType()),
+    aiir::IntegerType targetType = aiir::IntegerType::get(
+        &getAIIRContext(), getContext().getIntWidth(intExpr->getType()),
         intExpr->getType()->isSignedIntegerOrEnumerationType()
-            ? mlir::IntegerType::SignednessSemantics::Signed
-            : mlir::IntegerType::SignednessSemantics::Unsigned);
+            ? aiir::IntegerType::SignednessSemantics::Signed
+            : aiir::IntegerType::SignednessSemantics::Unsigned);
 
-    auto conversionOp = mlir::UnrealizedConversionCastOp::create(
+    auto conversionOp = aiir::UnrealizedConversionCastOp::create(
         builder, exprLoc, targetType, expr);
     return conversionOp.getResult(0);
   };
 
   // Emit the correct 'wait' clauses.
   {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    aiir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPoint(waitOp);
 
     if (s.hasDevNumExpr())
@@ -204,60 +204,60 @@ CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
       waitOp.getWaitOperandsMutable().append(createIntExpr(QueueExpr));
   }
 
-  return mlir::success();
+  return aiir::success();
 }
 
-mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
+aiir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
     const OpenACCCombinedConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location end = getLoc(s.getSourceRange().getEnd());
 
   switch (s.getDirectiveKind()) {
   case OpenACCDirectiveKind::ParallelLoop:
-    return emitOpenACCOpCombinedConstruct<ParallelOp, mlir::acc::YieldOp>(
+    return emitOpenACCOpCombinedConstruct<ParallelOp, aiir::acc::YieldOp>(
         start, end, s.getDirectiveKind(), s.clauses(), s.getLoop());
   case OpenACCDirectiveKind::SerialLoop:
-    return emitOpenACCOpCombinedConstruct<SerialOp, mlir::acc::YieldOp>(
+    return emitOpenACCOpCombinedConstruct<SerialOp, aiir::acc::YieldOp>(
         start, end, s.getDirectiveKind(), s.clauses(), s.getLoop());
   case OpenACCDirectiveKind::KernelsLoop:
-    return emitOpenACCOpCombinedConstruct<KernelsOp, mlir::acc::TerminatorOp>(
+    return emitOpenACCOpCombinedConstruct<KernelsOp, aiir::acc::TerminatorOp>(
         start, end, s.getDirectiveKind(), s.clauses(), s.getLoop());
   default:
     llvm_unreachable("invalid compute construct kind");
   }
 }
 
-mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
+aiir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location end = getLoc(s.getSourceRange().getEnd());
 
-  return emitOpenACCOpAssociatedStmt<HostDataOp, mlir::acc::TerminatorOp>(
+  return emitOpenACCOpAssociatedStmt<HostDataOp, aiir::acc::TerminatorOp>(
       start, end, s.getDirectiveKind(), s.clauses(), s.getStructuredBlock());
 }
 
-mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
+aiir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
   emitOpenACCOp<EnterDataOp>(start, s.getDirectiveKind(), s.clauses());
-  return mlir::success();
+  return aiir::success();
 }
 
-mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
+aiir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
   emitOpenACCOp<ExitDataOp>(start, s.getDirectiveKind(), s.clauses());
-  return mlir::success();
+  return aiir::success();
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
   emitOpenACCOp<UpdateOp>(start, s.getDirectiveKind(), s.clauses());
-  return mlir::success();
+  return aiir::success();
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
   // The 'cache' directive 'may' be at the top of a loop by standard, but
   // doesn't have to be. Additionally, there is nothing that requires this be a
@@ -266,11 +266,11 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
   // that. Instead, we treat cache as a 'noop' if there is no acc.loop to apply
   // it to.
   if (!activeLoopOp)
-    return mlir::success();
+    return aiir::success();
 
-  mlir::acc::LoopOp loopOp = *activeLoopOp;
+  aiir::acc::LoopOp loopOp = *activeLoopOp;
 
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  aiir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(loopOp);
 
   for (const Expr *var : s.getVarList()) {
@@ -284,7 +284,7 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
     loopOp.getCacheOperandsMutable().append(cacheOp.getResult());
   }
 
-  return mlir::success();
+  return aiir::success();
 }
 
 const VarDecl *getLValueDecl(const Expr *e) {
@@ -297,9 +297,9 @@ const VarDecl *getLValueDecl(const Expr *e) {
   return cast<VarDecl>(dre->getDecl());
 }
 
-static mlir::acc::AtomicReadOp
+static aiir::acc::AtomicReadOp
 emitAtomicRead(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
-               mlir::Location start,
+               aiir::Location start,
                const OpenACCAtomicConstruct::SingleStmtInfo &inf) {
   // Atomic 'read' only permits 'v = x', where v and x are both scalar L
   // values. The getAssociatedStmtInfo strips off implicit casts, which
@@ -307,36 +307,36 @@ emitAtomicRead(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   // just emit it as an L value.  The Flang implementation has no problem with
   // different types, so it appears that the dialect can handle the
   // conversions.
-  mlir::Value v = cgf.emitLValue(inf.V).getPointer();
-  mlir::Value x = cgf.emitLValue(inf.X).getPointer();
-  mlir::Type resTy = cgf.convertType(inf.V->getType());
-  return mlir::acc::AtomicReadOp::create(builder, start, x, v, resTy,
+  aiir::Value v = cgf.emitLValue(inf.V).getPointer();
+  aiir::Value x = cgf.emitLValue(inf.X).getPointer();
+  aiir::Type resTy = cgf.convertType(inf.V->getType());
+  return aiir::acc::AtomicReadOp::create(builder, start, x, v, resTy,
                                          /*ifCond=*/{});
 }
 
-static mlir::acc::AtomicWriteOp
+static aiir::acc::AtomicWriteOp
 emitAtomicWrite(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
-                mlir::Location start,
+                aiir::Location start,
                 const OpenACCAtomicConstruct::SingleStmtInfo &inf) {
-  mlir::Value x = cgf.emitLValue(inf.X).getPointer();
-  mlir::Value expr = cgf.emitAnyExpr(inf.RefExpr).getValue();
-  return mlir::acc::AtomicWriteOp::create(builder, start, x, expr,
+  aiir::Value x = cgf.emitLValue(inf.X).getPointer();
+  aiir::Value expr = cgf.emitAnyExpr(inf.RefExpr).getValue();
+  return aiir::acc::AtomicWriteOp::create(builder, start, x, expr,
                                           /*ifCond=*/{});
 }
 
-static std::pair<mlir::LogicalResult, mlir::acc::AtomicUpdateOp>
+static std::pair<aiir::LogicalResult, aiir::acc::AtomicUpdateOp>
 emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
-                 mlir::Location start, mlir::Location end,
+                 aiir::Location start, aiir::Location end,
                  const OpenACCAtomicConstruct::SingleStmtInfo &inf) {
-  mlir::Value x = cgf.emitLValue(inf.X).getPointer();
-  auto op = mlir::acc::AtomicUpdateOp::create(builder, start, x, /*ifCond=*/{});
+  aiir::Value x = cgf.emitLValue(inf.X).getPointer();
+  auto op = aiir::acc::AtomicUpdateOp::create(builder, start, x, /*ifCond=*/{});
 
-  mlir::LogicalResult res = mlir::success();
+  aiir::LogicalResult res = aiir::success();
   {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    mlir::Type argTy = cast<cir::PointerType>(x.getType()).getPointee();
-    std::array<mlir::Type, 1> recipeType{argTy};
-    std::array<mlir::Location, 1> recipeLoc{start};
+    aiir::OpBuilder::InsertionGuard guardCase(builder);
+    aiir::Type argTy = cast<cir::PointerType>(x.getType()).getPointee();
+    std::array<aiir::Type, 1> recipeType{argTy};
+    std::array<aiir::Location, 1> recipeLoc{start};
     auto *recipeBlock = builder.createBlock(
         &op.getRegion(), op.getRegion().end(), recipeType, recipeLoc);
     builder.setInsertionPointToEnd(recipeBlock);
@@ -363,34 +363,34 @@ emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
     res = cgf.emitStmt(inf.WholeExpr, /*useCurrentScope=*/true);
 
     auto load = cir::LoadOp::create(builder, start, {alloca});
-    mlir::acc::YieldOp::create(builder, end, {load});
+    aiir::acc::YieldOp::create(builder, end, {load});
   }
 
   return {res, op};
 }
 
-mlir::LogicalResult
+aiir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
   // While Atomic is an 'associated statement' construct, it 'steals' the
   // expression it is associated with rather than emitting it inside of it.  So
   // it has custom emit logic.
-  mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+  aiir::Location start = getLoc(s.getSourceRange().getBegin());
+  aiir::Location end = getLoc(s.getSourceRange().getEnd());
   OpenACCAtomicConstruct::StmtInfo inf = s.getAssociatedStmtInfo();
 
   switch (s.getAtomicKind()) {
   case OpenACCAtomicKind::Read: {
     assert(inf.Form == OpenACCAtomicConstruct::StmtInfo::StmtForm::Read);
-    mlir::acc::AtomicReadOp op =
+    aiir::acc::AtomicReadOp op =
         emitAtomicRead(*this, builder, start, inf.First);
     emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
-    return mlir::success();
+    return aiir::success();
   }
   case OpenACCAtomicKind::Write: {
     assert(inf.Form == OpenACCAtomicConstruct::StmtInfo::StmtForm::Write);
     auto op = emitAtomicWrite(*this, builder, start, inf.First);
     emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
-    return mlir::success();
+    return aiir::success();
   }
   case OpenACCAtomicKind::None:
   case OpenACCAtomicKind::Update: {
@@ -403,18 +403,18 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
     // Atomic-capture is made up of two statements, either an update = read,
     // read + update, or read + write.  As a result, the IR represents the
     // capture region as having those two 'inside' of it.
-    auto op = mlir::acc::AtomicCaptureOp::create(builder, start, /*ifCond=*/{});
+    auto op = aiir::acc::AtomicCaptureOp::create(builder, start, /*ifCond=*/{});
     emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
-    mlir::LogicalResult res = mlir::success();
+    aiir::LogicalResult res = aiir::success();
     {
-      mlir::OpBuilder::InsertionGuard guardCase(builder);
+      aiir::OpBuilder::InsertionGuard guardCase(builder);
 
-      mlir::Block *block =
+      aiir::Block *block =
           builder.createBlock(&op.getRegion(), op.getRegion().end(), {}, {});
 
       builder.setInsertionPointToStart(block);
 
-      auto terminator = mlir::acc::TerminatorOp::create(builder, end);
+      auto terminator = aiir::acc::TerminatorOp::create(builder, end);
 
       // The AtomicCaptureOp only permits the two acc.atomic.* operations inside
       // of it, so all other parts of the expression need to be emitted before
@@ -425,9 +425,9 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
       default:
         llvm_unreachable("invalid form for Capture");
       case OpenACCAtomicConstruct::StmtInfo::StmtForm::ReadWrite: {
-        mlir::acc::AtomicReadOp first =
+        aiir::acc::AtomicReadOp first =
             emitAtomicRead(*this, builder, start, inf.First);
-        mlir::acc::AtomicWriteOp second =
+        aiir::acc::AtomicWriteOp second =
             emitAtomicWrite(*this, builder, start, inf.Second);
 
         first->moveBefore(terminator);
@@ -435,7 +435,7 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
         break;
       }
       case OpenACCAtomicConstruct::StmtInfo::StmtForm::ReadUpdate: {
-        mlir::acc::AtomicReadOp first =
+        aiir::acc::AtomicReadOp first =
             emitAtomicRead(*this, builder, start, inf.First);
         auto [this_res, second] =
             emitAtomicUpdate(*this, builder, start, end, inf.Second);
@@ -449,7 +449,7 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
         auto [this_res, first] =
             emitAtomicUpdate(*this, builder, start, end, inf.First);
         res = this_res;
-        mlir::acc::AtomicReadOp second =
+        aiir::acc::AtomicReadOp second =
             emitAtomicRead(*this, builder, start, inf.Second);
 
         first->moveBefore(terminator);

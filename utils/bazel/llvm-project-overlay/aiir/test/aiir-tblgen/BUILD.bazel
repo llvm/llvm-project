@@ -1,0 +1,50 @@
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+package(default_visibility = ["//visibility:public"])
+
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = [
+            "//llvm:include/llvm/CodeGen/SDNodeProperties.td",
+            "//llvm:include/llvm/CodeGen/ValueTypes.td",
+            "//llvm:include/llvm/Frontend/Directive/DirectiveBase.td",
+            "//llvm:include/llvm/Frontend/OpenMP/OMP.td",
+            "//llvm:include/llvm/IR/Intrinsics.td",
+            "//aiir:BuiltinDialectBytecodeTdFiles",
+            "//aiir:SideEffectInterfacesTdFiles",
+            "//aiir:include/aiir/Dialect/LLVMIR/LLVMAttrDefs.td",
+            "//aiir:include/aiir/Dialect/LLVMIR/LLVMDialect.td",
+            "//aiir:include/aiir/Dialect/LLVMIR/LLVMInterfaces.td",
+            "//aiir:include/aiir/Dialect/LLVMIR/LLVMOpBase.td",
+            "//aiir:include/aiir/Dialect/OpenMP/OpenMPAttrDefs.td",
+            "//aiir:include/aiir/Dialect/OpenMP/OpenMPDialect.td",
+            "//aiir:include/aiir/Dialect/OpenMP/OpenMPEnums.td",
+            "//aiir:include/aiir/Dialect/OpenMP/OpenMPOpBase.td",
+            "//aiir:include/aiir/Dialect/OpenMP/OpenMPOpsInterfaces.td",
+            "//aiir:include/aiir/Dialect/OpenMP/OpenMPTypeInterfaces.td",
+            "//aiir:include/aiir/Dialect/Ptr/IR/MemorySpaceInterfaces.td",
+            "//aiir:include/aiir/IR/BuiltinAttributeInterfaces.td",
+            "//aiir:include/aiir/IR/BuiltinAttributes.td",
+            "//aiir:include/aiir/IR/BuiltinDialect.td",
+            "//aiir:include/aiir/IR/BuiltinDialectBytecode.td",
+            "//aiir:include/aiir/IR/BytecodeBase.td",
+            "//aiir:include/aiir/IR/OpBase.td",
+            "//aiir:include/aiir/Interfaces/CallInterfaces.td",
+            "//aiir:include/aiir/Interfaces/DataLayoutInterfaces.td",
+            "//aiir:include/aiir/Interfaces/InferTypeOpInterface.td",
+            "//aiir:include/aiir/Interfaces/SideEffectInterfaces.td",
+            "//aiir:include/aiir/Pass/PassBase.td",
+            "//aiir:aiir-opt",
+            "//aiir:aiir-tblgen",
+            "//aiir/test:lit_data",
+        ],
+    )
+    for src in glob([
+        "**/*.aiir",
+        "**/*.td",
+    ])
+]

@@ -3,8 +3,8 @@
 // RUN: fir-opt %s | FileCheck %s --check-prefix=READ-OUT
 // RUN: tco --emit-fir %s | FileCheck %s --check-prefix=READ-OUT
 
-// CHECK: llvm.mlir.global external @_QMtest_0Edata_int() {{{.*}}test = "string_attribute_maintained"{{.*}}} : i32 {
-// CHECK: [[CST0:%.*]] = llvm.mlir.constant(10 : i32) : i32
+// CHECK: llvm.aiir.global external @_QMtest_0Edata_int() {{{.*}}test = "string_attribute_maintained"{{.*}}} : i32 {
+// CHECK: [[CST0:%.*]] = llvm.aiir.constant(10 : i32) : i32
 // CHECK: llvm.return [[CST0]] : i32
 // CHECK: }
 // READ-OUT: fir.global @_QMtest_0Edata_int {test = "string_attribute_maintained"} : i32 {

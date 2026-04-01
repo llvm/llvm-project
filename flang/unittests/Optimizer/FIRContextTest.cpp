@@ -8,10 +8,10 @@
 
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "gtest/gtest.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinOps.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "llvm/TargetParser/Host.h"
 #include <string>
@@ -21,14 +21,14 @@ using namespace fir;
 struct StringAttributesTests : public testing::Test {
 public:
   void SetUp() {
-    context.loadDialect<mlir::LLVM::LLVMDialect>();
+    context.loadDialect<aiir::LLVM::LLVMDialect>();
     kindMap = new KindMapping(&context, kindMapInit, "r42a10c14d28i40l41");
-    mod = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+    mod = aiir::ModuleOp::create(aiir::UnknownLoc::get(&context));
   }
 
   void TearDown() { delete kindMap; }
 
-  mlir::MLIRContext context;
+  aiir::AIIRContext context;
   KindMapping *kindMap{};
   std::string kindMapInit =
       "i10:80,l3:24,a1:8,r54:Double,r62:X86_FP80,r11:PPC_FP128";
@@ -36,7 +36,7 @@ public:
   std::string targetCPU = "gfx90a";
   std::string tuneCPU = "generic";
   std::string targetFeatures = "+gfx9-insts,+wavefrontsize64";
-  mlir::ModuleOp mod;
+  aiir::ModuleOp mod;
 };
 
 TEST_F(StringAttributesTests, moduleStringAttrTest) {

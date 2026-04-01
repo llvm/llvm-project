@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -26,12 +26,12 @@
 #include <optional>
 #include <string>
 
-namespace mlir {
+namespace aiir {
 class Location;
 class Type;
 class Value;
 class ValueRange;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -46,44 +46,44 @@ namespace Fortran::lower {
 struct PreparedActualArgument {
 
   PreparedActualArgument(hlfir::Entity actual,
-                         std::optional<mlir::Value> isPresent)
+                         std::optional<aiir::Value> isPresent)
       : actual{actual}, isPresent{isPresent} {}
   PreparedActualArgument(hlfir::ElementalAddrOp vectorSubscriptedActual)
       : actual{vectorSubscriptedActual}, isPresent{std::nullopt} {}
-  void setElementalIndices(mlir::ValueRange &indices) {
+  void setElementalIndices(aiir::ValueRange &indices) {
     oneBasedElementalIndices = &indices;
   }
 
   /// Get the prepared actual. If this is an array argument in an elemental
   /// call, the current element value will be returned.
-  hlfir::Entity getActual(mlir::Location loc, fir::FirOpBuilder &builder) const;
+  hlfir::Entity getActual(aiir::Location loc, fir::FirOpBuilder &builder) const;
 
-  mlir::Type getFortranElementType() {
+  aiir::Type getFortranElementType() {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
       return hlfir::getFortranElementType(actualEntity->getType());
-    mlir::Value entity =
+    aiir::Value entity =
         std::get<hlfir::ElementalAddrOp>(actual).getElementEntity();
     return hlfir::getFortranElementType(entity.getType());
   }
 
-  void derefPointersAndAllocatables(mlir::Location loc,
+  void derefPointersAndAllocatables(aiir::Location loc,
                                     fir::FirOpBuilder &builder) {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
       actual = hlfir::derefPointersAndAllocatables(loc, builder, *actualEntity);
   }
 
-  void loadTrivialScalar(mlir::Location loc, fir::FirOpBuilder &builder) {
+  void loadTrivialScalar(aiir::Location loc, fir::FirOpBuilder &builder) {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
       actual = hlfir::loadTrivialScalar(loc, builder, *actualEntity);
   }
 
   /// Ensure an array expression argument is fully evaluated in memory before
   /// the call. Useful for impure elemental calls.
-  hlfir::AssociateOp associateIfArrayExpr(mlir::Location loc,
+  hlfir::AssociateOp associateIfArrayExpr(aiir::Location loc,
                                           fir::FirOpBuilder &builder) {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual)) {
       if (!actualEntity->isVariable() && actualEntity->isArray()) {
-        mlir::Type storageType = actualEntity->getType();
+        aiir::Type storageType = actualEntity->getType();
         hlfir::AssociateOp associate = hlfir::genAssociateExpr(
             loc, builder, *actualEntity, storageType, "adapt.impure_arg_eval");
         actual = hlfir::Entity{associate};
@@ -98,13 +98,13 @@ struct PreparedActualArgument {
            std::get<hlfir::Entity>(actual).isArray();
   }
 
-  mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder) {
+  aiir::Value genShape(aiir::Location loc, fir::FirOpBuilder &builder) {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
       return hlfir::genShape(loc, builder, *actualEntity);
     return std::get<hlfir::ElementalAddrOp>(actual).getShape();
   }
 
-  mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder) {
+  aiir::Value genCharLength(aiir::Location loc, fir::FirOpBuilder &builder) {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
       return hlfir::genCharLength(loc, builder, *actualEntity);
     auto typeParams = std::get<hlfir::ElementalAddrOp>(actual).getTypeparams();
@@ -113,27 +113,27 @@ struct PreparedActualArgument {
     return typeParams[0];
   }
 
-  void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
-                           llvm::SmallVectorImpl<mlir::Value> &result) {
+  void genLengthParameters(aiir::Location loc, fir::FirOpBuilder &builder,
+                           llvm::SmallVectorImpl<aiir::Value> &result) {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual)) {
       hlfir::genLengthParameters(loc, builder, *actualEntity, result);
       return;
     }
-    for (mlir::Value len :
+    for (aiir::Value len :
          std::get<hlfir::ElementalAddrOp>(actual).getTypeparams())
       result.push_back(len);
   }
 
   /// When the argument is polymorphic, get mold value with the same dynamic
   /// type.
-  mlir::Value getPolymorphicMold(mlir::Location loc) const {
+  aiir::Value getPolymorphicMold(aiir::Location loc) const {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
       return *actualEntity;
     TODO(loc, "polymorphic vector subscripts");
   }
 
   bool handleDynamicOptional() const { return isPresent.has_value(); }
-  mlir::Value getIsPresent() const {
+  aiir::Value getIsPresent() const {
     assert(handleDynamicOptional() && "not a dynamic optional");
     return *isPresent;
   }
@@ -142,11 +142,11 @@ struct PreparedActualArgument {
 
 private:
   std::variant<hlfir::Entity, hlfir::ElementalAddrOp> actual;
-  mlir::ValueRange *oneBasedElementalIndices{nullptr};
+  aiir::ValueRange *oneBasedElementalIndices{nullptr};
   // When the actual may be dynamically optional, "isPresent"
   // holds a boolean value indicating the presence of the
   // actual argument at runtime.
-  std::optional<mlir::Value> isPresent;
+  std::optional<aiir::Value> isPresent;
 };
 
 /// Vector of pre-lowered actual arguments. nullopt if the actual is
@@ -155,10 +155,10 @@ using PreparedActualArguments =
     llvm::SmallVector<std::optional<PreparedActualArgument>>;
 
 std::optional<hlfir::EntityWithAttributes> lowerHlfirIntrinsic(
-    fir::FirOpBuilder &builder, mlir::Location loc, const std::string &name,
+    fir::FirOpBuilder &builder, aiir::Location loc, const std::string &name,
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType);
+    aiir::Type stmtResultType);
 
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_HLFIRINTRINSICS_H

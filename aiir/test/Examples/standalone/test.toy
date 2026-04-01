@@ -1,0 +1,19 @@
+# RUN: "%cmake_exe" "%aiir_src_root/examples/standalone" -G "%cmake_generator" \
+# RUN: -DCMAKE_BUILD_TYPE=%cmake_build_type \
+# RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
+# RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DAIIR_DIR=%aiir_cmake_dir \
+# RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
+# RUN: -DAIIR_PYTHON_PACKAGE_PREFIX=aiir_standalone \
+# RUN: -DAIIR_BINDINGS_PYTHON_NB_DOMAIN=aiir_standalone \
+# RUN: -DAIIR_INCLUDE_TESTS=ON \
+# RUN: -DPython3_EXECUTABLE=%python \
+# RUN: -DPython_EXECUTABLE=%python
+# RUN: export PYTHONPATH="%aiir_obj_root/python_packages/aiir_core"
+# RUN: "%cmake_exe" --build . --target check-standalone | tee %t
+# RUN: FileCheck --input-file=%t %s
+
+# Note: The number of checked tests is not important. The command will fail
+# if any fail.
+# CHECK: Passed
+# CHECK-NOT: Failed
+# UNSUPPORTED: target={{.*(android).*}}

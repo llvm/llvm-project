@@ -10,8 +10,8 @@
 #define FORTRAN_OPTIMIZER_TRANSFORMS_CUFCOMMON_H_
 
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/Dialect/GPU/IR/GPUDialect.h"
+#include "aiir/IR/BuiltinOps.h"
 
 static constexpr llvm::StringRef cudaDeviceModuleName = "cuda_device_mod";
 static constexpr llvm::StringRef cudaSharedMemSuffix = "__shared_mem__";
@@ -24,24 +24,24 @@ class KindMapping;
 namespace cuf {
 
 /// Retrieve or create the CUDA Fortran GPU module in the given \p mod.
-mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
-                                            mlir::SymbolTable &symTab);
+aiir::gpu::GPUModuleOp getOrCreateGPUModule(aiir::ModuleOp mod,
+                                            aiir::SymbolTable &symTab);
 
-bool isCUDADeviceContext(mlir::Operation *op);
-bool isCUDADeviceContext(mlir::Region &,
+bool isCUDADeviceContext(aiir::Operation *op);
+bool isCUDADeviceContext(aiir::Region &,
                          bool isDoConcurrentOffloadEnabled = false);
 bool isRegisteredDeviceGlobal(fir::GlobalOp op);
 bool isRegisteredDeviceAttr(std::optional<cuf::DataAttribute> attr);
 
-void genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder);
+void genPointerSync(const aiir::Value box, fir::FirOpBuilder &builder);
 
-int computeElementByteSize(mlir::Location loc, mlir::Type type,
+int computeElementByteSize(aiir::Location loc, aiir::Type type,
                            fir::KindMapping &kindMap,
                            bool emitErrorOnFailure = true);
 
-mlir::Value computeElementCount(mlir::PatternRewriter &rewriter,
-                                mlir::Location loc, mlir::Value shapeOperand,
-                                mlir::Type seqType, mlir::Type targetType);
+aiir::Value computeElementCount(aiir::PatternRewriter &rewriter,
+                                aiir::Location loc, aiir::Value shapeOperand,
+                                aiir::Type seqType, aiir::Type targetType);
 
 } // namespace cuf
 

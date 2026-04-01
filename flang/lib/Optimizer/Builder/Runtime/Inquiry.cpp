@@ -15,10 +15,10 @@
 using namespace Fortran::runtime;
 
 /// Generate call to `Lbound` runtime routine when the DIM argument is present.
-mlir::Value fir::runtime::genLboundDim(fir::FirOpBuilder &builder,
-                                       mlir::Location loc, mlir::Value array,
-                                       mlir::Value dim) {
-  mlir::func::FuncOp lboundFunc =
+aiir::Value fir::runtime::genLboundDim(fir::FirOpBuilder &builder,
+                                       aiir::Location loc, aiir::Value array,
+                                       aiir::Value dim) {
+  aiir::func::FuncOp lboundFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(LboundDim)>(loc, builder);
   auto fTy = lboundFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -29,10 +29,10 @@ mlir::Value fir::runtime::genLboundDim(fir::FirOpBuilder &builder,
   return fir::CallOp::create(builder, loc, lboundFunc, args).getResult(0);
 }
 
-void fir::runtime::genLbound(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value resultAddr, mlir::Value array,
-                             mlir::Value kind) {
-  mlir::func::FuncOp func =
+void fir::runtime::genLbound(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value resultAddr, aiir::Value array,
+                             aiir::Value kind) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(Lbound)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -46,10 +46,10 @@ void fir::runtime::genLbound(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate call to `Ubound` runtime routine.  Calls to UBOUND with a DIM
 /// argument get transformed into an expression equivalent to
 /// SIZE() + LBOUND() - 1, so they don't have an intrinsic in the runtime.
-void fir::runtime::genUbound(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value resultBox, mlir::Value array,
-                             mlir::Value kind) {
-  mlir::func::FuncOp uboundFunc =
+void fir::runtime::genUbound(fir::FirOpBuilder &builder, aiir::Location loc,
+                             aiir::Value resultBox, aiir::Value array,
+                             aiir::Value kind) {
+  aiir::func::FuncOp uboundFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Ubound)>(loc, builder);
   auto fTy = uboundFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -62,10 +62,10 @@ void fir::runtime::genUbound(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Generate call to `Size` runtime routine. This routine is a version when
 /// the DIM argument is present.
-mlir::Value fir::runtime::genSizeDim(fir::FirOpBuilder &builder,
-                                     mlir::Location loc, mlir::Value array,
-                                     mlir::Value dim) {
-  mlir::func::FuncOp sizeFunc =
+aiir::Value fir::runtime::genSizeDim(fir::FirOpBuilder &builder,
+                                     aiir::Location loc, aiir::Value array,
+                                     aiir::Value dim) {
+  aiir::func::FuncOp sizeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(SizeDim)>(loc, builder);
   auto fTy = sizeFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -78,9 +78,9 @@ mlir::Value fir::runtime::genSizeDim(fir::FirOpBuilder &builder,
 
 /// Generate call to `Size` runtime routine. This routine is a version when
 /// the DIM argument is absent.
-mlir::Value fir::runtime::genSize(fir::FirOpBuilder &builder,
-                                  mlir::Location loc, mlir::Value array) {
-  mlir::func::FuncOp sizeFunc =
+aiir::Value fir::runtime::genSize(fir::FirOpBuilder &builder,
+                                  aiir::Location loc, aiir::Value array) {
+  aiir::func::FuncOp sizeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Size)>(loc, builder);
   auto fTy = sizeFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -92,10 +92,10 @@ mlir::Value fir::runtime::genSize(fir::FirOpBuilder &builder,
 }
 
 /// Generate call to `IsContiguous` runtime routine.
-mlir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
-                                          mlir::Location loc,
-                                          mlir::Value array) {
-  mlir::func::FuncOp isContiguousFunc =
+aiir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
+                                          aiir::Location loc,
+                                          aiir::Value array) {
+  aiir::func::FuncOp isContiguousFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(IsContiguous)>(loc, builder);
   auto fTy = isContiguousFunc.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, array);
@@ -103,21 +103,21 @@ mlir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
 }
 
 /// Generate call to `IsContiguousUpTo` runtime routine.
-mlir::Value fir::runtime::genIsContiguousUpTo(fir::FirOpBuilder &builder,
-                                              mlir::Location loc,
-                                              mlir::Value array,
-                                              mlir::Value dim) {
-  mlir::func::FuncOp isContiguousFunc =
+aiir::Value fir::runtime::genIsContiguousUpTo(fir::FirOpBuilder &builder,
+                                              aiir::Location loc,
+                                              aiir::Value array,
+                                              aiir::Value dim) {
+  aiir::func::FuncOp isContiguousFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(IsContiguousUpTo)>(loc, builder);
   auto fTy = isContiguousFunc.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, array, dim);
   return fir::CallOp::create(builder, loc, isContiguousFunc, args).getResult(0);
 }
 
-void fir::runtime::genShape(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Value resultAddr, mlir::Value array,
-                            mlir::Value kind) {
-  mlir::func::FuncOp func =
+void fir::runtime::genShape(fir::FirOpBuilder &builder, aiir::Location loc,
+                            aiir::Value resultAddr, aiir::Value array,
+                            aiir::Value kind) {
+  aiir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(Shape)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);

@@ -17,8 +17,8 @@ func.func @fun_linkonce_odr(%arg0: i32) -> i32 attributes {llvm.linkage = #llvm.
   return %arg0 : i32
 }
 
-// CHECK-COMDAT:  llvm.mlir.global linkonce constant @global_linkonce() comdat(@__llvm_comdat::@global_linkonce) {addr_space = 0 : i32} : i32 
-// CHECK-NOCOMDAT:  llvm.mlir.global linkonce constant @global_linkonce() {addr_space = 0 : i32} : i32  {
+// CHECK-COMDAT:  llvm.aiir.global linkonce constant @global_linkonce() comdat(@__llvm_comdat::@global_linkonce) {addr_space = 0 : i32} : i32 
+// CHECK-NOCOMDAT:  llvm.aiir.global linkonce constant @global_linkonce() {addr_space = 0 : i32} : i32  {
 fir.global linkonce @global_linkonce constant : i32 {
   %0 = arith.constant 0 : i32
   fir.has_value %0 : i32
@@ -34,8 +34,8 @@ fir.global linkonce @global_linkonce constant : i32 {
 // CHECK-NOCOMDAT-NOT: llvm.comdat_selector
 
 
-// CHECK-COMDAT:  llvm.mlir.global linkonce_odr constant @global_linkonce_odr() comdat(@__llvm_comdat::@global_linkonce_odr) {addr_space = 0 : i32} : i32 
-// CHECK-NOCOMDAT:  llvm.mlir.global linkonce_odr constant @global_linkonce_odr() {addr_space = 0 : i32} : i32 { 
+// CHECK-COMDAT:  llvm.aiir.global linkonce_odr constant @global_linkonce_odr() comdat(@__llvm_comdat::@global_linkonce_odr) {addr_space = 0 : i32} : i32 
+// CHECK-NOCOMDAT:  llvm.aiir.global linkonce_odr constant @global_linkonce_odr() {addr_space = 0 : i32} : i32 { 
 fir.global linkonce_odr @global_linkonce_odr constant : i32 {
   %0 = arith.constant 0 : i32
   fir.has_value %0 : i32

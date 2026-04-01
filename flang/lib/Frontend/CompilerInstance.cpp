@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,7 +18,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/Timing.h"
-#include "mlir/Support/RawOstreamExtras.h"
+#include "aiir/Support/RawOstreamExtras.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -169,14 +169,14 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   if (invoc.getEnableTimers()) {
     llvm::TimePassesIsEnabled = true;
 
-    timingStreamMLIR = std::make_unique<Fortran::support::string_ostream>();
+    timingStreamAIIR = std::make_unique<Fortran::support::string_ostream>();
     timingStreamLLVM = std::make_unique<Fortran::support::string_ostream>();
     timingStreamCodeGen = std::make_unique<Fortran::support::string_ostream>();
 
     timingMgr.setEnabled(true);
-    timingMgr.setDisplayMode(mlir::DefaultTimingManager::DisplayMode::Tree);
+    timingMgr.setDisplayMode(aiir::DefaultTimingManager::DisplayMode::Tree);
     timingMgr.setOutput(
-        Fortran::support::createTimingFormatterText(*timingStreamMLIR));
+        Fortran::support::createTimingFormatterText(*timingStreamAIIR));
 
     // Creating a new TimingScope will automatically start the timer. Since this
     // is the top-level timer, this is ok because it will end up capturing the
@@ -205,10 +205,10 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
     // a null stream.
     timingMgr.print();
     timingMgr.setOutput(
-        Fortran::support::createTimingFormatterText(mlir::thread_safe_nulls()));
+        Fortran::support::createTimingFormatterText(aiir::thread_safe_nulls()));
 
     // This prints the timings in "reverse" order, starting from code
-    // generation, followed by LLVM-IR optimizations, then MLIR optimizations
+    // generation, followed by LLVM-IR optimizations, then AIIR optimizations
     // and transformations and the frontend. If any of the steps are disabled,
     // for instance because code generation was not performed, the strings
     // will be empty.
@@ -218,8 +218,8 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
     if (!timingStreamLLVM->str().empty())
       llvm::errs() << timingStreamLLVM->str() << "\n";
 
-    if (!timingStreamMLIR->str().empty())
-      llvm::errs() << timingStreamMLIR->str() << "\n";
+    if (!timingStreamAIIR->str().empty())
+      llvm::errs() << timingStreamAIIR->str() << "\n";
   }
 
   return !getDiagnostics().getClient()->getNumErrors();

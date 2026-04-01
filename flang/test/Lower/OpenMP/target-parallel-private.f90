@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --enable-delayed-privatization \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
 ! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %s 2>&1 |\
 ! RUN:   FileCheck %s

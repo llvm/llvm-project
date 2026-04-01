@@ -14,9 +14,9 @@
 #ifndef FORTRAN_DIALECT_HLFIR_OP_BASE
 #define FORTRAN_DIALECT_HLFIR_OP_BASE
 
-include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/EnumAttr.td"
-include "mlir/IR/OpBase.td"
+include "aiir/IR/AttrTypeBase.td"
+include "aiir/IR/EnumAttr.td"
+include "aiir/IR/OpBase.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 
 def hlfir_Dialect : Dialect {
@@ -58,26 +58,26 @@ def hlfir_ExprType : TypeDef<hlfir_Dialect, "Expr"> {
 
   let parameters = (ins
     ArrayRefParameter<"int64_t", "expression shape">:$shape,
-    "mlir::Type":$elementType,
+    "aiir::Type":$elementType,
     "bool":$polymorphic
   );
 
   let extraClassDeclaration = [{
     using Shape = llvm::SmallVector<int64_t>;
-    mlir::Type getEleTy() const {return getElementType();}
+    aiir::Type getEleTy() const {return getElementType();}
     bool isScalar() const { return getShape().empty(); }
     bool isArray() const { return !isScalar(); }
     bool isPolymorphic() const { return getPolymorphic(); }
     unsigned getRank() const {return getShape().size();}
-    mlir::Type getElementExprType() const {
-      mlir::Type eleTy = getElementType();
+    aiir::Type getElementExprType() const {
+      aiir::Type eleTy = getElementType();
       if (fir::isa_trivial(eleTy))
         return eleTy;
       return hlfir::ExprType::get(eleTy.getContext(), Shape{}, eleTy,
                 isPolymorphic());
     }
     static constexpr int64_t getUnknownExtent() {
-      return mlir::ShapedType::kDynamic;
+      return aiir::ShapedType::kDynamic;
     }
   }];
 

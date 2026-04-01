@@ -1,4 +1,4 @@
-add_clang_library(MLIRCIR
+add_clang_library(AIIRCIR
   CIRAttrs.cpp
   CIRDialect.cpp
   CIRMemorySlot.cpp
@@ -6,19 +6,19 @@ add_clang_library(MLIRCIR
   CIRDataLayout.cpp
 
   DEPENDS
-  MLIRCIROpsIncGen
-  MLIRCIRTypeConstraintsIncGen
-  MLIRCIREnumsGen
-  MLIRCIROpInterfacesIncGen
-  MLIRCIRLoopOpInterfaceIncGen
+  AIIRCIROpsIncGen
+  AIIRCIRTypeConstraintsIncGen
+  AIIRCIREnumsGen
+  AIIRCIROpInterfacesIncGen
+  AIIRCIRLoopOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRCIRInterfaces
-  MLIRDLTIDialect
-  MLIRDataLayoutInterfaces
-  MLIRFuncDialect
-  MLIRLoopLikeInterface
-  MLIRCIRInterfaces
+  AIIRIR
+  AIIRCIRInterfaces
+  AIIRDLTIDialect
+  AIIRDataLayoutInterfaces
+  AIIRFuncDialect
+  AIIRLoopLikeInterface
+  AIIRCIRInterfaces
   clangAST
   )

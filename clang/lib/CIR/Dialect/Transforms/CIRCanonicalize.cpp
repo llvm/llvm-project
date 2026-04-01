@@ -12,24 +12,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Block.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Region.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/Block.h"
+#include "aiir/IR/Operation.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/IR/Region.h"
+#include "aiir/Support/LogicalResult.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/MissingFeatures.h"
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
-namespace mlir {
+namespace aiir {
 #define GEN_PASS_DEF_CIRCANONICALIZE
 #include "clang/CIR/Dialect/Passes.h.inc"
-} // namespace mlir
+} // namespace aiir
 
 namespace {
 
@@ -56,8 +56,8 @@ void CIRCanonicalizePass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
 
   // Collect canonicalization patterns from CIR ops.
-  mlir::Dialect *cir = getContext().getLoadedDialect<cir::CIRDialect>();
-  for (mlir::RegisteredOperationName op :
+  aiir::Dialect *cir = getContext().getLoadedDialect<cir::CIRDialect>();
+  for (aiir::RegisteredOperationName op :
        getContext().getRegisteredOperations())
     if (&op.getDialect() == cir)
       op.getCanonicalizationPatterns(patterns, &getContext());
@@ -86,6 +86,6 @@ void CIRCanonicalizePass::runOnOperation() {
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::createCIRCanonicalizePass() {
+std::unique_ptr<Pass> aiir::createCIRCanonicalizePass() {
   return std::make_unique<CIRCanonicalizePass>();
 }

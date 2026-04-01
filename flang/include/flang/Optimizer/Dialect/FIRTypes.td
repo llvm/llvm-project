@@ -13,7 +13,7 @@
 #ifndef FIR_DIALECT_FIR_TYPES
 #define FIR_DIALECT_FIR_TYPES
 
-include "mlir/IR/AttrTypeBase.td"
+include "aiir/IR/AttrTypeBase.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -21,7 +21,7 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 //===----------------------------------------------------------------------===//
 
 class FIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
-               string baseCppClass = "::mlir::Type">
+               string baseCppClass = "::aiir::Type">
     : TypeDef<FIROpsDialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
@@ -47,7 +47,7 @@ def fir_BoxCharType : FIR_Type<"BoxChar", "boxchar"> {
     using KindTy = unsigned;
 
     // a !fir.boxchar<k> always wraps a !fir.char<k, ?>
-    CharacterType getElementType(mlir::MLIRContext *context) const;
+    CharacterType getElementType(aiir::AIIRContext *context) const;
 
     CharacterType getEleTy() const;
   }];
@@ -62,7 +62,7 @@ def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
     variables that are referenced.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "aiir::Type":$eleTy);
 
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
@@ -77,19 +77,19 @@ def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
     to) whether the entity is an array, its size, or what type it has.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "aiir::Type":$eleTy, "bool":$isVolatile);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
+        "aiir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
       return Base::get(eleTy.getContext(), eleTy, isVolatile);
     }]>,
   ];
 
   let extraClassDeclaration = [{
-    mlir::Type getElementType() const { return getEleTy(); }
+    aiir::Type getElementType() const { return getEleTy(); }
     bool isVolatile() const { return getIsVolatile(); }
   }];
 
@@ -115,12 +115,12 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
     using LenType = std::int64_t;
 
     /// Return unknown length Character type. e.g., CHARACTER(LEN=n).
-    static CharacterType getUnknownLen(mlir::MLIRContext *ctxt, KindTy kind) {
+    static CharacterType getUnknownLen(aiir::AIIRContext *ctxt, KindTy kind) {
       return get(ctxt, kind, unknownLen());
     }
 
     /// Return length 1 Character type. e.g., CHARACTER(LEN=1).
-    static CharacterType getSingleton(mlir::MLIRContext *ctxt, KindTy kind) {
+    static CharacterType getSingleton(aiir::AIIRContext *ctxt, KindTy kind) {
       return get(ctxt, kind, singleton());
     }
 
@@ -128,7 +128,7 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
     static constexpr LenType singleton() { return 1; }
 
     /// Character has a LEN value which is not a compile-time known constant.
-    static constexpr LenType unknownLen() { return mlir::ShapedType::kDynamic; }
+    static constexpr LenType unknownLen() { return aiir::ShapedType::kDynamic; }
 
     /// Character LEN is a runtime value.
     bool hasDynamicLen() { return getLen() == unknownLen(); }
@@ -146,10 +146,10 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
     is equivalent to a fir.box type with a dynamic type.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "aiir::Type":$eleTy, "bool":$isVolatile);
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
+    TypeBuilderWithInferredContext<(ins "aiir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
       return $_get(eleTy.getContext(), eleTy, isVolatile);
     }]>
   ];
@@ -182,7 +182,7 @@ def fir_HeapType : FIR_Type<"Heap", "heap"> {
     indirection. For example, an ALLOCATABLE POINTER is invalid.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "aiir::Type":$eleTy);
 
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
@@ -190,14 +190,14 @@ def fir_HeapType : FIR_Type<"Heap", "heap"> {
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
+    TypeBuilderWithInferredContext<(ins "aiir::Type":$elementType), [{
       assert(singleIndirectionLevel(elementType) && "invalid element type");
       return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
 
   let extraClassDeclaration = [{
-    mlir::Type getElementType() const { return getEleTy(); }
+    aiir::Type getElementType() const { return getEleTy(); }
   }];
 }
 
@@ -270,18 +270,18 @@ def fir_LLVMPointerType : FIR_Type<"LLVMPointer", "llvm_ptr"> {
     double indirections).
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "aiir::Type":$eleTy);
 
   let assemblyFormat = "`<` $eleTy `>`";
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
+    TypeBuilderWithInferredContext<(ins "aiir::Type":$elementType), [{
       return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
 
   let extraClassDeclaration = [{
-    mlir::Type getElementType() const { return getEleTy(); }
+    aiir::Type getElementType() const { return getEleTy(); }
   }];
 }
 
@@ -294,7 +294,7 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
     indirection. For example, an ALLOCATABLE POINTER is invalid.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "aiir::Type":$eleTy);
 
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
@@ -302,14 +302,14 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
+    TypeBuilderWithInferredContext<(ins "aiir::Type":$elementType), [{
       assert(singleIndirectionLevel(elementType) && "invalid element type");
       return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
 
   let extraClassDeclaration = [{
-    mlir::Type getElementType() const { return getEleTy(); }
+    aiir::Type getElementType() const { return getEleTy(); }
   }];
 }
 
@@ -329,17 +329,17 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    using TypePair = std::pair<std::string, mlir::Type>;
+    using TypePair = std::pair<std::string, aiir::Type>;
     using TypeList = llvm::ArrayRef<TypePair>;
     using TypeVector = llvm::SmallVector<TypePair>;
     TypeList getTypeList() const;
     TypeList getLenParamList() const;
 
-    mlir::Type getType(llvm::StringRef ident);
+    aiir::Type getType(llvm::StringRef ident);
     // Returns the index of the field \p ident in the type list.
     // Returns maximum unsigned if ident is not a field of this RecordType.
     unsigned getFieldIndex(llvm::StringRef ident);
-    mlir::Type getType(unsigned index) {
+    aiir::Type getType(unsigned index) {
       assert(index < getNumFields());
       return getTypeList()[index].second;
     }
@@ -377,18 +377,18 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
     to a specific memory resource.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "aiir::Type":$eleTy, "bool":$isVolatile);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, CArg<"bool", "false">:$isVolatile), [{
+    TypeBuilderWithInferredContext<(ins "aiir::Type":$elementType, CArg<"bool", "false">:$isVolatile), [{
       return Base::get(elementType.getContext(), elementType, isVolatile);
     }]>,
   ];
 
   let extraClassDeclaration = [{
-    mlir::Type getElementType() const { return getEleTy(); }
+    aiir::Type getElementType() const { return getEleTy(); }
     bool isVolatile() const { return getIsVolatile(); }
   }];
 
@@ -444,13 +444,13 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     may have an unknown number of dimensions or the extent of dimensions may be
     unknown. A sequence type models a Fortran array entity, giving it a type in
     FIR. A sequence type is assumed to be stored in a column-major order, which
-    differs from LLVM IR and other dialects of MLIR.
+    differs from LLVM IR and other dialects of AIIR.
   }];
 
   let parameters = (ins
     ArrayRefParameter<"int64_t", "Sequence shape">:$shape,
-    "mlir::Type":$eleTy,
-    "mlir::AffineMapAttr":$layoutMap
+    "aiir::Type":$eleTy,
+    "aiir::AffineMapAttr":$layoutMap
   );
 
   let genVerifyDecl = 1;
@@ -459,11 +459,11 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
   let builders = [
     TypeBuilderWithInferredContext<(ins
         "llvm::ArrayRef<int64_t>":$shape,
-        "mlir::Type":$eleTy), [{
+        "aiir::Type":$eleTy), [{
       return get(eleTy.getContext(), shape, eleTy, {});
     }]>,
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy,
+        "aiir::Type":$eleTy,
         "size_t":$dimensions), [{
       llvm::SmallVector<int64_t> shape(dimensions, getUnknownExtent());
       return get(eleTy.getContext(), shape, eleTy, {});
@@ -492,7 +492,7 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
 
     // The value `kDynamic` represents an unknown extent for a dimension
     static constexpr Extent getUnknownExtent() {
-      return mlir::ShapedType::kDynamic;
+      return aiir::ShapedType::kDynamic;
     }
 
     std::uint64_t getConstantArraySize() {
@@ -503,7 +503,7 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
       return size;
     }
 
-    mlir::Type getElementType() const { return getEleTy(); }
+    aiir::Type getElementType() const { return getEleTy(); }
   }];
 }
 
@@ -528,7 +528,7 @@ def fir_TypeDescType : FIR_Type<"TypeDesc", "tdesc"> {
     descriptor objects to determine the type of an entity at runtime, etc.
   }];
 
-  let parameters = (ins "mlir::Type":$ofTy);
+  let parameters = (ins "aiir::Type":$ofTy);
 
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
@@ -536,7 +536,7 @@ def fir_TypeDescType : FIR_Type<"TypeDesc", "tdesc"> {
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
+    TypeBuilderWithInferredContext<(ins "aiir::Type":$elementType), [{
       return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
@@ -551,15 +551,15 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
     A vector's element type must be real or integer.
   }];
 
-  let parameters = (ins "uint64_t":$len, "mlir::Type":$eleTy);
+  let parameters = (ins "uint64_t":$len, "aiir::Type":$eleTy);
 
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    static bool isValidElementType(mlir::Type t);
+    static bool isValidElementType(aiir::Type t);
 
-    mlir::Type getElementType() const { return getEleTy(); }
+    aiir::Type getElementType() const { return getEleTy(); }
   }];
 
   let skipDefaultBuilders = 1;
@@ -567,7 +567,7 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
   let builders = [
     TypeBuilderWithInferredContext<(ins
         "uint64_t":$len,
-        "mlir::Type":$eleTy), [{
+        "aiir::Type":$eleTy), [{
       return Base::get(eleTy.getContext(), len, eleTy);
     }]>,
   ];
@@ -590,7 +590,7 @@ def fir_DummyScopeType : FIR_Type<"DummyScope", "dscope"> {
 
 // Whether a type is a BaseBoxType
 def IsBaseBoxTypePred
-        : CPred<"mlir::isa<::fir::BaseBoxType>($_self)">;
+        : CPred<"aiir::isa<::fir::BaseBoxType>($_self)">;
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types

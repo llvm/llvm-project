@@ -6,56 +6,56 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_DATALAYOUT_H
 #define FORTRAN_OPTIMIZER_SUPPORT_DATALAYOUT_H
 
-#include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "aiir/Interfaces/DataLayoutInterfaces.h"
 #include <optional>
 
-namespace mlir {
+namespace aiir {
 class ModuleOp;
 namespace gpu {
 class GPUModuleOp;
 } // namespace gpu
-} // namespace mlir
+} // namespace aiir
 
 namespace llvm {
 class DataLayout;
 } // namespace llvm
 
 namespace fir::support {
-/// Create an mlir::DataLayoutSpecInterface attribute from an llvm::DataLayout
-/// and set it on the provided mlir::ModuleOp.
+/// Create an aiir::DataLayoutSpecInterface attribute from an llvm::DataLayout
+/// and set it on the provided aiir::ModuleOp.
 /// Also set the llvm.data_layout attribute with the string representation of
 /// the llvm::DataLayout on the module.
 /// These attributes are replaced if they were already set.
-void setMLIRDataLayout(mlir::ModuleOp mlirModule, const llvm::DataLayout &dl);
-void setMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule,
+void setAIIRDataLayout(aiir::ModuleOp aiirModule, const llvm::DataLayout &dl);
+void setAIIRDataLayout(aiir::gpu::GPUModuleOp aiirModule,
                        const llvm::DataLayout &dl);
 
-/// Create an mlir::DataLayoutSpecInterface from the llvm.data_layout attribute
+/// Create an aiir::DataLayoutSpecInterface from the llvm.data_layout attribute
 /// if one is provided. If such attribute is not available, create a default
 /// target independent layout when allowDefaultLayout is true. Otherwise do
 /// nothing.
-void setMLIRDataLayoutFromAttributes(mlir::ModuleOp mlirModule,
+void setAIIRDataLayoutFromAttributes(aiir::ModuleOp aiirModule,
                                      bool allowDefaultLayout);
-void setMLIRDataLayoutFromAttributes(mlir::gpu::GPUModuleOp mlirModule,
+void setAIIRDataLayoutFromAttributes(aiir::gpu::GPUModuleOp aiirModule,
                                      bool allowDefaultLayout);
 
-/// Create mlir::DataLayout from the data layout information on the
-/// mlir::Module. Creates the data layout information attributes with
-/// setMLIRDataLayoutFromAttributes if the DLTI attribute is not yet set. If no
+/// Create aiir::DataLayout from the data layout information on the
+/// aiir::Module. Creates the data layout information attributes with
+/// setAIIRDataLayoutFromAttributes if the DLTI attribute is not yet set. If no
 /// information is present at all and \p allowDefaultLayout is false, returns
 /// std::nullopt.
-std::optional<mlir::DataLayout>
-getOrSetMLIRDataLayout(mlir::ModuleOp mlirModule,
+std::optional<aiir::DataLayout>
+getOrSetAIIRDataLayout(aiir::ModuleOp aiirModule,
                        bool allowDefaultLayout = false);
-std::optional<mlir::DataLayout>
-getOrSetMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule,
+std::optional<aiir::DataLayout>
+getOrSetAIIRDataLayout(aiir::gpu::GPUModuleOp aiirModule,
                        bool allowDefaultLayout = false);
 
 } // namespace fir::support

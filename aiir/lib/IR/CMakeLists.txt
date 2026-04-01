@@ -1,0 +1,77 @@
+if(AIIR_ENABLE_PDL_IN_PATTERNMATCH)
+  set(pdl_src
+    PDL/PDLPatternMatch.cpp
+  )
+endif()
+
+add_aiir_library(AIIRIR
+  AffineExpr.cpp
+  AffineMap.cpp
+  AsmPrinter.cpp
+  Attributes.cpp
+  AttrTypeSubElements.cpp
+  Block.cpp
+  Builders.cpp
+  BuiltinAttributeInterfaces.cpp
+  BuiltinAttributes.cpp
+  BuiltinDialect.cpp
+  BuiltinDialectBytecode.cpp
+  BuiltinTypes.cpp
+  BuiltinTypeInterfaces.cpp
+  Diagnostics.cpp
+  Dialect.cpp
+  DialectResourceBlobManager.cpp
+  Dominance.cpp
+  ExtensibleDialect.cpp
+  IntegerSet.cpp
+  Location.cpp
+  AIIRContext.cpp
+  ODSSupport.cpp
+  Operation.cpp
+  OperationSupport.cpp
+  PatternLoggingListener.cpp
+  PatternMatch.cpp
+  QuantStorageTypeInterface.cpp
+  Region.cpp
+  RegionKindInterface.cpp
+  Remarks.cpp
+  SymbolTable.cpp
+  TensorEncoding.cpp
+  Types.cpp
+  TypeRange.cpp
+  TypeUtilities.cpp
+  Unit.cpp
+  Value.cpp
+  ValueRange.cpp
+  Verifier.cpp
+  Visitors.cpp
+  ${pdl_src}
+
+  ADDITIONAL_HEADER_DIRS
+  ${AIIR_MAIN_INCLUDE_DIR}/aiir/IR
+
+  DEPENDS
+  AIIRBuiltinAttributesIncGen
+  AIIRBuiltinAttributeInterfacesIncGen
+  AIIRBuiltinDialectBytecodeIncGen
+  AIIRBuiltinDialectIncGen
+  AIIRBuiltinLocationAttributesIncGen
+  AIIRBuiltinOpsIncGen
+  AIIRBuiltinTypesIncGen
+  AIIRBuiltinTypeConstraintsIncGen
+  AIIRBuiltinTypeInterfacesIncGen
+  AIIRCallInterfacesIncGen
+  AIIRCastInterfacesIncGen
+  AIIRDataLayoutInterfacesIncGen
+  AIIRDialectFoldInterfaceIncGen
+  AIIROpAsmInterfaceIncGen
+  AIIRQuantStorageTypeInterfaceIncGen
+  AIIRRegionKindInterfaceIncGen
+  AIIRSideEffectInterfacesIncGen
+  AIIRSymbolInterfacesIncGen
+  AIIRTensorEncodingIncGen
+  AIIROpAsmDialectInterfaceIncGen
+
+  LINK_LIBS PUBLIC
+  AIIRSupport
+  )

@@ -1,0 +1,4 @@
+// RUN: aiir-opt --help | FileCheck %s
+//
+// CHECK: OVERVIEW: AIIR modular optimizer driver
+

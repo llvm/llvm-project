@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --split-input-file -o /dev/null --mlir-disable-threading \
+// RUN: fir-opt %s --split-input-file -o /dev/null --aiir-disable-threading \
 // RUN:   -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' \
 // RUN:   2>&1 | FileCheck -match-full-lines %s
 

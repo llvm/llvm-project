@@ -12,7 +12,7 @@ add_clang_library(clangTidyLLVMModule STATIC
   PreferStaticOverAnonymousNamespaceCheck.cpp
   TwineLocalCheck.cpp
   TypeSwitchCaseTypesCheck.cpp
-  UseNewMLIROpBuilderCheck.cpp
+  UseNewAIIROpBuilderCheck.cpp
   UseRangesCheck.cpp
   UseVectorUtilsCheck.cpp
 

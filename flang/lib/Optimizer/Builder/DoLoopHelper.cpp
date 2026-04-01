@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 fir::DoLoopOp
-fir::factory::DoLoopHelper::createLoop(mlir::Value lb, mlir::Value ub,
-                                       mlir::Value step,
+fir::factory::DoLoopHelper::createLoop(aiir::Value lb, aiir::Value ub,
+                                       aiir::Value step,
                                        const BodyGenerator &bodyGenerator) {
   auto lbi = builder.convertToIndexType(loc, lb);
   auto ubi = builder.convertToIndexType(loc, ub);
@@ -30,7 +30,7 @@ fir::factory::DoLoopHelper::createLoop(mlir::Value lb, mlir::Value ub,
 }
 
 fir::DoLoopOp
-fir::factory::DoLoopHelper::createLoop(mlir::Value lb, mlir::Value ub,
+fir::factory::DoLoopHelper::createLoop(aiir::Value lb, aiir::Value ub,
                                        const BodyGenerator &bodyGenerator) {
   return createLoop(
       lb, ub, builder.createIntegerConstant(loc, builder.getIndexType(), 1),
@@ -38,11 +38,11 @@ fir::factory::DoLoopHelper::createLoop(mlir::Value lb, mlir::Value ub,
 }
 
 fir::DoLoopOp
-fir::factory::DoLoopHelper::createLoop(mlir::Value count,
+fir::factory::DoLoopHelper::createLoop(aiir::Value count,
                                        const BodyGenerator &bodyGenerator) {
   auto indexType = builder.getIndexType();
   auto zero = builder.createIntegerConstant(loc, indexType, 0);
   auto one = builder.createIntegerConstant(loc, count.getType(), 1);
-  auto up = mlir::arith::SubIOp::create(builder, loc, count, one);
+  auto up = aiir::arith::SubIOp::create(builder, loc, count, one);
   return createLoop(zero, up, one, bodyGenerator);
 }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -110,11 +110,11 @@ int64_t getCollapseValue(const List<Clause> &clauses) {
 
 void genObjectList(const ObjectList &objects,
                    lower::AbstractConverter &converter,
-                   llvm::SmallVectorImpl<mlir::Value> &operands) {
+                   llvm::SmallVectorImpl<aiir::Value> &operands) {
   for (const Object &object : objects) {
     const semantics::Symbol *sym = object.sym();
     assert(sym && "Expected Symbol");
-    if (mlir::Value variable = converter.getSymbolAddress(*sym)) {
+    if (aiir::Value variable = converter.getSymbolAddress(*sym)) {
       operands.push_back(variable);
     } else if (const auto *details =
                    sym->detailsIf<semantics::HostAssocDetails>()) {
@@ -124,7 +124,7 @@ void genObjectList(const ObjectList &objects,
   }
 }
 
-mlir::Type getLoopVarType(lower::AbstractConverter &converter,
+aiir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize) {
   // OpenMP runtime requires 32-bit or 64-bit loop variables.
   loopVarTypeSize = loopVarTypeSize * 8;
@@ -132,7 +132,7 @@ mlir::Type getLoopVarType(lower::AbstractConverter &converter,
     loopVarTypeSize = 32;
   } else if (loopVarTypeSize > 64) {
     loopVarTypeSize = 64;
-    mlir::emitWarning(converter.getCurrentLocation(),
+    aiir::emitWarning(converter.getCurrentLocation(),
                       "OpenMP loop iteration variable cannot have more than 64 "
                       "bits size and will be narrowed into 64 bits.");
   }
@@ -162,7 +162,7 @@ getIterationVariableSymbol(const lower::pft::Evaluation &eval) {
 }
 
 void gatherFuncAndVarSyms(
-    const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
+    const ObjectList &objects, aiir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause,
     bool automap) {
   for (const Object &object : objects)
@@ -204,8 +204,8 @@ omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
 static void generateArrayIndices(lower::AbstractConverter &converter,
                                  fir::FirOpBuilder &firOpBuilder,
                                  lower::StatementContext &stmtCtx,
-                                 mlir::Location clauseLocation,
-                                 llvm::SmallVectorImpl<mlir::Value> &indices,
+                                 aiir::Location clauseLocation,
+                                 llvm::SmallVectorImpl<aiir::Value> &indices,
                                  omp::Object object) {
   auto maybeRef = evaluate::ExtractDataRef(*object.ref());
   if (!maybeRef)
@@ -219,7 +219,7 @@ static void generateArrayIndices(lower::AbstractConverter &converter,
     if (std::holds_alternative<Triplet>(v.u))
       TODO(clauseLocation, "Triplet indexing in map clause is unsupported");
     auto expr = std::get<Fortran::evaluate::IndirectSubscriptIntegerExpr>(v.u);
-    mlir::Value subscript =
+    aiir::Value subscript =
         fir::getBase(converter.genExprValue(toEvExpr(expr.value()), stmtCtx));
     indices.push_back(firOpBuilder.createConvert(
         clauseLocation, firOpBuilder.getIndexType(), subscript));
@@ -305,12 +305,12 @@ static void generateArrayIndices(lower::AbstractConverter &converter,
 ///   generated maps, minus alterations of the TO and FROM bits for the
 ///   intermediate components to prevent accidental overwriting on device
 ///   write back.
-mlir::Value createParentSymAndGenIntermediateMaps(
-    mlir::Location clauseLocation, lower::AbstractConverter &converter,
+aiir::Value createParentSymAndGenIntermediateMaps(
+    aiir::Location clauseLocation, lower::AbstractConverter &converter,
     semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
     omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
-    mlir::omp::ClauseMapFlags mapTypeBits) {
+    aiir::omp::ClauseMapFlags mapTypeBits) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   /// Checks if an omp::Object is an array expression with a subscript, e.g.
@@ -328,7 +328,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
   fir::factory::AddrAndBoundsInfo parentBaseAddr =
       lower::getDataOperandBaseAddr(converter, firOpBuilder,
                                     *objectList[0].sym(), clauseLocation);
-  mlir::Value curValue = parentBaseAddr.addr;
+  aiir::Value curValue = parentBaseAddr.addr;
 
   // Iterate over all objects in the objectList, this should consist of all
   // record types between the parent and the member being mapped (including
@@ -347,10 +347,10 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     //
     // We must generate coordinate operation accesses for each subscript
     // we encounter.
-    if (fir::SequenceType arrType = mlir::dyn_cast<fir::SequenceType>(
+    if (fir::SequenceType arrType = aiir::dyn_cast<fir::SequenceType>(
             fir::unwrapPassByRefType(curValue.getType()))) {
       if (isArrayExprWithSubscript(objectList[i])) {
-        llvm::SmallVector<mlir::Value> subscriptIndices;
+        llvm::SmallVector<aiir::Value> subscriptIndices;
         generateArrayIndices(converter, firOpBuilder, stmtCtx, clauseLocation,
                              subscriptIndices, objectList[i]);
         assert(!subscriptIndices.empty() &&
@@ -365,15 +365,15 @@ mlir::Value createParentSymAndGenIntermediateMaps(
           // both the lb (ShiftOp) and extent (ShapeOp) of the Box, giving the
           // ArrayCoorOp the spatial information it needs to calculate the
           // underlying address.
-          mlir::Value shapeShift = Fortran::lower::getShapeShift(
+          aiir::Value shapeShift = Fortran::lower::getShapeShift(
               firOpBuilder, clauseLocation, curValue);
           auto addrOp =
               fir::BoxAddrOp::create(firOpBuilder, clauseLocation, curValue);
           curValue = fir::ArrayCoorOp::create(
               firOpBuilder, clauseLocation,
               firOpBuilder.getRefType(arrType.getEleTy()), addrOp, shapeShift,
-              /*slice=*/mlir::Value{}, subscriptIndices,
-              /*typeparms=*/mlir::ValueRange{});
+              /*slice=*/aiir::Value{}, subscriptIndices,
+              /*typeparms=*/aiir::ValueRange{});
         } else {
           // We're required to negate by one in the non-Box case as I believe
           // we do not have the shape generated from the dimensions to help
@@ -381,10 +381,10 @@ mlir::Value createParentSymAndGenIntermediateMaps(
           // TODO/FIXME: This may need adjusted to support bounds of unusual
           // dimensions, if that's the case then it is likely best to fold this
           // branch into the above.
-          mlir::Value one = firOpBuilder.createIntegerConstant(
+          aiir::Value one = firOpBuilder.createIntegerConstant(
               clauseLocation, firOpBuilder.getIndexType(), 1);
           for (auto &v : subscriptIndices)
-            v = mlir::arith::SubIOp::create(firOpBuilder, clauseLocation, v,
+            v = aiir::arith::SubIOp::create(firOpBuilder, clauseLocation, v,
                                             one);
           curValue = fir::CoordinateOp::create(
               firOpBuilder, clauseLocation,
@@ -399,11 +399,11 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     // utilise the index information generated previously and passed in to
     // work out the correct member to access and the corresponding member
     // type.
-    if (fir::RecordType recordType = mlir::dyn_cast<fir::RecordType>(
+    if (fir::RecordType recordType = aiir::dyn_cast<fir::RecordType>(
             fir::unwrapPassByRefType(curValue.getType()))) {
-      fir::IntOrValue idxConst = mlir::IntegerAttr::get(
+      fir::IntOrValue idxConst = aiir::IntegerAttr::get(
           firOpBuilder.getI32Type(), indices[currentIndicesIdx]);
-      mlir::Type memberTy = recordType.getType(indices[currentIndicesIdx]);
+      aiir::Type memberTy = recordType.getType(indices[currentIndicesIdx]);
       curValue = fir::CoordinateOp::create(
           firOpBuilder, clauseLocation, firOpBuilder.getRefType(memberTy),
           curValue, llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
@@ -434,12 +434,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         // unfortunately this currently does a bit more than just generate
         // bounds and we discard the other bits. May be useful to extend the
         // utility to just provide bounds in the future.
-        llvm::SmallVector<mlir::Value> interimBounds;
+        llvm::SmallVector<aiir::Value> interimBounds;
         if (i + 1 < objectList.size() &&
             objectList[i + 1].sym()->IsObjectArray()) {
           std::stringstream interimFortran;
           Fortran::lower::gatherDataOperandAddrAndBounds<
-              mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
+              aiir::omp::MapBoundsOp, aiir::omp::MapBoundsType>(
               converter, converter.getFirOpBuilder(), semaCtx,
               converter.getFctCtx(), *objectList[i + 1].sym(),
               objectList[i + 1].ref(), clauseLocation, interimFortran,
@@ -451,20 +451,20 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         // be safer to just pass OMP_MAP_NONE as the map type, but we may still
         // need some of the other map types the mapped member utilises, so for
         // now it's good to keep an eye on this.
-        mlir::omp::ClauseMapFlags interimMapType = mapTypeBits;
-        interimMapType &= ~mlir::omp::ClauseMapFlags::to;
-        interimMapType &= ~mlir::omp::ClauseMapFlags::from;
-        interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
+        aiir::omp::ClauseMapFlags interimMapType = mapTypeBits;
+        interimMapType &= ~aiir::omp::ClauseMapFlags::to;
+        interimMapType &= ~aiir::omp::ClauseMapFlags::from;
+        interimMapType &= ~aiir::omp::ClauseMapFlags::return_param;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
-        mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
+        aiir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
             firOpBuilder, clauseLocation, curValue,
-            /*varPtrPtr=*/mlir::Value{}, asFortran,
+            /*varPtrPtr=*/aiir::Value{}, asFortran,
             /*bounds=*/interimBounds,
             /*members=*/{},
-            /*membersIndex=*/mlir::ArrayAttr{}, interimMapType,
-            mlir::omp::VariableCaptureKind::ByRef, curValue.getType());
+            /*membersIndex=*/aiir::ArrayAttr{}, interimMapType,
+            aiir::omp::VariableCaptureKind::ByRef, curValue.getType());
 
         parentMemberIndices.memberPlacementIndices.push_back(interimIndices);
         parentMemberIndices.memberMap.push_back(mapOp);
@@ -534,7 +534,7 @@ void generateMemberPlacementIndices(const Object &object,
 }
 
 void OmpMapParentAndMemberData::addChildIndexAndMapToParent(
-    const omp::Object &object, mlir::omp::MapInfoOp &mapOp,
+    const omp::Object &object, aiir::omp::MapInfoOp &mapOp,
     semantics::SemanticsContext &semaCtx) {
   llvm::SmallVector<int64_t> indices;
   generateMemberPlacementIndices(object, indices, semaCtx);
@@ -561,7 +561,7 @@ void insertChildMapInfoIntoParent(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
-    llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+    llvm::SmallVectorImpl<aiir::Value> &mapOperands,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (auto indices : parentMemberIndices) {
@@ -570,7 +570,7 @@ void insertChildMapInfoIntoParent(
           return v == indices.first.sym();
         });
     if (parentIter != mapSyms.end()) {
-      auto mapOp = llvm::cast<mlir::omp::MapInfoOp>(
+      auto mapOp = llvm::cast<aiir::omp::MapInfoOp>(
           mapOperands[std::distance(mapSyms.begin(), parentIter)]
               .getDefiningOp());
 
@@ -591,7 +591,7 @@ void insertChildMapInfoIntoParent(
       // dominance ordering at the cost of efficiency/time.
       mapOp->moveAfter(indices.second.memberMap.back());
 
-      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+      for (aiir::omp::MapInfoOp memberMap : indices.second.memberMap)
         mapOp.getMembersMutable().append(memberMap.getResult());
 
       mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
@@ -599,34 +599,34 @@ void insertChildMapInfoIntoParent(
     } else {
       // NOTE: We take the map type of the first child, this may not
       // be the correct thing to do, however, we shall see. For the moment
-      // it allows this to work with enter and exit without causing MLIR
+      // it allows this to work with enter and exit without causing AIIR
       // verification issues. The more appropriate thing may be to take
       // the "main" map type clause from the directive being used.
-      mlir::omp::ClauseMapFlags mapType =
+      aiir::omp::ClauseMapFlags mapType =
           indices.second.memberMap[0].getMapType();
 
-      llvm::SmallVector<mlir::Value> members;
+      llvm::SmallVector<aiir::Value> members;
       members.reserve(indices.second.memberMap.size());
-      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+      for (aiir::omp::MapInfoOp memberMap : indices.second.memberMap)
         members.push_back(memberMap.getResult());
 
       // Create parent to emplace and bind members
-      llvm::SmallVector<mlir::Value> bounds;
+      llvm::SmallVector<aiir::Value> bounds;
       std::stringstream asFortran;
       fir::factory::AddrAndBoundsInfo info =
-          lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
-                                                mlir::omp::MapBoundsType>(
+          lower::gatherDataOperandAddrAndBounds<aiir::omp::MapBoundsOp,
+                                                aiir::omp::MapBoundsType>(
               converter, firOpBuilder, semaCtx, converter.getFctCtx(),
               *indices.first.sym(), indices.first.ref(),
               converter.getCurrentLocation(), asFortran, bounds,
               treatIndexAsSection);
 
-      mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
+      aiir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
           firOpBuilder, info.rawInput.getLoc(), info.rawInput,
-          /*varPtrPtr=*/mlir::Value(), asFortran.str(), bounds, members,
+          /*varPtrPtr=*/aiir::Value(), asFortran.str(), bounds, members,
           firOpBuilder.create2DI64ArrayAttr(
               indices.second.memberPlacementIndices),
-          mapType, mlir::omp::VariableCaptureKind::ByRef,
+          mapType, aiir::omp::VariableCaptureKind::ByRef,
           info.rawInput.getType(),
           /*partialMap=*/true);
 
@@ -637,7 +637,7 @@ void insertChildMapInfoIntoParent(
 }
 
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
-                                     mlir::Location loc) {
+                                     aiir::Location loc) {
   using Lastprivate = omp::clause::Lastprivate;
   auto &maybeMod =
       std::get<std::optional<Lastprivate::LastprivateModifier>>(lastp.t);
@@ -649,13 +649,13 @@ void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
 }
 
 static void convertLoopBounds(lower::AbstractConverter &converter,
-                              mlir::Location loc,
-                              mlir::omp::LoopRelatedClauseOps &result,
+                              aiir::Location loc,
+                              aiir::omp::LoopRelatedClauseOps &result,
                               std::size_t loopVarTypeSize) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   // The types of lower bound, upper bound, and step are converted into the
   // type of the loop variable if necessary.
-  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
+  aiir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
   for (unsigned it = 0; it < (unsigned)result.loopLowerBounds.size(); it++) {
     result.loopLowerBounds[it] = firOpBuilder.createConvert(
         loc, loopVarType, result.loopLowerBounds[it]);
@@ -724,10 +724,10 @@ void collectTileSizesFromOpenMPConstruct(
 }
 
 int64_t collectLoopRelatedInfo(
-    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::AbstractConverter &converter, aiir::Location currentLocation,
     lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
     const omp::List<omp::Clause> &clauses,
-    mlir::omp::LoopRelatedClauseOps &result,
+    aiir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
   int64_t numCollapse = 1;
 
@@ -750,9 +750,9 @@ int64_t collectLoopRelatedInfo(
 }
 
 void collectLoopRelatedInfo(
-    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::AbstractConverter &converter, aiir::Location currentLocation,
     lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
-    int64_t numCollapse, mlir::omp::LoopRelatedClauseOps &result,
+    int64_t numCollapse, aiir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -811,13 +811,13 @@ void collectLoopRelatedInfo(
 // entities such as hlfir.designate/hlfir.declare, while others already
 // produce raw FIR addresses such as fir.box_addr. Normalize entity-like values
 // to a raw address, and leave already-raw addresses unchanged.
-mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
+aiir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
                             const omp::Object &object,
                             Fortran::lower::StatementContext &stmtCtx,
-                            mlir::Location loc) {
+                            aiir::Location loc) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  auto genRawAddress = [&](mlir::Value v) -> mlir::Value {
+  auto genRawAddress = [&](aiir::Value v) -> aiir::Value {
     // Examples seen here include hlfir.designate for a(i), hlfir.declare for
     // whole objects like dummy/character arrays, fir.load of a pointer box,
     // and already-raw fir.box_addr results. Only the entity-like cases can be
@@ -838,23 +838,23 @@ mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
   if (auto expr = object.ref()) {
     fir::ExtendedValue exv =
         converter.genExprAddr(toEvExpr(*expr), stmtCtx, &loc);
-    mlir::Value baseAddr = fir::getBase(exv);
+    aiir::Value baseAddr = fir::getBase(exv);
     return genRawAddress(baseAddr);
   }
 
   // Whole objects such as affinity(a) come from the symbol address directly.
   const Fortran::semantics::Symbol *sym = object.sym();
   assert(sym && "expected symbol in affinity object");
-  mlir::Value symAddr = converter.getSymbolAddress(*sym);
+  aiir::Value symAddr = converter.getSymbolAddress(*sym);
   return genRawAddress(symAddr);
 }
 
 // Compute the size in bytes of a single element described by an HLFIR entity.
 // This returns the per-element byte size only; callers handle any array extent
 // or section span separately.
-mlir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
-                                  mlir::Location loc,
-                                  const mlir::DataLayout &dl,
+aiir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
+                                  aiir::Location loc,
+                                  const aiir::DataLayout &dl,
                                   hlfir::Entity entity) {
   // Boxed entities carry the runtime element size in the descriptor.
   if (entity.isBoxAddressOrValue())
@@ -863,15 +863,15 @@ mlir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
         fir::BoxEleSizeOp::create(builder, loc, builder.getIndexType(),
                                   entity));
 
-  mlir::Type elemTy = entity.getFortranElementType();
+  aiir::Type elemTy = entity.getFortranElementType();
 
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(elemTy)) {
+  if (auto charTy = aiir::dyn_cast<fir::CharacterType>(elemTy)) {
     // Non-box character entities expose length separately; multiply it by the
     // character kind byte width.
-    mlir::Value charLen = hlfir::genCharLength(loc, builder, entity);
-    mlir::Value charBytes = builder.createIntegerConstant(
+    aiir::Value charLen = hlfir::genCharLength(loc, builder, entity);
+    aiir::Value charBytes = builder.createIntegerConstant(
         loc, builder.getI64Type(), charTy.getFKind());
-    return mlir::arith::MulIOp::create(
+    return aiir::arith::MulIOp::create(
         builder, loc,
         fir::ConvertOp::create(builder, loc, builder.getI64Type(), charLen),
         charBytes);
@@ -888,18 +888,18 @@ mlir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
 }
 
 // Compute the total number of elements in a whole affinity object.
-static mlir::Value getTotalElements(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, hlfir::Entity entity) {
+static aiir::Value getTotalElements(fir::FirOpBuilder &builder,
+                                    aiir::Location loc, hlfir::Entity entity) {
   if (entity.isAssumedRank())
     return builder.createIntegerConstant(loc, builder.getI64Type(), 0);
 
   assert(!entity.isScalar() &&
          "expected non-scalar entity to compute total elements");
 
-  mlir::Value total =
+  aiir::Value total =
       builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-  for (mlir::Value extent : hlfir::genExtentsVector(loc, builder, entity))
-    total = mlir::arith::MulIOp::create(builder, loc, total, extent);
+  for (aiir::Value extent : hlfir::genExtentsVector(loc, builder, entity))
+    total = aiir::arith::MulIOp::create(builder, loc, total, extent);
   return fir::ConvertOp::create(builder, loc, builder.getI64Type(), total);
 }
 
@@ -923,29 +923,29 @@ static mlir::Value getTotalElements(fir::FirOpBuilder &builder,
 //
 // Strides in the section bounds do not change this computation: the span still
 // covers the full contiguous address range between the first and last element.
-static mlir::Value computeBoundsSpan(fir::FirOpBuilder &builder,
-                                     mlir::Location loc,
-                                     llvm::ArrayRef<mlir::Value> bounds,
+static aiir::Value computeBoundsSpan(fir::FirOpBuilder &builder,
+                                     aiir::Location loc,
+                                     llvm::ArrayRef<aiir::Value> bounds,
                                      hlfir::Entity entity) {
   assert(!bounds.empty() && "expected non-empty bounds to compute span");
   auto fullExtents = hlfir::genExtentsVector(loc, builder, entity);
   assert(fullExtents.size() == bounds.size() &&
          "expected bounds and full extents to have the same size");
-  mlir::Value one =
+  aiir::Value one =
       builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-  mlir::Value span = one;     // inclusive: +1
-  mlir::Value distance = one; // column-major linearization factor
+  aiir::Value span = one;     // inclusive: +1
+  aiir::Value distance = one; // column-major linearization factor
   for (auto [b, extent] : llvm::zip(bounds, fullExtents)) {
-    auto mb = b.getDefiningOp<mlir::omp::MapBoundsOp>();
+    auto mb = b.getDefiningOp<aiir::omp::MapBoundsOp>();
     assert(mb && "expected omp.map_bounds for affinity section span");
-    mlir::Value delta = mlir::arith::SubIOp::create(
+    aiir::Value delta = aiir::arith::SubIOp::create(
         builder, loc, mb.getUpperBound(), mb.getLowerBound());
 
-    span = mlir::arith::AddIOp::create(
+    span = aiir::arith::AddIOp::create(
         builder, loc, span,
-        mlir::arith::MulIOp::create(builder, loc, delta, distance));
+        aiir::arith::MulIOp::create(builder, loc, delta, distance));
 
-    distance = mlir::arith::MulIOp::create(builder, loc, distance, extent);
+    distance = aiir::arith::MulIOp::create(builder, loc, distance, extent);
   }
   // Convert from index to i64 (bounds are in index type)
   return fir::ConvertOp::create(builder, loc, builder.getI64Type(), span);
@@ -956,10 +956,10 @@ static mlir::Value computeBoundsSpan(fir::FirOpBuilder &builder,
 // is the span of the section in elements multiplied by the element size. For a
 // whole array object, it is the total number of elements multiplied by the
 // element size.
-mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
-                           const mlir::DataLayout &dl, hlfir::Entity entity,
-                           llvm::ArrayRef<mlir::Value> bounds) {
-  mlir::Value elemBytes = genElementSizeInBytes(builder, loc, dl, entity);
+aiir::Value genAffinityLen(fir::FirOpBuilder &builder, aiir::Location loc,
+                           const aiir::DataLayout &dl, hlfir::Entity entity,
+                           llvm::ArrayRef<aiir::Value> bounds) {
+  aiir::Value elemBytes = genElementSizeInBytes(builder, loc, dl, entity);
 
   // Scalar entities and single designated elements contribute exactly one
   // element to the affinity object.
@@ -968,13 +968,13 @@ mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
 
   if (!bounds.empty()) {
     // Array sections carry explicit bounds describing the covered span.
-    mlir::Value spanElems = computeBoundsSpan(builder, loc, bounds, entity);
-    return mlir::arith::MulIOp::create(builder, loc, spanElems, elemBytes);
+    aiir::Value spanElems = computeBoundsSpan(builder, loc, bounds, entity);
+    return aiir::arith::MulIOp::create(builder, loc, spanElems, elemBytes);
   }
 
   // Whole-array objects have no explicit bounds here, so use the extents of
   // the entity itself.
-  return mlir::arith::MulIOp::create(
+  return aiir::arith::MulIOp::create(
       builder, loc, getTotalElements(builder, loc, entity), elemBytes);
 }
 
@@ -1011,9 +1011,9 @@ void defaultMangler(Fortran::lower::AbstractConverter &converter,
 // Examples:
 //   a(i, j)       -> coordinates for a(i, j)
 //   a(i:i+1, j+2) -> coordinates for a(i, j+2)
-std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+std::optional<llvm::SmallVector<aiir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
-    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc) {
+    Fortran::lower::StatementContext &stmtCtx, aiir::Location loc) {
   const std::optional<ExprTy> &ref = object.ref();
   assert(ref && "expected iterator-dependent object to have a reference");
 
@@ -1029,13 +1029,13 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
   const Fortran::semantics::Symbol *sym = object.sym();
   assert(sym && "expected symbol for iterator-dependent object");
   fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*sym);
-  mlir::Value one =
+  aiir::Value one =
       builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-  llvm::SmallVector<mlir::Value> indices;
+  llvm::SmallVector<aiir::Value> indices;
   indices.reserve(arrayRef->subscript().size());
 
   for (const auto &[dim, subscript] : llvm::enumerate(arrayRef->subscript())) {
-    mlir::Value idx;
+    aiir::Value idx;
     if (const auto *triplet =
             std::get_if<Fortran::evaluate::Triplet>(&subscript.u)) {
       // Sections use the first element of the section as the base address, so
@@ -1077,27 +1077,27 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 
 // Build the element address for an iterator-dependent affinity object from a
 // base entity and lowered indices.
-mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
+aiir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   hlfir::Entity entity,
-                                  llvm::ArrayRef<mlir::Value> ivs,
-                                  mlir::Location loc) {
+                                  llvm::ArrayRef<aiir::Value> ivs,
+                                  aiir::Location loc) {
   auto &builder = converter.getFirOpBuilder();
-  mlir::Value base = entity.getBase();
+  aiir::Value base = entity.getBase();
 
   // If base is a reference-to-box, load it so array_coor sees the box value
-  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(base.getType())) {
-    if (mlir::isa<fir::BoxType>(refTy.getEleTy()))
+  if (auto refTy = aiir::dyn_cast<fir::ReferenceType>(base.getType())) {
+    if (aiir::isa<fir::BoxType>(refTy.getEleTy()))
       base = fir::LoadOp::create(builder, loc, base);
   }
 
   // Build shape from the entity extents
-  mlir::Value shape;
+  aiir::Value shape;
   auto extents = hlfir::genExtentsVector(loc, builder, entity);
   assert(extents.size() == ivs.size() &&
          "expected the number of extents and iteration variables to match for "
          "iterator");
   if (entity.mayHaveNonDefaultLowerBounds()) {
-    llvm::SmallVector<mlir::Value> lowerBounds;
+    llvm::SmallVector<aiir::Value> lowerBounds;
     lowerBounds.reserve(ivs.size());
     for (unsigned dim = 0; dim < ivs.size(); ++dim)
       lowerBounds.push_back(hlfir::genLBound(loc, builder, entity, dim));
@@ -1106,15 +1106,15 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
     shape = fir::ShapeOp::create(builder, loc, extents);
   }
 
-  mlir::Type elementToRefTy =
+  aiir::Type elementToRefTy =
       fir::ReferenceType::get(entity.getFortranElementType());
 
   return fir::ArrayCoorOp::create(builder, loc, elementToRefTy,
                                   /*memref=*/base,
                                   /*shape=*/shape,
-                                  /*slice=*/mlir::Value{},
+                                  /*slice=*/aiir::Value{},
                                   /*indices=*/ivs,
-                                  /*typeparams=*/mlir::ValueRange{});
+                                  /*typeparams=*/aiir::ValueRange{});
 }
 
 } // namespace omp

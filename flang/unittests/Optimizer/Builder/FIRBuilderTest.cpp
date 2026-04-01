@@ -12,7 +12,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 
-using namespace mlir;
+using namespace aiir;
 
 struct FIRBuilderTest : public testing::Test {
 public:
@@ -21,14 +21,14 @@ public:
 
     llvm::ArrayRef<fir::KindTy> defs;
     fir::KindMapping kindMap(&context, defs);
-    mlir::OpBuilder builder(&context);
+    aiir::OpBuilder builder(&context);
     auto loc = builder.getUnknownLoc();
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    moduleOp = mlir::ModuleOp::create(builder, loc);
+    moduleOp = aiir::ModuleOp::create(builder, loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+    aiir::func::FuncOp func = aiir::func::FuncOp::create(
         builder, loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
@@ -38,8 +38,8 @@ public:
 
   fir::FirOpBuilder &getBuilder() { return *firBuilder; }
 
-  mlir::MLIRContext context;
-  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
+  aiir::AIIRContext context;
+  aiir::OwningOpRef<aiir::ModuleOp> moduleOp;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 };
 
@@ -51,11 +51,11 @@ static arith::CmpIOp createCondition(fir::FirOpBuilder &builder) {
       builder, loc, arith::CmpIPredicate::eq, zero1, zero2);
 }
 
-static void checkIntegerConstant(mlir::Value value, mlir::Type ty, int64_t v) {
-  EXPECT_TRUE(mlir::isa<mlir::arith::ConstantOp>(value.getDefiningOp()));
-  auto cstOp = dyn_cast<mlir::arith::ConstantOp>(value.getDefiningOp());
+static void checkIntegerConstant(aiir::Value value, aiir::Type ty, int64_t v) {
+  EXPECT_TRUE(aiir::isa<aiir::arith::ConstantOp>(value.getDefiningOp()));
+  auto cstOp = dyn_cast<aiir::arith::ConstantOp>(value.getDefiningOp());
   EXPECT_EQ(ty, cstOp.getType());
-  auto valueAttr = mlir::dyn_cast_or_null<IntegerAttr>(cstOp.getValue());
+  auto valueAttr = aiir::dyn_cast_or_null<IntegerAttr>(cstOp.getValue());
   EXPECT_EQ(v, valueAttr.getInt());
 }
 
@@ -109,7 +109,7 @@ TEST_F(FIRBuilderTest, genIsNotNullAddr) {
   auto dummyValue =
       builder.createIntegerConstant(loc, builder.getIndexType(), 0);
   auto res = builder.genIsNotNullAddr(loc, dummyValue);
-  EXPECT_TRUE(mlir::isa<arith::CmpIOp>(res.getDefiningOp()));
+  EXPECT_TRUE(aiir::isa<arith::CmpIOp>(res.getDefiningOp()));
   auto cmpOp = dyn_cast<arith::CmpIOp>(res.getDefiningOp());
   EXPECT_EQ(arith::CmpIPredicate::ne, cmpOp.getPredicate());
 }
@@ -120,7 +120,7 @@ TEST_F(FIRBuilderTest, genIsNullAddr) {
   auto dummyValue =
       builder.createIntegerConstant(loc, builder.getIndexType(), 0);
   auto res = builder.genIsNullAddr(loc, dummyValue);
-  EXPECT_TRUE(mlir::isa<arith::CmpIOp>(res.getDefiningOp()));
+  EXPECT_TRUE(aiir::isa<arith::CmpIOp>(res.getDefiningOp()));
   auto cmpOp = dyn_cast<arith::CmpIOp>(res.getDefiningOp());
   EXPECT_EQ(arith::CmpIPredicate::eq, cmpOp.getPredicate());
 }
@@ -130,14 +130,14 @@ TEST_F(FIRBuilderTest, createZeroConstant) {
   auto loc = builder.getUnknownLoc();
 
   auto cst = builder.createNullConstant(loc);
-  EXPECT_TRUE(mlir::isa<fir::ZeroOp>(cst.getDefiningOp()));
+  EXPECT_TRUE(aiir::isa<fir::ZeroOp>(cst.getDefiningOp()));
   auto zeroOp = dyn_cast<fir::ZeroOp>(cst.getDefiningOp());
   EXPECT_EQ(fir::ReferenceType::get(builder.getNoneType()),
       zeroOp.getResult().getType());
   auto idxTy = builder.getIndexType();
 
   cst = builder.createNullConstant(loc, idxTy);
-  EXPECT_TRUE(mlir::isa<fir::ZeroOp>(cst.getDefiningOp()));
+  EXPECT_TRUE(aiir::isa<fir::ZeroOp>(cst.getDefiningOp()));
   zeroOp = dyn_cast<fir::ZeroOp>(cst.getDefiningOp());
   EXPECT_EQ(builder.getIndexType(), zeroOp.getResult().getType());
 }
@@ -146,13 +146,13 @@ TEST_F(FIRBuilderTest, createRealZeroConstant) {
   auto builder = getBuilder();
   auto ctx = builder.getContext();
   auto loc = builder.getUnknownLoc();
-  auto realTy = mlir::Float64Type::get(ctx);
+  auto realTy = aiir::Float64Type::get(ctx);
   auto cst = builder.createRealZeroConstant(loc, realTy);
-  EXPECT_TRUE(mlir::isa<arith::ConstantOp>(cst.getDefiningOp()));
+  EXPECT_TRUE(aiir::isa<arith::ConstantOp>(cst.getDefiningOp()));
   auto cstOp = dyn_cast<arith::ConstantOp>(cst.getDefiningOp());
   EXPECT_EQ(realTy, cstOp.getType());
   EXPECT_EQ(
-      0u, mlir::cast<FloatAttr>(cstOp.getValue()).getValue().convertToDouble());
+      0u, aiir::cast<FloatAttr>(cstOp.getValue()).getValue().convertToDouble());
 }
 
 TEST_F(FIRBuilderTest, createBool) {
@@ -165,8 +165,8 @@ TEST_F(FIRBuilderTest, createBool) {
 TEST_F(FIRBuilderTest, getVarLenSeqTy) {
   auto builder = getBuilder();
   auto ty = builder.getVarLenSeqTy(builder.getI64Type());
-  EXPECT_TRUE(mlir::isa<fir::SequenceType>(ty));
-  fir::SequenceType seqTy = mlir::dyn_cast<fir::SequenceType>(ty);
+  EXPECT_TRUE(aiir::isa<fir::SequenceType>(ty));
+  fir::SequenceType seqTy = aiir::dyn_cast<fir::SequenceType>(ty);
   EXPECT_EQ(1u, seqTy.getDimension());
   EXPECT_TRUE(fir::unwrapSequenceType(ty).isInteger(64));
 }
@@ -187,7 +187,7 @@ TEST_F(FIRBuilderTest, createGlobal1) {
   auto i64Type = IntegerType::get(builder.getContext(), 64);
   auto global = builder.createGlobal(
       loc, i64Type, "global1", builder.createInternalLinkage(), {}, true);
-  EXPECT_TRUE(mlir::isa<fir::GlobalOp>(global));
+  EXPECT_TRUE(aiir::isa<fir::GlobalOp>(global));
   EXPECT_EQ("global1", global.getSymName());
   EXPECT_TRUE(global.getConstant().has_value());
   EXPECT_EQ(i64Type, global.getType());
@@ -211,14 +211,14 @@ TEST_F(FIRBuilderTest, createGlobal2) {
   auto attr = builder.getIntegerAttr(i32Type, 16);
   auto global = builder.createGlobal(
       loc, i32Type, "global2", builder.createLinkOnceLinkage(), attr, false);
-  EXPECT_TRUE(mlir::isa<fir::GlobalOp>(global));
+  EXPECT_TRUE(aiir::isa<fir::GlobalOp>(global));
   EXPECT_EQ("global2", global.getSymName());
   EXPECT_FALSE(global.getConstant().has_value());
   EXPECT_EQ(i32Type, global.getType());
   EXPECT_TRUE(global.getInitVal().has_value());
-  EXPECT_TRUE(mlir::isa<mlir::IntegerAttr>(global.getInitVal().value()));
+  EXPECT_TRUE(aiir::isa<aiir::IntegerAttr>(global.getInitVal().value()));
   EXPECT_EQ(16,
-      mlir::cast<mlir::IntegerAttr>(global.getInitVal().value()).getValue());
+      aiir::cast<aiir::IntegerAttr>(global.getInitVal().value()).getValue());
   EXPECT_TRUE(global.getLinkName().has_value());
   EXPECT_EQ(
       builder.createLinkOnceLinkage().getValue(), global.getLinkName().value());
@@ -241,8 +241,8 @@ TEST_F(FIRBuilderTest, uniqueCFIdent) {
 
 TEST_F(FIRBuilderTest, locationToLineNo) {
   auto builder = getBuilder();
-  auto loc = mlir::FileLineColLoc::get(builder.getStringAttr("file1"), 10, 5);
-  mlir::Value line =
+  auto loc = aiir::FileLineColLoc::get(builder.getStringAttr("file1"), 10, 5);
+  aiir::Value line =
       fir::factory::locationToLineNo(builder, loc, builder.getI64Type());
   checkIntegerConstant(line, builder.getI64Type(), 10);
   line = fir::factory::locationToLineNo(
@@ -263,8 +263,8 @@ TEST_F(FIRBuilderTest, hasDynamicSize) {
 TEST_F(FIRBuilderTest, locationToFilename) {
   auto builder = getBuilder();
   auto loc =
-      mlir::FileLineColLoc::get(builder.getStringAttr("file1.f90"), 10, 5);
-  mlir::Value locToFile = fir::factory::locationToFilename(builder, loc);
+      aiir::FileLineColLoc::get(builder.getStringAttr("file1.f90"), 10, 5);
+  aiir::Value locToFile = fir::factory::locationToFilename(builder, loc);
   auto addrOp = dyn_cast<fir::AddrOfOp>(locToFile.getDefiningOp());
   auto symbol = addrOp.getSymbol().getRootReference().getValue();
   auto global = builder.getNamedGlobal(symbol);
@@ -272,11 +272,11 @@ TEST_F(FIRBuilderTest, locationToFilename) {
   EXPECT_TRUE(llvm::hasSingleElement(stringLitOps));
   for (auto stringLit : stringLitOps) {
     EXPECT_EQ(
-        10, mlir::cast<mlir::IntegerAttr>(stringLit.getSize()).getValue());
-    EXPECT_TRUE(mlir::isa<StringAttr>(stringLit.getValue()));
+        10, aiir::cast<aiir::IntegerAttr>(stringLit.getSize()).getValue());
+    EXPECT_TRUE(aiir::isa<StringAttr>(stringLit.getValue()));
     EXPECT_EQ(0,
         strcmp("file1.f90\0",
-            mlir::dyn_cast<StringAttr>(stringLit.getValue())
+            aiir::dyn_cast<StringAttr>(stringLit.getValue())
                 .getValue()
                 .str()
                 .c_str()));
@@ -288,9 +288,9 @@ TEST_F(FIRBuilderTest, createStringLitOp) {
   llvm::StringRef data("mystringlitdata");
   auto loc = builder.getUnknownLoc();
   auto op = builder.createStringLitOp(loc, data);
-  EXPECT_EQ(15, mlir::cast<mlir::IntegerAttr>(op.getSize()).getValue());
-  EXPECT_TRUE(mlir::isa<StringAttr>(op.getValue()));
-  EXPECT_EQ(data, mlir::dyn_cast<StringAttr>(op.getValue()).getValue());
+  EXPECT_EQ(15, aiir::cast<aiir::IntegerAttr>(op.getSize()).getValue());
+  EXPECT_TRUE(aiir::isa<StringAttr>(op.getValue()));
+  EXPECT_EQ(data, aiir::dyn_cast<StringAttr>(op.getValue()).getValue());
 }
 
 TEST_F(FIRBuilderTest, createStringLiteral) {
@@ -306,7 +306,7 @@ TEST_F(FIRBuilderTest, createStringLiteral) {
   auto generalGetLen = fir::getLen(strLit);
   checkIntegerConstant(generalGetLen, builder.getCharacterLengthType(), 16);
   auto addr = charBox->getBuffer();
-  EXPECT_TRUE(mlir::isa<fir::AddrOfOp>(addr.getDefiningOp()));
+  EXPECT_TRUE(aiir::isa<fir::AddrOfOp>(addr.getDefiningOp()));
   auto addrOp = dyn_cast<fir::AddrOfOp>(addr.getDefiningOp());
   auto symbol = addrOp.getSymbol().getRootReference().getValue();
   auto global = builder.getNamedGlobal(symbol);
@@ -319,10 +319,10 @@ TEST_F(FIRBuilderTest, createStringLiteral) {
   EXPECT_TRUE(llvm::hasSingleElement(stringLitOps));
   for (auto stringLit : stringLitOps) {
     EXPECT_EQ(
-        16, mlir::cast<mlir::IntegerAttr>(stringLit.getSize()).getValue());
-    EXPECT_TRUE(mlir::isa<StringAttr>(stringLit.getValue()));
+        16, aiir::cast<aiir::IntegerAttr>(stringLit.getSize()).getValue());
+    EXPECT_TRUE(aiir::isa<StringAttr>(stringLit.getValue()));
     EXPECT_EQ(
-        strValue, mlir::dyn_cast<StringAttr>(stringLit.getValue()).getValue());
+        strValue, aiir::dyn_cast<StringAttr>(stringLit.getValue()).getValue());
   }
 }
 
@@ -332,7 +332,7 @@ TEST_F(FIRBuilderTest, allocateLocal) {
   llvm::StringRef varName = "var1";
   auto var = builder.allocateLocal(
       loc, builder.getI64Type(), "", varName, {}, {}, false);
-  EXPECT_TRUE(mlir::isa<fir::AllocaOp>(var.getDefiningOp()));
+  EXPECT_TRUE(aiir::isa<fir::AllocaOp>(var.getDefiningOp()));
   auto allocaOp = dyn_cast<fir::AllocaOp>(var.getDefiningOp());
   EXPECT_EQ(builder.getI64Type(), allocaOp.getInType());
   EXPECT_TRUE(allocaOp.getBindcName().has_value());
@@ -343,10 +343,10 @@ TEST_F(FIRBuilderTest, allocateLocal) {
   EXPECT_EQ(0u, allocaOp.getShape().size());
 }
 
-static void checkShapeOp(mlir::Value shape, mlir::Value c10, mlir::Value c100) {
-  EXPECT_TRUE(mlir::isa<fir::ShapeOp>(shape.getDefiningOp()));
+static void checkShapeOp(aiir::Value shape, aiir::Value c10, aiir::Value c100) {
+  EXPECT_TRUE(aiir::isa<fir::ShapeOp>(shape.getDefiningOp()));
   fir::ShapeOp op = dyn_cast<fir::ShapeOp>(shape.getDefiningOp());
-  auto shapeTy = mlir::dyn_cast<fir::ShapeType>(op.getType());
+  auto shapeTy = aiir::dyn_cast<fir::ShapeType>(op.getType());
   EXPECT_EQ(2u, shapeTy.getRank());
   EXPECT_EQ(2u, op.getExtents().size());
   EXPECT_EQ(c10, op.getExtents()[0]);
@@ -358,7 +358,7 @@ TEST_F(FIRBuilderTest, genShapeWithExtents) {
   auto loc = builder.getUnknownLoc();
   auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
   auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
-  llvm::SmallVector<mlir::Value> extents = {c10, c100};
+  llvm::SmallVector<aiir::Value> extents = {c10, c100};
   auto shape = builder.genShape(loc, extents);
   checkShapeOp(shape, c10, c100);
 }
@@ -369,12 +369,12 @@ TEST_F(FIRBuilderTest, genShapeWithExtentsAndShapeShift) {
   auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
   auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
   auto c1 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
-  llvm::SmallVector<mlir::Value> shifts = {c1, c1};
-  llvm::SmallVector<mlir::Value> extents = {c10, c100};
+  llvm::SmallVector<aiir::Value> shifts = {c1, c1};
+  llvm::SmallVector<aiir::Value> extents = {c10, c100};
   auto shape = builder.genShape(loc, shifts, extents);
-  EXPECT_TRUE(mlir::isa<fir::ShapeShiftOp>(shape.getDefiningOp()));
+  EXPECT_TRUE(aiir::isa<fir::ShapeShiftOp>(shape.getDefiningOp()));
   fir::ShapeShiftOp op = dyn_cast<fir::ShapeShiftOp>(shape.getDefiningOp());
-  auto shapeTy = mlir::dyn_cast<fir::ShapeShiftType>(op.getType());
+  auto shapeTy = aiir::dyn_cast<fir::ShapeShiftType>(op.getType());
   EXPECT_EQ(2u, shapeTy.getRank());
   EXPECT_EQ(2u, op.getExtents().size());
   EXPECT_EQ(2u, op.getOrigins().size());
@@ -385,7 +385,7 @@ TEST_F(FIRBuilderTest, genShapeWithAbstractArrayBox) {
   auto loc = builder.getUnknownLoc();
   auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
   auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
-  llvm::SmallVector<mlir::Value> extents = {c10, c100};
+  llvm::SmallVector<aiir::Value> extents = {c10, c100};
   fir::AbstractArrayBox aab(extents, {});
   EXPECT_TRUE(aab.lboundsAllOne());
   auto shape = builder.genShape(loc, aab);
@@ -410,10 +410,10 @@ TEST_F(FIRBuilderTest, getExtents) {
   EXPECT_EQ(0u, ext.size());
   auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
   auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
-  llvm::SmallVector<mlir::Value> extents = {c10, c100};
+  llvm::SmallVector<aiir::Value> extents = {c10, c100};
   fir::SequenceType::Shape shape(2, fir::SequenceType::getUnknownExtent());
   auto arrayTy = fir::SequenceType::get(shape, builder.getI64Type());
-  mlir::Value array = fir::UndefOp::create(builder, loc, arrayTy);
+  aiir::Value array = fir::UndefOp::create(builder, loc, arrayTy);
   fir::ArrayBoxValue aab(array, extents, {});
   fir::ExtendedValue ex(aab);
   auto readExtents = fir::factory::getExtents(loc, builder, ex);
@@ -424,31 +424,31 @@ TEST_F(FIRBuilderTest, createZeroValue) {
   auto builder = getBuilder();
   auto loc = builder.getUnknownLoc();
 
-  mlir::Type i64Ty = mlir::IntegerType::get(builder.getContext(), 64);
-  mlir::Value zeroInt = fir::factory::createZeroValue(builder, loc, i64Ty);
+  aiir::Type i64Ty = aiir::IntegerType::get(builder.getContext(), 64);
+  aiir::Value zeroInt = fir::factory::createZeroValue(builder, loc, i64Ty);
   EXPECT_TRUE(zeroInt.getType() == i64Ty);
   auto cst =
-      mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(zeroInt.getDefiningOp());
+      aiir::dyn_cast_or_null<aiir::arith::ConstantOp>(zeroInt.getDefiningOp());
   EXPECT_TRUE(cst);
-  auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue());
+  auto intAttr = aiir::dyn_cast<aiir::IntegerAttr>(cst.getValue());
   EXPECT_TRUE(intAttr && intAttr.getInt() == 0);
 
-  mlir::Type f32Ty = mlir::Float32Type::get(builder.getContext());
-  mlir::Value zeroFloat = fir::factory::createZeroValue(builder, loc, f32Ty);
+  aiir::Type f32Ty = aiir::Float32Type::get(builder.getContext());
+  aiir::Value zeroFloat = fir::factory::createZeroValue(builder, loc, f32Ty);
   EXPECT_TRUE(zeroFloat.getType() == f32Ty);
-  auto cst2 = mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(
+  auto cst2 = aiir::dyn_cast_or_null<aiir::arith::ConstantOp>(
       zeroFloat.getDefiningOp());
   EXPECT_TRUE(cst2);
-  auto floatAttr = mlir::dyn_cast<mlir::FloatAttr>(cst2.getValue());
+  auto floatAttr = aiir::dyn_cast<aiir::FloatAttr>(cst2.getValue());
   EXPECT_TRUE(floatAttr && floatAttr.getValueAsDouble() == 0.);
 
-  mlir::Type boolTy = mlir::IntegerType::get(builder.getContext(), 1);
-  mlir::Value flaseBool = fir::factory::createZeroValue(builder, loc, boolTy);
+  aiir::Type boolTy = aiir::IntegerType::get(builder.getContext(), 1);
+  aiir::Value flaseBool = fir::factory::createZeroValue(builder, loc, boolTy);
   EXPECT_TRUE(flaseBool.getType() == boolTy);
-  auto cst3 = mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(
+  auto cst3 = aiir::dyn_cast_or_null<aiir::arith::ConstantOp>(
       flaseBool.getDefiningOp());
   EXPECT_TRUE(cst3);
-  auto intAttr2 = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue());
+  auto intAttr2 = aiir::dyn_cast<aiir::IntegerAttr>(cst.getValue());
   EXPECT_TRUE(intAttr2 && intAttr2.getInt() == 0);
 }
 
@@ -456,7 +456,7 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
   auto builder = getBuilder();
   auto loc = builder.getUnknownLoc();
 
-  auto makeExv = [&](mlir::Type elementType, mlir::Type arrayType)
+  auto makeExv = [&](aiir::Type elementType, aiir::Type arrayType)
       -> std::tuple<llvm::SmallVector<fir::ExtendedValue, 4>,
           llvm::SmallVector<fir::ExtendedValue, 4>> {
     auto ptrTyArray = fir::PointerType::get(arrayType);
@@ -479,22 +479,22 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
     scalars.emplace_back(fir::UnboxedValue(ptrValScalar));
     scalars.emplace_back(fir::BoxValue(boxValScalar));
     scalars.emplace_back(
-        fir::MutableBoxValue(boxRefValScalar, mlir::ValueRange(), {}));
+        fir::MutableBoxValue(boxRefValScalar, aiir::ValueRange(), {}));
 
     llvm::SmallVector<fir::ExtendedValue, 4> arrays;
     auto extent = fir::UndefOp::create(builder, loc, builder.getIndexType());
-    llvm::SmallVector<mlir::Value> extents(
-        mlir::dyn_cast<fir::SequenceType>(arrayType).getDimension(),
+    llvm::SmallVector<aiir::Value> extents(
+        aiir::dyn_cast<fir::SequenceType>(arrayType).getDimension(),
         extent.getResult());
     arrays.emplace_back(fir::ArrayBoxValue(ptrValArray, extents));
     arrays.emplace_back(fir::BoxValue(boxValArray));
     arrays.emplace_back(
-        fir::MutableBoxValue(boxRefValArray, mlir::ValueRange(), {}));
+        fir::MutableBoxValue(boxRefValArray, aiir::ValueRange(), {}));
     return {scalars, arrays};
   };
 
-  auto f32Ty = mlir::Float32Type::get(builder.getContext());
-  mlir::Type f32SeqTy = builder.getVarLenSeqTy(f32Ty);
+  auto f32Ty = aiir::Float32Type::get(builder.getContext());
+  aiir::Type f32SeqTy = builder.getVarLenSeqTy(f32Ty);
   auto [f32Scalars, f32Arrays] = makeExv(f32Ty, f32SeqTy);
   for (const auto &scalar : f32Scalars) {
     EXPECT_EQ(fir::getBaseTypeOf(scalar), f32Ty);
@@ -510,12 +510,12 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
   auto derivedWithLengthTy =
       fir::RecordType::get(builder.getContext(), "derived_test");
 
-  llvm::SmallVector<std::pair<std::string, mlir::Type>> parameters;
-  llvm::SmallVector<std::pair<std::string, mlir::Type>> components;
+  llvm::SmallVector<std::pair<std::string, aiir::Type>> parameters;
+  llvm::SmallVector<std::pair<std::string, aiir::Type>> components;
   parameters.emplace_back("p1", builder.getI64Type());
   components.emplace_back("c1", f32Ty);
   derivedWithLengthTy.finalize(parameters, components);
-  mlir::Type derivedWithLengthSeqTy =
+  aiir::Type derivedWithLengthSeqTy =
       builder.getVarLenSeqTy(derivedWithLengthTy);
   auto [derivedWithLengthScalars, derivedWithLengthArrays] =
       makeExv(derivedWithLengthTy, derivedWithLengthSeqTy);
@@ -536,13 +536,13 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   auto ctx = builder.getContext();
   auto loc = builder.getUnknownLoc();
 
-  auto realTy = mlir::Float32Type::get(ctx);
+  auto realTy = aiir::Float32Type::get(ctx);
   auto arg = fir::UndefOp::create(builder, loc, realTy);
 
   // Test that FastMathFlags is 'none' by default.
-  mlir::Operation *op1 = mlir::arith::AddFOp::create(builder, loc, arg, arg);
+  aiir::Operation *op1 = aiir::arith::AddFOp::create(builder, loc, arg, arg);
   auto op1_fmi =
-      mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op1);
+      aiir::dyn_cast_or_null<aiir::arith::ArithFastMathInterface>(op1);
   EXPECT_TRUE(op1_fmi);
   auto op1_fmf = op1_fmi.getFastMathFlagsAttr().getValue();
   EXPECT_EQ(op1_fmf, arith::FastMathFlags::none);
@@ -558,18 +558,18 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   builder_copy.setFastMathFlags(FMF2);
 
   // Modifying FastMathFlags for the copy must not affect the original builder.
-  mlir::Operation *op2 = mlir::arith::AddFOp::create(builder, loc, arg, arg);
+  aiir::Operation *op2 = aiir::arith::AddFOp::create(builder, loc, arg, arg);
   auto op2_fmi =
-      mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op2);
+      aiir::dyn_cast_or_null<aiir::arith::ArithFastMathInterface>(op2);
   EXPECT_TRUE(op2_fmi);
   auto op2_fmf = op2_fmi.getFastMathFlagsAttr().getValue();
   EXPECT_EQ(op2_fmf, FMF1);
 
   // Modifying FastMathFlags for the original builder must not affect the copy.
-  mlir::Operation *op3 =
-      mlir::arith::AddFOp::create(builder_copy, loc, arg, arg);
+  aiir::Operation *op3 =
+      aiir::arith::AddFOp::create(builder_copy, loc, arg, arg);
   auto op3_fmi =
-      mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op3);
+      aiir::dyn_cast_or_null<aiir::arith::ArithFastMathInterface>(op3);
   EXPECT_TRUE(op3_fmi);
   auto op3_fmf = op3_fmi.getFastMathFlagsAttr().getValue();
   EXPECT_EQ(op3_fmf, FMF2);
@@ -577,10 +577,10 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   // Test that the builder copy inherits FastMathFlags from the original.
   fir::FirOpBuilder builder_copy2(builder);
 
-  mlir::Operation *op4 =
-      mlir::arith::AddFOp::create(builder_copy2, loc, arg, arg);
+  aiir::Operation *op4 =
+      aiir::arith::AddFOp::create(builder_copy2, loc, arg, arg);
   auto op4_fmi =
-      mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op4);
+      aiir::dyn_cast_or_null<aiir::arith::ArithFastMathInterface>(op4);
   EXPECT_TRUE(op4_fmi);
   auto op4_fmf = op4_fmi.getFastMathFlagsAttr().getValue();
   EXPECT_EQ(op4_fmf, FMF1);
@@ -595,9 +595,9 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
   auto arg = fir::UndefOp::create(builder, loc, intTy);
 
   // Test that IntegerOverflowFlags is 'none' by default.
-  mlir::Operation *op1 = mlir::arith::AddIOp::create(builder, loc, arg, arg);
+  aiir::Operation *op1 = aiir::arith::AddIOp::create(builder, loc, arg, arg);
   auto op1_iofi =
-      mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
+      aiir::dyn_cast_or_null<aiir::arith::ArithIntegerOverflowFlagsInterface>(
           op1);
   EXPECT_TRUE(op1_iofi);
   auto op1_ioff = op1_iofi.getOverflowAttr().getValue();
@@ -613,9 +613,9 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
 
   // Modifying IntegerOverflowFlags for the copy must not affect the original
   // builder.
-  mlir::Operation *op2 = mlir::arith::AddIOp::create(builder, loc, arg, arg);
+  aiir::Operation *op2 = aiir::arith::AddIOp::create(builder, loc, arg, arg);
   auto op2_iofi =
-      mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
+      aiir::dyn_cast_or_null<aiir::arith::ArithIntegerOverflowFlagsInterface>(
           op2);
   EXPECT_TRUE(op2_iofi);
   auto op2_ioff = op2_iofi.getOverflowAttr().getValue();
@@ -623,10 +623,10 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
 
   // Modifying IntegerOverflowFlags for the original builder must not affect the
   // copy.
-  mlir::Operation *op3 =
-      mlir::arith::AddIOp::create(builder_copy, loc, arg, arg);
+  aiir::Operation *op3 =
+      aiir::arith::AddIOp::create(builder_copy, loc, arg, arg);
   auto op3_iofi =
-      mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
+      aiir::dyn_cast_or_null<aiir::arith::ArithIntegerOverflowFlagsInterface>(
           op3);
   EXPECT_TRUE(op3_iofi);
   auto op3_ioff = op3_iofi.getOverflowAttr().getValue();
@@ -635,10 +635,10 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
   // Test that the builder copy inherits IntegerOverflowFlags from the original.
   fir::FirOpBuilder builder_copy2(builder);
 
-  mlir::Operation *op4 =
-      mlir::arith::AddIOp::create(builder_copy2, loc, arg, arg);
+  aiir::Operation *op4 =
+      aiir::arith::AddIOp::create(builder_copy2, loc, arg, arg);
   auto op4_iofi =
-      mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
+      aiir::dyn_cast_or_null<aiir::arith::ArithIntegerOverflowFlagsInterface>(
           op4);
   EXPECT_TRUE(op4_iofi);
   auto op4_ioff = op4_iofi.getOverflowAttr().getValue();
@@ -656,12 +656,12 @@ TEST_F(FIRBuilderTest, getDescriptorWithNewBaseAddress) {
   auto ptrTy = fir::PointerType::get(seqTy);
   auto boxTy = fir::BoxType::get(ptrTy);
   // Create an undef box descriptor value (descriptor contents are unspecified).
-  mlir::Value inputBox = fir::UndefOp::create(builder, loc, boxTy);
+  aiir::Value inputBox = fir::UndefOp::create(builder, loc, boxTy);
 
   // New base address (same element type and properties).
-  mlir::Value addr2 = fir::UndefOp::create(builder, loc, refArrTy);
+  aiir::Value addr2 = fir::UndefOp::create(builder, loc, refArrTy);
 
-  mlir::Value newBox = fir::factory::getDescriptorWithNewBaseAddress(
+  aiir::Value newBox = fir::factory::getDescriptorWithNewBaseAddress(
       builder, loc, inputBox, addr2);
 
   // The returned descriptor must have the same type as the input box.
@@ -674,19 +674,19 @@ TEST_F(FIRBuilderTest, getDescriptorWithNewBaseAddress) {
 
   // The shape should be derived from the input box; expect a fir.shape with one
   // extent that comes from a fir.box_dims reading from the original input box.
-  mlir::Value shape = embox.getShape();
+  aiir::Value shape = embox.getShape();
   ASSERT_TRUE(shape);
   ASSERT_TRUE(llvm::isa_and_nonnull<fir::ShapeShiftOp>(shape.getDefiningOp()));
   auto shapeOp = llvm::dyn_cast<fir::ShapeShiftOp>(shape.getDefiningOp());
   ASSERT_EQ(shapeOp.getExtents().size(), 1u);
-  mlir::Value extent0 = shapeOp.getExtents()[0];
+  aiir::Value extent0 = shapeOp.getExtents()[0];
   ASSERT_TRUE(llvm::isa_and_nonnull<fir::BoxDimsOp>(extent0.getDefiningOp()));
   auto dimOp = llvm::dyn_cast<fir::BoxDimsOp>(extent0.getDefiningOp());
   EXPECT_EQ(dimOp.getVal(), inputBox);
 
   // Also verify the origin comes from a BoxDims on the same input box.
   ASSERT_EQ(shapeOp.getOrigins().size(), 1u);
-  mlir::Value origin0 = shapeOp.getOrigins()[0];
+  aiir::Value origin0 = shapeOp.getOrigins()[0];
   ASSERT_TRUE(llvm::isa_and_nonnull<fir::BoxDimsOp>(origin0.getDefiningOp()));
   auto lbOp = llvm::dyn_cast<fir::BoxDimsOp>(origin0.getDefiningOp());
   EXPECT_EQ(lbOp.getVal(), inputBox);
@@ -702,13 +702,13 @@ TEST_F(FIRBuilderTest, getDescriptorWithNewBaseAddress_PolymorphicScalar) {
   auto classTy = fir::ClassType::get(ptrRecTy);
 
   // Input descriptor is an undefined fir.class value.
-  mlir::Value inputBox = fir::UndefOp::create(builder, loc, classTy);
+  aiir::Value inputBox = fir::UndefOp::create(builder, loc, classTy);
 
   // New base address of the same element type (reference to the record).
   auto refRecTy = fir::ReferenceType::get(recTy);
-  mlir::Value newAddr = fir::UndefOp::create(builder, loc, refRecTy);
+  aiir::Value newAddr = fir::UndefOp::create(builder, loc, refRecTy);
 
-  mlir::Value newBox = fir::factory::getDescriptorWithNewBaseAddress(
+  aiir::Value newBox = fir::factory::getDescriptorWithNewBaseAddress(
       builder, loc, inputBox, newAddr);
 
   // Same descriptor type must be preserved.
@@ -721,10 +721,10 @@ TEST_F(FIRBuilderTest, getDescriptorWithNewBaseAddress_PolymorphicScalar) {
   EXPECT_EQ(embox.getMemref(), newAddr);
 
   // Polymorphic scalar should have no shape operand.
-  mlir::Value shape = embox.getShape();
+  aiir::Value shape = embox.getShape();
   EXPECT_TRUE(shape == nullptr);
 
   // The type descriptor/mold must be the original input box.
-  mlir::Value tdesc = embox.getSourceBox();
+  aiir::Value tdesc = embox.getSourceBox();
   EXPECT_EQ(tdesc, inputBox);
 }

@@ -14,11 +14,11 @@
 
 #include "llvm/Support/LogicalResult.h"
 
-namespace mlir {
+namespace aiir {
 class Attribute;
 class OpBuilder;
 class Value;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 
@@ -28,7 +28,7 @@ namespace fir {
 /// or cannot be represented as an Attribute. The operations are not deleted,
 /// but some llvm.insertvalue value operands may be folded with the builder on
 /// the way.
-llvm::FailureOr<mlir::Attribute>
-tryFoldingLLVMInsertChain(mlir::Value insertChainResult,
-                          mlir::OpBuilder &builder);
+llvm::FailureOr<aiir::Attribute>
+tryFoldingLLVMInsertChain(aiir::Value insertChainResult,
+                          aiir::OpBuilder &builder);
 } // namespace fir

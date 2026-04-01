@@ -23,35 +23,35 @@ using namespace Fortran::runtime;
 
 /// Create a `int main(...)` that calls the Fortran entry point
 void fir::runtime::genMain(
-    fir::FirOpBuilder &builder, mlir::Location loc,
+    fir::FirOpBuilder &builder, aiir::Location loc,
     const std::vector<Fortran::lower::EnvironmentDefault> &defs, bool initCuda,
     bool initCoarrayEnv) {
   auto *context = builder.getContext();
   auto argcTy = builder.getDefaultIntegerType();
-  auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
+  auto ptrTy = aiir::LLVM::LLVMPointerType::get(context);
 
   // void ProgramStart(int argc, char** argv, char** envp,
   //                   _QQEnvironmentDefaults* env)
   auto startFn = builder.createFunction(
       loc, RTNAME_STRING(ProgramStart),
-      mlir::FunctionType::get(context, {argcTy, ptrTy, ptrTy, ptrTy}, {}));
+      aiir::FunctionType::get(context, {argcTy, ptrTy, ptrTy, ptrTy}, {}));
   // void ProgramStop()
   auto stopFn =
       builder.createFunction(loc, RTNAME_STRING(ProgramEndStatement),
-                             mlir::FunctionType::get(context, {}, {}));
+                             aiir::FunctionType::get(context, {}, {}));
 
   // int main(int argc, char** argv, char** envp)
   auto mainFn = builder.createFunction(
       loc, "main",
-      mlir::FunctionType::get(context, {argcTy, ptrTy, ptrTy}, argcTy));
+      aiir::FunctionType::get(context, {argcTy, ptrTy, ptrTy}, argcTy));
   // void _QQmain()
   auto qqMainFn = builder.createFunction(
-      loc, "_QQmain", mlir::FunctionType::get(context, {}, {}));
+      loc, "_QQmain", aiir::FunctionType::get(context, {}, {}));
 
   mainFn.setPublic();
 
   auto *block = mainFn.addEntryBlock();
-  mlir::OpBuilder::InsertionGuard insertGuard(builder);
+  aiir::OpBuilder::InsertionGuard insertGuard(builder);
   builder.setInsertionPointToStart(block);
 
   // Create the list of any environment defaults for the runtime to set. The
@@ -60,14 +60,14 @@ void fir::runtime::genMain(
   // are compiled separately.
   auto env = fir::runtime::genEnvironmentDefaults(builder, loc, defs);
 
-  llvm::SmallVector<mlir::Value, 4> args(block->getArguments());
+  llvm::SmallVector<aiir::Value, 4> args(block->getArguments());
   args.push_back(env);
 
   fir::CallOp::create(builder, loc, startFn, args);
 
   if (initCuda) {
     auto initFn = builder.createFunction(
-        loc, RTNAME_STRING(CUFInit), mlir::FunctionType::get(context, {}, {}));
+        loc, RTNAME_STRING(CUFInit), aiir::FunctionType::get(context, {}, {}));
     fir::CallOp::create(builder, loc, initFn);
   }
   if (initCoarrayEnv)
@@ -75,7 +75,7 @@ void fir::runtime::genMain(
 
   fir::CallOp::create(builder, loc, qqMainFn);
 
-  mlir::Value ret = builder.createIntegerConstant(loc, argcTy, 0);
+  aiir::Value ret = builder.createIntegerConstant(loc, argcTy, 0);
   fir::CallOp::create(builder, loc, stopFn);
-  mlir::func::ReturnOp::create(builder, loc, ret);
+  aiir::func::ReturnOp::create(builder, loc, ret);
 }

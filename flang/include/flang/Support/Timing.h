@@ -13,13 +13,13 @@
 #ifndef FORTRAN_SUPPORT_TIMING_H
 #define FORTRAN_SUPPORT_TIMING_H
 
-#include "mlir/Support/Timing.h"
+#include "aiir/Support/Timing.h"
 
 namespace Fortran::support {
 
 /// Create a strategy to render the captured times in plain text. This is
 /// intended to be passed to a TimingManager.
-std::unique_ptr<mlir::OutputStrategy> createTimingFormatterText(
+std::unique_ptr<aiir::OutputStrategy> createTimingFormatterText(
     llvm::raw_ostream &os);
 
 } // namespace Fortran::support

@@ -1,0 +1,9 @@
+add_aiir_unittest(AIIRSCFTests
+  LoopLikeSCFOpsTest.cpp
+)
+aiir_target_link_libraries(AIIRSCFTests
+  PRIVATE
+  AIIRIR
+  AIIRSCFDialect
+  AIIRSCFUtils
+)

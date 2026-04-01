@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,12 +29,12 @@
 #include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 
-#include "mlir/IR/Dialect.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Target/LLVMIR/Import.h"
-#include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "aiir/IR/Dialect.h"
+#include "aiir/Parser/Parser.h"
+#include "aiir/Pass/PassManager.h"
+#include "aiir/Support/LLVM.h"
+#include "aiir/Target/LLVMIR/Import.h"
+#include "aiir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
@@ -79,9 +79,9 @@
 using namespace Fortran::frontend;
 
 constexpr llvm::StringLiteral timingIdParse = "Parse";
-constexpr llvm::StringLiteral timingIdMLIRGen = "MLIR generation";
-constexpr llvm::StringLiteral timingIdMLIRPasses =
-    "MLIR translation/optimization";
+constexpr llvm::StringLiteral timingIdAIIRGen = "AIIR generation";
+constexpr llvm::StringLiteral timingIdAIIRPasses =
+    "AIIR translation/optimization";
 constexpr llvm::StringLiteral timingIdLLVMIRGen = "LLVM IR generation";
 constexpr llvm::StringLiteral timingIdLLVMIRPasses = "LLVM IR optimizations";
 constexpr llvm::StringLiteral timingIdBackend =
@@ -92,11 +92,11 @@ constexpr llvm::StringLiteral timingIdBackend =
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 
-/// Save the given \c mlirModule to a temporary .mlir file, in a location
+/// Save the given \c aiirModule to a temporary .aiir file, in a location
 /// decided by the -save-temps flag. No files are produced if the flag is not
 /// specified.
-static bool saveMLIRTempFile(const CompilerInvocation &ci,
-                             mlir::ModuleOp mlirModule,
+static bool saveAIIRTempFile(const CompilerInvocation &ci,
+                             aiir::ModuleOp aiirModule,
                              llvm::StringRef inputFile,
                              llvm::StringRef outputTag) {
   if (!ci.getCodeGenOpts().SaveTempsDir.has_value())
@@ -113,14 +113,14 @@ static bool saveMLIRTempFile(const CompilerInvocation &ci,
   // information
   llvm::SmallString<256> path(dir);
   llvm::sys::path::append(path, llvm::sys::path::stem(inputFile) + "-" +
-                                    outputTag + ".mlir");
+                                    outputTag + ".aiir");
 
   std::error_code ec;
   llvm::ToolOutputFile out(path, ec, llvm::sys::fs::OF_Text);
   if (ec)
     return false;
 
-  mlirModule->print(out.os());
+  aiirModule->print(out.os());
   out.os().close();
   out.keep();
 
@@ -152,7 +152,7 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
          (runSemanticChecks() || true) && (generateRtTypeTables() || true);
 }
 
-static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
+static void addDependentLibs(aiir::ModuleOp aiirModule, CompilerInstance &ci) {
   const std::vector<std::string> &libs =
       ci.getInvocation().getCodeGenOpts().DependentLibs;
   if (libs.empty()) {
@@ -164,10 +164,10 @@ static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
       llvm::Triple(ci.getInvocation().getTargetOpts().triple).isOSWindows() &&
       "--dependent-lib is only supported on Windows");
   // Add linker options specified by --dependent-lib
-  auto builder = mlir::OpBuilder(mlirModule.getRegion());
+  auto builder = aiir::OpBuilder(aiirModule.getRegion());
   for (const std::string &lib : libs) {
-    mlir::LLVM::LinkerOptionsOp::create(
-        builder, mlirModule.getLoc(),
+    aiir::LLVM::LinkerOptionsOp::create(
+        builder, aiirModule.getLoc(),
         builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
   }
 }
@@ -179,14 +179,14 @@ bool CodeGenAction::beginSourceFileAction() {
     llvmModule.reset(nullptr);
   llvmCtx = std::make_unique<llvm::LLVMContext>();
   CompilerInstance &ci = this->getInstance();
-  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
-  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
+  aiir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  aiir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
   // This will provide timing information even when the input is an LLVM IR or
-  // MLIR file. That is fine because those do have to be parsed, so the label
+  // AIIR file. That is fine because those do have to be parsed, so the label
   // is still accurate.
-  mlir::TimingScope timingScopeParse = timingScopeRoot.nest(
-      mlir::TimingIdentifier::get(timingIdParse, timingMgr));
+  aiir::TimingScope timingScopeParse = timingScopeRoot.nest(
+      aiir::TimingIdentifier::get(timingIdParse, timingMgr));
 
   // If the input is an LLVM file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::LLVM_IR) {
@@ -203,43 +203,43 @@ bool CodeGenAction::beginSourceFileAction() {
     return true;
   }
 
-  // Reset MLIR module if it was set before overriding the old context.
-  if (mlirModule)
-    mlirModule = mlir::OwningOpRef<mlir::ModuleOp>(nullptr);
-  // Load the MLIR dialects required by Flang
-  mlirCtx = std::make_unique<mlir::MLIRContext>();
-  fir::support::loadDialects(*mlirCtx);
-  fir::support::registerLLVMTranslation(*mlirCtx);
-  mlir::DialectRegistry registry;
+  // Reset AIIR module if it was set before overriding the old context.
+  if (aiirModule)
+    aiirModule = aiir::OwningOpRef<aiir::ModuleOp>(nullptr);
+  // Load the AIIR dialects required by Flang
+  aiirCtx = std::make_unique<aiir::AIIRContext>();
+  fir::support::loadDialects(*aiirCtx);
+  fir::support::registerLLVMTranslation(*aiirCtx);
+  aiir::DialectRegistry registry;
   fir::acc::registerOpenACCExtensions(registry);
   fir::omp::registerOpenMPExtensions(registry);
-  mlirCtx->appendDialectRegistry(registry);
+  aiirCtx->appendDialectRegistry(registry);
 
   const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
-  // If the input is an MLIR file, just parse it and return.
-  if (this->getCurrentInput().getKind().getLanguage() == Language::MLIR) {
+  // If the input is an AIIR file, just parse it and return.
+  if (this->getCurrentInput().getKind().getLanguage() == Language::AIIR) {
     llvm::SourceMgr sourceMgr;
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
         llvm::MemoryBuffer::getFileOrSTDIN(getCurrentInput().getFile());
     sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
-    mlir::OwningOpRef<mlir::ModuleOp> module =
-        mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, mlirCtx.get());
+    aiir::OwningOpRef<aiir::ModuleOp> module =
+        aiir::parseSourceFile<aiir::ModuleOp>(sourceMgr, aiirCtx.get());
 
-    if (!module || mlir::failed(module->verifyInvariants())) {
+    if (!module || aiir::failed(module->verifyInvariants())) {
       unsigned diagID = ci.getDiagnostics().getCustomDiagID(
           clang::DiagnosticsEngine::Error, "Could not parse FIR");
       ci.getDiagnostics().Report(diagID);
       return false;
     }
 
-    mlirModule = std::move(module);
+    aiirModule = std::move(module);
     const llvm::DataLayout &dl = targetMachine.createDataLayout();
-    fir::support::setMLIRDataLayout(*mlirModule, dl);
+    fir::support::setAIIRDataLayout(*aiirModule, dl);
     return true;
   }
 
-  // Otherwise, generate an MLIR module from the input Fortran source
+  // Otherwise, generate an AIIR module from the input Fortran source
   if (getCurrentInput().getKind().getLanguage() != Language::Fortran) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error,
@@ -253,16 +253,16 @@ bool CodeGenAction::beginSourceFileAction() {
     return res;
 
   timingScopeParse.stop();
-  mlir::TimingScope timingScopeMLIRGen = timingScopeRoot.nest(
-      mlir::TimingIdentifier::get(timingIdMLIRGen, timingMgr));
+  aiir::TimingScope timingScopeAIIRGen = timingScopeRoot.nest(
+      aiir::TimingIdentifier::get(timingIdAIIRGen, timingMgr));
 
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =
       ci.getSemanticsContext().defaultKinds();
-  fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
+  fir::KindMapping kindMap(aiirCtx.get(), llvm::ArrayRef<fir::KindTy>{
                                               fir::fromDefaultKinds(defKinds)});
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
-      *mlirCtx, ci.getSemanticsContext(), defKinds,
+      *aiirCtx, ci.getSemanticsContext(), defKinds,
       ci.getSemanticsContext().intrinsics(),
       ci.getSemanticsContext().targetCharacteristics(), getAllCooked(ci),
       ci.getInvocation().getTargetOpts().triple, kindMap,
@@ -273,36 +273,36 @@ bool CodeGenAction::beginSourceFileAction() {
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    mlir::omp::setOffloadModuleInterfaceAttributes(
+    aiir::omp::setOffloadModuleInterfaceAttributes(
         lb.getModule(),
         makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
-    mlir::omp::setOpenMPVersionAttribute(
+    aiir::omp::setOpenMPVersionAttribute(
         lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
-    mlir::ModuleOp mod = lb.getModule();
+    aiir::ModuleOp mod = lb.getModule();
     mod.getOperation()->setAttr(
-        mlir::StringAttr::get(mod.getContext(),
+        aiir::StringAttr::get(mod.getContext(),
                               llvm::Twine{"fir.fast_real_mod"}),
-        mlir::BoolAttr::get(mod.getContext(), true));
+        aiir::BoolAttr::get(mod.getContext(), true));
   }
 
   // Create a parse tree and lower it to FIR
   parseAndLowerTree(ci, lb);
 
   // Fetch module from lb, so we can set
-  mlirModule = lb.getModuleAndRelease();
+  aiirModule = lb.getModuleAndRelease();
 
   // Add target specific items like dependent libraries, target specific
   // constants etc.
-  addDependentLibs(*mlirModule, ci);
-  timingScopeMLIRGen.stop();
+  addDependentLibs(*aiirModule, ci);
+  timingScopeAIIRGen.stop();
 
   // run the default passes.
-  mlir::PassManager pm((*mlirModule)->getName(),
-                       mlir::OpPassManager::Nesting::Implicit);
-  (void)mlir::applyPassManagerCLOptions(pm);
+  aiir::PassManager pm((*aiirModule)->getName(),
+                       aiir::OpPassManager::Nesting::Implicit);
+  (void)aiir::applyPassManagerCLOptions(pm);
   // Add OpenMP-related passes
   // WARNING: These passes must be run immediately after the lowering to ensure
   // that the FIR is correct with respect to OpenMP operations/attributes.
@@ -338,8 +338,8 @@ bool CodeGenAction::beginSourceFileAction() {
 
   if (isOpenMPEnabled) {
     opts.isTargetDevice = false;
-    if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
-            mlirModule->getOperation()))
+    if (auto offloadMod = llvm::dyn_cast<aiir::omp::OffloadModuleInterface>(
+            aiirModule->getOperation()))
       opts.isTargetDevice = offloadMod.getIsTargetDevice();
   }
 
@@ -351,23 +351,23 @@ bool CodeGenAction::beginSourceFileAction() {
 
   pm.enableVerifier(/*verifyPasses=*/true);
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
-  pm.enableTiming(timingScopeMLIRGen);
+  pm.enableTiming(timingScopeAIIRGen);
 
-  if (mlir::failed(pm.run(*mlirModule))) {
+  if (aiir::failed(pm.run(*aiirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error,
         "verification of lowering to FIR failed");
     ci.getDiagnostics().Report(diagID);
     return false;
   }
-  timingScopeMLIRGen.stop();
+  timingScopeAIIRGen.stop();
 
-  // Print initial full MLIR module, before lowering or transformations, if
+  // Print initial full AIIR module, before lowering or transformations, if
   // -save-temps has been specified.
-  if (!saveMLIRTempFile(ci.getInvocation(), *mlirModule, getCurrentFile(),
+  if (!saveAIIRTempFile(ci.getInvocation(), *aiirModule, getCurrentFile(),
                         "fir")) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Saving MLIR temp file failed");
+        clang::DiagnosticsEngine::Error, "Saving AIIR temp file failed");
     ci.getDiagnostics().Report(diagID);
     return false;
   }
@@ -613,19 +613,19 @@ mapToLevel(const Fortran::frontend::CodeGenOptions &opts) {
 
 // Lower using HLFIR then run the FIR to HLFIR pipeline
 void CodeGenAction::lowerHLFIRToFIR() {
-  assert(mlirModule && "The MLIR module has not been generated yet.");
+  assert(aiirModule && "The AIIR module has not been generated yet.");
 
   CompilerInstance &ci = this->getInstance();
   const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
   llvm::OptimizationLevel level = mapToLevel(opts);
-  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
-  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
+  aiir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  aiir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
-  fir::support::loadDialects(*mlirCtx);
+  fir::support::loadDialects(*aiirCtx);
 
-  // Set-up the MLIR pass manager
-  mlir::PassManager pm((*mlirModule)->getName(),
-                       mlir::OpPassManager::Nesting::Implicit);
+  // Set-up the AIIR pass manager
+  aiir::PassManager pm((*aiirModule)->getName(),
+                       aiir::OpPassManager::Nesting::Implicit);
 
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -636,17 +636,17 @@ void CodeGenAction::lowerHLFIRToFIR() {
     enableOpenMP = fir::EnableOpenMP::Full;
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     enableOpenMP = fir::EnableOpenMP::Simd;
-  MLIRToLLVMPassPipelineConfig config(level);
+  AIIRToLLVMPassPipelineConfig config(level);
   config.fpMaxminBehavior =
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
-  (void)mlir::applyPassManagerCLOptions(pm);
+  (void)aiir::applyPassManagerCLOptions(pm);
 
-  mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
-      mlir::TimingIdentifier::get(timingIdMLIRPasses, timingMgr));
-  pm.enableTiming(timingScopeMLIRPasses);
-  if (!mlir::succeeded(pm.run(*mlirModule))) {
+  aiir::TimingScope timingScopeAIIRPasses = timingScopeRoot.nest(
+      aiir::TimingIdentifier::get(timingIdAIIRPasses, timingMgr));
+  pm.enableTiming(timingScopeAIIRPasses);
+  if (!aiir::succeeded(pm.run(*aiirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Lowering to FIR failed");
     ci.getDiagnostics().Report(diagID);
@@ -725,33 +725,33 @@ getVScaleRange(CompilerInstance &ci) {
   return std::nullopt;
 }
 
-// Lower the previously generated MLIR module into an LLVM IR module
+// Lower the previously generated AIIR module into an LLVM IR module
 void CodeGenAction::generateLLVMIR() {
-  assert(mlirModule && "The MLIR module has not been generated yet.");
+  assert(aiirModule && "The AIIR module has not been generated yet.");
 
   CompilerInstance &ci = this->getInstance();
   CompilerInvocation &invoc = ci.getInvocation();
   const CodeGenOptions &opts = invoc.getCodeGenOpts();
   const auto &mathOpts = invoc.getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
-  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
-  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
+  aiir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  aiir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
-  fir::support::loadDialects(*mlirCtx);
-  mlir::DialectRegistry registry;
+  fir::support::loadDialects(*aiirCtx);
+  aiir::DialectRegistry registry;
   fir::support::registerNonCodegenDialects(registry);
   fir::support::addFIRExtensions(registry);
-  mlirCtx->appendDialectRegistry(registry);
-  fir::support::registerLLVMTranslation(*mlirCtx);
+  aiirCtx->appendDialectRegistry(registry);
+  fir::support::registerLLVMTranslation(*aiirCtx);
 
-  // Set-up the MLIR pass manager
-  mlir::PassManager pm((*mlirModule)->getName(),
-                       mlir::OpPassManager::Nesting::Implicit);
+  // Set-up the AIIR pass manager
+  aiir::PassManager pm((*aiirModule)->getName(),
+                       aiir::OpPassManager::Nesting::Implicit);
 
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
-  MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  AIIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
   config.fpMaxminBehavior = invoc.getLoweringOpts().getFPMaxminBehavior();
   llvm::Triple pipelineTriple(invoc.getTargetOpts().triple);
   config.SkipConvertComplexPow = pipelineTriple.isAMDGCN();
@@ -778,36 +778,36 @@ void CodeGenAction::generateLLVMIR() {
   config.ComplexRange = opts.getComplexRange();
 
   // Create the pass pipeline
-  fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
-  (void)mlir::applyPassManagerCLOptions(pm);
+  fir::createAIIRToLLVMPassPipeline(pm, config, getCurrentFile());
+  (void)aiir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
-  mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
-      mlir::TimingIdentifier::get(timingIdMLIRPasses, timingMgr));
-  pm.enableTiming(timingScopeMLIRPasses);
-  if (!mlir::succeeded(pm.run(*mlirModule))) {
+  aiir::TimingScope timingScopeAIIRPasses = timingScopeRoot.nest(
+      aiir::TimingIdentifier::get(timingIdAIIRPasses, timingMgr));
+  pm.enableTiming(timingScopeAIIRPasses);
+  if (!aiir::succeeded(pm.run(*aiirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Lowering to LLVM IR failed");
     ci.getDiagnostics().Report(diagID);
   }
-  timingScopeMLIRPasses.stop();
+  timingScopeAIIRPasses.stop();
 
-  // Print final MLIR module, just before translation into LLVM IR, if
+  // Print final AIIR module, just before translation into LLVM IR, if
   // -save-temps has been specified.
-  if (!saveMLIRTempFile(ci.getInvocation(), *mlirModule, getCurrentFile(),
+  if (!saveAIIRTempFile(ci.getInvocation(), *aiirModule, getCurrentFile(),
                         "llvmir")) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Saving MLIR temp file failed");
+        clang::DiagnosticsEngine::Error, "Saving AIIR temp file failed");
     ci.getDiagnostics().Report(diagID);
     return;
   }
 
   // Translate to LLVM IR
-  mlir::TimingScope timingScopeLLVMIRGen = timingScopeRoot.nest(
-      mlir::TimingIdentifier::get(timingIdLLVMIRGen, timingMgr));
-  std::optional<llvm::StringRef> moduleName = mlirModule->getName();
-  llvmModule = mlir::translateModuleToLLVMIR(
-      *mlirModule, *llvmCtx, moduleName ? *moduleName : "FIRModule");
+  aiir::TimingScope timingScopeLLVMIRGen = timingScopeRoot.nest(
+      aiir::TimingIdentifier::get(timingIdLLVMIRGen, timingMgr));
+  std::optional<llvm::StringRef> moduleName = aiirModule->getName();
+  llvmModule = aiir::translateModuleToLLVMIR(
+      *aiirModule, *llvmCtx, moduleName ? *moduleName : "FIRModule");
 
   if (!llvmModule) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -867,7 +867,7 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
   case BackendActionTy::Backend_EmitFIR:
   case BackendActionTy::Backend_EmitHLFIR:
     return ci.createDefaultOutputFile(
-        /*Binary=*/false, inFile, /*extension=*/"mlir");
+        /*Binary=*/false, inFile, /*extension=*/"aiir");
   case BackendActionTy::Backend_EmitBC:
     return ci.createDefaultOutputFile(
         /*Binary=*/true, inFile, /*extension=*/"bc");
@@ -1341,8 +1341,8 @@ void CodeGenAction::executeAction() {
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   Fortran::lower::LoweringOptions &loweringOpts =
       ci.getInvocation().getLoweringOpts();
-  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
-  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
+  aiir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  aiir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
   // If the output stream is a file, generate it and define the corresponding
   // output stream. If a pre-defined output stream is available, we will use
@@ -1372,14 +1372,14 @@ void CodeGenAction::executeAction() {
     if (loweringOpts.getLowerToHighLevelFIR()) {
       lowerHLFIRToFIR();
     }
-    mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
+    aiirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }
 
   if (action == BackendActionTy::Backend_EmitHLFIR) {
     assert(loweringOpts.getLowerToHighLevelFIR() &&
            "Lowering must have been configured to emit HLFIR");
-    mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
+    aiirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }
 
@@ -1390,8 +1390,8 @@ void CodeGenAction::executeAction() {
 
   // This will already have been started in generateLLVMIR(). But we need to
   // continue operating on the module, so we continue timing it.
-  mlir::TimingScope timingScopeLLVMIRGen = timingScopeRoot.nest(
-      mlir::TimingIdentifier::get(timingIdLLVMIRGen, timingMgr));
+  aiir::TimingScope timingScopeLLVMIRGen = timingScopeRoot.nest(
+      aiir::TimingIdentifier::get(timingIdLLVMIRGen, timingMgr));
 
   // If generating the LLVM module failed, abort! No need for further error
   // reporting since generateLLVMIR() does this already.
@@ -1453,8 +1453,8 @@ void CodeGenAction::executeAction() {
   }
 
   // Run LLVM's middle-end (i.e. the optimizer).
-  mlir::TimingScope timingScopeLLVMIRPasses = timingScopeRoot.nest(
-      mlir::TimingIdentifier::get(timingIdLLVMIRPasses, timingMgr));
+  aiir::TimingScope timingScopeLLVMIRPasses = timingScopeRoot.nest(
+      aiir::TimingIdentifier::get(timingIdLLVMIRPasses, timingMgr));
   runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
   timingScopeLLVMIRPasses.stop();
 
@@ -1465,8 +1465,8 @@ void CodeGenAction::executeAction() {
   }
 
   // Run LLVM's backend and generate either assembly or machine code
-  mlir::TimingScope timingScopeBackend = timingScopeRoot.nest(
-      mlir::TimingIdentifier::get(timingIdBackend, timingMgr));
+  aiir::TimingScope timingScopeBackend = timingScopeRoot.nest(
+      aiir::TimingIdentifier::get(timingIdBackend, timingMgr));
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(

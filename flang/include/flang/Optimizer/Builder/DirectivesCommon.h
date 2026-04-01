@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -23,8 +23,8 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace fir::factory {
 
@@ -32,19 +32,19 @@ namespace fir::factory {
 /// operations.
 struct AddrAndBoundsInfo {
   explicit AddrAndBoundsInfo() {}
-  explicit AddrAndBoundsInfo(mlir::Value addr, mlir::Value rawInput)
+  explicit AddrAndBoundsInfo(aiir::Value addr, aiir::Value rawInput)
       : addr(addr), rawInput(rawInput) {}
-  explicit AddrAndBoundsInfo(mlir::Value addr, mlir::Value rawInput,
-                             mlir::Value isPresent)
+  explicit AddrAndBoundsInfo(aiir::Value addr, aiir::Value rawInput,
+                             aiir::Value isPresent)
       : addr(addr), rawInput(rawInput), isPresent(isPresent) {}
-  explicit AddrAndBoundsInfo(mlir::Value addr, mlir::Value rawInput,
-                             mlir::Value isPresent, mlir::Type boxType)
+  explicit AddrAndBoundsInfo(aiir::Value addr, aiir::Value rawInput,
+                             aiir::Value isPresent, aiir::Type boxType)
       : addr(addr), rawInput(rawInput), isPresent(isPresent), boxType(boxType) {
   }
-  mlir::Value addr = nullptr;
-  mlir::Value rawInput = nullptr;
-  mlir::Value isPresent = nullptr;
-  mlir::Type boxType = nullptr;
+  aiir::Value addr = nullptr;
+  aiir::Value rawInput = nullptr;
+  aiir::Value isPresent = nullptr;
+  aiir::Type boxType = nullptr;
   void dump(llvm::raw_ostream &os) {
     os << "AddrAndBoundsInfo addr: " << addr << "\n";
     os << "AddrAndBoundsInfo rawInput: " << rawInput << "\n";
@@ -54,13 +54,13 @@ struct AddrAndBoundsInfo {
 };
 
 inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
-                                                mlir::Value symAddr,
+                                                aiir::Value symAddr,
                                                 bool isOptional,
-                                                mlir::Location loc,
+                                                aiir::Location loc,
                                                 bool unwrapFirBox = true) {
-  mlir::Value rawInput = symAddr;
+  aiir::Value rawInput = symAddr;
   if (auto declareOp =
-          mlir::dyn_cast_or_null<hlfir::DeclareOp>(symAddr.getDefiningOp())) {
+          aiir::dyn_cast_or_null<hlfir::DeclareOp>(symAddr.getDefiningOp())) {
     symAddr = declareOp.getResults()[0];
     rawInput = declareOp.getResults()[1];
   }
@@ -68,21 +68,21 @@ inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
   if (!symAddr)
     llvm::report_fatal_error("could not retrieve symbol address");
 
-  mlir::Value isPresent;
+  aiir::Value isPresent;
   if (isOptional)
     isPresent =
         fir::IsPresentOp::create(builder, loc, builder.getI1Type(), rawInput);
 
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(
+  if (auto boxTy = aiir::dyn_cast<fir::BaseBoxType>(
           fir::unwrapRefType(symAddr.getType()))) {
     // In case of a box reference, load it here to get the box value.
     // This is preferrable because then the same box value can then be used for
     // all address/dimension retrievals. For Fortran optional though, leave
     // the load generation for later so it can be done in the appropriate
     // if branches.
-    if (unwrapFirBox && mlir::isa<fir::ReferenceType>(symAddr.getType()) &&
+    if (unwrapFirBox && aiir::isa<fir::ReferenceType>(symAddr.getType()) &&
         !isOptional) {
-      mlir::Value addr = fir::LoadOp::create(builder, loc, symAddr);
+      aiir::Value addr = fir::LoadOp::create(builder, loc, symAddr);
       return AddrAndBoundsInfo(addr, rawInput, isPresent, boxTy);
     }
 
@@ -91,10 +91,10 @@ inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
   // For boxchar references, do the same as what is done above for box
   // references - Load the boxchar so that it is easier to retrieve the length
   // of the underlying character and the data pointer.
-  if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(
+  if (auto boxCharType = aiir::dyn_cast<fir::BoxCharType>(
           fir::unwrapRefType((symAddr.getType())))) {
-    if (!isOptional && mlir::isa<fir::ReferenceType>(symAddr.getType())) {
-      mlir::Value boxChar = fir::LoadOp::create(builder, loc, symAddr);
+    if (!isOptional && aiir::isa<fir::ReferenceType>(symAddr.getType())) {
+      aiir::Value boxChar = fir::LoadOp::create(builder, loc, symAddr);
       return AddrAndBoundsInfo(boxChar, rawInput, isPresent);
     }
   }
@@ -102,25 +102,25 @@ inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
 }
 
 template <typename BoundsOp, typename BoundsType>
-llvm::SmallVector<mlir::Value>
-gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, mlir::Location loc,
-                          fir::ExtendedValue dataExv, mlir::Value box,
+llvm::SmallVector<aiir::Value>
+gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, aiir::Location loc,
+                          fir::ExtendedValue dataExv, aiir::Value box,
                           bool collectValuesOnly = false) {
   assert(box && "box must exist");
-  llvm::SmallVector<mlir::Value> values;
-  mlir::Value byteStride;
-  mlir::Type idxTy = builder.getIndexType();
-  mlir::Type boundTy = builder.getType<BoundsType>();
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  llvm::SmallVector<aiir::Value> values;
+  aiir::Value byteStride;
+  aiir::Type idxTy = builder.getIndexType();
+  aiir::Type boundTy = builder.getType<BoundsType>();
+  aiir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   for (unsigned dim = 0; dim < dataExv.rank(); ++dim) {
-    mlir::Value d = builder.createIntegerConstant(loc, idxTy, dim);
-    mlir::Value baseLb =
+    aiir::Value d = builder.createIntegerConstant(loc, idxTy, dim);
+    aiir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
     auto dimInfo =
         fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box, d);
-    mlir::Value lb = builder.createIntegerConstant(loc, idxTy, 0);
-    mlir::Value ub =
-        mlir::arith::SubIOp::create(builder, loc, dimInfo.getExtent(), one);
+    aiir::Value lb = builder.createIntegerConstant(loc, idxTy, 0);
+    aiir::Value ub =
+        aiir::arith::SubIOp::create(builder, loc, dimInfo.getExtent(), one);
     if (dim == 0) // First stride is the element size.
       byteStride = dimInfo.getByteStride();
     if (collectValuesOnly) {
@@ -130,52 +130,52 @@ gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, mlir::Location loc,
       values.push_back(byteStride);
       values.push_back(baseLb);
     } else {
-      mlir::Value bound =
+      aiir::Value bound =
           BoundsOp::create(builder, loc, boundTy, lb, ub, dimInfo.getExtent(),
                            byteStride, true, baseLb);
       values.push_back(bound);
     }
     // Compute the stride for the next dimension.
-    byteStride = mlir::arith::MulIOp::create(builder, loc, byteStride,
+    byteStride = aiir::arith::MulIOp::create(builder, loc, byteStride,
                                              dimInfo.getExtent());
   }
   return values;
 }
 template <typename BoundsOp, typename BoundsType>
-mlir::Value
-genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
+aiir::Value
+genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, aiir::Location loc,
                        fir::ExtendedValue dataExv, AddrAndBoundsInfo &info) {
 
-  if (!mlir::isa<fir::BoxCharType>(fir::unwrapRefType(info.addr.getType())))
-    return mlir::Value{};
+  if (!aiir::isa<fir::BoxCharType>(fir::unwrapRefType(info.addr.getType())))
+    return aiir::Value{};
 
-  mlir::Type idxTy = builder.getIndexType();
-  mlir::Type lenType = builder.getCharacterLengthType();
-  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  using ExtentAndStride = std::tuple<mlir::Value, mlir::Value>;
+  aiir::Type idxTy = builder.getIndexType();
+  aiir::Type lenType = builder.getCharacterLengthType();
+  aiir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  aiir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  using ExtentAndStride = std::tuple<aiir::Value, aiir::Value>;
   auto [extent, stride] = [&]() -> ExtentAndStride {
     if (info.isPresent) {
-      llvm::SmallVector<mlir::Type> resTypes = {idxTy, idxTy};
-      mlir::Operation::result_range ifRes =
+      llvm::SmallVector<aiir::Type> resTypes = {idxTy, idxTy};
+      aiir::Operation::result_range ifRes =
           builder
               .genIfOp(loc, resTypes, info.isPresent, /*withElseRegion=*/true)
               .genThen([&]() {
-                mlir::Value boxChar =
+                aiir::Value boxChar =
                     fir::isa_ref_type(info.addr.getType())
                         ? fir::LoadOp::create(builder, loc, info.addr)
                         : info.addr;
                 fir::BoxCharType boxCharType =
-                    mlir::cast<fir::BoxCharType>(boxChar.getType());
-                mlir::Type refType = builder.getRefType(boxCharType.getEleTy());
+                    aiir::cast<fir::BoxCharType>(boxChar.getType());
+                aiir::Type refType = builder.getRefType(boxCharType.getEleTy());
                 auto unboxed = fir::UnboxCharOp::create(builder, loc, refType,
                                                         lenType, boxChar);
-                mlir::SmallVector<mlir::Value> results = {unboxed.getResult(1),
+                aiir::SmallVector<aiir::Value> results = {unboxed.getResult(1),
                                                           one};
                 fir::ResultOp::create(builder, loc, results);
               })
               .genElse([&]() {
-                mlir::SmallVector<mlir::Value> results = {zero, zero};
+                aiir::SmallVector<aiir::Value> results = {zero, zero};
                 fir::ResultOp::create(builder, loc, results);
               })
               .getResults();
@@ -183,19 +183,19 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
     }
     // We have already established that info.addr.getType() is a boxchar
     // or a boxchar address. If an address, load the boxchar.
-    mlir::Value boxChar = fir::isa_ref_type(info.addr.getType())
+    aiir::Value boxChar = fir::isa_ref_type(info.addr.getType())
                               ? fir::LoadOp::create(builder, loc, info.addr)
                               : info.addr;
     fir::BoxCharType boxCharType =
-        mlir::cast<fir::BoxCharType>(boxChar.getType());
-    mlir::Type refType = builder.getRefType(boxCharType.getEleTy());
+        aiir::cast<fir::BoxCharType>(boxChar.getType());
+    aiir::Type refType = builder.getRefType(boxCharType.getEleTy());
     auto unboxed =
         fir::UnboxCharOp::create(builder, loc, refType, lenType, boxChar);
     return {unboxed.getResult(1), one};
   }();
 
-  mlir::Value ub = mlir::arith::SubIOp::create(builder, loc, extent, one);
-  mlir::Type boundTy = builder.getType<BoundsType>();
+  aiir::Value ub = aiir::arith::SubIOp::create(builder, loc, extent, one);
+  aiir::Type boundTy = builder.getType<BoundsType>();
   return BoundsOp::create(builder, loc, boundTy,
                           /*lower_bound=*/zero,
                           /*upper_bound=*/ub,
@@ -207,32 +207,32 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Generate the bounds operation from the descriptor information.
 template <typename BoundsOp, typename BoundsType>
-llvm::SmallVector<mlir::Value>
-genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
+llvm::SmallVector<aiir::Value>
+genBoundsOpsFromBox(fir::FirOpBuilder &builder, aiir::Location loc,
                     fir::ExtendedValue dataExv, AddrAndBoundsInfo &info) {
-  llvm::SmallVector<mlir::Value> bounds;
-  mlir::Type idxTy = builder.getIndexType();
-  mlir::Type boundTy = builder.getType<BoundsType>();
+  llvm::SmallVector<aiir::Value> bounds;
+  aiir::Type idxTy = builder.getIndexType();
+  aiir::Type boundTy = builder.getType<BoundsType>();
 
-  assert(mlir::isa<fir::BaseBoxType>(info.boxType) &&
+  assert(aiir::isa<fir::BaseBoxType>(info.boxType) &&
          "expect fir.box or fir.class");
   assert(fir::unwrapRefType(info.addr.getType()) == info.boxType &&
          "expected box type consistency");
 
   if (info.isPresent) {
-    llvm::SmallVector<mlir::Type> resTypes;
+    llvm::SmallVector<aiir::Type> resTypes;
     constexpr unsigned nbValuesPerBound = 5;
     for (unsigned dim = 0; dim < dataExv.rank() * nbValuesPerBound; ++dim)
       resTypes.push_back(idxTy);
 
-    mlir::Operation::result_range ifRes =
+    aiir::Operation::result_range ifRes =
         builder.genIfOp(loc, resTypes, info.isPresent, /*withElseRegion=*/true)
             .genThen([&]() {
-              mlir::Value box =
+              aiir::Value box =
                   !fir::isBoxAddress(info.addr.getType())
                       ? info.addr
                       : fir::LoadOp::create(builder, loc, info.addr);
-              llvm::SmallVector<mlir::Value> boundValues =
+              llvm::SmallVector<aiir::Value> boundValues =
                   gatherBoundsOrBoundValues<BoundsOp, BoundsType>(
                       builder, loc, dataExv, box,
                       /*collectValuesOnly=*/true);
@@ -240,9 +240,9 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
             })
             .genElse([&] {
               // Box is not present. Populate bound values with default values.
-              llvm::SmallVector<mlir::Value> boundValues;
-              mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-              mlir::Value mOne = builder.createMinusOneInteger(loc, idxTy);
+              llvm::SmallVector<aiir::Value> boundValues;
+              aiir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+              aiir::Value mOne = builder.createMinusOneInteger(loc, idxTy);
               for (unsigned dim = 0; dim < dataExv.rank(); ++dim) {
                 boundValues.push_back(zero); // lb
                 boundValues.push_back(mOne); // ub
@@ -256,13 +256,13 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
     // Create the bound operations outside the if-then-else with the if op
     // results.
     for (unsigned i = 0; i < ifRes.size(); i += nbValuesPerBound) {
-      mlir::Value bound =
+      aiir::Value bound =
           BoundsOp::create(builder, loc, boundTy, ifRes[i], ifRes[i + 1],
                            ifRes[i + 2], ifRes[i + 3], true, ifRes[i + 4]);
       bounds.push_back(bound);
     }
   } else {
-    mlir::Value box = !fir::isBoxAddress(info.addr.getType())
+    aiir::Value box = !fir::isBoxAddress(info.addr.getType())
                           ? info.addr
                           : fir::LoadOp::create(builder, loc, info.addr);
     bounds = gatherBoundsOrBoundValues<BoundsOp, BoundsType>(builder, loc,
@@ -274,42 +274,42 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate bounds operation for base array without any subscripts
 /// provided.
 template <typename BoundsOp, typename BoundsType>
-llvm::SmallVector<mlir::Value>
-genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
+llvm::SmallVector<aiir::Value>
+genBaseBoundsOps(fir::FirOpBuilder &builder, aiir::Location loc,
                  fir::ExtendedValue dataExv, bool isAssumedSize,
                  bool strideIncludeLowerExtent = false) {
-  mlir::Type idxTy = builder.getIndexType();
-  mlir::Type boundTy = builder.getType<BoundsType>();
-  llvm::SmallVector<mlir::Value> bounds;
+  aiir::Type idxTy = builder.getIndexType();
+  aiir::Type boundTy = builder.getType<BoundsType>();
+  llvm::SmallVector<aiir::Value> bounds;
 
   if (dataExv.rank() == 0)
     return bounds;
 
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  aiir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   const unsigned rank = dataExv.rank();
-  mlir::Value cumulativeExtent = one;
+  aiir::Value cumulativeExtent = one;
   for (unsigned dim = 0; dim < rank; ++dim) {
-    mlir::Value baseLb =
+    aiir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
-    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-    mlir::Value ub;
-    mlir::Value lb = zero;
-    mlir::Value extent = fir::factory::readExtent(builder, loc, dataExv, dim);
+    aiir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+    aiir::Value ub;
+    aiir::Value lb = zero;
+    aiir::Value extent = fir::factory::readExtent(builder, loc, dataExv, dim);
     if (isAssumedSize && dim + 1 == rank) {
       extent = zero;
       ub = lb;
     } else {
       // ub = extent - 1
-      ub = mlir::arith::SubIOp::create(builder, loc, extent, one);
+      ub = aiir::arith::SubIOp::create(builder, loc, extent, one);
     }
-    mlir::Value stride = one;
+    aiir::Value stride = one;
     if (strideIncludeLowerExtent) {
       stride = cumulativeExtent;
-      cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
+      cumulativeExtent = builder.createOrFold<aiir::arith::MulIOp>(
           loc, cumulativeExtent, extent);
     }
 
-    mlir::Value bound = BoundsOp::create(builder, loc, boundTy, lb, ub, extent,
+    aiir::Value bound = BoundsOp::create(builder, loc, boundTy, lb, ub, extent,
                                          stride, false, baseLb);
     bounds.push_back(bound);
   }
@@ -318,8 +318,8 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Checks if an argument is optional based on the fortran attributes
 /// that are tied to it.
-inline bool isOptionalArgument(mlir::Operation *op) {
-  if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(op))
+inline bool isOptionalArgument(aiir::Operation *op) {
+  if (auto declareOp = aiir::dyn_cast_or_null<hlfir::DeclareOp>(op))
     if (declareOp.getFortranAttrs() &&
         bitEnumContainsAny(*declareOp.getFortranAttrs(),
                            fir::FortranVariableFlagsEnum::optional))
@@ -328,22 +328,22 @@ inline bool isOptionalArgument(mlir::Operation *op) {
 }
 
 template <typename BoundsOp, typename BoundsType>
-llvm::SmallVector<mlir::Value>
+llvm::SmallVector<aiir::Value>
 genImplicitBoundsOps(fir::FirOpBuilder &builder, AddrAndBoundsInfo &info,
                      fir::ExtendedValue dataExv, bool dataExvIsAssumedSize,
-                     mlir::Location loc) {
-  llvm::SmallVector<mlir::Value> bounds;
+                     aiir::Location loc) {
+  llvm::SmallVector<aiir::Value> bounds;
 
-  mlir::Value baseOp = info.rawInput;
-  if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(baseOp.getType())))
+  aiir::Value baseOp = info.rawInput;
+  if (aiir::isa<fir::BaseBoxType>(fir::unwrapRefType(baseOp.getType())))
     bounds =
         genBoundsOpsFromBox<BoundsOp, BoundsType>(builder, loc, dataExv, info);
-  if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(baseOp.getType()))) {
+  if (aiir::isa<fir::SequenceType>(fir::unwrapRefType(baseOp.getType()))) {
     bounds = genBaseBoundsOps<BoundsOp, BoundsType>(builder, loc, dataExv,
                                                     dataExvIsAssumedSize);
   }
   if (characterWithDynamicLen(fir::unwrapRefType(baseOp.getType())) ||
-      mlir::isa<fir::BoxCharType>(fir::unwrapRefType(info.addr.getType()))) {
+      aiir::isa<fir::BoxCharType>(fir::unwrapRefType(info.addr.getType()))) {
     bounds = {genBoundsOpFromBoxChar<BoundsOp, BoundsType>(builder, loc,
                                                            dataExv, info)};
   }

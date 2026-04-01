@@ -1712,7 +1712,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   // an orphaned loop construct must be private.
   //
   // This again is something we cannot really diagnose, as it requires we see
-  // all the uses/scopes of all variables referenced.  The middle end/MLIR might
+  // all the uses/scopes of all variables referenced.  The middle end/AIIR might
   // be able to diagnose this.
 
   // OpenACC 3.3 Section 2.5.4:

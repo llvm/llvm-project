@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Builders.h"
+#include "aiir/IR/Builders.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
@@ -22,15 +22,15 @@
 using namespace Fortran::frontend;
 
 namespace test {
-class DummyDialect : public ::mlir::Dialect {
-  explicit DummyDialect(::mlir::MLIRContext *context)
-      : ::mlir::Dialect(getDialectNamespace(), context,
-            ::mlir::TypeID::get<DummyDialect>()) {
+class DummyDialect : public ::aiir::Dialect {
+  explicit DummyDialect(::aiir::AIIRContext *context)
+      : ::aiir::Dialect(getDialectNamespace(), context,
+            ::aiir::TypeID::get<DummyDialect>()) {
     initialize();
   }
 
   void initialize();
-  friend class ::mlir::MLIRContext;
+  friend class ::aiir::AIIRContext;
 
 public:
   ~DummyDialect() override = default;
@@ -40,7 +40,7 @@ public:
 };
 
 namespace dummy {
-class FakeOp : public ::mlir::Op<FakeOp> {
+class FakeOp : public ::aiir::Op<FakeOp> {
 public:
   using Op::Op;
 
@@ -49,11 +49,11 @@ public:
   static ::llvm::ArrayRef<::llvm::StringRef> getAttributeNames() { return {}; }
 
   static void build(
-      ::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState) {}
+      ::aiir::OpBuilder &odsBuilder, ::aiir::OperationState &odsState) {}
 
   static FakeOp create(
-      ::mlir::OpBuilder &odsBuilder, ::mlir::Location location) {
-    ::mlir::OperationState state(location, getOperationName());
+      ::aiir::OpBuilder &odsBuilder, ::aiir::Location location) {
+    ::aiir::OperationState state(location, getOperationName());
     build(odsBuilder, state);
     auto res = ::llvm::dyn_cast<FakeOp>(odsBuilder.create(state));
     assert(res && "builder didn't return the right type");
@@ -63,8 +63,8 @@ public:
 } // namespace dummy
 } // namespace test
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID(::test::DummyDialect)
-MLIR_DEFINE_EXPLICIT_TYPE_ID(::test::DummyDialect)
+AIIR_DECLARE_EXPLICIT_TYPE_ID(::test::DummyDialect)
+AIIR_DEFINE_EXPLICIT_TYPE_ID(::test::DummyDialect)
 
 namespace test {
 
@@ -72,19 +72,19 @@ void DummyDialect::initialize() { addOperations<::test::dummy::FakeOp>(); }
 } // namespace test
 
 // A test CodeGenAction to verify that we gracefully handle failure to convert
-// from MLIR to LLVM IR.
+// from AIIR to LLVM IR.
 class LLVMConversionFailureCodeGenAction : public CodeGenAction {
 public:
   LLVMConversionFailureCodeGenAction()
       : CodeGenAction(BackendActionTy::Backend_EmitLL) {
-    mlirCtx = std::make_unique<mlir::MLIRContext>();
-    mlirCtx->loadDialect<test::DummyDialect>();
+    aiirCtx = std::make_unique<aiir::AIIRContext>();
+    aiirCtx->loadDialect<test::DummyDialect>();
 
-    mlir::Location loc(mlir::UnknownLoc::get(mlirCtx.get()));
-    mlirModule = mlir::ModuleOp::create(loc, "mod");
+    aiir::Location loc(aiir::UnknownLoc::get(aiirCtx.get()));
+    aiirModule = aiir::ModuleOp::create(loc, "mod");
 
-    mlir::OpBuilder builder(mlirCtx.get());
-    builder.setInsertionPointToStart(&mlirModule->getRegion().front());
+    aiir::OpBuilder builder(aiirCtx.get());
+    builder.setInsertionPointToStart(&aiirModule->getRegion().front());
     // Create a fake op to trip conversion to LLVM.
     test::dummy::FakeOp::create(builder, loc);
 

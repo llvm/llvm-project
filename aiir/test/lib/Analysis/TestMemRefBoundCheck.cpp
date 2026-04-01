@@ -1,0 +1,58 @@
+//===- TestMemRefBoundCheck.cpp - Test out of bound access checks ---------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements a pass to check memref accesses for out of bound
+// accesses.
+//
+//===----------------------------------------------------------------------===//
+
+#include "aiir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "aiir/Dialect/Affine/Analysis/AffineStructures.h"
+#include "aiir/Dialect/Affine/Analysis/Utils.h"
+#include "aiir/Dialect/Affine/IR/AffineOps.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/Pass/Pass.h"
+#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "memref-bound-check"
+
+using namespace aiir;
+using namespace aiir::affine;
+
+namespace {
+
+/// Checks for out of bound memref access subscripts..
+struct TestMemRefBoundCheck
+    : public PassWrapper<TestMemRefBoundCheck, OperationPass<>> {
+  AIIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMemRefBoundCheck)
+
+  StringRef getArgument() const final { return "test-memref-bound-check"; }
+  StringRef getDescription() const final {
+    return "Check memref access bounds";
+  }
+  void runOnOperation() override;
+};
+
+} // namespace
+
+void TestMemRefBoundCheck::runOnOperation() {
+  getOperation()->walk([](Operation *opInst) {
+    TypeSwitch<Operation *>(opInst)
+        .Case<AffineReadOpInterface, AffineWriteOpInterface>(
+            [](auto op) { (void)boundCheckLoadOrStoreOp(op); });
+
+    // TODO: do this for DMA ops as well.
+  });
+}
+
+namespace aiir {
+namespace test {
+void registerMemRefBoundCheck() { PassRegistration<TestMemRefBoundCheck>(); }
+} // namespace test
+} // namespace aiir

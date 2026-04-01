@@ -11,24 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Interfaces/CallInterfaces.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/BuiltinAttributes.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Interfaces/CallInterfaces.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Casting.h"
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
-static bool isSymbolRef(mlir::CallInterfaceCallable callable) {
+static bool isSymbolRef(aiir::CallInterfaceCallable callable) {
   return llvm::isa<SymbolRefAttr>(callable);
 }
-static bool isValue(mlir::CallInterfaceCallable callable) {
+static bool isValue(aiir::CallInterfaceCallable callable) {
   return llvm::isa<Value>(callable);
 }
 
@@ -51,7 +51,7 @@ std::pair<func::FuncOp, Block *> createModuleWithFunction(
 struct FIRCallInterfaceTest : public testing::Test {
   void SetUp() override { fir::support::loadDialects(context); }
 
-  MLIRContext context;
+  AIIRContext context;
 };
 
 TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToDirect) {
@@ -63,7 +63,7 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToDirect) {
   // Direct call: fir.call @target()
   auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
   auto callOp = fir::CallOp::create(
-      builder, loc, callTargetRef, llvm::ArrayRef<mlir::Type>{}, ValueRange{});
+      builder, loc, callTargetRef, llvm::ArrayRef<aiir::Type>{}, ValueRange{});
   ASSERT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
   EXPECT_EQ(callOp.getNumOperands(), 0u);
 
@@ -91,7 +91,7 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_indirectToDirect) {
   // Indirect call: fir.call %arg0()
   Value callTargetValue = block->getArgument(0);
   auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{callTargetValue});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{callTargetValue});
   ASSERT_TRUE(isValue(callOp.getCallableForCallee()));
   EXPECT_EQ(callOp.getNumOperands(), 1u);
   EXPECT_FALSE(callOp->getAttr(fir::CallOp::getCalleeAttrNameStr()));
@@ -120,7 +120,7 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToIndirect) {
   // Direct call first
   auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
   auto callOp = fir::CallOp::create(
-      builder, loc, callTargetRef, llvm::ArrayRef<mlir::Type>{}, ValueRange{});
+      builder, loc, callTargetRef, llvm::ArrayRef<aiir::Type>{}, ValueRange{});
   ASSERT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
   EXPECT_EQ(callOp.getNumOperands(), 0u);
 
@@ -147,7 +147,7 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_indirectToIndirect) {
 
   // Indirect call: fir.call %arg0()
   auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{callTarget0});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{callTarget0});
   ASSERT_TRUE(isValue(callOp.getCallableForCallee()));
   EXPECT_EQ(callOp.getNumOperands(), 1u);
   EXPECT_EQ(callOp.getOperand(0), callTarget0);
@@ -176,7 +176,7 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToIndirect_withArgs) {
   // Direct call with one argument: fir.call @target(%arg)
   auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
   auto callOp = fir::CallOp::create(builder, loc, callTargetRef,
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{argVal});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{argVal});
   ASSERT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
   EXPECT_EQ(callOp.getNumOperands(), 1u);
   EXPECT_EQ(callOp.getOperand(0), argVal);
@@ -204,7 +204,7 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_indirectToDirect_withArgs) {
 
   // Indirect call with one argument: fir.call %callee(%arg)
   auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{calleeVal, argVal});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{calleeVal, argVal});
   ASSERT_TRUE(isValue(callOp.getCallableForCallee()));
   EXPECT_EQ(callOp.getNumOperands(), 2u);
   EXPECT_EQ(callOp.getOperand(0), calleeVal);
@@ -235,7 +235,7 @@ TEST_F(
 
   // Indirect call with one argument: fir.call %callee0(%arg)
   auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{callee0, argVal});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{callee0, argVal});
   ASSERT_TRUE(isValue(callOp.getCallableForCallee()));
   EXPECT_EQ(callOp.getNumOperands(), 2u);
   EXPECT_EQ(callOp.getOperand(0), callee0);
@@ -252,12 +252,12 @@ TEST_F(
 }
 
 static ArrayAttr makeArgAttrs(
-    MLIRContext *ctx, llvm::ArrayRef<DictionaryAttr> dicts) {
+    AIIRContext *ctx, llvm::ArrayRef<DictionaryAttr> dicts) {
   llvm::SmallVector<Attribute> attrs(dicts.begin(), dicts.end());
   return ArrayAttr::get(ctx, attrs);
 }
 
-static DictionaryAttr makeTestArgDict(MLIRContext *ctx, StringRef value) {
+static DictionaryAttr makeTestArgDict(AIIRContext *ctx, StringRef value) {
   return DictionaryAttr::get(ctx,
       {NamedAttribute(
           StringAttr::get(ctx, "test.attr"), StringAttr::get(ctx, value))});
@@ -277,7 +277,7 @@ TEST_F(
   // Direct call with one argument and arg_attrs.
   auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
   auto callOp = fir::CallOp::create(builder, loc, callTargetRef,
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{argVal});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{argVal});
   callOp->setAttr(callOp.getArgAttrsAttrName(),
       makeArgAttrs(&context, {makeTestArgDict(&context, "arg0")}));
   ASSERT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
@@ -316,7 +316,7 @@ TEST_F(
   // Direct call with one argument and arg_attrs for that argument.
   auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
   auto callOp = fir::CallOp::create(builder, loc, callTargetRef,
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{argVal});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{argVal});
   callOp->setAttr(callOp.getArgAttrsAttrName(),
       makeArgAttrs(&context, {makeTestArgDict(&context, "arg0")}));
   ASSERT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
@@ -353,7 +353,7 @@ TEST_F(
 
   // Indirect call with callee + one argument
   auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{calleeVal, argVal});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{calleeVal, argVal});
   callOp->setAttr(callOp.getArgAttrsAttrName(),
       makeArgAttrs(&context,
           {DictionaryAttr::get(&context, {}),
@@ -390,7 +390,7 @@ TEST_F(FIRCallInterfaceTest,
 
   // Indirect call with one argument and arg_attrs
   auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
-      llvm::ArrayRef<mlir::Type>{}, ValueRange{callee0, argVal});
+      llvm::ArrayRef<aiir::Type>{}, ValueRange{callee0, argVal});
   callOp->setAttr(callOp.getArgAttrsAttrName(),
       makeArgAttrs(&context,
           {DictionaryAttr::get(&context, {}),

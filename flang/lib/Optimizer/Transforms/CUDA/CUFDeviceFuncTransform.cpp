@@ -14,16 +14,16 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/Index/IR/IndexDialect.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/IRMapping.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/RegionUtils.h"
+#include "aiir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "aiir/Dialect/GPU/IR/GPUDialect.h"
+#include "aiir/Dialect/Index/IR/IndexDialect.h"
+#include "aiir/Dialect/Index/IR/IndexOps.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/LLVMIR/NVVMDialect.h"
+#include "aiir/Dialect/SCF/IR/SCF.h"
+#include "aiir/IR/IRMapping.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -32,7 +32,7 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-using namespace mlir;
+using namespace aiir;
 
 namespace {
 
@@ -41,54 +41,54 @@ class CUFDeviceFuncTransform
   using CUFDeviceFuncTransformBase<
       CUFDeviceFuncTransform>::CUFDeviceFuncTransformBase;
 
-  static gpu::GPUFuncOp createGPUFuncOp(mlir::func::FuncOp funcOp,
+  static gpu::GPUFuncOp createGPUFuncOp(aiir::func::FuncOp funcOp,
                                         bool isGlobal, int computeCap) {
-    mlir::OpBuilder builder(funcOp.getContext());
+    aiir::OpBuilder builder(funcOp.getContext());
 
-    mlir::Region &funcOpBody = funcOp.getBody();
+    aiir::Region &funcOpBody = funcOp.getBody();
     SetVector<Value> operands;
-    for (mlir::Value operand : funcOp.getArguments())
+    for (aiir::Value operand : funcOp.getArguments())
       operands.insert(operand);
 
-    llvm::SmallVector<mlir::Type> funcOperandTypes;
-    llvm::SmallVector<mlir::Type> funcResultTypes;
+    llvm::SmallVector<aiir::Type> funcOperandTypes;
+    llvm::SmallVector<aiir::Type> funcResultTypes;
     funcOperandTypes.reserve(funcOp.getArgumentTypes().size());
     funcResultTypes.reserve(funcOp.getResultTypes().size());
-    for (mlir::Type opTy : funcOp.getArgumentTypes())
+    for (aiir::Type opTy : funcOp.getArgumentTypes())
       funcOperandTypes.push_back(opTy);
-    for (mlir::Type resTy : funcOp.getResultTypes())
+    for (aiir::Type resTy : funcOp.getResultTypes())
       funcResultTypes.push_back(resTy);
 
-    mlir::Location loc = funcOp.getLoc();
+    aiir::Location loc = funcOp.getLoc();
 
-    mlir::FunctionType type = mlir::FunctionType::get(
+    aiir::FunctionType type = aiir::FunctionType::get(
         funcOp.getContext(), funcOperandTypes, funcResultTypes);
 
     auto deviceFuncOp =
         gpu::GPUFuncOp::create(builder, loc, funcOp.getName(), type,
-                               mlir::TypeRange{}, mlir::TypeRange{});
+                               aiir::TypeRange{}, aiir::TypeRange{});
     if (isGlobal)
       deviceFuncOp->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                             builder.getUnitAttr());
 
-    mlir::Region &deviceFuncBody = deviceFuncOp.getBody();
-    mlir::Block &entryBlock = deviceFuncBody.front();
+    aiir::Region &deviceFuncBody = deviceFuncOp.getBody();
+    aiir::Block &entryBlock = deviceFuncBody.front();
 
-    mlir::IRMapping map;
+    aiir::IRMapping map;
     for (const auto &operand : enumerate(operands))
       map.map(operand.value(), entryBlock.getArgument(operand.index()));
 
     funcOpBody.cloneInto(&deviceFuncBody, map);
 
     deviceFuncOp.walk([](func::ReturnOp op) {
-      mlir::OpBuilder replacer(op);
+      aiir::OpBuilder replacer(op);
       gpu::ReturnOp gpuReturnOp = gpu::ReturnOp::create(replacer, op.getLoc());
       gpuReturnOp->setOperands(op.getOperands());
       op.erase();
     });
 
-    mlir::Block &funcOpEntry = funcOp.front();
-    mlir::Block *clonedFuncOpEntry = map.lookup(&funcOpEntry);
+    aiir::Block &funcOpEntry = funcOp.front();
+    aiir::Block *clonedFuncOpEntry = map.lookup(&funcOpEntry);
 
     entryBlock.getOperations().splice(entryBlock.getOperations().end(),
                                       clonedFuncOpEntry->getOperations());
@@ -112,10 +112,10 @@ class CUFDeviceFuncTransform
     return deviceFuncOp;
   }
 
-  static void createHostStub(mlir::func::FuncOp funcOp,
-                             mlir::SymbolTable &symTab, mlir::ModuleOp mod) {
-    mlir::Location loc = funcOp.getLoc();
-    mlir::OpBuilder modBuilder(mod.getBodyRegion());
+  static void createHostStub(aiir::func::FuncOp funcOp,
+                             aiir::SymbolTable &symTab, aiir::ModuleOp mod) {
+    aiir::Location loc = funcOp.getLoc();
+    aiir::OpBuilder modBuilder(mod.getBodyRegion());
     modBuilder.setInsertionPointToEnd(mod.getBody());
     auto emptyStub = func::FuncOp::create(modBuilder, loc, funcOp.getName(),
                                           funcOp.getFunctionType());
@@ -129,7 +129,7 @@ class CUFDeviceFuncTransform
     symTab.insert(emptyStub);
   }
 
-  static bool isDeviceFunc(mlir::func::FuncOp funcOp) {
+  static bool isDeviceFunc(aiir::func::FuncOp funcOp) {
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                 cuf::getProcAttrName()))
@@ -145,21 +145,21 @@ class CUFDeviceFuncTransform
     // Working on Module operation because inserting/removing function from the
     // module is not thread-safe.
     ModuleOp mod = getOperation();
-    mlir::SymbolTable symbolTable(getOperation());
+    aiir::SymbolTable symbolTable(getOperation());
 
     auto *ctx = getOperation().getContext();
-    mlir::OpBuilder builder(ctx);
+    aiir::OpBuilder builder(ctx);
 
     gpu::GPUModuleOp gpuMod = cuf::getOrCreateGPUModule(mod, symbolTable);
-    mlir::SymbolTable gpuModSymTab(gpuMod);
+    aiir::SymbolTable gpuModSymTab(gpuMod);
 
-    llvm::SetVector<mlir::func::FuncOp> funcsToClone;
-    llvm::SetVector<mlir::func::FuncOp> deviceFuncs;
-    llvm::SetVector<mlir::func::FuncOp> keepInModule;
+    llvm::SetVector<aiir::func::FuncOp> funcsToClone;
+    llvm::SetVector<aiir::func::FuncOp> deviceFuncs;
+    llvm::SetVector<aiir::func::FuncOp> keepInModule;
     llvm::StringSet<> deviceFuncNames;
 
     // Look for all function to migrate to the GPU module.
-    mod.walk([&](mlir::func::FuncOp op) {
+    mod.walk([&](aiir::func::FuncOp op) {
       if (isDeviceFunc(op)) {
         deviceFuncs.insert(op);
         deviceFuncNames.insert(op.getSymName());
@@ -168,7 +168,7 @@ class CUFDeviceFuncTransform
 
     auto processCallOp = [&](fir::CallOp op) {
       if (op.getCallee()) {
-        auto func = symbolTable.lookup<mlir::func::FuncOp>(
+        auto func = symbolTable.lookup<aiir::func::FuncOp>(
             op.getCallee()->getLeafReference());
         if (deviceFuncs.count(func) == 0)
           funcsToClone.insert(func);
@@ -191,7 +191,7 @@ class CUFDeviceFuncTransform
         globalOp.walk([&](fir::AddrOfOp addrOfOp) {
           if (deviceFuncNames.contains(addrOfOp.getSymbol().getLeafReference()))
             keepInModule.insert(
-                *llvm::find_if(deviceFuncs, [&](mlir::func::FuncOp f) {
+                *llvm::find_if(deviceFuncs, [&](aiir::func::FuncOp f) {
                   return f.getSymName() ==
                          addrOfOp.getSymbol().getLeafReference();
                 }));
@@ -218,12 +218,12 @@ class CUFDeviceFuncTransform
       auto isGlobal = cudaProcAttr.getValue() == cuf::ProcAttribute::Global ||
                       cudaProcAttr.getValue() == cuf::ProcAttribute::GridGlobal;
       if (funcOp.isDeclaration()) {
-        mlir::Operation *clonedFuncOp = funcOp->clone();
+        aiir::Operation *clonedFuncOp = funcOp->clone();
         if (isGlobal) {
           clonedFuncOp->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                                 builder.getUnitAttr());
           clonedFuncOp->removeAttr(cuf::getProcAttrName());
-          if (auto funcOp = mlir::dyn_cast<func::FuncOp>(clonedFuncOp))
+          if (auto funcOp = aiir::dyn_cast<func::FuncOp>(clonedFuncOp))
             funcOp.setNested();
         }
         gpuModSymTab.insert(clonedFuncOp);

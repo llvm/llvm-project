@@ -9,9 +9,9 @@
 #ifndef FORTRAN_LOWER_HOSTASSOCIATIONS_H
 #define FORTRAN_LOWER_HOSTASSOCIATIONS_H
 
-#include "mlir/IR/Location.h"
-#include "mlir/IR/Types.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Location.h"
+#include "aiir/IR/Types.h"
+#include "aiir/IR/Value.h"
 #include "llvm/ADT/SetVector.h"
 
 namespace Fortran {
@@ -51,7 +51,7 @@ public:
   void internalProcedureBindings(AbstractConverter &converter, SymMap &symMap);
 
   /// Return the type of the extra argument to add to each internal procedure.
-  mlir::Type getArgumentType(AbstractConverter &convert);
+  aiir::Type getArgumentType(AbstractConverter &convert);
 
   /// Is \p symbol host associated ?
   bool isAssociated(const Fortran::semantics::Symbol &symbol) const {
@@ -66,7 +66,7 @@ private:
   llvm::SetVector<const Fortran::semantics::Symbol *> globalSymbols;
 
   /// The type of the extra argument to be added to each internal procedure.
-  mlir::Type argType;
+  aiir::Type argType;
 
   /// Scope of the parent procedure if addSymbolsToBind was called.
   const Fortran::semantics::Scope *hostScope;

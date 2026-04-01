@@ -6,46 +6,46 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H
 
-#include "mlir/IR/Dialect.h"
+#include "aiir/IR/Dialect.h"
 
 #include "flang/Optimizer/Dialect/FIRDialect.h.inc"
 
-namespace mlir {
+namespace aiir {
 class IRMapping;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 
 /// The FIR codegen dialect is a dialect containing a small set of transient
 /// operations used exclusively during code generation.
-class FIRCodeGenDialect final : public mlir::Dialect {
+class FIRCodeGenDialect final : public aiir::Dialect {
 public:
-  explicit FIRCodeGenDialect(mlir::MLIRContext *ctx);
+  explicit FIRCodeGenDialect(aiir::AIIRContext *ctx);
   virtual ~FIRCodeGenDialect();
 
   static llvm::StringRef getDialectNamespace() { return "fircg"; }
 };
 
 /// Support for inlining on FIR.
-bool canLegallyInline(mlir::Operation *op, mlir::Region *reg, bool,
-                      mlir::IRMapping &map);
-bool canLegallyInline(mlir::Operation *, mlir::Operation *, bool);
+bool canLegallyInline(aiir::Operation *op, aiir::Region *reg, bool,
+                      aiir::IRMapping &map);
+bool canLegallyInline(aiir::Operation *, aiir::Operation *, bool);
 
 // Register the FIRInlinerInterface to FIROpsDialect
-void addFIRInlinerExtension(mlir::DialectRegistry &registry);
+void addFIRInlinerExtension(aiir::DialectRegistry &registry);
 
 // Register implementation of LLVMTranslationDialectInterface.
-void addFIRToLLVMIRExtension(mlir::DialectRegistry &registry);
+void addFIRToLLVMIRExtension(aiir::DialectRegistry &registry);
 
 void registerFortranTempArrayCopyIsSafeExternalModels(
-    mlir::DialectRegistry &registry);
+    aiir::DialectRegistry &registry);
 
 } // namespace fir
 

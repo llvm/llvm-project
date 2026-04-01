@@ -9,14 +9,14 @@
 #ifndef CIR_DIALECT_TRANSFORMS_PASSDETAIL_H
 #define CIR_DIALECT_TRANSFORMS_PASSDETAIL_H
 
-#include "mlir/IR/Dialect.h"
-#include "mlir/Pass/Pass.h"
+#include "aiir/IR/Dialect.h"
+#include "aiir/Pass/Pass.h"
 
 namespace cir {
 class CIRDialect;
 } // namespace cir
 
-namespace mlir {
+namespace aiir {
 // Forward declaration from Dialect.h
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
@@ -24,6 +24,6 @@ void registerDialect(DialectRegistry &registry);
 #define GEN_PASS_DECL
 #include "clang/CIR/Dialect/Passes.h.inc"
 
-} // namespace mlir
+} // namespace aiir
 
 #endif // CIR_DIALECT_TRANSFORMS_PASSDETAIL_H

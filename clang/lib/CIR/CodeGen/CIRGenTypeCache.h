@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 #define LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "aiir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -52,15 +52,15 @@ struct CIRGenTypeCache {
   cir::FP128Type fP128Ty;
 
   /// ClangIR char
-  mlir::Type uCharTy;
+  aiir::Type uCharTy;
 
   /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
   union {
-    mlir::Type uIntPtrTy;
-    mlir::Type sizeTy;
+    aiir::Type uIntPtrTy;
+    aiir::Type sizeTy;
   };
 
-  mlir::Type ptrDiffTy;
+  aiir::Type ptrDiffTy;
 
   /// void* in address space 0
   cir::PointerType voidPtrTy;
@@ -81,7 +81,7 @@ struct CIRGenTypeCache {
     unsigned char SizeAlignInBytes;
   };
 
-  mlir::ptr::MemorySpaceAttrInterface cirAllocaAddressSpace;
+  aiir::ptr::MemorySpaceAttrInterface cirAllocaAddressSpace;
 
   clang::CharUnits getSizeSize() const {
     return clang::CharUnits::fromQuantity(SizeSizeInBytes);
@@ -94,7 +94,7 @@ struct CIRGenTypeCache {
     return clang::CharUnits::fromQuantity(PointerAlignInBytes);
   }
 
-  mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
+  aiir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
     return cirAllocaAddressSpace;
   }
 };

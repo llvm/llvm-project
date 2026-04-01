@@ -865,42 +865,42 @@ func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : 
 }
 
 // Test that we rewrite the signature of and calls to a function that accepts
-// and returns MLIR complex<f32>.
+// and returns AIIR complex<f32>.
 
-// I32-LABEL: func private @mlircomplexf32
+// I32-LABEL: func private @aiircomplexf32
 // I32-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>})
 // I32-SAME: -> i64
-// I32_MINGW-LABEL: func private @mlircomplexf32
+// I32_MINGW-LABEL: func private @aiircomplexf32
 // I32_MINGW-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>})
 // I32_MINGW-SAME: -> i64
-// X64-LABEL: func private @mlircomplexf32
+// X64-LABEL: func private @aiircomplexf32
 // X64-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.vector<2:f32>, [[Z2:%[0-9A-Za-z]+]]: !fir.vector<2:f32>)
 // X64-SAME: -> !fir.vector<2:f32>
-// X64_MINGW-LABEL: func private @mlircomplexf32
+// X64_MINGW-LABEL: func private @aiircomplexf32
 // X64_MINGW-SAME: ([[Z1:%[0-9A-Za-z]+]]: i64, [[Z2:%[0-9A-Za-z]+]]: i64)
 // X64_MINGW-SAME: -> i64
-// AARCH64-LABEL: func private @mlircomplexf32
+// AARCH64-LABEL: func private @aiircomplexf32
 // AARCH64-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.array<2xf32>, [[Z2:%[0-9A-Za-z]+]]: !fir.array<2xf32>)
 // AARCH64-SAME: -> tuple<f32, f32>
-// PPC64le-LABEL: func private @mlircomplexf32
+// PPC64le-LABEL: func private @aiircomplexf32
 // PPC64le-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32)
 // PPC64le-SAME: -> tuple<f32, f32>
-// SPARCV9-LABEL: func private @mlircomplexf32
+// SPARCV9-LABEL: func private @aiircomplexf32
 // SPARCV9-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32)
 // SPARCV9-SAME: -> tuple<f32, f32>
-// RISCV64-LABEL: func private @mlircomplexf32
+// RISCV64-LABEL: func private @aiircomplexf32
 // RISCV64-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32)
 // RISCV64-SAME: -> tuple<f32, f32>
-// PPC64-LABEL: func private @mlircomplexf32
+// PPC64-LABEL: func private @aiircomplexf32
 // PPC64-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32)
 // PPC64-SAME: -> tuple<f32, f32>
-// PPC-LABEL: func private @mlircomplexf32
+// PPC-LABEL: func private @aiircomplexf32
 // PPC-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32)
 // PPC-SAME: -> tuple<f32, f32>
-// LOONGARCH64-LABEL: func private @mlircomplexf32
+// LOONGARCH64-LABEL: func private @aiircomplexf32
 // LOONGARCH64-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32)
 // LOONGARCH64-SAME: -> tuple<f32, f32>
-func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> complex<f32> {
+func.func private @aiircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> complex<f32> {
 
   // I32-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // I32-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
@@ -914,7 +914,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // I32-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC]] : !fir.ref<complex<f32>>
   // I32-DAG: [[Z2_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z2_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
 
-  // I32: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> i64
+  // I32: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> i64
 
   // I32_MINGW-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // I32_MINGW-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
@@ -928,7 +928,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // I32_MINGW-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC]] : !fir.ref<complex<f32>>
   // I32_MINGW-DAG: [[Z2_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z2_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
 
-  // I32_MINGW: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> i64
+  // I32_MINGW: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> i64
 
   // X64-DAG: [[Z2_ADDR:%[0-9A-Za-z]+]] = fir.alloca !fir.vector<2:f32>
   // X64-DAG: fir.store [[Z2]] to [[Z2_ADDR]] : !fir.ref<!fir.vector<2:f32>>
@@ -948,7 +948,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // X64-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC2]] : !fir.ref<complex<f32>>
   // X64-DAG: [[Z2_RELOADED:%[0-9A-Za-z]+]] = fir.load [[Z2_ADDRV]] : !fir.ref<!fir.vector<2:f32>>
 
-  // X64: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_RELOADED]], [[Z2_RELOADED]]) : (!fir.vector<2:f32>, !fir.vector<2:f32>) -> !fir.vector<2:f32>
+  // X64: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[Z1_RELOADED]], [[Z2_RELOADED]]) : (!fir.vector<2:f32>, !fir.vector<2:f32>) -> !fir.vector<2:f32>
 
   // X64_MINGW-DAG: [[Z2_ADDR:%[0-9A-Za-z]+]] = fir.alloca i64
   // X64_MINGW-DAG: fir.store [[Z2]] to [[Z2_ADDR]] : !fir.ref<i64>
@@ -968,7 +968,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // X64_MINGW-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC2]] : !fir.ref<complex<f32>>
   // X64_MINGW-DAG: [[Z2_RELOADED:%[0-9A-Za-z]+]] = fir.load [[Z2_ADDRV]] : !fir.ref<i64>
 
-  // X64_MINGW: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_RELOADED]], [[Z2_RELOADED]]) : (i64, i64) -> i64
+  // X64_MINGW: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[Z1_RELOADED]], [[Z2_RELOADED]]) : (i64, i64) -> i64
 
   // AARCH64-DAG: [[Z2_ARR:%[0-9A-Za-z]+]] = fir.alloca !fir.array<2xf32>
   // AARCH64-DAG: fir.store [[Z2]] to [[Z2_ARR]] : !fir.ref<!fir.array<2xf32>>
@@ -988,7 +988,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // AARCH64-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC2]] : !fir.ref<complex<f32>>
   // AARCH64-DAG: [[Z2_RELOADED:%[0-9A-Za-z]+]] = fir.load [[Z2_ARR2]] : !fir.ref<!fir.array<2xf32>>
 
-  // AARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_RELOADED]], [[Z2_RELOADED]]) : (!fir.array<2xf32>, !fir.array<2xf32>) -> tuple<f32, f32>
+  // AARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[Z1_RELOADED]], [[Z2_RELOADED]]) : (!fir.array<2xf32>, !fir.array<2xf32>) -> tuple<f32, f32>
 
   // PPC64le-DAG: [[Z2_EMPTY:%[0-9A-Za-z]+]] = fir.undefined complex<f32>
   // PPC64le-DAG: [[Z2_PARTIAL:%[0-9A-Za-z]+]] = fir.insert_value [[Z2_EMPTY]], [[A2]], [0 : i32] : (complex<f32>, f32) -> complex<f32>
@@ -1002,7 +1002,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // PPC64le-DAG: [[A2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [0 : i32] : (complex<f32>) -> f32
   // PPC64le-DAG: [[B2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [1 : i32] : (complex<f32>) -> f32
 
-  // PPC64le: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
+  // PPC64le: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
 
   // SPARCV9-DAG: [[Z2_EMPTY:%[0-9A-Za-z]+]] = fir.undefined complex<f32>
   // SPARCV9-DAG: [[Z2_PARTIAL:%[0-9A-Za-z]+]] = fir.insert_value [[Z2_EMPTY]], [[A2]], [0 : i32] : (complex<f32>, f32) -> complex<f32>
@@ -1016,7 +1016,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // SPARCV9-DAG: [[A2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [0 : i32] : (complex<f32>) -> f32
   // SPARCV9-DAG: [[B2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [1 : i32] : (complex<f32>) -> f32
 
-  // SPARCV9: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
+  // SPARCV9: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
 
   // RISCV64-DAG: [[Z2_EMPTY:%[0-9A-Za-z]+]] = fir.undefined complex<f32>
   // RISCV64-DAG: [[Z2_PARTIAL:%[0-9A-Za-z]+]] = fir.insert_value [[Z2_EMPTY]], [[A2]], [0 : i32] : (complex<f32>, f32) -> complex<f32>
@@ -1030,7 +1030,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // RISCV64-DAG: [[A2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [0 : i32] : (complex<f32>) -> f32
   // RISCV64-DAG: [[B2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [1 : i32] : (complex<f32>) -> f32
 
-  // RISCV64: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
+  // RISCV64: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
   
   // PPC64-DAG: [[Z2_EMPTY:%[0-9A-Za-z]+]] = fir.undefined complex<f32>
   // PPC64-DAG: [[Z2_PARTIAL:%[0-9A-Za-z]+]] = fir.insert_value [[Z2_EMPTY]], [[A2]], [0 : i32] : (complex<f32>, f32) -> complex<f32>
@@ -1044,7 +1044,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // PPC64-DAG: [[A2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [0 : i32] : (complex<f32>) -> f32
   // PPC64-DAG: [[B2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [1 : i32] : (complex<f32>) -> f32
 
-  // PPC64: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
+  // PPC64: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
 
   // PPC-DAG: [[Z2_EMPTY:%[0-9A-Za-z]+]] = fir.undefined complex<f32>
   // PPC-DAG: [[Z2_PARTIAL:%[0-9A-Za-z]+]] = fir.insert_value [[Z2_EMPTY]], [[A2]], [0 : i32] : (complex<f32>, f32) -> complex<f32>
@@ -1058,7 +1058,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // PPC-DAG: [[A2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [0 : i32] : (complex<f32>) -> f32
   // PPC-DAG: [[B2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [1 : i32] : (complex<f32>) -> f32
 
-  // PPC: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
+  // PPC: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
 
   // LOONGARCH64-DAG: [[Z2_EMPTY:%[0-9A-Za-z]+]] = fir.undefined complex<f32>
   // LOONGARCH64-DAG: [[Z2_PARTIAL:%[0-9A-Za-z]+]] = fir.insert_value [[Z2_EMPTY]], [[A2]], [0 : i32] : (complex<f32>, f32) -> complex<f32>
@@ -1072,8 +1072,8 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // LOONGARCH64-DAG: [[A2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [0 : i32] : (complex<f32>) -> f32
   // LOONGARCH64-DAG: [[B2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [1 : i32] : (complex<f32>) -> f32
 
-  // LOONGARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
-  %0 = fir.call @mlircomplexf32(%z1, %z2) : (complex<f32>, complex<f32>) -> complex<f32>
+  // LOONGARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.call @aiircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
+  %0 = fir.call @aiircomplexf32(%z1, %z2) : (complex<f32>, complex<f32>) -> complex<f32>
 
   // I32: [[ADDRI64:%[0-9A-Za-z]+]] = fir.alloca i64
   // I32: fir.store [[VAL]] to [[ADDRI64]] : !fir.ref<i64>

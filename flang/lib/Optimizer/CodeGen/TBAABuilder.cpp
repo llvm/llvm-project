@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,14 +15,14 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
-#include <mlir/Dialect/LLVMIR/LLVMDialect.h>
-#include <mlir/Dialect/LLVMIR/LLVMTypes.h>
+#include <aiir/Dialect/LLVMIR/LLVMAttrs.h>
+#include <aiir/Dialect/LLVMIR/LLVMDialect.h>
+#include <aiir/Dialect/LLVMIR/LLVMTypes.h>
 
 #define DEBUG_TYPE "flang-tbaa-builder"
 
-using namespace mlir;
-using namespace mlir::LLVM;
+using namespace aiir;
+using namespace aiir::LLVM;
 
 static llvm::cl::opt<bool> disableTBAA(
     "disable-tbaa",
@@ -48,12 +48,12 @@ static llvm::cl::opt<unsigned>
 
 namespace fir {
 
-TBAABuilder::TBAABuilder(MLIRContext *context, bool applyTBAA,
+TBAABuilder::TBAABuilder(AIIRContext *context, bool applyTBAA,
                          bool forceUnifiedTree)
     : enableTBAA(applyTBAA && !disableTBAA),
       trees(/*separatePerFunction=*/perFunctionTBAATrees && !forceUnifiedTree) {
   // TODO: the TBAA tags created here are rooted in the root scope
-  // of the enclosing function. This does not work best with MLIR inlining.
+  // of the enclosing function. This does not work best with AIIR inlining.
   // A better approach is to root them according to the scopes they belong to
   // and that were used by AddAliasTagsPass to create TBAA tags before
   // the CodeGen. For example:
@@ -100,18 +100,18 @@ TBAATagAttr TBAABuilder::getAccessTag(TBAATypeDescriptorAttr baseTypeDesc,
   return tag;
 }
 
-TBAATagAttr TBAABuilder::getAnyBoxAccessTag(mlir::LLVM::LLVMFuncOp func) {
+TBAATagAttr TBAABuilder::getAnyBoxAccessTag(aiir::LLVM::LLVMFuncOp func) {
   TBAATypeDescriptorAttr boxMemberTypeDesc = trees[func].boxMemberTypeDesc;
   return getAccessTag(boxMemberTypeDesc, boxMemberTypeDesc, /*offset=*/0);
 }
 
 TBAATagAttr TBAABuilder::getBoxAccessTag(Type baseFIRType, Type accessFIRType,
                                          GEPOp gep,
-                                         mlir::LLVM::LLVMFuncOp func) {
+                                         aiir::LLVM::LLVMFuncOp func) {
   return getAnyBoxAccessTag(func);
 }
 
-TBAATagAttr TBAABuilder::getAnyDataAccessTag(mlir::LLVM::LLVMFuncOp func) {
+TBAATagAttr TBAABuilder::getAnyDataAccessTag(aiir::LLVM::LLVMFuncOp func) {
   TBAATypeDescriptorAttr anyDataAccessTypeDesc = trees[func].anyDataTypeDesc;
   return getAccessTag(anyDataAccessTypeDesc, anyDataAccessTypeDesc,
                       /*offset=*/0);
@@ -119,11 +119,11 @@ TBAATagAttr TBAABuilder::getAnyDataAccessTag(mlir::LLVM::LLVMFuncOp func) {
 
 TBAATagAttr TBAABuilder::getDataAccessTag(Type baseFIRType, Type accessFIRType,
                                           GEPOp gep,
-                                          mlir::LLVM::LLVMFuncOp func) {
+                                          aiir::LLVM::LLVMFuncOp func) {
   return getAnyDataAccessTag(func);
 }
 
-TBAATagAttr TBAABuilder::getAnyAccessTag(mlir::LLVM::LLVMFuncOp func) {
+TBAATagAttr TBAABuilder::getAnyAccessTag(aiir::LLVM::LLVMFuncOp func) {
   TBAATypeDescriptorAttr anyAccessTypeDesc = trees[func].anyAccessDesc;
   return getAccessTag(anyAccessTypeDesc, anyAccessTypeDesc, /*offset=*/0);
 }
@@ -133,7 +133,7 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
   if (!enableTBAA)
     return;
 
-  mlir::LLVM::LLVMFuncOp func = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
+  aiir::LLVM::LLVMFuncOp func = op->getParentOfType<aiir::LLVM::LLVMFuncOp>();
   if (!func)
     return;
 
@@ -152,7 +152,7 @@ void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
     // with both data and descriptor accesses.
     // Conservatively set any-access tag if there is any descriptor member.
     tbaaTagSym = getAnyAccessTag(func);
-  } else if (mlir::isa<fir::BaseBoxType>(baseFIRType)) {
+  } else if (aiir::isa<fir::BaseBoxType>(baseFIRType)) {
     tbaaTagSym = getBoxAccessTag(baseFIRType, accessFIRType, gep, func);
   } else {
     tbaaTagSym = getDataAccessTag(baseFIRType, accessFIRType, gep, func);

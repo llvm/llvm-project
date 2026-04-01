@@ -14,12 +14,12 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIR_ALIAS_TAG_OP_INTERFACE_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIR_ALIAS_TAG_OP_INTERFACE_H
 
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/Operation.h"
+#include "aiir/IR/OpDefinition.h"
+#include "aiir/IR/Operation.h"
 #include "llvm/Support/LogicalResult.h"
 
 namespace fir::detail {
-llvm::LogicalResult verifyFirAliasTagOpInterface(mlir::Operation *op);
+llvm::LogicalResult verifyFirAliasTagOpInterface(aiir::Operation *op);
 } // namespace fir::detail
 
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h.inc"

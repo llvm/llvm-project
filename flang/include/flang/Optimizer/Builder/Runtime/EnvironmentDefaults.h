@@ -25,10 +25,10 @@ class FirOpBuilder;
 class GlobalOp;
 } // namespace fir
 
-namespace mlir {
+namespace aiir {
 class Location;
 class Value;
-} // namespace mlir
+} // namespace aiir
 
 namespace Fortran::lower {
 struct EnvironmentDefault;
@@ -39,8 +39,8 @@ namespace fir::runtime {
 /// Create the list of environment variable defaults for the runtime to set. The
 /// form of the generated list is defined in the runtime header file
 /// environment-default-list.h
-mlir::Value genEnvironmentDefaults(
-    fir::FirOpBuilder &builder, mlir::Location loc,
+aiir::Value genEnvironmentDefaults(
+    fir::FirOpBuilder &builder, aiir::Location loc,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults);
 
 } // namespace fir::runtime

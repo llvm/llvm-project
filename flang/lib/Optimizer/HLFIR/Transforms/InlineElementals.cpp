@@ -16,13 +16,13 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/IRMapping.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Dialect/Func/IR/FuncOps.h"
+#include "aiir/IR/IRMapping.h"
+#include "aiir/IR/PatternMatch.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Support/LLVM.h"
+#include "aiir/Transforms/DialectConversion.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <iterator>
 
@@ -35,7 +35,7 @@ namespace hlfir {
 /// a destroy operation, return those two, otherwise return {}
 static std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>>
 getTwoUses(hlfir::ElementalOp elemental) {
-  mlir::Operation::user_range users = elemental->getUsers();
+  aiir::Operation::user_range users = elemental->getUsers();
   // don't inline anything with more than one use (plus hfir.destroy)
   if (std::distance(users.begin(), users.end()) != 2) {
     return std::nullopt;
@@ -48,8 +48,8 @@ getTwoUses(hlfir::ElementalOp elemental) {
 
   hlfir::ApplyOp apply;
   hlfir::DestroyOp destroy;
-  for (mlir::Operation *user : users)
-    mlir::TypeSwitch<mlir::Operation *, void>(user)
+  for (aiir::Operation *user : users)
+    aiir::TypeSwitch<aiir::Operation *, void>(user)
         .Case([&](hlfir::ApplyOp op) { apply = op; })
         .Case([&](hlfir::DestroyOp op) { destroy = op; });
 
@@ -58,7 +58,7 @@ getTwoUses(hlfir::ElementalOp elemental) {
 
   // we can't inline if the return type of the yield doesn't match the return
   // type of the apply
-  auto yield = mlir::dyn_cast_or_null<hlfir::YieldElementOp>(
+  auto yield = aiir::dyn_cast_or_null<hlfir::YieldElementOp>(
       elemental.getRegion().back().back());
   assert(yield && "hlfir.elemental should always end with a yield");
   if (apply.getResult().getType() != yield.getElementValue().getType())
@@ -69,13 +69,13 @@ getTwoUses(hlfir::ElementalOp elemental) {
 
 namespace {
 class InlineElementalConversion
-    : public mlir::OpRewritePattern<hlfir::ElementalOp> {
+    : public aiir::OpRewritePattern<hlfir::ElementalOp> {
 public:
-  using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
+  using aiir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental,
-                  mlir::PatternRewriter &rewriter) const override {
+                  aiir::PatternRewriter &rewriter) const override {
     std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>> maybeTuple =
         getTwoUses(elemental);
     if (!maybeTuple)
@@ -106,7 +106,7 @@ public:
     rewriter.eraseOp(destroy);
     rewriter.eraseOp(elemental);
 
-    return mlir::success();
+    return aiir::success();
   }
 };
 
@@ -114,19 +114,19 @@ class InlineElementalsPass
     : public hlfir::impl::InlineElementalsBase<InlineElementalsPass> {
 public:
   void runOnOperation() override {
-    mlir::MLIRContext *context = &getContext();
+    aiir::AIIRContext *context = &getContext();
 
-    mlir::GreedyRewriteConfig config;
+    aiir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
     config.setRegionSimplificationLevel(
-        mlir::GreedySimplifyRegionLevel::Disabled);
+        aiir::GreedySimplifyRegionLevel::Disabled);
 
-    mlir::RewritePatternSet patterns(context);
+    aiir::RewritePatternSet patterns(context);
     patterns.insert<InlineElementalConversion>(context);
 
-    if (mlir::failed(mlir::applyPatternsGreedily(
+    if (aiir::failed(aiir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
-      mlir::emitError(getOperation()->getLoc(),
+      aiir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR elemental inlining");
       signalPassFailure();
     }

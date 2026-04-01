@@ -16,7 +16,7 @@
 
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "aiir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -58,8 +58,8 @@ public:
                                                  const clang::VarDecl *d) const;
 
   /// Get the address space for alloca.
-  virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
-    return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
+  virtual aiir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
+    return cir::LangAddressSpaceAttr::get(&info->cgt.getAIIRContext(),
                                           cir::LangAddressSpace::Default);
   }
 
@@ -111,24 +111,24 @@ public:
   /// for the given global.
   /// In OG, the function receives an llvm::GlobalValue. However, functions
   /// and global variables are separate types in Clang IR, so we use a general
-  /// mlir::Operation*.
+  /// aiir::Operation*.
   virtual void setTargetAttributes(const clang::Decl *decl,
-                                   mlir::Operation *global,
+                                   aiir::Operation *global,
                                    CIRGenModule &module) const {}
 
   virtual bool isScalarizableAsmOperand(CIRGenFunction &cgf,
-                                        mlir::Type ty) const {
+                                        aiir::Type ty) const {
     return false;
   }
 
-  /// Corrects the MLIR type for a given constraint and "usual"
+  /// Corrects the AIIR type for a given constraint and "usual"
   /// type.
   ///
-  /// \returns A new MLIR type, possibly the same as the original
+  /// \returns A new AIIR type, possibly the same as the original
   /// on success
-  virtual mlir::Type adjustInlineAsmType(CIRGenFunction &cgf,
+  virtual aiir::Type adjustInlineAsmType(CIRGenFunction &cgf,
                                          llvm::StringRef constraint,
-                                         mlir::Type ty) const {
+                                         aiir::Type ty) const {
     return ty;
   }
 };

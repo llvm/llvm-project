@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,16 +21,16 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/IR/Value.h"
+#include "aiir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
-#include <mlir/IR/ValueRange.h>
+#include <aiir/IR/ValueRange.h>
 
 namespace {
 
 class HlfirTransformationalIntrinsic {
 public:
   explicit HlfirTransformationalIntrinsic(fir::FirOpBuilder &builder,
-                                          mlir::Location loc)
+                                          aiir::Location loc)
       : builder(builder), loc(loc) {}
 
   virtual ~HlfirTransformationalIntrinsic() = default;
@@ -38,8 +38,8 @@ public:
   hlfir::EntityWithAttributes
   lower(const Fortran::lower::PreparedActualArguments &loweredActuals,
         const fir::IntrinsicArgumentLoweringRules *argLowering,
-        mlir::Type stmtResultType) {
-    mlir::Value res = lowerImpl(loweredActuals, argLowering, stmtResultType);
+        aiir::Type stmtResultType) {
+    aiir::Value res = lowerImpl(loweredActuals, argLowering, stmtResultType);
     for (const hlfir::CleanupFunction &fn : cleanupFns)
       fn();
     return {hlfir::EntityWithAttributes{res}};
@@ -47,32 +47,32 @@ public:
 
 protected:
   fir::FirOpBuilder &builder;
-  mlir::Location loc;
+  aiir::Location loc;
   llvm::SmallVector<hlfir::CleanupFunction, 3> cleanupFns;
 
-  virtual mlir::Value
+  virtual aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) = 0;
+            aiir::Type stmtResultType) = 0;
 
-  llvm::SmallVector<mlir::Value> getOperandVector(
+  llvm::SmallVector<aiir::Value> getOperandVector(
       const Fortran::lower::PreparedActualArguments &loweredActuals,
       const fir::IntrinsicArgumentLoweringRules *argLowering);
 
-  mlir::Type computeResultType(mlir::Value argArray, mlir::Type stmtResultType);
+  aiir::Type computeResultType(aiir::Value argArray, aiir::Type stmtResultType);
 
   template <typename OP, typename... BUILD_ARGS>
   inline OP createOp(BUILD_ARGS... args) {
     return OP::create(builder, loc, args...);
   }
 
-  mlir::Value loadBoxAddress(
+  aiir::Value loadBoxAddress(
       const std::optional<Fortran::lower::PreparedActualArgument> &arg);
 
-  mlir::Value
+  aiir::Value
   loadTrivialScalar(const Fortran::lower::PreparedActualArgument &arg);
 
-  mlir::Value loadOptionalValue(Fortran::lower::PreparedActualArgument &arg);
+  aiir::Value loadOptionalValue(Fortran::lower::PreparedActualArgument &arg);
 
   void addCleanup(std::optional<hlfir::CleanupFunction> cleanup) {
     if (cleanup)
@@ -86,10 +86,10 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 using HlfirSumLowering = HlfirReductionIntrinsic<hlfir::SumOp, true>;
 using HlfirProductLowering = HlfirReductionIntrinsic<hlfir::ProductOp, true>;
@@ -104,10 +104,10 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 using HlfirMinlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MinlocOp>;
 using HlfirMaxlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MaxlocOp>;
@@ -118,10 +118,10 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 using HlfirMatmulLowering = HlfirProductIntrinsic<hlfir::MatmulOp>;
 using HlfirDotProductLowering = HlfirProductIntrinsic<hlfir::DotProductOp>;
@@ -131,10 +131,10 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 
 class HlfirCountLowering : public HlfirTransformationalIntrinsic {
@@ -142,23 +142,23 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 
 class HlfirCharExtremumLowering : public HlfirTransformationalIntrinsic {
 public:
-  HlfirCharExtremumLowering(fir::FirOpBuilder &builder, mlir::Location loc,
+  HlfirCharExtremumLowering(fir::FirOpBuilder &builder, aiir::Location loc,
                             hlfir::CharExtremumPredicate pred)
       : HlfirTransformationalIntrinsic(builder, loc), pred{pred} {}
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 
 protected:
   hlfir::CharExtremumPredicate pred;
@@ -166,14 +166,14 @@ protected:
 
 class HlfirCharTrimLowering : public HlfirTransformationalIntrinsic {
 public:
-  HlfirCharTrimLowering(fir::FirOpBuilder &builder, mlir::Location loc)
+  HlfirCharTrimLowering(fir::FirOpBuilder &builder, aiir::Location loc)
       : HlfirTransformationalIntrinsic(builder, loc) {}
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 
 class HlfirCShiftLowering : public HlfirTransformationalIntrinsic {
@@ -181,10 +181,10 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 
 class HlfirEOShiftLowering : public HlfirTransformationalIntrinsic {
@@ -192,10 +192,10 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 
 class HlfirReshapeLowering : public HlfirTransformationalIntrinsic {
@@ -203,10 +203,10 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 
 class HlfirIndexLowering : public HlfirTransformationalIntrinsic {
@@ -214,26 +214,26 @@ public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
 protected:
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 
 struct HlfirLenLowering : public HlfirTransformationalIntrinsic {
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
-  mlir::Value
+  aiir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
+            aiir::Type stmtResultType) override;
 };
 
 } // namespace
 
-mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
+aiir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
     const std::optional<Fortran::lower::PreparedActualArgument> &arg) {
   if (!arg)
-    return mlir::Value{};
+    return aiir::Value{};
 
   hlfir::Entity actual = arg->getActual(loc, builder);
 
@@ -250,22 +250,22 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
   auto [exv, cleanup] = hlfir::translateToExtendedValue(loc, builder, actual);
   addCleanup(cleanup);
 
-  mlir::Value isPresent = arg->getIsPresent();
+  aiir::Value isPresent = arg->getIsPresent();
   // createBox will not do create any invalid memory dereferences if exv is
   // absent. The created fir.box will not be usable, but the SelectOp below
   // ensures it won't be.
-  mlir::Value box = builder.createBox(loc, exv);
-  mlir::Type boxType = box.getType();
+  aiir::Value box = builder.createBox(loc, exv);
+  aiir::Type boxType = box.getType();
   auto absent = fir::AbsentOp::create(builder, loc, boxType);
-  auto boxOrAbsent = mlir::arith::SelectOp::create(builder, loc, boxType,
+  auto boxOrAbsent = aiir::arith::SelectOp::create(builder, loc, boxType,
                                                    isPresent, box, absent);
 
   return boxOrAbsent;
 }
 
-mlir::Value HlfirTransformationalIntrinsic::loadOptionalValue(
+aiir::Value HlfirTransformationalIntrinsic::loadOptionalValue(
     Fortran::lower::PreparedActualArgument &arg) {
-  mlir::Type eleType = arg.getFortranElementType();
+  aiir::Type eleType = arg.getFortranElementType();
 
   // For an elemental call, getActual() may produce
   // a designator denoting the array element to be passed
@@ -285,22 +285,22 @@ mlir::Value HlfirTransformationalIntrinsic::loadOptionalValue(
         fir::ResultOp::create(builder, loc, val);
       })
       .genElse([&]() {
-        mlir::Value zero = fir::factory::createZeroValue(builder, loc, eleType);
+        aiir::Value zero = fir::factory::createZeroValue(builder, loc, eleType);
         fir::ResultOp::create(builder, loc, zero);
       })
       .getResults()[0];
 }
 
-mlir::Value HlfirTransformationalIntrinsic::loadTrivialScalar(
+aiir::Value HlfirTransformationalIntrinsic::loadTrivialScalar(
     const Fortran::lower::PreparedActualArgument &arg) {
   hlfir::Entity actual = arg.getActual(loc, builder);
   return hlfir::loadTrivialScalar(loc, builder, actual);
 }
 
-llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
+llvm::SmallVector<aiir::Value> HlfirTransformationalIntrinsic::getOperandVector(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering) {
-  llvm::SmallVector<mlir::Value> operands;
+  llvm::SmallVector<aiir::Value> operands;
   operands.reserve(loweredActuals.size());
 
   for (size_t i = 0; i < loweredActuals.size(); ++i) {
@@ -310,7 +310,7 @@ llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
       operands.emplace_back();
       continue;
     }
-    mlir::Value valArg;
+    aiir::Value valArg;
     if (!argLowering) {
       valArg = loadTrivialScalar(*arg);
       operands.emplace_back(valArg);
@@ -342,19 +342,19 @@ llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
   return operands;
 }
 
-mlir::Type
-HlfirTransformationalIntrinsic::computeResultType(mlir::Value argArray,
-                                                  mlir::Type stmtResultType) {
-  mlir::Type normalisedResult =
+aiir::Type
+HlfirTransformationalIntrinsic::computeResultType(aiir::Value argArray,
+                                                  aiir::Type stmtResultType) {
+  aiir::Type normalisedResult =
       hlfir::getFortranElementOrSequenceType(stmtResultType);
-  if (auto array = mlir::dyn_cast<fir::SequenceType>(normalisedResult)) {
+  if (auto array = aiir::dyn_cast<fir::SequenceType>(normalisedResult)) {
     hlfir::ExprType::Shape resultShape =
         hlfir::ExprType::Shape{array.getShape()};
-    mlir::Type elementType = array.getEleTy();
+    aiir::Type elementType = array.getEleTy();
     return hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
                                 fir::isPolymorphicType(stmtResultType));
   } else if (auto resCharType =
-                 mlir::dyn_cast<fir::CharacterType>(stmtResultType)) {
+                 aiir::dyn_cast<fir::CharacterType>(stmtResultType)) {
     normalisedResult = hlfir::ExprType::get(
         builder.getContext(), hlfir::ExprType::Shape{}, resCharType,
         /*polymorphic=*/false);
@@ -363,18 +363,18 @@ HlfirTransformationalIntrinsic::computeResultType(mlir::Value argArray,
 }
 
 template <typename OP, bool HAS_MASK>
-mlir::Value HlfirReductionIntrinsic<OP, HAS_MASK>::lowerImpl(
+aiir::Value HlfirReductionIntrinsic<OP, HAS_MASK>::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
-  mlir::Value array = operands[0];
-  mlir::Value dim = operands[1];
+  aiir::Value array = operands[0];
+  aiir::Value dim = operands[1];
   // dim, mask can be NULL if these arguments are not given
   if (dim)
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
 
-  mlir::Type resultTy = computeResultType(array, stmtResultType);
+  aiir::Type resultTy = computeResultType(array, stmtResultType);
 
   OP op;
   if constexpr (HAS_MASK)
@@ -386,116 +386,116 @@ mlir::Value HlfirReductionIntrinsic<OP, HAS_MASK>::lowerImpl(
 }
 
 template <typename OP>
-mlir::Value HlfirMinMaxLocIntrinsic<OP>::lowerImpl(
+aiir::Value HlfirMinMaxLocIntrinsic<OP>::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
-  mlir::Value array = operands[0];
-  mlir::Value dim = operands[1];
-  mlir::Value mask = operands[2];
-  mlir::Value back = operands[4];
+  aiir::Value array = operands[0];
+  aiir::Value dim = operands[1];
+  aiir::Value mask = operands[2];
+  aiir::Value back = operands[4];
   // dim, mask and back can be NULL if these arguments are not given.
   if (dim)
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
   if (back)
     back = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{back});
 
-  mlir::Type resultTy = computeResultType(array, stmtResultType);
+  aiir::Type resultTy = computeResultType(array, stmtResultType);
 
   return createOp<OP>(resultTy, array, dim, mask, back);
 }
 
 template <typename OP>
-mlir::Value HlfirProductIntrinsic<OP>::lowerImpl(
+aiir::Value HlfirProductIntrinsic<OP>::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
-  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  aiir::Type resultType = computeResultType(operands[0], stmtResultType);
   return createOp<OP>(resultType, operands[0], operands[1]);
 }
 
-mlir::Value HlfirTransposeLowering::lowerImpl(
+aiir::Value HlfirTransposeLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
   hlfir::ExprType::Shape resultShape;
-  mlir::Type normalisedResult =
+  aiir::Type normalisedResult =
       hlfir::getFortranElementOrSequenceType(stmtResultType);
-  auto array = mlir::cast<fir::SequenceType>(normalisedResult);
+  auto array = aiir::cast<fir::SequenceType>(normalisedResult);
   llvm::ArrayRef<int64_t> arrayShape = array.getShape();
   assert(arrayShape.size() == 2 && "arguments to transpose have a rank of 2");
-  mlir::Type elementType = array.getEleTy();
+  aiir::Type elementType = array.getEleTy();
   resultShape.push_back(arrayShape[0]);
   resultShape.push_back(arrayShape[1]);
-  if (auto resCharType = mlir::dyn_cast<fir::CharacterType>(elementType))
+  if (auto resCharType = aiir::dyn_cast<fir::CharacterType>(elementType))
     if (!resCharType.hasConstantLen()) {
       // The FunctionRef expression might have imprecise character
       // type at this point, and we can improve it by propagating
       // the constant length from the argument.
-      auto argCharType = mlir::dyn_cast<fir::CharacterType>(
+      auto argCharType = aiir::dyn_cast<fir::CharacterType>(
           hlfir::getFortranElementType(operands[0].getType()));
       if (argCharType && argCharType.hasConstantLen())
         elementType = fir::CharacterType::get(
             builder.getContext(), resCharType.getFKind(), argCharType.getLen());
     }
 
-  mlir::Type resultTy =
+  aiir::Type resultTy =
       hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
                            fir::isPolymorphicType(stmtResultType));
   return createOp<hlfir::TransposeOp>(resultTy, operands[0]);
 }
 
-mlir::Value HlfirCountLowering::lowerImpl(
+aiir::Value HlfirCountLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
-  mlir::Value array = operands[0];
-  mlir::Value dim = operands[1];
+  aiir::Value array = operands[0];
+  aiir::Value dim = operands[1];
   if (dim)
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
-  mlir::Type resultType = computeResultType(array, stmtResultType);
+  aiir::Type resultType = computeResultType(array, stmtResultType);
   return createOp<hlfir::CountOp>(resultType, array, dim);
 }
 
-mlir::Value HlfirCharExtremumLowering::lowerImpl(
+aiir::Value HlfirCharExtremumLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
   assert(operands.size() >= 2);
-  return createOp<hlfir::CharExtremumOp>(pred, mlir::ValueRange{operands});
+  return createOp<hlfir::CharExtremumOp>(pred, aiir::ValueRange{operands});
 }
 
-mlir::Value HlfirCharTrimLowering::lowerImpl(
+aiir::Value HlfirCharTrimLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
   assert(operands.size() == 1);
   return createOp<hlfir::CharTrimOp>(operands[0]);
 }
 
-mlir::Value HlfirCShiftLowering::lowerImpl(
+aiir::Value HlfirCShiftLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
   assert(operands.size() == 3);
-  mlir::Value dim = operands[2];
+  aiir::Value dim = operands[2];
   if (!dim) {
     // If DIM is not present, drop the last element which is a null Value.
     operands.truncate(2);
   } else if (loweredActuals[2] && loweredActuals[2]->handleDynamicOptional()) {
     // Use getIsPresent() to select between a present DIM value or
     // the default 1 per Fortran 16.9.68.
-    mlir::Value isPresent = loweredActuals[2]->getIsPresent();
-    mlir::Type dimType = dim.getType();
-    mlir::Value one = builder.createIntegerConstant(loc, dimType, 1);
-    dim = mlir::arith::SelectOp::create(builder, loc, isPresent, dim, one);
+    aiir::Value isPresent = loweredActuals[2]->getIsPresent();
+    aiir::Type dimType = dim.getType();
+    aiir::Value one = builder.createIntegerConstant(loc, dimType, 1);
+    dim = aiir::arith::SelectOp::create(builder, loc, isPresent, dim, one);
     operands[2] = dim;
   } else {
     // If DIM is present, then dereference it if it is a ref.
@@ -503,37 +503,37 @@ mlir::Value HlfirCShiftLowering::lowerImpl(
     operands[2] = dim;
   }
 
-  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  aiir::Type resultType = computeResultType(operands[0], stmtResultType);
   return createOp<hlfir::CShiftOp>(resultType, operands);
 }
 
-mlir::Value HlfirEOShiftLowering::lowerImpl(
+aiir::Value HlfirEOShiftLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
   assert(operands.size() == 4);
-  mlir::Value array = operands[0];
-  mlir::Value shift = operands[1];
-  mlir::Value boundary = operands[2];
-  mlir::Value dim = operands[3];
+  aiir::Value array = operands[0];
+  aiir::Value shift = operands[1];
+  aiir::Value boundary = operands[2];
+  aiir::Value dim = operands[3];
   if (loweredActuals[3] && loweredActuals[3]->handleDynamicOptional()) {
     // Use getIsPresent() to select between a present DIM value or
     // the default 1 per Fortran 16.9.77.
-    mlir::Value isPresent = loweredActuals[3]->getIsPresent();
-    mlir::Type dimType = dim.getType();
-    mlir::Value one = builder.createIntegerConstant(loc, dimType, 1);
-    dim = mlir::arith::SelectOp::create(builder, loc, isPresent, dim, one);
+    aiir::Value isPresent = loweredActuals[3]->getIsPresent();
+    aiir::Type dimType = dim.getType();
+    aiir::Value one = builder.createIntegerConstant(loc, dimType, 1);
+    dim = aiir::arith::SelectOp::create(builder, loc, isPresent, dim, one);
   } else if (dim) {
     // If DIM is statically present, dereference it if it is a ref.
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
   }
 
-  mlir::Type resultType = computeResultType(array, stmtResultType);
+  aiir::Type resultType = computeResultType(array, stmtResultType);
 
   if (boundary && fir::isa_trivial(boundary.getType())) {
-    mlir::Type elementType = hlfir::getFortranElementType(resultType);
-    if (auto logicalTy = mlir::dyn_cast<fir::LogicalType>(elementType)) {
+    aiir::Type elementType = hlfir::getFortranElementType(resultType);
+    if (auto logicalTy = aiir::dyn_cast<fir::LogicalType>(elementType)) {
       // Scalar logical constant boundary might be represented using i1, i2, ...
       // type. We need to cast it to fir.logical type of the ARRAY/result.
       if (boundary.getType() != logicalTy)
@@ -543,9 +543,9 @@ mlir::Value HlfirEOShiftLowering::lowerImpl(
       // it into a signless arith.constant value (which is a requirement
       // of the Arith dialect). If the ARRAY/RESULT is also UNSIGNED,
       // we have to cast the boundary to the same unsigned type.
-      auto resultIntTy = mlir::dyn_cast<mlir::IntegerType>(elementType);
+      auto resultIntTy = aiir::dyn_cast<aiir::IntegerType>(elementType);
       auto boundaryIntTy =
-          mlir::dyn_cast<mlir::IntegerType>(boundary.getType());
+          aiir::dyn_cast<aiir::IntegerType>(boundary.getType());
       if (resultIntTy && boundaryIntTy &&
           resultIntTy.getSignedness() != boundaryIntTy.getSignedness())
         boundary = builder.createConvert(loc, resultIntTy, boundary);
@@ -555,37 +555,37 @@ mlir::Value HlfirEOShiftLowering::lowerImpl(
   return createOp<hlfir::EOShiftOp>(resultType, array, shift, boundary, dim);
 }
 
-mlir::Value HlfirReshapeLowering::lowerImpl(
+aiir::Value HlfirReshapeLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
   assert(operands.size() == 4);
-  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  aiir::Type resultType = computeResultType(operands[0], stmtResultType);
   return createOp<hlfir::ReshapeOp>(resultType, operands[0], operands[1],
                                     operands[2], operands[3]);
 }
 
-mlir::Value HlfirIndexLowering::lowerImpl(
+aiir::Value HlfirIndexLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
   // 'kind' optional operand is unused here as it has already been
   // translated into result type.
   assert(operands.size() == 4);
-  mlir::Value substr = operands[1];
-  mlir::Value str = operands[0];
-  mlir::Value back = operands[2];
-  mlir::Value result =
+  aiir::Value substr = operands[1];
+  aiir::Value str = operands[0];
+  aiir::Value back = operands[2];
+  aiir::Value result =
       createOp<hlfir::IndexOp>(stmtResultType, substr, str, back);
   return result;
 }
 
-mlir::Value HlfirLenLowering::lowerImpl(
+aiir::Value HlfirLenLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   // LEN (STRING [, KIND])
   assert((loweredActuals.size() == 1 || loweredActuals.size() == 2) &&
          loweredActuals[0].has_value());
@@ -596,10 +596,10 @@ mlir::Value HlfirLenLowering::lowerImpl(
 }
 
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
-    fir::FirOpBuilder &builder, mlir::Location loc, const std::string &name,
+    fir::FirOpBuilder &builder, aiir::Location loc, const std::string &name,
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
+    aiir::Type stmtResultType) {
   // If the result is of a derived type that may need finalization,
   // we have to use DestroyOp with 'finalize' attribute for the result
   // of the intrinsic operation.
@@ -656,7 +656,7 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
     return HlfirLenLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                 stmtResultType);
 
-  if (mlir::isa<fir::CharacterType>(stmtResultType)) {
+  if (aiir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
       return HlfirCharExtremumLowering{builder, loc,
                                        hlfir::CharExtremumPredicate::min}

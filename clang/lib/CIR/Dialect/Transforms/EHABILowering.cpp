@@ -25,7 +25,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/IR/Builders.h"
+#include "aiir/IR/Builders.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -34,13 +34,13 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/TargetParser/Triple.h"
 
-using namespace mlir;
+using namespace aiir;
 using namespace cir;
 
-namespace mlir {
+namespace aiir {
 #define GEN_PASS_DEF_CIREHABILOWERING
 #include "clang/CIR/Dialect/Passes.h.inc"
-} // namespace mlir
+} // namespace aiir
 
 namespace {
 
@@ -50,14 +50,14 @@ namespace {
 
 /// Ensure a function with the given name and type exists in the module. If it
 /// does not exist, create a private external declaration.
-static cir::FuncOp getOrCreateRuntimeFuncDecl(mlir::ModuleOp mod,
-                                              mlir::Location loc,
+static cir::FuncOp getOrCreateRuntimeFuncDecl(aiir::ModuleOp mod,
+                                              aiir::Location loc,
                                               StringRef name,
                                               cir::FuncType funcTy) {
   if (auto existing = mod.lookupSymbol<cir::FuncOp>(name))
     return existing;
 
-  mlir::OpBuilder builder(mod.getContext());
+  aiir::OpBuilder builder(mod.getContext());
   builder.setInsertionPointToEnd(mod.getBody());
   auto funcOp = cir::FuncOp::create(builder, loc, name, funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
@@ -73,17 +73,17 @@ static cir::FuncOp getOrCreateRuntimeFuncDecl(mlir::ModuleOp mod,
 /// Each supported ABI (Itanium, Microsoft, etc.) provides a concrete subclass.
 class EHABILowering {
 public:
-  explicit EHABILowering(mlir::ModuleOp mod)
+  explicit EHABILowering(aiir::ModuleOp mod)
       : mod(mod), ctx(mod.getContext()), builder(ctx) {}
   virtual ~EHABILowering() = default;
 
   /// Lower all EH operations in the module to an ABI-specific form.
-  virtual mlir::LogicalResult run() = 0;
+  virtual aiir::LogicalResult run() = 0;
 
 protected:
-  mlir::ModuleOp mod;
-  mlir::MLIRContext *ctx;
-  mlir::OpBuilder builder;
+  aiir::ModuleOp mod;
+  aiir::AIIRContext *ctx;
+  aiir::OpBuilder builder;
 };
 
 //===----------------------------------------------------------------------===//
@@ -100,12 +100,12 @@ protected:
 class ItaniumEHLowering : public EHABILowering {
 public:
   using EHABILowering::EHABILowering;
-  mlir::LogicalResult run() override;
+  aiir::LogicalResult run() override;
 
 private:
   /// Maps a !cir.eh_token value to its Itanium ABI replacement pair:
   /// an exception pointer (!cir.ptr<!void>) and a type id (!u32i).
-  using EhTokenMap = DenseMap<mlir::Value, std::pair<mlir::Value, mlir::Value>>;
+  using EhTokenMap = DenseMap<aiir::Value, std::pair<aiir::Value, aiir::Value>>;
 
   cir::VoidType voidType;
   cir::PointerType voidPtrType;
@@ -122,18 +122,18 @@ private:
   constexpr const static ::llvm::StringLiteral kGxxPersonality =
       "__gxx_personality_v0";
 
-  void ensureRuntimeDecls(mlir::Location loc);
-  void ensureClangCallTerminate(mlir::Location loc);
-  mlir::LogicalResult lowerFunc(cir::FuncOp funcOp);
+  void ensureRuntimeDecls(aiir::Location loc);
+  void ensureClangCallTerminate(aiir::Location loc);
+  aiir::LogicalResult lowerFunc(cir::FuncOp funcOp);
   void lowerEhInitiate(cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
-                       SmallVectorImpl<mlir::Operation *> &deadOps);
-  void lowerDispatch(cir::EhDispatchOp dispatch, mlir::Value exnPtr,
-                     mlir::Value typeId,
-                     SmallVectorImpl<mlir::Operation *> &deadOps);
+                       SmallVectorImpl<aiir::Operation *> &deadOps);
+  void lowerDispatch(cir::EhDispatchOp dispatch, aiir::Value exnPtr,
+                     aiir::Value typeId,
+                     SmallVectorImpl<aiir::Operation *> &deadOps);
 };
 
 /// Lower all EH operations in the module to the Itanium-specific form.
-mlir::LogicalResult ItaniumEHLowering::run() {
+aiir::LogicalResult ItaniumEHLowering::run() {
   // Pre-compute the common types used throughout all function lowerings.
   // TODO(cir): Move these to the base class if they are also needed for MSVC.
   voidType = cir::VoidType::get(ctx);
@@ -143,15 +143,15 @@ mlir::LogicalResult ItaniumEHLowering::run() {
   u32Type = cir::IntType::get(ctx, 32, /*isSigned=*/false);
 
   for (cir::FuncOp funcOp : mod.getOps<cir::FuncOp>()) {
-    if (mlir::failed(lowerFunc(funcOp)))
-      return mlir::failure();
+    if (aiir::failed(lowerFunc(funcOp)))
+      return aiir::failure();
   }
-  return mlir::success();
+  return aiir::success();
 }
 
 /// Ensure the necessary Itanium runtime function declarations exist in the
 /// module.
-void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
+void ItaniumEHLowering::ensureRuntimeDecls(aiir::Location loc) {
   // TODO(cir): Handle other personality functions. This probably isn't needed
   // here if we fix codegen to always set the personality function.
   if (!personalityFunc) {
@@ -184,7 +184,7 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
 ///     std::terminate();
 ///     unreachable;
 ///   }
-void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
+void ItaniumEHLowering::ensureClangCallTerminate(aiir::Location loc) {
   if (clangCallTerminateFunc)
     return;
 
@@ -203,13 +203,13 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
   funcOp.setGlobalVisibilityAttr(
       cir::VisibilityAttr::get(ctx, cir::VisibilityKind::Hidden));
 
-  mlir::Block *entryBlock = funcOp.addEntryBlock();
+  aiir::Block *entryBlock = funcOp.addEntryBlock();
   builder.setInsertionPointToStart(entryBlock);
-  mlir::Value exnArg = entryBlock->getArgument(0);
+  aiir::Value exnArg = entryBlock->getArgument(0);
 
   auto catchCall = cir::CallOp::create(
-      builder, loc, mlir::FlatSymbolRefAttr::get(beginCatchFunc), u8PtrType,
-      mlir::ValueRange{exnArg});
+      builder, loc, aiir::FlatSymbolRefAttr::get(beginCatchFunc), u8PtrType,
+      aiir::ValueRange{exnArg});
   catchCall.setNothrowAttr(builder.getUnitAttr());
 
   auto terminateFuncDecl = getOrCreateRuntimeFuncDecl(
@@ -218,8 +218,8 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
   terminateFuncDecl->setAttr(cir::CIRDialect::getNoReturnAttrName(),
                              builder.getUnitAttr());
   auto terminateCall = cir::CallOp::create(
-      builder, loc, mlir::FlatSymbolRefAttr::get(terminateFuncDecl), voidType,
-      mlir::ValueRange{});
+      builder, loc, aiir::FlatSymbolRefAttr::get(terminateFuncDecl), voidType,
+      aiir::ValueRange{});
   terminateCall.setNothrowAttr(builder.getUnitAttr());
   terminateCall->setAttr(cir::CIRDialect::getNoReturnAttrName(),
                          builder.getUnitAttr());
@@ -232,9 +232,9 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
 }
 
 /// Lower all EH operations in a single function.
-mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
+aiir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   if (funcOp.isDeclaration())
-    return mlir::success();
+    return aiir::success();
 
   // All EH lowering follows from cir.eh.initiate operations. The token each
   // initiate produces connects it to every other EH op in the function
@@ -243,7 +243,7 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   SmallVector<cir::EhInitiateOp> initiateOps;
   funcOp.walk([&](cir::EhInitiateOp op) { initiateOps.push_back(op); });
   if (initiateOps.empty())
-    return mlir::success();
+    return aiir::success();
 
   ensureRuntimeDecls(funcOp.getLoc());
 
@@ -261,25 +261,25 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   // only once. Dispatch ops are scheduled for deferred removal so that sibling
   // initiates can still read catch types from a shared dispatch.
   EhTokenMap ehTokenMap;
-  SmallVector<mlir::Operation *> deadOps;
+  SmallVector<aiir::Operation *> deadOps;
   for (cir::EhInitiateOp initiateOp : initiateOps)
     lowerEhInitiate(initiateOp, ehTokenMap, deadOps);
 
   // Erase operations that were deferred during per-initiate processing
   // (dispatch ops whose catch types were read by multiple initiates).
-  for (mlir::Operation *op : deadOps)
+  for (aiir::Operation *op : deadOps)
     op->erase();
 
   // Remove the !cir.eh_token block arguments that were replaced by (ptr, u32)
   // pairs. Iterate in reverse to preserve argument indices during removal.
-  for (mlir::Block &block : funcOp.getBody()) {
+  for (aiir::Block &block : funcOp.getBody()) {
     for (int i = block.getNumArguments() - 1; i >= 0; --i) {
-      if (mlir::isa<cir::EhTokenType>(block.getArgument(i).getType()))
+      if (aiir::isa<cir::EhTokenType>(block.getArgument(i).getType()))
         block.eraseArgument(i);
     }
   }
 
-  return mlir::success();
+  return aiir::success();
 }
 
 /// Lower all EH operations connected to a single cir.eh.initiate.
@@ -310,15 +310,15 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
 /// arguments reachable from multiple sibling initiates are registered once.
 void ItaniumEHLowering::lowerEhInitiate(
     cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
-    SmallVectorImpl<mlir::Operation *> &deadOps) {
-  mlir::Value rootToken = initiateOp.getEhToken();
+    SmallVectorImpl<aiir::Operation *> &deadOps) {
+  aiir::Value rootToken = initiateOp.getEhToken();
 
   // Create the inflight_exception without a catch_type_list. The catch types
   // will be set once we encounter the dispatch during the traversal below.
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
       builder, initiateOp.getLoc(), /*cleanup=*/initiateOp.getCleanup(),
-      /*catch_type_list=*/mlir::ArrayAttr{});
+      /*catch_type_list=*/aiir::ArrayAttr{});
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
                            inflightOp.getTypeId()};
@@ -327,64 +327,64 @@ void ItaniumEHLowering::lowerEhInitiate(
   // or a block argument that carries it), we snapshot its users, register
   // (ptr, u32) replacement arguments on successor blocks, then process every
   // user inline. This avoids collecting ops into separate vectors.
-  SmallVector<mlir::Value> worklist;
-  SmallPtrSet<mlir::Value, 8> visited;
+  SmallVector<aiir::Value> worklist;
+  SmallPtrSet<aiir::Value, 8> visited;
   worklist.push_back(rootToken);
 
   while (!worklist.empty()) {
-    mlir::Value current = worklist.pop_back_val();
+    aiir::Value current = worklist.pop_back_val();
     if (!visited.insert(current).second)
       continue;
 
     // Snapshot users before modifying any of them (erasing ops during
     // iteration would invalidate the use-list iterator).
-    SmallVector<mlir::Operation *> users;
-    for (mlir::OpOperand &use : current.getUses())
+    SmallVector<aiir::Operation *> users;
+    for (aiir::OpOperand &use : current.getUses())
       users.push_back(use.getOwner());
 
     // Register replacement block arguments on successor blocks (extending the
     // worklist), then lower the op itself.
-    for (mlir::Operation *user : users) {
+    for (aiir::Operation *user : users) {
       // Trace into successor blocks to register (ptr, u32) replacement
       // arguments for any !cir.eh_token block arguments found there.  Even
       // if a block arg was already registered by a sibling initiate, it is
       // still added to the worklist so that the traversal can reach the
       // shared dispatch to read catch types.
       for (unsigned s = 0; s < user->getNumSuccessors(); ++s) {
-        mlir::Block *succ = user->getSuccessor(s);
-        for (mlir::BlockArgument arg : succ->getArguments()) {
-          if (!mlir::isa<cir::EhTokenType>(arg.getType()))
+        aiir::Block *succ = user->getSuccessor(s);
+        for (aiir::BlockArgument arg : succ->getArguments()) {
+          if (!aiir::isa<cir::EhTokenType>(arg.getType()))
             continue;
           if (!ehTokenMap.count(arg)) {
-            mlir::Value ptrArg = succ->addArgument(voidPtrType, arg.getLoc());
-            mlir::Value u32Arg = succ->addArgument(u32Type, arg.getLoc());
+            aiir::Value ptrArg = succ->addArgument(voidPtrType, arg.getLoc());
+            aiir::Value u32Arg = succ->addArgument(u32Type, arg.getLoc());
             ehTokenMap[arg] = {ptrArg, u32Arg};
           }
           worklist.push_back(arg);
         }
       }
 
-      if (auto op = mlir::dyn_cast<cir::BeginCleanupOp>(user)) {
+      if (auto op = aiir::dyn_cast<cir::BeginCleanupOp>(user)) {
         // begin_cleanup / end_cleanup are no-ops for Itanium.  Erase the
         // end_cleanup first (drops the cleanup_token use) then the begin.
         for (auto &tokenUsers :
              llvm::make_early_inc_range(op.getCleanupToken().getUses())) {
           if (auto endOp =
-                  mlir::dyn_cast<cir::EndCleanupOp>(tokenUsers.getOwner()))
+                  aiir::dyn_cast<cir::EndCleanupOp>(tokenUsers.getOwner()))
             endOp.erase();
         }
         op.erase();
-      } else if (auto op = mlir::dyn_cast<cir::BeginCatchOp>(user)) {
+      } else if (auto op = aiir::dyn_cast<cir::BeginCatchOp>(user)) {
         // Replace end_catch → __cxa_end_catch (drops the catch_token use),
         // then replace begin_catch → __cxa_begin_catch.
         for (auto &tokenUsers :
              llvm::make_early_inc_range(op.getCatchToken().getUses())) {
           if (auto endOp =
-                  mlir::dyn_cast<cir::EndCatchOp>(tokenUsers.getOwner())) {
+                  aiir::dyn_cast<cir::EndCatchOp>(tokenUsers.getOwner())) {
             builder.setInsertionPoint(endOp);
             cir::CallOp::create(builder, endOp.getLoc(),
-                                mlir::FlatSymbolRefAttr::get(endCatchFunc),
-                                voidType, mlir::ValueRange{});
+                                aiir::FlatSymbolRefAttr::get(endCatchFunc),
+                                voidType, aiir::ValueRange{});
             endOp.erase();
           }
         }
@@ -392,24 +392,24 @@ void ItaniumEHLowering::lowerEhInitiate(
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         builder.setInsertionPoint(op);
         auto callOp = cir::CallOp::create(
-            builder, op.getLoc(), mlir::FlatSymbolRefAttr::get(beginCatchFunc),
-            u8PtrType, mlir::ValueRange{exnPtr});
-        mlir::Value castResult = callOp.getResult();
-        mlir::Type expectedPtrType = op.getExnPtr().getType();
+            builder, op.getLoc(), aiir::FlatSymbolRefAttr::get(beginCatchFunc),
+            u8PtrType, aiir::ValueRange{exnPtr});
+        aiir::Value castResult = callOp.getResult();
+        aiir::Type expectedPtrType = op.getExnPtr().getType();
         if (castResult.getType() != expectedPtrType)
           castResult =
               cir::CastOp::create(builder, op.getLoc(), expectedPtrType,
                                   cir::CastKind::bitcast, callOp.getResult());
         op.getExnPtr().replaceAllUsesWith(castResult);
         op.erase();
-      } else if (auto op = mlir::dyn_cast<cir::EhDispatchOp>(user)) {
+      } else if (auto op = aiir::dyn_cast<cir::EhDispatchOp>(user)) {
         // Read catch types from the dispatch and set them on the inflight op.
-        mlir::ArrayAttr catchTypes = op.getCatchTypesAttr();
+        aiir::ArrayAttr catchTypes = op.getCatchTypesAttr();
         if (catchTypes && catchTypes.size() > 0) {
-          SmallVector<mlir::Attribute> typeSymbols;
-          for (mlir::Attribute attr : catchTypes)
+          SmallVector<aiir::Attribute> typeSymbols;
+          for (aiir::Attribute attr : catchTypes)
             typeSymbols.push_back(
-                mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
+                aiir::cast<cir::GlobalViewAttr>(attr).getSymbol());
           inflightOp.setCatchTypeListAttr(builder.getArrayAttr(typeSymbols));
         }
         // Only lower the dispatch once. A sibling initiate sharing the same
@@ -419,29 +419,29 @@ void ItaniumEHLowering::lowerEhInitiate(
           auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
           lowerDispatch(op, exnPtr, typeId, deadOps);
         }
-      } else if (auto op = mlir::dyn_cast<cir::EhTerminateOp>(user)) {
+      } else if (auto op = aiir::dyn_cast<cir::EhTerminateOp>(user)) {
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         ensureClangCallTerminate(op.getLoc());
         builder.setInsertionPoint(op);
         auto call = cir::CallOp::create(
             builder, op.getLoc(),
-            mlir::FlatSymbolRefAttr::get(clangCallTerminateFunc), voidType,
-            mlir::ValueRange{exnPtr});
+            aiir::FlatSymbolRefAttr::get(clangCallTerminateFunc), voidType,
+            aiir::ValueRange{exnPtr});
         call.setNothrowAttr(builder.getUnitAttr());
         call->setAttr(cir::CIRDialect::getNoReturnAttrName(),
                       builder.getUnitAttr());
         cir::UnreachableOp::create(builder, op.getLoc());
         op.erase();
-      } else if (auto op = mlir::dyn_cast<cir::ResumeOp>(user)) {
+      } else if (auto op = aiir::dyn_cast<cir::ResumeOp>(user)) {
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         builder.setInsertionPoint(op);
         cir::ResumeFlatOp::create(builder, op.getLoc(), exnPtr, typeId);
         op.erase();
-      } else if (auto op = mlir::dyn_cast<cir::BrOp>(user)) {
+      } else if (auto op = aiir::dyn_cast<cir::BrOp>(user)) {
         // Replace eh_token operands with the (ptr, u32) pair.
-        SmallVector<mlir::Value> newOperands;
+        SmallVector<aiir::Value> newOperands;
         bool changed = false;
-        for (mlir::Value operand : op.getDestOperands()) {
+        for (aiir::Value operand : op.getDestOperands()) {
           auto it = ehTokenMap.find(operand);
           if (it != ehTokenMap.end()) {
             newOperands.push_back(it->second.first);
@@ -467,13 +467,13 @@ void ItaniumEHLowering::lowerEhInitiate(
 /// The dispatch itself is replaced with a branch to the first comparison
 /// block and added to deadOps for deferred removal.
 void ItaniumEHLowering::lowerDispatch(
-    cir::EhDispatchOp dispatch, mlir::Value exnPtr, mlir::Value typeId,
-    SmallVectorImpl<mlir::Operation *> &deadOps) {
-  mlir::Location dispLoc = dispatch.getLoc();
-  mlir::Block *defaultDest = dispatch.getDefaultDestination();
-  mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr();
-  mlir::SuccessorRange catchDests = dispatch.getCatchDestinations();
-  mlir::Block *dispatchBlock = dispatch->getBlock();
+    cir::EhDispatchOp dispatch, aiir::Value exnPtr, aiir::Value typeId,
+    SmallVectorImpl<aiir::Operation *> &deadOps) {
+  aiir::Location dispLoc = dispatch.getLoc();
+  aiir::Block *defaultDest = dispatch.getDefaultDestination();
+  aiir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr();
+  aiir::SuccessorRange catchDests = dispatch.getCatchDestinations();
+  aiir::Block *dispatchBlock = dispatch->getBlock();
 
   // Build the comparison chain in new blocks inserted after the dispatch's
   // block. The dispatch itself is replaced with a branch to the first
@@ -482,7 +482,7 @@ void ItaniumEHLowering::lowerDispatch(
     // No typed catches: replace dispatch with a direct branch.
     builder.setInsertionPoint(dispatch);
     cir::BrOp::create(builder, dispLoc, defaultDest,
-                      mlir::ValueRange{exnPtr, typeId});
+                      aiir::ValueRange{exnPtr, typeId});
   } else {
     unsigned numCatches = catchTypes.size();
 
@@ -490,25 +490,25 @@ void ItaniumEHLowering::lowerDispatch(
     // block's false destination (the next comparison block, or defaultDest
     // for the last one) is already available. Each createBlock inserts
     // before the previous one, so the blocks end up in forward order.
-    mlir::Block *insertBefore = dispatchBlock->getNextNode();
-    mlir::Block *falseDest = defaultDest;
-    mlir::Block *firstCmpBlock = nullptr;
+    aiir::Block *insertBefore = dispatchBlock->getNextNode();
+    aiir::Block *falseDest = defaultDest;
+    aiir::Block *firstCmpBlock = nullptr;
     for (int i = numCatches - 1; i >= 0; --i) {
       auto *cmpBlock = builder.createBlock(insertBefore, {voidPtrType, u32Type},
                                            {dispLoc, dispLoc});
 
-      mlir::Value cmpExnPtr = cmpBlock->getArgument(0);
-      mlir::Value cmpTypeId = cmpBlock->getArgument(1);
+      aiir::Value cmpExnPtr = cmpBlock->getArgument(0);
+      aiir::Value cmpTypeId = cmpBlock->getArgument(1);
 
-      auto globalView = mlir::cast<cir::GlobalViewAttr>(catchTypes[i]);
+      auto globalView = aiir::cast<cir::GlobalViewAttr>(catchTypes[i]);
       auto ehTypeIdOp =
           cir::EhTypeIdOp::create(builder, dispLoc, globalView.getSymbol());
       auto cmpOp = cir::CmpOp::create(builder, dispLoc, cir::CmpOpKind::eq,
                                       cmpTypeId, ehTypeIdOp.getTypeId());
 
       cir::BrCondOp::create(builder, dispLoc, cmpOp, catchDests[i], falseDest,
-                            mlir::ValueRange{cmpExnPtr, cmpTypeId},
-                            mlir::ValueRange{cmpExnPtr, cmpTypeId});
+                            aiir::ValueRange{cmpExnPtr, cmpTypeId},
+                            aiir::ValueRange{cmpExnPtr, cmpTypeId});
 
       insertBefore = cmpBlock;
       falseDest = cmpBlock;
@@ -518,7 +518,7 @@ void ItaniumEHLowering::lowerDispatch(
     // Replace the dispatch with a branch to the first comparison block.
     builder.setInsertionPoint(dispatch);
     cir::BrOp::create(builder, dispLoc, firstCmpBlock,
-                      mlir::ValueRange{exnPtr, typeId});
+                      aiir::ValueRange{exnPtr, typeId});
   }
 
   // Schedule the dispatch for deferred removal. We cannot erase it now because
@@ -538,12 +538,12 @@ struct CIREHABILoweringPass
 };
 
 void CIREHABILoweringPass::runOnOperation() {
-  auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
+  auto mod = aiir::cast<aiir::ModuleOp>(getOperation());
 
   // The target triple is attached to the module as the "cir.triple" attribute.
   // If it is absent (e.g. a CIR module parsed from text without a triple) we
   // cannot determine the ABI and must skip the pass.
-  auto tripleAttr = mlir::dyn_cast_if_present<mlir::StringAttr>(
+  auto tripleAttr = aiir::dyn_cast_if_present<aiir::StringAttr>(
       mod->getAttr(cir::CIRDialect::getTripleAttrName()));
   if (!tripleAttr) {
     mod.emitError("Module has no target triple");
@@ -563,12 +563,12 @@ void CIREHABILoweringPass::runOnOperation() {
     lowering = std::make_unique<ItaniumEHLowering>(mod);
   }
 
-  if (mlir::failed(lowering->run()))
+  if (aiir::failed(lowering->run()))
     return signalPassFailure();
 }
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::createCIREHABILoweringPass() {
+std::unique_ptr<Pass> aiir::createCIREHABILoweringPass() {
   return std::make_unique<CIREHABILoweringPass>();
 }

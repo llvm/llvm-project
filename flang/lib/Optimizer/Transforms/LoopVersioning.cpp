@@ -51,15 +51,15 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/Dominance.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/TypeUtilities.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/RegionUtils.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/IR/Dominance.h"
+#include "aiir/IR/Matchers.h"
+#include "aiir/IR/TypeUtilities.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Transforms/DialectConversion.h"
+#include "aiir/Transforms/GreedyPatternRewriteDriver.h"
+#include "aiir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -84,7 +84,7 @@ public:
 /// A structure to hold an argument, the size of the argument and dimension
 /// information.
 struct ArgInfo {
-  mlir::Value arg;
+  aiir::Value arg;
   size_t size;
   unsigned rank;
   fir::BoxDimsOp dims[CFI_MAX_RANK];
@@ -96,30 +96,30 @@ struct ArgInfo {
 struct ArgsUsageInLoop {
   /// Mapping between the memref operand of an array indexing
   /// operation (e.g. fir.coordinate_of) and the argument information.
-  llvm::DenseMap<mlir::Value, ArgInfo> usageInfo;
+  llvm::DenseMap<aiir::Value, ArgInfo> usageInfo;
   /// Some array indexing operations inside a loop cannot be transformed.
   /// This vector holds the memref operands of such operations.
   /// The vector is used to make sure that we do not try to transform
   /// any outer loop, since this will imply the operation rewrite
   /// in this loop.
-  llvm::SetVector<mlir::Value> cannotTransform;
+  llvm::SetVector<aiir::Value> cannotTransform;
 
   // Debug dump of the structure members assuming that
   // the information has been collected for the given loop.
   void dump(fir::DoLoopOp loop) const {
     LLVM_DEBUG({
-      mlir::OpPrintingFlags printFlags;
+      aiir::OpPrintingFlags printFlags;
       printFlags.skipRegions();
       llvm::dbgs() << "Arguments usage info for loop:\n";
       loop.print(llvm::dbgs(), printFlags);
       llvm::dbgs() << "\nUsed args:\n";
       for (auto &use : usageInfo) {
-        mlir::Value v = use.first;
+        aiir::Value v = use.first;
         v.print(llvm::dbgs(), printFlags);
         llvm::dbgs() << "\n";
       }
       llvm::dbgs() << "\nCannot transform args:\n";
-      for (mlir::Value arg : cannotTransform) {
+      for (aiir::Value arg : cannotTransform) {
         arg.print(llvm::dbgs(), printFlags);
         llvm::dbgs() << "\n";
       }
@@ -129,7 +129,7 @@ struct ArgsUsageInLoop {
 
   // Erase usageInfo and cannotTransform entries for a set
   // of given arguments.
-  void eraseUsage(const llvm::SetVector<mlir::Value> &args) {
+  void eraseUsage(const llvm::SetVector<aiir::Value> &args) {
     for (auto &arg : args)
       usageInfo.erase(arg);
     cannotTransform.set_subtract(args);
@@ -137,7 +137,7 @@ struct ArgsUsageInLoop {
 
   // Erase usageInfo and cannotTransform entries for a set
   // of given arguments provided in the form of usageInfo map.
-  void eraseUsage(const llvm::DenseMap<mlir::Value, ArgInfo> &args) {
+  void eraseUsage(const llvm::DenseMap<aiir::Value, ArgInfo> &args) {
     for (auto &arg : args) {
       usageInfo.erase(arg.first);
       cannotTransform.remove(arg.first);
@@ -146,9 +146,9 @@ struct ArgsUsageInLoop {
 };
 } // namespace
 
-static fir::SequenceType getAsSequenceType(mlir::Value v) {
-  mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v.getType()));
-  return mlir::dyn_cast<fir::SequenceType>(argTy);
+static fir::SequenceType getAsSequenceType(aiir::Value v) {
+  aiir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v.getType()));
+  return aiir::dyn_cast<fir::SequenceType>(argTy);
 }
 
 /// Return the rank and the element size (in bytes) of the given
@@ -162,7 +162,7 @@ static fir::SequenceType getAsSequenceType(mlir::Value v) {
 /// dimension are allowed to proceed.
 static std::pair<unsigned, size_t>
 getRankAndElementSize(const fir::KindMapping &kindMap,
-                      const mlir::DataLayout &dl, mlir::Value v,
+                      const aiir::DataLayout &dl, aiir::Value v,
                       bool isArgument = false) {
   if (auto seqTy = getAsSequenceType(v)) {
     unsigned rank = seqTy.getDimension();
@@ -170,7 +170,7 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
         (!isArgument ||
          seqTy.getShape()[0] == fir::SequenceType::getUnknownExtent())) {
       size_t typeSize = 0;
-      mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(v.getType());
+      aiir::Type elementType = fir::unwrapSeqOrBoxedSeqType(v.getType());
       if (fir::isa_trivial(elementType)) {
         auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignmentOrCrash(
             v.getLoc(), elementType, dl, kindMap);
@@ -187,7 +187,7 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
 
 /// If a value comes from a fir.declare of fir.pack_array,
 /// follow it to the original source, otherwise return the value.
-static mlir::Value unwrapPassThroughOps(mlir::Value val) {
+static aiir::Value unwrapPassThroughOps(aiir::Value val) {
   // Instead of unwrapping fir.declare, we may try to start
   // the analysis in this pass from fir.declare's instead
   // of the function entry block arguments. This way the loop
@@ -212,7 +212,7 @@ static mlir::Value unwrapPassThroughOps(mlir::Value val) {
 
 /// if a value comes from a fir.rebox, follow the rebox to the original source,
 /// of the value, otherwise return the value
-static mlir::Value unwrapReboxOp(mlir::Value val) {
+static aiir::Value unwrapReboxOp(aiir::Value val) {
   while (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
     if (!fir::reboxPreservesContinuity(rebox,
                                        /*mayHaveNonDefaultLowerBounds=*/true,
@@ -228,16 +228,16 @@ static mlir::Value unwrapReboxOp(mlir::Value val) {
 
 /// normalize a value (removing fir.declare and fir.rebox) so that we can
 /// more conveniently spot values which came from function arguments
-static mlir::Value normaliseVal(mlir::Value val) {
+static aiir::Value normaliseVal(aiir::Value val) {
   return unwrapPassThroughOps(unwrapReboxOp(val));
 }
 
 /// some FIR operations accept a fir.shape, a fir.shift or a fir.shapeshift.
 /// fir.shift and fir.shapeshift allow us to extract lower bounds
 /// if lowerbounds cannot be found, return nullptr
-static mlir::Value tryGetLowerBoundsFromShapeLike(mlir::Value shapeLike,
+static aiir::Value tryGetLowerBoundsFromShapeLike(aiir::Value shapeLike,
                                                   unsigned dim) {
-  mlir::Value lowerBound{nullptr};
+  aiir::Value lowerBound{nullptr};
   if (auto shift = shapeLike.getDefiningOp<fir::ShiftOp>())
     lowerBound = shift.getOrigins()[dim];
   if (auto shapeShift = shapeLike.getDefiningOp<fir::ShapeShiftOp>())
@@ -249,10 +249,10 @@ static mlir::Value tryGetLowerBoundsFromShapeLike(mlir::Value shapeLike,
 /// argument to a fir.array_coor op
 /// 0 <= dim < rank
 /// May return nullptr if no lower bounds can be determined
-static mlir::Value getLowerBound(fir::ArrayCoorOp coop, unsigned dim) {
+static aiir::Value getLowerBound(fir::ArrayCoorOp coop, unsigned dim) {
   // 1) try to get from the shape argument to fir.array_coor
-  if (mlir::Value shapeLike = coop.getShape())
-    if (mlir::Value lb = tryGetLowerBoundsFromShapeLike(shapeLike, dim))
+  if (aiir::Value shapeLike = coop.getShape())
+    if (aiir::Value lb = tryGetLowerBoundsFromShapeLike(shapeLike, dim))
       return lb;
 
   // It is important not to try to read the lower bound from the box, because
@@ -265,19 +265,19 @@ static mlir::Value getLowerBound(fir::ArrayCoorOp coop, unsigned dim) {
 
 /// gets the i'th index from array coordinate operation op
 /// dim should range between 0 and rank - 1
-static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
+static aiir::Value getIndex(fir::FirOpBuilder &builder, aiir::Operation *op,
                             unsigned dim) {
-  if (fir::CoordinateOp coop = mlir::dyn_cast<fir::CoordinateOp>(op))
+  if (fir::CoordinateOp coop = aiir::dyn_cast<fir::CoordinateOp>(op))
     return coop.getCoor()[dim];
 
-  fir::ArrayCoorOp coop = mlir::dyn_cast<fir::ArrayCoorOp>(op);
+  fir::ArrayCoorOp coop = aiir::dyn_cast<fir::ArrayCoorOp>(op);
   assert(coop &&
          "operation must be either fir.coordiante_of or fir.array_coor");
 
   // fir.coordinate_of indices start at 0: adjust these indices to match by
   // subtracting the lower bound
-  mlir::Value index = coop.getIndices()[dim];
-  mlir::Value lb = getLowerBound(coop, dim);
+  aiir::Value index = coop.getIndices()[dim];
+  aiir::Value lb = getLowerBound(coop, dim);
   if (!lb)
     // assume a default lower bound of one
     lb = builder.createIntegerConstant(coop.getLoc(), index.getType(), 1);
@@ -285,30 +285,30 @@ static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
   // index_0 = index - lb;
   if (lb.getType() != index.getType())
     lb = builder.createConvert(coop.getLoc(), index.getType(), lb);
-  return mlir::arith::SubIOp::create(builder, coop.getLoc(), index, lb);
+  return aiir::arith::SubIOp::create(builder, coop.getLoc(), index, lb);
 }
 
 void LoopVersioningPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "=== Begin " DEBUG_TYPE " ===\n");
-  mlir::func::FuncOp func = getOperation();
+  aiir::func::FuncOp func = getOperation();
 
   // First look for arguments with assumed shape = unknown extent in the lowest
   // dimension.
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
-  mlir::Block::BlockArgListType args = func.getArguments();
-  mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
+  aiir::Block::BlockArgListType args = func.getArguments();
+  aiir::ModuleOp module = func->getParentOfType<aiir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(module);
-  mlir::SmallVector<ArgInfo, 4> argsOfInterest;
-  std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
+  aiir::SmallVector<ArgInfo, 4> argsOfInterest;
+  std::optional<aiir::DataLayout> dl = fir::support::getOrSetAIIRDataLayout(
       module, /*allowDefaultLayout=*/false);
   if (!dl)
-    mlir::emitError(module.getLoc(),
+    aiir::emitError(module.getLoc(),
                     "data layout attribute is required to perform " DEBUG_TYPE
                     "pass");
   for (auto &arg : args) {
     // Optional arguments must be checked for IsPresent before
     // looking for the bounds. They are unsupported for the time being.
-    if (func.getArgAttrOfType<mlir::UnitAttr>(arg.getArgNumber(),
+    if (func.getArgAttrOfType<aiir::UnitAttr>(arg.getArgNumber(),
                                               fir::getOptionalAttrName())) {
       LLVM_DEBUG(llvm::dbgs() << "OPTIONAL is not supported\n");
       continue;
@@ -327,27 +327,27 @@ void LoopVersioningPass::runOnOperation() {
   }
 
   // A list of all loops in the function in post-order.
-  mlir::SmallVector<fir::DoLoopOp> originalLoops;
+  aiir::SmallVector<fir::DoLoopOp> originalLoops;
   // Information about the arguments usage by the instructions
   // immediately nested in a loop.
   llvm::DenseMap<fir::DoLoopOp, ArgsUsageInLoop> argsInLoops;
 
-  auto &domInfo = getAnalysis<mlir::DominanceInfo>();
+  auto &domInfo = getAnalysis<aiir::DominanceInfo>();
 
   // Traverse the loops in post-order and see
   // if those arguments are used inside any loop.
   func.walk([&](fir::DoLoopOp loop) {
-    mlir::Block &body = *loop.getBody();
+    aiir::Block &body = *loop.getBody();
     auto &argsInLoop = argsInLoops[loop];
     originalLoops.push_back(loop);
-    body.walk([&](mlir::Operation *op) {
+    body.walk([&](aiir::Operation *op) {
       // Support either fir.array_coor or fir.coordinate_of.
-      if (!mlir::isa<fir::ArrayCoorOp, fir::CoordinateOp>(op))
+      if (!aiir::isa<fir::ArrayCoorOp, fir::CoordinateOp>(op))
         return;
       // Process only operations immediately nested in the current loop.
       if (op->getParentOfType<fir::DoLoopOp>() != loop)
         return;
-      mlir::Value operand = op->getOperand(0);
+      aiir::Value operand = op->getOperand(0);
       for (auto a : argsOfInterest) {
         if (a.arg == normaliseVal(operand)) {
           // Use the reboxed value, not the block arg when re-creating the loop.
@@ -364,7 +364,7 @@ void LoopVersioningPass::runOnOperation() {
           // This means that we cannot transform properly
           // instructions referencing a.arg in the whole loop
           // nest this loop is located in.
-          if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op))
+          if (auto arrayCoor = aiir::dyn_cast<fir::ArrayCoorOp>(op))
             if (arrayCoor.getSlice())
               argsInLoop.cannotTransform.insert(a.arg);
 
@@ -439,10 +439,10 @@ void LoopVersioningPass::runOnOperation() {
   // The list must hold the loops in post order, so that
   // the inner loops are transformed before the outer loops.
   struct OpsWithArgs {
-    mlir::Operation *op;
-    mlir::SmallVector<ArgInfo, 4> argsAndDims;
+    aiir::Operation *op;
+    aiir::SmallVector<ArgInfo, 4> argsAndDims;
   };
-  mlir::SmallVector<OpsWithArgs, 4> loopsOfInterest;
+  aiir::SmallVector<OpsWithArgs, 4> loopsOfInterest;
   for (fir::DoLoopOp loop : originalLoops) {
     auto &argsInLoop = argsInLoops[loop];
     if (argsInLoop.usageInfo.empty())
@@ -462,8 +462,8 @@ void LoopVersioningPass::runOnOperation() {
 
   // If we get here, there are loops to process.
   fir::FirOpBuilder builder{module, std::move(kindMap)};
-  mlir::Location loc = builder.getUnknownLoc();
-  mlir::IndexType idxTy = builder.getIndexType();
+  aiir::Location loc = builder.getUnknownLoc();
+  aiir::IndexType idxTy = builder.getIndexType();
 
   LLVM_DEBUG(llvm::dbgs() << "Func Before transformation:\n");
   LLVM_DEBUG(func->dump());
@@ -474,7 +474,7 @@ void LoopVersioningPass::runOnOperation() {
     LLVM_DEBUG(op.op->dump());
     builder.setInsertionPoint(op.op);
 
-    mlir::Value allCompares = nullptr;
+    aiir::Value allCompares = nullptr;
     // Ensure all of the arrays are unit-stride.
     for (auto &arg : op.argsAndDims) {
       // Fetch all the dimensions of the array, except the last dimension.
@@ -482,21 +482,21 @@ void LoopVersioningPass::runOnOperation() {
       // we have one dim
       unsigned ndims = arg.rank;
       for (unsigned i = 0; i < ndims; i++) {
-        mlir::Value dimIdx = builder.createIntegerConstant(loc, idxTy, i);
+        aiir::Value dimIdx = builder.createIntegerConstant(loc, idxTy, i);
         arg.dims[i] = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
                                              arg.arg, dimIdx);
       }
       // We only care about lowest order dimension, here.
-      mlir::Value elemSize =
+      aiir::Value elemSize =
           builder.createIntegerConstant(loc, idxTy, arg.size);
-      mlir::Value cmp = mlir::arith::CmpIOp::create(
-          builder, loc, mlir::arith::CmpIPredicate::eq,
+      aiir::Value cmp = aiir::arith::CmpIOp::create(
+          builder, loc, aiir::arith::CmpIPredicate::eq,
           arg.dims[0].getResult(2), elemSize);
       if (!allCompares) {
         allCompares = cmp;
       } else {
         allCompares =
-            mlir::arith::AndIOp::create(builder, loc, cmp, allCompares);
+            aiir::arith::AndIOp::create(builder, loc, cmp, allCompares);
       }
     }
 
@@ -506,21 +506,21 @@ void LoopVersioningPass::runOnOperation() {
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
     LLVM_DEBUG(llvm::dbgs() << "Creating cloned loop\n");
-    mlir::Operation *clonedLoop = op.op->clone();
+    aiir::Operation *clonedLoop = op.op->clone();
     bool changed = false;
     for (auto &arg : op.argsAndDims) {
       fir::SequenceType::Shape newShape;
       newShape.push_back(fir::SequenceType::getUnknownExtent());
       auto elementType = fir::unwrapSeqOrBoxedSeqType(arg.arg.getType());
-      mlir::Type arrTy = fir::SequenceType::get(newShape, elementType);
-      mlir::Type boxArrTy = fir::BoxType::get(arrTy);
-      mlir::Type refArrTy = builder.getRefType(arrTy);
+      aiir::Type arrTy = fir::SequenceType::get(newShape, elementType);
+      aiir::Type boxArrTy = fir::BoxType::get(arrTy);
+      aiir::Type refArrTy = builder.getRefType(arrTy);
       auto carg = fir::ConvertOp::create(builder, loc, boxArrTy, arg.arg);
       auto caddr = fir::BoxAddrOp::create(builder, loc, refArrTy, carg);
       auto insPt = builder.saveInsertionPoint();
       // Use caddr instead of arg.
-      clonedLoop->walk([&](mlir::Operation *coop) {
-        if (!mlir::isa<fir::CoordinateOp, fir::ArrayCoorOp>(coop))
+      clonedLoop->walk([&](aiir::Operation *coop) {
+        if (!aiir::isa<fir::CoordinateOp, fir::ArrayCoorOp>(coop))
           return;
         // Reduce the multi-dimensioned index to a single index.
         // This is required becase fir arrays do not support multiple dimensions
@@ -531,32 +531,32 @@ void LoopVersioningPass::runOnOperation() {
         // 0, 1 and 2 or x, y and z.
         if (coop->getOperand(0) == arg.arg && coop->getOperands().size() >= 2) {
           builder.setInsertionPoint(coop);
-          mlir::Value totalIndex;
+          aiir::Value totalIndex;
           for (unsigned i = arg.rank - 1; i > 0; i--) {
-            mlir::Value curIndex =
+            aiir::Value curIndex =
                 builder.createConvert(loc, idxTy, getIndex(builder, coop, i));
             // Multiply by the stride of this array. Later we'll divide by the
             // element size.
-            mlir::Value scale =
+            aiir::Value scale =
                 builder.createConvert(loc, idxTy, arg.dims[i].getResult(2));
             curIndex =
-                mlir::arith::MulIOp::create(builder, loc, scale, curIndex);
-            totalIndex = (totalIndex) ? mlir::arith::AddIOp::create(
+                aiir::arith::MulIOp::create(builder, loc, scale, curIndex);
+            totalIndex = (totalIndex) ? aiir::arith::AddIOp::create(
                                             builder, loc, curIndex, totalIndex)
                                       : curIndex;
           }
           // This is the lowest dimension - which doesn't need scaling
-          mlir::Value finalIndex =
+          aiir::Value finalIndex =
               builder.createConvert(loc, idxTy, getIndex(builder, coop, 0));
           if (totalIndex) {
             assert(llvm::isPowerOf2_32(arg.size) &&
                    "Expected power of two here");
             unsigned bits = llvm::Log2_32(arg.size);
-            mlir::Value elemShift =
+            aiir::Value elemShift =
                 builder.createIntegerConstant(loc, idxTy, bits);
-            totalIndex = mlir::arith::AddIOp::create(
+            totalIndex = aiir::arith::AddIOp::create(
                 builder, loc,
-                mlir::arith::ShRSIOp::create(builder, loc, totalIndex,
+                aiir::arith::ShRSIOp::create(builder, loc, totalIndex,
                                              elemShift),
                 finalIndex);
           } else {
@@ -564,7 +564,7 @@ void LoopVersioningPass::runOnOperation() {
           }
           auto newOp = fir::CoordinateOp::create(
               builder, loc, builder.getRefType(elementType), caddr,
-              mlir::ValueRange{totalIndex});
+              aiir::ValueRange{totalIndex});
           LLVM_DEBUG(newOp->dump());
           coop->getResult(0).replaceAllUsesWith(newOp->getResult(0));
           coop->erase();
@@ -579,7 +579,7 @@ void LoopVersioningPass::runOnOperation() {
     builder.insert(clonedLoop);
     // Forward the result(s), if any, from the loop operation to the
     //
-    mlir::ResultRange results = clonedLoop->getResults();
+    aiir::ResultRange results = clonedLoop->getResults();
     bool hasResults = (results.size() > 0);
     if (hasResults)
       fir::ResultOp::create(builder, loc, results);

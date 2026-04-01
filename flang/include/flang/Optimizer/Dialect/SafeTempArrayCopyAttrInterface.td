@@ -14,7 +14,7 @@
 #ifndef FORTRAN_SAFETEMPARRAYCOPYATTRINTERFACE_TD
 #define FORTRAN_SAFETEMPARRAYCOPYATTRINTERFACE_TD
 
-include "mlir/IR/OpBase.td"
+include "aiir/IR/OpBase.td"
 
 def SafeTempArrayCopyAttrInterface
     : AttrInterface<"SafeTempArrayCopyAttrInterface"> {
@@ -42,11 +42,11 @@ def SafeTempArrayCopyAttrInterface
         The implementation may assume that \p array is present
         (though, it may be empty).
       }],
-           /*retTy=*/"mlir::Value",
+           /*retTy=*/"aiir::Value",
            /*methodName=*/"genDynamicCheck",
            /*args=*/
-           (ins "::mlir::Location":$loc, "::fir::FirOpBuilder &":$builder,
-               "::mlir::Value":$array)>,
+           (ins "::aiir::Location":$loc, "::fir::FirOpBuilder &":$builder,
+               "::aiir::Value":$array)>,
        StaticInterfaceMethod<
            /*desc=*/[{
         This method allows inserting any FIR right before the optional
@@ -57,8 +57,8 @@ def SafeTempArrayCopyAttrInterface
            /*retTy=*/"void",
            /*methodName=*/"registerTempDeallocation",
            /*args=*/
-           (ins "::mlir::Location":$loc, "::fir::FirOpBuilder &":$builder,
-               "::mlir::Value":$array, "::mlir::Value":$temp)>,
+           (ins "::aiir::Location":$loc, "::fir::FirOpBuilder &":$builder,
+               "::aiir::Value":$array, "::aiir::Value":$temp)>,
   ];
 }
 

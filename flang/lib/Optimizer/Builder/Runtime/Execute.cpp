@@ -21,23 +21,23 @@ using namespace Fortran::runtime;
 // reason the extra indirection with `isAbsent` is needed for testing whether a
 // given parameter is actually present (so that parameters with "value" absent
 // are not considered as present).
-inline bool isAbsent(mlir::Value val) {
-  return mlir::isa_and_nonnull<fir::AbsentOp>(val.getDefiningOp());
+inline bool isAbsent(aiir::Value val) {
+  return aiir::isa_and_nonnull<fir::AbsentOp>(val.getDefiningOp());
 }
 
 void fir::runtime::genExecuteCommandLine(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::Value command, mlir::Value wait,
-                                         mlir::Value exitstat,
-                                         mlir::Value cmdstat,
-                                         mlir::Value cmdmsg) {
+                                         aiir::Location loc,
+                                         aiir::Value command, aiir::Value wait,
+                                         aiir::Value exitstat,
+                                         aiir::Value cmdstat,
+                                         aiir::Value cmdmsg) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(ExecuteCommandLine)>(loc, builder);
-  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
+  aiir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  aiir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  aiir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(6));
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+  llvm::SmallVector<aiir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, command, wait, exitstat, cmdstat, cmdmsg,
       sourceFile, sourceLine);
   fir::CallOp::create(builder, loc, runtimeFunc, args);

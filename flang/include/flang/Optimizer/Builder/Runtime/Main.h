@@ -12,9 +12,9 @@
 #include "flang/Lower/EnvironmentDefault.h"
 #include <vector>
 
-namespace mlir {
+namespace aiir {
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -23,7 +23,7 @@ class GlobalOp;
 
 namespace fir::runtime {
 
-void genMain(fir::FirOpBuilder &builder, mlir::Location loc,
+void genMain(fir::FirOpBuilder &builder, aiir::Location loc,
              const std::vector<Fortran::lower::EnvironmentDefault> &defs,
              bool initCuda = false, bool initCoarrayEnv = false);
 }

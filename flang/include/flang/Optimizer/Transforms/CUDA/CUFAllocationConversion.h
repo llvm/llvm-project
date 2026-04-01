@@ -9,24 +9,24 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_CUDA_CUFALLOCATIONCONVERSION_H_
 #define FORTRAN_OPTIMIZER_TRANSFORMS_CUDA_CUFALLOCATIONCONVERSION_H_
 
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassRegistry.h"
 
 namespace fir {
 class LLVMTypeConverter;
 }
 
-namespace mlir {
+namespace aiir {
 class DataLayout;
 class SymbolTable;
-} // namespace mlir
+} // namespace aiir
 
 namespace cuf {
 
 /// Patterns that convert CUF operations to runtime calls.
 void populateCUFAllocationConversionPatterns(
-    const fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
-    const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns);
+    const fir::LLVMTypeConverter &converter, aiir::DataLayout &dl,
+    const aiir::SymbolTable &symtab, aiir::RewritePatternSet &patterns);
 
 } // namespace cuf
 

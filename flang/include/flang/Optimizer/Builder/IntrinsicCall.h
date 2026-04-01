@@ -16,9 +16,9 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat-consts.h"
-#include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/Math/IR/Math.h"
+#include "aiir/Dialect/Complex/IR/Complex.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/Math/IR/Math.h"
 #include <optional>
 
 namespace Fortran {
@@ -38,11 +38,11 @@ struct IntrinsicHandlerEntry;
 /// Lower an intrinsic call given the intrinsic \p name, its \p resultType (that
 /// must be std::nullopt if and only if this is a subroutine call), and its
 /// lowered arguments \p args. The returned pair contains the result value
-/// (null mlir::Value for subroutine calls), and a boolean that indicates if
+/// (null aiir::Value for subroutine calls), and a boolean that indicates if
 /// this result must be freed after use.
 std::pair<fir::ExtendedValue, bool>
-genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
-                 std::optional<mlir::Type> resultType,
+genIntrinsicCall(fir::FirOpBuilder &, aiir::Location, llvm::StringRef name,
+                 std::optional<aiir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
                  Fortran::lower::AbstractConverter *converter = nullptr);
 
@@ -50,9 +50,9 @@ genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
 /// IntrinsicHandlerEntry obtained by a previous lookup for a handler to lower
 /// this intrinsic (see lookupIntrinsicHandler).
 std::pair<fir::ExtendedValue, bool>
-genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
+genIntrinsicCall(fir::FirOpBuilder &, aiir::Location,
                  const IntrinsicHandlerEntry &,
-                 std::optional<mlir::Type> resultType,
+                 std::optional<aiir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
                  Fortran::lower::AbstractConverter *converter = nullptr);
 
@@ -102,7 +102,7 @@ struct IntrinsicLibrary {
 
   // Constructors.
   explicit IntrinsicLibrary(
-      fir::FirOpBuilder &builder, mlir::Location loc,
+      fir::FirOpBuilder &builder, aiir::Location loc,
       Fortran::lower::AbstractConverter *converter = nullptr)
       : builder{builder}, loc{loc}, converter{converter} {}
   IntrinsicLibrary() = delete;
@@ -112,7 +112,7 @@ struct IntrinsicLibrary {
   /// and expected result type \p resultType. Return the result and a boolean
   /// that, if true, indicates that the result must be freed after use.
   std::pair<fir::ExtendedValue, bool>
-  genIntrinsicCall(llvm::StringRef name, std::optional<mlir::Type> resultType,
+  genIntrinsicCall(llvm::StringRef name, std::optional<aiir::Type> resultType,
                    llvm::ArrayRef<fir::ExtendedValue> arg);
 
   /// Search a runtime function that is associated to the generic intrinsic name
@@ -122,308 +122,308 @@ struct IntrinsicLibrary {
   /// conversions will be inserted before and/or after the call. This is to
   /// mainly to allow 16 bits float support even-though little or no math
   /// runtime is currently available for it.
-  mlir::Value genRuntimeCall(llvm::StringRef name, mlir::Type,
-                             llvm::ArrayRef<mlir::Value>);
+  aiir::Value genRuntimeCall(llvm::StringRef name, aiir::Type,
+                             llvm::ArrayRef<aiir::Value>);
 
-  using RuntimeCallGenerator = std::function<mlir::Value(
-      fir::FirOpBuilder &, mlir::Location, llvm::ArrayRef<mlir::Value>)>;
+  using RuntimeCallGenerator = std::function<aiir::Value(
+      fir::FirOpBuilder &, aiir::Location, llvm::ArrayRef<aiir::Value>)>;
   RuntimeCallGenerator
   getRuntimeCallGenerator(llvm::StringRef name,
-                          mlir::FunctionType soughtFuncType);
+                          aiir::FunctionType soughtFuncType);
 
   void genAbort(llvm::ArrayRef<fir::ExtendedValue>);
   /// Lowering for the ABS intrinsic. The ABS intrinsic expects one argument in
-  /// the llvm::ArrayRef. The ABS intrinsic is lowered into MLIR/FIR operation
+  /// the llvm::ArrayRef. The ABS intrinsic is lowered into AIIR/FIR operation
   /// if the argument is an integer, into llvm intrinsics if the argument is
   /// real and to the `hypot` math routine if the argument is of complex type.
-  mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAcosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAcospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
-                                mlir::Value, mlir::Value)>
-  fir::ExtendedValue genAdjustRtCall(mlir::Type,
+  aiir::Value genAbs(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genAcosd(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genAcospi(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  template <void (*CallRuntime)(fir::FirOpBuilder &, aiir::Location loc,
+                                aiir::Value, aiir::Value)>
+  fir::ExtendedValue genAdjustRtCall(aiir::Type,
                                      llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAint(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAll(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genAllocated(mlir::Type,
+  aiir::Value genAimag(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genAint(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genAll(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genAllocated(aiir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAtanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genAnint(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genAny(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genAtanpi(aiir::Type, llvm::ArrayRef<aiir::Value>);
   fir::ExtendedValue
-      genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAsind(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAsinpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAssociated(mlir::Type,
+      genCommandArgumentCount(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genAsind(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genAsinpi(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genAssociated(aiir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAtand(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genBesselJn(mlir::Type,
+  aiir::Value genAtand(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genBesselJn(aiir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genBesselYn(mlir::Type,
+  fir::ExtendedValue genBesselYn(aiir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
-  template <mlir::arith::CmpIPredicate pred>
-  mlir::Value genBitwiseCompare(mlir::Type resultType,
-                                llvm::ArrayRef<mlir::Value> args);
+  template <aiir::arith::CmpIPredicate pred>
+  aiir::Value genBitwiseCompare(aiir::Type resultType,
+                                llvm::ArrayRef<aiir::Value> args);
 
-  mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genChdir(std::optional<mlir::Type> resultType,
+  aiir::Value genBtest(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genCeiling(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genChar(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genChdir(std::optional<aiir::Type> resultType,
                               llvm::ArrayRef<fir::ExtendedValue>);
-  template <mlir::arith::CmpIPredicate pred>
-  fir::ExtendedValue genCharacterCompare(mlir::Type,
+  template <aiir::arith::CmpIPredicate pred>
+  fir::ExtendedValue genCharacterCompare(aiir::Type,
                                          llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genCmplx(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genCmplx(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genConjg(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genCount(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genCAssociatedCFunPtr(mlir::Type,
+  fir::ExtendedValue genCshift(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genCAssociatedCFunPtr(aiir::Type,
                                            llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genCAssociatedCPtr(mlir::Type,
+  fir::ExtendedValue genCAssociatedCPtr(aiir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genCDevLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genErfcScaled(mlir::Type resultType,
-                            llvm::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genCDevLoc(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genErfcScaled(aiir::Type resultType,
+                            llvm::ArrayRef<aiir::Value> args);
   void genCFPointer(llvm::ArrayRef<fir::ExtendedValue>);
   void genCFProcPointer(llvm::ArrayRef<fir::ExtendedValue>);
   void genCFStrPointer(llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  template <mlir::arith::CmpIPredicate pred>
-  fir::ExtendedValue genCPtrCompare(mlir::Type,
+  fir::ExtendedValue genCFunLoc(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genCLoc(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <aiir::arith::CmpIPredicate pred>
+  fir::ExtendedValue genCPtrCompare(aiir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
   void genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue>);
   void genCoMax(llvm::ArrayRef<fir::ExtendedValue>);
   void genCoMin(llvm::ArrayRef<fir::ExtendedValue>);
   void genCoSum(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genCospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genCosd(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genCospi(aiir::Type, llvm::ArrayRef<aiir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genDsecnds(mlir::Type resultType,
+  fir::ExtendedValue genDsecnds(aiir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args);
-  mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genDotProduct(mlir::Type,
+  aiir::Value genDim(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genDotProduct(aiir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genDprod(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genDshiftl(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genDshiftr(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genDprod(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genDshiftl(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genDshiftr(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genEoshift(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genExit(llvm::ArrayRef<fir::ExtendedValue>);
-  void genExecuteCommandLine(mlir::ArrayRef<fir::ExtendedValue> args);
-  fir::ExtendedValue genEtime(std::optional<mlir::Type>,
-                              mlir::ArrayRef<fir::ExtendedValue> args);
-  mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genExtendsTypeOf(mlir::Type,
+  void genExecuteCommandLine(aiir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genEtime(std::optional<aiir::Type>,
+                              aiir::ArrayRef<fir::ExtendedValue> args);
+  aiir::Value genExponent(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genExtendsTypeOf(aiir::Type,
                                       llvm::ArrayRef<fir::ExtendedValue>);
   template <bool isMax>
-  mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genFCString(mlir::Type,
+  aiir::Value genExtremum(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genFCString(aiir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genFloor(aiir::Type, llvm::ArrayRef<aiir::Value>);
   void genFlush(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genFraction(mlir::Type resultType,
-                          mlir::ArrayRef<mlir::Value> args);
-  void genFree(mlir::ArrayRef<fir::ExtendedValue> args);
-  fir::ExtendedValue genFseek(std::optional<mlir::Type>,
-                              mlir::ArrayRef<fir::ExtendedValue> args);
-  fir::ExtendedValue genFtell(std::optional<mlir::Type>,
-                              mlir::ArrayRef<fir::ExtendedValue> args);
-  fir::ExtendedValue genGetCwd(std::optional<mlir::Type> resultType,
+  aiir::Value genFraction(aiir::Type resultType,
+                          aiir::ArrayRef<aiir::Value> args);
+  void genFree(aiir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genFseek(std::optional<aiir::Type>,
+                              aiir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genFtell(std::optional<aiir::Type>,
+                              aiir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genGetCwd(std::optional<aiir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
-  void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
-  mlir::Value genGetPID(mlir::Type resultType,
-                        llvm::ArrayRef<mlir::Value> args);
-  void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
+  void genGetCommand(aiir::ArrayRef<fir::ExtendedValue> args);
+  aiir::Value genGetPID(aiir::Type resultType,
+                        llvm::ArrayRef<aiir::Value> args);
+  void genGetCommandArgument(aiir::ArrayRef<fir::ExtendedValue> args);
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genGetGID(mlir::Type resultType,
-                        llvm::ArrayRef<mlir::Value> args);
-  mlir::Value genGetTeam(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genGetUID(mlir::Type resultType,
-                        llvm::ArrayRef<mlir::Value> args);
-  fir::ExtendedValue genHostnm(std::optional<mlir::Type> resultType,
+  aiir::Value genGetGID(aiir::Type resultType,
+                        llvm::ArrayRef<aiir::Value> args);
+  aiir::Value genGetTeam(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genGetUID(aiir::Type resultType,
+                        llvm::ArrayRef<aiir::Value> args);
+  fir::ExtendedValue genHostnm(std::optional<aiir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
-  fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genIany(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genIbclr(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genFindloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genIeeeClass(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeCopySign(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genIall(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genIand(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genIany(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genIbclr(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIbits(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIbset(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genIchar(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genFindloc(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genIeeeClass(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeCopySign(aiir::Type, llvm::ArrayRef<aiir::Value>);
   void genIeeeGetFlag(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
   template <bool isGet, bool isModes>
   void genIeeeGetOrSetModesOrStatus(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetUnderflowMode(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genIeeeInt(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeIsFinite(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeIsNegative(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeIsNormal(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeLogb(mlir::Type, mlir::ArrayRef<mlir::Value>);
+  aiir::Value genIeeeInt(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeIsFinite(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeIsNan(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeIsNegative(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeIsNormal(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeLogb(aiir::Type, aiir::ArrayRef<aiir::Value>);
   template <bool isMax, bool isNum, bool isMag>
-  mlir::Value genIeeeMaxMin(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  template <mlir::arith::CmpFPredicate pred>
-  mlir::Value genIeeeQuietCompare(mlir::Type resultType,
-                                  llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeReal(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeRem(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeRint(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genIeeeMaxMin(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  template <aiir::arith::CmpFPredicate pred>
+  aiir::Value genIeeeQuietCompare(aiir::Type resultType,
+                                  llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeReal(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeRem(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeRint(aiir::Type, llvm::ArrayRef<aiir::Value>);
   template <bool isFlag>
   void genIeeeSetFlagOrHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeSetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeSetUnderflowMode(llvm::ArrayRef<fir::ExtendedValue>);
-  template <mlir::arith::CmpFPredicate pred>
-  mlir::Value genIeeeSignalingCompare(mlir::Type resultType,
-                                      llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeSignbit(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genIeeeSupportFlag(mlir::Type,
+  template <aiir::arith::CmpFPredicate pred>
+  aiir::Value genIeeeSignalingCompare(aiir::Type resultType,
+                                      llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeSignbit(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genIeeeSupportFlag(aiir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genIeeeSupportHalting(mlir::Type,
+  fir::ExtendedValue genIeeeSupportHalting(aiir::Type,
                                            llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genIeeeSupportRounding(mlir::Type,
+  fir::ExtendedValue genIeeeSupportRounding(aiir::Type,
                                             llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genIeeeSupportStandard(mlir::Type,
+  fir::ExtendedValue genIeeeSupportStandard(aiir::Type,
                                             llvm::ArrayRef<fir::ExtendedValue>);
-  template <mlir::arith::CmpIPredicate pred>
-  mlir::Value genIeeeTypeCompare(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeUnordered(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeeeValue(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genIrand(mlir::Type resultType,
+  template <aiir::arith::CmpIPredicate pred>
+  aiir::Value genIeeeTypeCompare(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeUnordered(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeeeValue(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIeor(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genIndex(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genIor(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genIparity(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIrand(aiir::Type resultType,
                               llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genIsContiguous(mlir::Type,
+  fir::ExtendedValue genIsContiguous(aiir::Type,
                                      llvm::ArrayRef<fir::ExtendedValue>);
   template <Fortran::runtime::io::Iostat value>
-  mlir::Value genIsIostatValue(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIsFPClass(mlir::Type, llvm::ArrayRef<mlir::Value>,
+  aiir::Value genIsIostatValue(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIsFPClass(aiir::Type, llvm::ArrayRef<aiir::Value>,
                            int fpclass);
-  mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genLeadz(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genMalloc(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genIshft(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genIshftc(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genLbound(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genLeadz(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genLen(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genLenTrim(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genLoc(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genMalloc(aiir::Type, llvm::ArrayRef<aiir::Value>);
   template <typename Shift>
-  mlir::Value genMask(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genMatmulTranspose(mlir::Type,
+  aiir::Value genMask(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genMatmul(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genMatmulTranspose(aiir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genMaxloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genMaxval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genMerge(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genMergeBits(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genMinloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genMinval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genMaxloc(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genMaxval(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genMerge(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genMergeBits(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genMinloc(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genMinval(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genMod(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genModulo(aiir::Type, llvm::ArrayRef<aiir::Value>);
   void genMoveAlloc(llvm::ArrayRef<fir::ExtendedValue>);
   void genMvbits(llvm::ArrayRef<fir::ExtendedValue>);
   enum class NearestProc { Nearest, NextAfter, NextDown, NextUp };
   template <NearestProc>
-  mlir::Value genNearest(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genNumImages(mlir::Type,
+  aiir::Value genNearest(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genNint(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genNorm2(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genNot(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genNull(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genNumImages(aiir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genParity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genPack(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genParity(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genPerror(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genPopcnt(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genPoppar(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genPutenv(std::optional<mlir::Type>,
+  aiir::Value genPopcnt(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genPoppar(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genPresent(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genProduct(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genPutenv(std::optional<aiir::Type>,
                                llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genRand(mlir::Type resultType,
+  fir::ExtendedValue genRand(aiir::Type resultType,
                              llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genReduce(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genReduceDim(mlir::Type,
+  fir::ExtendedValue genReduce(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genReduceDim(aiir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genRename(std::optional<mlir::Type>,
-                               mlir::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genRRSpacing(mlir::Type resultType,
-                           llvm::ArrayRef<mlir::Value> args);
-  mlir::Value genRtc(mlir::Type resultType, llvm::ArrayRef<mlir::Value> args);
-  fir::ExtendedValue genSameTypeAs(mlir::Type,
+  fir::ExtendedValue genRename(std::optional<aiir::Type>,
+                               aiir::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genRepeat(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genReshape(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genRRSpacing(aiir::Type resultType,
+                           llvm::ArrayRef<aiir::Value> args);
+  aiir::Value genRtc(aiir::Type resultType, llvm::ArrayRef<aiir::Value> args);
+  fir::ExtendedValue genSameTypeAs(aiir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genSecnds(mlir::Type resultType,
+  aiir::Value genScale(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genScan(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSecnds(aiir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
-  fir::ExtendedValue genSecond(std::optional<mlir::Type>,
-                               mlir::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genSelectedCharKind(mlir::Type,
+  fir::ExtendedValue genSecond(std::optional<aiir::Type>,
+                               aiir::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSelectedCharKind(aiir::Type,
                                          llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genSelectedIntKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSelectedLogicalKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSelectedRealKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSetExponent(mlir::Type resultType,
-                             llvm::ArrayRef<mlir::Value> args);
-  fir::ExtendedValue genShape(mlir::Type resultType,
+  aiir::Value genSelectedIntKind(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genSelectedLogicalKind(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genSelectedRealKind(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genSetExponent(aiir::Type resultType,
+                             llvm::ArrayRef<aiir::Value> args);
+  fir::ExtendedValue genShape(aiir::Type resultType,
                               llvm::ArrayRef<fir::ExtendedValue>);
   template <typename Shift>
-  mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genShift(aiir::Type resultType, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genShiftA(aiir::Type resultType, llvm::ArrayRef<aiir::Value>);
   void genShowDescriptor(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSind(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSinpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genSizeOf(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genSpacing(mlir::Type resultType,
-                         llvm::ArrayRef<mlir::Value> args);
+  aiir::Value genSign(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genSind(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genSinpi(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genSize(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSizeOf(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  aiir::Value genSpacing(aiir::Type resultType,
+                         llvm::ArrayRef<aiir::Value> args);
   void genSplit(llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genStorageSize(mlir::Type,
+  fir::ExtendedValue genSpread(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genStorageSize(aiir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSum(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSignalSubroutine(llvm::ArrayRef<fir::ExtendedValue>);
   void genSleep(llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genSystem(std::optional<mlir::Type>,
-                               mlir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genSystem(std::optional<aiir::Type>,
+                               aiir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genTanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genTeamNumber(mlir::Type,
+  aiir::Value genTand(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  aiir::Value genTanpi(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genTeamNumber(aiir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genTime(aiir::Type, llvm::ArrayRef<aiir::Value>);
   void genTokenize(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genTransfer(mlir::Type,
+  aiir::Value genTrailz(aiir::Type, llvm::ArrayRef<aiir::Value>);
+  fir::ExtendedValue genTransfer(aiir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genTranspose(mlir::Type,
+  fir::ExtendedValue genTranspose(aiir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genThisImage(mlir::Type,
+  fir::ExtendedValue genThisImage(aiir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genUnlink(std::optional<mlir::Type> resultType,
+  fir::ExtendedValue genTrim(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genUbound(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genUnlink(std::optional<aiir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
-  fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genUnpack(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genVerify(aiir::Type, llvm::ArrayRef<fir::ExtendedValue>);
 
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
   /// is ignored because this is already reflected in the result type.
-  mlir::Value genConversion(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  aiir::Value genConversion(aiir::Type, llvm::ArrayRef<aiir::Value>);
 
   /// In the template helper below:
   ///  - "FN func" is a callback to generate the related intrinsic runtime call.
@@ -432,26 +432,26 @@ struct IntrinsicLibrary {
   /// Helper for MinLoc/MaxLoc.
   template <typename FN, typename FD>
   fir::ExtendedValue genExtremumloc(FN func, FD funcDim, llvm::StringRef errMsg,
-                                    mlir::Type,
+                                    aiir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
   template <typename FN, typename FD, typename FC>
   /// Helper for MinVal/MaxVal.
   fir::ExtendedValue genExtremumVal(FN func, FD funcDim, FC funcChar,
                                     llvm::StringRef errMsg,
-                                    mlir::Type resultType,
+                                    aiir::Type resultType,
                                     llvm::ArrayRef<fir::ExtendedValue> args);
   /// Process calls to Product, Sum, IAll, IAny, IParity intrinsic functions
   template <typename FN, typename FD>
   fir::ExtendedValue genReduction(FN func, FD funcDim, llvm::StringRef errMsg,
-                                  mlir::Type resultType,
+                                  aiir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
 
   /// Generate code to raise \p excepts if \p cond is absent,
   /// or present and true.
-  void genRaiseExcept(int excepts, mlir::Value cond = {});
+  void genRaiseExcept(int excepts, aiir::Value cond = {});
 
   /// Generate a quiet NaN of a given floating point type.
-  mlir::Value genQNan(mlir::Type resultType);
+  aiir::Value genQNan(aiir::Type resultType);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
@@ -470,58 +470,58 @@ struct IntrinsicLibrary {
   /// be generated for all the similar calls in a program.
   /// If the Generator is nullptr, the wrapper uses genRuntimeCall.
   template <typename GeneratorType>
-  mlir::Value outlineInWrapper(GeneratorType, llvm::StringRef name,
-                               mlir::Type resultType,
-                               llvm::ArrayRef<mlir::Value> args);
+  aiir::Value outlineInWrapper(GeneratorType, llvm::StringRef name,
+                               aiir::Type resultType,
+                               llvm::ArrayRef<aiir::Value> args);
   template <typename GeneratorType>
   fir::ExtendedValue
   outlineInExtendedWrapper(GeneratorType, llvm::StringRef name,
-                           std::optional<mlir::Type> resultType,
+                           std::optional<aiir::Type> resultType,
                            llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <typename GeneratorType>
-  mlir::func::FuncOp getWrapper(GeneratorType, llvm::StringRef name,
-                                mlir::FunctionType,
+  aiir::func::FuncOp getWrapper(GeneratorType, llvm::StringRef name,
+                                aiir::FunctionType,
                                 bool loadRefArguments = false);
 
   /// Generate calls to ElementalGenerator, handling the elemental aspects
   template <typename GeneratorType>
   fir::ExtendedValue
-  genElementalCall(GeneratorType, llvm::StringRef name, mlir::Type resultType,
+  genElementalCall(GeneratorType, llvm::StringRef name, aiir::Type resultType,
                    llvm::ArrayRef<fir::ExtendedValue> args, bool outline);
 
   /// Helper to invoke code generator for the intrinsics given arguments.
-  mlir::Value invokeGenerator(ElementalGenerator generator,
-                              mlir::Type resultType,
-                              llvm::ArrayRef<mlir::Value> args);
-  mlir::Value invokeGenerator(RuntimeCallGenerator generator,
-                              mlir::Type resultType,
-                              llvm::ArrayRef<mlir::Value> args);
-  mlir::Value invokeGenerator(ExtendedGenerator generator,
-                              mlir::Type resultType,
-                              llvm::ArrayRef<mlir::Value> args);
-  mlir::Value invokeGenerator(SubroutineGenerator generator,
-                              llvm::ArrayRef<mlir::Value> args);
-  mlir::Value invokeGenerator(DualGenerator generator,
-                              llvm::ArrayRef<mlir::Value> args);
-  mlir::Value invokeGenerator(DualGenerator generator, mlir::Type resultType,
-                              llvm::ArrayRef<mlir::Value> args);
+  aiir::Value invokeGenerator(ElementalGenerator generator,
+                              aiir::Type resultType,
+                              llvm::ArrayRef<aiir::Value> args);
+  aiir::Value invokeGenerator(RuntimeCallGenerator generator,
+                              aiir::Type resultType,
+                              llvm::ArrayRef<aiir::Value> args);
+  aiir::Value invokeGenerator(ExtendedGenerator generator,
+                              aiir::Type resultType,
+                              llvm::ArrayRef<aiir::Value> args);
+  aiir::Value invokeGenerator(SubroutineGenerator generator,
+                              llvm::ArrayRef<aiir::Value> args);
+  aiir::Value invokeGenerator(DualGenerator generator,
+                              llvm::ArrayRef<aiir::Value> args);
+  aiir::Value invokeGenerator(DualGenerator generator, aiir::Type resultType,
+                              llvm::ArrayRef<aiir::Value> args);
 
   /// Get pointer to unrestricted intrinsic. Generate the related unrestricted
   /// intrinsic if it is not defined yet.
-  mlir::SymbolRefAttr
+  aiir::SymbolRefAttr
   getUnrestrictedIntrinsicSymbolRefAttr(llvm::StringRef name,
-                                        mlir::FunctionType signature);
+                                        aiir::FunctionType signature);
 
   /// Helper function for generating code clean-up for result descriptors
   fir::ExtendedValue readAndAddCleanUp(fir::MutableBoxValue resultMutableBox,
-                                       mlir::Type resultType,
+                                       aiir::Type resultType,
                                        llvm::StringRef errMsg);
 
   void setResultMustBeFreed() { resultMustBeFreed = true; }
 
   fir::FirOpBuilder &builder;
-  mlir::Location loc;
+  aiir::Location loc;
   bool resultMustBeFreed = false;
   Fortran::lower::AbstractConverter *converter = nullptr;
 };
@@ -566,13 +566,13 @@ struct RuntimeFunction {
 
 struct MathOperation {
   // Callback type for generating lowering for a math operation.
-  using MathGeneratorTy = mlir::Value (*)(fir::FirOpBuilder &, mlir::Location,
+  using MathGeneratorTy = aiir::Value (*)(fir::FirOpBuilder &, aiir::Location,
                                           const MathOperation &,
-                                          mlir::FunctionType,
-                                          llvm::ArrayRef<mlir::Value>);
+                                          aiir::FunctionType,
+                                          llvm::ArrayRef<aiir::Value>);
 
   // Overrides fir::runtime::FuncTypeBuilderFunc to add FirOpBuilder argument.
-  using FuncTypeBuilderFunc = mlir::FunctionType (*)(mlir::MLIRContext *,
+  using FuncTypeBuilderFunc = aiir::FunctionType (*)(aiir::AIIRContext *,
                                                      fir::FirOpBuilder &);
 
   // llvm::StringRef comparison operator are not constexpr, so use string_view.
@@ -587,7 +587,7 @@ struct MathOperation {
   FuncTypeBuilderFunc typeGenerator;
 
   // A callback to generate FIR for the intrinsic defined by 'key'.
-  // A callback may generate either dedicated MLIR operation(s) or
+  // A callback may generate either dedicated AIIR operation(s) or
   // a function call to a runtime function with name defined by
   // 'runtimeFunc'.
   MathGeneratorTy funcGenerator;
@@ -606,9 +606,9 @@ enum class ParamTypeId {
 };
 
 // Helper function to get length of a 16-byte vector of element type eleTy.
-static int getVecLen(mlir::Type eleTy) {
-  assert((mlir::isa<mlir::IntegerType>(eleTy) ||
-          mlir::isa<mlir::FloatType>(eleTy)) &&
+static int getVecLen(aiir::Type eleTy) {
+  assert((aiir::isa<aiir::IntegerType>(eleTy) ||
+          aiir::isa<aiir::FloatType>(eleTy)) &&
          "unsupported vector element type");
   return 16 / (eleTy.getIntOrFloatBitWidth() / 8);
 }
@@ -652,10 +652,10 @@ using RealVector = ParamType<ParamTypeId::RealVector, k>;
 // Helper function that generates most types that are supported for intrinsic
 // arguments and return type. Used by `genFuncType` to generate function
 // types for most of the intrinsics.
-static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
+static inline aiir::Type getTypeHelper(aiir::AIIRContext *context,
                                        fir::FirOpBuilder &builder,
                                        ParamTypeId typeId, int kind) {
-  mlir::Type r;
+  aiir::Type r;
   unsigned bits{0};
   switch (typeId) {
   case ParamTypeId::Void:
@@ -664,25 +664,25 @@ static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
   case ParamTypeId::Address:
     bits = builder.getKindMap().getIntegerBitsize(kind);
     assert(bits != 0 && "failed to convert address kind to integer bitsize");
-    r = fir::ReferenceType::get(mlir::IntegerType::get(context, bits));
+    r = fir::ReferenceType::get(aiir::IntegerType::get(context, bits));
     break;
   case ParamTypeId::Integer:
   case ParamTypeId::IntegerVector:
     bits = builder.getKindMap().getIntegerBitsize(kind);
     assert(bits != 0 && "failed to convert kind to integer bitsize");
-    r = mlir::IntegerType::get(context, bits);
+    r = aiir::IntegerType::get(context, bits);
     break;
   case ParamTypeId::UnsignedVector:
     bits = builder.getKindMap().getIntegerBitsize(kind);
     assert(bits != 0 && "failed to convert kind to unsigned bitsize");
-    r = mlir::IntegerType::get(context, bits, mlir::IntegerType::Unsigned);
+    r = aiir::IntegerType::get(context, bits, aiir::IntegerType::Unsigned);
     break;
   case ParamTypeId::Real:
   case ParamTypeId::RealVector:
     r = builder.getRealType(kind);
     break;
   case ParamTypeId::Complex:
-    r = mlir::ComplexType::get(builder.getRealType(kind));
+    r = aiir::ComplexType::get(builder.getRealType(kind));
     break;
   }
 
@@ -705,21 +705,21 @@ static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
 // Generic function type generator that supports most of the function types
 // used by intrinsics.
 template <typename TyR, typename... ArgTys>
-static inline mlir::FunctionType genFuncType(mlir::MLIRContext *context,
+static inline aiir::FunctionType genFuncType(aiir::AIIRContext *context,
                                              fir::FirOpBuilder &builder) {
   llvm::SmallVector<ParamTypeId> argTys = {ArgTys::ty...};
   llvm::SmallVector<int> argKinds = {ArgTys::kind...};
-  llvm::SmallVector<mlir::Type> argTypes;
+  llvm::SmallVector<aiir::Type> argTypes;
 
   for (size_t i = 0; i < argTys.size(); ++i) {
     argTypes.push_back(getTypeHelper(context, builder, argTys[i], argKinds[i]));
   }
 
   if (TyR::ty == ParamTypeId::Void)
-    return mlir::FunctionType::get(context, argTypes, {});
+    return aiir::FunctionType::get(context, argTypes, {});
 
   auto resType = getTypeHelper(context, builder, TyR::ty, TyR::kind);
-  return mlir::FunctionType::get(context, argTypes, {resType});
+  return aiir::FunctionType::get(context, argTypes, {resType});
 }
 
 /// Entry into the tables describing how an intrinsic must be lowered.
@@ -737,63 +737,63 @@ struct IntrinsicHandlerEntry {
 //===----------------------------------------------------------------------===//
 // Helper functions for argument handling.
 //===----------------------------------------------------------------------===//
-static inline mlir::Type getConvertedElementType(mlir::MLIRContext *context,
-                                                 mlir::Type eleTy) {
-  if (mlir::isa<mlir::IntegerType>(eleTy) && !eleTy.isSignlessInteger()) {
-    const auto intTy{mlir::dyn_cast<mlir::IntegerType>(eleTy)};
-    auto newEleTy{mlir::IntegerType::get(context, intTy.getWidth())};
+static inline aiir::Type getConvertedElementType(aiir::AIIRContext *context,
+                                                 aiir::Type eleTy) {
+  if (aiir::isa<aiir::IntegerType>(eleTy) && !eleTy.isSignlessInteger()) {
+    const auto intTy{aiir::dyn_cast<aiir::IntegerType>(eleTy)};
+    auto newEleTy{aiir::IntegerType::get(context, intTy.getWidth())};
     return newEleTy;
   }
   return eleTy;
 }
 
-static inline llvm::SmallVector<mlir::Value, 4>
+static inline llvm::SmallVector<aiir::Value, 4>
 getBasesForArgs(llvm::ArrayRef<fir::ExtendedValue> args) {
-  llvm::SmallVector<mlir::Value, 4> baseVec;
+  llvm::SmallVector<aiir::Value, 4> baseVec;
   for (auto arg : args)
     baseVec.push_back(getBase(arg));
   return baseVec;
 }
 
-static inline llvm::SmallVector<mlir::Type, 4>
-getTypesForArgs(llvm::ArrayRef<mlir::Value> args) {
-  llvm::SmallVector<mlir::Type, 4> typeVec;
+static inline llvm::SmallVector<aiir::Type, 4>
+getTypesForArgs(llvm::ArrayRef<aiir::Value> args) {
+  llvm::SmallVector<aiir::Type, 4> typeVec;
   for (auto arg : args)
     typeVec.push_back(arg.getType());
   return typeVec;
 }
 
-mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
+aiir::Value genLibCall(fir::FirOpBuilder &builder, aiir::Location loc,
                        const MathOperation &mathOp,
-                       mlir::FunctionType libFuncType,
-                       llvm::ArrayRef<mlir::Value> args);
+                       aiir::FunctionType libFuncType,
+                       llvm::ArrayRef<aiir::Value> args);
 
 template <typename T>
-mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
+aiir::Value genMathOp(fir::FirOpBuilder &builder, aiir::Location loc,
                       const MathOperation &mathOp,
-                      mlir::FunctionType mathLibFuncType,
-                      llvm::ArrayRef<mlir::Value> args);
+                      aiir::FunctionType mathLibFuncType,
+                      llvm::ArrayRef<aiir::Value> args);
 
 template <typename T>
-mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
+aiir::Value genComplexMathOp(fir::FirOpBuilder &builder, aiir::Location loc,
                              const MathOperation &mathOp,
-                             mlir::FunctionType mathLibFuncType,
-                             llvm::ArrayRef<mlir::Value> args);
+                             aiir::FunctionType mathLibFuncType,
+                             llvm::ArrayRef<aiir::Value> args);
 
-mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
-                                       mlir::Location loc,
+aiir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
+                                       aiir::Location loc,
                                        const MathOperation &mathOp,
-                                       mlir::FunctionType libFuncType,
-                                       llvm::ArrayRef<mlir::Value> args);
+                                       aiir::FunctionType libFuncType,
+                                       llvm::ArrayRef<aiir::Value> args);
 
 /// Lookup for a handler or runtime call generator to lower intrinsic
 /// \p intrinsicName.
 std::optional<IntrinsicHandlerEntry>
 lookupIntrinsicHandler(fir::FirOpBuilder &, llvm::StringRef intrinsicName,
-                       std::optional<mlir::Type> resultType);
+                       std::optional<aiir::Type> resultType);
 
 /// Generate a TODO error message for an as yet unimplemented intrinsic.
-void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name);
+void crashOnMissingIntrinsic(aiir::Location loc, llvm::StringRef name);
 
 /// Return argument lowering rules for an intrinsic.
 /// Returns a nullptr if all the intrinsic arguments should be lowered by value.
@@ -811,10 +811,10 @@ fir::ExtendedValue getAbsentIntrinsicArgument();
 /// Get SymbolRefAttr of runtime (or wrapper function containing inlined
 // implementation) of an unrestricted intrinsic (defined by its signature
 // and generic name)
-mlir::SymbolRefAttr
-getUnrestrictedIntrinsicSymbolRefAttr(fir::FirOpBuilder &, mlir::Location,
+aiir::SymbolRefAttr
+getUnrestrictedIntrinsicSymbolRefAttr(fir::FirOpBuilder &, aiir::Location,
                                       llvm::StringRef name,
-                                      mlir::FunctionType signature);
+                                      aiir::FunctionType signature);
 
 //===----------------------------------------------------------------------===//
 // Direct access to intrinsics that may be used by lowering outside
@@ -823,22 +823,22 @@ getUnrestrictedIntrinsicSymbolRefAttr(fir::FirOpBuilder &, mlir::Location,
 
 /// Generate maximum. There must be at least one argument and all arguments
 /// must have the same type.
-mlir::Value genMax(fir::FirOpBuilder &, mlir::Location,
-                   llvm::ArrayRef<mlir::Value> args);
+aiir::Value genMax(fir::FirOpBuilder &, aiir::Location,
+                   llvm::ArrayRef<aiir::Value> args);
 
 /// Generate minimum. Same constraints as genMax.
-mlir::Value genMin(fir::FirOpBuilder &, mlir::Location,
-                   llvm::ArrayRef<mlir::Value> args);
+aiir::Value genMin(fir::FirOpBuilder &, aiir::Location,
+                   llvm::ArrayRef<aiir::Value> args);
 
 /// Generate Complex divide with the given expected
 /// result type.
-mlir::Value genDivC(fir::FirOpBuilder &builder, mlir::Location loc,
-                    mlir::Type resultType, mlir::Value x, mlir::Value y);
+aiir::Value genDivC(fir::FirOpBuilder &builder, aiir::Location loc,
+                    aiir::Type resultType, aiir::Value x, aiir::Value y);
 
 /// Generate power function x**y with the given expected
 /// result type.
-mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,
-                   mlir::Value x, mlir::Value y);
+aiir::Value genPow(fir::FirOpBuilder &, aiir::Location, aiir::Type resultType,
+                   aiir::Value x, aiir::Value y);
 
 } // namespace fir
 

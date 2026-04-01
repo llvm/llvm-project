@@ -74,7 +74,7 @@ public:
 /// `Repeated<T>` is also a proper random-access range: `begin()`/`end()`
 /// return iterators that always dereference to the same stored value.
 // At least 16-byte aligned so that Repeated<T>* has more low bits available
-// than a plain pointer. The primary use case is pointer-like types (e.g. MLIR
+// than a plain pointer. The primary use case is pointer-like types (e.g. AIIR
 // Type, Value) where Repeated<T>* appears in a PointerUnion alongside them.
 template <typename T>
 struct [[nodiscard]] alignas(std::max(size_t{16}, alignof(T))) Repeated {

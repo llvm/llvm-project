@@ -1,0 +1,10 @@
+// RUN: aiir-translate %s --aiir-to-llvmir -aiir-timing 2>&1 | FileCheck %s
+
+// CHECK: Execution time report
+// CHECK: Total Execution Time:
+// CHECK: Name
+// CHECK-NEXT: Translate AIIR to LLVMIR
+
+llvm.func @foo() {
+  llvm.return
+}

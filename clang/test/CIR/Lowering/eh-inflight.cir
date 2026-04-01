@@ -15,7 +15,7 @@ cir.func @inflight_exception() personality(@__gxx_personality_v0) {
 }
 
 // CHECK: llvm.func @inflight_exception() attributes {personality = @__gxx_personality_v0} {
-// CHECK:   %[[CONST_0:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:   %[[CONST_0:.*]] = llvm.aiir.zero : !llvm.ptr
 // CHECK:   %[[LP:.*]] = llvm.landingpad (catch %[[CONST_0]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
 // CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)> 
 // CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)> 
@@ -44,8 +44,8 @@ cir.func @inflight_exception_with_catch_type_list() personality(@__gxx_personali
 }
 
 // CHECK: llvm.func @inflight_exception_with_catch_type_list() attributes {personality = @__gxx_personality_v0} {
-// CHECK:   %[[TI_1_ADDR:.*]] = llvm.mlir.addressof @_ZTIPKc : !llvm.ptr
-// CHECK:   %[[TI_2_ADDR:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
+// CHECK:   %[[TI_1_ADDR:.*]] = llvm.aiir.addressof @_ZTIPKc : !llvm.ptr
+// CHECK:   %[[TI_2_ADDR:.*]] = llvm.aiir.addressof @_ZTIi : !llvm.ptr
 // CHECK:   %[[LP:.*]] = llvm.landingpad (catch %[[TI_2_ADDR]] : !llvm.ptr) (catch %[[TI_1_ADDR]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
 // CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)> 
 // CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)> 

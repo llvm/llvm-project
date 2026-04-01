@@ -1,11 +1,11 @@
 // Check AliasAnalysis for pointer components.
 //
 // Throughout this test, The ".fir" suffix on symbols indicates a version of the
-// MLIR after convert-hlfir-to-fir.  A key difference is that component access
+// AIIR after convert-hlfir-to-fir.  A key difference is that component access
 // is via fir.coordinate_of instead of hlfir.designate.  We would like alias
 // analysis results to be the same in both versions.
 
-// RUN: fir-opt %s -split-input-file -o /dev/null --mlir-disable-threading  \
+// RUN: fir-opt %s -split-input-file -o /dev/null --aiir-disable-threading  \
 // RUN:   -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' \
 // RUN:   2>&1 | FileCheck -match-full-lines %s
 

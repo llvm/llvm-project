@@ -1,0 +1,11 @@
+add_aiir_unittest(AIIRSPIRVImportExportTests
+  DeserializationTest.cpp
+  SerializationTest.cpp
+)
+aiir_target_link_libraries(AIIRSPIRVImportExportTests
+  PRIVATE
+  AIIRIR
+  AIIRSPIRVDialect
+  AIIRSPIRVDeserialization
+  AIIRSPIRVSerialization
+)

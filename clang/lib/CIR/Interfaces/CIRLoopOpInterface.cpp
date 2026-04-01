@@ -15,8 +15,8 @@
 namespace cir {
 
 void LoopOpInterface::getLoopOpSuccessorRegions(
-    LoopOpInterface op, mlir::RegionBranchPoint point,
-    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+    LoopOpInterface op, aiir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<aiir::RegionSuccessor> &regions) {
   assert(point.isParent() || point.getTerminatorPredecessorOrNull());
 
   // Branching to first region: go to condition or body (do-while).
@@ -25,12 +25,12 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
     return;
   }
 
-  mlir::Region *parentRegion =
+  aiir::Region *parentRegion =
       point.getTerminatorPredecessorOrNull()->getParentRegion();
 
   // Branching from condition: go to body or exit.
   if (&op.getCond() == parentRegion) {
-    regions.emplace_back(mlir::RegionSuccessor::parent());
+    regions.emplace_back(aiir::RegionSuccessor::parent());
     regions.emplace_back(&op.getBody());
     return;
   }
@@ -38,7 +38,7 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
   // Branching from body: go to step (for) or condition.
   if (&op.getBody() == parentRegion) {
     // FIXME(cir): Should we consider break/continue statements here?
-    mlir::Region *afterBody =
+    aiir::Region *afterBody =
         (op.maybeGetStep() ? op.maybeGetStep() : &op.getCond());
     regions.emplace_back(afterBody);
     return;
@@ -53,16 +53,16 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
   llvm_unreachable("unexpected branch origin");
 }
 
-mlir::ValueRange
+aiir::ValueRange
 LoopOpInterface::getLoopOpSuccessorInputs(LoopOpInterface op,
-                                          mlir::RegionSuccessor successor) {
+                                          aiir::RegionSuccessor successor) {
   if (successor.isParent())
     return op->getResults();
   if (successor == &op.getEntry())
     return op.getEntry().getArguments();
   if (successor == &op.getBody())
     return op.getBody().getArguments();
-  mlir::Region *afterBody =
+  aiir::Region *afterBody =
       (op.maybeGetStep() ? op.maybeGetStep() : &op.getCond());
   if (successor == afterBody)
     return afterBody->getArguments();
@@ -72,10 +72,10 @@ LoopOpInterface::getLoopOpSuccessorInputs(LoopOpInterface op,
 }
 
 /// Verify invariants of the LoopOpInterface.
-llvm::LogicalResult detail::verifyLoopOpInterface(mlir::Operation *op) {
-  // FIXME: fix this so the conditionop isn't requiring MLIRCIR
-  // auto loopOp = mlir::cast<LoopOpInterface>(op);
-  // if (!mlir::isa<ConditionOp>(loopOp.getCond().back().getTerminator()))
+llvm::LogicalResult detail::verifyLoopOpInterface(aiir::Operation *op) {
+  // FIXME: fix this so the conditionop isn't requiring AIIRCIR
+  // auto loopOp = aiir::cast<LoopOpInterface>(op);
+  // if (!aiir::isa<ConditionOp>(loopOp.getCond().back().getTerminator()))
   //   return op->emitOpError(
   //       "expected condition region to terminate with 'cir.condition'");
   return llvm::success();

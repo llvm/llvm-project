@@ -15,7 +15,7 @@
 
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
 namespace fir {
 class AddrOfOp;
@@ -32,52 +32,52 @@ namespace fir::acc {
 
 template <typename Op>
 struct PartialEntityAccessModel
-    : public mlir::acc::PartialEntityAccessOpInterface::ExternalModel<
+    : public aiir::acc::PartialEntityAccessOpInterface::ExternalModel<
           PartialEntityAccessModel<Op>, Op> {
-  mlir::Value getBaseEntity(mlir::Operation *op) const;
+  aiir::Value getBaseEntity(aiir::Operation *op) const;
 
   // Default implementation - returns false (partial view)
-  bool isCompleteView(mlir::Operation *op) const { return false; }
+  bool isCompleteView(aiir::Operation *op) const { return false; }
 };
 
 // Full specializations for declare operations
 template <>
 struct PartialEntityAccessModel<fir::DeclareOp>
-    : public mlir::acc::PartialEntityAccessOpInterface::ExternalModel<
+    : public aiir::acc::PartialEntityAccessOpInterface::ExternalModel<
           PartialEntityAccessModel<fir::DeclareOp>, fir::DeclareOp> {
-  mlir::Value getBaseEntity(mlir::Operation *op) const;
-  bool isCompleteView(mlir::Operation *op) const;
+  aiir::Value getBaseEntity(aiir::Operation *op) const;
+  bool isCompleteView(aiir::Operation *op) const;
 };
 
 template <>
 struct PartialEntityAccessModel<hlfir::DeclareOp>
-    : public mlir::acc::PartialEntityAccessOpInterface::ExternalModel<
+    : public aiir::acc::PartialEntityAccessOpInterface::ExternalModel<
           PartialEntityAccessModel<hlfir::DeclareOp>, hlfir::DeclareOp> {
-  mlir::Value getBaseEntity(mlir::Operation *op) const;
-  bool isCompleteView(mlir::Operation *op) const;
+  aiir::Value getBaseEntity(aiir::Operation *op) const;
+  bool isCompleteView(aiir::Operation *op) const;
 };
 
 struct AddressOfGlobalModel
-    : public mlir::acc::AddressOfGlobalOpInterface::ExternalModel<
+    : public aiir::acc::AddressOfGlobalOpInterface::ExternalModel<
           AddressOfGlobalModel, fir::AddrOfOp> {
-  mlir::SymbolRefAttr getSymbol(mlir::Operation *op) const;
+  aiir::SymbolRefAttr getSymbol(aiir::Operation *op) const;
 };
 
 struct GlobalVariableModel
-    : public mlir::acc::GlobalVariableOpInterface::ExternalModel<
+    : public aiir::acc::GlobalVariableOpInterface::ExternalModel<
           GlobalVariableModel, fir::GlobalOp> {
-  bool isConstant(mlir::Operation *op) const;
-  mlir::Region *getInitRegion(mlir::Operation *op) const;
-  bool isDeviceData(mlir::Operation *op) const;
+  bool isConstant(aiir::Operation *op) const;
+  aiir::Region *getInitRegion(aiir::Operation *op) const;
+  bool isDeviceData(aiir::Operation *op) const;
 };
 
 template <typename Op>
 struct IndirectGlobalAccessModel
-    : public mlir::acc::IndirectGlobalAccessOpInterface::ExternalModel<
+    : public aiir::acc::IndirectGlobalAccessOpInterface::ExternalModel<
           IndirectGlobalAccessModel<Op>, Op> {
-  void getReferencedSymbols(mlir::Operation *op,
-                            llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
-                            mlir::SymbolTable *symbolTable) const;
+  void getReferencedSymbols(aiir::Operation *op,
+                            llvm::SmallVectorImpl<aiir::SymbolRefAttr> &symbols,
+                            aiir::SymbolTable *symbolTable) const;
 };
 
 /// External model for OutlineRematerializationOpInterface.
@@ -86,7 +86,7 @@ struct IndirectGlobalAccessModel
 /// that cannot be passed as arguments to outlined regions.
 template <typename Op>
 struct OutlineRematerializationModel
-    : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
+    : public aiir::acc::OutlineRematerializationOpInterface::ExternalModel<
           OutlineRematerializationModel<Op>, Op> {};
 
 /// External model for OffloadRegionOpInterface.
@@ -94,10 +94,10 @@ struct OutlineRematerializationModel
 /// and outlining.
 template <typename Op>
 struct OffloadRegionModel
-    : public mlir::acc::OffloadRegionOpInterface::ExternalModel<
+    : public aiir::acc::OffloadRegionOpInterface::ExternalModel<
           OffloadRegionModel<Op>, Op> {
-  mlir::Region &getOffloadRegion(mlir::Operation *op) const {
-    return mlir::cast<Op>(op).getRegion();
+  aiir::Region &getOffloadRegion(aiir::Operation *op) const {
+    return aiir::cast<Op>(op).getRegion();
   }
 };
 
@@ -112,23 +112,23 @@ struct OperationMoveModel : public fir::OperationMoveOpInterface::ExternalModel<
   // operation from the 'descendant' operation into 'op' operation.
   // If 'candidate' is nullptr, then the caller is querying whether
   // any operation from any descendant can be moved into 'op' operation.
-  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
-                             mlir::Operation *candidate) const;
+  bool canMoveFromDescendant(aiir::Operation *op, aiir::Operation *descendant,
+                             aiir::Operation *candidate) const;
 
   // Returns true if it is allowed to move the given 'candidate'
   // operation out of 'op' operation. If 'candidate' is nullptr,
   // then the caller is querying whether any operation can be moved
   // out of 'op' operation.
-  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const;
+  bool canMoveOutOf(aiir::Operation *op, aiir::Operation *candidate) const;
 };
 
 struct ReductionInitOpFortranObjectViewModel
     : public fir::FortranObjectViewOpInterface::ExternalModel<
-          ReductionInitOpFortranObjectViewModel, mlir::acc::ReductionInitOp> {
-  mlir::Value getViewSource(mlir::Operation *op,
-                            mlir::OpResult resultView) const;
-  std::optional<std::int64_t> getViewOffset(mlir::Operation *op,
-                                            mlir::OpResult resultView) const;
+          ReductionInitOpFortranObjectViewModel, aiir::acc::ReductionInitOp> {
+  aiir::Value getViewSource(aiir::Operation *op,
+                            aiir::OpResult resultView) const;
+  std::optional<std::int64_t> getViewOffset(aiir::Operation *op,
+                                            aiir::OpResult resultView) const;
 };
 
 } // namespace fir::acc

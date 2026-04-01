@@ -1,6 +1,6 @@
 ! This test checks location of OpenMP constructs and clauses
 
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --mlir-print-debuginfo %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -maiir --aiir-print-debuginfo %s -o - | FileCheck %s
 
 !CHECK-LABEL: sub_parallel
 subroutine sub_parallel()

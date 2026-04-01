@@ -33,9 +33,9 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #if CLANG_ENABLE_CIR
-#include "mlir/IR/AsmState.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/PassManager.h"
+#include "aiir/IR/AsmState.h"
+#include "aiir/IR/AIIRContext.h"
+#include "aiir/Pass/PassManager.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
 #endif
@@ -288,16 +288,16 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 #endif
 
 #if CLANG_ENABLE_CIR
-  if (!Clang->getFrontendOpts().MLIRArgs.empty()) {
-    mlir::registerCIRPasses();
-    mlir::registerMLIRContextCLOptions();
-    mlir::registerPassManagerCLOptions();
-    mlir::registerAsmPrinterCLOptions();
-    unsigned NumArgs = Clang->getFrontendOpts().MLIRArgs.size();
+  if (!Clang->getFrontendOpts().AIIRArgs.empty()) {
+    aiir::registerCIRPasses();
+    aiir::registerAIIRContextCLOptions();
+    aiir::registerPassManagerCLOptions();
+    aiir::registerAsmPrinterCLOptions();
+    unsigned NumArgs = Clang->getFrontendOpts().AIIRArgs.size();
     auto Args = std::make_unique<const char *[]>(NumArgs + 2);
-    Args[0] = "clang (MLIR option parsing)";
+    Args[0] = "clang (AIIR option parsing)";
     for (unsigned i = 0; i != NumArgs; ++i)
-      Args[i + 1] = Clang->getFrontendOpts().MLIRArgs[i].c_str();
+      Args[i + 1] = Clang->getFrontendOpts().AIIRArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
     llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(),
                                       /*Description=*/"", /*Errs=*/nullptr,

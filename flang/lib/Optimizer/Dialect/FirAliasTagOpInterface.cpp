@@ -6,26 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
 
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.cpp.inc"
 
 llvm::LogicalResult
-fir::detail::verifyFirAliasTagOpInterface(mlir::Operation *op) {
-  auto iface = mlir::cast<FirAliasTagOpInterface>(op);
+fir::detail::verifyFirAliasTagOpInterface(aiir::Operation *op) {
+  auto iface = aiir::cast<FirAliasTagOpInterface>(op);
 
-  mlir::ArrayAttr tags = iface.getTBAATagsOrNull();
+  aiir::ArrayAttr tags = iface.getTBAATagsOrNull();
   if (!tags)
     return llvm::success();
 
-  for (mlir::Attribute iter : tags)
-    if (!mlir::isa<mlir::LLVM::TBAATagAttr>(iter))
+  for (aiir::Attribute iter : tags)
+    if (!aiir::isa<aiir::LLVM::TBAATagAttr>(iter))
       return op->emitOpError("expected op to return array of ")
-             << mlir::LLVM::TBAATagAttr::getMnemonic() << " attributes";
+             << aiir::LLVM::TBAATagAttr::getMnemonic() << " attributes";
   return llvm::success();
 }

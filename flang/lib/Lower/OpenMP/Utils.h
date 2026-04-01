@@ -11,9 +11,9 @@
 
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/Location.h"
-#include "mlir/IR/Value.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/IR/Location.h"
+#include "aiir/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
 #include <optional>
@@ -46,11 +46,11 @@ class AbstractConverter;
 namespace omp {
 
 struct DeclareTargetCaptureInfo {
-  mlir::omp::DeclareTargetCaptureClause clause;
+  aiir::omp::DeclareTargetCaptureClause clause;
   bool automap = false;
   const semantics::Symbol &symbol;
 
-  DeclareTargetCaptureInfo(mlir::omp::DeclareTargetCaptureClause c,
+  DeclareTargetCaptureInfo(aiir::omp::DeclareTargetCaptureClause c,
                            const semantics::Symbol &s, bool a = false)
       : clause(c), automap(a), symbol(s) {}
 };
@@ -58,7 +58,7 @@ struct DeclareTargetCaptureInfo {
 // A small helper structure for keeping track of a component members MapInfoOp
 // and index data when lowering OpenMP map clauses. Keeps track of the
 // placement of the component in the derived type hierarchy it rests within,
-// alongside the generated mlir::omp::MapInfoOp for the mapped component.
+// alongside the generated aiir::omp::MapInfoOp for the mapped component.
 //
 // As an example of what the contents of this data structure may be like,
 // when provided the following derived type and map of that type:
@@ -104,7 +104,7 @@ struct OmpMapParentAndMemberData {
   llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
 
   // Placement of the member in the member vector.
-  llvm::SmallVector<mlir::omp::MapInfoOp> memberMap;
+  llvm::SmallVector<aiir::omp::MapInfoOp> memberMap;
 
   bool isDuplicateMemberMapInfo(llvm::SmallVectorImpl<int64_t> &memberIndices) {
     return llvm::find_if(memberPlacementIndices, [&](auto &memberData) {
@@ -113,7 +113,7 @@ struct OmpMapParentAndMemberData {
   }
 
   void addChildIndexAndMapToParent(const omp::Object &object,
-                                   mlir::omp::MapInfoOp &mapOp,
+                                   aiir::omp::MapInfoOp &mapOp,
                                    semantics::SemanticsContext &semaCtx);
 };
 
@@ -122,7 +122,7 @@ void insertChildMapInfoIntoParent(
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
-    llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+    llvm::SmallVectorImpl<aiir::Value> &mapOperands,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms);
 
 void generateMemberPlacementIndices(
@@ -132,12 +132,12 @@ void generateMemberPlacementIndices(
 bool isMemberOrParentAllocatableOrPointer(
     const Object &object, Fortran::semantics::SemanticsContext &semaCtx);
 
-mlir::Value createParentSymAndGenIntermediateMaps(
-    mlir::Location clauseLocation, Fortran::lower::AbstractConverter &converter,
+aiir::Value createParentSymAndGenIntermediateMaps(
+    aiir::Location clauseLocation, Fortran::lower::AbstractConverter &converter,
     semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
     omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
-    mlir::omp::ClauseMapFlags mapTypeBits);
+    aiir::omp::ClauseMapFlags mapTypeBits);
 
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec);
@@ -145,14 +145,14 @@ bool requiresImplicitDefaultDeclareMapper(
 omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
                                 semantics::SemanticsContext &semaCtx);
 
-mlir::Type getLoopVarType(lower::AbstractConverter &converter,
+aiir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
 
 semantics::Symbol *
 getIterationVariableSymbol(const lower::pft::Evaluation &eval);
 
 void gatherFuncAndVarSyms(
-    const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
+    const ObjectList &objects, aiir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause,
     bool automap = false);
 
@@ -160,26 +160,26 @@ int64_t getCollapseValue(const List<Clause> &clauses);
 
 void genObjectList(const ObjectList &objects,
                    lower::AbstractConverter &converter,
-                   llvm::SmallVectorImpl<mlir::Value> &operands);
+                   llvm::SmallVectorImpl<aiir::Value> &operands);
 
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
-                                     mlir::Location loc);
+                                     aiir::Location loc);
 
 pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
 
 int64_t collectLoopRelatedInfo(
-    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::AbstractConverter &converter, aiir::Location currentLocation,
     lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
     const omp::List<omp::Clause> &clauses,
-    mlir::omp::LoopRelatedClauseOps &result,
+    aiir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
 
 void collectLoopRelatedInfo(
-    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::AbstractConverter &converter, aiir::Location currentLocation,
     lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
     std::int64_t collapseValue,
     // const omp::List<omp::Clause> &clauses,
-    mlir::omp::LoopRelatedClauseOps &result,
+    aiir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
 
 void collectTileSizesFromOpenMPConstruct(
@@ -187,24 +187,24 @@ void collectTileSizesFromOpenMPConstruct(
     llvm::SmallVectorImpl<int64_t> &tileSizes,
     Fortran::semantics::SemanticsContext &semaCtx);
 
-mlir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
-                                  mlir::Location loc,
-                                  const mlir::DataLayout &dl,
+aiir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
+                                  aiir::Location loc,
+                                  const aiir::DataLayout &dl,
                                   hlfir::Entity entity);
 
-mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
+aiir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
                             const omp::Object &object,
                             Fortran::lower::StatementContext &stmtCtx,
-                            mlir::Location loc);
+                            aiir::Location loc);
 
-mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
-                           const mlir::DataLayout &dl, hlfir::Entity entity,
-                           llvm::ArrayRef<mlir::Value> bounds);
+aiir::Value genAffinityLen(fir::FirOpBuilder &builder, aiir::Location loc,
+                           const aiir::DataLayout &dl, hlfir::Entity entity,
+                           llvm::ArrayRef<aiir::Value> bounds);
 
 struct IteratorRange {
-  mlir::Value lb;
-  mlir::Value ub;
-  mlir::Value step;
+  aiir::Value lb;
+  aiir::Value ub;
+  aiir::Value step;
   Fortran::semantics::Symbol *ivSym = nullptr;
 };
 
@@ -220,14 +220,14 @@ bool hasIteratorIVReference(
 void defaultMangler(Fortran::lower::AbstractConverter &converter,
                     std::string &mapperIdName, llvm::StringRef memberName);
 
-mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
+aiir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   hlfir::Entity entity,
-                                  llvm::ArrayRef<mlir::Value> ivs,
-                                  mlir::Location loc);
+                                  llvm::ArrayRef<aiir::Value> ivs,
+                                  aiir::Location loc);
 
-std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+std::optional<llvm::SmallVector<aiir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
-    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
+    Fortran::lower::StatementContext &stmtCtx, aiir::Location loc);
 
 } // namespace omp
 } // namespace lower

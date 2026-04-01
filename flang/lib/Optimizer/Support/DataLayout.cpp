@@ -9,13 +9,13 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Target/LLVMIR/Import.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/Dialect/GPU/IR/GPUDialect.h"
+#include "aiir/Dialect/LLVMIR/LLVMDialect.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/Interfaces/DataLayoutInterfaces.h"
+#include "aiir/Support/LLVM.h"
+#include "aiir/Target/LLVMIR/Import.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -23,75 +23,75 @@
 
 namespace {
 template <typename ModOpTy>
-static void setDataLayout(ModOpTy mlirModule, const llvm::DataLayout &dl) {
-  mlir::MLIRContext *context = mlirModule.getContext();
-  mlirModule->setAttr(
-      mlir::LLVM::LLVMDialect::getDataLayoutAttrName(),
-      mlir::StringAttr::get(context, dl.getStringRepresentation()));
-  mlir::DataLayoutSpecInterface dlSpec = mlir::translateDataLayout(dl, context);
-  mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+static void setDataLayout(ModOpTy aiirModule, const llvm::DataLayout &dl) {
+  aiir::AIIRContext *context = aiirModule.getContext();
+  aiirModule->setAttr(
+      aiir::LLVM::LLVMDialect::getDataLayoutAttrName(),
+      aiir::StringAttr::get(context, dl.getStringRepresentation()));
+  aiir::DataLayoutSpecInterface dlSpec = aiir::translateDataLayout(dl, context);
+  aiirModule->setAttr(aiir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
 template <typename ModOpTy>
-static void setDataLayoutFromAttributes(ModOpTy mlirModule,
+static void setDataLayoutFromAttributes(ModOpTy aiirModule,
                                         bool allowDefaultLayout) {
-  if (mlirModule.getDataLayoutSpec())
+  if (aiirModule.getDataLayoutSpec())
     return; // Already set.
   if (auto dataLayoutString =
-          mlirModule->template getAttrOfType<mlir::StringAttr>(
-              mlir::LLVM::LLVMDialect::getDataLayoutAttrName())) {
+          aiirModule->template getAttrOfType<aiir::StringAttr>(
+              aiir::LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvm::DataLayout llvmDataLayout(dataLayoutString);
-    fir::support::setMLIRDataLayout(mlirModule, llvmDataLayout);
+    fir::support::setAIIRDataLayout(aiirModule, llvmDataLayout);
     return;
   }
   if (!allowDefaultLayout)
     return;
   llvm::DataLayout llvmDataLayout("");
-  fir::support::setMLIRDataLayout(mlirModule, llvmDataLayout);
+  fir::support::setAIIRDataLayout(aiirModule, llvmDataLayout);
 }
 
 template <typename ModOpTy>
-static std::optional<mlir::DataLayout>
-getOrSetDataLayout(ModOpTy mlirModule, bool allowDefaultLayout) {
-  if (!mlirModule.getDataLayoutSpec())
-    fir::support::setMLIRDataLayoutFromAttributes(mlirModule,
+static std::optional<aiir::DataLayout>
+getOrSetDataLayout(ModOpTy aiirModule, bool allowDefaultLayout) {
+  if (!aiirModule.getDataLayoutSpec())
+    fir::support::setAIIRDataLayoutFromAttributes(aiirModule,
                                                   allowDefaultLayout);
-  if (!mlirModule.getDataLayoutSpec() &&
-      !mlir::isa<mlir::gpu::GPUModuleOp>(mlirModule))
+  if (!aiirModule.getDataLayoutSpec() &&
+      !aiir::isa<aiir::gpu::GPUModuleOp>(aiirModule))
     return std::nullopt;
-  return mlir::DataLayout(mlirModule);
+  return aiir::DataLayout(aiirModule);
 }
 
 } // namespace
 
-void fir::support::setMLIRDataLayout(mlir::ModuleOp mlirModule,
+void fir::support::setAIIRDataLayout(aiir::ModuleOp aiirModule,
                                      const llvm::DataLayout &dl) {
-  setDataLayout(mlirModule, dl);
+  setDataLayout(aiirModule, dl);
 }
 
-void fir::support::setMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule,
+void fir::support::setAIIRDataLayout(aiir::gpu::GPUModuleOp aiirModule,
                                      const llvm::DataLayout &dl) {
-  setDataLayout(mlirModule, dl);
+  setDataLayout(aiirModule, dl);
 }
 
-void fir::support::setMLIRDataLayoutFromAttributes(mlir::ModuleOp mlirModule,
+void fir::support::setAIIRDataLayoutFromAttributes(aiir::ModuleOp aiirModule,
                                                    bool allowDefaultLayout) {
-  setDataLayoutFromAttributes(mlirModule, allowDefaultLayout);
+  setDataLayoutFromAttributes(aiirModule, allowDefaultLayout);
 }
 
-void fir::support::setMLIRDataLayoutFromAttributes(
-    mlir::gpu::GPUModuleOp mlirModule, bool allowDefaultLayout) {
-  setDataLayoutFromAttributes(mlirModule, allowDefaultLayout);
+void fir::support::setAIIRDataLayoutFromAttributes(
+    aiir::gpu::GPUModuleOp aiirModule, bool allowDefaultLayout) {
+  setDataLayoutFromAttributes(aiirModule, allowDefaultLayout);
 }
 
-std::optional<mlir::DataLayout>
-fir::support::getOrSetMLIRDataLayout(mlir::ModuleOp mlirModule,
+std::optional<aiir::DataLayout>
+fir::support::getOrSetAIIRDataLayout(aiir::ModuleOp aiirModule,
                                      bool allowDefaultLayout) {
-  return getOrSetDataLayout(mlirModule, allowDefaultLayout);
+  return getOrSetDataLayout(aiirModule, allowDefaultLayout);
 }
 
-std::optional<mlir::DataLayout>
-fir::support::getOrSetMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule,
+std::optional<aiir::DataLayout>
+fir::support::getOrSetAIIRDataLayout(aiir::gpu::GPUModuleOp aiirModule,
                                      bool allowDefaultLayout) {
-  return getOrSetDataLayout(mlirModule, allowDefaultLayout);
+  return getOrSetDataLayout(aiirModule, allowDefaultLayout);
 }

@@ -13,9 +13,9 @@
 #ifndef FORTRAN_OPTIMIZER_OPENACC_SUPPORT_FIROPENACCUTILS_H
 #define FORTRAN_OPTIMIZER_OPENACC_SUPPORT_FIROPENACCUTILS_H
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/Value.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/IR/Builders.h"
+#include "aiir/IR/Value.h"
 #include <string>
 
 namespace fir {
@@ -27,7 +27,7 @@ namespace acc {
 /// \param preferDemangledName If true, prefers demangled/bindc names over
 ///        mangled/unique names. If false, prefers mangled names.
 /// Returns empty string if no name is found.
-std::string getVariableName(mlir::Value v, bool preferDemangledName = true);
+std::string getVariableName(aiir::Value v, bool preferDemangledName = true);
 
 /// Get the recipe name for a given recipe kind, FIR type, and optional
 /// variable. Uses FIR's type string representation with appropriate prefix. For
@@ -41,16 +41,16 @@ std::string getVariableName(mlir::Value v, bool preferDemangledName = true);
 /// \param reductionOp Optional reduction operator (required for reduction
 /// recipes)
 /// \return The complete recipe name with all necessary suffixes
-std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type,
-                          mlir::Value var = nullptr,
-                          llvm::ArrayRef<mlir::Value> bounds = {},
-                          mlir::acc::ReductionOperator reductionOp =
-                              mlir::acc::ReductionOperator::AccNone);
+std::string getRecipeName(aiir::acc::RecipeKind kind, aiir::Type type,
+                          aiir::Value var = nullptr,
+                          llvm::ArrayRef<aiir::Value> bounds = {},
+                          aiir::acc::ReductionOperator reductionOp =
+                              aiir::acc::ReductionOperator::AccNone);
 
 /// Check if all bounds are expressed with constant values.
 /// \param bounds Array of DataBoundsOp values to check
 /// \return true if all bounds have constant lowerbound/upperbound or extent
-bool areAllBoundsConstant(llvm::ArrayRef<mlir::Value> bounds);
+bool areAllBoundsConstant(llvm::ArrayRef<aiir::Value> bounds);
 
 /// Create or get a private recipe for the given type and name.
 /// \param builder The FIR builder
@@ -58,10 +58,10 @@ bool areAllBoundsConstant(llvm::ArrayRef<mlir::Value> bounds);
 /// \param ty The type of the variable
 /// \param dataBoundOps Optional bounds for the variable
 /// \return The existing or created PrivateRecipeOp symbol
-mlir::SymbolRefAttr
-createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                         mlir::Value var,
-                         llvm::SmallVector<mlir::Value> &dataBoundOps);
+aiir::SymbolRefAttr
+createOrGetPrivateRecipe(aiir::OpBuilder &builder, aiir::Location loc,
+                         aiir::Value var,
+                         llvm::SmallVector<aiir::Value> &dataBoundOps);
 
 /// Create or get a firstprivate recipe for the given type and name.
 /// \param builder The FIR builder
@@ -69,10 +69,10 @@ createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \param ty The type of the variable
 /// \param dataBoundOps Optional bounds for the variable
 /// \return The existing or created FirstprivateRecipeOp symbol
-mlir::SymbolRefAttr
-createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                              mlir::Value var,
-                              llvm::SmallVector<mlir::Value> &dataBoundOps);
+aiir::SymbolRefAttr
+createOrGetFirstprivateRecipe(aiir::OpBuilder &builder, aiir::Location loc,
+                              aiir::Value var,
+                              llvm::SmallVector<aiir::Value> &dataBoundOps);
 
 /// Create or get a reduction recipe for the given type, name and operator.
 /// \param builder The FIR builder
@@ -82,11 +82,11 @@ createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \param dataBoundOps Optional bounds for the variable
 /// \param fastMathAttr Optional fast math attributes
 /// \return The existing or created ReductionRecipeOp symbol
-mlir::SymbolRefAttr
-createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                           mlir::Value var, mlir::acc::ReductionOperator op,
-                           llvm::SmallVector<mlir::Value> &dataBoundOps,
-                           mlir::Attribute fastMathAttr = {});
+aiir::SymbolRefAttr
+createOrGetReductionRecipe(aiir::OpBuilder &builder, aiir::Location loc,
+                           aiir::Value var, aiir::acc::ReductionOperator op,
+                           llvm::SmallVector<aiir::Value> &dataBoundOps,
+                           aiir::Attribute fastMathAttr = {});
 
 /// Walks through operations that forward or view their operand and returns
 /// the original defining value. This strips operations like fir.convert,
@@ -94,7 +94,7 @@ createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \param value The value to trace back to its origin
 /// \param stripDeclare If true (default), also strips declare operations
 /// \return The original value after stripping all intermediate operations
-mlir::Value getOriginalDef(mlir::Value value, bool stripDeclare = true);
+aiir::Value getOriginalDef(aiir::Value value, bool stripDeclare = true);
 
 } // namespace acc
 } // namespace fir

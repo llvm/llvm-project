@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "aiir/Tools/aiir-opt/AiirOptMain.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
@@ -19,7 +19,7 @@
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 
-using namespace mlir;
+using namespace aiir;
 namespace fir {
 namespace test {
 void registerTestFIRAliasAnalysisPass();
@@ -27,16 +27,16 @@ void registerTestFIROpenACCInterfacesPass();
 } // namespace test
 } // namespace fir
 
-// Defined in mlir/test, no pulic header.
-namespace mlir {
+// Defined in aiir/test, no pulic header.
+namespace aiir {
 void registerSideEffectTestPasses();
 namespace test {
 void registerTestOpenACC();
 } // namespace test
-} // namespace mlir
+} // namespace aiir
 
 int main(int argc, char **argv) {
-  fir::support::registerMLIRPassesForFortranTools();
+  fir::support::registerAIIRPassesForFortranTools();
   fir::registerOptCodeGenPasses();
   fir::registerOptTransformPasses();
   hlfir::registerHLFIRPasses();
@@ -45,13 +45,13 @@ int main(int argc, char **argv) {
 #ifdef FLANG_INCLUDE_TESTS
   fir::test::registerTestFIRAliasAnalysisPass();
   fir::test::registerTestFIROpenACCInterfacesPass();
-  mlir::registerSideEffectTestPasses();
-  mlir::test::registerTestOpenACC();
+  aiir::registerSideEffectTestPasses();
+  aiir::test::registerTestOpenACC();
 #endif
   DialectRegistry registry;
   fir::support::registerDialects(registry);
-  registry.insert<mlir::memref::MemRefDialect>();
+  registry.insert<aiir::memref::MemRefDialect>();
   fir::support::addFIRExtensions(registry);
-  return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
+  return failed(AiirOptMain(argc, argv, "FIR modular optimizer driver\n",
       registry));
 }

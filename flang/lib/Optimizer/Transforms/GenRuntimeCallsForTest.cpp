@@ -30,7 +30,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/io-api.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "aiir/Dialect/LLVMIR/LLVMAttrs.h"
 
 namespace fir {
 #define GEN_PASS_DEF_GENRUNTIMECALLSFORTEST
@@ -59,17 +59,17 @@ public:
 static constexpr llvm::StringRef testPrefix = "test_";
 
 void GenRuntimeCallsForTestPass::runOnOperation() {
-  mlir::ModuleOp moduleOp = getOperation();
-  mlir::OpBuilder mlirBuilder(moduleOp.getRegion());
-  fir::FirOpBuilder builder(mlirBuilder, moduleOp);
-  mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
+  aiir::ModuleOp moduleOp = getOperation();
+  aiir::OpBuilder aiirBuilder(moduleOp.getRegion());
+  fir::FirOpBuilder builder(aiirBuilder, moduleOp);
+  aiir::Location loc = aiir::UnknownLoc::get(builder.getContext());
 
 #define KNOWN_IO_FUNC(X)                                                       \
   fir::runtime::getIORuntimeFunc<mkIOKey(X)>(loc, builder)
 #define KNOWN_RUNTIME_FUNC(X)                                                  \
   fir::runtime::getRuntimeFunc<mkRTKey(X)>(loc, builder)
 
-  mlir::func::FuncOp runtimeFuncsTable[] = {
+  aiir::func::FuncOp runtimeFuncsTable[] = {
 #include "flang/Optimizer/Transforms/RuntimeFunctions.inc"
   };
 
@@ -78,21 +78,21 @@ void GenRuntimeCallsForTestPass::runOnOperation() {
 
   // Generate thin wrapper functions calling the known Fortran
   // runtime functions.
-  llvm::SmallVector<mlir::Operation *> newFuncs;
+  llvm::SmallVector<aiir::Operation *> newFuncs;
   for (unsigned i = 0;
        i < sizeof(runtimeFuncsTable) / sizeof(runtimeFuncsTable[0]); ++i) {
-    mlir::func::FuncOp funcOp = runtimeFuncsTable[i];
-    mlir::FunctionType funcTy = funcOp.getFunctionType();
+    aiir::func::FuncOp funcOp = runtimeFuncsTable[i];
+    aiir::FunctionType funcTy = funcOp.getFunctionType();
     std::string name = (llvm::Twine(testPrefix) + funcOp.getName()).str();
-    mlir::func::FuncOp callerFunc = builder.createFunction(loc, name, funcTy);
-    callerFunc.setVisibility(mlir::SymbolTable::Visibility::Public);
-    mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
+    aiir::func::FuncOp callerFunc = builder.createFunction(loc, name, funcTy);
+    callerFunc.setVisibility(aiir::SymbolTable::Visibility::Public);
+    aiir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
 
     // Generate the wrapper function body that consists of a call and return.
     builder.setInsertionPointToStart(callerFunc.addEntryBlock());
-    mlir::Block::BlockArgListType args = callerFunc.front().getArguments();
+    aiir::Block::BlockArgListType args = callerFunc.front().getArguments();
     auto callOp = fir::CallOp::create(builder, loc, funcOp, args);
-    mlir::func::ReturnOp::create(builder, loc, callOp.getResults());
+    aiir::func::ReturnOp::create(builder, loc, callOp.getResults());
 
     newFuncs.push_back(callerFunc.getOperation());
     builder.restoreInsertionPoint(insertPt);

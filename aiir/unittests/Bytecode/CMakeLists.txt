@@ -1,0 +1,9 @@
+add_aiir_unittest(AIIRBytecodeTests
+  BytecodeTest.cpp
+)
+aiir_target_link_libraries(AIIRBytecodeTests
+  PRIVATE
+  AIIRBytecodeReader
+  AIIRBytecodeWriter
+  AIIRParser
+)

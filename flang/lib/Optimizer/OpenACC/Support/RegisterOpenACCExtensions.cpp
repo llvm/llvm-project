@@ -23,8 +23,8 @@
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
 
 namespace fir::acc {
-void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
-  registry.addExtension(+[](mlir::MLIRContext *ctx,
+void registerOpenACCExtensions(aiir::DialectRegistry &registry) {
+  registry.addExtension(+[](aiir::AIIRContext *ctx,
                             fir::FIROpsDialect *dialect) {
     fir::BoxType::attachInterface<OpenACCMappableModel<fir::BaseBoxType>>(*ctx);
     fir::ClassType::attachInterface<OpenACCMappableModel<fir::BaseBoxType>>(
@@ -89,7 +89,7 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
 
   // Register HLFIR operation interfaces
   registry.addExtension(
-      +[](mlir::MLIRContext *ctx, hlfir::hlfirDialect *dialect) {
+      +[](aiir::AIIRContext *ctx, hlfir::hlfirDialect *dialect) {
         hlfir::DesignateOp::attachInterface<
             PartialEntityAccessModel<hlfir::DesignateOp>>(*ctx);
         hlfir::DeclareOp::attachInterface<
@@ -97,16 +97,16 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
       });
 
   // Register CUF operation interfaces
-  registry.addExtension(+[](mlir::MLIRContext *ctx, cuf::CUFDialect *dialect) {
+  registry.addExtension(+[](aiir::AIIRContext *ctx, cuf::CUFDialect *dialect) {
     cuf::KernelOp::attachInterface<OffloadRegionModel<cuf::KernelOp>>(*ctx);
   });
 
   // Attach FIR dialect interfaces to OpenACC operations.
-  registry.addExtension(+[](mlir::MLIRContext *ctx,
-                            mlir::acc::OpenACCDialect *dialect) {
-    mlir::acc::LoopOp::attachInterface<OperationMoveModel<mlir::acc::LoopOp>>(
+  registry.addExtension(+[](aiir::AIIRContext *ctx,
+                            aiir::acc::OpenACCDialect *dialect) {
+    aiir::acc::LoopOp::attachInterface<OperationMoveModel<aiir::acc::LoopOp>>(
         *ctx);
-    mlir::acc::ReductionInitOp::attachInterface<
+    aiir::acc::ReductionInitOp::attachInterface<
         fir::acc::ReductionInitOpFortranObjectViewModel>(*ctx);
   });
 

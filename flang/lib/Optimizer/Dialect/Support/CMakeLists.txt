@@ -1,4 +1,4 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(dialect_libs GLOBAL PROPERTY AIIR_DIALECT_LIBS)
 
 add_flang_library(FIRDialectSupport
   KindMapping.cpp
@@ -7,9 +7,9 @@ add_flang_library(FIRDialectSupport
   DEPENDS
   intrinsics_gen
 
-  MLIR_DEPS
-  MLIRIR
+  AIIR_DEPS
+  AIIRIR
 
-  MLIR_LIBS
+  AIIR_LIBS
   ${dialect_libs}
 )

@@ -13,7 +13,7 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRENUMATTR_TD
 #define CLANG_CIR_DIALECT_IR_CIRENUMATTR_TD
 
-include "mlir/IR/EnumAttr.td"
+include "aiir/IR/EnumAttr.td"
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 
 class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>

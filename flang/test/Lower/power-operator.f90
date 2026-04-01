@@ -1,10 +1,10 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc --math-runtime=precise -emit-fir %s -o - | FileCheck %s --check-prefix=PRECISE
-! RUN: bbc --force-mlir-complex -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --force-aiir-complex -emit-fir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fapprox-func -emit-fir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefix=PRECISE
-! RUN: %flang_fc1 -emit-fir -mllvm --force-mlir-complex %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -mllvm --force-aiir-complex %s -o - | FileCheck %s
 
 ! Test power operation lowering
 

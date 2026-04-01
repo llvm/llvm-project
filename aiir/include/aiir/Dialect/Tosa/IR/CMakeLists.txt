@@ -1,0 +1,25 @@
+add_aiir_dialect(TosaOps tosa)
+add_aiir_doc(TosaOps TosaOps Dialects/ -gen-op-doc -dialect=tosa)
+add_aiir_interface(TosaInterfaces)
+
+set(LLVM_TARGET_DEFINITIONS TosaOps.td)
+aiir_tablegen(TosaOpsTypesBase.h.inc -gen-typedef-decls -typedefs-dialect=tosa)
+aiir_tablegen(TosaOpsTypesBase.cpp.inc -gen-typedef-defs -typedefs-dialect=tosa)
+aiir_tablegen(TosaAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=tosa)
+aiir_tablegen(TosaAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=tosa)
+add_aiir_dialect_tablegen_target(AIIRTosaAttributesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS TosaDialectBytecode.td)
+aiir_tablegen(TosaDialectBytecode.cpp.inc -gen-bytecode -bytecode-dialect="Tosa")
+add_aiir_dialect_tablegen_target(AIIRTosaDialectBytecodeIncGen)
+
+set(LLVM_TARGET_DEFINITIONS TosaOpBase.td)
+aiir_tablegen(TosaEnums.h.inc -gen-enum-decls)
+aiir_tablegen(TosaEnums.cpp.inc -gen-enum-defs)
+add_aiir_dialect_tablegen_target(AIIRTosaEnumsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS TosaOps.td)
+aiir_tablegen(TosaAvailability.h.inc -gen-avail-interface-decls)
+aiir_tablegen(TosaAvailability.cpp.inc -gen-avail-interface-defs)
+aiir_tablegen(TosaOpAvailabilityImpl.inc -gen-tosa-avail-impls)
+add_aiir_dialect_tablegen_target(AIIRTosaAvailabilityIncGen)

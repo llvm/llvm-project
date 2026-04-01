@@ -148,8 +148,8 @@ about the loop. For example, the `llvm.loop.vectorize.enable` metadata informs
 the optimizer that a loop can be vectorized without considering its cost-model.
 This attribute is added to the loop condition branch.
 
-### Representation in MLIR
-The MLIR LLVM dialect models this by an attribute called LoopAnnotation
+### Representation in AIIR
+The AIIR LLVM dialect models this by an attribute called LoopAnnotation
 Attribute. The attribute can be added to the latch of the loop in the cf
 dialect and is then carried through lowering to the LLVM dialect.
 

@@ -5,15 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Provides an LLVM-like API wrapper to DLTI and MLIR layout queries. This
+// Provides an LLVM-like API wrapper to DLTI and AIIR layout queries. This
 // makes it easier to port some of LLVM codegen layout logic to CIR.
 //===----------------------------------------------------------------------===//
 
 #ifndef CLANG_CIR_DIALECT_IR_CIRDATALAYOUT_H
 #define CLANG_CIR_DIALECT_IR_CIRDATALAYOUT_H
 
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "aiir/Dialect/DLTI/DLTI.h"
+#include "aiir/IR/BuiltinOps.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace cir {
@@ -28,22 +28,22 @@ class CIRDataLayout {
   unsigned programAddrSpace = 0;
 
 public:
-  mlir::DataLayout layout;
+  aiir::DataLayout layout;
 
   /// Constructs a DataLayout the module's data layout attribute.
-  CIRDataLayout(mlir::ModuleOp modOp);
+  CIRDataLayout(aiir::ModuleOp modOp);
 
   /// Parse a data layout string (with fallback to default values).
-  void reset(mlir::DataLayoutSpecInterface spec);
+  void reset(aiir::DataLayoutSpecInterface spec);
 
   bool isBigEndian() const { return bigEndian; }
 
   unsigned getProgramAddressSpace() const { return programAddrSpace; }
 
   /// Internal helper method that returns requested alignment for type.
-  llvm::Align getAlignment(mlir::Type ty, bool useABIAlign) const;
+  llvm::Align getAlignment(aiir::Type ty, bool useABIAlign) const;
 
-  llvm::Align getABITypeAlign(mlir::Type ty) const {
+  llvm::Align getABITypeAlign(aiir::Type ty) const {
     return getAlignment(ty, true);
   }
 
@@ -54,7 +54,7 @@ public:
   /// the runtime size will be a positive integer multiple of the base size.
   ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
-  llvm::TypeSize getTypeStoreSize(mlir::Type ty) const {
+  llvm::TypeSize getTypeStoreSize(aiir::Type ty) const {
     llvm::TypeSize baseSize = getTypeSizeInBits(ty);
     return {llvm::divideCeil(baseSize.getKnownMinValue(), 8),
             baseSize.isScalable()};
@@ -67,7 +67,7 @@ public:
   /// the runtime size will be a positive integer multiple of the base size.
   ///
   /// For example, returns 40 for i36 and 80 for x86_fp80.
-  llvm::TypeSize getTypeStoreSizeInBits(mlir::Type ty) const {
+  llvm::TypeSize getTypeStoreSizeInBits(aiir::Type ty) const {
     llvm::TypeSize baseSize = getTypeSizeInBits(ty);
     uint64_t alignedSizeInBits =
         llvm::alignToPowerOf2(baseSize.getKnownMinValue(), 8);
@@ -82,7 +82,7 @@ public:
   ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 12 or 16 for x86_fp80, depending on alignment.
-  llvm::TypeSize getTypeAllocSize(mlir::Type ty) const {
+  llvm::TypeSize getTypeAllocSize(aiir::Type ty) const {
     // Round up to the next alignment boundary.
     return llvm::alignTo(getTypeStoreSize(ty), getABITypeAlign(ty).value());
   }
@@ -95,20 +95,20 @@ public:
   ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 96 or 128 for x86_fp80, depending on alignment.
-  llvm::TypeSize getTypeAllocSizeInBits(mlir::Type ty) const {
+  llvm::TypeSize getTypeAllocSizeInBits(aiir::Type ty) const {
     return 8 * getTypeAllocSize(ty);
   }
 
-  llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const;
+  llvm::TypeSize getTypeSizeInBits(aiir::Type ty) const;
 
-  llvm::TypeSize getPointerTypeSizeInBits(mlir::Type ty) const {
-    assert(mlir::isa<cir::PointerType>(ty) &&
+  llvm::TypeSize getPointerTypeSizeInBits(aiir::Type ty) const {
+    assert(aiir::isa<cir::PointerType>(ty) &&
            "This should only be called with a pointer type");
     return layout.getTypeSizeInBits(ty);
   }
 
-  mlir::Type getIntPtrType(mlir::Type ty) const {
-    assert(mlir::isa<cir::PointerType>(ty) && "Expected pointer type");
+  aiir::Type getIntPtrType(aiir::Type ty) const {
+    assert(aiir::isa<cir::PointerType>(ty) && "Expected pointer type");
     return cir::IntType::get(ty.getContext(), getPointerTypeSizeInBits(ty),
                              false);
   }
@@ -117,7 +117,7 @@ public:
   /// specified type.
   ///
   /// For example, returns false for i19 that has a 24-bit store size.
-  bool typeSizeEqualsStoreSize(mlir::Type ty) const {
+  bool typeSizeEqualsStoreSize(aiir::Type ty) const {
     return getTypeSizeInBits(ty) == getTypeStoreSizeInBits(ty);
   }
 };

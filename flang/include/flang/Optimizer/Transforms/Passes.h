@@ -11,20 +11,20 @@
 
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
+#include "aiir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "aiir/Dialect/OpenMP/OpenMPDialect.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassRegistry.h"
 #include <memory>
 
-namespace mlir {
+namespace aiir {
 class IRMapping;
 class GreedyRewriteConfig;
 class Operation;
 class Pass;
 class Region;
 class ModuleOp;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 
@@ -36,31 +36,31 @@ namespace fir {
 
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
-std::unique_ptr<mlir::Pass> createAffineDemotionPass();
-std::unique_ptr<mlir::Pass>
+std::unique_ptr<aiir::Pass> createAffineDemotionPass();
+std::unique_ptr<aiir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
-std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
-std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
-std::unique_ptr<mlir::Pass>
+std::unique_ptr<aiir::Pass> createMemDataFlowOptPass();
+std::unique_ptr<aiir::Pass> createPromoteToAffinePass();
+std::unique_ptr<aiir::Pass>
 createAddDebugInfoPass(fir::AddDebugInfoOptions options = {});
 
-std::unique_ptr<mlir::Pass> createAnnotateConstantOperandsPass();
-std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
-std::unique_ptr<mlir::Pass>
-createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
+std::unique_ptr<aiir::Pass> createAnnotateConstantOperandsPass();
+std::unique_ptr<aiir::Pass> createAlgebraicSimplificationPass();
+std::unique_ptr<aiir::Pass>
+createAlgebraicSimplificationPass(const aiir::GreedyRewriteConfig &config);
 
-std::unique_ptr<mlir::Pass> createVScaleAttrPass();
-std::unique_ptr<mlir::Pass>
+std::unique_ptr<aiir::Pass> createVScaleAttrPass();
+std::unique_ptr<aiir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
-void populateFIRToSCFRewrites(mlir::RewritePatternSet &patterns,
+void populateFIRToSCFRewrites(aiir::RewritePatternSet &patterns,
                               bool parallelUnordered = false);
 
-void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
+void populateCfgConversionRewrites(aiir::RewritePatternSet &patterns,
                                    bool forceLoopToExecuteOnce = false,
                                    bool setNSW = true);
 
-void populateSimplifyFIROperationsPatterns(mlir::RewritePatternSet &patterns,
+void populateSimplifyFIROperationsPatterns(aiir::RewritePatternSet &patterns,
                                            bool preferInlineImplementation);
 
 // declarative passes

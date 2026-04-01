@@ -9,10 +9,10 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_TEMPORARYSTACK_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_TEMPORARYSTACK_H
 
-namespace mlir {
+namespace aiir {
 class Value;
 class Location;
-} // namespace mlir
+} // namespace aiir
 
 namespace fir {
 class FirOpBuilder;
@@ -20,26 +20,26 @@ class FirOpBuilder;
 
 namespace fir::runtime {
 
-mlir::Value genCreateValueStack(mlir::Location loc, fir::FirOpBuilder &builder);
+aiir::Value genCreateValueStack(aiir::Location loc, fir::FirOpBuilder &builder);
 
-void genPushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                  mlir::Value opaquePtr, mlir::Value boxValue);
-void genValueAt(mlir::Location loc, fir::FirOpBuilder &builder,
-                mlir::Value opaquePtr, mlir::Value i, mlir::Value retValueBox);
+void genPushValue(aiir::Location loc, fir::FirOpBuilder &builder,
+                  aiir::Value opaquePtr, aiir::Value boxValue);
+void genValueAt(aiir::Location loc, fir::FirOpBuilder &builder,
+                aiir::Value opaquePtr, aiir::Value i, aiir::Value retValueBox);
 
-void genDestroyValueStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                          mlir::Value opaquePtr);
+void genDestroyValueStack(aiir::Location loc, fir::FirOpBuilder &builder,
+                          aiir::Value opaquePtr);
 
-mlir::Value genCreateDescriptorStack(mlir::Location loc,
+aiir::Value genCreateDescriptorStack(aiir::Location loc,
                                      fir::FirOpBuilder &builder);
 
-void genPushDescriptor(mlir::Location loc, fir::FirOpBuilder &builder,
-                       mlir::Value opaquePtr, mlir::Value boxValue);
-void genDescriptorAt(mlir::Location loc, fir::FirOpBuilder &builder,
-                     mlir::Value opaquePtr, mlir::Value i,
-                     mlir::Value retValueBox);
+void genPushDescriptor(aiir::Location loc, fir::FirOpBuilder &builder,
+                       aiir::Value opaquePtr, aiir::Value boxValue);
+void genDescriptorAt(aiir::Location loc, fir::FirOpBuilder &builder,
+                     aiir::Value opaquePtr, aiir::Value i,
+                     aiir::Value retValueBox);
 
-void genDestroyDescriptorStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                               mlir::Value opaquePtr);
+void genDestroyDescriptorStack(aiir::Location loc, fir::FirOpBuilder &builder,
+                               aiir::Value opaquePtr);
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_TEMPORARYSTACK_H

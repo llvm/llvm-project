@@ -20,73 +20,73 @@
 #include "clang/AST/TypeBase.h"
 #include "clang/Basic/OpenACCKinds.h"
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "aiir/Dialect/OpenACC/OpenACC.h"
 
 namespace clang::CIRGen {
 class OpenACCRecipeBuilderBase {
   // makes the copy of the addresses of an alloca to the previous allocation.
-  void makeAllocaCopy(mlir::Location loc, mlir::Type copyType,
-                      mlir::Value numEltsToCopy, mlir::Value offsetPerSubarray,
-                      mlir::Value destAlloca, mlir::Value srcAlloca);
+  void makeAllocaCopy(aiir::Location loc, aiir::Type copyType,
+                      aiir::Value numEltsToCopy, aiir::Value offsetPerSubarray,
+                      aiir::Value destAlloca, aiir::Value srcAlloca);
   // This function generates the required alloca, similar to
   // 'emitAutoVarAlloca', except for the OpenACC array/pointer types.
-  mlir::Value makeBoundsAlloca(mlir::Block *block, SourceRange exprRange,
-                               mlir::Location loc, std::string_view allocaName,
+  aiir::Value makeBoundsAlloca(aiir::Block *block, SourceRange exprRange,
+                               aiir::Location loc, std::string_view allocaName,
                                size_t numBounds,
                                llvm::ArrayRef<QualType> boundTypes);
 
-  void makeBoundsInit(mlir::Value alloca, mlir::Location loc,
-                      mlir::Block *block, const VarDecl *allocaDecl,
+  void makeBoundsInit(aiir::Value alloca, aiir::Location loc,
+                      aiir::Block *block, const VarDecl *allocaDecl,
                       QualType origType, bool isInitSection);
 
 protected:
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;
 
-  mlir::Block *createRecipeBlock(mlir::Region &region, mlir::Type opTy,
-                                 mlir::Location loc, size_t numBounds,
+  aiir::Block *createRecipeBlock(aiir::Region &region, aiir::Type opTy,
+                                 aiir::Location loc, size_t numBounds,
                                  bool isInit);
   // Creates a loop through an 'acc.bounds', leaving the 'insertion' point to be
   // the inside of the loop body. Traverses LB->UB UNLESS `inverse` is set.
   // Returns the 'subscriptedValue' changed with the new bounds subscript.
-  std::pair<mlir::Value, mlir::Value>
-  createBoundsLoop(mlir::Value subscriptedValue, mlir::Value subscriptedValue2,
-                   mlir::Value bound, mlir::Location loc, bool inverse);
+  std::pair<aiir::Value, aiir::Value>
+  createBoundsLoop(aiir::Value subscriptedValue, aiir::Value subscriptedValue2,
+                   aiir::Value bound, aiir::Location loc, bool inverse);
 
-  mlir::Value createBoundsLoop(mlir::Value subscriptedValue, mlir::Value bound,
-                               mlir::Location loc, bool inverse) {
+  aiir::Value createBoundsLoop(aiir::Value subscriptedValue, aiir::Value bound,
+                               aiir::Location loc, bool inverse) {
     return createBoundsLoop(subscriptedValue, {}, bound, loc, inverse).first;
   }
 
-  mlir::acc::ReductionOperator convertReductionOp(OpenACCReductionOperator op);
+  aiir::acc::ReductionOperator convertReductionOp(OpenACCReductionOperator op);
 
   // This function generates the 'combiner' section for a reduction recipe. Note
   // that this function is not 'insertion point' clean, in that it alters the
   // insertion point to be inside of the 'combiner' section of the recipe, but
   // doesn't restore it aftewards.
   void createReductionRecipeCombiner(
-      mlir::Location loc, mlir::Location locEnd, mlir::Value mainOp,
-      mlir::acc::ReductionRecipeOp recipe, size_t numBounds, QualType origType,
+      aiir::Location loc, aiir::Location locEnd, aiir::Value mainOp,
+      aiir::acc::ReductionRecipeOp recipe, size_t numBounds, QualType origType,
       llvm::ArrayRef<OpenACCReductionRecipe::CombinerRecipe> combinerRecipes);
 
-  void createInitRecipe(mlir::Location loc, mlir::Location locEnd,
-                        SourceRange exprRange, mlir::Value mainOp,
-                        mlir::Region &recipeInitRegion, size_t numBounds,
+  void createInitRecipe(aiir::Location loc, aiir::Location locEnd,
+                        SourceRange exprRange, aiir::Value mainOp,
+                        aiir::Region &recipeInitRegion, size_t numBounds,
                         llvm::ArrayRef<QualType> boundTypes,
                         const VarDecl *allocaDecl, QualType origType,
                         bool emitInitExpr);
 
-  void createFirstprivateRecipeCopy(mlir::Location loc, mlir::Location locEnd,
-                                    mlir::Value mainOp,
+  void createFirstprivateRecipeCopy(aiir::Location loc, aiir::Location locEnd,
+                                    aiir::Value mainOp,
                                     const VarDecl *allocaDecl,
                                     const VarDecl *temporary,
-                                    mlir::Region &copyRegion, size_t numBounds);
+                                    aiir::Region &copyRegion, size_t numBounds);
 
-  void createRecipeDestroySection(mlir::Location loc, mlir::Location locEnd,
-                                  mlir::Value mainOp, CharUnits alignment,
+  void createRecipeDestroySection(aiir::Location loc, aiir::Location locEnd,
+                                  aiir::Value mainOp, CharUnits alignment,
                                   QualType origType, size_t numBounds,
                                   QualType baseType,
-                                  mlir::Region &destroyRegion);
+                                  aiir::Region &destroyRegion);
 
   OpenACCRecipeBuilderBase(CIRGen::CIRGenFunction &cgf,
                            CIRGen::CIRGenBuilderTy &builder)
@@ -102,17 +102,17 @@ class OpenACCRecipeBuilder : OpenACCRecipeBuilderBase {
     {
       llvm::raw_string_ostream stream(recipeName);
 
-      if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
+      if constexpr (std::is_same_v<RecipeTy, aiir::acc::PrivateRecipeOp>) {
         stream << "privatization_";
       } else if constexpr (std::is_same_v<RecipeTy,
-                                          mlir::acc::FirstprivateRecipeOp>) {
+                                          aiir::acc::FirstprivateRecipeOp>) {
         stream << "firstprivatization_";
 
       } else if constexpr (std::is_same_v<RecipeTy,
-                                          mlir::acc::ReductionRecipeOp>) {
+                                          aiir::acc::ReductionRecipeOp>) {
         stream << "reduction_";
         // Values here are a little weird (for bitwise and/or is 'i' prefix, and
-        // logical ops with 'l'), but are chosen to be the same as the MLIR
+        // logical ops with 'l'), but are chosen to be the same as the AIIR
         // dialect names as well as to match the Flang versions of these.
         switch (reductionOp) {
         case OpenACCReductionOperator::Addition:
@@ -165,35 +165,35 @@ public:
                        CIRGen::CIRGenBuilderTy &builder)
       : OpenACCRecipeBuilderBase(cgf, builder) {}
   RecipeTy getOrCreateRecipe(
-      ASTContext &astCtx, mlir::OpBuilder::InsertPoint &insertLocation,
+      ASTContext &astCtx, aiir::OpBuilder::InsertPoint &insertLocation,
       const Expr *varRef, const VarDecl *varRecipe, const VarDecl *temporary,
       OpenACCReductionOperator reductionOp, DeclContext *dc, QualType origType,
       size_t numBounds, llvm::ArrayRef<QualType> boundTypes, QualType baseType,
-      mlir::Value mainOp,
+      aiir::Value mainOp,
       llvm::ArrayRef<OpenACCReductionRecipe::CombinerRecipe>
           reductionCombinerRecipes) {
     assert(!varRecipe->getType()->isSpecificBuiltinType(
                BuiltinType::ArraySection) &&
            "array section shouldn't make it to recipe creation");
 
-    mlir::ModuleOp mod = builder.getBlock()
+    aiir::ModuleOp mod = builder.getBlock()
                              ->getParent()
-                             ->template getParentOfType<mlir::ModuleOp>();
+                             ->template getParentOfType<aiir::ModuleOp>();
 
     std::string recipeName = getRecipeName(varRef->getSourceRange(), baseType,
                                            numBounds, reductionOp);
     if (auto recipe = mod.lookupSymbol<RecipeTy>(recipeName))
       return recipe;
 
-    mlir::Location loc = cgf.cgm.getLoc(varRef->getBeginLoc());
-    mlir::Location locEnd = cgf.cgm.getLoc(varRef->getEndLoc());
+    aiir::Location loc = cgf.cgm.getLoc(varRef->getBeginLoc());
+    aiir::Location locEnd = cgf.cgm.getLoc(varRef->getEndLoc());
 
-    mlir::OpBuilder modBuilder(mod.getBodyRegion());
+    aiir::OpBuilder modBuilder(mod.getBodyRegion());
     if (insertLocation.isSet())
       modBuilder.restoreInsertionPoint(insertLocation);
     RecipeTy recipe;
 
-    if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
+    if constexpr (std::is_same_v<RecipeTy, aiir::acc::ReductionRecipeOp>) {
       recipe = RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType(),
                                 convertReductionOp(reductionOp));
     } else {
@@ -201,19 +201,19 @@ public:
     }
     insertLocation = modBuilder.saveInsertionPoint();
 
-    if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
+    if constexpr (std::is_same_v<RecipeTy, aiir::acc::PrivateRecipeOp>) {
       createInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
                        recipe.getInitRegion(), numBounds, boundTypes, varRecipe,
                        origType, /*emitInitExpr=*/true);
     } else if constexpr (std::is_same_v<RecipeTy,
-                                        mlir::acc::ReductionRecipeOp>) {
+                                        aiir::acc::ReductionRecipeOp>) {
       createInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
                        recipe.getInitRegion(), numBounds, boundTypes, varRecipe,
                        origType, /*emitInitExpr=*/true);
       createReductionRecipeCombiner(loc, locEnd, mainOp, recipe, numBounds,
                                     origType, reductionCombinerRecipes);
     } else {
-      static_assert(std::is_same_v<RecipeTy, mlir::acc::FirstprivateRecipeOp>);
+      static_assert(std::is_same_v<RecipeTy, aiir::acc::FirstprivateRecipeOp>);
       createInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
                        recipe.getInitRegion(), numBounds, boundTypes, varRecipe,
                        origType, /*emitInitExpr=*/false);

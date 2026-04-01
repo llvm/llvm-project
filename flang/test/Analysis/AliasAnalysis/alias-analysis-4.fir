@@ -1,8 +1,8 @@
 // check that hlfir.designate can be followed by alias analysis
 
-// use --mlir-disable-threading so that the AA queries are serialised
+// use --aiir-disable-threading so that the AA queries are serialised
 // as well as its diagnostic output.
-// RUN: fir-opt %s --test-fir-alias-analysis -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-opt %s --test-fir-alias-analysis -split-input-file --aiir-disable-threading 2>&1 | FileCheck %s
 
 // designate for a derived type component:
 // module m

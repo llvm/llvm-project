@@ -31,7 +31,7 @@ using namespace clang::CIRGen;
 
 namespace {
 /// The CIRRecordLowering is responsible for lowering an ASTRecordLayout to an
-/// mlir::Type. Some of the lowering is straightforward, some is not.
+/// aiir::Type. Some of the lowering is straightforward, some is not.
 // TODO: Detail some of the complexities and weirdnesses?
 // (See CGRecordLayoutBuilder.cpp)
 struct CIRRecordLowering final {
@@ -42,15 +42,15 @@ struct CIRRecordLowering final {
   struct MemberInfo final {
     CharUnits offset;
     enum class InfoKind { VFPtr, Field, Base, VBase } kind;
-    mlir::Type data;
+    aiir::Type data;
     union {
       const FieldDecl *fieldDecl;
       const CXXRecordDecl *cxxRecordDecl;
     };
-    MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
+    MemberInfo(CharUnits offset, InfoKind kind, aiir::Type data,
                const FieldDecl *fieldDecl = nullptr)
         : offset{offset}, kind{kind}, data{data}, fieldDecl{fieldDecl} {}
-    MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
+    MemberInfo(CharUnits offset, InfoKind kind, aiir::Type data,
                const CXXRecordDecl *rd)
         : offset{offset}, kind{kind}, data{data}, cxxRecordDecl{rd} {}
     // MemberInfos are sorted so we define a < operator.
@@ -62,14 +62,14 @@ struct CIRRecordLowering final {
   CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
                     bool packed);
 
-  /// Constructs a MemberInfo instance from an offset and mlir::Type.
-  MemberInfo makeStorageInfo(CharUnits offset, mlir::Type data) {
+  /// Constructs a MemberInfo instance from an offset and aiir::Type.
+  MemberInfo makeStorageInfo(CharUnits offset, aiir::Type data) {
     return MemberInfo(offset, MemberInfo::InfoKind::Field, data);
   }
 
   // Layout routines.
   void setBitFieldInfo(const FieldDecl *fd, CharUnits startOffset,
-                       mlir::Type storageType);
+                       aiir::Type storageType);
 
   void lower(bool NonVirtualBaseType);
   void lowerUnion();
@@ -88,7 +88,7 @@ struct CIRRecordLowering final {
   accumulateBitFields(RecordDecl::field_iterator field,
                       RecordDecl::field_iterator fieldEnd);
 
-  mlir::Type getVFPtrType();
+  aiir::Type getVFPtrType();
 
   bool isAAPCS() const {
     return astContext.getTargetInfo().getABI().starts_with("aapcs");
@@ -124,13 +124,13 @@ struct CIRRecordLowering final {
 
   void calculateZeroInit();
 
-  CharUnits getSize(mlir::Type Ty) {
+  CharUnits getSize(aiir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
   }
-  CharUnits getSizeInBits(mlir::Type ty) {
+  CharUnits getSizeInBits(aiir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
-  CharUnits getAlignment(mlir::Type Ty) {
+  CharUnits getAlignment(aiir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
   }
 
@@ -142,45 +142,45 @@ struct CIRRecordLowering final {
   }
 
   /// Wraps cir::IntType with some implicit arguments.
-  mlir::Type getUIntNType(uint64_t numBits) {
+  aiir::Type getUIntNType(uint64_t numBits) {
     unsigned alignedBits = llvm::PowerOf2Ceil(numBits);
     alignedBits = std::max(8u, alignedBits);
-    return cir::IntType::get(&cirGenTypes.getMLIRContext(), alignedBits,
+    return cir::IntType::get(&cirGenTypes.getAIIRContext(), alignedBits,
                              /*isSigned=*/false);
   }
 
-  mlir::Type getCharType() {
-    return cir::IntType::get(&cirGenTypes.getMLIRContext(),
+  aiir::Type getCharType() {
+    return cir::IntType::get(&cirGenTypes.getAIIRContext(),
                              astContext.getCharWidth(),
                              /*isSigned=*/false);
   }
 
-  mlir::Type getByteArrayType(CharUnits numberOfChars) {
+  aiir::Type getByteArrayType(CharUnits numberOfChars) {
     assert(!numberOfChars.isZero() && "Empty byte arrays aren't allowed.");
-    mlir::Type type = getCharType();
+    aiir::Type type = getCharType();
     return numberOfChars == CharUnits::One()
                ? type
                : cir::ArrayType::get(type, numberOfChars.getQuantity());
   }
 
   // Gets the CIR BaseSubobject type from a CXXRecordDecl.
-  mlir::Type getStorageType(const CXXRecordDecl *RD) {
+  aiir::Type getStorageType(const CXXRecordDecl *RD) {
     return cirGenTypes.getCIRGenRecordLayout(RD).getBaseSubobjectCIRType();
   }
   // This is different from LLVM traditional codegen because CIRGen uses arrays
   // of bytes instead of arbitrary-sized integers. This is important for packed
   // structures support.
-  mlir::Type getBitfieldStorageType(unsigned numBits) {
+  aiir::Type getBitfieldStorageType(unsigned numBits) {
     unsigned alignedBits = llvm::alignTo(numBits, astContext.getCharWidth());
     if (cir::isValidFundamentalIntWidth(alignedBits))
       return builder.getUIntNTy(alignedBits);
 
-    mlir::Type type = getCharType();
+    aiir::Type type = getCharType();
     return cir::ArrayType::get(type, alignedBits / astContext.getCharWidth());
   }
 
-  mlir::Type getStorageType(const FieldDecl *fieldDecl) {
-    mlir::Type type = cirGenTypes.convertTypeForMem(fieldDecl->getType());
+  aiir::Type getStorageType(const FieldDecl *fieldDecl) {
+    aiir::Type type = cirGenTypes.convertTypeForMem(fieldDecl->getType());
     if (fieldDecl->isBitField()) {
       cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
                                          "getStorageType for bitfields");
@@ -211,7 +211,7 @@ struct CIRRecordLowering final {
   // Helpful intermediate data-structures
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
-  llvm::SmallVector<mlir::Type, 16> fieldTypes;
+  llvm::SmallVector<aiir::Type, 16> fieldTypes;
   llvm::DenseMap<const FieldDecl *, CIRGenBitFieldInfo> bitFields;
   llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
@@ -246,7 +246,7 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
 
 void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
                                         CharUnits startOffset,
-                                        mlir::Type storageType) {
+                                        aiir::Type storageType) {
   CIRGenBitFieldInfo &info = bitFields[fd->getCanonicalDecl()];
   info.isSigned = fd->getType()->isSignedIntegerOrEnumerationType();
   info.offset =
@@ -352,7 +352,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
         continue;
       }
       uint64_t bitOffset = getFieldBitOffset(*field);
-      mlir::Type type = cirGenTypes.convertTypeForMem(field->getType());
+      aiir::Type type = cirGenTypes.convertTypeForMem(field->getType());
       // If we don't have a run yet, or don't live within the previous run's
       // allocated storage then we allocate some storage and start a new run.
       if (run == fieldEnd || bitOffset >= tail) {
@@ -473,7 +473,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
       if (!installBest) {
         // Determine if accumulating the just-seen span will create an expensive
         // access unit or not.
-        mlir::Type type = getUIntNType(astContext.toBits(accessSize));
+        aiir::Type type = getUIntNType(astContext.toBits(accessSize));
         if (!astContext.getTargetInfo().hasCheapUnalignedBitFieldAccess())
           cirGenTypes.getCGModule().errorNYI(
               field->getSourceRange(), "NYI CheapUnalignedBitFieldAccess");
@@ -530,7 +530,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
         // Add the storage member for the access unit to the record. The
         // bitfields get the offset of their storage but come afterward and
         // remain there after a stable sort.
-        mlir::Type type;
+        aiir::Type type;
         if (bestClipped) {
           assert(getSize(getUIntNType(astContext.toBits(accessSize))) >
                      accessSize &&
@@ -759,13 +759,13 @@ void CIRGenBitFieldInfo::dump() const { print(llvm::errs()); }
 
 void CIRRecordLowering::lowerUnion() {
   CharUnits layoutSize = astRecordLayout.getSize();
-  mlir::Type storageType = nullptr;
+  aiir::Type storageType = nullptr;
   bool seenNamedMember = false;
 
   // Iterate through the fields setting bitFieldInfo and the Fields array. Also
   // locate the "most appropriate" storage type.
   for (const FieldDecl *field : recordDecl->fields()) {
-    mlir::Type fieldType;
+    aiir::Type fieldType;
     if (field->isBitField()) {
       if (field->isZeroLengthBitField())
         continue;
@@ -856,7 +856,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
     return;
 
   for (auto &[field, info] : bitFields) {
-    mlir::Type resLTy = cirGenTypes.convertTypeForMem(field->getType());
+    aiir::Type resLTy = cirGenTypes.convertTypeForMem(field->getType());
 
     if (astContext.toBits(astRecordLayout.getAlignment()) <
         getSizeInBits(resLTy).getQuantity())
@@ -1015,6 +1015,6 @@ void CIRRecordLowering::accumulateVPtrs() {
                                        "accumulateVPtrs: hasOwnVBPtr");
 }
 
-mlir::Type CIRRecordLowering::getVFPtrType() {
+aiir::Type CIRRecordLowering::getVFPtrType() {
   return cir::VPtrType::get(builder.getContext());
 }

@@ -43,132 +43,132 @@
 /lldb/ @JDevlieghere
 /lldb/**/*FreeBSD* @mchoo7
 
-# MLIR Interfaces.
-/mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
-/mlir/include/mlir/Interfaces/ValueBoundsOpInterface.* @matthias-springer
-/mlir/lib/Interfaces/ValueBoundsOpInterface.* @matthias-springer
-/mlir/**/ValueBoundsOpInterfaceImpl.* @matthias-springer
-/mlir/include/mlir/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer
-/mlir/lib/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer
-/mlir/**/RuntimeVerifiableOpInterfaceImpl.* @matthias-springer
-/mlir/include/mlir/Interfaces/SubsetOpInterface.* @matthias-springer
-/mlir/lib/Interfaces/SubsetOpInterface.* @matthias-springer
-/mlir/**/SubsetOpInterfaceImpl.* @matthias-springer
-/mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
-/mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
-/mlir/**/Interfaces/ControlFlowInterfaces.* @matthias-springer
+# AIIR Interfaces.
+/aiir/include/aiir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
+/aiir/lib/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
+/aiir/include/aiir/Interfaces/ValueBoundsOpInterface.* @matthias-springer
+/aiir/lib/Interfaces/ValueBoundsOpInterface.* @matthias-springer
+/aiir/**/ValueBoundsOpInterfaceImpl.* @matthias-springer
+/aiir/include/aiir/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer
+/aiir/lib/Interfaces/RuntimeVerifiableOpInterface.* @matthias-springer
+/aiir/**/RuntimeVerifiableOpInterfaceImpl.* @matthias-springer
+/aiir/include/aiir/Interfaces/SubsetOpInterface.* @matthias-springer
+/aiir/lib/Interfaces/SubsetOpInterface.* @matthias-springer
+/aiir/**/SubsetOpInterfaceImpl.* @matthias-springer
+/aiir/include/aiir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
+/aiir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
+/aiir/**/Interfaces/ControlFlowInterfaces.* @matthias-springer
 
-# AMDGPU and ROCDL dialects in MLIR.
-/mlir/include/mlir/Dialect/AMDGPU @krzysz00 @kuhar
-/mlir/lib/Dialect/AMDGPU @krzysz00 @kuhar
-/mlir/lib/Conversion/*AMDGPU* @krzysz00 @kuhar
-/mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
-/mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
+# AMDGPU and ROCDL dialects in AIIR.
+/aiir/include/aiir/Dialect/AMDGPU @krzysz00 @kuhar
+/aiir/lib/Dialect/AMDGPU @krzysz00 @kuhar
+/aiir/lib/Conversion/*AMDGPU* @krzysz00 @kuhar
+/aiir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
+/aiir/include/aiir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
 
-# Arith dialect in MLIR.
-/mlir/include/mlir/Dialect/Arith @kuhar
-/mlir/lib/Dialect/Arith @kuhar
-/mlir/lib/Conversion/ArithTo* @kuhar
+# Arith dialect in AIIR.
+/aiir/include/aiir/Dialect/Arith @kuhar
+/aiir/lib/Dialect/Arith @kuhar
+/aiir/lib/Conversion/ArithTo* @kuhar
 
-# XeGPU and XeVM dialects in MLIR.
-/mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
-/mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
-/mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
-/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
-/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
-/mlir/include/mlir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
-/mlir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
-/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
-/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
-/mlir/lib/Conversion/*XeVM* @silee2
+# XeGPU and XeVM dialects in AIIR.
+/aiir/include/aiir/Dialect/XeGPU @charithaintc @Jianhui-Li
+/aiir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
+/aiir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
+/aiir/include/aiir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/aiir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/aiir/include/aiir/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
+/aiir/lib/Dialect/XeGPU/TransformOps @charithaintc @Jianhui-Li @tkarna
+/aiir/include/aiir/Dialect/LLVMIR/XeVM* @silee2
+/aiir/lib/Dialect/LLVMIR/IR/XeVM @silee2
+/aiir/lib/Conversion/*XeVM* @silee2
 
-# Bufferization Dialect in MLIR.
-/mlir/include/mlir/Dialect/Bufferization @matthias-springer
-/mlir/lib/Dialect/Bufferization @matthias-springer
-/mlir/**/BufferizableOpInterfaceImpl.* @matthias-springer
-/mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
+# Bufferization Dialect in AIIR.
+/aiir/include/aiir/Dialect/Bufferization @matthias-springer
+/aiir/lib/Dialect/Bufferization @matthias-springer
+/aiir/**/BufferizableOpInterfaceImpl.* @matthias-springer
+/aiir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
-# DLTI Dialect in MLIR
-/mlir/**/Dialect/DLTI @rolfmorel
-/mlir/**/DataLayoutInterfaces.* @rolfmorel
+# DLTI Dialect in AIIR
+/aiir/**/Dialect/DLTI @rolfmorel
+/aiir/**/DataLayoutInterfaces.* @rolfmorel
 
-# Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
-/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
-/mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @nicolasvasilache @Groverkss
+# Linalg Dialect in AIIR.
+/aiir/include/aiir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
+/aiir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
+/aiir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
+/aiir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
+/aiir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
+/aiir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @nicolasvasilache
+/aiir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @nicolasvasilache
+/aiir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @nicolasvasilache @Groverkss
 
-# MemRef Dialect in MLIR.
-/mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
+# MemRef Dialect in AIIR.
+/aiir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
 
-# Vector Dialect in MLIR.
-/mlir/**/*AMX* @aartbik @dcaballe
-/mlir/**/*Neon* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
-/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
-/mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
-/mlir/include/mlir/Dialect/Vector/IR @kuhar
-/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
-/mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
-/mlir/**/*EmulateNarrowType* @dcaballe
+# Vector Dialect in AIIR.
+/aiir/**/*AMX* @aartbik @dcaballe
+/aiir/**/*Neon* @banach-space @dcaballe @nicolasvasilache
+/aiir/**/*SME* @banach-space @dcaballe @nicolasvasilache
+/aiir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
+/aiir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
+/aiir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
+/aiir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
+/aiir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
+/aiir/include/aiir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
+/aiir/include/aiir/Dialect/Vector/IR @kuhar
+/aiir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
+/aiir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
+/aiir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
+/aiir/**/*EmulateNarrowType* @dcaballe
 
-# Presburger library in MLIR
-/mlir/**/*Presburger* @Groverkss @Superty
+# Presburger library in AIIR
+/aiir/**/*Presburger* @Groverkss @Superty
 
-# Tensor Dialect in MLIR.
-/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @nicolasvasilache
-/mlir/lib/Dialect/Tensor/Transforms/* @nicolasvasilache
+# Tensor Dialect in AIIR.
+/aiir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @nicolasvasilache
+/aiir/lib/Dialect/Tensor/Transforms/* @nicolasvasilache
 
-# Transform Dialect in MLIR.
-/mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
-/mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
-/mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
+# Transform Dialect in AIIR.
+/aiir/include/aiir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
+/aiir/lib/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
+/aiir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
 
-# SPIR-V Dialect in MLIR.
-/mlir/**/SPIRV/ @antiagainst @kuhar @IgWod
-/mlir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod
-/mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
-/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
+# SPIR-V Dialect in AIIR.
+/aiir/**/SPIRV/ @antiagainst @kuhar @IgWod
+/aiir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod
+/aiir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
+/aiir/tools/aiir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
 
-# MLIR Sparsifier.
-/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
+# AIIR Sparsifier.
+/aiir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
 
-# MLIR NVGPU Dialect
-/mlir/**/NVGPU*/ @grypp
-/mlir/test/**/CUDA/ @grypp
+# AIIR NVGPU Dialect
+/aiir/**/NVGPU*/ @grypp
+/aiir/test/**/CUDA/ @grypp
 
-# MLIR GPU Dialect
-/mlir/**/GPU*/ @fabianmcg
+# AIIR GPU Dialect
+/aiir/**/GPU*/ @fabianmcg
 
-# MLIR NVVM Dialect in MLIR
-/mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
-/mlir/**/NVVM* @grypp
+# AIIR NVVM Dialect in AIIR
+/aiir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
+/aiir/**/NVVM* @grypp
 
-# MLIR Index Dialect
-/mlir/**/Index* @mogball
+# AIIR Index Dialect
+/aiir/**/Index* @mogball
 
-# MLIR Python Bindings
-/mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
-/mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
-/mlir/lib/Bindings/Python @makslevental @rolfmorel
-/mlir/include/Bindings/Python @makslevental @rolfmorel
+# AIIR Python Bindings
+/aiir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
+/aiir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
+/aiir/lib/Bindings/Python @makslevental @rolfmorel
+/aiir/include/Bindings/Python @makslevental @rolfmorel
 
-# MLIR Mem2Reg/SROA
-/mlir/**/Transforms/Mem2Reg.* @moxinilian
-/mlir/**/Transforms/SROA.* @moxinilian
+# AIIR Mem2Reg/SROA
+/aiir/**/Transforms/Mem2Reg.* @moxinilian
+/aiir/**/Transforms/SROA.* @moxinilian
 
-# MLIR IRDL-related
-/mlir/**/*IRDL* @moxinilian
+# AIIR IRDL-related
+/aiir/**/*IRDL* @moxinilian
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk

@@ -17,16 +17,16 @@ include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIREnumAttr.td"
 include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
 include "clang/CIR/Interfaces/CIRTypeInterfaces.td"
-include "mlir/Interfaces/DataLayoutInterfaces.td"
-include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/EnumAttr.td"
+include "aiir/Interfaces/DataLayoutInterfaces.td"
+include "aiir/IR/AttrTypeBase.td"
+include "aiir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Types
 //===----------------------------------------------------------------------===//
 
 class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
-               string baseCppClass = "::mlir::Type">
+               string baseCppClass = "::aiir::Type">
     : TypeDef<CIR_Dialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
@@ -189,7 +189,7 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
     the complex number. `elementType` must be either a CIR integer type or a CIR
     floating-point type.
 
-    ```mlir
+    ```aiir
     !cir.complex<!s32i>
     !cir.complex<!cir.float>
     ```
@@ -198,7 +198,7 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
   let parameters = (ins CIR_AnyIntOrFloatType:$elementType);
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
+    TypeBuilderWithInferredContext<(ins "aiir::Type":$elementType), [{
       return $_get(elementType.getContext(), elementType);
     }]>,
   ];
@@ -213,7 +213,7 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
     }
 
     bool isIntegerComplex() const {
-      return mlir::isa<cir::IntType>(getElementType());
+      return aiir::isa<cir::IntType>(getElementType());
     }
   }];
 }
@@ -240,7 +240,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 
     Examples:
 
-    ```mlir
+    ```aiir
     !cir.ptr<!cir.int<u, 8>>
     !cir.ptr<!cir.float>
     !cir.ptr<!cir.record<struct "MyStruct">>
@@ -250,23 +250,23 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   }];
 
   let parameters = (ins
-    "mlir::Type":$pointee,
+    "aiir::Type":$pointee,
     OptionalParameter<
-        "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
+        "aiir::ptr::MemorySpaceAttrInterface">:$addrSpace
   );
 
   let skipDefaultBuilders = 1;
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$pointee,
-       CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+      "aiir::Type":$pointee,
+       CArg<"aiir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
         // Drop default address space and replace with empty attribute.
         addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
     TypeBuilder<(ins
-      "mlir::Type":$pointee,
-      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+      "aiir::Type":$pointee,
+      CArg<"aiir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
         // Drop default address space and replace with empty attribute.
         addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get($_ctxt, pointee, addrSpace);
@@ -283,7 +283,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let extraClassDeclaration = [{
     template <typename ...Types>
     bool isPtrTo() const {
-      return mlir::isa< Types... >(getPointee());
+      return aiir::isa< Types... >(getPointee());
     }
 
     bool isVoidPtr() const {
@@ -292,17 +292,17 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 
     template <typename ...Types>
     bool isPtrToPtrTo() const {
-      if (auto ptrType = mlir::dyn_cast<cir::PointerType>(getPointee()))
+      if (auto ptrType = aiir::dyn_cast<cir::PointerType>(getPointee()))
         return ptrType.isPtrTo<Types...>();
       return false;
     }
 
-    bool isPtrTo(mlir::Type type) const {
+    bool isPtrTo(aiir::Type type) const {
       return getPointee() == type;
     }
 
-    bool isPtrToPtrTo(mlir::Type type) const {
-      if (auto ptrType = mlir::dyn_cast<cir::PointerType>(getPointee()))
+    bool isPtrToPtrTo(aiir::Type type) const {
+      if (auto ptrType = aiir::dyn_cast<cir::PointerType>(getPointee()))
         return ptrType.isPtrTo(type);
       return false;
     }
@@ -325,12 +325,12 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
     containing record.
   }];
 
-  let parameters = (ins "mlir::Type":$member_ty,
+  let parameters = (ins "aiir::Type":$member_ty,
                         "cir::RecordType":$class_ty);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$member_ty, "cir::RecordType":$class_ty
+      "aiir::Type":$member_ty, "cir::RecordType":$class_ty
     ), [{
       return $_get(member_ty.getContext(), member_ty, class_ty);
     }]>,
@@ -397,11 +397,11 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
     `!cir.array` represents C/C++ constant arrays.
   }];
 
-  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+  let parameters = (ins "aiir::Type":$elementType, "uint64_t":$size);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$elementType, "uint64_t":$size
+      "aiir::Type":$elementType, "uint64_t":$size
     ), [{
         return $_get(elementType.getContext(), elementType, size);
     }]>,
@@ -434,7 +434,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Syntax:
 
-    ```mlir
+    ```aiir
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
@@ -445,7 +445,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Examples:
 
-    ```mlir
+    ```aiir
     !cir.vector<4 x !cir.int<u, 8>>
     !cir.vector<2 x !cir.float>
     ```
@@ -453,7 +453,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     Scalable vectors are indicated by enclosing size in square brackets.
 
     Example:
-    ```mlir
+    ```aiir
     !cir.vector<[4] x !cir.int<u, 8>>
     ```
   }];
@@ -466,7 +466,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
+      "aiir::Type":$element_type, "uint64_t":$size, CArg<"bool",
       "false">:$is_scalable
     ), [{
         return $_get(element_type.getContext(), element_type, size, is_scalable);
@@ -496,7 +496,7 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 
     Example:
 
-    ```mlir
+    ```aiir
     !cir.func<()>
     !cir.func<() -> bool>
     !cir.func<(!s8i, !s8i)>
@@ -505,8 +505,8 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     ```
   }];
 
-  let parameters = (ins ArrayRefParameter<"mlir::Type">:$inputs,
-                        OptionalParameter<"mlir::Type">:$optionalReturnType,
+  let parameters = (ins ArrayRefParameter<"aiir::Type">:$inputs,
+                        OptionalParameter<"aiir::Type">:$optionalReturnType,
                         "bool":$varArg);
   // Use a custom parser to handle argument types with variadic elipsis.
   let assemblyFormat = [{
@@ -515,14 +515,14 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 
   let builders = [
     // Create a FuncType, converting the return type from C-style to
-    // MLIR-style.  If the given return type is `cir::VoidType`, ignore it
-    // and create the FuncType with no return type, which is how MLIR
+    // AIIR-style.  If the given return type is `cir::VoidType`, ignore it
+    // and create the FuncType with no return type, which is how AIIR
     // represents function types.
     TypeBuilderWithInferredContext<(ins
-      "llvm::ArrayRef<mlir::Type>":$inputs, "mlir::Type":$returnType,
+      "llvm::ArrayRef<aiir::Type>":$inputs, "aiir::Type":$returnType,
       CArg<"bool", "false">:$isVarArg), [{
         return $_get(returnType.getContext(), inputs,
-                     mlir::isa<cir::VoidType>(returnType) ? nullptr : returnType,
+                     aiir::isa<cir::VoidType>(returnType) ? nullptr : returnType,
                      isVarArg);
     }]>
   ];
@@ -534,26 +534,26 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     bool isVarArg() const { return getVarArg(); }
 
     /// Returns the `i`th input operand type. Asserts if out of bounds.
-    mlir::Type getInput(unsigned i) const { return getInputs()[i]; }
+    aiir::Type getInput(unsigned i) const { return getInputs()[i]; }
 
     /// Returns the number of arguments to the function.
     unsigned getNumInputs() const { return getInputs().size(); }
 
     /// Get the C-style return type of the function, which is !cir.void if the
     /// function returns nothing and the actual return type otherwise.
-    mlir::Type getReturnType() const;
+    aiir::Type getReturnType() const;
 
-    /// Get the MLIR-style return type of the function, which is an empty
+    /// Get the AIIR-style return type of the function, which is an empty
     /// ArrayRef if the function returns nothing and a single-element ArrayRef
     /// with the actual return type otherwise.
-    llvm::ArrayRef<mlir::Type> getReturnTypes() const;
+    llvm::ArrayRef<aiir::Type> getReturnTypes() const;
 
     /// Does the function type return nothing?
     bool hasVoidReturn() const;
 
     /// Returns a clone of this function type with the given argument
     /// and result types.
-    FuncType clone(mlir::TypeRange inputs, mlir::TypeRange results) const;
+    FuncType clone(aiir::TypeRange inputs, aiir::TypeRange results) const;
   }];
 }
 
@@ -634,7 +634,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
 
     A few examples:
 
-    ```mlir
+    ```aiir
         !rec_complete = !cir.record<struct "complete" {!u8i}>
         !rec_incomplete = !cir.record<struct "incomplete" incomplete>
         !anonymous_struct = !cir.record<struct {!u8i}>
@@ -651,14 +651,14 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     In the example below, the `Node` record has a member that is a pointer to a
     `Node` record:
 
-    ```mlir
+    ```aiir
         !s = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
     ```
   }];
 
   let parameters = (ins
-    OptionalArrayRefParameter<"mlir::Type">:$members,
-    OptionalParameter<"mlir::StringAttr">:$name,
+    OptionalArrayRefParameter<"aiir::Type">:$members,
+    OptionalParameter<"aiir::StringAttr">:$name,
     "bool":$incomplete,
     "bool":$packed,
     "bool":$padded,
@@ -675,8 +675,8 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
   let builders = [
     // Create an identified and complete record type.
     TypeBuilder<(ins
-      "llvm::ArrayRef<mlir::Type>":$members,
-      "mlir::StringAttr":$name,
+      "llvm::ArrayRef<aiir::Type>":$members,
+      "aiir::StringAttr":$name,
       "bool":$packed,
       "bool":$padded,
       "RecordKind":$kind
@@ -687,7 +687,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
 
     // Create an identified and incomplete record type.
     TypeBuilder<(ins
-      "mlir::StringAttr":$name,
+      "aiir::StringAttr":$name,
       "RecordKind":$kind
     ), [{
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<Type>{}, name,
@@ -697,12 +697,12 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
 
     // Create an anonymous record type (always complete).
     TypeBuilder<(ins
-      "llvm::ArrayRef<mlir::Type>":$members,
+      "llvm::ArrayRef<aiir::Type>":$members,
       "bool":$packed,
       "bool":$padded,
       "RecordKind":$kind
     ), [{
-      return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
+      return $_get($_ctxt, members, aiir::StringAttr{}, /*incomplete=*/false,
                       packed, padded, kind);
     }]>];
 
@@ -717,7 +717,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     bool isComplete() const { return !isIncomplete(); };
     bool isIncomplete() const;
 
-    mlir::Type getLargestMember(const mlir::DataLayout &dataLayout) const;
+    aiir::Type getLargestMember(const aiir::DataLayout &dataLayout) const;
     size_t getNumElements() const { return getMembers().size(); };
     std::string getKindAsStr() {
       switch (getKind()) {
@@ -730,24 +730,24 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       }
       llvm_unreachable("Invalid value for RecordType::getKind()");
     }
-    mlir::Type getElementType(size_t idx) {
+    aiir::Type getElementType(size_t idx) {
       return getMembers()[idx];
     }
     std::string getPrefixedName() {
       return getKindAsStr() + "." + getName().getValue().str();
     }
 
-    void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
+    void complete(llvm::ArrayRef<aiir::Type> members, bool packed,
                   bool isPadded);
 
-    uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
+    uint64_t getElementOffset(const aiir::DataLayout &dataLayout,
               unsigned idx) const;
 
     bool isLayoutIdentical(const RecordType &other);
 
   private:
-    unsigned computeStructSize(const mlir::DataLayout &dataLayout) const;
-    uint64_t computeStructAlignment(const mlir::DataLayout &dataLayout) const;
+    unsigned computeStructSize(const aiir::DataLayout &dataLayout) const;
+    uint64_t computeStructAlignment(const aiir::DataLayout &dataLayout) const;
   public:
   }];
 
@@ -757,7 +757,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
 // Note CIRRecordType is used instead of CIR_RecordType
 // because of tablegen conflicts.
 def CIRRecordType : Type<
-  CPred<"::mlir::isa<::cir::RecordType>($_self)">, "CIR record type">;
+  CPred<"::aiir::isa<::cir::RecordType>($_self)">, "CIR record type">;
 
 //===----------------------------------------------------------------------===//
 // Exception Handling Token Types

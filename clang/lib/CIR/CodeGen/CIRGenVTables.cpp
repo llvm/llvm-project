@@ -14,7 +14,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenModule.h"
-#include "mlir/IR/Types.h"
+#include "aiir/IR/Types.h"
 #include "clang/AST/VTTBuilder.h"
 #include "clang/AST/VTableBuilder.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,7 +26,7 @@ using namespace clang::CIRGen;
 CIRGenVTables::CIRGenVTables(CIRGenModule &cgm)
     : cgm(cgm), vtContext(cgm.getASTContext().getVTableContext()) {}
 
-cir::FuncOp CIRGenModule::getAddrOfThunk(StringRef name, mlir::Type fnTy,
+cir::FuncOp CIRGenModule::getAddrOfThunk(StringRef name, aiir::Type fnTy,
                                          GlobalDecl gd) {
   return getOrCreateCIRFunction(name, fnTy, gd, /*forVTable=*/true,
                                 /*dontDefer=*/true, /*isThunk=*/true);
@@ -44,26 +44,26 @@ static void setThunkProperties(CIRGenModule &cgm, const ThunkInfo &thunk,
 
   if (!cgm.getCXXABI().exportThunk()) {
     assert(!cir::MissingFeatures::setDLLStorageClass());
-    cgm.setDSOLocal(static_cast<mlir::Operation *>(thunkFn));
+    cgm.setDSOLocal(static_cast<aiir::Operation *>(thunkFn));
   }
 
   if (cgm.supportsCOMDAT() && thunkFn.isWeakForLinker())
     thunkFn.setComdat(true);
 }
 
-mlir::Type CIRGenModule::getVTableComponentType() {
-  mlir::Type ptrTy = builder.getUInt8PtrTy();
+aiir::Type CIRGenModule::getVTableComponentType() {
+  aiir::Type ptrTy = builder.getUInt8PtrTy();
   assert(!cir::MissingFeatures::vtableRelativeLayout());
   return ptrTy;
 }
 
-mlir::Type CIRGenVTables::getVTableComponentType() {
+aiir::Type CIRGenVTables::getVTableComponentType() {
   return cgm.getVTableComponentType();
 }
 
 cir::RecordType CIRGenVTables::getVTableType(const VTableLayout &layout) {
-  SmallVector<mlir::Type, 4> tys;
-  mlir::Type componentType = getVTableComponentType();
+  SmallVector<aiir::Type, 4> tys;
+  aiir::Type componentType = getVTableComponentType();
   for (unsigned i = 0, e = layout.getNumVTables(); i != e; ++i)
     tys.push_back(cir::ArrayType::get(componentType, layout.getVTableSize(i)));
 
@@ -134,8 +134,8 @@ void CIRGenVTables::generateClassData(const CXXRecordDecl *rd) {
   cgm.getCXXABI().emitVTableDefinitions(*this, rd);
 }
 
-mlir::Attribute CIRGenVTables::getVTableComponent(
-    const VTableLayout &layout, unsigned componentIndex, mlir::Attribute rtti,
+aiir::Attribute CIRGenVTables::getVTableComponent(
+    const VTableLayout &layout, unsigned componentIndex, aiir::Attribute rtti,
     unsigned &nextVTableThunkIndex, unsigned vtableAddressPoint,
     bool vtableHasLocalLinkage) {
   const VTableComponent &component = layout.vtable_components()[componentIndex];
@@ -147,7 +147,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
   switch (component.getKind()) {
   case VTableComponent::CK_UnusedFunctionPointer:
     cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
-    return mlir::Attribute();
+    return aiir::Attribute();
 
   case VTableComponent::CK_VCallOffset:
     return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
@@ -162,8 +162,8 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
                                    component.getOffsetToTop().getQuantity());
 
   case VTableComponent::CK_RTTI:
-    assert((mlir::isa<cir::GlobalViewAttr>(rtti) ||
-            mlir::isa<cir::ConstPtrAttr>(rtti)) &&
+    assert((aiir::isa<cir::GlobalViewAttr>(rtti) ||
+            aiir::isa<cir::ConstPtrAttr>(rtti)) &&
            "expected GlobalViewAttr or ConstPtrAttr");
     return rtti;
 
@@ -219,7 +219,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
 
     return cir::GlobalViewAttr::get(
         builder.getUInt8PtrTy(),
-        mlir::FlatSymbolRefAttr::get(fnPtr.getSymNameAttr()));
+        aiir::FlatSymbolRefAttr::get(fnPtr.getSymNameAttr()));
   }
   }
 
@@ -228,22 +228,22 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
 
 void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
                                             const clang::VTableLayout &layout,
-                                            mlir::Attribute rtti,
+                                            aiir::Attribute rtti,
                                             bool vtableHasLocalLinkage) {
-  mlir::Type componentType = getVTableComponentType();
+  aiir::Type componentType = getVTableComponentType();
 
   const llvm::SmallVectorImpl<unsigned> &addressPoints =
       layout.getAddressPointIndices();
   unsigned nextVTableThunkIndex = 0;
 
-  mlir::MLIRContext *mlirContext = &cgm.getMLIRContext();
+  aiir::AIIRContext *aiirContext = &cgm.getAIIRContext();
 
-  SmallVector<mlir::Attribute> vtables;
+  SmallVector<aiir::Attribute> vtables;
   for (auto [vtableIndex, addressPoint] : llvm::enumerate(addressPoints)) {
     // Build a ConstArrayAttr of the vtable components.
     size_t vtableStart = layout.getVTableOffset(vtableIndex);
     size_t vtableEnd = vtableStart + layout.getVTableSize(vtableIndex);
-    llvm::SmallVector<mlir::Attribute> components;
+    llvm::SmallVector<aiir::Attribute> components;
     components.reserve(vtableEnd - vtableStart);
     for (size_t componentIndex : llvm::seq(vtableStart, vtableEnd))
       components.push_back(
@@ -252,12 +252,12 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
     // Create a ConstArrayAttr to hold the components.
     auto arr = cir::ConstArrayAttr::get(
         cir::ArrayType::get(componentType, components.size()),
-        mlir::ArrayAttr::get(mlirContext, components));
+        aiir::ArrayAttr::get(aiirContext, components));
     vtables.push_back(arr);
   }
 
   // Create a ConstRecordAttr to hold the component array.
-  const auto members = mlir::ArrayAttr::get(mlirContext, vtables);
+  const auto members = aiir::ArrayAttr::get(aiirContext, vtables);
   cir::ConstRecordAttr record = cgm.getBuilder().getAnonConstRecord(members);
 
   // Create a VTableAttr
@@ -300,7 +300,7 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
     linkage = cir::GlobalLinkageKind::InternalLinkage;
 
   llvm::Align align = cgm.getDataLayout().getABITypeAlign(vtType);
-  mlir::Location loc = cgm.getLoc(rd->getSourceRange());
+  aiir::Location loc = cgm.getLoc(rd->getSourceRange());
 
   // Create the variable that will hold the construction vtable.
   cir::GlobalOp vtable = cgm.createOrReplaceCXXRuntimeVariable(
@@ -309,7 +309,7 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   // V-tables are always unnamed_addr.
   assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
 
-  mlir::Attribute rtti = cgm.getAddrOfRTTIDescriptor(
+  aiir::Attribute rtti = cgm.getAddrOfRTTIDescriptor(
       loc, cgm.getASTContext().getCanonicalTagType(base.getBase()));
 
   // Create and set the initializer.
@@ -456,7 +456,7 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
                                       const CXXRecordDecl *rd) {
   VTTBuilder builder(cgm.getASTContext(), rd, /*GenerateDefinition=*/true);
 
-  mlir::MLIRContext *mlirContext = &cgm.getMLIRContext();
+  aiir::AIIRContext *aiirContext = &cgm.getAIIRContext();
 
   auto arrayType = cir::ArrayType::get(cgm.getBuilder().getUInt8PtrTy(),
                                        builder.getVTTComponents().size());
@@ -469,7 +469,7 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
                                          vtableAddressPoints.back()));
   }
 
-  SmallVector<mlir::Attribute> vttComponents;
+  SmallVector<aiir::Attribute> vttComponents;
   for (const VTTComponent &vttComponent : builder.getVTTComponents()) {
     const VTTVTable &vttVT = builder.getVTTVTables()[vttComponent.VTableIndex];
     cir::GlobalOp vtable = vtables[vttComponent.VTableIndex];
@@ -486,12 +486,12 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
              "Did not find ctor vtable address point!");
     }
 
-    mlir::Attribute indices[2] = {
+    aiir::Attribute indices[2] = {
         cgm.getBuilder().getI32IntegerAttr(addressPoint.VTableIndex),
         cgm.getBuilder().getI32IntegerAttr(addressPoint.AddressPointIndex),
     };
 
-    auto indicesAttr = mlir::ArrayAttr::get(mlirContext, indices);
+    auto indicesAttr = aiir::ArrayAttr::get(aiirContext, indices);
     cir::GlobalViewAttr init = cgm.getBuilder().getGlobalViewAttr(
         cgm.getBuilder().getUInt8PtrTy(), vtable, indicesAttr);
 
@@ -499,14 +499,14 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
   }
 
   auto init = cir::ConstArrayAttr::get(
-      arrayType, mlir::ArrayAttr::get(mlirContext, vttComponents));
+      arrayType, aiir::ArrayAttr::get(aiirContext, vttComponents));
 
   vttOp.setInitialValueAttr(init);
 
   // Set the correct linkage.
   vttOp.setLinkage(linkage);
-  mlir::SymbolTable::setSymbolVisibility(
-      vttOp, CIRGenModule::getMLIRVisibility(vttOp));
+  aiir::SymbolTable::setSymbolVisibility(
+      vttOp, CIRGenModule::getAIIRVisibility(vttOp));
 
   if (cgm.supportsCOMDAT() && vttOp.isWeakForLinker())
     vttOp.setComdat(true);
@@ -563,7 +563,7 @@ static RValue performReturnAdjustment(CIRGenFunction &cgf, QualType resultType,
   // Emit the return adjustment.
   bool nullCheckValue = !resultType->isReferenceType();
 
-  mlir::Value returnValue = rv.getValue();
+  aiir::Value returnValue = rv.getValue();
 
   if (nullCheckValue)
     cgf.cgm.errorNYI(
@@ -572,7 +572,7 @@ static RValue performReturnAdjustment(CIRGenFunction &cgf, QualType resultType,
   const CXXRecordDecl *classDecl =
       resultType->getPointeeType()->getAsCXXRecordDecl();
   CharUnits classAlign = cgf.cgm.getClassPointerAlignment(classDecl);
-  mlir::Type pointeeType = cgf.convertTypeForMem(resultType->getPointeeType());
+  aiir::Type pointeeType = cgf.convertTypeForMem(resultType->getPointeeType());
   returnValue = cgf.cgm.getCXXABI().performReturnAdjustment(
       cgf, Address(returnValue, pointeeType, classAlign), classDecl,
       thunk.Return);
@@ -656,7 +656,7 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
   if (thunk)
     thisValueClass = thunk->ThisType->getPointeeCXXRecordDecl();
 
-  mlir::Value adjustedThisPtr =
+  aiir::Value adjustedThisPtr =
       thunk ? cgm.getCXXABI().performThisAdjustment(*this, loadCXXThisAddress(),
                                                     thisValueClass, *thunk)
             : loadCXXThis();
@@ -721,7 +721,7 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
 
   // Now emit our call.
   CIRGenCallee cirCallee = CIRGenCallee::forDirect(callee, curGD);
-  mlir::Location loc = builder.getUnknownLoc();
+  aiir::Location loc = builder.getUnknownLoc();
   RValue rv = emitCall(*curFnInfo, cirCallee, slot, callArgs,
                        /*callOrTryCall=*/nullptr, loc);
 
@@ -742,7 +742,7 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
 }
 
 void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
-                                       mlir::Value adjustedThisPtr,
+                                       aiir::Value adjustedThisPtr,
                                        cir::FuncOp callee) {
   assert(!cir::MissingFeatures::opCallMustTail());
   cgm.errorNYI("musttail thunk");
@@ -755,7 +755,7 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
   // Create entry block and set up the builder's insertion point.
   // This must be done before calling startThunk() which calls startFunction().
   assert(fn.isDeclaration() && "Function already has body?");
-  mlir::Block *entryBb = fn.addEntryBlock();
+  aiir::Block *entryBb = fn.addEntryBlock();
   builder.setInsertionPointToStart(entryBb);
 
   // Create a scope in the symbol table to hold variable declarations.
@@ -774,7 +774,7 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
 
   // Get our callee. Use a placeholder type if this method is unprototyped so
   // that CIRGenModule doesn't try to set attributes.
-  mlir::Type ty;
+  aiir::Type ty;
   if (isUnprototyped)
     cgm.errorNYI("unprototyped thunk placeholder type");
   else
@@ -914,7 +914,7 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
     cgm.errorNYI("varargs thunk cloning");
   } else {
     // Normal thunk body generation.
-    mlir::OpBuilder::InsertionGuard guard(cgm.getBuilder());
+    aiir::OpBuilder::InsertionGuard guard(cgm.getBuilder());
     CIRGenFunction cgf(cgm, cgm.getBuilder());
     cgf.generateThunk(thunkFn, fnInfo, gd, thunkAdjustments, isUnprototyped);
   }

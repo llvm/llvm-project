@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+// Coding style: https://aiir.llvm.org/getting_started/DeveloperGuide/
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,8 +16,8 @@
 #include "flang/Frontend/FrontendAction.h"
 #include "flang/Frontend/ParserActions.h"
 
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/OwningOpRef.h"
+#include "aiir/IR/BuiltinOps.h"
+#include "aiir/IR/OwningOpRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include <memory>
@@ -168,7 +168,7 @@ class DebugDumpAllAction : public PrescanAndSemaDebugAction {
 // CodeGen Actions
 //===----------------------------------------------------------------------===//
 /// Represents the type of "backend" action to perform by the corresponding
-/// CodeGenAction. Note that from Flang's perspective, both LLVM and MLIR are
+/// CodeGenAction. Note that from Flang's perspective, both LLVM and AIIR are
 /// "backends" that are used for generating LLVM IR/BC, assembly files or
 /// machine code. This enum captures "what" exactly one of these backends is to
 /// do. The names are similar to what is used in Clang - this allows us to
@@ -182,14 +182,14 @@ enum class BackendActionTy {
   Backend_EmitHLFIR,    ///< Emit HLFIR files before any passes run
 };
 
-/// Abstract base class for actions that generate code (MLIR, LLVM IR, assembly
+/// Abstract base class for actions that generate code (AIIR, LLVM IR, assembly
 /// and machine code). Every action that inherits from this class will at
 /// least run the prescanning, parsing, semantic checks and lower the parse
-/// tree to an MLIR module.
+/// tree to an AIIR module.
 class CodeGenAction : public FrontendAction {
 
   void executeAction() override;
-  /// Runs prescan, parsing, sema and lowers to MLIR.
+  /// Runs prescan, parsing, sema and lowers to AIIR.
   bool beginSourceFileAction() override;
   /// Runs the optimization (aka middle-end) pipeline on the LLVM module
   /// associated with this action.
@@ -197,10 +197,10 @@ class CodeGenAction : public FrontendAction {
 
 protected:
   CodeGenAction(BackendActionTy act) : action{act} {};
-  /// @name MLIR
+  /// @name AIIR
   /// {
-  std::unique_ptr<mlir::MLIRContext> mlirCtx;
-  mlir::OwningOpRef<mlir::ModuleOp> mlirModule;
+  std::unique_ptr<aiir::AIIRContext> aiirCtx;
+  aiir::OwningOpRef<aiir::ModuleOp> aiirModule;
   /// }
 
   /// @name LLVM IR
@@ -216,7 +216,7 @@ protected:
   /// Runs pass pipeline to lower HLFIR into FIR
   void lowerHLFIRToFIR();
 
-  /// Generates an LLVM IR module from CodeGenAction::mlirModule and saves it
+  /// Generates an LLVM IR module from CodeGenAction::aiirModule and saves it
   /// in CodeGenAction::llvmModule.
   void generateLLVMIR();
 

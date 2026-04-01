@@ -9,8 +9,8 @@
 #ifndef FORTRAN_OPTIMIZER_CODEGEN_CODEGENOPENMP_H
 #define FORTRAN_OPTIMIZER_CODEGEN_CODEGENOPENMP_H
 
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
+#include "aiir/Pass/Pass.h"
+#include "aiir/Pass/PassRegistry.h"
 
 namespace fir {
 class LLVMTypeConverter;
@@ -19,7 +19,7 @@ class LLVMTypeConverter;
 /// dialect, utilised in cases where the default OpenMP dialect handling cannot
 /// handle all cases for intermingled fir types and operations.
 void populateOpenMPFIRToLLVMConversionPatterns(
-    const LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns);
+    const LLVMTypeConverter &converter, aiir::RewritePatternSet &patterns);
 
 } // namespace fir
 
