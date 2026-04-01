@@ -25543,7 +25543,8 @@ bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
   Type *StoreScalarTy = StoreTy->getScalarType();
   MinVF = PowerOf2Ceil(TTI.getStoreMinimumVF(
       R.getMinVF(DL.getTypeStoreSizeInBits(StoreScalarTy)), StoreScalarTy,
-      ValueTy->getScalarType()));
+      ValueTy->getScalarType(), Store->getAlign(),
+      Store->getPointerAddressSpace()));
   MinVF /= getNumElements(StoreTy);
   MinVF = std::max<unsigned>(2, MinVF);
 

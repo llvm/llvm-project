@@ -44,6 +44,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -480,9 +481,11 @@ public:
     return getTLI()->getPreferredLargeGEPBaseOffset(MinOffset, MaxOffset);
   }
 
-  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                             Type *ScalarValTy) const override {
-    auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy](unsigned VF) {
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy, Type *ScalarValTy,
+                             Align Alignment,
+                             unsigned AddrSpace) const override {
+    auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy, Alignment,
+                                  AddrSpace](unsigned VF) {
       auto *SrcTy = FixedVectorType::get(ScalarMemTy, VF / 2);
       EVT VT = getTLI()->getValueType(DL, SrcTy);
       if (getTLI()->isOperationLegal(ISD::STORE, VT) ||
@@ -493,7 +496,8 @@ public:
           getTLI()->getValueType(DL, FixedVectorType::get(ScalarValTy, VF / 2));
       EVT LegalizedVT =
           getTLI()->getTypeToTransformTo(ScalarMemTy->getContext(), VT);
-      return getTLI()->isTruncStoreLegal(LegalizedVT, ValVT);
+      return getTLI()->isTruncStoreLegal(LegalizedVT, ValVT, Alignment,
+                                         AddrSpace);
     };
     while (VF > 2 && IsSupportedByTarget(VF))
       VF /= 2;
@@ -1573,7 +1577,8 @@ public:
       TargetLowering::LegalizeAction LA = TargetLowering::Expand;
       EVT MemVT = getTLI()->getValueType(DL, Src);
       if (Opcode == Instruction::Store)
-        LA = getTLI()->getTruncStoreAction(LT.second, MemVT);
+        LA = getTLI()->getTruncStoreAction(LT.second, MemVT, Alignment,
+                                           AddressSpace);
       else
         LA = getTLI()->getLoadAction(LT.second, MemVT, Alignment, AddressSpace,
                                      ISD::EXTLOAD, false);
