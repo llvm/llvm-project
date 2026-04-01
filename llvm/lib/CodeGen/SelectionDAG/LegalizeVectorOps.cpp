@@ -307,7 +307,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     EVT StVT = ST->getMemoryVT();
     MVT ValVT = ST->getValue().getSimpleValueType();
     if (StVT.isVector() && ST->isTruncatingStore())
-      Action = TLI.getTruncStoreAction(ValVT, StVT);
+      Action = TLI.getTruncStoreAction(ValVT, StVT, ST->getAlign(),
+                                       ST->getAddressSpace());
     break;
   }
   case ISD::MERGE_VALUES:
