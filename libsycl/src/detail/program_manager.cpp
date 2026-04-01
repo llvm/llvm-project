@@ -161,8 +161,9 @@ DeviceImageWrapper *ProgramManager::getDeviceImage(std::string_view KernelName,
                   "No kernel named " + std::string(KernelName) + " was found");
 }
 
-ol_symbol_handle_t ProgramManager::getOrCreateKernel(const char *KernelName,
-                                                     DeviceImpl &Device) {
+ol_symbol_handle_t
+ProgramManager::getOrCreateKernel(std::string_view KernelName,
+                                  DeviceImpl &Device) {
   std::lock_guard<std::mutex> ImageGuard(MImageCollectionMutex);
 
   auto KernelIDIt = MKernelNameToID.find(KernelName);
@@ -213,10 +214,10 @@ ProgramManager::getOrCreateProgram(DeviceImpl &Device,
 
 ol_symbol_handle_t ProgramManager::createKernel(ol_program_handle_t Program,
                                                 const kernel_id &KernelID,
-                                                const char *KernelName,
+                                                std::string_view KernelName,
                                                 DeviceImpl &Device) {
   ol_symbol_handle_t Kernel{};
-  callAndThrow(olGetSymbol, Program, KernelName, OL_SYMBOL_KIND_KERNEL,
+  callAndThrow(olGetSymbol, Program, KernelName.data(), OL_SYMBOL_KIND_KERNEL,
                &Kernel);
   MKernels.insert(
       std::make_pair(KernelID, std::make_pair(Device.getHandle(), Kernel)));

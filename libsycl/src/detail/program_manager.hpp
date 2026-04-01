@@ -96,7 +96,7 @@ public:
   /// \param Device a device for which this kernel must be compiled.
   /// \return liboffload kernel handle that is ready to be passed to kernel
   /// execution methods.
-  ol_symbol_handle_t getOrCreateKernel(const char *KernelName,
+  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName,
                                        DeviceImpl &Device);
 
 private:
@@ -137,7 +137,8 @@ private:
   /// \return liboffload kernel for the requested configuration.
   ol_symbol_handle_t createKernel(ol_program_handle_t Program,
                                   const kernel_id &KernelID,
-                                  const char *KernelName, DeviceImpl &Device);
+                                  std::string_view KernelName,
+                                  DeviceImpl &Device);
 
   /// Searches for kernel.
   /// This call must be protected with mutex since it reads MKernels collection.

@@ -47,7 +47,7 @@ void queue::setKernelParameters(const std::vector<event> &Events,
   return impl->setKernelParameters(std::move(DepEventImplRefs), Range);
 }
 
-void queue::submitKernelImpl(const char *KernelName,
+void queue::submitKernelImpl(std::string_view KernelName,
                              detail::ArgCollection &TypelessArgs) {
   impl->submitKernelImpl(KernelName, TypelessArgs);
 }

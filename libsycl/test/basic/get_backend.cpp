@@ -20,17 +20,16 @@ bool check(backend be) {
   default:
     return false;
   }
-  return false;
 }
 
-inline void return_fail() {
+void return_fail() {
   std::cout << "Failed" << std::endl;
   exit(1);
 }
 
 int main() {
   for (const auto &plt : platform::get_platforms()) {
-    if (check(plt.get_backend()) == false) {
+    if (!check(plt.get_backend())) {
       return_fail();
     }
 

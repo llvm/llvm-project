@@ -185,7 +185,7 @@ public:
   /// Defines and invokes a SYCL kernel function as a lambda expression or a
   /// named function object type.
   ///
-  /// \param depEvents is a collection of events which specify the kernel
+  /// \param depEvents is a collection of events that specify the kernel
   /// dependencies.
   /// \param kernelFunc is the kernel functor or lambda.
   /// \return an event that represents the status of the submitted kernel.
@@ -195,8 +195,8 @@ public:
     static_assert(
         (detail::CheckFunctionSignature<std::remove_reference_t<KernelType>,
                                         void()>::value),
-        "sycl::queue::single_task() requires a kernel instead of command "
-        "group. ");
+        "sycl::queue::single_task() requires a kernel instead of a command "
+        "group");
 
     setKernelParameters(depEvents);
     submitSingleTask<KernelName, KernelType>(kernelFunc);
@@ -213,8 +213,10 @@ private:
   // function in the host implementation of KernelFunc in submitSingleTask.
   template <typename, typename... Args>
   void sycl_kernel_launch(const char *KernelName, Args &&...args) {
-    static_assert((sizeof...(args) == 1) &&
-                  "Only 2 arguments are expected in sycl_kernel_launch.");
+    static_assert(
+        (sizeof...(args) == 1) &&
+        "sycl_kernel_launch expects only 2 arguments now: name of kernel and "
+        "callable object passed to kernel invocation by the user.");
     detail::ArgCollection TypelessArgs;
     (TypelessArgs.addArg(args), ...);
 
@@ -230,12 +232,12 @@ private:
 
   template <typename KernelName, typename KernelType>
   _LIBSYCL_ENTRY_POINT_ATTR__(KernelName)
-  void submitSingleTask(const KernelType KernelFunc) {
+  void submitSingleTask(const KernelType &KernelFunc) {
     KernelFunc();
   }
 
   event getLastEvent();
-  void submitKernelImpl(const char *KernelName,
+  void submitKernelImpl(std::string_view KernelName,
                         detail::ArgCollection &TypelessArgs);
   void setKernelParameters(const std::vector<event> &Events,
                            const detail::UnifiedRangeView &Range = {});

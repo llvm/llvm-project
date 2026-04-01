@@ -15,7 +15,6 @@
 #include <OffloadAPI.h>
 
 #include <memory>
-#include <mutex>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
@@ -63,12 +62,12 @@ public:
   /// \return true if and only if the queue is in order.
   bool isInOrder() const { return MIsInorder; }
 
-  /// Enqueues kernel to liboffload.
+  /// Enqueues a kernel to liboffload.
   /// Kernel parameters like dependencies and range must be passed in advance by
   /// calling setKernelParameters.
   /// \param KernelName a name of kernel to be enqueued.
   /// \param TypelessArgs data about kernel arguments to be used for enqueue.
-  void submitKernelImpl(const char *KernelName,
+  void submitKernelImpl(std::string_view KernelName,
                         detail::ArgCollection &TypelessArgs);
 
   /// \return an event impl object that corresponds to the last kernel
@@ -80,9 +79,9 @@ public:
   }
 
   /// Sets kernel parameters to be used in the next submitKernelImpl call.
-  /// Must be called prior to submitKernelImpl call.
-  /// \param Events a collection of events that kernal depends on.
-  /// \param Range a unified range view of execution range.
+  /// Must be called prior to a submitKernelImpl call.
+  /// \param Events a collection of events that the kernal depends on.
+  /// \param Range a unified range view of the execution range.
   void setKernelParameters(std::vector<EventImplPtr> &&Events,
                            const detail::UnifiedRangeView &Range);
 

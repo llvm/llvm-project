@@ -12,7 +12,9 @@ int main() {
   *p = 0;
   q.single_task<Test>([=]() { *p = 42; });
   q.wait();
-  assert(*p == 42);
+
+  bool Failed = *p != 42;
+
   sycl::free(p, q);
-  return 0;
+  return Failed;
 }

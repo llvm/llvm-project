@@ -18,17 +18,18 @@ namespace detail {
 
 static void setKernelLaunchArgs(const detail::UnifiedRangeView &Range,
                                 ol_kernel_launch_size_args_t &ArgsToSet) {
+  assert(Range.MDims < 4 && "Invalid dimensions.");
   size_t GlobalSize[3] = {1, 1, 1};
   if (Range.MGlobalSize) {
     for (uint32_t I = 0; I < Range.MDims; I++) {
-      GlobalSize[I] = Range.MGlobalSize[I];
+      GlobalSize[I] = static_cast<uint32_t>(Range.MGlobalSize[I]);
     }
   }
 
   size_t GroupSize[3] = {1, 1, 1};
   if (Range.MLocalSize) {
     for (uint32_t I = 0; I < Range.MDims; I++) {
-      GroupSize[I] = Range.MLocalSize[I];
+      GroupSize[I] = static_cast<uint32_t>(Range.MLocalSize[I]);
     }
   }
 
@@ -80,8 +81,8 @@ void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
         "libsycl doesn't support cross-context/platform event dependencies "
         "now.");
 
-  // TODO: this convertion and storing only offload events is possible only
-  // while we don't have host tasks (and features based on host tasks, like
+  // TODO: this conversion and storing of only offload events is possible only
+  // while we don't have host tasks (or features based on host tasks, like
   // streams). With them - it is very likely we should copy EventImplPtr
   // (shared_ptr) and keep it here. Although it may differ if host tasks will be
   // implemented on offload level (no data now).
@@ -95,14 +96,19 @@ void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
   setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
 }
 
-void QueueImpl::submitKernelImpl(const char *KernelName,
+void QueueImpl::submitKernelImpl(std::string_view KernelName,
                                  detail::ArgCollection &TypelessArgs) {
   ol_symbol_handle_t Kernel =
       detail::ProgramManager::getInstance().getOrCreateKernel(KernelName,
                                                               MDevice);
   assert(Kernel);
 
-  ol_event_handle_t NewEvent{};
+  // TODO: liboffload supports only in-order queues and no cross context waiting
+  // is available now that means that this code is excessive but correct. I
+  // don't want to skip it and rely on default liboffload behaviour that is
+  // applicable for in-order queue only. Once OOO queues are added this waiting
+  // must be disabled for in-order queues. Once host tasks are added - cross
+  // context dependencies should be enabled and checked as well.
   if (!MCurrentSubmitInfo.DepEvents.empty()) {
     callAndThrow(olWaitEvents, MOffloadQueue,
                  MCurrentSubmitInfo.DepEvents.data(),
@@ -137,9 +143,11 @@ void QueueImpl::submitKernelImpl(const char *KernelName,
   MCurrentSubmitInfo.Range = {};
   if (isFailed(Result))
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
-                          std::string("Kernel submission (") + KernelName +
-                              ") failed with " + formatCodeString(Result));
+                          std::string("Kernel submission (") +
+                              KernelName.data() + ") failed with " +
+                              formatCodeString(Result));
 
+  ol_event_handle_t NewEvent{};
   callAndThrow(olCreateEvent, MOffloadQueue, &NewEvent);
 
   MCurrentSubmitInfo.LastEvent =

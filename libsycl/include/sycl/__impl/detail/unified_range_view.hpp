@@ -26,7 +26,7 @@ namespace detail {
 class UnifiedRangeView {
 
 public:
-  /// Default contructed view matches single task execution range.
+  /// Default contructed view matches the single task execution range.
   UnifiedRangeView() = default;
   UnifiedRangeView(const UnifiedRangeView &Desc) = default;
   UnifiedRangeView(UnifiedRangeView &&Desc) = default;

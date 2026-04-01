@@ -33,7 +33,7 @@ public:
   ArgWrapperBase &operator=(const ArgWrapperBase &) = delete;
   virtual ~ArgWrapperBase() = default;
 
-  virtual void deepCopy() = 0;
+  virtual bool deepCopy() = 0;
   virtual size_t getSize() const = 0;
   virtual const void *getPtr() const = 0;
 
@@ -48,27 +48,29 @@ public:
   ArgWrapper(const ArgWrapper &) = delete;
   ArgWrapper &operator=(const ArgWrapper &) = delete;
 
-  /// \return size of argument in bytes.
+  /// \return the size of the argument in bytes.
   size_t getSize() const override { return sizeof(Type); }
 
-  /// Returns raw pointer to the corresponding argument.
+  /// Returns a raw pointer to the corresponding argument.
   /// No copy is done by this method. It works with pointer to the memory whose
   /// existence must be guaranteed by class user or with copy that must be
   /// explicitly requested by class user via deepCopy method.
-  /// \return pointer to the argument.
+  /// \return a pointer to the argument.
   const void *getPtr() const override {
     assert((!DeepCopy || (DeepCopy.get()) == Ptr) &&
            "Incorrect state of copied argument");
     return Ptr;
   }
 
-  /// Copies agrument to RT owned storage.
-  void deepCopy() override {
+  /// Copies the agrument to RT owned storage.
+  /// \return true if argument was copied in this exact call.
+  bool deepCopy() override {
     if (DeepCopy)
-      return;
+      return false;
 
     DeepCopy.reset(new Type(*Ptr));
     Ptr = DeepCopy.get();
+    return true;
   }
 
 private:
@@ -80,9 +82,9 @@ private:
 /// data to pass through ABI boundary.
 class ArgCollection {
 public:
-  /// Adds argument to the collection. Don't own the memory. Argument lifetime
-  /// must be guaranteed by class user. If extended lifetime is needed (copy),
-  /// deepCopy must be called.
+  /// Adds an argument to the collection. Doesn't own the memory, the argument
+  /// lifetime must be guaranteed by the class user. If extended lifetime is
+  /// needed (copy), deepCopy must be called.
   template <typename Type> void addArg(Type &Arg) {
     MArgs.emplace_back(new ArgWrapper(Arg));
   }
@@ -92,10 +94,8 @@ public:
     if (MPtrs.size() != MArgs.size()) {
       MPtrs.clear();
       MPtrs.reserve(MArgs.size());
-      auto it = MArgs.cbegin();
-      while (it != MArgs.cend()) {
-        MPtrs.push_back((*it++)->getPtr());
-      }
+      for (const auto &Argument : MArgs)
+        MPtrs.push_back(Argument->getPtr());
     }
     return MPtrs.data();
   }
@@ -105,10 +105,8 @@ public:
     if (MSizes.size() != MArgs.size()) {
       MSizes.clear();
       MSizes.reserve(MArgs.size());
-      auto it = MArgs.cbegin();
-      while (it != MArgs.cend()) {
-        MSizes.push_back(static_cast<int64_t>((*it++)->getSize()));
-      }
+      for (const auto &Argument : MArgs)
+        MSizes.push_back(static_cast<int64_t>(Argument->getSize()));
     }
     return MSizes.data();
   }
@@ -118,8 +116,15 @@ public:
 
   /// Extends arguments lifetime by doing copy of all arguments.
   void deepCopy() {
+    bool CopiedAtLeastOne = false;
     for (auto &Arg : MArgs)
-      Arg->deepCopy();
+      CopiedAtLeastOne |= Arg->deepCopy();
+
+    if (CopiedAtLeastOne) {
+      MPtrs.clear();
+      // MSizes must be the same. No changes here so no need to clean and
+      // refill.
+    }
   }
 
 private:
