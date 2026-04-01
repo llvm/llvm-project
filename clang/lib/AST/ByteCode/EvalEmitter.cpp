@@ -11,6 +11,7 @@
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
@@ -370,12 +371,16 @@ void EvalEmitter::updateGlobalTemporaries() {
     assert(GlobalIndex);
     const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
     APValue *Cached = Temp->getOrCreateValue(true);
-    if (OptPrimType T = Ctx.classify(E->getType())) {
+
+    QualType TempType = E->getType();
+    if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+      TempType = MTE->getSubExpr()->skipRValueSubobjectAdjustments()->getType();
+
+    if (OptPrimType T = Ctx.classify(TempType)) {
       TYPE_SWITCH(*T,
                   { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
     } else {
-      if (std::optional<APValue> APV =
-              Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
+      if (std::optional<APValue> APV = Ptr.toRValue(Ctx, TempType))
         *Cached = *APV;
     }
   }

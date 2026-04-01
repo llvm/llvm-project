@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
@@ -81,6 +80,8 @@ public:
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
+  Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
+
   Error disconnect() override;
 
   Expected<HandleMessageAction>
@@ -127,7 +128,6 @@ private:
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   std::unique_ptr<MemoryAccess> OwnedMemAccess;
 
-  std::unique_ptr<EPCGenericDylibManager> EPCDylibMgr;
   ExecutorAddr RunAsMainAddr;
   ExecutorAddr RunAsVoidFunctionAddr;
   ExecutorAddr RunAsIntFunctionAddr;

@@ -40,11 +40,9 @@ namespace omp {
 
 class ReductionProcessor {
 public:
-  // ompOrig: mold/original variable
-  // ompPriv: private allocation (may be null for by-value reductions)
-  using GenInitValueCBTy = std::function<mlir::Value(
-      fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type type,
-      mlir::Value ompOrig, mlir::Value ompPriv)>;
+  using GenInitValueCBTy =
+      std::function<mlir::Value(fir::FirOpBuilder &builder, mlir::Location loc,
+                                mlir::Type type, mlir::Value ompOrig)>;
   using GenCombinerCBTy = std::function<void(
       fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type type,
       mlir::Value op1, mlir::Value op2, bool isByRef)>;
@@ -128,8 +126,7 @@ public:
   static DeclareRedType createDeclareReductionHelper(
       AbstractConverter &converter, llvm::StringRef reductionOpName,
       mlir::Type type, mlir::Location loc, bool isByRef,
-      GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB,
-      const semantics::Symbol *sym = nullptr);
+      GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB);
 
   /// Creates an OpenMP reduction declaration and inserts it into the provided
   /// symbol table. The declaration has a constant initializer with the neutral

@@ -72,42 +72,20 @@ public:
     /// location containing the data.
     uint32_t CVRegister : 16;
 
-    /// Value for `DerefOffset` indicating this is not an indirect load.
-    constexpr static int32_t NoDeref = INT32_MIN;
-
-    /// Offset to add after dereferencing `CVRegister + DataOffset` for
-    /// indirect loads. If this is not an indirect load, it's set to NoDeref.
-    int32_t DerefOffset = NoDeref;
-
-    static LocalVarDef emptyValue() {
-      LocalVarDef V;
-      std::memset(&V, 0xff, sizeof(LocalVarDef));
-      return V;
+    uint64_t static toOpaqueValue(const LocalVarDef DR) {
+      uint64_t Val = 0;
+      std::memcpy(&Val, &DR, sizeof(Val));
+      return Val;
     }
 
-    static LocalVarDef tombstoneValue() {
-      LocalVarDef V;
-      std::memset(&V, 0xff, sizeof(LocalVarDef));
-      V.InMemory = 0;
-      return V;
-    }
-
-    unsigned hashValue() const {
-      uint64_t H = 0;
-      std::memcpy(&H, this, sizeof(uint64_t));
-      static_assert(sizeof(LocalVarDef) == 8 + 4 &&
-                    offsetof(LocalVarDef, DerefOffset) == 8);
-      H = hash_combine(H, DerefOffset);
-      return H;
-    }
-
-    bool operator==(const LocalVarDef &Other) const {
-      return InMemory == Other.InMemory && DataOffset == Other.DataOffset &&
-             IsSubfield == Other.IsSubfield &&
-             StructOffset == Other.StructOffset &&
-             CVRegister == Other.CVRegister && DerefOffset == Other.DerefOffset;
+    LocalVarDef static createFromOpaqueValue(uint64_t Val) {
+      LocalVarDef DR;
+      std::memcpy(&DR, &Val, sizeof(Val));
+      return DR;
     }
   };
+
+  static_assert(sizeof(uint64_t) == sizeof(LocalVarDef));
 
 private:
   MCStreamer &OS;
@@ -126,8 +104,7 @@ private:
   /// info is being emitted, DebugHandlerBase::Asm may be null.
   AsmPrinter *CompilerInfoAsm = nullptr;
 
-  static LocalVarDef createDefRangeMem(uint16_t CVRegister, int Offset,
-                                       int32_t DerefOffset);
+  static LocalVarDef createDefRangeMem(uint16_t CVRegister, int Offset);
 
   /// Similar to DbgVariable in DwarfDebug, but not dwarf-specific.
   struct LocalVariable {
@@ -135,6 +112,7 @@ private:
     MapVector<LocalVarDef,
               SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 1>>
         DefRanges;
+    bool UseReferenceType = false;
     std::optional<APSInt> ConstantValue;
   };
 
@@ -453,6 +431,8 @@ private:
   getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
                          const DISubroutineType *SubroutineTy);
 
+  codeview::TypeIndex getTypeIndexForReferenceTo(const DIType *Ty);
+
   codeview::TypeIndex getMemberFunctionType(const DISubprogram *SP,
                                             const DICompositeType *Class);
 
@@ -556,20 +536,21 @@ public:
 template <> struct DenseMapInfo<CodeViewDebug::LocalVarDef> {
 
   static inline CodeViewDebug::LocalVarDef getEmptyKey() {
-    return CodeViewDebug::LocalVarDef::emptyValue();
+    return CodeViewDebug::LocalVarDef::createFromOpaqueValue(~0ULL);
   }
 
   static inline CodeViewDebug::LocalVarDef getTombstoneKey() {
-    return CodeViewDebug::LocalVarDef::tombstoneValue();
+    return CodeViewDebug::LocalVarDef::createFromOpaqueValue(~0ULL - 1ULL);
   }
 
   static unsigned getHashValue(const CodeViewDebug::LocalVarDef &DR) {
-    return DR.hashValue();
+    return CodeViewDebug::LocalVarDef::toOpaqueValue(DR) * 37ULL;
   }
 
   static bool isEqual(const CodeViewDebug::LocalVarDef &LHS,
                       const CodeViewDebug::LocalVarDef &RHS) {
-    return LHS == RHS;
+    return CodeViewDebug::LocalVarDef::toOpaqueValue(LHS) ==
+           CodeViewDebug::LocalVarDef::toOpaqueValue(RHS);
   }
 };
 
