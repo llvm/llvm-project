@@ -12,8 +12,8 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/raw_rwlock.h"
 #include "src/__support/threads/raw_mutex.h"
+#include "src/__support/threads/raw_rwlock.h"
 #include "src/__support/threads/sleep.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
@@ -131,7 +131,8 @@ static void nullptr_test() {
 // counts.
 static void high_reader_count_test() {
   pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
-  rwlock.__raw.__state = LIBC_NAMESPACE::rwlock::RwLockTester::full_reader_state();
+  rwlock.__raw.__state =
+      LIBC_NAMESPACE::rwlock::RwLockTester::full_reader_state();
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_rdlock(&rwlock), EAGAIN);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_tryrdlock(&rwlock), EAGAIN);
   // allocate 4 reader slots.

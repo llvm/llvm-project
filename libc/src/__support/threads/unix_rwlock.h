@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_UNIX_RWLOCK_H
 
 #include "hdr/types/pid_t.h"
-#include "src/__support/common.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/common.h"
 #include "src/__support/threads/identifier.h"
 #include "src/__support/threads/raw_rwlock.h"
 
