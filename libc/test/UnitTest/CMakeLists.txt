@@ -3,7 +3,7 @@ function(add_unittest_framework_library name)
     "TEST_LIB"
     "" # No optional arguments
     "" # No single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi value arguments
+    "SRCS;HDRS;DEPENDS" # Multi value arguments
     ${ARGN}
   )
   if(NOT TEST_LIB_SRCS)
@@ -30,17 +30,14 @@ function(add_unittest_framework_library name)
     # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
     set(LLVM_LIBC_FULL_BUILD "")
     _get_common_test_compile_options(compile_options "" "")
+    target_compile_options(${name}.unit PRIVATE ${compile_options})
     set(LLVM_LIBC_FULL_BUILD ON)
   else()
     _get_common_test_compile_options(compile_options "" "")
+    target_compile_options(${name}.unit PRIVATE ${compile_options})
   endif()
 
-  if (TEST_LIB_COMPILE_OPTIONS)
-    list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
-  endif()
-  target_compile_options(${name}.unit PRIVATE ${compile_options})
-
-    _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
   target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
@@ -60,15 +57,6 @@ function(add_unittest_framework_library name)
   endif()
 endfunction()
 
-if (NOT TARGET libc.src.__support.OSUtil.osutil OR NOT LLVM_LIBC_FULL_BUILD)
-  message(STATUS "TestLogger will use system libc's stdio to print.")
-  set(test_logger_compile_options "-DLIBC_TEST_USE_SYSTEM_PRINTF")
-  set(test_logger_osutil "")
-else()
-  set(test_logger_compile_options "")
-  set(test_logger_osutil "libc.src.__support.OSUtil.osutil")
-endif()
-
 add_unittest_framework_library(
   LibcTest
   SRCS
@@ -80,8 +68,6 @@ add_unittest_framework_library(
     LibcTest.h
     Test.h
     TestLogger.h
-  COMPILE_OPTIONS
-    ${test_logger_compile_options}
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.big_int
@@ -92,8 +78,8 @@ add_unittest_framework_library(
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.types
+    libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
-    ${test_logger_osutil}
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
