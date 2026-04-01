@@ -2,9 +2,6 @@
 
 // Tiny trip counts: trip=1 with counts(1, omp_fill) and trip=0.
 
-#ifndef HEADER
-#define HEADER
-
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -27,8 +24,6 @@ int main() {
 
   return EXIT_SUCCESS;
 }
-
-#endif /* HEADER */
 
 // CHECK:      trip1
 // CHECK-NEXT: i=0

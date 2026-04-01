@@ -1,8 +1,5 @@
 // RUN: %libomp-cxx-compile-and-run | FileCheck %s --match-full-lines
 
-#ifndef HEADER
-#define HEADER
-
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
@@ -16,8 +13,6 @@ int main() {
   printf("done\n");
   return EXIT_SUCCESS;
 }
-
-#endif /* HEADER */
 
 // CHECK:      do
 // CHECK-NEXT: x=10

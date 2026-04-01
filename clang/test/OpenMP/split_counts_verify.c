@@ -29,6 +29,7 @@ int main(void) {
 // IR-NEXT:    [[N:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[SUM:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[I:%.*]] = alloca i32, align 4
+// IR-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTSPLIT_IV_2_I:%.*]] = alloca i32, align 4
@@ -44,8 +45,8 @@ int main(void) {
 // IR-NEXT:    br i1 [[CMP]], label %[[FOR_BODY:.*]], label %[[FOR_END:.*]]
 // IR:       [[FOR_BODY]]:
 // IR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// IR-NEXT:    store i32 [[TMP1]], ptr @main..omp.iv, align 4
-// IR-NEXT:    [[TMP2:%.*]] = load i32, ptr @main..omp.iv, align 4
+// IR-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
+// IR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // IR-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // IR-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // IR-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -68,8 +69,8 @@ int main(void) {
 // IR-NEXT:    br i1 [[CMP3]], label %[[FOR_BODY4:.*]], label %[[FOR_END10:.*]]
 // IR:       [[FOR_BODY4]]:
 // IR-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// IR-NEXT:    store i32 [[TMP7]], ptr @main..omp.iv, align 4
-// IR-NEXT:    [[TMP8:%.*]] = load i32, ptr @main..omp.iv, align 4
+// IR-NEXT:    store i32 [[TMP7]], ptr [[DOTOMP_IV]], align 4
+// IR-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // IR-NEXT:    [[MUL5:%.*]] = mul nsw i32 [[TMP8]], 1
 // IR-NEXT:    [[ADD6:%.*]] = add nsw i32 0, [[MUL5]]
 // IR-NEXT:    store i32 [[ADD6]], ptr [[I]], align 4
@@ -92,8 +93,8 @@ int main(void) {
 // IR-NEXT:    br i1 [[CMP12]], label %[[FOR_BODY13:.*]], label %[[FOR_END19:.*]]
 // IR:       [[FOR_BODY13]]:
 // IR-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTSPLIT_IV_2_I]], align 4
-// IR-NEXT:    store i32 [[TMP13]], ptr @main..omp.iv, align 4
-// IR-NEXT:    [[TMP14:%.*]] = load i32, ptr @main..omp.iv, align 4
+// IR-NEXT:    store i32 [[TMP13]], ptr [[DOTOMP_IV]], align 4
+// IR-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // IR-NEXT:    [[MUL14:%.*]] = mul nsw i32 [[TMP14]], 1
 // IR-NEXT:    [[ADD15:%.*]] = add nsw i32 0, [[MUL14]]
 // IR-NEXT:    store i32 [[ADD15]], ptr [[I]], align 4

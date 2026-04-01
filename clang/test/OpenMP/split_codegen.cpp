@@ -116,6 +116,7 @@ void split_range_for() {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[I2:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -132,8 +133,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP1]], ptr @_ZZN1SC1EvE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZZN1SC1EvE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
@@ -156,8 +157,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6:%.*]], label [[FOR_END11:%.*]]
 // CHECK1:       for.body6:
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP8]], ptr @_ZZN1SC1EvE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr @_ZZN1SC1EvE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP8]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL7:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK1-NEXT:    [[ADD8:%.*]] = add nsw i32 0, [[MUL7]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2]], !align [[META3]]
@@ -179,6 +180,7 @@ void split_range_for() {
 // CHECK1-SAME: ) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 0, ptr [[I]], align 4
@@ -190,8 +192,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP1]], ptr @_ZZ20split_two_const_tripE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZZ20split_two_const_tripE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -212,8 +214,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3:%.*]], label [[FOR_END8:%.*]]
 // CHECK1:       for.body3:
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP6]], ptr @_ZZ20split_two_const_tripE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr @_ZZ20split_two_const_tripE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL4:%.*]] = mul nsw i32 [[TMP7]], 1
 // CHECK1-NEXT:    [[ADD5:%.*]] = add nsw i32 0, [[MUL4]]
 // CHECK1-NEXT:    store i32 [[ADD5]], ptr [[I]], align 4
@@ -236,6 +238,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
@@ -255,8 +258,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP3]], ptr @_ZZ14split_var_tripE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ14split_var_tripE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP4]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -279,8 +282,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6:%.*]], label [[FOR_END11:%.*]]
 // CHECK1:       for.body6:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP9]], ptr @_ZZ14split_var_tripE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ14split_var_tripE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL7:%.*]] = mul nsw i32 [[TMP10]], 1
 // CHECK1-NEXT:    [[ADD8:%.*]] = add nsw i32 0, [[MUL7]]
 // CHECK1-NEXT:    store i32 [[ADD8]], ptr [[I]], align 4
@@ -303,6 +306,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_2_I:%.*]] = alloca i32, align 4
@@ -323,8 +327,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP3]], ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP4]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -348,8 +352,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP6]], label [[FOR_BODY7:%.*]], label [[FOR_END12:%.*]]
 // CHECK1:       for.body7:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP9]], ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL8:%.*]] = mul nsw i32 [[TMP10]], 1
 // CHECK1-NEXT:    [[ADD9:%.*]] = add nsw i32 0, [[MUL8]]
 // CHECK1-NEXT:    store i32 [[ADD9]], ptr [[I]], align 4
@@ -375,8 +379,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP17]], label [[FOR_BODY18:%.*]], label [[FOR_END23:%.*]]
 // CHECK1:       for.body18:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTSPLIT_IV_2_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP16]], ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP16]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL19:%.*]] = mul nsw i32 [[TMP17]], 1
 // CHECK1-NEXT:    [[ADD20:%.*]] = add nsw i32 0, [[MUL19]]
 // CHECK1-NEXT:    store i32 [[ADD20]], ptr [[I]], align 4
@@ -399,6 +403,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
@@ -421,8 +426,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP4]], ptr @_ZZ16split_first_fillE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr @_ZZ16split_first_fillE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP5]], 1
 // CHECK1-NEXT:    [[ADD4:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD4]], ptr [[I]], align 4
@@ -448,8 +453,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END15:%.*]]
 // CHECK1:       for.body10:
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP11]], ptr @_ZZ16split_first_fillE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP12:%.*]] = load i32, ptr @_ZZ16split_first_fillE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP11]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL11:%.*]] = mul nsw i32 [[TMP12]], 1
 // CHECK1-NEXT:    [[ADD12:%.*]] = add nsw i32 0, [[MUL11]]
 // CHECK1-NEXT:    store i32 [[ADD12]], ptr [[I]], align 4
@@ -472,6 +477,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[I]], align 4
@@ -492,8 +498,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP4]], ptr @_ZZ15split_only_fillE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr @_ZZ15split_only_fillE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP5]], 1
 // CHECK1-NEXT:    [[ADD3:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD3]], ptr [[I]], align 4
@@ -516,6 +522,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_2_I:%.*]] = alloca i32, align 4
@@ -536,8 +543,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP3]], ptr @_ZZ15split_neg_startE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ15split_neg_startE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul i32 [[TMP4]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add i32 -1, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -561,8 +568,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP6]], label [[FOR_BODY7:%.*]], label [[FOR_END12:%.*]]
 // CHECK1:       for.body7:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP9]], ptr @_ZZ15split_neg_startE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ15split_neg_startE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL8:%.*]] = mul i32 [[TMP10]], 1
 // CHECK1-NEXT:    [[ADD9:%.*]] = add i32 -1, [[MUL8]]
 // CHECK1-NEXT:    store i32 [[ADD9]], ptr [[I]], align 4
@@ -588,8 +595,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP17]], label [[FOR_BODY18:%.*]], label [[FOR_END23:%.*]]
 // CHECK1:       for.body18:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTSPLIT_IV_2_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP16]], ptr @_ZZ15split_neg_startE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr @_ZZ15split_neg_startE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP16]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL19:%.*]] = mul i32 [[TMP17]], 1
 // CHECK1-NEXT:    [[ADD20:%.*]] = add i32 -1, [[MUL19]]
 // CHECK1-NEXT:    store i32 [[ADD20]], ptr [[I]], align 4
@@ -609,6 +616,7 @@ void split_range_for() {
 // CHECK1-SAME: ) #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 0, ptr [[I]], align 4
@@ -620,8 +628,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP1]], ptr @_ZZ16split_zero_firstE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZZ16split_zero_firstE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -642,8 +650,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3:%.*]], label [[FOR_END8:%.*]]
 // CHECK1:       for.body3:
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP6]], ptr @_ZZ16split_zero_firstE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr @_ZZ16split_zero_firstE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL4:%.*]] = mul nsw i32 [[TMP7]], 1
 // CHECK1-NEXT:    [[ADD5:%.*]] = add nsw i32 0, [[MUL4]]
 // CHECK1-NEXT:    store i32 [[ADD5]], ptr [[I]], align 4
@@ -666,6 +674,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_2_I:%.*]] = alloca i32, align 4
@@ -686,8 +695,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP3]], ptr @_ZZ17split_three_constE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ17split_three_constE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP4]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -708,8 +717,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP4]], label [[FOR_BODY5:%.*]], label [[FOR_END10:%.*]]
 // CHECK1:       for.body5:
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP8]], ptr @_ZZ17split_three_constE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr @_ZZ17split_three_constE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP8]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK1-NEXT:    [[ADD7:%.*]] = add nsw i32 0, [[MUL6]]
 // CHECK1-NEXT:    store i32 [[ADD7]], ptr [[I]], align 4
@@ -732,8 +741,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP13]], label [[FOR_BODY14:%.*]], label [[FOR_END19:%.*]]
 // CHECK1:       for.body14:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTSPLIT_IV_2_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP14]], ptr @_ZZ17split_three_constE7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr @_ZZ17split_three_constE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL15:%.*]] = mul nsw i32 [[TMP15]], 1
 // CHECK1-NEXT:    [[ADD16:%.*]] = add nsw i32 0, [[MUL15]]
 // CHECK1-NEXT:    store i32 [[ADD16]], ptr [[I]], align 4
@@ -756,6 +765,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
@@ -775,8 +785,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP3]], ptr @_ZZ11split_step2E7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ11split_step2E7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul i32 [[TMP4]], 2
 // CHECK1-NEXT:    [[ADD:%.*]] = add i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -799,8 +809,8 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6:%.*]], label [[FOR_END11:%.*]]
 // CHECK1:       for.body6:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP9]], ptr @_ZZ11split_step2E7.omp.iv, align 4
-// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ11split_step2E7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL7:%.*]] = mul i32 [[TMP10]], 2
 // CHECK1-NEXT:    [[ADD8:%.*]] = add i32 0, [[MUL7]]
 // CHECK1-NEXT:    store i32 [[ADD8]], ptr [[I]], align 4
@@ -823,6 +833,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
@@ -846,9 +857,9 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP5]], ptr @_ZZ15split_decrementE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr @_ZZ15split_decrementE7.omp.iv, align 4
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP7]], 1
 // CHECK1-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[TMP6]], [[MUL]]
 // CHECK1-NEXT:    store i32 [[SUB4]], ptr [[I]], align 4
@@ -874,9 +885,9 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END15:%.*]]
 // CHECK1:       for.body10:
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK1-NEXT:    store i32 [[TMP13]], ptr @_ZZ15split_decrementE7.omp.iv, align 4
+// CHECK1-NEXT:    store i32 [[TMP13]], ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr @_ZZ15split_decrementE7.omp.iv, align 4
+// CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL11:%.*]] = mul nsw i32 [[TMP15]], 1
 // CHECK1-NEXT:    [[SUB12:%.*]] = sub nsw i32 [[TMP14]], [[MUL11]]
 // CHECK1-NEXT:    store i32 [[SUB12]], ptr [[I]], align 4
@@ -902,6 +913,7 @@ void split_range_for() {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[DOTOMP_IV:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTSPLIT_IV_0___BEGIN1:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTSPLIT_IV_1___BEGIN1:%.*]] = alloca i64, align 8
@@ -938,9 +950,9 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK1:       for.body:
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i64, ptr [[DOTSPLIT_IV_0___BEGIN1]], align 8
-// CHECK1-NEXT:    store i64 [[TMP7]], ptr @_ZZ15split_range_forvE7.omp.iv, align 8
+// CHECK1-NEXT:    store i64 [[TMP7]], ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i64, ptr @_ZZ15split_range_forvE7.omp.iv, align 8
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i64 [[TMP9]], 1
 // CHECK1-NEXT:    [[ADD_PTR6:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 [[MUL]]
 // CHECK1-NEXT:    store ptr [[ADD_PTR6]], ptr [[__BEGIN1]], align 8
@@ -966,9 +978,9 @@ void split_range_for() {
 // CHECK1-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END15:%.*]]
 // CHECK1:       for.body10:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
-// CHECK1-NEXT:    store i64 [[TMP16]], ptr @_ZZ15split_range_forvE7.omp.iv, align 8
+// CHECK1-NEXT:    store i64 [[TMP16]], ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i64, ptr @_ZZ15split_range_forvE7.omp.iv, align 8
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[MUL11:%.*]] = mul nsw i64 [[TMP18]], 1
 // CHECK1-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i64 [[MUL11]]
 // CHECK1-NEXT:    store ptr [[ADD_PTR12]], ptr [[__BEGIN1]], align 8
@@ -1016,6 +1028,7 @@ void split_range_for() {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[I2:%.*]] = alloca ptr, align 8
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -1032,8 +1045,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP1]], ptr @_ZZN1SC1EvE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZZN1SC1EvE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
@@ -1056,8 +1069,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6:%.*]], label [[FOR_END11:%.*]]
 // CHECK2:       for.body6:
 // CHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP8]], ptr @_ZZN1SC1EvE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr @_ZZN1SC1EvE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP8]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL7:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i32 0, [[MUL7]]
 // CHECK2-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2]], !align [[META3]]
@@ -1091,6 +1104,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i64, align 8
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0___BEGIN1:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1___BEGIN1:%.*]] = alloca i64, align 8
@@ -1127,9 +1141,9 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i64, ptr [[DOTSPLIT_IV_0___BEGIN1]], align 8
-// CHECK2-NEXT:    store i64 [[TMP7]], ptr @_ZZ15split_range_forvE7.omp.iv, align 8
+// CHECK2-NEXT:    store i64 [[TMP7]], ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i64, ptr @_ZZ15split_range_forvE7.omp.iv, align 8
+// CHECK2-NEXT:    [[TMP9:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i64 [[TMP9]], 1
 // CHECK2-NEXT:    [[ADD_PTR6:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 [[MUL]]
 // CHECK2-NEXT:    store ptr [[ADD_PTR6]], ptr [[__BEGIN1]], align 8
@@ -1155,9 +1169,9 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END15:%.*]]
 // CHECK2:       for.body10:
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTSPLIT_IV_1___BEGIN1]], align 8
-// CHECK2-NEXT:    store i64 [[TMP16]], ptr @_ZZ15split_range_forvE7.omp.iv, align 8
+// CHECK2-NEXT:    store i64 [[TMP16]], ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i64, ptr @_ZZ15split_range_forvE7.omp.iv, align 8
+// CHECK2-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[MUL11:%.*]] = mul nsw i64 [[TMP18]], 1
 // CHECK2-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i64 [[MUL11]]
 // CHECK2-NEXT:    store ptr [[ADD_PTR12]], ptr [[__BEGIN1]], align 8
@@ -1183,6 +1197,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
@@ -1206,9 +1221,9 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP5]], ptr @_ZZ15split_decrementE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr @_ZZ15split_decrementE7.omp.iv, align 4
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP7]], 1
 // CHECK2-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[TMP6]], [[MUL]]
 // CHECK2-NEXT:    store i32 [[SUB4]], ptr [[I]], align 4
@@ -1234,9 +1249,9 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END15:%.*]]
 // CHECK2:       for.body10:
 // CHECK2-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP13]], ptr @_ZZ15split_decrementE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP13]], ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr @_ZZ15split_decrementE7.omp.iv, align 4
+// CHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL11:%.*]] = mul nsw i32 [[TMP15]], 1
 // CHECK2-NEXT:    [[SUB12:%.*]] = sub nsw i32 [[TMP14]], [[MUL11]]
 // CHECK2-NEXT:    store i32 [[SUB12]], ptr [[I]], align 4
@@ -1259,6 +1274,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
@@ -1281,8 +1297,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP4]], ptr @_ZZ16split_first_fillE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr @_ZZ16split_first_fillE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP5]], 1
 // CHECK2-NEXT:    [[ADD4:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD4]], ptr [[I]], align 4
@@ -1308,8 +1324,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END15:%.*]]
 // CHECK2:       for.body10:
 // CHECK2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP11]], ptr @_ZZ16split_first_fillE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP12:%.*]] = load i32, ptr @_ZZ16split_first_fillE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP11]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL11:%.*]] = mul nsw i32 [[TMP12]], 1
 // CHECK2-NEXT:    [[ADD12:%.*]] = add nsw i32 0, [[MUL11]]
 // CHECK2-NEXT:    store i32 [[ADD12]], ptr [[I]], align 4
@@ -1332,6 +1348,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_2_I:%.*]] = alloca i32, align 4
@@ -1352,8 +1369,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP3]], ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP4]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -1377,8 +1394,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP6]], label [[FOR_BODY7:%.*]], label [[FOR_END12:%.*]]
 // CHECK2:       for.body7:
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP9]], ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL8:%.*]] = mul nsw i32 [[TMP10]], 1
 // CHECK2-NEXT:    [[ADD9:%.*]] = add nsw i32 0, [[MUL8]]
 // CHECK2-NEXT:    store i32 [[ADD9]], ptr [[I]], align 4
@@ -1404,8 +1421,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP17]], label [[FOR_BODY18:%.*]], label [[FOR_END23:%.*]]
 // CHECK2:       for.body18:
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTSPLIT_IV_2_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP16]], ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP17:%.*]] = load i32, ptr @_ZZ14split_mid_fillE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP16]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL19:%.*]] = mul nsw i32 [[TMP17]], 1
 // CHECK2-NEXT:    [[ADD20:%.*]] = add nsw i32 0, [[MUL19]]
 // CHECK2-NEXT:    store i32 [[ADD20]], ptr [[I]], align 4
@@ -1428,6 +1445,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_2_I:%.*]] = alloca i32, align 4
@@ -1448,8 +1466,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP3]], ptr @_ZZ15split_neg_startE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ15split_neg_startE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul i32 [[TMP4]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add i32 -1, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -1473,8 +1491,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP6]], label [[FOR_BODY7:%.*]], label [[FOR_END12:%.*]]
 // CHECK2:       for.body7:
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP9]], ptr @_ZZ15split_neg_startE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ15split_neg_startE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL8:%.*]] = mul i32 [[TMP10]], 1
 // CHECK2-NEXT:    [[ADD9:%.*]] = add i32 -1, [[MUL8]]
 // CHECK2-NEXT:    store i32 [[ADD9]], ptr [[I]], align 4
@@ -1500,8 +1518,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP17]], label [[FOR_BODY18:%.*]], label [[FOR_END23:%.*]]
 // CHECK2:       for.body18:
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTSPLIT_IV_2_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP16]], ptr @_ZZ15split_neg_startE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP17:%.*]] = load i32, ptr @_ZZ15split_neg_startE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP16]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL19:%.*]] = mul i32 [[TMP17]], 1
 // CHECK2-NEXT:    [[ADD20:%.*]] = add i32 -1, [[MUL19]]
 // CHECK2-NEXT:    store i32 [[ADD20]], ptr [[I]], align 4
@@ -1524,6 +1542,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK2-NEXT:    store i32 0, ptr [[I]], align 4
@@ -1544,8 +1563,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP4]], ptr @_ZZ15split_only_fillE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr @_ZZ15split_only_fillE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP5]], 1
 // CHECK2-NEXT:    [[ADD3:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD3]], ptr [[I]], align 4
@@ -1568,6 +1587,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
@@ -1587,8 +1607,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP3]], ptr @_ZZ11split_step2E7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ11split_step2E7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul i32 [[TMP4]], 2
 // CHECK2-NEXT:    [[ADD:%.*]] = add i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -1611,8 +1631,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6:%.*]], label [[FOR_END11:%.*]]
 // CHECK2:       for.body6:
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP9]], ptr @_ZZ11split_step2E7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ11split_step2E7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL7:%.*]] = mul i32 [[TMP10]], 2
 // CHECK2-NEXT:    [[ADD8:%.*]] = add i32 0, [[MUL7]]
 // CHECK2-NEXT:    store i32 [[ADD8]], ptr [[I]], align 4
@@ -1635,6 +1655,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_2_I:%.*]] = alloca i32, align 4
@@ -1655,8 +1676,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP3]], ptr @_ZZ17split_three_constE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ17split_three_constE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP4]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -1677,8 +1698,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP4]], label [[FOR_BODY5:%.*]], label [[FOR_END10:%.*]]
 // CHECK2:       for.body5:
 // CHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP8]], ptr @_ZZ17split_three_constE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr @_ZZ17split_three_constE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP8]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK2-NEXT:    [[ADD7:%.*]] = add nsw i32 0, [[MUL6]]
 // CHECK2-NEXT:    store i32 [[ADD7]], ptr [[I]], align 4
@@ -1701,8 +1722,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP13]], label [[FOR_BODY14:%.*]], label [[FOR_END19:%.*]]
 // CHECK2:       for.body14:
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTSPLIT_IV_2_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP14]], ptr @_ZZ17split_three_constE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr @_ZZ17split_three_constE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL15:%.*]] = mul nsw i32 [[TMP15]], 1
 // CHECK2-NEXT:    [[ADD16:%.*]] = add nsw i32 0, [[MUL15]]
 // CHECK2-NEXT:    store i32 [[ADD16]], ptr [[I]], align 4
@@ -1722,6 +1743,7 @@ void split_range_for() {
 // CHECK2-SAME: ) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 0, ptr [[I]], align 4
@@ -1733,8 +1755,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP1]], ptr @_ZZ20split_two_const_tripE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZZ20split_two_const_tripE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -1755,8 +1777,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3:%.*]], label [[FOR_END8:%.*]]
 // CHECK2:       for.body3:
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP6]], ptr @_ZZ20split_two_const_tripE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr @_ZZ20split_two_const_tripE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL4:%.*]] = mul nsw i32 [[TMP7]], 1
 // CHECK2-NEXT:    [[ADD5:%.*]] = add nsw i32 0, [[MUL4]]
 // CHECK2-NEXT:    store i32 [[ADD5]], ptr [[I]], align 4
@@ -1779,6 +1801,7 @@ void split_range_for() {
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
@@ -1798,8 +1821,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP3]], ptr @_ZZ14split_var_tripE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ14split_var_tripE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP3]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP4]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -1822,8 +1845,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6:%.*]], label [[FOR_END11:%.*]]
 // CHECK2:       for.body6:
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP9]], ptr @_ZZ14split_var_tripE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ14split_var_tripE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL7:%.*]] = mul nsw i32 [[TMP10]], 1
 // CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i32 0, [[MUL7]]
 // CHECK2-NEXT:    store i32 [[ADD8]], ptr [[I]], align 4
@@ -1843,6 +1866,7 @@ void split_range_for() {
 // CHECK2-SAME: ) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_0_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTSPLIT_IV_1_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 0, ptr [[I]], align 4
@@ -1854,8 +1878,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK2:       for.body:
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTSPLIT_IV_0_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP1]], ptr @_ZZ16split_zero_firstE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZZ16split_zero_firstE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP1]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
@@ -1876,8 +1900,8 @@ void split_range_for() {
 // CHECK2-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3:%.*]], label [[FOR_END8:%.*]]
 // CHECK2:       for.body3:
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTSPLIT_IV_1_I]], align 4
-// CHECK2-NEXT:    store i32 [[TMP6]], ptr @_ZZ16split_zero_firstE7.omp.iv, align 4
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr @_ZZ16split_zero_firstE7.omp.iv, align 4
+// CHECK2-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[MUL4:%.*]] = mul nsw i32 [[TMP7]], 1
 // CHECK2-NEXT:    [[ADD5:%.*]] = add nsw i32 0, [[MUL4]]
 // CHECK2-NEXT:    store i32 [[ADD5]], ptr [[I]], align 4

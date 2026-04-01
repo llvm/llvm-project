@@ -4,9 +4,9 @@
 
 extern "C" void body(int);
 
-// CHECK-LABEL: define {{.*}} @_Z8outer_iv
+// CHECK-LABEL: define {{.*}} @outer_iv(
 // CHECK: .split.iv
-void outer_iv(int n) {
+extern "C" void outer_iv(int n) {
   int i;
 #pragma omp split counts(3, omp_fill)
   for (i = 0; i < n; ++i)

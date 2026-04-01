@@ -1040,7 +1040,7 @@ class OMPCountsClause final
   SourceLocation LParenLoc;
 
   /// Number of count expressions in the clause.
-  unsigned NumCounts;
+  unsigned NumCounts = 0;
 
   /// 0-based index of the omp_fill list item.
   std::optional<unsigned> OmpFillIndex;
@@ -1052,6 +1052,17 @@ class OMPCountsClause final
   explicit OMPCountsClause(int NumCounts)
       : OMPClause(llvm::omp::OMPC_counts, SourceLocation(), SourceLocation()),
         NumCounts(NumCounts) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  void setOmpFillIndex(std::optional<unsigned> Idx) { OmpFillIndex = Idx; }
+  void setOmpFillLoc(SourceLocation Loc) { OmpFillLoc = Loc; }
+
+  /// Sets the count expressions.
+  void setCountsRefs(ArrayRef<Expr *> VL) {
+    assert(VL.size() == NumCounts);
+    llvm::copy(VL, getCountsRefs().begin());
+  }
 
 public:
   /// Build a 'counts' AST node.
@@ -1073,9 +1084,6 @@ public:
   /// \param NumCounts   Number of items in the clause.
   static OMPCountsClause *CreateEmpty(const ASTContext &C, unsigned NumCounts);
 
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
-
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
@@ -1085,8 +1093,6 @@ public:
   std::optional<unsigned> getOmpFillIndex() const { return OmpFillIndex; }
   SourceLocation getOmpFillLoc() const { return OmpFillLoc; }
   bool hasOmpFill() const { return OmpFillIndex.has_value(); }
-  void setOmpFillIndex(std::optional<unsigned> Idx) { OmpFillIndex = Idx; }
-  void setOmpFillLoc(SourceLocation Loc) { OmpFillLoc = Loc; }
 
   /// Returns the count expressions.
   MutableArrayRef<Expr *> getCountsRefs() {
@@ -1094,12 +1100,6 @@ public:
   }
   ArrayRef<Expr *> getCountsRefs() const {
     return getTrailingObjects(NumCounts);
-  }
-
-  /// Sets the count expressions.
-  void setCountsRefs(ArrayRef<Expr *> VL) {
-    assert(VL.size() == NumCounts);
-    llvm::copy(VL, getCountsRefs().begin());
   }
 
   child_range children() {

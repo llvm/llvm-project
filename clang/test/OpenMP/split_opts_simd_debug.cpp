@@ -1,4 +1,4 @@
-// Optimized split IR at -O1; split + `-fopenmp-simd` syntax-only here (host emit-llvm can crash); -g smoke.
+// Optimized split IR at -O1; split + `-fopenmp-simd` syntax-only; -g debug-info smoke.
 //
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=60 -O1 -emit-llvm -DTEST_BODY %s -o - | FileCheck %s --check-prefix=O1
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp-simd -fopenmp-version=60 -fsyntax-only -verify -DTEST_SIMD %s

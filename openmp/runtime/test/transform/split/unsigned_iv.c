@@ -1,8 +1,5 @@
 // RUN: %libomp-compile-and-run | FileCheck %s --match-full-lines
 
-#ifndef HEADER
-#define HEADER
-
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -14,8 +11,6 @@ int main() {
   printf("done\n");
   return EXIT_SUCCESS;
 }
-
-#endif /* HEADER */
 
 // CHECK:      do
 // CHECK-NEXT: i=0

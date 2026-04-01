@@ -2010,14 +2010,12 @@ void OMPClausePrinter::VisitOMPCountsClause(OMPCountsClause *Node) {
   OS << "counts(";
   std::optional<unsigned> FillIdx = Node->getOmpFillIndex();
   ArrayRef<Expr *> Refs = Node->getCountsRefs();
-  for (auto I : llvm::seq<unsigned>(Refs.size())) {
-    if (I)
-      OS << ", ";
+  llvm::interleaveComma(llvm::seq<unsigned>(Refs.size()), OS, [&](unsigned I) {
     if (FillIdx && I == *FillIdx)
       OS << "omp_fill";
     else
       Refs[I]->printPretty(OS, nullptr, Policy, 0);
-  }
+  });
   OS << ")";
 }
 

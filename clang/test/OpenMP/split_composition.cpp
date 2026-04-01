@@ -4,10 +4,10 @@
 
 extern "C" void body(int, int);
 
-// CHECK: define {{.*}} @_Z11compositionv
+// CHECK: define {{.*}} @composition(
 // CHECK: .split.iv
 // CHECK: call void @body
-void composition(void) {
+extern "C" void composition(void) {
 #pragma omp parallel for
   for (int i = 0; i < 4; ++i) {
 #pragma omp split counts(2, omp_fill)

@@ -15927,7 +15927,7 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   if (!AStmt)
     return StmtError();
 
-  const OMPCountsClause *CountsClause =
+  const auto *CountsClause =
       OMPExecutableDirective::getSingleClause<OMPCountsClause>(Clauses);
   if (!CountsClause)
     return StmtError();
@@ -15976,15 +15976,15 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   // Internal variable names.
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
 
-  std::optional<unsigned> FillIdx = CountsClause->getOmpFillIndex();
-  if (!FillIdx)
+  if (!CountsClause->hasOmpFill())
     return StmtError();
+  unsigned FillIdx = *CountsClause->getOmpFillIndex();
 
   unsigned NumItems = CountsClause->getNumCounts();
   SmallVector<uint64_t, 4> CountValues(NumItems, 0);
   ArrayRef<Expr *> Refs = CountsClause->getCountsRefs();
   for (unsigned I = 0; I < NumItems; ++I) {
-    if (I == *FillIdx)
+    if (I == FillIdx)
       continue;
     Expr *CountExpr = Refs[I];
     if (!CountExpr)
@@ -16001,7 +16001,7 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   Expr *NumIterExpr = LoopHelper.NumIterations;
 
   uint64_t RightSum = 0;
-  for (unsigned I = *FillIdx + 1; I < NumItems; ++I)
+  for (unsigned I = FillIdx + 1; I < NumItems; ++I)
     RightSum += CountValues[I];
 
   auto MakeIntLit = [&](uint64_t Val) {
@@ -16012,6 +16012,11 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   size_t NumSegments = NumItems;
   SmallVector<Stmt *, 4> SplitLoops;
 
+  auto *IterVarDecl = cast<VarDecl>(IterationVarRef->getDecl());
+  SplitLoops.push_back(new (Context) DeclStmt(DeclGroupRef(IterVarDecl),
+                                              IterationVarRef->getBeginLoc(),
+                                              IterationVarRef->getEndLoc()));
+
   uint64_t LeftAccum = 0;
   uint64_t RightRemaining = RightSum;
 
@@ -16019,11 +16024,11 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     Expr *StartExpr = nullptr;
     Expr *EndExpr = nullptr;
 
-    if (Seg < *FillIdx) {
+    if (Seg < FillIdx) {
       StartExpr = MakeIntLit(LeftAccum);
       LeftAccum += CountValues[Seg];
       EndExpr = MakeIntLit(LeftAccum);
-    } else if (Seg == *FillIdx) {
+    } else if (Seg == FillIdx) {
       StartExpr = MakeIntLit(LeftAccum);
       if (RightRemaining == 0) {
         EndExpr = NumIterExpr;
