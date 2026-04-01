@@ -134,6 +134,15 @@ public:
     return InMemory;
   }
 
+  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // FIXME: This could use an in-memory cache to avoid IO, and only write to
+    // disk at the end of the scan.
+    return writeImpl(Path, Buffer);
+  }
+
   Expected<std::unique_ptr<llvm::MemoryBuffer>>
   read(StringRef FileName, off_t &Size, time_t &ModTime) override {
     // This is a compiler-internal input/output, let's bypass the sandbox.
