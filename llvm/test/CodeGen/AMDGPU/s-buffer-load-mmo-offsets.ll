@@ -18,8 +18,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset(<4 x i32> inreg %r
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s256))
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 16, 0, 0, implicit $exec :: (dereferenceable invariant load (s256))
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128), align 32)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 16, 0, 0, implicit $exec :: (dereferenceable invariant load (s128) from unknown-address + 16)
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub0
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub1
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub2
@@ -54,10 +54,10 @@ define amdgpu_ps <16 x float> @s_buffer_load_v16f32_vgpr_offset(<4 x i32> inreg 
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s512))
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 16, 0, 0, implicit $exec :: (dereferenceable invariant load (s512))
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN2:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 32, 0, 0, implicit $exec :: (dereferenceable invariant load (s512))
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN3:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 48, 0, 0, implicit $exec :: (dereferenceable invariant load (s512))
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128), align 64)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 16, 0, 0, implicit $exec :: (dereferenceable invariant load (s128) from unknown-address + 16)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN2:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 32, 0, 0, implicit $exec :: (dereferenceable invariant load (s128) from unknown-address + 32, align 32)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN3:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 48, 0, 0, implicit $exec :: (dereferenceable invariant load (s128) from unknown-address + 48)
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub0
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub1
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub2
