@@ -17708,9 +17708,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case AssignConvertType::IncompatibleOBTKinds: {
     assert(!SrcType->isFunctionType() &&
            "Unexpected function type found in IncompatibleOBTKinds assignment");
-    if (SrcType->canDecayToPointerType()) {
+    if (SrcType->canDecayToPointerType())
       SrcType = Context.getDecayedType(SrcType);
-    }
 
     auto getOBTKindName = [](QualType Ty) -> StringRef {
       if (Ty->isPointerType())
