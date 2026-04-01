@@ -75,21 +75,96 @@ entry:
   ret void
 }
 
+define amdgpu_cs void @test_s_bitreplicate_vgpr_store(i32 %mask, ptr addrspace(1) %out) {
+; GFX11-GISEL-LABEL: test_s_bitreplicate_vgpr_store:
+; GFX11-GISEL:       ; %bb.0: ; %entry
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr3_vgpr4
+; GFX11-GISEL-NEXT:  .LBB6_1: ; =>This Inner Loop Header: Depth=1
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-GISEL-NEXT:    v_cmpx_eq_u32_e64 s2, v0
+; GFX11-GISEL-NEXT:    s_bitreplicate_b64_b32 s[2:3], s2
+; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr0
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, s3
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, s2
+; GFX11-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB6_1
+; GFX11-GISEL-NEXT:  ; %bb.2:
+; GFX11-GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GISEL-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; GFX11-GISEL-NEXT:    s_endpgm
+;
+; GFX11-SDAG-LABEL: test_s_bitreplicate_vgpr_store:
+; GFX11-SDAG:       ; %bb.0: ; %entry
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-SDAG-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
+; GFX11-SDAG-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; GFX11-SDAG-NEXT:    s_endpgm
+entry:
+  %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 %mask)
+  store i64 %br, ptr addrspace(1) %out
+  ret void
+}
+
+define i64 @test_s_bitreplicate_vgpr_multi_use(i32 %mask) {
+; GFX11-GISEL-LABEL: test_s_bitreplicate_vgpr_multi_use:
+; GFX11-GISEL:       ; %bb.0: ; %entry
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr1_vgpr2
+; GFX11-GISEL-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-GISEL-NEXT:    v_cmpx_eq_u32_e64 s2, v0
+; GFX11-GISEL-NEXT:    s_bitreplicate_b64_b32 s[2:3], s2
+; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr0
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX11-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB7_1
+; GFX11-GISEL-NEXT:  ; %bb.2:
+; GFX11-GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v0, v1, v2
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: test_s_bitreplicate_vgpr_multi_use:
+; GFX11-SDAG:       ; %bb.0: ; %entry
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-SDAG-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
+; GFX11-SDAG-NEXT:    v_add_nc_u32_e64 v0, s0, s1
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 %mask)
+  %lo = trunc i64 %br to i32
+  %hi = lshr i64 %br, 32
+  %hi32 = trunc i64 %hi to i32
+  %sum = add i32 %lo, %hi32
+  %result = zext i32 %sum to i64
+  ret i64 %result
+}
+
 define i64 @test_s_bitreplicate_vgpr(i32 %mask) {
 ; GFX11-GISEL-LABEL: test_s_bitreplicate_vgpr:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-GISEL-NEXT:  .LBB6_1: ; =>This Inner Loop Header: Depth=1
+; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX11-GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-GISEL-NEXT:    v_cmpx_eq_u32_e64 s2, v2
 ; GFX11-GISEL-NEXT:    s_bitreplicate_b64_b32 s[2:3], s2
 ; GFX11-GISEL-NEXT:    ; implicit-def: $vgpr2
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
-; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB6_1
+; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX11-GISEL-NEXT:  ; %bb.2:
 ; GFX11-GISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
