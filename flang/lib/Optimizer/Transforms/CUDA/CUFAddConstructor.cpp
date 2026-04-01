@@ -137,6 +137,7 @@ struct CUFAddConstructor
       }
 
       // Register variables
+      bool hasNonAllocManagedGlobal = false;
       for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
         auto attr = globalOp.getDataAttrAttr();
         if (!attr)
@@ -172,6 +173,7 @@ struct CUFAddConstructor
           auto sizeVal = builder.createIntegerConstant(loc, idxTy, *size);
 
           if (isNonAllocManagedGlobal) {
+            hasNonAllocManagedGlobal = true;
             // Non-allocatable managed globals use pointer indirection:
             // a companion pointer in __nv_managed_data__ holds the unified
             // memory address, registered via __cudaRegisterManagedVar.
@@ -201,14 +203,16 @@ struct CUFAddConstructor
         }
       }
 
-      // Initialize the module after all variables are registered so the
-      // runtime populates managed variable unified memory pointers.
-      mlir::func::FuncOp initFunc =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFInitModule)>(loc, builder);
-      auto initFTy = initFunc.getFunctionType();
-      llvm::SmallVector<mlir::Value> initArgs{
-          fir::runtime::createArguments(builder, loc, initFTy, registeredMod)};
-      fir::CallOp::create(builder, loc, initFunc, initArgs);
+      if (hasNonAllocManagedGlobal) {
+        // Initialize the module after all variables are registered so the
+        // runtime populates managed variable unified memory pointers.
+        mlir::func::FuncOp initFunc =
+            fir::runtime::getRuntimeFunc<mkRTKey(CUFInitModule)>(loc, builder);
+        mlir::FunctionType initFTy = initFunc.getFunctionType();
+        llvm::SmallVector<mlir::Value> initArgs{fir::runtime::createArguments(
+            builder, loc, initFTy, registeredMod)};
+        fir::CallOp::create(builder, loc, initFunc, initArgs);
+      }
     }
     mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
 
