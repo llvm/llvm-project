@@ -140,7 +140,9 @@ void test_scopes(void) {
 
 
 void test_incompatible_initializer(void) {
-  auto s1[] = "test";   // expected-error {{variable 's1' with type 'auto[]' has incompatible initializer of type 'char[5]'}}
-  auto s2[4] = "test";  // expected-error {{variable 's2' with type 'auto[4]' has incompatible initializer of type 'char[5]'}}
-  auto s3[5] = "test";  // expected-error {{variable 's3' with type 'auto[5]' has incompatible initializer of type 'char[5]'}}
+  auto s1[] = "test";   // expected-error {{cannot use 'auto' with array in C}}
+  auto s2[4] = "test";  // expected-error {{cannot use 'auto' with array in C}}
+  auto s3[5] = "test";  // expected-error {{cannot use 'auto' with array in C}}
+  auto i = { 1 };       // expected-error {{cannot use 'auto' with initializer list in C}}
+  auto i2 = { 1, 2 };   // expected-error {{cannot use 'auto' with initializer list in C}}
 }
