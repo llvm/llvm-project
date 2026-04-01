@@ -1937,20 +1937,29 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
 // and a and b are constants.
 // Returns true if any possible dependence is disproved.
 // Works in some cases that symbolicRDIVtest doesn't, and vice versa.
-bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                                   const SCEV *SrcConst, const SCEV *DstConst,
-                                   const Loop *SrcLoop, const Loop *DstLoop,
+bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
+                                   const SCEVAddRecExpr *Dst,
                                    FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::ExactRDIV))
     return false;
 
+  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
+  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactRDIVapplications;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+
+  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
+    return false;
+
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
@@ -1974,12 +1983,12 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 
   // since SCEV construction seems to normalize, LM = 0
   std::optional<APInt> SrcUM =
-      collectNonNegativeConstantUpperBound(SrcLoop, Delta->getType());
+      collectNonNegativeConstantUpperBound(Src->getLoop(), Delta->getType());
   if (SrcUM)
     LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
 
   std::optional<APInt> DstUM =
-      collectNonNegativeConstantUpperBound(DstLoop, Delta->getType());
+      collectNonNegativeConstantUpperBound(Dst->getLoop(), Delta->getType());
   if (DstUM)
     LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
 
@@ -2095,25 +2104,12 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
 // Return true if dependence disproved.
 bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
                               FullDependence &Result) const {
-  const SCEV *SrcConst, *DstConst;
-  const SCEV *SrcCoeff, *DstCoeff;
-  const Loop *SrcLoop, *DstLoop;
-
   LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  if (SrcAddRec && DstAddRec) {
-    SrcConst = SrcAddRec->getStart();
-    SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
-    SrcLoop = SrcAddRec->getLoop();
-    DstConst = DstAddRec->getStart();
-    DstCoeff = DstAddRec->getStepRecurrence(*SE);
-    DstLoop = DstAddRec->getLoop();
-  } else
-    llvm_unreachable("RDIV expected at least one AddRec");
-  return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
-                       Result) ||
+  assert(SrcAddRec && DstAddRec && "Unexpected non-addrec input");
+  return exactRDIVtest(SrcAddRec, DstAddRec, Result) ||
          gcdMIVtest(Src, Dst, Result);
 }
 
@@ -2244,7 +2240,6 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   }
   const SCEV *DstConst = Coefficients;
 
-  APInt ExtraGCD = APInt::getZero(BitWidth);
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
   if (!Delta)
     return false;
@@ -2271,11 +2266,6 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   // which is infeasible, so we can disallow the = direction for the i level.
   // Setting j = j' doesn't help matters, so we end up with a direction vector
   // of [<>, *]
-  //
-  // Given A[5*i + 10*j*M + 9*M*N] and A[15*i + 20*j*M - 21*N*M + 5],
-  // we need to remember that the constant part is 5 and the RunningGCD should
-  // be initialized to ExtraGCD = 30.
-  LLVM_DEBUG(dbgs() << "    ExtraGCD = " << ExtraGCD << '\n');
 
   bool Improved = false;
   Coefficients = Src;
@@ -2283,7 +2273,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
              dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     Coefficients = AddRec->getStart();
     const Loop *CurLoop = AddRec->getLoop();
-    RunningGCD = ExtraGCD;
+    RunningGCD = 0;
     const SCEV *SrcCoeff = AddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = SE->getMinusSCEV(SrcCoeff, SrcCoeff);
 
@@ -2291,7 +2281,9 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
         !accumulateCoefficientsGCD(Dst, CurLoop, DstCoeff, RunningGCD))
       return false;
 
-    Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
+    Delta = minusSCEVNoSignedOverflow(DstCoeff, SrcCoeff, *SE);
+    if (!Delta)
+      continue;
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
     std::optional<APInt> ConstCoeff = getConstantCoefficient(Delta);
