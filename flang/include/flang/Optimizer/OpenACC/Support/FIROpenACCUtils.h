@@ -25,14 +25,14 @@ namespace acc {
 
 /// Memory source for `mappedValue` when it is produced by OpenACC mapping op
 /// `accOp` . Private-like ops return `SourceKind::Allocate`; other data clauses
-/// trace the host variable via `traceValue`.
+/// classify the host variable via `getSourceFn`.
 ///
 /// `accumulatedAttrs` collects Fortran variable attributes from the path from
 /// the queried value to `accOp` (e.g. [hl]fir.declare); they are merged into
 /// the returned source so TARGET/POINTER/INTENT_IN are not dropped.
 fir::AliasAnalysis::Source getSourceFromACCValue(
     mlir::Value mappedValue, mlir::Operation *accOp,
-    llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> traceValue,
+    llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> getSourceFn,
     bool originIsData,
     fir::AliasAnalysis::Source::Attributes accumulatedAttrs = {});
 

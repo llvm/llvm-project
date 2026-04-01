@@ -627,7 +627,7 @@ static bool isACCPrivateLikeOp(mlir::Operation *op) {
 
 fir::AliasAnalysis::Source fir::acc::getSourceFromACCValue(
     mlir::Value mappedValue, mlir::Operation *accOp,
-    llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> traceValue,
+    llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> getSourceFn,
     bool originIsData,
     fir::AliasAnalysis::Source::Attributes accumulatedAttrs) {
   assert(accOp && "OpenACC mapping op required");
@@ -647,9 +647,9 @@ fir::AliasAnalysis::Source fir::acc::getSourceFromACCValue(
   // queries, so using the host source remains a reasonable tradeoff for
   // disambiguating in-region uses. Finer modeling would require extending
   // AliasAnalysis::Source (with address space) and teaching AA to use it.
-  fir::AliasAnalysis::Source traced = traceValue(mlir::acc::getVar(accOp));
-  traced.attributes |= accumulatedAttrs;
-  return traced;
+  fir::AliasAnalysis::Source source = getSourceFn(mlir::acc::getVar(accOp));
+  source.attributes |= accumulatedAttrs;
+  return source;
 }
 
 mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
