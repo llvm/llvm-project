@@ -16,6 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
+#include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attrs.inc"
@@ -134,6 +135,16 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                        cir::OptInfoAttr::get(&mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
+
+  if (langOpts.OpenMP) {
+    mlir::omp::OffloadModuleOpts ompOpts(
+        langOpts.OpenMPTargetDebug, langOpts.OpenMPTeamSubscription,
+        langOpts.OpenMPThreadSubscription, langOpts.OpenMPNoThreadState,
+        langOpts.OpenMPNoNestedParallelism, langOpts.OpenMPIsTargetDevice,
+        getTriple().isGPU(), langOpts.OpenMPForceUSM, langOpts.OpenMP,
+        langOpts.OMPHostIRFile, langOpts.OMPTargetTriples, langOpts.NoGPULib);
+    mlir::omp::setOffloadModuleInterfaceAttributes(theModule, ompOpts);
+  }
 
   if (langOpts.CUDA)
     createCUDARuntime();
