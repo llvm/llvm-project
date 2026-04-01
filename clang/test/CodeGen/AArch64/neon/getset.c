@@ -23,8 +23,8 @@
 // ALL-LABEL: @test_vget_lane_u8(
 uint8_t test_vget_lane_u8(uint8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<8 x !u8i>
-
-// LLVM: [[VGET_LANE:%.*]] = extractelement <8 x i8> %{{.*}}, i32 7
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM: [[VGET_LANE:%.*]] = extractelement <8 x i8> [[A]], i32 7
 // LLVM: ret i8 [[VGET_LANE]]
   return vget_lane_u8(a, 7);
 }
