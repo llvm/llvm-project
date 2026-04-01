@@ -409,14 +409,18 @@ def hlsl_distance : HLSLBuiltin<"distance"> {
 
 def hlsl_dot2add : HLSLBuiltin<"dot2add"> {
   let Doc = [{
-\fn float dot2add(half2 A, half2 B, float C)
-\brief Dot product of 2 vector of type half and add a float scalar value.
+\fn float dot2add(half2 A, half2 B, float Acc)
+\brief Multiplies the elements of the two half-precision float input vectors
+together and sums the results into the 32-bit float accumulator.
 \param A The first input value to dot product.
 \param B The second input value to dot product.
-\param C The input value added to the dot product.
+\param Acc The accumulator value added to the dot product.
+
+This instruction operates within a single 32-bit wide SIMD lane.
+The inputs are 16-bit quantities packed into the same lane.
 }];
   let DetailFunc = "dot2add_impl";
-  let ParamNames = ["A", "B", "C"];
+  let ParamNames = ["A", "B", "Acc"];
   let Args = [VectorType<HalfTy, 2>, VectorType<HalfTy, 2>, FloatTy];
   let ReturnType = FloatTy;
   let Availability = SM6_4;
