@@ -16,7 +16,7 @@
 #ifndef LLVM_ADT_BITSET_H
 #define LLVM_ADT_BITSET_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/bit.h"
 #include <array>
 #include <climits>
 #include <cstdint>
