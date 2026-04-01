@@ -76,7 +76,8 @@ llvm::Error GsymCreatorV2::encode(FileWriter &O) const {
   // total FunctionInfo section size and each function's offset within it.
   SmallVector<char, 0> FIBuf;
   raw_svector_ostream FIOS(FIBuf);
-  FileWriter FIFW(FIOS, O.getByteOrder(), this);
+  FileWriter FIFW(FIOS, O.getByteOrder());
+  FIFW.setStringOffsetSize(getStringOffsetSize());
   std::vector<uint64_t> FIRelativeOffsets;
   for (const auto &FI : Funcs) {
     if (auto OffOrErr = FI.encode(FIFW))

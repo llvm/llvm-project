@@ -10,10 +10,10 @@
 #define LLVM_DEBUGINFO_GSYM_INLINEINFO_H
 
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
-#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include <stdint.h>
 #include <vector>
@@ -119,9 +119,9 @@ struct InlineInfo {
   /// \returns An error if the inline information is corrupt, or
   ///          Error::success() for all other cases, even when no information
   ///          is added to \a SrcLocs.
-  LLVM_ABI static llvm::Error lookup(const GsymReader &GR,
-                                     GsymDataExtractor &Data, uint64_t BaseAddr,
-                                     uint64_t Addr, SourceLocations &SrcLocs);
+  LLVM_ABI static llvm::Error lookup(const GsymReader &GR, DataExtractor &Data,
+                                     uint64_t BaseAddr, uint64_t Addr,
+                                     SourceLocations &SrcLocs);
 
   /// Lookup an address in the InlineInfo object
   ///
@@ -149,7 +149,7 @@ struct InlineInfo {
   /// another InlineInfo object.
   /// \returns An InlineInfo or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<InlineInfo> decode(GsymDataExtractor &Data,
+  LLVM_ABI static llvm::Expected<InlineInfo> decode(DataExtractor &Data,
                                                     uint64_t BaseAddr);
 
   /// Encode this InlineInfo object into FileWriter stream.

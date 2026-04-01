@@ -12,13 +12,13 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
-#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/MergedFunctionsInfo.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 
 namespace llvm {
@@ -26,7 +26,6 @@ class raw_ostream;
 
 namespace gsym {
 
-class GsymCreator;
 class GsymReader;
 /// Function information in GSYM files encodes information for one contiguous
 /// address range. If a function has discontiguous address ranges, they will
@@ -141,7 +140,7 @@ struct FunctionInfo {
   ///
   /// \returns An FunctionInfo or an error describing the issue that was
   /// encountered during decoding.
-  LLVM_ABI static llvm::Expected<FunctionInfo> decode(GsymDataExtractor &Data,
+  LLVM_ABI static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
                                                       uint64_t BaseAddr);
 
   /// Encode this object into FileWriter stream.
@@ -171,7 +170,7 @@ struct FunctionInfo {
   ///
   /// \returns The size in bytes of the FunctionInfo if it were to be encoded
   /// into a byte stream.
-  LLVM_ABI uint64_t cacheEncoding(const GsymCreator *GC = nullptr);
+  LLVM_ABI uint64_t cacheEncoding(uint8_t StringOffsetSize = 4);
 
   /// Lookup an address within a FunctionInfo object's data stream.
   ///
@@ -199,7 +198,7 @@ struct FunctionInfo {
   /// encountered during decoding. An error should only be returned if the
   /// address is not contained in the FunctionInfo or if the data is corrupted.
   LLVM_ABI static llvm::Expected<LookupResult>
-  lookup(GsymDataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
+  lookup(DataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
          uint64_t Addr,
          std::optional<DataExtractor> *MergedFuncsData = nullptr);
 

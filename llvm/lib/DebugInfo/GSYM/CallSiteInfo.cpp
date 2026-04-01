@@ -27,11 +27,11 @@ Error CallSiteInfo::encode(FileWriter &O) const {
   O.writeU8(Flags);
   O.writeU32(MatchRegex.size());
   for (uint32_t Entry : MatchRegex)
-    O.writeStrp(Entry);
+    O.writeStringOffset(Entry);
   return Error::success();
 }
 
-Expected<CallSiteInfo> CallSiteInfo::decode(GsymDataExtractor &Data,
+Expected<CallSiteInfo> CallSiteInfo::decode(DataExtractor &Data,
                                             uint64_t &Offset) {
   CallSiteInfo CSI;
 
@@ -60,7 +60,7 @@ Expected<CallSiteInfo> CallSiteInfo::decode(GsymDataExtractor &Data,
       return createStringError(std::errc::io_error,
                                "0x%8.8" PRIx64 ": missing MatchRegex entry",
                                Offset);
-    uint32_t Entry = Data.getStrp(&Offset);
+    uint32_t Entry = Data.getStringOffset(&Offset);
     CSI.MatchRegex.push_back(Entry);
   }
 
@@ -77,7 +77,7 @@ Error CallSiteInfoCollection::encode(FileWriter &O) const {
 }
 
 Expected<CallSiteInfoCollection>
-CallSiteInfoCollection::decode(GsymDataExtractor &Data) {
+CallSiteInfoCollection::decode(DataExtractor &Data) {
   CallSiteInfoCollection CSC;
   uint64_t Offset = 0;
 

@@ -12,8 +12,8 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include <vector>
 
@@ -65,7 +65,7 @@ struct CallSiteInfo {
   /// \param Data The binary stream to read the data from.
   /// \param Offset The current offset within the data stream.
   /// \returns A CallSiteInfo or an error describing the issue.
-  LLVM_ABI static llvm::Expected<CallSiteInfo> decode(GsymDataExtractor &Data,
+  LLVM_ABI static llvm::Expected<CallSiteInfo> decode(DataExtractor &Data,
                                                       uint64_t &Offset);
 
   /// Encode this CallSiteInfo object into a FileWriter stream.
@@ -83,7 +83,7 @@ struct CallSiteInfoCollection {
   /// \param Data The binary stream to read the data from.
   /// \returns A CallSiteInfoCollection or an error describing the issue.
   LLVM_ABI static llvm::Expected<CallSiteInfoCollection>
-  decode(GsymDataExtractor &Data);
+  decode(DataExtractor &Data);
 
   /// Encode this CallSiteInfoCollection object into a FileWriter stream.
   ///

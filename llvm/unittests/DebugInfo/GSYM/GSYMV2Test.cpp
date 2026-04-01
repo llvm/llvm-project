@@ -48,7 +48,8 @@ static Expected<SmallString<512>> encodeV2(const GsymCreatorV2 &GC,
                                            llvm::endianness ByteOrder) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder, &GC);
+  FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   if (auto Err = GC.encode(FW))
     return std::move(Err);
   return Str;
@@ -842,7 +843,8 @@ createAndReadV2(GsymCreatorV2 &GC,
 
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder, &GC);
+  FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   if (auto Err = GC.encode(FW))
     return std::move(Err);
 
@@ -1169,7 +1171,8 @@ static void transferFunctions(const GsymReader &Reader, GsymCreator &Creator) {
 static SmallString<1024> encodeCreator(const GsymCreator &GC) {
   SmallString<1024> Str;
   raw_svector_ostream OS(Str);
-  FileWriter FW(OS, llvm::endianness::native, &GC);
+  FileWriter FW(OS, llvm::endianness::native);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   llvm::Error Err = GC.encode(FW);
   EXPECT_FALSE(bool(Err));
   return Str;
@@ -1382,7 +1385,8 @@ TEST(GSYMV2Test, TestV2Segmenting) {
   // Encode and decode the segment.
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, llvm::endianness::native, &Seg);
+  FileWriter FW(OutStrm, llvm::endianness::native);
+  FW.setStringOffsetSize(Seg.getStringOffsetSize());
   ASSERT_FALSE(Seg.encode(FW));
 
   auto GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1418,7 +1422,8 @@ TEST(GSYMV2Test, TestV2SegmentingSize) {
   // First, encode the full GSYM to know the actual total size.
   SmallString<512> FullStr;
   raw_svector_ostream FullOS(FullStr);
-  FileWriter FullFW(FullOS, llvm::endianness::native, &GC);
+  FileWriter FullFW(FullOS, llvm::endianness::native);
+  FullFW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_FALSE(GC.encode(FullFW));
   const uint64_t FullSize = FullStr.size();
 

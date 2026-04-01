@@ -184,8 +184,7 @@ static void TestFunctionInfoDecodeError(llvm::endianness ByteOrder,
                                         std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
   DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  GsymDataExtractor Data(DE);
-  llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data, BaseAddr);
+  llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(DE, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -272,9 +271,8 @@ static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
   DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  GsymDataExtractor Data(DE);
   llvm::Expected<FunctionInfo> Decoded =
-      FunctionInfo::decode(Data, FI.Range.start());
+      FunctionInfo::decode(DE, FI.Range.start());
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -349,8 +347,7 @@ static void TestInlineInfoEncodeDecode(llvm::endianness ByteOrder,
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
   DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  GsymDataExtractor Data(DE);
-  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
+  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(DE, BaseAddr);
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -362,8 +359,7 @@ static void TestInlineInfoDecodeError(llvm::endianness ByteOrder,
                                       std::string ExpectedErrorMsg) {
   uint8_t AddressSize = 4;
   DataExtractor DE(Bytes, ByteOrder == llvm::endianness::little, AddressSize);
-  GsymDataExtractor Data(DE);
-  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
+  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(DE, BaseAddr);
   // Make sure decoding fails.
   ASSERT_FALSE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -1058,7 +1054,8 @@ static void TestGsymCreatorV1EncodeError(llvm::endianness ByteOrder,
                                          std::string ExpectedErrorMsg) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder, &GC);
+  FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   llvm::Error Err = GC.encode(FW);
   ASSERT_TRUE(bool(Err));
   checkError(ExpectedErrorMsg, std::move(Err));
@@ -1134,7 +1131,8 @@ static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
                              uint8_t ExpStrOffSize) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder, &GC);
+  FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
   auto GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1258,7 +1256,8 @@ template <typename CreatorT> static void TestGsymReaderImpl() {
   ASSERT_FALSE(FinalizeErr);
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder, &GC);
+  FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
   if (auto ExpectedGR = GsymReader::copyBuffer(OutStrm.str())) {
@@ -1327,7 +1326,8 @@ template <typename CreatorT> static void TestGsymLookupsImpl() {
   ASSERT_FALSE(FinalizeErr);
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  FileWriter FW(OutStrm, ByteOrder, &GC);
+  FileWriter FW(OutStrm, ByteOrder);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   llvm::Error Err = GC.encode(FW);
   ASSERT_FALSE((bool)Err);
   auto GROrErr = GsymReader::copyBuffer(OutStrm.str());

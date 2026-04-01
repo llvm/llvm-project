@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV1.h"
 #include "llvm/DebugInfo/GSYM/GsymReaderV2.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
@@ -226,8 +225,8 @@ GsymReader::getFunctionInfoDataAtIndex(uint64_t AddrIdx,
 llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr)) {
-    GsymDataExtractor GDE(*ExpectedData, this);
-    return FunctionInfo::decode(GDE, FuncStartAddr);
+    ExpectedData->setStringOffsetSize(getStringOffsetByteSize());
+    return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
   } else
     return ExpectedData.takeError();
 }
@@ -236,8 +235,8 @@ llvm::Expected<FunctionInfo>
 GsymReader::getFunctionInfoAtIndex(uint64_t Idx) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataAtIndex(Idx, FuncStartAddr)) {
-    GsymDataExtractor GDE(*ExpectedData, this);
-    return FunctionInfo::decode(GDE, FuncStartAddr);
+    ExpectedData->setStringOffsetSize(getStringOffsetByteSize());
+    return FunctionInfo::decode(*ExpectedData, FuncStartAddr);
   } else
     return ExpectedData.takeError();
 }
@@ -247,8 +246,8 @@ GsymReader::lookup(uint64_t Addr,
                    std::optional<DataExtractor> *MergedFunctionsData) const {
   uint64_t FuncStartAddr = 0;
   if (auto ExpectedData = getFunctionInfoDataForAddress(Addr, FuncStartAddr)) {
-    GsymDataExtractor GDE(*ExpectedData, this);
-    return FunctionInfo::lookup(GDE, *this, FuncStartAddr, Addr,
+    ExpectedData->setStringOffsetSize(getStringOffsetByteSize());
+    return FunctionInfo::lookup(*ExpectedData, *this, FuncStartAddr, Addr,
                                 MergedFunctionsData);
   } else
     return ExpectedData.takeError();
@@ -277,8 +276,8 @@ GsymReader::lookupAll(uint64_t Addr) const {
 
     // Process each merged function data.
     for (DataExtractor &MergedData : *ExpectedMergedFuncExtractors) {
-      GsymDataExtractor GDE(MergedData, this);
-      if (auto FI = FunctionInfo::lookup(GDE, *this,
+      MergedData.setStringOffsetSize(getStringOffsetByteSize());
+      if (auto FI = FunctionInfo::lookup(MergedData, *this,
                                          MainResult->FuncRange.start(), Addr)) {
         Results.push_back(std::move(*FI));
       } else {

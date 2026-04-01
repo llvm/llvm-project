@@ -74,7 +74,8 @@ llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
   raw_fd_ostream OutStrm(Path, EC);
   if (EC)
     return llvm::errorCodeToError(EC);
-  FileWriter O(OutStrm, ByteOrder, this);
+  FileWriter O(OutStrm, ByteOrder);
+  O.setStringOffsetSize(getStringOffsetSize());
   return encode(O);
 }
 
@@ -386,8 +387,8 @@ llvm::Error GsymCreator::encodeFileTable(FileWriter &O) const {
     return createStringError(std::errc::invalid_argument, "too many files");
   O.writeU32(static_cast<uint32_t>(Files.size()));
   for (const auto &File : Files) {
-    O.writeStrp(File.Dir);
-    O.writeStrp(File.Base);
+    O.writeStringOffset(File.Dir);
+    O.writeStringOffset(File.Base);
   }
   return Error::success();
 }
@@ -433,7 +434,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
   }
   std::lock_guard<std::mutex> Guard(Mutex);
   Funcs.emplace_back(DstFI);
-  return Funcs.back().cacheEncoding(this);
+  return Funcs.back().cacheEncoding(getStringOffsetSize());
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,

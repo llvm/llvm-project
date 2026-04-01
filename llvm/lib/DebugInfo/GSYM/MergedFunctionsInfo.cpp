@@ -33,7 +33,7 @@ llvm::Error MergedFunctionsInfo::encode(FileWriter &Out) const {
 }
 
 llvm::Expected<MergedFunctionsInfo>
-MergedFunctionsInfo::decode(GsymDataExtractor &Data, uint64_t BaseAddr) {
+MergedFunctionsInfo::decode(DataExtractor &Data, uint64_t BaseAddr) {
   MergedFunctionsInfo MFI;
   auto FuncExtractorsOrError = MFI.getFuncsDataExtractors(Data);
 
@@ -41,9 +41,8 @@ MergedFunctionsInfo::decode(GsymDataExtractor &Data, uint64_t BaseAddr) {
     return FuncExtractorsOrError.takeError();
 
   for (DataExtractor &FuncData : *FuncExtractorsOrError) {
-    GsymDataExtractor GsymFuncData(FuncData.getData(), Data);
-    llvm::Expected<FunctionInfo> FI =
-        FunctionInfo::decode(GsymFuncData, BaseAddr);
+    FuncData.setStringOffsetSize(Data.getStringOffsetSize());
+    llvm::Expected<FunctionInfo> FI = FunctionInfo::decode(FuncData, BaseAddr);
     if (!FI)
       return FI.takeError();
     MFI.MergedFunctions.push_back(std::move(*FI));
