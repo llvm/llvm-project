@@ -16,12 +16,12 @@ v_maximum3_f32 v17, v70, v255 /*v767*/, v1 /*v769*/
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      11
 # CHECK-NEXT: Total Cycles:      41
-# CHECK-NEXT: Total uOps:        12
+# CHECK-NEXT: Total uOps:        11
 
 # CHECK:      Dispatch Width:    1
-# CHECK-NEXT: uOps Per Cycle:    0.29
+# CHECK-NEXT: uOps Per Cycle:    0.27
 # CHECK-NEXT: IPC:               0.27
-# CHECK-NEXT: Block RThroughput: 12.0
+# CHECK-NEXT: Block RThroughput: 11.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -32,7 +32,7 @@ v_maximum3_f32 v17, v70, v255 /*v767*/, v1 /*v769*/
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      5     2.00                  U     v_permlane16_swap_b32_e32 v255, v13
+# CHECK-NEXT:  1      5     2.00                  U     v_permlane16_swap_b32_e32 v255, v13
 # CHECK-NEXT:  1      5     1.00                  U     v_maximum3_f32 v12, v12, v24, v2
 # CHECK-NEXT:  1      2     1.00                  U     s_set_vgpr_msb 0x3c03
 # CHECK-NEXT:  1      20    1.00    *             U     ds_load_tr8_b64 v[162:163], v232 offset:43024
@@ -57,11 +57,11 @@ v_maximum3_f32 v17, v70, v255 /*v767*/, v1 /*v769*/
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]
-# CHECK-NEXT:  -      -     1.00   12.00  4.00    -     7.00    -      -
+# CHECK-NEXT:  -      -     1.00   11.00  4.00    -     7.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
-# CHECK-NEXT:  -      -      -     2.00    -      -     2.00    -      -     v_permlane16_swap_b32_e32 v255, v13
+# CHECK-NEXT:  -      -      -     1.00    -      -     2.00    -      -     v_permlane16_swap_b32_e32 v255, v13
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -      -     v_maximum3_f32 v12, v12, v24, v2
 # CHECK-NEXT:  -      -      -     1.00   1.00    -      -      -      -     s_set_vgpr_msb 0x3c03
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -      -     ds_load_tr8_b64 v[162:163], v232 offset:43024
