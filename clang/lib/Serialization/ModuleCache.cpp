@@ -102,29 +102,7 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   }
 }
 
-Expected<std::unique_ptr<llvm::MemoryBuffer>>
-clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
-  Expected<llvm::sys::fs::file_t> FD =
-      llvm::sys::fs::openNativeFileForRead(FileName);
-  if (!FD)
-    return FD.takeError();
-  llvm::sys::fs::file_status Status;
-  if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
-    return llvm::errorCodeToError(EC);
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
-      llvm::MemoryBuffer::getOpenFile(*FD, FileName, Status.getSize(),
-                                      /*RequiresNullTerminator=*/false);
-  if (!Buf)
-    return llvm::errorCodeToError(Buf.getError());
-  Size = Status.getSize();
-  ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
-  return std::move(*Buf);
-}
-
 std::error_code clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer) {
-  // This is a compiler-internal input/output, let's bypass the sandbox.
-  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-
   StringRef Extension = llvm::sys::path::extension(Path);
   SmallString<128> ModelPath = StringRef(Path).drop_back(Extension.size());
   ModelPath += "-%%%%%%%%";
@@ -155,6 +133,25 @@ std::error_code clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer) {
     return EC;
 
   return {};
+}
+
+Expected<std::unique_ptr<llvm::MemoryBuffer>>
+clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
+  Expected<llvm::sys::fs::file_t> FD =
+      llvm::sys::fs::openNativeFileForRead(FileName);
+  if (!FD)
+    return FD.takeError();
+  llvm::sys::fs::file_status Status;
+  if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
+    return llvm::errorCodeToError(EC);
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
+      llvm::MemoryBuffer::getOpenFile(*FD, FileName, Status.getSize(),
+                                      /*RequiresNullTerminator=*/false);
+  if (!Buf)
+    return llvm::errorCodeToError(Buf.getError());
+  Size = Status.getSize();
+  ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  return std::move(*Buf);
 }
 
 namespace {
@@ -213,13 +210,16 @@ public:
     maybePruneImpl(Path, PruneInterval, PruneAfter);
   }
 
-  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer) override {
-    return writeImpl(Path, Buffer);
-  }
-
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    return writeImpl(Path, Buffer);
   }
 
   Expected<std::unique_ptr<llvm::MemoryBuffer>>

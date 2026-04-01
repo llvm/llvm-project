@@ -16,9 +16,9 @@
 #include <system_error>
 
 namespace llvm {
-class MemoryBufferRef;
 class AdvisoryLock;
 class MemoryBuffer;
+class MemoryBufferRef;
 } // namespace llvm
 
 namespace clang {
@@ -75,12 +75,12 @@ std::shared_ptr<ModuleCache> createCrossProcessModuleCache();
 /// Shared implementation of `ModuleCache::maybePrune()`.
 void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter);
 
+/// Shared implementation of `ModuleCache::write()`.
+std::error_code writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer);
+
 /// Shared implementation of `ModuleCache::read()`.
 Expected<std::unique_ptr<llvm::MemoryBuffer>>
 readImpl(StringRef FileName, off_t &Size, time_t &ModTime);
-
-/// Shared implementation of `ModuleCache::write()`.
-std::error_code writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer);
 } // namespace clang
 
 #endif
