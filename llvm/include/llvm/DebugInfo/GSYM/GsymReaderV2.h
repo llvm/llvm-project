@@ -29,8 +29,9 @@ class GsymReaderV2 : public GsymReader {
   /// Parsed GlobalData section descriptors, keyed by type.
   std::map<GlobalInfoType, GlobalData> GlobalDataSections;
   ArrayRef<uint8_t> AddrInfoOffsets;
-  /// File entries read with variable-width StrpSize for Dir/Base fields.
-  std::vector<FileEntry> ResolvedFiles;
+  /// DataExtractor for on-demand file table decoding. Contains exactly the
+  /// file entry data (does not include the NumFiles uint32_t).
+  DataExtractor FileData;
   struct SwappedData {
     HeaderV2 Hdr;
     std::vector<uint8_t> AddrOffsets;
@@ -62,6 +63,8 @@ public:
   uint64_t getStringOffsetByteSize() const override {
     return getHeader().StrpSize;
   }
+
+  std::optional<FileEntry> getFile(uint32_t Index) const override;
 
   // GlobalData accessors
   std::optional<uint64_t> getAddressInfoOffset(size_t Index) const override;

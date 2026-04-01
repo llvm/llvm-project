@@ -49,7 +49,6 @@ protected:
   std::unique_ptr<MemoryBuffer> MemBuffer;
   llvm::endianness Endian;
   ArrayRef<uint8_t> AddrOffsets;
-  ArrayRef<FileEntry> Files;
   StringTable StrTab;
 
   GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
@@ -170,11 +169,7 @@ public:
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
   /// valid, or std::nullopt if the file index is out of bounds,
-  std::optional<FileEntry> getFile(uint32_t Index) const {
-    if (Index < Files.size())
-      return Files[Index];
-    return std::nullopt;
-  }
+  virtual std::optional<FileEntry> getFile(uint32_t Index) const = 0;
 
   /// Dump the entire Gsym data contained in this object.
   ///

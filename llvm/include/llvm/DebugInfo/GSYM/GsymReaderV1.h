@@ -23,6 +23,7 @@ class GsymReaderV1 : public GsymReader {
   llvm::Error parse();
 
   const Header *Hdr = nullptr;
+  ArrayRef<FileEntry> Files;
   ArrayRef<uint32_t> AddrInfoOffsets;
   struct SwappedData {
     Header Hdr;
@@ -52,6 +53,12 @@ public:
   }
   uint64_t getAddressInfoOffsetByteSize() const override { return 4; }
   uint64_t getStringOffsetByteSize() const override { return 4; }
+
+  std::optional<FileEntry> getFile(uint32_t Index) const override {
+    if (Index < Files.size())
+      return Files[Index];
+    return std::nullopt;
+  }
 
   // GlobalData accessors
   std::optional<uint64_t> getAddressInfoOffset(size_t Index) const override;

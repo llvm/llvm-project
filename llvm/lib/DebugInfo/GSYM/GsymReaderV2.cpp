@@ -20,7 +20,8 @@ using namespace llvm;
 using namespace gsym;
 
 GsymReaderV2::GsymReaderV2(std::unique_ptr<MemoryBuffer> Buffer)
-    : GsymReader(std::move(Buffer)) {}
+    : GsymReader(std::move(Buffer)),
+      FileData(StringRef(), true, 8) {}
 
 GsymReaderV2::GsymReaderV2(GsymReaderV2 &&RHS) = default;
 GsymReaderV2::~GsymReaderV2() = default;
@@ -205,25 +206,22 @@ llvm::Error GsymReaderV2::parse() {
     return StrTabData.takeError();
   StrTab.Data = *StrTabData;
 
-  // Read file table using getStringOffset() for Dir/Base fields. This handles
-  // both swap and non-swap paths since variable StrpSize prevents mmap-casting.
+  // Validate and cache file table metadata for on-demand decoding via
+  // getFile(). The file table has variable-width Dir/Base fields (StrpSize),
+  // so entries are decoded on access rather than pre-parsed.
   {
-    DE.setStringOffsetSize(Hdr->StrpSize);
     if (FileTableGD.FileSize < 4)
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small");
     uint64_t FTOff = FileTableGD.FileOffset;
     uint32_t NumFiles = DE.getU32(&FTOff);
-    if (FileTableGD.FileSize < 4 + NumFiles * 2 * DE.getStringOffsetSize())
+    uint64_t EntriesSize = static_cast<uint64_t>(NumFiles) * 2 * Hdr->StrpSize;
+    if (FileTableGD.FileSize < 4 + EntriesSize)
       return createStringError(std::errc::invalid_argument,
                                "FileTable section too small for %u files",
                                NumFiles);
-    ResolvedFiles.resize(NumFiles);
-    for (uint32_t I = 0; I < NumFiles; ++I) {
-      ResolvedFiles[I].Dir = DE.getStringOffset(&FTOff);
-      ResolvedFiles[I].Base = DE.getStringOffset(&FTOff);
-    }
-    Files = ArrayRef<FileEntry>(ResolvedFiles);
+    FileData = DataExtractor(Buf.substr(FTOff, EntriesSize), IsLittleEndian, 8);
+    FileData.setStringOffsetSize(Hdr->StrpSize);
   }
   return Error::success();
 }
@@ -231,6 +229,19 @@ llvm::Error GsymReaderV2::parse() {
 const HeaderV2 &GsymReaderV2::getHeader() const {
   assert(Hdr);
   return *Hdr;
+}
+
+std::optional<FileEntry> GsymReaderV2::getFile(uint32_t Index) const {
+  uint64_t Offset = Index * 2 * FileData.getStringOffsetSize();
+  // If the offsset is beyond the end of the file table, the given index is out
+  // of range.
+  if (!FileData.isValidOffsetForDataOfSize(Offset,
+                                           2 * FileData.getStringOffsetSize()))
+    return std::nullopt;
+  FileEntry FE;
+  FE.Dir = FileData.getStringOffset(&Offset);
+  FE.Base = FileData.getStringOffset(&Offset);
+  return FE;
 }
 
 std::optional<uint64_t> GsymReaderV2::getAddressInfoOffset(size_t Index) const {
@@ -265,10 +276,15 @@ void GsymReaderV2::dump(raw_ostream &OS) {
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
   OS << "====== ========== ========== ==============================\n";
-  for (uint32_t I = 0; I < Files.size(); ++I) {
-    OS << format("[%4u] ", I) << HEX32(Files[I].Dir) << ' '
-       << HEX32(Files[I].Base) << ' ';
-    dump(OS, getFile(I));
+  // Since we don't store the total number of files in the file table, loop
+  // until we get a null entry which means the index is out of range.
+  for (uint32_t I = 0; ; ++I) {
+    auto FE = getFile(I);
+    if (!FE)
+      break;
+    OS << format("[%4u] ", I) << HEX32(FE->Dir) << ' '
+       << HEX32(FE->Base) << ' ';
+    dump(OS, FE);
     OS << "\n";
   }
   OS << "\n" << StrTab << "\n";

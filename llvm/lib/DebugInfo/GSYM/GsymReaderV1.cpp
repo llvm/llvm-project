@@ -236,10 +236,13 @@ void GsymReaderV1::dump(raw_ostream &OS) {
   OS << "\nFiles:\n";
   OS << "INDEX  DIRECTORY  BASENAME   PATH\n";
   OS << "====== ========== ========== ==============================\n";
-  for (uint32_t I = 0; I < Files.size(); ++I) {
-    OS << format("[%4u] ", I) << HEX32(Files[I].Dir) << ' '
-       << HEX32(Files[I].Base) << ' ';
-    dump(OS, getFile(I));
+  for (uint32_t I = 0; ; ++I) {
+    auto FE = getFile(I);
+    if (!FE)
+      break;
+    OS << format("[%4u] ", I) << HEX32(FE->Dir) << ' '
+       << HEX32(FE->Base) << ' ';
+    dump(OS, FE);
     OS << "\n";
   }
   OS << "\n" << StrTab << "\n";
