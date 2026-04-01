@@ -20,6 +20,25 @@
 using namespace clang;
 using namespace CIRGen;
 
+static std::unique_ptr<MangleContext> initDeviceMC(CIRGenModule &cgm) {
+  // If the host and device have different C++ ABIs, mark it as the device
+  // mangle context so that the mangling needs to retrieve the additional
+  // device lambda mangling number instead of the regular host one.
+  if (cgm.getASTContext().getAuxTargetInfo() &&
+      cgm.getASTContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+      cgm.getASTContext().getAuxTargetInfo()->getCXXABI().isItaniumFamily()) {
+    return std::unique_ptr<MangleContext>(
+        cgm.getASTContext().createDeviceMangleContext(
+            *cgm.getASTContext().getAuxTargetInfo()));
+  }
+
+  return std::unique_ptr<MangleContext>(cgm.getASTContext().createMangleContext(
+      cgm.getASTContext().getAuxTargetInfo()));
+}
+
+CIRGenCUDARuntime::CIRGenCUDARuntime(CIRGenModule &cgm)
+    : cgm(cgm), deviceMC(initDeviceMC(cgm)) {}
+
 CIRGenCUDARuntime::~CIRGenCUDARuntime() {}
 
 RValue CIRGenCUDARuntime::emitCUDAKernelCallExpr(CIRGenFunction &cgf,

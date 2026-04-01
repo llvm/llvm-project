@@ -33,8 +33,11 @@ class CIRGenCUDARuntime {
 protected:
   CIRGenModule &cgm;
 
+  /// Mangle context for device.
+  std::unique_ptr<MangleContext> deviceMC;
+
 public:
-  CIRGenCUDARuntime(CIRGenModule &cgm) : cgm(cgm) {}
+  CIRGenCUDARuntime(CIRGenModule &cgm);
   virtual ~CIRGenCUDARuntime();
 
   virtual void emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
@@ -47,6 +50,14 @@ public:
   virtual mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) = 0;
 
   virtual mlir::Operation *getKernelStub(mlir::Operation *handle) = 0;
+
+  /// Adjust linkage of shadow variables in host compilation
+  virtual void internalizeDeviceSideVar(const VarDecl *d,
+                                        cir::GlobalLinkageKind &linkage) = 0;
+
+  /// Returns function or variable name on device side even if the current
+  /// compilation is for host.
+  virtual std::string getDeviceSideName(const NamedDecl *nd) = 0;
 };
 
 CIRGenCUDARuntime *createNVCUDARuntime(CIRGenModule &cgm);

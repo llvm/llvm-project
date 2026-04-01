@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCUDARuntime.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/Operation.h"
@@ -64,6 +65,11 @@ public:
 
   void emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
                       FunctionArgList &args) override;
+
+  void internalizeDeviceSideVar(const VarDecl *d,
+                                cir::GlobalLinkageKind &linkage) override;
+
+  std::string getDeviceSideName(const NamedDecl *nd) override;
 };
 
 } // namespace
@@ -341,4 +347,58 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
   kernelStubs[globalOp] = fn;
 
   return globalOp;
+}
+
+void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
+    const VarDecl *d, cir::GlobalLinkageKind &linkage) {
+  if (cgm.getLangOpts().GPURelocatableDeviceCode)
+    cgm.errorNYI(
+        "internalizeDeviceSideVar: GPU Relocatable Deviced Code (RDC)");
+
+  // __shared__ variables are odd. Shadows do get created, but
+  // they are not registered with the CUDA runtime, so they
+  // can't really be used to access their device-side
+  // counterparts. It's not clear yet whether it's nvcc's bug or
+  // a feature, but we've got to do the same for compatibility.
+  if (d->hasAttr<CUDADeviceAttr>() || d->hasAttr<CUDAConstantAttr>() ||
+      d->hasAttr<CUDASharedAttr>()) {
+    linkage = cir::GlobalLinkageKind::InternalLinkage;
+  }
+
+  if (d->getType()->isCUDADeviceBuiltinSurfaceType() ||
+      d->getType()->isCUDADeviceBuiltinTextureType())
+    cgm.errorNYI("internalizeDeviceSideVar: CUDA Surface/Texture support");
+}
+
+std::string CIRGenNVCUDARuntime::getDeviceSideName(const NamedDecl *nd) {
+  GlobalDecl gd;
+  // nd could be either a kernel or a variable.
+  if (auto *fd = dyn_cast<FunctionDecl>(nd))
+    gd = GlobalDecl(fd, KernelReferenceKind::Kernel);
+  else
+    gd = GlobalDecl(nd);
+  std::string deviceSideName;
+  MangleContext *mc;
+  if (cgm.getLangOpts().CUDAIsDevice)
+    mc = &cgm.getCXXABI().getMangleContext();
+  else
+    mc = deviceMC.get();
+  if (mc->shouldMangleDeclName(nd)) {
+    SmallString<256> buffer;
+    llvm::raw_svector_ostream out(buffer);
+    mc->mangleName(gd, out);
+    deviceSideName = std::string(out.str());
+  } else
+    deviceSideName = std::string(nd->getIdentifier()->getName());
+
+  // Make unique name for device side static file-scope variable for HIP.
+  if (cgm.getASTContext().shouldExternalize(nd) &&
+      cgm.getLangOpts().GPURelocatableDeviceCode) {
+    SmallString<256> buffer;
+    llvm::raw_svector_ostream out(buffer);
+    out << deviceSideName;
+    cgm.printPostfixForExternalizedDecl(out, nd);
+    deviceSideName = std::string(out.str());
+  }
+  return deviceSideName;
 }

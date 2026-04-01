@@ -37,6 +37,24 @@ def CIR_CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName", "cu.kernel_name"> {
   let canHaveIllegalCXXABIType = 0;
 }
 
+def CUDAShadowNameAttr : CIR_Attr<"CUDAShadowName",
+                                  "cu.shadow_name"> {
+  let summary = "Device-side global variable name for this shadow.";
+  let description =
+  [{
+    This attribute is attached to global variable definitions and records the
+    mangled name of the global variable used on the device.
+
+    In CUDA, __device__, __constant__ and __shared__ variables, as well as 
+    surface and texture variables, will generate a shadow symbol on host.
+    We must preserve the correspodence in order to generate registration
+    functions.
+  }];
+
+  let parameters = (ins "std::string":$device_side_name);
+  let assemblyFormat = "`<` $device_side_name `>`";
+}
+
 def CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
                                              "cu.externally_initialized"> {
   let summary = "The marked variable is externally initialized.";
