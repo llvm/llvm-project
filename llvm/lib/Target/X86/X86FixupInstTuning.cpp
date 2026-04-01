@@ -21,6 +21,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86RegisterInfo.h"
@@ -37,8 +38,135 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-fixup-inst-tuning"
 
 STATISTIC(NumInstChanges, "Number of instructions changes");
+STATISTIC(NumVPTERNLOGNotFolds,
+          "Number of all-ones + XOR-mem fused into VPTERNLOG NOT");
 
 namespace {
+
+/// Return the VPTERNLOG-rmi opcode for the given XOR-mem opcode, or 0 if there
+/// is no corresponding opcode.  We use the Q (64-bit element) variant for the
+/// VPTERNLOG so that the memory operand can be folded with the larger element
+/// granularity – element type is irrelevant for a bitwise NOT.
+static unsigned getVPTERNLOGForXORrm(unsigned XorOpc) {
+  switch (XorOpc) {
+  default:
+    return 0;
+  case X86::VPXORQZrm:
+  case X86::VPXORDZrm:
+    return X86::VPTERNLOGQZrmi;
+  case X86::VPXORQZ256rm:
+  case X86::VPXORDZ256rm:
+    return X86::VPTERNLOGQZ256rmi;
+  case X86::VPXORQZ128rm:
+  case X86::VPXORDZ128rm:
+    return X86::VPTERNLOGQZ128rmi;
+  }
+}
+
+/// Return true if \p MI is a VPTERNLOG-rri that materializes all-ones
+/// (immediate 0xFF) with all source operands marked as undef.
+static bool isVPTERNLOGAllOnes(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case X86::VPTERNLOGDZrri:
+  case X86::VPTERNLOGQZrri:
+  case X86::VPTERNLOGDZ256rri:
+  case X86::VPTERNLOGQZ256rri:
+  case X86::VPTERNLOGDZ128rri:
+  case X86::VPTERNLOGQZ128rri:
+    break;
+  }
+  // The last operand is the immediate; it must be 0xFF (all-ones).
+  const MachineOperand &ImmOp = MI.getOperand(MI.getNumOperands() - 1);
+  return ImmOp.isImm() && (ImmOp.getImm() & 0xFF) == 0xFF;
+}
+
+/// Try to fuse an all-ones materialization followed by a vector XOR-from-memory
+/// into a single VPTERNLOG NOT-from-memory:
+///
+///   $dst = VPTERNLOGDZrri undef $dst, undef $dst, undef $dst, 255
+///   $dst = VPXORQZrm      killed $dst, <mem>
+///
+/// becomes:
+///
+///   $dst = VPTERNLOGQZrmi  undef $dst, undef $dst, <mem>, 0x55
+///
+/// The immediate 0x55 = ~C (where C = src3 = memory operand), which is
+/// independent of src1 and src2.
+static bool tryFuseNotFromMem(const X86InstrInfo *TII, MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator &I) {
+  MachineInstr &XorMI = *I;
+  unsigned TernlogOpc = getVPTERNLOGForXORrm(XorMI.getOpcode());
+  if (!TernlogOpc)
+    return false;
+
+  // The XOR-rm layout: $dst(tied=$src1), $src1, base, scale, index, disp, seg.
+  Register DstReg = XorMI.getOperand(0).getReg();
+
+  // Walk backward to find the all-ones materialization.  Skip debug and
+  // position-independent instructions, but stop at any real instruction that
+  // touches DstReg.
+  MachineBasicBlock::iterator PrevIt = I;
+  if (PrevIt == MBB.begin())
+    return false;
+
+  MachineInstr *AllOnesMI = nullptr;
+  for (--PrevIt;; --PrevIt) {
+    MachineInstr &Prev = *PrevIt;
+
+    if (Prev.isDebugInstr()) {
+      if (PrevIt == MBB.begin())
+        return false;
+      continue;
+    }
+
+    if (isVPTERNLOGAllOnes(Prev) && Prev.getOperand(0).getReg() == DstReg) {
+      AllOnesMI = &Prev;
+      break;
+    }
+
+    // Any other instruction that reads or writes DstReg blocks the fold.
+    return false;
+  }
+
+  if (!AllOnesMI)
+    return false;
+
+  // Verify that the all-ones defines only DstReg and has no other users
+  // between itself and the XOR.  Since they are adjacent (modulo debug instrs)
+  // and both write DstReg, this is guaranteed.
+
+  LLVM_DEBUG(dbgs() << "Fusing VPTERNLOG NOT-from-memory:\n"
+                    << "  " << *AllOnesMI << "  " << XorMI);
+
+  // Build: $dst = VPTERNLOGQZrmi undef $dst, undef $dst, <mem>, 0x0F
+  // The XOR-rm operands: 0=dst, 1=src1, 2..6=mem(base,scale,index,disp,seg)
+  MachineInstrBuilder MIB =
+      BuildMI(MBB, I, XorMI.getDebugLoc(), TII->get(TernlogOpc), DstReg)
+          .addReg(DstReg, RegState::Undef)  // src1 (tied, don't care)
+          .addReg(DstReg, RegState::Undef); // src2 (don't care)
+
+  // Copy the 5 memory addressing operands from the XOR.
+  for (unsigned J = 2; J < 2 + X86::AddrNumOperands; ++J)
+    MIB.add(XorMI.getOperand(J));
+
+  MIB.addImm(0x55); // imm = ~C where C = src3 = memory operand
+
+  // Preserve mem-refs from the XOR.
+  MIB.setMemRefs(XorMI.memoperands());
+
+  LLVM_DEBUG(dbgs() << "  -> " << *MIB);
+
+  // Erase the two old instructions.
+  AllOnesMI->eraseFromParent();
+  I = MIB.getInstr()->getIterator();
+  XorMI.eraseFromParent();
+
+  ++NumVPTERNLOGNotFolds;
+  return true;
+}
+
 class X86FixupInstTuningImpl {
 public:
   bool runOnMachineFunction(MachineFunction &MF);
@@ -683,6 +811,11 @@ bool X86FixupInstTuningImpl::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
+      // Try fusing all-ones + XOR-mem → VPTERNLOG NOT-mem first.
+      if (tryFuseNotFromMem(TII, MBB, I)) {
+        Changed = true;
+        continue;
+      }
       if (processInstruction(MF, MBB, I)) {
         ++NumInstChanges;
         Changed = true;

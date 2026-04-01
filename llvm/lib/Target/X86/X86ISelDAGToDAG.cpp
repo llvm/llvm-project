@@ -4835,6 +4835,10 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
            Opc == X86ISD::ANDNP;
   };
 
+  auto IsAllOnesVec = [](SDValue V) {
+    return ISD::isBuildVectorAllOnes(V.getNode());
+  };
+
   auto IsAllOnesXor = [](SDValue V) {
     return V.getOpcode() == ISD::XOR &&
            ISD::isBuildVectorAllOnes(V.getOperand(1).getNode());
@@ -4845,6 +4849,47 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
       return V.getOperand(0);
     return V;
   };
+
+  std::function<bool(SDValue, unsigned)> IsHomogeneousAssociativeTree =
+      [&](SDValue V, unsigned Opc) {
+        V = PeelSingleUseBitcast(V);
+        if (V.getOpcode() != Opc)
+          return true;
+        if (!V.hasOneUse())
+          return false;
+        return IsHomogeneousAssociativeTree(V.getOperand(0), Opc) &&
+               IsHomogeneousAssociativeTree(V.getOperand(1), Opc);
+      };
+
+  auto IsLoadLike = [](SDValue V) {
+    return isa<LoadSDNode>(V.getNode()) ||
+           V.getOpcode() == X86ISD::VBROADCAST_LOAD;
+  };
+
+  // Fast-path: X ^ -1 -> ~X.
+  //
+  // Use X for all three VPTERNLOG inputs and select an immediate that yields
+  // ~X when A == B == C == X (imm bit0 = 1, bit7 = 0; other bits are don't
+  // care). This avoids introducing undef register operands.
+  //
+  // Keep this for register-like X only. For load-like X, this can cause an
+  // extra move/load before a folded-load VPTERNLOG form, which is usually not
+  // profitable.
+  if (N->getOpcode() == ISD::XOR) {
+    for (unsigned Idx = 0; Idx != 2; ++Idx) {
+      if (!IsAllOnesVec(N->getOperand(Idx)))
+        continue;
+
+      SDValue X = N->getOperand(Idx ^ 1);
+      SDValue XNoCast = PeelSingleUseBitcast(X);
+      if (IsLogicOpcode(XNoCast.getOpcode()) || IsAllOnesXor(XNoCast) ||
+          IsLoadLike(XNoCast))
+        continue;
+
+      if (matchVPTERNLOG(N, N, N, N, X, X, X, 0x01))
+        return true;
+    }
+  }
 
   // Avoid consuming OR into a stand-alone VPTERNLOG if it is part of a
   // higher-level A & ~(B | C) shape. Let the parent AND/ANDNP matcher absorb
@@ -4862,6 +4907,26 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
         NextUser = *NextUser->user_begin();
       unsigned NextOpc = NextUser->getOpcode();
       if (NextOpc == ISD::AND || NextOpc == X86ISD::ANDNP)
+        return false;
+    }
+  }
+
+  // Avoid consuming xor(logic_op, -1) (i.e. NOT of a logic sub-tree) into a
+  // stand-alone VPTERNLOG when the parent is also a logic op.  The parent's
+  // ComputeTernlog will fold the NOT directly into the truth-table immediate,
+  // producing fewer instructions overall.
+  if (N->getOpcode() == ISD::XOR && N->hasOneUse() &&
+      (ISD::isBuildVectorAllOnes(N->getOperand(0).getNode()) ||
+       ISD::isBuildVectorAllOnes(N->getOperand(1).getNode()))) {
+    SDValue Inner = ISD::isBuildVectorAllOnes(N->getOperand(1).getNode())
+                        ? N->getOperand(0)
+                        : N->getOperand(1);
+    SDValue InnerNoCast = PeelSingleUseBitcast(Inner);
+    if (IsLogicOpcode(InnerNoCast.getOpcode())) {
+      SDNode *User = *N->user_begin();
+      while (User->getOpcode() == ISD::BITCAST && User->hasOneUse())
+        User = *User->user_begin();
+      if (IsLogicOpcode(User->getOpcode()))
         return false;
     }
   }
@@ -4894,8 +4959,8 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   };
 
   auto ComputeTernlog = [&](SDValue Root, SDNode *OpaqueSubtree,
-                            SmallVectorImpl<LeafInfo> &Leaves,
-                            uint8_t &ImmOut, bool &TooManyLeaves) {
+                            SmallVectorImpl<LeafInfo> &Leaves, uint8_t &ImmOut,
+                            bool &TooManyLeaves) {
     TooManyLeaves = false;
 
     auto lookupLeaf = [&](SDValue Leaf) -> std::optional<uint8_t> {
@@ -4989,7 +5054,13 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   bool TooManyLeaves = false;
   if (ComputeTernlog(SDValue(N, 0), /*OpaqueSubtree=*/nullptr, Leaves, Imm,
                      TooManyLeaves)) {
-    if (Leaves.size() < 2)
+    if (Leaves.empty())
+      return false;
+    // A single-leaf load folded into VPTERNLOG causes a redundant explicit
+    // load (for the tied src1=dst) plus a folded load, doubling memory
+    // traffic. Bail out and let default lowering handle it (e.g.
+    // SETALLONES + VPXORQ mem for NOT-of-load).
+    if (Leaves.size() == 1 && IsLoadLike(PeelSingleUseBitcast(Leaves[0].Leaf)))
       return false;
     return EmitFromLeaves(N, Leaves, Imm);
   }
@@ -4998,6 +5069,45 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   // input leaf, then fold the remaining logic around it. This allows
   // multi-level trees to be selected as chained VPTERNLOG operations.
   if (TooManyLeaves) {
+    bool IsAssocOp = N->getOpcode() == ISD::OR || N->getOpcode() == ISD::AND ||
+                     N->getOpcode() == ISD::XOR;
+    bool IsHomogeneousAssoc = IsAssocOp && IsHomogeneousAssociativeTree(
+                                               SDValue(N, 0), N->getOpcode());
+
+    // For homogeneous associative trees, prefer choosing an opaque subtree
+    // from one level below the root-side logic node so we can expose two fresh
+    // siblings and form 3-input VPTERNLOG combines (e.g. OR reductions as
+    // repeated imm=254), rather than creating long 2-input $252/$250 chains.
+    if (IsHomogeneousAssoc) {
+      for (unsigned RootIdx = 0; RootIdx != 2; ++RootIdx) {
+        SDValue Side = PeelSingleUseBitcast(N->getOperand(RootIdx));
+        if (!Side.hasOneUse() || Side.getOpcode() != N->getOpcode())
+          continue;
+
+        for (unsigned ChildIdx = 0; ChildIdx != 2; ++ChildIdx) {
+          SDValue Child = PeelSingleUseBitcast(Side.getOperand(ChildIdx));
+          if (!Child.hasOneUse() || Child.getOpcode() != N->getOpcode())
+            continue;
+
+          SmallVector<LeafInfo, 3> AssocLeaves;
+          uint8_t AssocImm = 0;
+          bool AssocTooManyLeaves = false;
+          if (!ComputeTernlog(SDValue(N, 0), Child.getNode(), AssocLeaves,
+                              AssocImm, AssocTooManyLeaves))
+            continue;
+
+          if (AssocLeaves.size() < 2)
+            continue;
+
+          if (EmitFromLeaves(N, AssocLeaves, AssocImm))
+            return true;
+        }
+      }
+      // Fall through to generic cascading — for balanced trees all
+      // grandchildren may be leaves, so the child-as-opaque strategy below
+      // can still produce a valid 3-input combine.
+    }
+
     auto IsGoodOpaqueCandidate = [&](SDValue V) {
       SDValue P = PeelSingleUseBitcast(V);
       if (IsAllOnesXor(P))
@@ -5019,6 +5129,25 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
         N->getOperand(CandidateOrder[1]).hasOneUse())
       std::swap(CandidateOrder[0], CandidateOrder[1]);
 
+    // Collect all opaque subtree candidates: direct children and, if a direct
+    // child is itself a logic op, its grandchildren.  Trying grandchildren
+    // allows the root VPTERNLOG to absorb more distinct operands (3 instead
+    // of 2), which produces tighter cascades.  Example:
+    //
+    //      xor              With child "and" opaque: 2 leaves (and, e)
+    //     /   \             With grandchild "or" opaque: 3 leaves (or, d, e)
+    //   and    e            → saves one instruction in the cascade.
+    //  /   \
+    // or    d
+    //
+    // Try direct children first.  Only explore grandchildren when all direct
+    // children produce ≤2 leaves (i.e. a degenerate 2-input fold that wastes
+    // a VPTERNLOG slot) AND the opaque subtree itself has >3 leaves, meaning
+    // a single VPTERNLOG cannot handle it. When the opaque child fits in one
+    // VPTERNLOG (≤3 leaves), going deeper just reshuffles the split without
+    // saving instructions.
+    bool TriedDirect = false;
+    bool NeedsGrandchild = false;
     for (unsigned Idx : CandidateOrder) {
       SmallVector<LeafInfo, 3> CascadedLeaves;
       uint8_t CascadedImm = 0;
@@ -5029,11 +5158,91 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
                           CascadedImm, CascadedTooManyLeaves))
         continue;
 
-      if (CascadedLeaves.size() < 2)
+      if (CascadedLeaves.empty())
         continue;
 
-      if (EmitFromLeaves(N, CascadedLeaves, CascadedImm))
-        return true;
+      // If the direct child yields a 3-leaf fold, emit it right away — this
+      // is already optimal for this level.
+      if (CascadedLeaves.size() == 3) {
+        if (EmitFromLeaves(N, CascadedLeaves, CascadedImm))
+          return true;
+      }
+      TriedDirect = true;
+
+      // Check if the opaque subtree itself has >3 leaves: if so, it cannot
+      // be handled by a single VPTERNLOG, and going one level deeper may
+      // help reduce the total instruction count.
+      if (CascadedLeaves.size() <= 2) {
+        SmallVector<LeafInfo, 3> SubLeaves;
+        uint8_t SubImm = 0;
+        bool SubTooMany = false;
+        if (!ComputeTernlog(SDValue(N->getOperand(Idx)),
+                            /*OpaqueSubtree=*/nullptr, SubLeaves, SubImm,
+                            SubTooMany) &&
+            SubTooMany)
+          NeedsGrandchild = true;
+      }
+    }
+
+    // Direct children only yielded ≤2-leaf folds and the opaque subtree has
+    // >3 leaves (can't fit in one VPTERNLOG).  Try grandchildren — making a
+    // deeper subtree opaque exposes more leaves at the root level, reducing
+    // the total instruction count.
+    if (NeedsGrandchild) {
+      for (unsigned Idx : CandidateOrder) {
+        SDValue Child = N->getOperand(Idx);
+        SDValue ChildNoCast = PeelSingleUseBitcast(Child);
+        if (!ChildNoCast.hasOneUse() || !IsLogicOpcode(ChildNoCast.getOpcode()))
+          continue;
+
+        for (unsigned GIdx = 0; GIdx != 2; ++GIdx) {
+          SDValue GChild = ChildNoCast.getOperand(GIdx);
+          SDValue GChildNoCast = PeelSingleUseBitcast(GChild);
+
+          // Skip NOT-wrappers (xor X, -1): ComputeTernlog already folds NOT
+          // into the truth table, so cutting at a NOT boundary just pushes
+          // the NOT into a separate instruction without saving anything.
+          if (IsAllOnesXor(GChildNoCast))
+            continue;
+
+          if (!IsLogicOpcode(GChildNoCast.getOpcode()))
+            continue;
+
+          SmallVector<LeafInfo, 3> CascadedLeaves;
+          uint8_t CascadedImm = 0;
+          bool CascadedTooManyLeaves = false;
+
+          if (!ComputeTernlog(SDValue(N, 0), GChild.getNode(), CascadedLeaves,
+                              CascadedImm, CascadedTooManyLeaves))
+            continue;
+
+          if (CascadedLeaves.size() < 3)
+            continue;
+
+          if (EmitFromLeaves(N, CascadedLeaves, CascadedImm))
+            return true;
+        }
+      }
+    }
+
+    // Fall back to direct-child opaque with ≤2 leaves if nothing else worked.
+    if (TriedDirect) {
+      for (unsigned Idx : CandidateOrder) {
+        SmallVector<LeafInfo, 3> CascadedLeaves;
+        uint8_t CascadedImm = 0;
+        bool CascadedTooManyLeaves = false;
+        SDNode *OpaqueSubtree = N->getOperand(Idx).getNode();
+
+        if (!ComputeTernlog(SDValue(N, 0), OpaqueSubtree, CascadedLeaves,
+                            CascadedImm, CascadedTooManyLeaves))
+          continue;
+
+        if (CascadedLeaves.empty())
+          continue;
+
+        if (EmitFromLeaves(N, CascadedLeaves, CascadedImm))
+          return true;
+      }
     }
   }
 
