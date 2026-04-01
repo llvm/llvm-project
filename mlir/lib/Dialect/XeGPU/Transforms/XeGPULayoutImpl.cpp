@@ -462,6 +462,8 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
 
   SmallVector<int64_t> consumerSgLayout =
       consumerLayout.getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> consumerSgData =
+      consumerLayout.getEffectiveSgDataAsInt();
   SmallVector<int64_t> consumerLaneLayout =
       consumerLayout.getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> consumerOrder = consumerLayout.getEffectiveOrderAsInt();
@@ -494,9 +496,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
         if (!llvm::is_contained(reductionDims, i) &&
             consumerIdx < static_cast<int>(consumerSgLayout.size())) {
           sgLayout[i] = consumerSgLayout[consumerIdx];
-          assert((srcShape[i] % sgLayout[i] == 0) &&
-                 "source shape not divisible by consumer sg_layout");
-          sgData[i] = srcShape[i] / sgLayout[i];
+          sgData[i] = consumerSgData[consumerIdx];
           remainingSgCount /= sgLayout[i];
           order[i] = consumerOrder[consumerIdx];
           consumerIdx++;
