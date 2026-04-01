@@ -33,13 +33,11 @@ void HexagonInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
 void HexagonInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                    StringRef Annot, const MCSubtargetInfo &STI,
                                    raw_ostream &OS) {
-  // PS_crash is emitted as 0x00110011 for __builtin_trap.  It encodes
-  // the duplex { R1 = memw(R1+#0); R1 = memw(R1+#0) } -- both slots
-  // write R1, triggering a hardware exception.  The \v separator signals
-  // the HexagonPrettyPrinter in llvm-objdump that this is a duplex so
-  // it closes the packet braces correctly.
+  // PS_crash is emitted as R1 = memw(R1++#0) -- the load destination and
+  // the post-increment destination both write R1, triggering a hardware
+  // "multiple writes to register" exception.
   if (MI->getOpcode() == Hexagon::PS_crash) {
-    OS << "mult_reg_write_fail" << '\v' << "mult_reg_write_fail";
+    OS << "r1 = memw(r1++#0) // llvm.trap";
     return;
   }
   if (HexagonMCInstrInfo::isDuplex(MII, *MI)) {

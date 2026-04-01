@@ -753,13 +753,13 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
   Hexagon_MC::verifyInstructionPredicates(MI->getOpcode(),
                                           getSubtargetInfo().getFeatureBits());
 
-  // Crash is emitted as a raw 32-bit word that the processor decodes as a
-  // duplex with both slots writing R1 -- an illegal packet that raises a
-  // "multiple writes to register" hardware exception.  We bypass the normal
-  // MCInst path because the assembler would (correctly) reject the
-  // duplicate destination.
+  // Crash is emitted as R1 = memw(R1++#0): the load destination and the
+  // post-increment destination both write R1, so the hardware raises a
+  // "multiple writes to register" exception.  We bypass the normal MCInst
+  // path because the assembler would (correctly) reject the duplicate
+  // destination.
   if (MI->getOpcode() == Hexagon::PS_crash) {
-    OutStreamer->emitInt32(DUPLEX_LOAD_R1R1);
+    OutStreamer->emitInt32(LOAD_MULT_REG_WRITE);
     return;
   }
 

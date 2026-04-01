@@ -101,10 +101,11 @@ createHexagonELFObjectWriter(uint8_t OSABI, StringRef CPU);
 unsigned HexagonGetLastSlot();
 unsigned HexagonConvertUnits(unsigned ItinUnits, unsigned *Lanes);
 
-// Raw encoding of the duplex { R1 = memw(R1+#0); R1 = memw(R1+#0) }.
-// Both slots write R1, so the hardware raises a "multiple writes to
-// register" exception.  Used by PS_crash / __builtin_trap.
-constexpr uint32_t DUPLEX_LOAD_R1R1 = 0x00110011;
+// Raw encoding of R1 = memw(R1++#0) (L2_loadri_pi with Rd==Rx==R1).
+// The load destination and the post-increment destination both write R1,
+// so the hardware raises a "multiple writes to register" exception.
+// Used by PS_crash / llvm.trap.
+constexpr uint32_t LOAD_MULT_REG_WRITE = 0x9b810001;
 
 } // End llvm namespace
 
