@@ -17294,8 +17294,9 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
   if (!isNullConstant(TrueVal))
     return SDValue();
 
-  // We also require hasOneUse()  to ensure that we can safely replace ISD::SRL
-  // with PPCISD::SRL without affecting other users later.
+  // This combine is replacing a select_cc with a PPC srl, not an srl with a
+  // PPC srl. If the original srl had multiple uses it would just remain in the
+  // code. This is at most a performance consideration.
   if (FalseVal.getOpcode() != ISD::SRL || !FalseVal.hasOneUse())
     return SDValue();
 
@@ -17315,20 +17316,26 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
     if (ShiftAmt.getOpcode() != ISD::TRUNCATE)
       return SDValue();
 
+    // Verify the truncate target type is appropriate for shift amount (i32, not
+    // i1 or other)
+    if (ShiftAmt.getValueType() != MVT::i32)
+      return SDValue();
+
     SDValue CtlzNode = ShiftAmt.getOperand(0);
 
     if (CtlzNode.getOpcode() != ISD::CTLZ)
       return SDValue();
 
     CtlzArg = CtlzNode.getOperand(0);
-  } else
+  } else {
     CtlzArg = ShiftAmt.getOperand(0);
+  }
 
   // Check if ctlz operates on the same value as the comparison
   if (CtlzArg != CmpLHS)
     return SDValue();
 
-  // Replace ISD::SRL with PPCISD::SRL to ensure well-defined behavior.
+  // Using PPCISD::SRL to ensure well-defined behavior.
   // On PowerPC, PPCISD::SRL guarantees that shift by bitwidth returns 0,
   // which is exactly what we need for the bitfloor(0) case.
   SDLoc DL(N);
