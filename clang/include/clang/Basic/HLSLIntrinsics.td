@@ -355,13 +355,13 @@ The return value is the UBYTE4 representation of the \a x parameter.
 This function swizzles and scales components of the \a x parameter. Use this
 function to compensate for the lack of UBYTE4 support in some hardware.
 }];
-  // Use the same scaling factor used by FXC, and DXC for DXIL
-  // (i.e., 255.001953)
-  // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
-  // The DXC implementation refers to a comment on the following stackoverflow
-  // discussion to justify the scaling factor: "Built-in rounding, necessary
-  // because of truncation. 0.001953 * 256 = 0.5"
-  // https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
+  // Use the scaling factor used by FXC, and DXC for DXIL (i.e., 255.001953).
+  // The [DXC implementation] refers to [stack overflow] to justify the scaling
+  // factor:
+  // > Built-in rounding, necessary because of truncation. 0.001953 * 256 = 0.5
+  // 
+  // [DXC implementation]: https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
+  // [stack overflow]: https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
   let Body = "return V.zyxw * 255.001953f;";
   let ParamNames = ["V"];
   let Args = [VectorType<FloatTy, 4>];
