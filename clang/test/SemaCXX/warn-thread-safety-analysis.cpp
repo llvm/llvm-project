@@ -7494,13 +7494,17 @@ void testPointerAliasNoEscape3() {
   ptr->mu.Unlock();
 }
 
+// Passing an alias by non-const reference or pointer-to-pointer to a function
+// is no longer treated as an escape: dropping call-based alias invalidation
+// eliminates false positives (e.g. annotated acquire/release functions that
+// incidentally take the alias by mutable pointer) at the cost of not warning
+// when the called function actually changes what the alias points to.
 void testPointerAliasEscape1(Foo *f) {
   Foo *ptr = f;
   escapeAlias(0, ptr);
 
   ptr->mu.Lock();
-  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
-                          // expected-note{{found near match 'ptr->mu'}}
+  f->data = 42;
   ptr->mu.Unlock();
 }
 
@@ -7509,8 +7513,7 @@ void testPointerAliasEscape2(Foo *f) {
   escapeAlias(0, &ptr);
 
   ptr->mu.Lock();
-  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
-                          // expected-note{{found near match 'ptr->mu'}}
+  f->data = 42;
   ptr->mu.Unlock();
 }
 
@@ -7521,8 +7524,7 @@ void testPointerAliasEscape3(Foo *f) {
   escapeAlias(0, &ptr);
 
   ptr->mu.Lock();
-  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
-                          // expected-note{{found near match 'ptr->mu'}}
+  f->data = 42;
   ptr->mu.Unlock();
 }
 
@@ -7535,6 +7537,29 @@ void testPointerAliasEscapeAndReset(Foo *f) {
 
   ptr->mu.Lock();
   f->data = 42;
+  ptr->mu.Unlock();
+}
+
+// Annotated acquire/release functions that incidentally take the alias by
+// non-const pointer must not produce false positives.
+void lockFooPtr(Foo **Fp) EXCLUSIVE_LOCK_FUNCTION((*Fp)->mu);
+void unlockFooPtr(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
+
+void testAnnotatedAcquireReleaseNoFalsePositive(Foo *F) {
+  Foo *ptr = F;
+  lockFooPtr(&ptr);
+  F->data = 42;
+  ptr->data = 42;
+  unlockFooPtr(&ptr);
+}
+
+void customRealloc(void **p, long);
+void testPointerAliasTypeErasedEscape(Foo *f) {
+  Foo *ptr = f;
+  customRealloc((void**)&ptr, sizeof(*ptr));
+  ptr->mu.Lock();
+  f->data = 42; // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                // expected-note{{found near match 'ptr->mu'}}
   ptr->mu.Unlock();
 }
 
@@ -7553,7 +7578,7 @@ void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
   Foo* L;
   L = F;
   L->mu.Lock();
-  // Release the lock held by 'L' before clearing its definition.
+  // L's alias is retained across the call.
   unlockFooWithEscapablePointer(&L);
 }
 
