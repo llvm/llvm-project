@@ -266,7 +266,10 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["projects_to_build"], "clang;llvm")
         self.assertEqual(env_variables["project_check_targets"], "")
         self.assertEqual(env_variables["runtimes_to_build"], "libclc")
-        self.assertEqual(env_variables["runtimes_check_targets"], "check-libclc-amdgcn-amd-amdhsa-llvm")
+        self.assertEqual(
+            env_variables["runtimes_check_targets"],
+            "check-libclc-amdgcn-amd-amdhsa-llvm",
+        )
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
     def test_exclude_docs(self):
