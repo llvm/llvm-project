@@ -102,6 +102,7 @@ protected:
   Tool *getTool(Action::ActionClass AC) const override;
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
+  Tool *buildStaticLibTool() const override;
 
 private:
   LazyDetector<CudaInstallationDetector> CudaInstallation;

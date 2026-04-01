@@ -136,6 +136,8 @@ protected:
 
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
+  Tool *buildStaticLibTool() const override;
+
 private:
   std::optional<llvm::StringRef> WinSdkDir, WinSdkVersion, WinSysRoot;
   std::string VCToolChainPath;

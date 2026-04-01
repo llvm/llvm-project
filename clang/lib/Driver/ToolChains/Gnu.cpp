@@ -244,6 +244,8 @@ void tools::gnutools::StaticLibTool::ConstructJob(
   ArgStringList CmdArgs;
   // Create and insert file members with a deterministic index.
   CmdArgs.push_back("rcsD");
+  if (Args.hasArgNoClaim(options::OPT_marm64x))
+    CmdArgs.push_back("--whole-archive");
   CmdArgs.push_back(Output.getFilename());
 
   for (const auto &II : Inputs) {

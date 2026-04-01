@@ -589,6 +589,10 @@ Tool *toolchains::MinGW::buildLinker() const {
   return new tools::MinGW::Linker(*this);
 }
 
+Tool *toolchains::MinGW::buildStaticLibTool() const {
+  return new tools::gnutools::StaticLibTool(*this);
+}
+
 bool toolchains::MinGW::HasNativeLLVMSupport() const {
   return NativeLLVMSupport;
 }

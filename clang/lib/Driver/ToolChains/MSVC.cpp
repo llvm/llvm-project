@@ -8,6 +8,7 @@
 
 #include "MSVC.h"
 #include "Darwin.h"
+#include "Gnu.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
@@ -469,6 +470,13 @@ Tool *MSVCToolChain::buildAssembler() const {
     return new tools::darwin::Assembler(*this);
   getDriver().Diag(clang::diag::err_no_external_assembler);
   return nullptr;
+}
+
+Tool *MSVCToolChain::buildStaticLibTool() const {
+  // It is used only for -marm64x handling to merge native and EC object files.
+  // This is an LLVM extension, so we cannot use MSVC lib.exe for this.
+  // Use the gnutools helper to construct the llvm-ar command instead.
+  return new tools::gnutools::StaticLibTool(*this);
 }
 
 ToolChain::UnwindTableLevel
