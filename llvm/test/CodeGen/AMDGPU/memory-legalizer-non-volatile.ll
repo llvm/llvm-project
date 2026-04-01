@@ -2,10 +2,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU,GFX12-CU-DAGISEL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU,GFX12-CU-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mattr=+globally-addressable-scratch -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS,GFX1250-GAS-DAGISEL %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s                 | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS,GFX1250-NOGAS-DAGISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mattr=+globally-addressable-scratch -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS,GFX1250-GAS-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s                 | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS,GFX1250-NOGAS-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -amdgpu-globally-addressable-scratch -mcpu=gfx1250 < %s                      | FileCheck --check-prefixes=GFX1250,GFX1250-GAS,GFX1250-GAS-DAGISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s                                                           | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS,GFX1250-NOGAS-DAGISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -amdgpu-globally-addressable-scratch -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GAS,GFX1250-GAS-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s                                      | FileCheck --check-prefixes=GFX1250,GFX1250-NOGAS,GFX1250-NOGAS-GISEL %s
 
 define void @flat_i32_nonatomic(ptr addrspace(0) %in, ptr addrspace(0) %out) {
 ; GFX12-CU-LABEL: flat_i32_nonatomic:

@@ -17527,8 +17527,8 @@ For GFX125x:
     it again, updating the cache line with a clean ``$nv=0`` copy of the data.
   * ``nv=1`` is set on operations that are known to access read-only memory, or memory
     that can only be modified by the current thread. For example, all scratch/private memory
-    (if ``globally-addressable-scratch`` is disabled), scratch memory used for spill/reloads,
-    loads marked as invariant, etc.
+    (unless globally addressable scratch is supported by the target **and** enabled),
+    scratch memory used for spill/reloads, loads marked as invariant, etc.
 
 * ``global_inv``, ``global_wb`` and ``global_wbinv`` are cache control instructions.
   The affected cache(s) are controlled by the ``SCOPE`` of the instruction.
@@ -17571,18 +17571,6 @@ ensure it is coherent with the vector caches. The scalar and vector caches are
 invalidated between kernel dispatches by CP since constant address space data
 may change between kernel dispatch executions. See
 :ref:`amdgpu-amdhsa-memory-spaces`.
-
-Atomics in the scratch address space are handled as follows:
-
-* Data types <= 32 bits:
-
-  * If ``globally-addressable-scratch`` is used, the instruction is converted into
-    an atomic in the generic (``flat``) address space.  All properties of the atomic
-    (atomic ordering, volatility, alignment, etc.) are preserved.
-    Refer to the generic address space code sequences for further information.
-  * Otherwise, the operation is considered as non-atomic.
-
-* Data types >32 bits: unsupported and an error is emitted.
 
 The code sequences used to implement the memory model for GFX125x are defined in
 table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`.
