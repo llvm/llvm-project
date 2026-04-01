@@ -127,14 +127,15 @@ insertPrefetchHints(MachineFunction &MF,
     unsigned NumCallsInBB = 0;
     auto InstrIt = BB.begin();
     for (auto HintIt = BBHints.begin(); HintIt != BBHints.end();) {
-      bool TargetFunctionDefined = false;
-      if (Function *TargetFunction = M->getFunction(HintIt->TargetFunction))
-        TargetFunctionDefined = !TargetFunction->isDeclaration();
       auto NextInstrIt = InstrIt == BB.end() ? BB.end() : std::next(InstrIt);
       // Insert all the prefetch hints which must be placed after this call (or
       // at the beginning of the block if `NumCallsInBB` is zero.
       while (HintIt != BBHints.end() &&
-             NumCallsInBB >= HintIt->SiteID.CallsiteIndex) {
+             HintIt->SiteID.CallsiteIndex == NumCallsInBB) {
+        bool TargetFunctionDefined = false;
+        if (Function *TargetFunction = M->getFunction(HintIt->TargetFunction))
+          TargetFunctionDefined = !TargetFunction->isDeclaration();
+
         auto TargetSymbolName = getPrefetchTargetSymbolName(
             HintIt->TargetFunction, HintIt->TargetID.BBID,
             HintIt->TargetID.CallsiteIndex);
