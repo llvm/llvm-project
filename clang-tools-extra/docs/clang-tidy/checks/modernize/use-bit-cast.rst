@@ -32,9 +32,11 @@ It only matches direct named source and destination objects, or direct
 field subobjects accessed through ``.``, ``->``, ``.*``, or ``->*``,
 and only when:
 
-* both object types are trivially copyable,
-* neither object type is a pointer, array, function type, or
-  volatile-qualified,
+* both object types are trivially copyable and bitwise-cloneable, and
+  neither is a pointer, function, or volatile-qualified type,
+* the destination type can be assigned from the ``std::bit_cast`` result,
+  so raw C array destinations are excluded while types such as
+  ``std::array`` are allowed,
 * the source and destination types differ,
 * the copy size is expressed as ``sizeof(...)`` for either copied type, and
 * the ``memcpy`` call appears in a discarded-value context, such as a statement
@@ -60,5 +62,5 @@ Options
 
 .. option:: IncludeStyle
 
-   A string specifying which include-style is used, ``llvm`` or ``google``.
-   Default is ``llvm``.
+   A string specifying which include-style is used, `llvm` or `google`.
+   Default is `llvm`.

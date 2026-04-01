@@ -20,13 +20,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-static const Expr *stripMemcpyArgument(const Expr *ExprNode) {
-  ExprNode = ExprNode->IgnoreParenImpCasts();
-  while (const auto *Cast = dyn_cast<ExplicitCastExpr>(ExprNode))
-    ExprNode = Cast->getSubExpr()->IgnoreParenImpCasts();
-  return ExprNode;
-}
-
 static bool isSupportedMemcpyObjectExpr(const Expr *ExprNode) {
   ExprNode = ExprNode->IgnoreParenImpCasts();
 
@@ -44,7 +37,7 @@ static bool isSupportedMemcpyObjectExpr(const Expr *ExprNode) {
 }
 
 static const Expr *extractMemcpyObjectExpr(const Expr *ExprNode) {
-  ExprNode = stripMemcpyArgument(ExprNode);
+  ExprNode = ExprNode->IgnoreParenCasts();
   const auto *AddressOf = dyn_cast<UnaryOperator>(ExprNode);
   if (!AddressOf || AddressOf->getOpcode() != UO_AddrOf)
     return nullptr;
@@ -53,30 +46,23 @@ static const Expr *extractMemcpyObjectExpr(const Expr *ExprNode) {
   return isSupportedMemcpyObjectExpr(ObjectExpr) ? ObjectExpr : nullptr;
 }
 
-static bool isSupportedMemcpyArgType(QualType Type, const ASTContext &Context,
-                                     bool RequireMutable) {
-  if (Type.isNull())
+static bool isBitCastableMemcpyObjectType(QualType Type,
+                                          const ASTContext &Context) {
+  Type = Type.getCanonicalType().getNonReferenceType();
+  return !Type.isNull() && !Type.isVolatileQualified() &&
+         !Type->isAnyPointerType() && !Type->isFunctionType() &&
+         Type.isTriviallyCopyableType(Context) &&
+         Type.isBitwiseCloneableType(Context);
+}
+
+static bool canAssignBitCastResult(QualType Type) {
+  Type = Type.getCanonicalType().getNonReferenceType();
+  if (Type.isNull() || Type.isConstQualified() || Type->isArrayType())
     return false;
 
-  const QualType CanonicalType = Type.getCanonicalType().getNonReferenceType();
-  if (CanonicalType.isNull() || CanonicalType->isDependentType() ||
-      CanonicalType->isIncompleteType() ||
-      CanonicalType.isVolatileQualified() ||
-      CanonicalType->isAnyPointerType() || CanonicalType->isArrayType() ||
-      CanonicalType->isFunctionType())
-    return false;
-
-  if (RequireMutable) {
-    if (CanonicalType.isConstQualified())
-      return false;
-
-    if (const auto *Record = CanonicalType->getAsCXXRecordDecl())
-      if (!Record->hasSimpleCopyAssignment() &&
-          !Record->hasSimpleMoveAssignment())
-        return false;
-  }
-
-  return Type.getNonReferenceType().isTriviallyCopyableType(Context);
+  const auto *Record = Type->getAsCXXRecordDecl();
+  return !Record || Record->hasSimpleCopyAssignment() ||
+         Record->hasSimpleMoveAssignment();
 }
 
 static bool isSameUnqualifiedCanonicalType(QualType LHS, QualType RHS) {
@@ -210,9 +196,9 @@ AST_MATCHER(CallExpr, isBitCastMemcpyCandidate) {
   const QualType DstType = DstExpr->getType().getNonReferenceType();
   const QualType SrcType = SrcExpr->getType().getNonReferenceType();
 
-  return isSupportedMemcpyArgType(DstType, Context, /*RequireMutable=*/true) &&
-         isSupportedMemcpyArgType(SrcType, Context,
-                                  /*RequireMutable=*/false) &&
+  return isBitCastableMemcpyObjectType(DstType, Context) &&
+         isBitCastableMemcpyObjectType(SrcType, Context) &&
+         canAssignBitCastResult(DstType) &&
          !isSameUnqualifiedCanonicalType(SrcType, DstType) &&
          isMatchingSizeOfExpression(Node.getArg(2), SrcType, DstType, Context);
 }

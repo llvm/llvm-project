@@ -5,6 +5,11 @@
 void *memcpy(void *To, const void *From, unsigned long long Size);
 
 namespace std {
+template <typename T, unsigned long long N>
+struct array {
+  T Storage[N];
+};
+
 using ::memcpy;
 }
 
@@ -72,6 +77,22 @@ void const_source_case() {
   // CHECK-FIXES: dst = std::bit_cast<unsigned int>(src);
 }
 
+void std_array_case() {
+  std::array<float, 1> src{{1.0f}};
+  std::array<unsigned int, 1> dst{};
+  std::memcpy(&dst, &src, sizeof(src));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+  // CHECK-FIXES: dst = std::bit_cast<std::array<unsigned int, 1>>(src);
+}
+
+void raw_array_source_case() {
+  float src[1] = {1.0f};
+  std::array<unsigned int, 1> dst{};
+  std::memcpy(&dst, &src, sizeof(src));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+  // CHECK-FIXES: dst = std::bit_cast<std::array<unsigned int, 1>>(src);
+}
+
 void lambda_case() {
   auto L = [] {
     float src = 1.0f;
@@ -127,6 +148,13 @@ void array_case() {
   unsigned char bytes[sizeof(float)];
   float src = 1.0f;
   std::memcpy(bytes, &src, sizeof(src));
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+}
+
+void raw_array_destination_case() {
+  std::array<float, 1> src{{1.0f}};
+  unsigned int dst[1];
+  std::memcpy(&dst, &src, sizeof(src));
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
 }
 
