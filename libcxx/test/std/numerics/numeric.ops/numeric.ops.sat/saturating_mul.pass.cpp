@@ -133,7 +133,7 @@ constexpr bool test_unsigned() {
 
   assert(std::saturating_mul(IntegerT{28}, IntegerT{2}) == IntegerT{56});
 
-  // Saturation (no limit values
+  // Saturation (no limit values)
 
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
