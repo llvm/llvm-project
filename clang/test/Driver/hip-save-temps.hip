@@ -1,31 +1,31 @@
 // -fno-gpu-rdc without -o with -c
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   --no-offload-new-driver -nogpuinc --offload-arch=gfx900 -c %s 2>&1 | \
+// RUN:   -nogpuinc --offload-arch=gfx900 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC %s
 
 // -fno-gpu-rdc without -o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   --no-offload-new-driver -nogpuinc --offload-arch=gfx900 %s 2>&1 | \
+// RUN:   -nogpuinc --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,NOUT %s
 
 // -fno-gpu-rdc with -o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   --no-offload-new-driver -nogpuinc -o executable --offload-arch=gfx900 %s 2>&1 | \
+// RUN:   -nogpuinc -o executable --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,WOUT %s
 
 // -fgpu-rdc without -o with -c
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   --no-offload-new-driver -nogpuinc -fgpu-rdc --offload-arch=gfx900 -c %s 2>&1 | \
+// RUN:   -nogpuinc -fgpu-rdc --offload-arch=gfx900 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCC %s
 
 // -fgpu-rdc without -o
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   --no-offload-new-driver -nogpuinc -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
+// RUN:   -nogpuinc -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,NOUT %s
 
 // -fgpu-rdc with -o
 // UN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// UN:   --offload-new-driver -nogpuinc -o executable -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
+// UN:   -nogpuinc -o executable -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
 // UN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,WOUT %s
 
 // -fgpu-rdc host object path
@@ -36,7 +36,7 @@
 
 // device object paths
 // CHECK: {{".*clang.*"}} "-cc1" {{.*}} "-E" {{.*}} [[CPU:"-target-cpu" "gfx900"]] {{.*}}  "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.hipi"
-// NORDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.bc"
+// NORDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.tmp.bc"
 // RDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.tmp.bc"
 
 // NORDC: {{".*clang.*"}} "-cc1" {{.*}} "-S"
@@ -72,7 +72,7 @@
 
 // Check to ensure we have a .tmp for unoptimized bitcode with -fno-gpu-rdc.
 // RUN: %clang -### -ccc-print-bindings --target=x86_64-linux-gnu -nogpulib \
-// RUN:   -save-temps -fno-gpu-rdc -nogpuinc --offload-arch=gfx906 -c %s 2>&1 | \
+// RUN:   --offload-new-driver -save-temps -fno-gpu-rdc -nogpuinc --offload-arch=gfx906 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=NORDC-BINDINGS %s
 //      NORDC-BINDINGS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+]]"
 // NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[TMP_BC:.+]]"
@@ -82,7 +82,7 @@
 
 // Check to ensure we have a .tmp for unoptimized bitcode with -fgpu-rdc.
 // RUN: %clang -### -ccc-print-bindings --target=x86_64-linux-gnu -nogpulib \
-// RUN:   -save-temps -fgpu-rdc -nogpuinc --offload-arch=gfx906 -c %s 2>&1 | \
+// RUN:   --offload-new-driver -save-temps -fgpu-rdc -nogpuinc --offload-arch=gfx906 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=RDC-BINDINGS %s
 //      RDC-BINDINGS: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+]]"
 // RDC-BINDINGS-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[TMP_BC:.+]]"
