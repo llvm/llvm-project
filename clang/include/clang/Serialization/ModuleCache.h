@@ -10,7 +10,6 @@
 #define LLVM_CLANG_SERIALIZATION_MODULECACHE_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/ErrorOr.h"
 
 #include <ctime>
 #include <memory>
