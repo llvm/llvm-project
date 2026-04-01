@@ -2455,7 +2455,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   LLVM_DEBUG(dbgs() << "\n*** GenerateWaitcntInstBefore: "; MI.print(dbgs()););
   setForceEmitWaitcnt();
 
-  assert(!MI.isMetaInstruction());
+  assert(!MI.isMetaInstruction() || MI.getOpcode() == AMDGPU::ASYNCMARK);
 
   AMDGPU::Waitcnt Wait;
   const unsigned Opc = MI.getOpcode();
@@ -3308,7 +3308,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                          E = Block.instr_end();
        Iter != E; ++Iter) {
     MachineInstr &Inst = *Iter;
-    if (Inst.isMetaInstruction())
+    // ASYNCMARK is meta instr but needs processing by
+    // generateWaitcntInstBefore and recordAsyncMark for vmcnt tracking.
+    if (Inst.isMetaInstruction() && Inst.getOpcode() != AMDGPU::ASYNCMARK)
       continue;
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
