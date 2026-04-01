@@ -8,9 +8,7 @@
 
 #include <arm_sve.h>
 
-#if defined(__ARM_FEATURE_SME) && defined(__ARM_FEATURE_SVE)
-#define ATTR __arm_streaming_compatible
-#elif defined(__ARM_FEATURE_SME)
+#if defined(__ARM_FEATURE_SME)
 #define ATTR __arm_streaming
 #else
 #define ATTR
@@ -18,9 +16,9 @@
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
-#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3) A1##A3
+#define SVE_ACLE_FUNC(A1,A2_UNUSED) A1
 #else
-#define SVE_ACLE_FUNC(A1,A2,A3) A1##A2##A3
+#define SVE_ACLE_FUNC(A1,A2) A1##A2
 #endif
 
 // CHECK-LABEL: @test_svdot_s16_x2(
@@ -35,7 +33,7 @@
 //
 svint16_t test_svdot_s16_x2(svint16_t op1, svint8_t op2, svint8_t op3) ATTR
 {
-  return SVE_ACLE_FUNC(svdot,_s16_s8,)(op1, op2, op3);
+  return SVE_ACLE_FUNC(svdot,_s16_s8)(op1, op2, op3);
 }
 
 // CHECK-LABEL: @test_svdot_u16_x2(
@@ -50,7 +48,7 @@ svint16_t test_svdot_s16_x2(svint16_t op1, svint8_t op2, svint8_t op3) ATTR
 //
 svuint16_t test_svdot_u16_x2(svuint16_t op1, svuint8_t op2, svuint8_t op3) ATTR
 {
-  return SVE_ACLE_FUNC(svdot,_u16_u8,)(op1, op2, op3);
+  return SVE_ACLE_FUNC(svdot,_u16_u8)(op1, op2, op3);
 }
 
 // CHECK-LABEL: @test_svdot_lane_s16_x2(
@@ -65,7 +63,7 @@ svuint16_t test_svdot_u16_x2(svuint16_t op1, svuint8_t op2, svuint8_t op3) ATTR
 //
 svint16_t test_svdot_lane_s16_x2(svint16_t op1, svint8_t op2, svint8_t op3) ATTR
 {
-  return SVE_ACLE_FUNC(svdot_lane,_s16_s8,)(op1, op2, op3, 7);
+  return SVE_ACLE_FUNC(svdot_lane,_s16_s8)(op1, op2, op3, 7);
 }
 
 // CHECK-LABEL: @test_svdot_lane_u16_x2(
@@ -80,5 +78,5 @@ svint16_t test_svdot_lane_s16_x2(svint16_t op1, svint8_t op2, svint8_t op3) ATTR
 //
 svuint16_t test_svdot_lane_u16_x2(svuint16_t op1, svuint8_t op2, svuint8_t op3) ATTR
 {
-  return SVE_ACLE_FUNC(svdot_lane,_u16_u8,)(op1, op2, op3, 7);
+  return SVE_ACLE_FUNC(svdot_lane,_u16_u8)(op1, op2, op3, 7);
 }
