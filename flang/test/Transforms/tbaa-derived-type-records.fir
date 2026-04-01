@@ -152,3 +152,91 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     return
   }
 }
+
+// -----
+
+// Dummy argument of derived type with pointer, allocatable, and scalar
+// components.  The pointer target goes into the "target data" subtree;
+// the allocatable payload and the scalar component are tagged under the
+// per-argument "dummy arg data" subtree.
+
+// CHECK: #[[R5:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest_dummy_ptr_alloc">
+// CHECK: #[[ANY5:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[R5]], 0>}>
+// CHECK: #[[ANYDATA5:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY5]], 0>}>
+// CHECK: #[[TGT5:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA5]], 0>}>
+// CHECK: #[[DUMMYARG5:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[ANYDATA5]], 0>}>
+// CHECK: #[[PTRTAG5:.+]] = #llvm.tbaa_tag<base_type = #[[TGT5]], access_type = #[[TGT5]], offset = 0>
+// CHECK: #[[ARGNODE5:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/{{.*}}Eobj", members = {<#[[DUMMYARG5]], 0>}>
+// CHECK: #[[ARGTAG5:.+]] = #llvm.tbaa_tag<base_type = #[[ARGNODE5]], access_type = #[[ARGNODE5]], offset = 0>
+// CHECK-LABEL: func.func @_QPtest_dummy_ptr_alloc
+// pointer target: "target data"
+// CHECK: fir.load %{{[0-9]+}} : !fir.ref<!fir.box<!fir.ptr<f32>>>
+// CHECK: fir.load %{{[0-9]+}} {tbaa = [#[[PTRTAG5]]]} : !fir.ptr<f32>
+// allocatable payload: per-argument tag
+// CHECK: fir.load %{{[0-9]+}} : !fir.ref<!fir.box<!fir.heap<f32>>>
+// CHECK: fir.load %{{[0-9]+}} {tbaa = [#[[ARGTAG5]]]} : !fir.ref<f32>
+// scalar component: same per-argument tag
+// CHECK: fir.load %{{[0-9]+}} {tbaa = [#[[ARGTAG5]]]} : !fir.ref<f32>
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+  func.func @_QPtest_dummy_ptr_alloc(%arg0: !fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>> {fir.bindc_name = "obj"}) {
+    %scope = fir.dummy_scope : !fir.dscope
+    %obj = fir.declare %arg0 dummy_scope %scope {uniq_name = "_QFtest_dummy_ptr_allocEobj"} : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>
+    %pref = fir.coordinate_of %obj, p : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+    %pbox = fir.load %pref : !fir.ref<!fir.box<!fir.ptr<f32>>>
+    %paddr = fir.box_addr %pbox : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
+    %pval = fir.load %paddr : !fir.ptr<f32>
+    %aref = fir.coordinate_of %obj, a : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+    %abox = fir.load %aref : !fir.ref<!fir.box<!fir.heap<f32>>>
+    %aheap = fir.box_addr %abox : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+    %adataref = fir.convert %aheap : (!fir.heap<f32>) -> !fir.ref<f32>
+    %aval = fir.load %adataref : !fir.ref<f32>
+    %iref = fir.coordinate_of %obj, i : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<f32>
+    %ival = fir.load %iref : !fir.ref<f32>
+    return
+  }
+}
+
+// -----
+
+// TARGET local composite with pointer, allocatable, and scalar components.
+// The pointer target gets the generic "target data" tag (pointer targets can
+// alias any other pointer or target).  The allocatable payload and the scalar
+// component get a named tag under the "target data" subtree, since they are
+// part of a TARGET variable but are not themselves pointers.
+
+// CHECK: #[[R6:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest_target_local">
+// CHECK: #[[ANY6:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[R6]], 0>}>
+// CHECK: #[[ANYDATA6:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY6]], 0>}>
+// CHECK: #[[TGT6:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA6]], 0>}>
+// CHECK: #[[PTRTAG6:.+]] = #llvm.tbaa_tag<base_type = #[[TGT6]], access_type = #[[TGT6]], offset = 0>
+// CHECK: #[[TGTNODE6:.+]] = #llvm.tbaa_type_desc<id = "target data/{{.*}}Eobj", members = {<#[[TGT6]], 0>}>
+// CHECK: #[[TGTTAG6:.+]] = #llvm.tbaa_tag<base_type = #[[TGTNODE6]], access_type = #[[TGTNODE6]], offset = 0>
+// CHECK-LABEL: func.func @_QPtest_target_local
+// pointer target: generic "target data"
+// CHECK: fir.load %{{[0-9]+}} : !fir.ref<!fir.box<!fir.ptr<f32>>>
+// CHECK: fir.load %{{[0-9]+}} {tbaa = [#[[PTRTAG6]]]} : !fir.ptr<f32>
+// allocatable payload: named "target data/<obj>" tag
+// CHECK: fir.load %{{[0-9]+}} : !fir.ref<!fir.box<!fir.heap<f32>>>
+// CHECK: fir.load %{{[0-9]+}} {tbaa = [#[[TGTTAG6]]]} : !fir.ref<f32>
+// scalar component: same named target tag
+// CHECK: fir.load %{{[0-9]+}} {tbaa = [#[[TGTTAG6]]]} : !fir.ref<f32>
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+  func.func @_QPtest_target_local() {
+    %0 = fir.alloca !fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}> {bindc_name = "obj", fir.target, uniq_name = "_QFtest_target_localEobj"}
+    %obj = fir.declare %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest_target_localEobj"} : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>
+    %pref = fir.coordinate_of %obj, p : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+    %pbox = fir.load %pref : !fir.ref<!fir.box<!fir.ptr<f32>>>
+    %paddr = fir.box_addr %pbox : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
+    %pval = fir.load %paddr : !fir.ptr<f32>
+    %aref = fir.coordinate_of %obj, a : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+    %abox = fir.load %aref : !fir.ref<!fir.box<!fir.heap<f32>>>
+    %aheap = fir.box_addr %abox : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+    %adataref = fir.convert %aheap : (!fir.heap<f32>) -> !fir.ref<f32>
+    %aval = fir.load %adataref : !fir.ref<f32>
+    %iref = fir.coordinate_of %obj, i : (!fir.ref<!fir.type<_QMtbaaTmix{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,i:f32}>>) -> !fir.ref<f32>
+    %ival = fir.load %iref : !fir.ref<f32>
+    return
+  }
+}
