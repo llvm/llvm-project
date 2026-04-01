@@ -125,6 +125,8 @@ class SILoadStoreOptimizer {
     const MachineOperand *AddrReg[MaxAddressRegs];
     unsigned NumAddresses;
     unsigned Order;
+    AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
+    SyncScope::ID SSID = SyncScope::System;
 
     bool hasSameBaseAddress(const CombineInfo &CI) {
       if (NumAddresses != CI.NumAddresses)
@@ -902,6 +904,13 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     CPol = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::cpol)->getImm();
   }
 
+  // Extract atomic ordering and sync scope from MMO for merge compatibility.
+  if (!I->memoperands_empty()) {
+    const MachineMemOperand *MMO = *I->memoperands_begin();
+    Ordering = MMO->getSuccessOrdering();
+    SSID = MMO->getSyncScopeID();
+  }
+
   AddressRegs Regs = getRegs(Opc, *LSO.TII);
   bool isVIMAGEorVSAMPLE = LSO.TII->isVIMAGE(*I) || LSO.TII->isVSAMPLE(*I);
 
@@ -1094,6 +1103,10 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
 
   // This won't be valid if the offset isn't aligned.
   if ((CI.Offset % CI.EltSize != 0) || (Paired.Offset % CI.EltSize != 0))
+    return false;
+
+  // Do not merge instructions with different atomic semantics.
+  if (CI.Ordering != Paired.Ordering || CI.SSID != Paired.SSID)
     return false;
 
   if (CI.InstClass == TBUFFER_LOAD || CI.InstClass == TBUFFER_STORE) {
@@ -2649,12 +2662,29 @@ SILoadStoreOptimizer::collectMergeableInsts(
 
     // Treat volatile accesses, ordered accesses and unmodeled side effects as
     // barriers. We can look after this barrier for separate merges.
-    if (MI.hasOrderedMemoryRef() || MI.hasUnmodeledSideEffects()) {
+    if (MI.hasUnmodeledSideEffects()) {
       LLVM_DEBUG(dbgs() << "Breaking search on barrier: " << MI);
 
       // Search will resume after this instruction in a separate merge list.
       ++BlockI;
       break;
+    }
+
+    if (MI.hasOrderedMemoryRef()) {
+      // Allow unordered and monotonic nonvolatile atomic loads to be merged.
+      // Instructions without MMOs or with volatile/strongly ordered MMOs
+      // remain barriers.
+      if (MI.mayStore() || MI.memoperands_empty() ||
+          llvm::any_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+            return MMO->isVolatile() ||
+                   isStrongerThanMonotonic(MMO->getSuccessOrdering());
+          })) {
+        LLVM_DEBUG(dbgs() << "Breaking search on barrier: " << MI);
+
+        // Search will resume after this instruction in a separate merge list.
+        ++BlockI;
+        break;
+      }
     }
 
     const InstClassEnum InstClass = getInstClass(MI.getOpcode(), *TII);
