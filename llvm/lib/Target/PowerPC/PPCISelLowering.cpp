@@ -20693,8 +20693,17 @@ SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
   EVT ResVT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
   SDLoc dl(N);
-  return GenerateVBPERM(DCI.DAG, dl, Src, SrcVT, ResVT,
-                        Subtarget.isLittleEndian());
+  SelectionDAG &DAG = DCI.DAG;
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  SDValue VBPerm = GenerateVBPERM(DAG, dl, Src, SrcVT, ResVT, IsLittleEndian);
+  if (!VBPerm)
+    return SDValue();
+  SDValue ForExtract = DAG.getBitcast(MVT::v4i32, VBPerm);
+  SDValue Extracted =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, ForExtract,
+                  DAG.getIntPtrConstant(IsLittleEndian ? 2 : 1, dl));
+  return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Extracted);
 }
 
 SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
@@ -20707,7 +20716,6 @@ SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
   if (!IsV16i8 && !IsV8i16 && !IsV8i8)
     return SDValue();
 
-  unsigned EltIdx = 2;
   if (IsV8i8) {
     Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i8,
                       DAG.getUNDEF(MVT::v16i8), Src,
@@ -20721,21 +20729,14 @@ SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
     if (IsV8i8 && IsLE)
       BitIndices[Idx] += 64;
   }
-  if (!IsLE) {
+  if (!IsLE)
     std::reverse(BitIndices.begin(), BitIndices.end());
-    EltIdx = 1;
-  }
   SmallVector<SDValue, 16> BVOps;
   for (auto Idx : BitIndices)
     BVOps.push_back(DAG.getConstant(Idx, dl, MVT::i8));
   SDValue VRB = DAG.getBuildVector(MVT::v16i8, dl, BVOps);
-  SDValue VBPerm =
-      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
-                  DAG.getConstant(Intrinsic::ppc_altivec_vbpermq, dl, MVT::i32),
-                  DAG.getBitcast(MVT::v16i8, Src), VRB);
-  SDValue ForExtract = DAG.getBitcast(MVT::v4i32, VBPerm);
-  SDValue Extracted =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, ForExtract,
-                  DAG.getIntPtrConstant(EltIdx, dl));
-  return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Extracted);
+  return DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
+      DAG.getConstant(Intrinsic::ppc_altivec_vbpermq, dl, MVT::i32),
+      DAG.getBitcast(MVT::v16i8, Src), VRB);
 }
