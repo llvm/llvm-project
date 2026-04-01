@@ -305,89 +305,6 @@ protected:
                        AddrOffsets.size()/sizeof(T));
   }
 
-  /// A random access iterator over a byte array of fixed-size unsigned
-  /// integers. Supports any element byte size from 1 to 8, enabling
-  /// std::lower_bound() to binary search address offset tables without
-  /// requiring power-of-two element sizes.
-  class AddrOffsetIterator {
-    ArrayRef<uint8_t> Data;
-    uint8_t ByteSize;
-    size_t Index;
-
-  public:
-    using iterator_category = std::random_access_iterator_tag;
-    using value_type = uint64_t;
-    using difference_type = int64_t;
-    using pointer = const uint64_t *;
-    using reference = uint64_t;
-
-    AddrOffsetIterator(ArrayRef<uint8_t> Data, uint8_t ByteSize, size_t Index)
-        : Data(Data), ByteSize(ByteSize), Index(Index) {}
-
-    uint64_t operator*() const {
-      return getUnsigned(Data, ByteSize, Index).value_or(0);
-    }
-    uint64_t operator[](difference_type N) const {
-      return getUnsigned(Data, ByteSize, Index + N).value_or(0);
-    }
-    AddrOffsetIterator &operator++() {
-      ++Index;
-      return *this;
-    }
-    AddrOffsetIterator operator++(int) {
-      auto T = *this;
-      ++Index;
-      return T;
-    }
-    AddrOffsetIterator &operator--() {
-      --Index;
-      return *this;
-    }
-    AddrOffsetIterator operator--(int) {
-      auto T = *this;
-      --Index;
-      return T;
-    }
-    AddrOffsetIterator &operator+=(difference_type N) {
-      Index += N;
-      return *this;
-    }
-    AddrOffsetIterator &operator-=(difference_type N) {
-      Index -= N;
-      return *this;
-    }
-    AddrOffsetIterator operator+(difference_type N) const {
-      return AddrOffsetIterator(Data, ByteSize, Index + N);
-    }
-    AddrOffsetIterator operator-(difference_type N) const {
-      return AddrOffsetIterator(Data, ByteSize, Index - N);
-    }
-    difference_type operator-(const AddrOffsetIterator &RHS) const {
-      return static_cast<difference_type>(Index) -
-             static_cast<difference_type>(RHS.Index);
-    }
-    bool operator==(const AddrOffsetIterator &RHS) const {
-      return Index == RHS.Index;
-    }
-    bool operator!=(const AddrOffsetIterator &RHS) const {
-      return Index != RHS.Index;
-    }
-    bool operator<(const AddrOffsetIterator &RHS) const {
-      return Index < RHS.Index;
-    }
-    bool operator>(const AddrOffsetIterator &RHS) const {
-      return Index > RHS.Index;
-    }
-    bool operator<=(const AddrOffsetIterator &RHS) const {
-      return Index <= RHS.Index;
-    }
-    bool operator>=(const AddrOffsetIterator &RHS) const {
-      return Index >= RHS.Index;
-    }
-
-    size_t getIndex() const { return Index; }
-  };
-
   /// Given an address, find the address index.
   ///
   /// Binary search the address table and find the matching address index.
@@ -397,7 +314,7 @@ protected:
   /// \returns An index into the address table. This index can be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   /// Returns an error if the address isn't in the GSYM with details of why.
-  LLVM_ABI Expected<uint64_t> getAddressIndex(const uint64_t Addr) const;
+  virtual Expected<uint64_t> getAddressIndex(const uint64_t Addr) const = 0;
 
   /// Given an address index, get the offset for the FunctionInfo.
   ///

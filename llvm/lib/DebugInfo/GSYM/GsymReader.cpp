@@ -116,43 +116,6 @@ std::optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   return *AddressOffset + getBaseAddress();
 }
 
-Expected<uint64_t>
-GsymReader::getAddressIndex(const uint64_t Addr) const {
-  const uint64_t BaseAddress = getBaseAddress();
-  if (Addr < BaseAddress)
-    return createStringError(std::errc::invalid_argument,
-                             "address 0x%" PRIx64 " is not in GSYM", Addr);
-
-  const uint64_t AddrOffset = Addr - BaseAddress;
-  const uint8_t ByteSize = getAddressOffsetByteSize();
-  const size_t NumAddrs = getNumAddresses();
-  AddrOffsetIterator Begin(AddrOffsets, ByteSize, 0);
-  AddrOffsetIterator End(AddrOffsets, ByteSize, NumAddrs);
-  auto Iter = std::lower_bound(Begin, End, AddrOffset);
-
-  // Watch for addresses that fall between the base address and the first
-  // address offset.
-  if (Iter == Begin && AddrOffset < *Begin)
-    return createStringError(std::errc::invalid_argument,
-                             "address 0x%" PRIx64 " is not in GSYM", Addr);
-  if (Iter == End || AddrOffset < *Iter)
-    --Iter;
-
-  // GSYM files have sorted function infos with the most information (line
-  // table and/or inline info) first in the array of function infos, so
-  // always backup as much as possible as long as the address offset is the
-  // same as the previous entry.
-  while (Iter != Begin) {
-    auto Prev = Iter - 1;
-    if (*Prev == *Iter)
-      Iter = Prev;
-    else
-      break;
-  }
-
-  return Iter.getIndex();
-}
-
 llvm::Expected<DataExtractor>
 GsymReader::getFunctionInfoDataForAddress(uint64_t Addr,
                                           uint64_t &FuncStartAddr) const {

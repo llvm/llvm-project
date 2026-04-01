@@ -177,6 +177,36 @@ const Header &GsymReaderV1::getHeader() const {
   return *Hdr;
 }
 
+Expected<uint64_t>
+GsymReaderV1::getAddressIndex(const uint64_t Addr) const {
+  if (Addr >= Hdr->BaseAddress) {
+    const uint64_t AddrOffset = Addr - Hdr->BaseAddress;
+    std::optional<uint64_t> AddrOffsetIndex;
+    switch (Hdr->AddrOffSize) {
+    case 1:
+      AddrOffsetIndex = getAddressOffsetIndex<uint8_t>(AddrOffset);
+      break;
+    case 2:
+      AddrOffsetIndex = getAddressOffsetIndex<uint16_t>(AddrOffset);
+      break;
+    case 4:
+      AddrOffsetIndex = getAddressOffsetIndex<uint32_t>(AddrOffset);
+      break;
+    case 8:
+      AddrOffsetIndex = getAddressOffsetIndex<uint64_t>(AddrOffset);
+      break;
+    default:
+      return createStringError(std::errc::invalid_argument,
+                               "unsupported address offset size %u",
+                               Hdr->AddrOffSize);
+    }
+    if (AddrOffsetIndex)
+      return *AddrOffsetIndex;
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "address 0x%" PRIx64 " is not in GSYM", Addr);
+}
+
 std::optional<uint64_t> GsymReaderV1::getAddressInfoOffset(size_t Index) const {
   if (Index < AddrInfoOffsets.size())
     return AddrInfoOffsets[Index];

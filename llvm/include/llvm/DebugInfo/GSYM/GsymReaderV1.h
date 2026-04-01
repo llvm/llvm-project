@@ -33,6 +33,31 @@ class GsymReaderV1 : public GsymReader {
   };
   std::unique_ptr<SwappedData> Swap;
 
+  /// Get the address offset index for a given address offset using typed
+  /// array binary search (power-of-two sizes only).
+  template <class T>
+  std::optional<uint64_t>
+  getAddressOffsetIndex(const uint64_t AddrOffset) const {
+    ArrayRef<T> AIO = getAddrOffsets<T>();
+    const auto Begin = AIO.begin();
+    const auto End = AIO.end();
+    auto Iter = std::lower_bound(Begin, End, AddrOffset);
+    if (Iter == Begin && AddrOffset < *Begin)
+      return std::nullopt;
+    if (Iter == End || AddrOffset < *Iter)
+      --Iter;
+
+    while (Iter != Begin) {
+      auto Prev = Iter - 1;
+      if (*Prev == *Iter)
+        Iter = Prev;
+      else
+        break;
+    }
+
+    return std::distance(Begin, Iter);
+  }
+
   LLVM_ABI static llvm::Expected<GsymReaderV1>
   create(std::unique_ptr<MemoryBuffer> &MemBuffer);
 
@@ -59,6 +84,8 @@ public:
       return Files[Index];
     return std::nullopt;
   }
+
+  LLVM_ABI Expected<uint64_t> getAddressIndex(const uint64_t Addr) const override;
 
   // GlobalData accessors
   std::optional<uint64_t> getAddressInfoOffset(size_t Index) const override;
