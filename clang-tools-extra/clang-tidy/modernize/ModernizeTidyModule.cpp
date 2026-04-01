@@ -32,6 +32,7 @@
 #include "TypeTraitsCheck.h"
 #include "UnaryStaticAssertCheck.h"
 #include "UseAutoCheck.h"
+#include "UseBitCastCheck.h"
 #include "UseBoolLiteralsCheck.h"
 #include "UseConstraintsCheck.h"
 #include "UseDefaultMemberInitCheck.h"
@@ -88,6 +89,7 @@ public:
     CheckFactories.registerCheck<MinMaxUseInitializerListCheck>(
         "modernize-min-max-use-initializer-list");
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
+    CheckFactories.registerCheck<UseBitCastCheck>("modernize-use-bit-cast");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");
     CheckFactories.registerCheck<UseIntegerSignComparisonCheck>(

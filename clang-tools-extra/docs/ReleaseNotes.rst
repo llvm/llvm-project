@@ -145,6 +145,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-bit-cast
+  <clang-tidy/checks/modernize/use-bit-cast>` check.
+
+  Finds conservative object-to-object ``memcpy`` type punning that can be
+  rewritten as ``std::bit_cast`` in C++20 and later.
+
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 
