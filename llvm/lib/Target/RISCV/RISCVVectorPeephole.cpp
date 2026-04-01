@@ -339,12 +339,24 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
 
   // Masked off lanes past TrueVL will come from False, and converting to vmv
   // will lose these lanes unless MIVL <= TrueVL.
-  // TODO: We could relax this for False == Passthru and True policy == TU
+  // We can relax this when False == Passthru and True's tail policy is TU,
+  // because True's tail lanes will preserve its passthru (= False = Passthru).
   const MachineOperand &MIVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
   const MachineOperand &TrueVL =
       True->getOperand(RISCVII::getVLOpNum(True->getDesc()));
-  if (!RISCV::isVLKnownLE(MIVL, TrueVL))
-    return false;
+  if (!RISCV::isVLKnownLE(MIVL, TrueVL)) {
+    Register FalseReg = MI.getOperand(2).getReg();
+    Register PassthruReg = MI.getOperand(1).getReg();
+    if (!PassthruReg.isValid() || FalseReg != PassthruReg)
+      return false;
+    if (!RISCVII::hasVecPolicyOp(True->getDesc().TSFlags))
+      return false;
+    uint64_t TruePolicy =
+        True->getOperand(RISCVII::getVecPolicyOpNum(True->getDesc()))
+            .getImm();
+    if (TruePolicy & RISCVVType::TAIL_AGNOSTIC)
+      return false;
+  }
 
   // True's passthru needs to be equivalent to False
   Register TruePassthruReg = True->getOperand(1).getReg();
