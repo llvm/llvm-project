@@ -368,6 +368,14 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
     return success();
   }
 
+  // Memref index_cast is a no-op at the LLVM level since LLVM uses opaque
+  // pointers and memrefs of different integer/index element types all convert
+  // to the same LLVM struct type.
+  if (isa<MemRefType>(op.getIn().getType())) {
+    rewriter.replaceOp(op, adaptor.getIn());
+    return success();
+  }
+
   bool isNonNeg = false;
   if constexpr (std::is_same_v<ExtCastTy, LLVM::ZExtOp>)
     isNonNeg = op.getNonNeg();
