@@ -316,9 +316,7 @@ public:
     llvm::append_range(*this, other);
     llvm::append_range(Writebacks, other.Writebacks);
     llvm::append_range(CleanupsToDeactivate, other.CleanupsToDeactivate);
-    LifetimeCleanups.insert(LifetimeCleanups.end(),
-                            other.LifetimeCleanups.begin(),
-                            other.LifetimeCleanups.end());
+    llvm::append_range(LifetimeCleanups, other.LifetimeCleanups);
     assert(!(StackBase && other.StackBase) && "can't merge stackbases");
     if (!StackBase)
       StackBase = other.StackBase;
@@ -347,8 +345,20 @@ public:
     CleanupsToDeactivate.push_back(ArgCleanup);
   }
 
+  void addArgCleanupDeactivationAfterCall(EHScopeStack::stable_iterator Cleanup,
+                                          llvm::Instruction *IsActiveIP) {
+    CallArgCleanup ArgCleanup;
+    ArgCleanup.Cleanup = Cleanup;
+    ArgCleanup.IsActiveIP = IsActiveIP;
+    CleanupsToDeactivateAfterCall.push_back(ArgCleanup);
+  }
+
   ArrayRef<CallArgCleanup> getCleanupsToDeactivate() const {
     return CleanupsToDeactivate;
+  }
+
+  ArrayRef<CallArgCleanup> getCleanupsToDeactivateAfterCall() const {
+    return CleanupsToDeactivateAfterCall;
   }
 
   void allocateArgumentMemory(CodeGenFunction &CGF);
@@ -379,6 +389,9 @@ private:
   /// is used to cleanup objects that are owned by the callee once the call
   /// occurs.
   SmallVector<CallArgCleanup, 1> CleanupsToDeactivate;
+
+  /// Deactivate these cleanups immediately after the call returns successfully.
+  SmallVector<CallArgCleanup, 1> CleanupsToDeactivateAfterCall;
 
   /// Lifetime information needed to call llvm.lifetime.end for any temporary
   /// argument allocas.

@@ -4529,6 +4529,16 @@ static void deactivateArgCleanupsBeforeCall(CodeGenFunction &CGF,
   }
 }
 
+static void deactivateArgCleanupsAfterCall(CodeGenFunction &CGF,
+                                           const CallArgList &CallArgs) {
+  ArrayRef<CallArgList::CallArgCleanup> Cleanups =
+      CallArgs.getCleanupsToDeactivateAfterCall();
+  for (const auto &I : llvm::reverse(Cleanups)) {
+    CGF.DeactivateCleanupBlock(I.Cleanup, I.IsActiveIP);
+    I.IsActiveIP->eraseFromParent();
+  }
+}
+
 static const Expr *maybeGetUnaryAddrOfOperand(const Expr *E) {
   if (const UnaryOperator *uop = dyn_cast<UnaryOperator>(E->IgnoreParens()))
     if (uop->getOpcode() == UO_AddrOf)
@@ -5072,13 +5082,18 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     if (!CGM.getCodeGenOpts().NoLifetimeMarkersForTemporaries &&
         EmitLifetimeStart(ArgSlotAlloca.getPointer())) {
       if (E->getType().isDestructedType()) {
-        pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
-                                             ArgSlotAlloca);
+        pushFullExprCleanup<CallLifetimeEnd>(
+            CleanupKind::NormalEHLifetimeMarker, ArgSlotAlloca);
       } else {
         args.addLifetimeCleanup({ArgSlotAlloca.getPointer()});
-        if (getInvokeDest())
+        if (getInvokeDest()) {
           pushFullExprCleanup<CallLifetimeEnd>(CleanupKind::EHCleanup,
                                                ArgSlotAlloca);
+          EHScopeStack::stable_iterator Cleanup = EHStack.stable_begin();
+          llvm::Instruction *IsActive =
+              Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+          args.addArgCleanupDeactivationAfterCall(Cleanup, IsActive);
+        }
       }
     }
   }
@@ -6075,6 +6090,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               BundleList);
     EmitBlock(Cont);
   }
+
+  if (!CallArgs.getCleanupsToDeactivateAfterCall().empty())
+    deactivateArgCleanupsAfterCall(*this, CallArgs);
   if (CI->getCalledFunction() && CI->getCalledFunction()->hasName() &&
       CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
     SetSqrtFPAccuracy(CI);

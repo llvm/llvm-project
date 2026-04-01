@@ -11,14 +11,14 @@ struct Trivial {
 // CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA6:![0-9]+]]
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA5:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // EXCEPTIONS-LABEL: define dso_local void @cleanup(
 // EXCEPTIONS-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 // EXCEPTIONS-NEXT:  [[ENTRY:.*:]]
 // EXCEPTIONS-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
-// EXCEPTIONS-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA6:![0-9]+]]
+// EXCEPTIONS-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA5:![0-9]+]]
 // EXCEPTIONS-NEXT:    ret void
 //
 void cleanup(int *p) {}
@@ -79,7 +79,7 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:    store ptr [[TMP1]], ptr [[EXN_SLOT]], align 8
 // EXCEPTIONS-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 1
 // EXCEPTIONS-NEXT:    store i32 [[TMP2]], ptr [[EHSELECTOR_SLOT]], align 4
-// EXCEPTIONS-NEXT:    br label %[[EHCLEANUP7:.*]]
+// EXCEPTIONS-NEXT:    br label %[[EHCLEANUP:.*]]
 // EXCEPTIONS:       [[LPAD1]]:
 // EXCEPTIONS-NEXT:    [[TMP3:%.*]] = landingpad { ptr, i32 }
 // EXCEPTIONS-NEXT:            cleanup
@@ -87,7 +87,8 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:    store ptr [[TMP4]], ptr [[EXN_SLOT]], align 8
 // EXCEPTIONS-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i32 } [[TMP3]], 1
 // EXCEPTIONS-NEXT:    store i32 [[TMP5]], ptr [[EHSELECTOR_SLOT]], align 4
-// EXCEPTIONS-NEXT:    br label %[[EHCLEANUP:.*]]
+// EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR4]]
+// EXCEPTIONS-NEXT:    br label %[[EHCLEANUP]]
 // EXCEPTIONS:       [[LPAD4]]:
 // EXCEPTIONS-NEXT:    [[TMP6:%.*]] = landingpad { ptr, i32 }
 // EXCEPTIONS-NEXT:            cleanup
@@ -98,9 +99,6 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP3]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    br label %[[EHCLEANUP]]
 // EXCEPTIONS:       [[EHCLEANUP]]:
-// EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR4]]
-// EXCEPTIONS-NEXT:    br label %[[EHCLEANUP7]]
-// EXCEPTIONS:       [[EHCLEANUP7]]:
 // EXCEPTIONS-NEXT:    call void @cleanup(ptr noundef [[X]])
 // EXCEPTIONS-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR4]]
 // EXCEPTIONS-NEXT:    br label %[[EH_RESUME:.*]]
@@ -108,8 +106,8 @@ struct Trivial gen(void);
 // EXCEPTIONS-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // EXCEPTIONS-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
 // EXCEPTIONS-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
-// EXCEPTIONS-NEXT:    [[LPAD_VAL9:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
-// EXCEPTIONS-NEXT:    resume { ptr, i32 } [[LPAD_VAL9]]
+// EXCEPTIONS-NEXT:    [[LPAD_VAL8:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
+// EXCEPTIONS-NEXT:    resume { ptr, i32 } [[LPAD_VAL8]]
 //
 void test() {
   int x __attribute__((cleanup(cleanup)));

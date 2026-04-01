@@ -35,16 +35,16 @@ void func_that_throws(Trivial t);
 // CHECK:       [[LPAD1]]:
 // CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 // CHECK-NEXT:            catch ptr null
-// CHECK-NEXT:    br label %[[EHCLEANUP:.*]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP]]) #[[ATTR4]]
+// CHECK-NEXT:    br label %[[CATCH:.*]]
 // CHECK:       [[LPAD4]]:
 // CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
 // CHECK-NEXT:            catch ptr null
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP2]]) #[[ATTR4]]
-// CHECK-NEXT:    br label %[[EHCLEANUP]]
-// CHECK:       [[EHCLEANUP]]:
+// CHECK-NEXT:    br label %[[CATCH]]
+// CHECK:       [[CATCH]]:
 // CHECK-NEXT:    [[DOTPN:%.*]] = phi { ptr, i32 } [ [[TMP1]], %[[LPAD4]] ], [ [[TMP0]], %[[LPAD1]] ]
 // CHECK-NEXT:    [[EXN_SLOT_0:%.*]] = extractvalue { ptr, i32 } [[DOTPN]], 0
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP]]) #[[ATTR4]]
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @__cxa_begin_catch(ptr [[EXN_SLOT_0]]) #[[ATTR4]]
 // CHECK-NEXT:    tail call void @__cxa_end_catch()
 // CHECK-NEXT:    br label %[[TRY_CONT]]
