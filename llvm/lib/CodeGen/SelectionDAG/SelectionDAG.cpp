@@ -64,6 +64,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -4706,7 +4707,7 @@ ConstantRange SelectionDAG::computeConstantRangeIncludingKnownBits(
     unsigned Depth) const {
   KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
   ConstantRange CR1 = ConstantRange::fromKnownBits(Known, ForSigned);
-  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, Depth);
+  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, ForSigned, Depth);
   ConstantRange::PreferredRangeType RangeType =
       ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
   return CR1.intersectWith(CR2, RangeType);
@@ -4821,6 +4822,11 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
            isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
                                   Depth + 1);
+  }
+
+  case ISD::TRUNCATE: {
+    return (OrZero || isKnownNeverZero(Val, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), OrZero, Depth + 1);
   }
 
   case ISD::ROTL:
@@ -6045,6 +6051,79 @@ bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
          (Op.isAnyAdd() || isADDLike(Op));
 }
 
+KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
+                                               FPClassTest InterestedClasses,
+                                               unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return computeKnownFPClass(Op, DemandedElts, InterestedClasses, Depth);
+}
+
+KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
+                                               const APInt &DemandedElts,
+                                               FPClassTest InterestedClasses,
+                                               unsigned Depth) const {
+  KnownFPClass Known;
+
+  if (const auto *CFP = dyn_cast<ConstantFPSDNode>(Op))
+    return KnownFPClass(CFP->getValueAPF());
+
+  if (Depth >= MaxRecursionDepth)
+    return Known;
+
+  if (Op.getOpcode() == ISD::UNDEF)
+    return Known;
+
+  [[maybe_unused]] EVT VT = Op.getValueType();
+  assert((!VT.isFixedLengthVector() ||
+          DemandedElts.getBitWidth() == VT.getVectorNumElements()) &&
+         "Unexpected vector size");
+
+  if (!DemandedElts)
+    return Known;
+
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case ISD::POISON: {
+    Known.KnownFPClasses = fcNone;
+    Known.SignBit = false;
+    break;
+  }
+  case ISD::BUILD_VECTOR: {
+    assert(!VT.isScalableVector());
+    bool First = true;
+    for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I) {
+      if (!DemandedElts[I])
+        continue;
+
+      if (First) {
+        Known =
+            computeKnownFPClass(Op.getOperand(I), InterestedClasses, Depth + 1);
+        First = false;
+      } else {
+        Known |=
+            computeKnownFPClass(Op.getOperand(I), InterestedClasses, Depth + 1);
+      }
+
+      if (Known.isUnknown())
+        break;
+    }
+    break;
+  }
+  default:
+    if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
+        Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
+      TLI->computeKnownFPClassForTargetNode(Op, Known, DemandedElts, *this,
+                                            Depth);
+    }
+    break;
+  }
+
+  return Known;
+}
+
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN,
                                    unsigned Depth) const {
   EVT VT = Op.getValueType();
@@ -6069,12 +6148,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
 
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
-
-  // If the value is a constant, we can obviously see if it is a NaN or not.
-  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op)) {
-    return !C->getValueAPF().isNaN() ||
-           (SNaN && !C->getValueAPF().isSignaling());
-  }
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
@@ -6250,9 +6323,12 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
       return TLI->isKnownNeverNaNForTargetNode(Op, DemandedElts, *this, SNaN,
                                                Depth);
     }
-
-    return false;
+    break;
   }
+
+  FPClassTest NanMask = SNaN ? fcSNan : fcNan;
+  KnownFPClass Known = computeKnownFPClass(Op, DemandedElts, NanMask, Depth);
+  return Known.isKnownNever(NanMask);
 }
 
 bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
@@ -8214,6 +8290,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
+  case ISD::IS_FPCLASS: {
+    assert(N1.getValueType().isFloatingPoint() &&
+           "IS_FPCLASS is used for a non-floating type");
+    assert(isa<ConstantSDNode>(N2) && "FPClassTest is not Constant");
+    FPClassTest Mask = static_cast<FPClassTest>(N2->getAsZExtVal());
+    // If all tests are made, it doesn't matter what the value is.
+    if ((Mask & fcAllFlags) == fcAllFlags)
+      return getBoolConstant(true, DL, VT, N1.getValueType());
+    if ((Mask & fcAllFlags) == 0)
+      return getBoolConstant(false, DL, VT, N1.getValueType());
+    break;
+  }
   case ISD::AssertNoFPClass: {
     assert(N1.getValueType().isFloatingPoint() &&
            "AssertNoFPClass is used for a non-floating type");

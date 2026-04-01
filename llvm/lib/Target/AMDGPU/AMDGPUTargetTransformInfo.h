@@ -95,6 +95,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
                                          : 4 * TargetTransformInfo::TCC_Basic;
   }
 
+  int getTransInstrCost(TTI::TargetCostKind CostKind) const;
+
   // On some parts, normal fp64 operations are half rate, and others
   // quarter. This also applies to some integer operations.
   int get64BitInstrCost(TTI::TargetCostKind CostKind) const;
@@ -310,7 +312,7 @@ public:
   /// implementation.
   unsigned getNumberOfParts(Type *Tp) const override;
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+  ValueUniformity getValueUniformity(const Value *V) const override;
 
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,
