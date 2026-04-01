@@ -173,7 +173,7 @@ know that the value returned by ``getView()`` depends on the temporary
 ``MyOwner`` object, and it would not be able to diagnose the dangling ``sv``.
 
 The analysis also tracks record types returned from functions and constructors
-with ``[[clang::lifetimebound]]`` parameters:
+with ``[[clang::lifetimebound]]`` annotated parameters:
 
 .. code-block:: c++
 
