@@ -22,36 +22,42 @@ This check corresponds to the CERT rule
 Examples
 ========
 
+The checker emits a warning in the following cases at the indicated locations:
+
 .. code-block:: c++
 
   int x = 3;
 
-  if (x = 4) // warning: should it be `x == 4`?
+  if (x = 4) // should it be `x == 4` instead of 'x = 4' ?
     x = x + 1;
 
-  while ((x <= 11) || (x = 22)) // warning: the assignment is found as operand of a logical operator
+  while ((x <= 11) || (x = 22)) // assignment appears as operand of a logical operator
     x += 2;
 
   do {
     x += 5;
-  } while ((x > 10) ? (x = 11) : (x > 5)); // warning: assignment in loop condition (from `x = 11`)
+  } while ((x > 10) ? (x = 11) : (x > 5)); // assignment in loop condition (from `x = 11`)
 
-  for (int i = 0; i == 2, x = 5; ++i) // warning: assignment in loop condition (from last operand of comma)
+  for (int i = 0; i == 2, x = 5; ++i) // assignment in loop condition (from last operand of comma)
     foo1(i, x);
 
-  for (int i = 0; i == 2, (x = 5); ++i) // warning: assignment is not a single expression, parentheses do not prevent the warning
+  for (int i = 0; i == 2, (x = 5); ++i) // assignment is not a single expression, parentheses do not prevent the warning
     foo1(i, x);
 
-  int a = (x == 2) || (x = 3); // warning: the assignment appears in the operand a logical operator
+  int a = (x == 2) || (x = 3); // assignment appears in the operand a logical operator
 
-  if ((x = 1)) { // no warning: single assignment in parentheses
+The following cases do not produce a warning:
+
+.. code-block:: c++
+
+  if ((x = 1)) { // a single assignment between parentheses
     x += 10;
 
-  if ((x = 1) != 0) { // no warning: assignment appears in a complex expression and not with a logical operator
+  if ((x = 1) != 0) { // assignment appears in a complex expression and without a logical operator
     ++x;
 
-  if (foo(x = 9) && array[x = 8]) { // no warning: assignment appears in argument of function call or array index
+  if (foo(x = 9) && array[x = 8]) { // assignment appears in argument of function call or array index
     ++x;
 
-  for (int i = 0; i = 2, x == 5; ++i) // no warning: assignment does not take part in the condition of the loop
+  for (int i = 0; i = 2, x == 5; ++i) // assignment does not take part in the condition of the loop
     foo1(i, x);
