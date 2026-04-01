@@ -8290,6 +8290,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
+  case ISD::IS_FPCLASS: {
+    assert(N1.getValueType().isFloatingPoint() &&
+           "IS_FPCLASS is used for a non-floating type");
+    assert(isa<ConstantSDNode>(N2) && "FPClassTest is not Constant");
+    FPClassTest Mask = static_cast<FPClassTest>(N2->getAsZExtVal());
+    // If all tests are made, it doesn't matter what the value is.
+    if ((Mask & fcAllFlags) == fcAllFlags)
+      return getBoolConstant(true, DL, VT, N1.getValueType());
+    if ((Mask & fcAllFlags) == 0)
+      return getBoolConstant(false, DL, VT, N1.getValueType());
+    break;
+  }
   case ISD::AssertNoFPClass: {
     assert(N1.getValueType().isFloatingPoint() &&
            "AssertNoFPClass is used for a non-floating type");

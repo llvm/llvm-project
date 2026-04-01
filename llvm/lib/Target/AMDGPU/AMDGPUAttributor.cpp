@@ -1598,8 +1598,8 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
           return true;
         // Otherwise specialize uniform values.
         const auto &TTI = TM.getTargetTransformInfo(*CB.getCaller());
-        return TTI.getInstructionUniformity(CB.getCalledOperand()) ==
-               InstructionUniformity::AlwaysUniform;
+        return TTI.getValueUniformity(CB.getCalledOperand()) ==
+               ValueUniformity::AlwaysUniform;
       };
   AC.IPOAmendableCB = [](const Function &F) {
     return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
