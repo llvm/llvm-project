@@ -425,7 +425,7 @@ Changes in existing checks
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by fixing a false
   positive where function templates could be diagnosed as generic identifiers
-  when ``DefaultCase`` was enabled.
+  when `DefaultCase` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
