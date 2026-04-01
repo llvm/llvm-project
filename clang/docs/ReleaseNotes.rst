@@ -449,6 +449,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
 - Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
 - Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
+- Fixed an assertion failure when parsing an invalid ``decltype`` specifier with missing parentheses or extra semicolons. (#GH188014)
 
 OpenACC Specific Changes
 ------------------------
@@ -458,7 +459,10 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
-
+- Introduced a new target specific builtin ``__builtin_amdgcn_processor_is``,
+  a late / deferred query for the current target processor.
+- Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
+  a late / deferred query for the availability of target specific builtins.
 - Initial support for gfx1310
 
 NVPTX Support
