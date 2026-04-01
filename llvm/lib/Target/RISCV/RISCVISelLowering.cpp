@@ -23259,6 +23259,11 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.One = computeGREVOrGORC(Known.One.getZExtValue(), 7, IsGORC);
     break;
   }
+  case RISCVISD::USATI: {
+    unsigned Width = Op.getConstantOperandVal(1);
+    Known.Zero.setBitsFrom(Width);
+    break;
+  }
   case RISCVISD::READ_VLENB: {
     // We can use the minimum and maximum VLEN values to bound VLENB.  We
     // know VLEN must be a power of two.
@@ -23360,6 +23365,10 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::STRICT_FCVT_WU_RV64:
     // TODO: As the result is sign-extended, this is conservatively correct.
     return 33;
+  case RISCVISD::SATI: {
+    unsigned Width = Op.getConstantOperandVal(1);
+    return Op.getScalarValueSizeInBits() - Width;
+  }
   case RISCVISD::VMV_X_S: {
     // The number of sign bits of the scalar result is computed by obtaining the
     // element type of the input vector operand, subtracting its width from the
