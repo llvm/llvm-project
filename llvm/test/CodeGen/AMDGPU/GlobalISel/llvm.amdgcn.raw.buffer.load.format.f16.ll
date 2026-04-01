@@ -47,8 +47,9 @@ define amdgpu_ps half @raw_buffer_load_format_f16__sgpr_rsrc__vgpr_voffset__sgpr
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (f16), align 1, addrspace 8)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN]]
-  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN]].lo16
+  ; GFX12-NEXT:   $vgpr0_lo16 = COPY [[COPY6]]
+  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0_lo16
   %val = call half @llvm.amdgcn.raw.buffer.load.format.f16(<4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
 }
@@ -347,8 +348,9 @@ define amdgpu_ps half @raw_buffer_load_format_f16__vgpr_rsrc__sgpr_voffset__vgpr
   ; GFX12-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.5:
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN]]
-  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX12-NEXT:   [[COPY11:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN]].lo16
+  ; GFX12-NEXT:   $vgpr0_lo16 = COPY [[COPY11]]
+  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0_lo16
   %val = call half @llvm.amdgcn.raw.buffer.load.format.f16(<4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
 }
@@ -476,8 +478,10 @@ define amdgpu_ps half @raw_buffer_load_format_f16__sgpr_rsrc__sgpr_voffset__sgpr
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr7
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
   ; GFX12-NEXT:   [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN [[COPY6]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, implicit $exec :: (dereferenceable load (f16), align 1, addrspace 8)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN]]
-  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_OFFEN]], implicit $exec
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[V_READFIRSTLANE_B32_]]
+  ; GFX12-NEXT:   $vgpr0_lo16 = COPY [[COPY7]]
+  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0_lo16
   %val = call half @llvm.amdgcn.raw.buffer.load.format.f16(<4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
 }

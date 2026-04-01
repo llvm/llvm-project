@@ -162,7 +162,7 @@ define half @v_exp2_f16_uniform(half inreg %src)  {
 ; GFX12-NEXT:    v_s_exp_f16 s0, s0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %exp2 = call half @llvm.amdgcn.exp2.f16(half %src)
   ret half %exp2
