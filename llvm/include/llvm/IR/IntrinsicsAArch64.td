@@ -2944,7 +2944,7 @@ def int_aarch64_sve_whilewr_d : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable
 let TargetPrefix = "aarch64" in {
   class SME_Load_Store_Intrinsic<LLVMType pred_ty>
     : DefaultAttrsIntrinsic<[],
-        [pred_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>]>;
+        [pred_ty, llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>]>;
 
   // Loads
   def int_aarch64_sme_ld1b_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
@@ -2972,7 +2972,7 @@ let TargetPrefix = "aarch64" in {
 
   // Spill + fill
   class SME_LDR_STR_ZA_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly]>;
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_aarch64_sme_ldr : SME_LDR_STR_ZA_Intrinsic;
   def int_aarch64_sme_str : SME_LDR_STR_ZA_Intrinsic;
 
@@ -3942,7 +3942,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sel_x4  : SVE2_VG4_Sel_Intrinsic;
 
   class SME_LDR_STR_ZT_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_aarch64_sme_ldr_zt : SME_LDR_STR_ZT_Intrinsic;
   def int_aarch64_sme_str_zt : SME_LDR_STR_ZT_Intrinsic;
 

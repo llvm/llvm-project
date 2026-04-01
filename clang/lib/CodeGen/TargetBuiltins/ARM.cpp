@@ -3809,7 +3809,7 @@ Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
   NewOps.push_back(BasePtr);
   NewOps.push_back(Ops[0]);
   NewOps.push_back(RealSlice);
-  Function *F = CGM.getIntrinsic(IntID);
+  Function *F = CGM.getIntrinsic(IntID, BasePtr->getType());
   return Builder.CreateCall(F, NewOps);
 }
 
@@ -3842,7 +3842,7 @@ Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
     Ops.push_back(Builder.getInt32(0));
   else
     Ops[2] = Builder.CreateIntCast(Ops[2], Int32Ty, true);
-  Function *F = CGM.getIntrinsic(IntID, {});
+  Function *F = CGM.getIntrinsic(IntID, Ops[1]->getType());
   return Builder.CreateCall(F, Ops);
 }
 
@@ -4441,6 +4441,12 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
     if (auto PredTy = dyn_cast<llvm::VectorType>(Op->getType()))
       if (PredTy->getElementType()->isIntegerTy(1))
         Op = EmitSVEPredicateCast(Op, getSVEType(TypeFlags));
+
+  if (BuiltinID == SME::BI__builtin_sme_svldr_zt ||
+      BuiltinID == SME::BI__builtin_sme_svstr_zt) {
+    Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic, Ops[1]->getType());
+    return Builder.CreateCall(F, Ops);
+  }
 
   Function *F =
       TypeFlags.isOverloadNone()
