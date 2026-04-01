@@ -310,3 +310,6 @@
 
 // RUN: %clang_cl -target x86_64-windows -fdebug-compilation-dir=. /Z7 /Fofoo/a.obj -### -- %s 2>&1 | FileCheck -check-prefix=RELATIVE_OBJPATH2 %s
 // RELATIVE_OBJPATH2: "-object-file-name=foo\\a.obj"
+
+// RUN: %clang_cl /c /Fodir/ /clang:-fembed-bitcode -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEBC %s
+// FoNAMEBC:  "-o" "dir/cl-outputs.bc"
