@@ -129,8 +129,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[SATI_RV64_:%[0-9]+]]:gpr = SATI_RV64 [[COPY]], 16, implicit-def $vxsat
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[SATI_RV64_]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: $x10 = COPY [[SATI_RV64_]]
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
     ; SATI_RV64 with imm=16 saturates to [-2^15, 2^15-1], which is sign-extended
@@ -151,8 +150,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[SATI_RV64_:%[0-9]+]]:gpr = SATI_RV64 [[COPY]], 32, implicit-def $vxsat
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[SATI_RV64_]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: $x10 = COPY [[SATI_RV64_]]
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
     ; SATI_RV64 with imm=32 saturates to [-2^31, 2^31-1], which is sign-extended
@@ -195,8 +193,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[USATI_RV64_:%[0-9]+]]:gpr = USATI_RV64 [[COPY]], 16, implicit-def $vxsat
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[USATI_RV64_]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: $x10 = COPY [[USATI_RV64_]]
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
     ; USATI_RV64 with imm=16 saturates to [0, 2^16-1], which is sign-extended (bit 31 is 0)
@@ -217,8 +214,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[USATI_RV64_:%[0-9]+]]:gpr = USATI_RV64 [[COPY]], 31, implicit-def $vxsat
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[USATI_RV64_]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: $x10 = COPY [[USATI_RV64_]]
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
     ; USATI_RV64 with imm=31 saturates to [0, 2^31-1], which is sign-extended (bit 31 is 0)
