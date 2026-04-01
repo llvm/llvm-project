@@ -4,7 +4,7 @@
 ## on Linux systems where the host triple matches the target.
 REQUIRES: system-linux
 
-RUN: %clang %S/Inputs/hello.c -o %t
+RUN: %clang %cflags %S/Inputs/hello.c -o %t
 RUN: touch %t.empty.fdata
 RUN: not llvm-bolt %t -o %t.bolt --data %t.empty.fdata 2>&1 | FileCheck %s
 
