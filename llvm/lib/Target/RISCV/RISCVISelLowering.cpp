@@ -541,7 +541,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
 
   if (Subtarget.hasStdExtP()) {
-    setTargetDAGCombine(ISD::TRUNCATE);
     static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
     static const MVT RV64VTs[] = {MVT::v2i32, MVT::v4i16, MVT::v8i8};
     ArrayRef<MVT> VTs;
@@ -1894,10 +1893,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   // Allow scalar min/max to be combined with vector reductions.
   if (Subtarget.hasVInstructions())
-    setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
+    setTargetDAGCombine({ISD::UMAX, ISD::UMIN});
+  if (Subtarget.hasVInstructions() || Subtarget.hasStdExtP())
+    setTargetDAGCombine({ISD::SMAX, ISD::SMIN});
 
   if ((Subtarget.hasStdExtZbs() && Subtarget.is64Bit()) ||
-      Subtarget.hasVInstructions())
+      Subtarget.hasVInstructions() || Subtarget.hasStdExtP())
     setTargetDAGCombine(ISD::TRUNCATE);
 
   if (Subtarget.hasStdExtZbkb())
@@ -21439,6 +21440,57 @@ static SDValue performSHLCombine(SDNode *N,
                      Passthru, Mask, VL);
 }
 
+// Fold (smax (smin X, (1 << C) - 1), -(1 << C)) -> riscv_sati X, C.
+// Fold (smin (smax X, -(1 << C)), (1 << C) - 1) -> riscv_sati X, C.
+// Fold (smax (smin X, (1 << C) - 1), 0) -> riscv_usati X, C.
+// Fold (smin (smax X, 0, (1 << C) - 1) -> riscv_usati X, C.
+static SDValue combineMinMaxToSat(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const RISCVSubtarget &Subtarget) {
+  if (!DCI.isAfterLegalizeDAG())
+    return SDValue();
+
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+
+  if (VT != Subtarget.getXLenVT())
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+
+  if ((N0.getOpcode() != ISD::SMIN && N0.getOpcode() != ISD::SMAX) ||
+      !isa<ConstantSDNode>(N->getOperand(1)) ||
+      !isa<ConstantSDNode>(N0.getOperand(1)))
+    return SDValue();
+
+  SDValue Min = SDValue(N, 0);
+  SDValue Max = N0;
+  SDValue Input = N0.getOperand(0);
+  if (Min.getOpcode() == ISD::SMAX)
+    std::swap(Min, Max);
+
+  APInt MinC = Min.getConstantOperandAPInt(1);
+  APInt MaxC = Max.getConstantOperandAPInt(1);
+
+  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX ||
+      !(MinC + 1).isPowerOf2())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  SDLoc DL(N);
+  if (MinC == ~MaxC)
+    return DAG.getNode(RISCVISD::SATI, DL, VT, Input,
+                       DAG.getTargetConstant(MinC.countr_one(), DL, VT));
+  if (MaxC == 0)
+    return DAG.getNode(RISCVISD::USATI, DL, VT, Input,
+                       DAG.getTargetConstant(MinC.countr_one(), DL, VT));
+
+  return SDValue();
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -21800,11 +21852,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue();
     return DAG.getNode(RISCVISD::FSGNJX, DL, VT, N1, N0->getOperand(1));
   }
-  case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
   case ISD::SMAX:
   case ISD::SMIN:
+    if (SDValue V = combineMinMaxToSat(N, DCI, Subtarget))
+      return V;
+    [[fallthrough]];
+  case ISD::FADD:
   case ISD::FMAXNUM:
   case ISD::FMINNUM: {
     if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
