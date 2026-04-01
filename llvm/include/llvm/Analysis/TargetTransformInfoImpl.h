@@ -668,7 +668,8 @@ public:
   virtual unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     return 0;
   }
-  virtual unsigned getStoreMinimumVF(unsigned VF, Type *, Type *) const {
+  virtual unsigned getStoreMinimumVF(unsigned VF, Type *, Type *, Align,
+                                     unsigned) const {
     return VF;
   }
 
@@ -1227,6 +1228,11 @@ public:
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
+
+  virtual bool isUniform(const Instruction *I,
+                         const SmallBitVector &UniformArgs) const {
+    llvm_unreachable("target must implement isUniform for Custom uniformity");
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

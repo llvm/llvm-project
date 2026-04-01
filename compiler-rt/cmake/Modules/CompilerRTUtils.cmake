@@ -322,18 +322,22 @@ macro(load_llvm_config)
     set(LLVM_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}" CACHE PATH "Path to llvm/bin")
     set(LLVM_INCLUDE_DIR ${LLVM_INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
 
-    list(FIND LLVM_AVAILABLE_LIBS LLVMXRay XRAY_INDEX)
-    set(COMPILER_RT_HAS_LLVMXRAY TRUE)
-    if (XRAY_INDEX EQUAL -1)
-      message(WARNING "LLVMXRay not found in LLVM_AVAILABLE_LIBS")
-      set(COMPILER_RT_HAS_LLVMXRAY FALSE)
-    endif()
+    # These checks are irrelevant for the compiler-rt builtins build, which does
+    # not report these in LLVM_AVAILABLE_LIBS due to being BUILDTREE_ONLY.
+    if (NOT COMPILER_RT_BUILTINS_STANDALONE_BUILD)
+      list(FIND LLVM_AVAILABLE_LIBS LLVMXRay XRAY_INDEX)
+      set(COMPILER_RT_HAS_LLVMXRAY TRUE)
+      if (XRAY_INDEX EQUAL -1)
+        message(WARNING "LLVMXRay not found in LLVM_AVAILABLE_LIBS")
+        set(COMPILER_RT_HAS_LLVMXRAY FALSE)
+      endif()
 
-    list(FIND LLVM_AVAILABLE_LIBS LLVMTestingSupport TESTINGSUPPORT_INDEX)
-    set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT TRUE)
-    if (TESTINGSUPPORT_INDEX EQUAL -1)
-      message(WARNING "LLVMTestingSupport not found in LLVM_AVAILABLE_LIBS")
-      set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT FALSE)
+      list(FIND LLVM_AVAILABLE_LIBS LLVMTestingSupport TESTINGSUPPORT_INDEX)
+      set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT TRUE)
+      if (TESTINGSUPPORT_INDEX EQUAL -1)
+        message(WARNING "LLVMTestingSupport not found in LLVM_AVAILABLE_LIBS")
+        set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT FALSE)
+      endif()
     endif()
   endif()
 
@@ -422,6 +426,18 @@ macro(construct_compiler_rt_default_triple)
       set(COMPILER_RT_GPU_BUILD ON)
       set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c")
     endif()
+  endif()
+
+  # Try to locate the GPU loader utility for GPU unit tests.
+  if(COMPILER_RT_GPU_BUILD AND NOT COMPILER_RT_EMULATOR)
+    get_filename_component(_compiler_path "${CMAKE_C_COMPILER}" DIRECTORY)
+    find_program(COMPILER_RT_EMULATOR
+                 NAMES llvm-gpu-loader NO_DEFAULT_PATH
+                 PATHS ${LLVM_BINARY_DIR}/bin ${_compiler_path})
+    if(COMPILER_RT_EMULATOR)
+      message(STATUS "Found GPU loader for testing: ${COMPILER_RT_EMULATOR}")
+    endif()
+    unset(_compiler_path)
   endif()
 
   # Determine if test target triple is specified explicitly, and doesn't match the

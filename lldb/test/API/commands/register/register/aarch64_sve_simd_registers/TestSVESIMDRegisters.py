@@ -27,6 +27,8 @@ class Mode(Enum):
 
 
 class SVESIMDRegistersTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def get_build_flags(self, mode):
         cflags = "-march=armv8-a+sve"
         if mode == Mode.SSVE:

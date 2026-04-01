@@ -1,0 +1,97 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "PreferSingleCharOverloadsCheck.h"
+#include "../utils/OptionsUtils.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "llvm/Support/raw_ostream.h"
+#include <optional>
+
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::performance {
+
+static std::optional<std::string>
+makeCharacterLiteral(const StringLiteral *Literal) {
+  std::string Result;
+  {
+    llvm::raw_string_ostream OS(Result);
+    Literal->outputString(OS);
+  }
+  // Now replace the " with '.
+  auto OpenPos = Result.find_first_of('"');
+  if (OpenPos == std::string::npos)
+    return std::nullopt;
+  Result[OpenPos] = '\'';
+
+  auto ClosePos = Result.find_last_of('"');
+  if (ClosePos == std::string::npos)
+    return std::nullopt;
+  Result[ClosePos] = '\'';
+
+  // "'" is OK, but ''' is not, so add a backslash
+  if ((ClosePos - OpenPos) == 2 && Result[OpenPos + 1] == '\'')
+    Result.replace(OpenPos + 1, 1, "\\'");
+
+  return Result;
+}
+
+PreferSingleCharOverloadsCheck::PreferSingleCharOverloadsCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      StringLikeClasses(utils::options::parseStringList(
+          Options.get("StringLikeClasses",
+                      "::std::basic_string;::std::basic_string_view"))) {}
+
+void PreferSingleCharOverloadsCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "StringLikeClasses",
+                utils::options::serializeStringList(StringLikeClasses));
+}
+
+void PreferSingleCharOverloadsCheck::registerMatchers(MatchFinder *Finder) {
+  const auto SingleChar =
+      ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal"));
+
+  const auto StringExpr = expr(hasType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(recordDecl(hasAnyName(StringLikeClasses)))))));
+
+  const auto InterestingStringFunction = hasAnyName(
+      "find", "rfind", "find_first_of", "find_first_not_of", "find_last_of",
+      "find_last_not_of", "starts_with", "ends_with", "contains", "operator+=");
+
+  Finder->addMatcher(
+      cxxMemberCallExpr(
+          callee(functionDecl(InterestingStringFunction).bind("func")),
+          anyOf(argumentCountIs(1), argumentCountIs(2)),
+          hasArgument(0, SingleChar), on(StringExpr)),
+      this);
+
+  Finder->addMatcher(cxxOperatorCallExpr(hasOperatorName("+="),
+                                         hasLHS(StringExpr), hasRHS(SingleChar),
+                                         callee(functionDecl().bind("func"))),
+                     this);
+}
+
+void PreferSingleCharOverloadsCheck::check(
+    const MatchFinder::MatchResult &Result) {
+  const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("literal");
+  const auto *FindFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
+
+  auto Replacement = makeCharacterLiteral(Literal);
+  if (!Replacement)
+    return;
+
+  diag(Literal->getBeginLoc(), "%0 called with a string literal consisting of "
+                               "a single character; consider using the more "
+                               "efficient overload accepting a character")
+      << FindFunc
+      << FixItHint::CreateReplacement(Literal->getSourceRange(), *Replacement);
+}
+
+} // namespace clang::tidy::performance
