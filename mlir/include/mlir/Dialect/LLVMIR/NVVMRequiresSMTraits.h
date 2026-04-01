@@ -42,7 +42,9 @@ struct NVVMCheckSMVersion {
     return llvm::any_of(
         fullSmVersionList, [&](const unsigned &requiredFullSmVersion) {
           if (hasArchAcceleratedFeatures(requiredFullSmVersion))
-            return targetFullSmVersion == requiredFullSmVersion;
+            return hasArchAcceleratedFeatures(targetFullSmVersion) &&
+                   (getSMVersion(targetFullSmVersion) ==
+                    getSMVersion(requiredFullSmVersion));
 
           if (hasFamilySpecificFeatures(requiredFullSmVersion))
             return hasFamilySpecificFeatures(targetFullSmVersion) &&
@@ -53,14 +55,6 @@ struct NVVMCheckSMVersion {
 
           return targetFullSmVersion >= requiredFullSmVersion;
         });
-  }
-
-  static unsigned getSMVersion(unsigned fullSmVersion) {
-    return fullSmVersion / 10;
-  }
-
-  static unsigned getSMFamily(unsigned fullSmVersion) {
-    return fullSmVersion / 100;
   }
 
   // Parses an SM version string and returns an equivalent full SM version
@@ -76,14 +70,26 @@ struct NVVMCheckSMVersion {
 
     return smVersion * 10 + (isAA ? 3 : 0) + (isFS ? 2 : 0);
   }
-
-private:
-  bool hasFamilySpecificFeatures(unsigned fullSmVersion) const {
-    return (fullSmVersion % 10) != 0;
+  
+  static bool isMinimumSMVersion(unsigned fullSmVersion) {
+    return getSMVersion(fullSmVersion) >= 20;
   }
 
-  bool hasArchAcceleratedFeatures(unsigned fullSmVersion) const {
+private:
+  static bool hasFamilySpecificFeatures(unsigned fullSmVersion) {
+    return (fullSmVersion % 10) >= 2;
+  }
+
+  static bool hasArchAcceleratedFeatures(unsigned fullSmVersion) {
     return (fullSmVersion % 10) == 3;
+  }
+
+  static unsigned getSMVersion(unsigned fullSmVersion) {
+    return fullSmVersion / 10;
+  }
+
+  static unsigned getSMFamily(unsigned fullSmVersion) {
+    return fullSmVersion / 100;
   }
 };
 
