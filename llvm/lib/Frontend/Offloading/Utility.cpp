@@ -88,6 +88,19 @@ StringRef offloading::getOffloadEntrySection(Module &M) {
                                                   : "llvm_offload_entries";
 }
 
+/// Returns the start/end symbol names for iterating offloading entries in a
+/// given section. Mach-O uses \1section$start$/\1section$end$ convention;
+/// ELF/COFF use __start_/__stop_ prefixes.
+static std::pair<std::string, std::string>
+getOffloadEntryBoundarySymbols(const Triple &T, StringRef SectionName) {
+  if (T.isOSBinFormatMachO()) {
+    std::string SymSection = SectionName.str();
+    std::replace(SymSection.begin(), SymSection.end(), ',', '$');
+    return {"\1section$start$" + SymSection, "\1section$end$" + SymSection};
+  }
+  return {("__start_" + SectionName).str(), ("__stop_" + SectionName).str()};
+}
+
 GlobalVariable *
 offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
                                 Constant *Addr, StringRef Name, uint64_t Size,
@@ -132,24 +145,8 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
   auto Linkage = Triple.isOSBinFormatCOFF() ? GlobalValue::WeakODRLinkage
                                             : GlobalValue::ExternalLinkage;
 
-  // Mach-O uses linker-defined section boundary symbols with a special naming
-  // convention: \1section$start$<segment>$<section> (the \1 prefix suppresses
-  // the leading underscore that Mach-O normally adds to C symbols).
-  // See SanitizerCoverage for the existing precedent:
-  //   llvm/lib/Transforms/Instrumentation/SanitizerCoverage.cpp
-  //   compiler-rt/lib/profile/InstrProfilingPlatformDarwin.c
-  std::string StartName, StopName;
-  if (Triple.isOSBinFormatMachO()) {
-    // Mach-O section name is "segment,section" — convert commas to '$' for
-    // the linker symbol convention.
-    std::string SymSection = SectionName.str();
-    std::replace(SymSection.begin(), SymSection.end(), ',', '$');
-    StartName = "\1section$start$" + SymSection;
-    StopName = "\1section$end$" + SymSection;
-  } else {
-    StartName = ("__start_" + SectionName).str();
-    StopName = ("__stop_" + SectionName).str();
-  }
+  auto [StartName, StopName] =
+      getOffloadEntryBoundarySymbols(Triple, SectionName);
 
   auto *EntriesB = new GlobalVariable(M, EntryType, /*isConstant=*/true,
                                       Linkage, EntryInit, StartName);
