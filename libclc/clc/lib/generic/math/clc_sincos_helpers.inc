@@ -184,6 +184,17 @@ __clc_argReductionLargeS(private __CLC_FLOATN *r, __CLC_FLOATN x) {
   const __CLC_UINTN b0 = 0xFE5163ABU;
 
   __CLC_UINTN p0, p1, p2, p3, p4, p5, p6, p7;
+#ifndef __opencl_c_int64
+  __CLC_UINTN c0, c1;
+
+  __CLC_FULL_MUL(xm, b0, c0, p0);
+  __CLC_FULL_MAD(xm, b1, c0, c1, p1);
+  __CLC_FULL_MAD(xm, b2, c1, c0, p2);
+  __CLC_FULL_MAD(xm, b3, c0, c1, p3);
+  __CLC_FULL_MAD(xm, b4, c1, c0, p4);
+  __CLC_FULL_MAD(xm, b5, c0, c1, p5);
+  __CLC_FULL_MAD(xm, b6, c1, p7, p6);
+#else
   __CLC_ULONGN a;
 
   __CLC_ULONGN xm_u64 = __CLC_CONVERT_ULONGN(xm);
@@ -215,6 +226,7 @@ __clc_argReductionLargeS(private __CLC_FLOATN *r, __CLC_FLOATN x) {
   a = xm_u64 * __CLC_CONVERT_ULONGN(b6) + a;
   p6 = __CLC_CONVERT_UINTN(a);
   p7 = __CLC_CONVERT_UINTN(a >> 32);
+#endif
 
   __CLC_UINTN fbits =
       (__CLC_UINTN)224 + (__CLC_UINTN)23 - __CLC_CONVERT_UINTN(xe);

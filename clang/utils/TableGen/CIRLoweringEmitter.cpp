@@ -23,6 +23,7 @@ using namespace clang;
 namespace {
 std::vector<std::string> CXXABILoweringPatterns;
 std::vector<std::string> CXXABILoweringPatternsList;
+std::vector<std::string> CXXABILoweringAttrAlwaysLegal;
 std::vector<std::string> LLVMLoweringPatterns;
 std::vector<std::string> LLVMLoweringPatternsList;
 
@@ -216,6 +217,18 @@ void Generate(const Record *OpRecord) {
       LLVMLoweringPatternsList.push_back(std::move(PatternName));
   }
 }
+
+void GenerateCIREnumAttrs(const Record *Record) {
+  std::string OpName = GetOpCppClassName(Record);
+  // EnumAttr is in a separate hierarchy, so we have to set these separately, as
+  // they never have an 'illegal' CXXABI type in them.
+  CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
+}
+void GenerateCIRAttrs(const Record *Record) {
+  std::string OpName = GetOpCppClassName(Record);
+  if (!Record->getValueAsBit("canHaveIllegalCXXABIType"))
+    CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
+}
 } // namespace
 
 void clang::EmitCIRLowering(const llvm::RecordKeeper &RK,
@@ -223,6 +236,10 @@ void clang::EmitCIRLowering(const llvm::RecordKeeper &RK,
   emitSourceFileHeader("Lowering patterns for CIR operations", OS);
   for (const auto *OpRecord : RK.getAllDerivedDefinitions("CIR_Op"))
     Generate(OpRecord);
+  for (const auto *OpRecord : RK.getAllDerivedDefinitions("EnumAttr"))
+    GenerateCIREnumAttrs(OpRecord);
+  for (const auto *OpRecord : RK.getAllDerivedDefinitions("CIR_Attr"))
+    GenerateCIRAttrs(OpRecord);
 
   OS << "#ifdef GET_ABI_LOWERING_PATTERNS\n"
      << llvm::join(CXXABILoweringPatterns, "\n") << "#endif\n\n";
@@ -233,4 +250,7 @@ void clang::EmitCIRLowering(const llvm::RecordKeeper &RK,
      << llvm::join(LLVMLoweringPatterns, "\n") << "#endif\n\n";
   OS << "#ifdef GET_LLVM_LOWERING_PATTERNS_LIST\n"
      << llvm::join(LLVMLoweringPatternsList, ",\n") << "\n#endif\n\n";
+
+  OS << "#ifdef CXX_ABI_ALWAYS_LEGAL_ATTRS\n"
+     << llvm::join(CXXABILoweringAttrAlwaysLegal, ",\n") << "\n#endif\n\n";
 }

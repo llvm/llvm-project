@@ -614,6 +614,73 @@ define i32 @shlsati_i32(i32 %a) {
  ret i32 %sshlsat
 }
 
+define i8 @ushlsat_i8(i8 %a, i8 %b) {
+; CHECK-LABEL: ushlsat_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 24
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i8 @llvm.ushl.sat.i8(i8 %a,i8 %b)
+ ret i8 %ushlsat
+}
+
+define i16 @ushlsat_i16(i16 %a, i16 %b) {
+; CHECK-LABEL: ushlsat_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.h a1, a1
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 16
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i16 @llvm.ushl.sat.i16(i16 %a,i16 %b)
+ ret i16 %ushlsat
+}
+
+define i32 @ushlsat_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: ushlsat_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i32 @llvm.ushl.sat.i32(i32 %a,i32 %b)
+ ret i32 %ushlsat
+}
+
+define i8 @ushlsati_i8(i8 %a) {
+; CHECK-LABEL: ushlsati_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 24
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i8 @llvm.ushl.sat.i8(i8 %a, i8 5)
+ ret i8 %ushlsat
+}
+
+define i16 @ushlsati_i16(i16 %a) {
+; CHECK-LABEL: ushlsati_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 16
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i16 @llvm.ushl.sat.i16(i16 %a, i16 10)
+ ret i16 %ushlsat
+}
+
+define i32 @ushlsati_i32(i32 %a) {
+; CHECK-LABEL: ushlsati_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 21
+; CHECK-NEXT:    sshl a0, a0, a1
+; CHECK-NEXT:    ret
+ %ushlsat = tail call i32 @llvm.ushl.sat.i32(i32 %a, i32 21)
+ ret i32 %ushlsat
+}
+
 define i8 @sadd_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: sadd_i8:
 ; CHECK:       # %bb.0:
@@ -745,6 +812,56 @@ define i32 @usub_i32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret
   %a = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
   ret i32 %a
+}
+
+define i32 @aadd_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: aadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %add = add i64 %ext.a, %ext.b
+  %shift = ashr i64 %add, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @aadd2_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: aadd2_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %and = and i32 %a, %b
+  %xor = xor i32 %a, %b
+  %shift = ashr i32 %xor, 1
+  %res = add i32 %and, %shift
+  ret i32 %res
+}
+
+define i32 @aaddu_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: aaddu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aaddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %add = add i64 %ext.a, %ext.b
+  %shift = lshr i64 %add, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @aaddu2_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: aaddu2_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aaddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %and = and i32 %a, %b
+  %xor = xor i32 %a, %b
+  %shift = lshr i32 %xor, 1
+  %res = add i32 %and, %shift
+  ret i32 %res
 }
 
 define i64 @wmul_i32(i32 %x, i32 %y) {
@@ -1241,4 +1358,36 @@ define i64 @wsub_from_neg_const(i32 %a) nounwind {
   %ext_a = zext i32 %a to i64
   %sum = add i64 %ext_a, -42
   ret i64 %sum
+}
+
+define zeroext i1 @smulo_i32(i32 %v1, i32 %v2, ptr %res) {
+; CHECK-LABEL: smulo_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    wmul a4, a0, a1
+; CHECK-NEXT:    srai a0, a4, 31
+; CHECK-NEXT:    xor a0, a5, a0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    sw a4, 0(a2)
+; CHECK-NEXT:    ret
+entry:
+  %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
+  %val = extractvalue {i32, i1} %t, 0
+  %obit = extractvalue {i32, i1} %t, 1
+  store i32 %val, ptr %res
+  ret i1 %obit
+}
+
+define zeroext i1 @umulo_i32(i32 %v1, i32 %v2, ptr %res) {
+; CHECK-LABEL: umulo_i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    wmulu a4, a0, a1
+; CHECK-NEXT:    snez a0, a5
+; CHECK-NEXT:    sw a4, 0(a2)
+; CHECK-NEXT:    ret
+entry:
+  %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
+  %val = extractvalue {i32, i1} %t, 0
+  %obit = extractvalue {i32, i1} %t, 1
+  store i32 %val, ptr %res
+  ret i1 %obit
 }

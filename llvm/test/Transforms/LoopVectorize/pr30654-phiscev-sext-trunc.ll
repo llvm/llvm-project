@@ -31,7 +31,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @a = common global [250 x i32] zeroinitializer, align 16
 
-; Function Attrs: norecurse nounwind uwtable
 define void @doit1(i32 %n, i32 %step) {
 ; CHECK-LABEL: @doit1(
 ; CHECK-NEXT:  entry:
@@ -152,7 +151,6 @@ for.end:
 ;
 
 
-; Function Attrs: norecurse nounwind uwtable
 define void @doit2(i32 %n, i32 %step)  {
 ; CHECK-LABEL: @doit2(
 ; CHECK-NEXT:  entry:
@@ -270,7 +268,6 @@ for.end:
 ;
 
 
-; Function Attrs: norecurse nounwind uwtable
 define void @doit3(i32 %n, i32 %step) {
 ; CHECK-LABEL: @doit3(
 ; CHECK-NEXT:  entry:
@@ -346,7 +343,6 @@ for.end:
 ; }
 
 
-; Function Attrs: norecurse nounwind uwtable
 define void @doit4(i32 %n, i8 signext %cstep) {
 ; CHECK-LABEL: @doit4(
 ; CHECK-NEXT:  entry:

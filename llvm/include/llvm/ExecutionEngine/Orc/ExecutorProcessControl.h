@@ -146,11 +146,8 @@ public:
     return *MemMgr;
   }
 
-  /// Return the DylibManager for the target process.
-  DylibManager &getDylibMgr() const {
-    assert(DylibMgr && "No DylibMgr object set");
-    return *DylibMgr;
-  }
+  /// Create a default DylibManager for the target process.
+  virtual Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() = 0;
 
   /// Returns the bootstrap map.
   const StringMap<std::vector<char>> &getBootstrapMap() const {
@@ -317,7 +314,6 @@ protected:
   JITDispatchInfo JDI;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
-  DylibManager *DylibMgr = nullptr;
   StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
