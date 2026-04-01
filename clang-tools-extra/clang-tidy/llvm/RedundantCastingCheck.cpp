@@ -137,7 +137,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   } else {
     // IgnoreUnlessSpelledInSource prevents matching implicit casts
     const TraversalKindScope TmpTraversalKind(*Result.Context, TK_AsIs);
-    for (const auto Parent : Result.Context->getParents(*Call)) {
+    for (const DynTypedNode Parent : Result.Context->getParents(*Call)) {
       if (const auto *ParentCastExpr = Parent.get<CastExpr>()) {
         ParentTy = ParentCastExpr->getType();
         break;
@@ -157,7 +157,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
       //   struct B : A {};
       //   struct C : A {};
       //   struct D : B, C {};
-      // So we should not warn for `A *a = cast<C>(d))`.
+      // So we should not warn for `A *a = cast<C>(d)`.
       if (IsDerivedFromParent &&
           Paths.isAmbiguous(ParentTy->getCanonicalTypeUnqualified()))
         return;
@@ -176,7 +176,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   // 'type-parameter-0-0'
   const QualType DiagFromTy(ArgPointeeTy->getUnqualifiedDesugaredType(), 0);
   diag(Arg->getExprLoc(),
-       "source expression has %select{|pointee}0 type %1%select{|, which is a "
+       "source expression has%select{| pointee}0 type %1%select{|, which is a "
        "subtype of %3}2",
        DiagnosticIDs::Note)
       << Arg->getSourceRange() << ArgTy->isPointerType() << DiagFromTy
