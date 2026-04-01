@@ -1117,6 +1117,8 @@ struct FunCloner {
 
     LLVMContextRef Ctx = LLVMGetModuleContext(M);
     LLVMBasicBlockRef BB = LLVMAppendBasicBlockInContext(Ctx, Fun, Name);
+    if (LLVMGetBasicBlockTerminator(BB) != nullptr)
+      report_fatal_error("Basic block must not have terminator");
     return BBMap[Src] = BB;
   }
 
@@ -1158,6 +1160,9 @@ struct FunCloner {
 
       Cur = Next;
     }
+
+    if (LLVMGetBasicBlockTerminator(BB) != LLVMGetLastInstruction(BB))
+      report_fatal_error("Basic block terminator mismatch");
 
     LLVMDisposeBuilder(Builder);
     return BB;
