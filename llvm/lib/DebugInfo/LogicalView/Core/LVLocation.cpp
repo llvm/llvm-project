@@ -374,6 +374,12 @@ std::string LVOperation::getOperandsCodeViewInfo() {
     Stream << "register_rel " << getReader().getRegisterName(Opcode, Operands)
            << " offset " << int(Operands[1]);
     break;
+  // Operands: [Register, Offset, OffsetInUdt].
+  case codeview::SymbolKind::S_DEFRANGE_REGISTER_REL_INDIR:
+    Stream << "register_rel_indir "
+           << getReader().getRegisterName(Opcode, Operands) << " offset "
+           << int(Operands[1]) << " offset_in_udt " << int(Operands[2]);
+    break;
 
   // Operands: [Program].
   case codeview::SymbolKind::S_DEFRANGE:

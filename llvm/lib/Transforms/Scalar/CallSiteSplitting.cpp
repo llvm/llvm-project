@@ -128,8 +128,8 @@ using ConditionsTy = SmallVector<ConditionTy, 2>;
 /// if it is relevant to any argument at CB.
 static void recordCondition(CallBase &CB, BasicBlock *From, BasicBlock *To,
                             ConditionsTy &Conditions) {
-  auto *BI = dyn_cast<BranchInst>(From->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(From->getTerminator());
+  if (!BI)
     return;
 
   CmpPredicate Pred;

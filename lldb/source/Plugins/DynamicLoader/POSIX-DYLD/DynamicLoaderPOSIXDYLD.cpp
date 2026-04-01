@@ -42,7 +42,9 @@ void DynamicLoaderPOSIXDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void DynamicLoaderPOSIXDYLD::Terminate() {}
+void DynamicLoaderPOSIXDYLD::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef DynamicLoaderPOSIXDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
@@ -623,7 +625,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
   MemoryRegionInfo info;
   Target &target = m_process->GetTarget();
   Status status = m_process->GetMemoryRegionInfo(m_interpreter_base, info);
-  if (status.Fail() || info.GetMapped() != MemoryRegionInfo::eYes ||
+  if (status.Fail() || info.GetMapped() != eLazyBoolYes ||
       info.GetName().IsEmpty()) {
     Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOG(log, "Failed to get interpreter region info: {0}", status);

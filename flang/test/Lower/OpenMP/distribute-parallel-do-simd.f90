@@ -1,8 +1,10 @@
 ! This test checks lowering of OpenMP DISTRIBUTE PARALLEL DO SIMD composite
 ! constructs.
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
+! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,OPENMP52
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,OPENMP52
 
 ! CHECK-LABEL: func.func @_QPdistribute_parallel_do_simd_num_threads(
 subroutine distribute_parallel_do_simd_num_threads()
@@ -11,7 +13,8 @@ subroutine distribute_parallel_do_simd_num_threads()
   ! CHECK:      omp.parallel num_threads({{.*}}) {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd linear({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd num_threads(10)
   do index_ = 1, 10
@@ -28,7 +31,8 @@ subroutine distribute_parallel_do_simd_dist_schedule()
   ! CHECK:      omp.parallel  {
   ! CHECK:      omp.distribute dist_schedule_static dist_schedule_chunk_size({{.*}}) {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd linear({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd dist_schedule(static, 4)
   do index_ = 1, 10
@@ -45,7 +49,8 @@ subroutine distribute_parallel_do_simd_schedule()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop schedule(static = {{.*}}) {
-  ! CHECK-NEXT: omp.simd linear({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd schedule(static, 4)
   do index_ = 1, 10
@@ -62,7 +67,8 @@ subroutine distribute_parallel_do_simd_simdlen()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd linear({{.*}}) simdlen(4) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) simdlen(4) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) simdlen(4) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd simdlen(4)
   do index_ = 1, 10
@@ -86,8 +92,10 @@ subroutine distribute_parallel_do_simd_private()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd linear(%{{.*}}) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
-  ! CHECK-SAME:                  : !fir.ref<i64>) {
+  ! DEFAULT-NEXT: omp.simd linear(%{{.*}}) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! DEFAULT-SAME:                  : !fir.ref<i64>) {
+  ! OPENMP52-NEXT: omp.simd linear(val(%{{.*}})) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! OPENMP52-SAME:                  : !fir.ref<i64>) {
   ! CHECK-NEXT: omp.loop_nest
   ! CHECK:      %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]
   !$omp distribute parallel do simd private(x)

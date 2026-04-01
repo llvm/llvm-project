@@ -139,6 +139,9 @@ expand_template(
         # TODO: treesitter support
         "#cmakedefine01 LLDB_ENABLE_TREESITTER": "#define LLDB_ENABLE_TREESITTER 0",
 
+        # Would cause tests to run with MTE.
+        "#cmakedefine01 LLDB_ENABLE_MTE": "#define LLDB_ENABLE_MTE 0",
+
         # Defaults that could be configurable if needed
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
         "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
@@ -361,25 +364,32 @@ gentbl_cc_library(
 cc_library(
     name = "APIHeaders",
     hdrs = glob(["include/lldb/API/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
 )
 
 cc_library(
     name = "InterpreterHeaders",
     hdrs = glob(["include/lldb/Interpreter/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
-    deps = [":APIHeaders"],
+    deps = [
+        ":APIHeaders",
+        ":Headers",
+    ],
 )
 
 cc_library(
     name = "BreakpointHeaders",
     hdrs = glob(["include/lldb/Breakpoint/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
 )
 
 cc_library(
     name = "ExpressionHeaders",
     hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
     deps = ["//llvm:ExecutionEngine"],
 )
@@ -387,8 +397,12 @@ cc_library(
 cc_library(
     name = "DataFormattersHeaders",
     hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
     textual_hdrs = glob(["include/lldb/DataFormatters/**/*.def"]),
+    deps = [
+        ":Headers",
+    ],
 )
 
 cc_library(
@@ -455,6 +469,7 @@ cc_library(
 cc_library(
     name = "SymbolHeaders",
     hdrs = glob(["include/lldb/Symbol/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
 )
 
@@ -485,6 +500,7 @@ cc_library(
         "include/lldb/Host/macosx/*.h",
         "include/lldb/Host/posix/*.h",
     ]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
     deps = [":UtilityHeaders"],
 )
@@ -526,9 +542,12 @@ objc_library(
 
 cc_library(
     name = "Host",
-    srcs = glob([
-        "source/Host/common/**/*.cpp",
-    ]) + select({
+    srcs = glob(
+        [
+            "source/Host/common/**/*.cpp",
+        ],
+        exclude = ["source/Host/common/Editline.cpp"],
+    ) + select({
         "@platforms//os:linux": glob(
             [
                 "source/Host/posix/**/*.cpp",
@@ -542,11 +561,17 @@ cc_library(
                 "source/Host/posix/**/*.cpp",
             ],
         ),
+    }) + select({
+        ":libedit_enabled": ["source/Host/common/Editline.cpp"],
+        "//conditions:default": [],
     }),
-    hdrs = [":ConfigHeader"] + glob([
-        "include/lldb/Host/*.h",
-        "include/lldb/Host/common/*.h",
-    ]) + select({
+    hdrs = [":ConfigHeader"] + glob(
+        [
+            "include/lldb/Host/*.h",
+            "include/lldb/Host/common/*.h",
+        ],
+        exclude = ["include/lldb/Host/Editline.h"],
+    ) + select({
         "@platforms//os:macos": glob([
             "include/lldb/Host/macosx/*.h",
             "include/lldb/Host/posix/*.h",
@@ -555,6 +580,9 @@ cc_library(
             "include/lldb/Host/linux/*.h",
             "include/lldb/Host/posix/*.h",
         ]),
+    }) + select({
+        ":libedit_enabled": ["include/lldb/Host/Editline.h"],
+        "//conditions:default": [],
     }),
     features = ["-layering_check"],  # histedit.h breaks this.
     includes = ["include"],
@@ -632,20 +660,24 @@ cc_library(
         "include/lldb/Core/**/*.h",
         "include/lldb/ValueObject/**/*.h",  # This should be its own library.
     ]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
     deps = [
         ":BreakpointHeaders",
         ":CoreProperties",
         ":DataFormattersHeaders",
         ":ExpressionHeaders",
+        ":Headers",
         ":Host",
         ":InterpreterHeaders",
         ":SymbolHeaders",
         ":TargetHeaders",
+        ":UtilityHeaders",
         "//clang:driver",
         "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:Telemetry",
     ],
 )
 
@@ -664,6 +696,11 @@ cc_library(
         ],
     ),
     includes = ["include"],
+    textual_hdrs = glob(
+        [
+            "source/Core/**/*.inc",
+        ],
+    ),
     deps = [
         ":BreakpointHeaders",
         ":CoreHeaders",
@@ -710,6 +747,7 @@ cc_library(
 cc_library(
     name = "TargetHeaders",
     hdrs = glob(["include/lldb/Target/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
     deps = [
         ":AppleArm64ExceptionClass",
@@ -746,12 +784,17 @@ cc_library(
     hdrs = glob(["include/lldb/lldb-*.h"]) + [
         "include/lldb/Symbol/SaveCoreOptions.h",
     ],
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
+    deps = [
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
     name = "UtilityPrivateHeaders",
     hdrs = glob(["source/Utility/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["source"],
     deps = [":Headers"],
 )
@@ -759,12 +802,17 @@ cc_library(
 cc_library(
     name = "UtilityHeaders",
     hdrs = glob(["include/lldb/Utility/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
+    deps = [
+        ":Headers",
+    ],
 )
 
 cc_library(
     name = "ProtocolHeaders",
     hdrs = glob(["include/lldb/Protocol/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = ["include"],
     deps = [
         ":Headers",
@@ -899,12 +947,22 @@ cc_library(
     name = "DebugServerCommonMacOSXHeaders",
     hdrs = glob(["tools/debugserver/source/MacOSX/**/*.h"]),
     strip_include_prefix = "tools/debugserver/source/MacOSX",
+    tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 cc_library(
     name = "DebugServerCommonHeaders",
     hdrs = glob(["tools/debugserver/source/**/*.h"]),
     strip_include_prefix = "tools/debugserver/source",
+    tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [":DebugServerCommonMacOSXHeaders"],
 )
 
@@ -929,6 +987,9 @@ cc_library(
         ["tools/debugserver/source/**/*.cpp"],
         exclude = ["tools/debugserver/source/debugserver.cpp"],
     ),
+    copts = [
+        "-Wno-vla-cxx-extension",
+    ],
     local_defines = ["LLDB_USE_OS_LOG"],
     tags = ["nobuildkite"],
     deps = [
@@ -971,6 +1032,9 @@ cc_binary(
         "tools/debugserver/source/debugserver.cpp",
         ":debugserver_version_gen",
         ":mach_gen",
+    ],
+    copts = [
+        "-Wno-vla-cxx-extension",
     ],
     tags = ["nobuildkite"],
     target_compatible_with = select({

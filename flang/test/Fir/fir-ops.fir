@@ -1060,3 +1060,27 @@ func.func @test_declare_value(%arg0: i32, %scope: !fir.dscope) {
   fir.declare_value %arg0 dummy_scope %scope arg 1 {uniq_name = "test"} : i32
   return
 }
+
+// CHECK-LABEL: func @test_bitcast(
+// CHECK-SAME: %[[I32:.*]]: i32, %[[F32:.*]]: f32, %[[LOG:.*]]: !fir.logical<4>, %[[CH1:.*]]: !fir.char<1>, %[[CH2:.*]]: !fir.char<2>) {
+func.func @test_bitcast(%arg0: i32, %arg1: f32, %arg2: !fir.logical<4>, %arg3: !fir.char<1>, %arg4: !fir.char<2>) {
+// CHECK: %{{.*}} = fir.bitcast %[[I32]] : (i32) -> f32
+  %0 = fir.bitcast %arg0 : (i32) -> f32
+// CHECK: %{{.*}} = fir.bitcast %[[F32]] : (f32) -> i32
+  %1 = fir.bitcast %arg1 : (f32) -> i32
+// CHECK: %{{.*}} = fir.bitcast %[[I32]] : (i32) -> !fir.logical<4>
+  %2 = fir.bitcast %arg0 : (i32) -> !fir.logical<4>
+// CHECK: %{{.*}} = fir.bitcast %[[LOG]] : (!fir.logical<4>) -> i32
+  %3 = fir.bitcast %arg2 : (!fir.logical<4>) -> i32
+// CHECK: %{{.*}} = fir.bitcast %[[LOG]] : (!fir.logical<4>) -> f32
+  %4 = fir.bitcast %arg2 : (!fir.logical<4>) -> f32
+// CHECK: %{{.*}} = fir.bitcast %[[F32]] : (f32) -> !fir.logical<4>
+  %5 = fir.bitcast %arg1 : (f32) -> !fir.logical<4>
+// CHECK: %{{.*}} = fir.bitcast %[[CH1]] : (!fir.char<1>) -> i8
+  %6 = fir.bitcast %arg3 : (!fir.char<1>) -> i8
+// CHECK: %{{.*}} = fir.bitcast %[[CH2]] : (!fir.char<2>) -> i16
+  %7 = fir.bitcast %arg4 : (!fir.char<2>) -> i16
+// CHECK: %{{.*}} = fir.bitcast %[[I32]] : (i32) -> !fir.logical<4>
+  %8 = fir.bitcast %arg0 : (i32) -> !fir.logical<4>
+  return
+}

@@ -247,7 +247,7 @@ void AMDGPUTargetAsmStreamer::finish() {
 }
 
 void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget() {
-  OS << "\t.amdgcn_target \"" << getTargetID()->toString() << "\"\n";
+  OS << "\t.amdgcn_target \"" << *getTargetID() << "\"\n";
 }
 
 void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
@@ -327,7 +327,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(
 }
 
 bool AMDGPUTargetAsmStreamer::EmitISAVersion() {
-  OS << "\t.amd_amdgpu_isa \"" << getTargetID()->toString() << "\"\n";
+  OS << "\t.amd_amdgpu_isa \"" << getTargetID() << "\"\n";
   return true;
 }
 
@@ -930,7 +930,12 @@ bool AMDGPUTargetELFStreamer::EmitISAVersion() {
   EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_HSA_ISA_NAME,
            [&](MCELFStreamer &OS) {
              OS.emitLabel(DescBegin);
-             OS.emitBytes(getTargetID()->toString());
+
+             SmallString<32> Str;
+             raw_svector_ostream StrOS(Str);
+             StrOS << *getTargetID();
+
+             OS.emitBytes(StrOS.str());
              OS.emitLabel(DescEnd);
            });
   return true;

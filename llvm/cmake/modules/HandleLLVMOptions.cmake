@@ -1159,7 +1159,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx64")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
@@ -1342,6 +1342,13 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
     # debugging such cases rather difficult. Therefore, disable PCH on AIX by
     # default.
     message(NOTICE "Precompiled headers are disabled by default on AIX. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "OS390")
+    # There are occasional issues with PCH on z/OS, therefore disable PCH by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on z/OS. "
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   endif()

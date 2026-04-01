@@ -121,6 +121,11 @@ defm : RemapAllTargetPseudoPointerOperands<nvptx_ptr_rc>;
 def NVPTXInstrInfo : InstrInfo {
 }
 
+def NVPTXAsmWriter : AsmWriter {
+  int PassSubtarget = 1;
+}
+
 def NVPTX : Target {
   let InstructionSet = NVPTXInstrInfo;
+  let AssemblyWriters = [NVPTXAsmWriter];
 }

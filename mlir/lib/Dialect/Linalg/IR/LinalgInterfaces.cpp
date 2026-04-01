@@ -251,8 +251,12 @@ static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
   if (body->getOperations().size() != 2)
     return false;
 
+  // The payload op must have one result and at least arity-many operands
+  // (otherwise not all inputs can be used). It can have additional operands
+  // from outside of the generic op (e.g. div(1, x) for linalg.reciprocal) or
+  // use an input more than once (e.g. mul(x, x) for linalg.square).
   Operation *oper = &body->front();
-  if (oper->getNumOperands() != arity || oper->getNumResults() != 1)
+  if (oper->getNumOperands() < arity || oper->getNumResults() != 1)
     return false;
 
   auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());

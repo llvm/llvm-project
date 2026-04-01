@@ -243,10 +243,7 @@ protected:
   detail::ValueImpl *impl;
 };
 
-inline raw_ostream &operator<<(raw_ostream &os, Value value) {
-  value.print(os);
-  return os;
-}
+raw_ostream &operator<<(raw_ostream &os, Value value);
 
 //===----------------------------------------------------------------------===//
 // OpOperand
@@ -262,7 +259,7 @@ public:
   }
 
   /// Return which operand this is in the OpOperand list of the Operation.
-  unsigned getOperandNumber();
+  unsigned getOperandNumber() const;
 
   /// Set the current value being used by this operand.
   void assign(Value value) { set(value); }

@@ -45,7 +45,7 @@ ConfusableIdentifierCheck::~ConfusableIdentifierCheck() = default;
 // We're skipping 1. and 3. for the sake of simplicity, but this can lead to
 // false positive.
 
-static llvm::SmallString<64U> skeleton(StringRef Name) {
+static SmallString<64U> skeleton(StringRef Name) {
   using namespace llvm;
   SmallString<64U> Skeleton;
   Skeleton.reserve(1U + Name.size());
@@ -102,7 +102,7 @@ struct Entry {
 // that has no corresponding context, such as an alias template or variable
 // template.
 using DeclsWithinContextMap =
-    llvm::DenseMap<const Decl *, llvm::SmallVector<Entry, 1>>;
+    llvm::DenseMap<const Decl *, SmallVector<Entry, 1>>;
 
 static bool addToContext(DeclsWithinContextMap &DeclsWithinContext,
                          const Decl *Context, Entry E) {
@@ -189,7 +189,7 @@ void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
 }
 
 void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
-  llvm::StringMap<llvm::SmallVector<const IdentifierInfo *, 1>> SkeletonToNames;
+  llvm::StringMap<SmallVector<const IdentifierInfo *, 1>> SkeletonToNames;
   // Compute the skeleton for each identifier.
   for (auto &[Ident, Decls] : NameToDecls)
     SkeletonToNames[skeleton(Ident->getName())].push_back(Ident);

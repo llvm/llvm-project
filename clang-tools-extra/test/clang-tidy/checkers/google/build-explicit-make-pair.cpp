@@ -1,16 +1,6 @@
 // RUN: %check_clang_tidy %s google-build-explicit-make-pair %t
 
-namespace std {
-template <class T1, class T2>
-struct pair {
-  pair(T1 x, T2 y) {}
-};
-
-template <class T1, class T2>
-pair<T1, T2> make_pair(T1 x, T2 y) {
-  return pair<T1, T2>(x, y);
-}
-}
+#include <utility>
 
 template <typename T>
 void templ(T a, T b) {
