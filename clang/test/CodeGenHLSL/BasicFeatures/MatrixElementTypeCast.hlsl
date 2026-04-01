@@ -165,17 +165,17 @@ struct Derived : BFields {
 };
 
 // CHECK-LABEL: define hidden void @_Z5call47Derived(
-// CHECK-SAME: ptr noundef byval([[STRUCT_DERIVED:%.*]]) align 1 [[D:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef dead_on_return [[D:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A:%.*]] = alloca [2 x <2 x i32>], align 4
-// CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_DERIVED]], align 1
+// CHECK:         [[A:%.*]] = alloca [2 x <2 x i32>], align 4
+// CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %struct.Derived, align 1
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x i32>, align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[D]], i32 19, i1 false)
-// CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0
+// CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[D]], i32 19, i1 false)
+// CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds %struct.Derived, ptr [[AGG_TEMP]], i32 0, i32 0
 // CHECK-NEXT:    [[E:%.*]] = getelementptr inbounds nuw [[STRUCT_BFIELDS:%.*]], ptr [[GEP]], i32 0, i32 1
-// CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 0
-// CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 2
-// CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 1
+// CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds %struct.Derived, ptr [[AGG_TEMP]], i32 0, i32 0, i32 0
+// CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds %struct.Derived, ptr [[AGG_TEMP]], i32 0, i32 0, i32 2
+// CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds %struct.Derived, ptr [[AGG_TEMP]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[GEP1]], align 8
 // CHECK-NEXT:    [[CONV:%.*]] = fptosi double [[TMP1]] to i32

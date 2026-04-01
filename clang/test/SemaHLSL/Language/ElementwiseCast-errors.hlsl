@@ -18,7 +18,7 @@ struct R {
 export void cantCast4() {
   int2 A = {1,2};
   R r = R(A);
-  // expected-error@-1 {{no viable conversion from 'int' to 'R}}
+  // expected-error@-1 {{no matching constructor for initialization of 'R'}}
   // expected-error@-2 {{no viable conversion from 'float' to 'R}}
   R r2;
   r2.A = 1;

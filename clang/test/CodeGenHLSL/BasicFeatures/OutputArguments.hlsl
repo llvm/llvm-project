@@ -161,7 +161,14 @@ void init(out S s) {
 // CHECK: [[S:%.*]] = alloca %struct.S
 // CHECK: [[Tmp:%.*]] = alloca %struct.S
 // CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) [[Tmp]])
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 [[Tmp]], i32 8, i1 false)
+// CHECK: [[X:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[S]], i32 0, i32 0
+// CHECK: [[X1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[Tmp]], i32 0, i32 0
+// CHECK: [[X2:%.*]] = load i32, ptr [[X1]], align 1
+// CHECK: store i32 [[X2]], ptr [[X]], align 1
+// CHECK: [[Y:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[S]], i32 0, i32 1
+// CHECK: [[Y2:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[Tmp]], i32 0, i32 1
+// CHECK: [[Y3:%.*]] = load float, ptr [[Y2]], align 1
+// CHECK: store float [[Y3]], ptr [[Y]], align 1
 
 // OPT: ret i32 7
 export int case6() {
@@ -186,9 +193,24 @@ void init(inout R s) {
 
 // CHECK: [[S:%.*]] = alloca %struct.R
 // CHECK: [[Tmp:%.*]] = alloca %struct.R
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[S]], i32 8, i1 false)
+// CHECK: [[X:%.*]] = getelementptr inbounds nuw %struct.R, ptr [[Tmp]], i32 0, i32 0
+// CHECK: [[X1:%.*]] = getelementptr inbounds nuw %struct.R, ptr [[S]], i32 0, i32 0
+// CHECK: [[X2:%.*]] = load i32, ptr [[X1]], align 1
+// CHECK: store i32 [[X2]], ptr [[X]], align 1
+// CHECK: [[Y:%.*]] = getelementptr inbounds nuw %struct.R, ptr [[Tmp]], i32 0, i32 1
+// CHECK: [[Y2:%.*]] = getelementptr inbounds nuw %struct.R, ptr [[S]], i32 0, i32 1
+// CHECK: [[Y3:%.*]] = load float, ptr [[Y2]], align 1
+// CHECK: store float [[Y3]], ptr [[Y]], align 1
+
 // CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) [[Tmp]])
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 [[Tmp]], i32 8, i1 false)
+// CHECK: [[X:%.*]] = getelementptr inbounds nuw %struct.R, ptr [[S]], i32 0, i32 0
+// CHECK: [[X2:%.*]] = getelementptr inbounds nuw %struct.R, ptr [[Tmp]], i32 0, i32 0
+// CHECK: [[X3:%.*]] = load i32, ptr [[X2]], align 1
+// CHECK: store i32 [[X3]], ptr [[X]], align 1
+// CHECK: [[Y:%.*]] = getelementptr inbounds nuw %struct.R, ptr [[S]], i32 0, i32 1
+// CHECK: [[Y2:%.*]] = getelementptr inbounds nuw %struct.R, ptr [[Tmp]], i32 0, i32 1
+// CHECK: [[Y3:%.*]] = load float, ptr [[Y2]], align 1
+// CHECK: store float [[Y3]], ptr [[Y]], align 1
 
 // OPT: ret i32 7
 export int case7() {

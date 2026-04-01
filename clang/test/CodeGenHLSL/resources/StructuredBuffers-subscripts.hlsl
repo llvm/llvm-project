@@ -34,18 +34,17 @@ void main(unsigned GI : SV_GroupIndex) {
   Out2[GI] = In[GI];
 #endif
 
-  // For SPIR-V, the addrspacecast comes from `S::operator=` member function, which expects
-  // parameters in address space 0. This is why hlsl_device is a sub address
-  // space of the default address space.
-  // SPV: %[[INPTR:.*]] = call noundef align 1 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t.i32(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %{{.*}}, i32 %{{.*}})
-  // SPV: %[[INCAST:.*]] = addrspacecast ptr addrspace(11) %[[INPTR]] to ptr
   // SPV: %[[OUTPTR:.*]] = call noundef align 1 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t.i32(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %{{.*}}, i32 %{{.*}})
-  // SPV: %[[OUTCAST:.*]] = addrspacecast ptr addrspace(11) %[[OUTPTR]] to ptr
-  // SPV: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[OUTCAST]], ptr align 1 %[[INCAST]], i64 4, i1 false)
+  // SPV: %[[INPTR:.*]] = call noundef align 1 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t.i32(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %{{.*}}, i32 %{{.*}})
+  // SPV: call void @llvm.memcpy.p0.p11.i64(ptr align 1 %ref.tmp.i, ptr addrspace(11) align 1 %[[INPTR]], i64 4, i1 false)
+  // SPV: %[[L56:.*]] = load float, ptr %ref.tmp.i, align 1
+  // SPV: store float %[[L56]], ptr addrspace(11) %[[OUTPTR]]
 
   // For DXIL, hlsl_device and the default address space map to the same target address space. No need for an address space cast.
-  // DXIL: %[[INPTR:.*]] = call noundef nonnull align 1 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_1_0t.i32(target("dx.RawBuffer", %struct.S, 1, 0) %{{.*}}, i32 %{{.*}})
   // DXIL: %[[OUTPTR:.*]] = call noundef nonnull align 1 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_1_0t.i32(target("dx.RawBuffer", %struct.S, 1, 0) %{{.*}}, i32 %{{.*}})
-  // DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %[[OUTPTR]], ptr align 1 %[[INPTR]], i32 4, i1 false)
+  // DXIL: %[[INPTR:.*]] = call noundef nonnull align 1 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_1_0t.i32(target("dx.RawBuffer", %struct.S, 1, 0) %{{.*}}, i32 %{{.*}})
+  // DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %ref.tmp.i, ptr align 1 %[[INPTR]], i32 4, i1 false)
+  // DXIL: %[[L70:.*]] = load float, ptr %ref.tmp.i, align 1
+  // DXIL: store float %[[L70]], ptr %[[OUTPTR]], align 1
   RWSB3[0] = RWSB3[1];
 }
