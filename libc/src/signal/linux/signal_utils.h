@@ -114,7 +114,7 @@ LIBC_INLINE int restore_signals(const sigset_t &set) {
 }
 
 LIBC_INLINE int unblock_signal(int signal) {
-  sigset_t set;
+  sigset_t set = empty_set();
   if (!add_signal(set, signal))
     return -EINVAL;
   return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_UNBLOCK,
