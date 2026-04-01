@@ -147,7 +147,7 @@ PROJECT_CHECK_TARGETS = {
     "flang": "check-flang",
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
-    "libclc": "check-libclc",
+    "libclc": "check-libclc-amdgcn-amd-amdhsa-llvm",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",
