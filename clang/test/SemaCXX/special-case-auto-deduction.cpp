@@ -263,3 +263,22 @@ static_assert(__is_same(decltype(pc), int * const));
 const auto *const cpc = p;
 static_assert(__is_same(decltype(cpc), const int * const));
 
+
+// cvr test
+const int *qp1 = nullptr;
+auto *__restrict qx1 = qp1;
+static_assert(__is_same(decltype(qx1), const int *__restrict));
+
+volatile int *qp2 = nullptr;
+auto *const qx2 = qp2;
+static_assert(__is_same(decltype(qx2), volatile int *const));
+
+volatile int *__restrict qp3 = nullptr;
+const auto *const qx3 = qp3;
+static_assert(__is_same(decltype(qx3), const volatile int *const));
+
+// type alias
+
+using PtrAlias = const int *;
+PtrAlias qp4 = nullptr;
+auto *const qx4 = &qp4;

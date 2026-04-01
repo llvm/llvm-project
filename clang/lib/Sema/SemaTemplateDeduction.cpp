@@ -5285,7 +5285,8 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
         DeclaredTy->isPointerType() &&
         Context.hasSameType(
             DeclaredTy->getPointeeType().getLocalUnqualifiedType(),
-            Context.getAutoDeductType());
+            Context.getAutoDeductType()) &&
+        !DeclaredTy->getPointeeType().getQualifiers().hasCVRQualifiers();
 
     QualType ProcessedInitTy = Init->getType().getNonReferenceType();
     if (ProcessedInitTy->isArrayType() || ProcessedInitTy->isFunctionType())
@@ -5302,11 +5303,11 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
 #endif
     } else if (CanUsePointerFastPath) {
       DeducedType = ProcessedInitTy->getPointeeType();
-      Qualifiers ProcessedInitQuals = DeducedType.getLocalQualifiers();
-      Qualifiers TypeQuals = DeclaredTy->getPointeeType().getLocalQualifiers();
-      ProcessedInitQuals.removeCVRQualifiers(TypeQuals.getCVRQualifiers());
-      DeducedType = Context.getQualifiedType(
-          DeducedType.getLocalUnqualifiedType(), ProcessedInitQuals);
+      // Normalize qualifiers on array pointee types so the fast path builds the
+      // same deduced type shape as the slow path.
+      Qualifiers DeducedQuals;
+      DeducedType = Context.getUnqualifiedArrayType(DeducedType, DeducedQuals);
+      DeducedType = Context.getQualifiedType(DeducedType, DeducedQuals);
 #ifndef NDEBUG
       FastPathUsed = true;
 #endif
@@ -5384,7 +5385,6 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
               /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0, FailedTSC);
           TDK != TemplateDeductionResult::Success)
         return TDK;
-          
     }
     // Could be null if somehow 'auto' appears in a non-deduced context.
     if (Deduced[0].getKind() != TemplateArgument::Type)
@@ -5394,8 +5394,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
 #ifndef NDEBUG
     if (FastPathUsed) {
       // Ignore differences due only to QualType sugar.
-      if (FastPathDeducedType.getCanonicalType() !=
-          DeducedType.getCanonicalType()) {
+      if (FastPathDeducedType != DeducedType) {
         llvm::errs() << "Deducing: ";
         Type.dump();
         Init->dump();
@@ -5406,8 +5405,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
         DeducedType.dump();
       }
 
-      assert(FastPathDeducedType.getCanonicalType() ==
-                 DeducedType.getCanonicalType() &&
+      assert(FastPathDeducedType == DeducedType &&
              "fast path auto deduction produced a different deduced type than "
              "the template-deduction path");
     }
@@ -5428,7 +5426,6 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     }
     DeducedType = Context.getCommonSugaredType(Result, DeducedType);
   }
-  
 
   if (AT->isConstrained() && !IgnoreConstraints &&
       CheckDeducedPlaceholderConstraints(

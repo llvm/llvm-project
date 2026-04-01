@@ -183,10 +183,8 @@ Non-comprehensive list of changes in this release
 
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
-- Improved the performance of ``auto`` deduction by adding the fast path
-  for additional simple cases, including non-canonical initializer types,
-  top-level-cv-qualified ``auto``, and single-level ``auto*`` declarators in
-  supported language modes.
+- Improved the performance of ``auto`` deduction by adding a fast path
+  for simple cases, including ``auto``, ``const auto``, and ``auto*``. (#GH186274)
   
 - Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
 
