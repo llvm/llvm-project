@@ -5209,9 +5209,12 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
     if (!ExpSCEV)
       break;
     const SCEV *Expr = ExpSCEV->getSCEV();
-    Value *Res =
-        Expander.expandCodeFor(Expr, Expr->getType(), EntryBB->getTerminator());
-    ExpandedSCEVs[ExpSCEV->getSCEV()] = Res;
+    Value *Res = ExpandedSCEVs.lookup(Expr);
+    if (!Res) {
+      Res = Expander.expandCodeFor(Expr, Expr->getType(),
+                                   EntryBB->getTerminator());
+      ExpandedSCEVs[Expr] = Res;
+    }
     VPValue *Exp = Plan.getOrAddLiveIn(Res);
     ExpSCEV->replaceAllUsesWith(Exp);
     if (Plan.getTripCount() == ExpSCEV)
