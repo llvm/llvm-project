@@ -1388,7 +1388,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
-  if (Delta == nullptr)
+  if (!Delta)
     return false;
 
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
