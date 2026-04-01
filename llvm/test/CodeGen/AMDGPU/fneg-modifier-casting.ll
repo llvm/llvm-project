@@ -1038,15 +1038,15 @@ define float @cospiD_pattern0_half(i16 %arg, float %arg1, float %arg2) {
 ; GFX11-TRUE16-LABEL: cospiD_pattern0_half:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v3.l, 1
-; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
-; GFX11-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 1, v3.l
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 0x8000, vcc_lo
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, v0.l, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0.h
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo
+; GFX11-TRUE16-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 1, v0.l
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 0x8000, vcc_lo
+; GFX11-TRUE16-NEXT:    v_xor_b16 v1.h, v1.h, v0.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_xor_b16 v0.h, v0.h, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: cospiD_pattern0_half:

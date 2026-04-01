@@ -74,7 +74,7 @@ define amdgpu_ps bfloat @fsub_bf16_ss(bfloat inreg %a, bfloat inreg %b) {
 ; GFX12-NEXT:    s_cmp_u_f32 s0, 0
 ; GFX12-NEXT:    s_cselect_b32 s0, s2, s1
 ; GFX12-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fsub_bf16_ss:
@@ -85,7 +85,7 @@ define amdgpu_ps bfloat @fsub_bf16_ss(bfloat inreg %a, bfloat inreg %b) {
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_pk_add_bf16 v0, s0, s1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fsub bfloat %a, %b
   ret bfloat %result

@@ -797,9 +797,8 @@ define half @fptrunc_f64_to_f16(double %a) {
 ; GFX1250-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-TRUE16-NEXT:    v_and_or_b32 v0, v1, 0x1ff, v0
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bfe_u32 v3, v1, 20, 11
-; GFX1250-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
-; GFX1250-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1250-SDAG-TRUE16-NEXT:    v_dual_lshrrev_b32 v2, 8, v1 :: v_dual_lshrrev_b32 v1, 16, v1
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX1250-SDAG-TRUE16-NEXT:    v_sub_nc_u32_e32 v4, 0x3f1, v3
 ; GFX1250-SDAG-TRUE16-NEXT:    v_add_nc_u32_e32 v3, 0xfffffc10, v3
