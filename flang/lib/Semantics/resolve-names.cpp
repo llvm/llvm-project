@@ -10403,6 +10403,7 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoInline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::IVDep>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::InlineAlways>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Simd>(x.u)) {
     return;
   }

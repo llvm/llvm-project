@@ -1886,6 +1886,13 @@ public:
               Word("!DIR$ NOINLINE");
             },
             [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
+            [&](const CompilerDirective::InlineAlways &InlineAlways) {
+              Word("!DIR$ INLINEALWAYS");
+              if (InlineAlways.v.has_value()){
+                Word(" ");
+                Word (InlineAlways.v->ToString());
+              }
+            },
             [&](const CompilerDirective::Simd &) { Word("!DIR$ SIMD"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");

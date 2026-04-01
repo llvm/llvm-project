@@ -3344,6 +3344,7 @@ struct StmtFunctionStmt {
 // !DIR$ FORCEINLINE
 // !DIR$ INLINE
 // !DIR$ NOINLINE
+// !DIR$ INLINEALWAYS
 // !DIR$ IVDEP
 // !DIR$ SIMD
 // !DIR$ <anything else>
@@ -3381,6 +3382,10 @@ struct CompilerDirective {
     WRAPPER_CLASS_BOILERPLATE(
         Prefetch, std::list<common::Indirection<Designator>>);
   };
+  struct InlineAlways {
+    WRAPPER_CLASS_BOILERPLATE(
+      InlineAlways, std::optional<Name>);
+  };
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
@@ -3394,7 +3399,7 @@ struct CompilerDirective {
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
       Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
-      NoInline, Prefetch, IVDep, Simd>
+      NoInline, InlineAlways, Prefetch, IVDep, Simd>
       u;
 };
 
