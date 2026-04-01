@@ -10,7 +10,8 @@ struct B : A {
   int b;
   B(B&& other) :
     A(std::move(other)),
-    b(std::move(other.b)) // No error raised
+    b(std::move(other.b))
+      // CHECK-NOTES-NOT: [[@LINE-1]]:7: warning: 'other' used after it was moved
         {}
 };
 
