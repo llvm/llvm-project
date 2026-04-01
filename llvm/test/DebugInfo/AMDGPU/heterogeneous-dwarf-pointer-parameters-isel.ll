@@ -17,36 +17,38 @@ define void @_QFPadd(ptr %0, ptr %1) #0 !dbg !12 {
   ; CHECK-O0-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; CHECK-O0-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; CHECK-O0-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; CHECK-O0-NEXT:   DBG_VALUE [[COPY4]], 0, !9, !DIExpression(DIOpArg(0, ptr), DIOpDeref(ptr)),  debug-location !8
+  ; CHECK-O0-NEXT:   DBG_VALUE [[COPY4]], 0, !9, !DIExpression(DIOpArg(0, ptr), DIOpDeref(ptr)), debug-location !8
   ; CHECK-O0-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-  ; CHECK-O0-NEXT:   DBG_VALUE [[COPY5]], 0, !7, !DIExpression(DIOpArg(0, ptr), DIOpDeref(ptr)),  debug-location !8
-  ; CHECK-O0-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]],  debug-location !10
-  ; CHECK-O0-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY6]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !10 :: (load (s32) from %ir.0)
-  ; CHECK-O0-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]],  debug-location !10
-  ; CHECK-O0-NEXT:   [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY7]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !10 :: (load (s32) from %ir.1)
-  ; CHECK-O0-NEXT:   [[V_CMP_LE_I32_e64_:%[0-9]+]]:sreg_32 = V_CMP_LE_I32_e64 killed [[FLAT_LOAD_DWORD]], killed [[FLAT_LOAD_DWORD1]], implicit $exec,  debug-location !10
-  ; CHECK-O0-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, killed [[V_CMP_LE_I32_e64_]], implicit-def dead $scc,  debug-location !10
-  ; CHECK-O0-NEXT:   $vcc_lo = COPY [[S_AND_B32_]],  debug-location !10
-  ; CHECK-O0-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc,  debug-location !10
-  ; CHECK-O0-NEXT:   S_BRANCH %bb.1,  debug-location !10
+  ; CHECK-O0-NEXT:   DBG_VALUE [[COPY5]], 0, !7, !DIExpression(DIOpArg(0, ptr), DIOpDeref(ptr)), debug-location !8
+  ; CHECK-O0-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], debug-location !10
+  ; CHECK-O0-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY6]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !10 :: (load (s32) from %ir.0)
+  ; CHECK-O0-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], debug-location !10
+  ; CHECK-O0-NEXT:   [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY7]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !10 :: (load (s32) from %ir.1)
+  ; CHECK-O0-NEXT:   [[V_CMP_GT_I32_e64_:%[0-9]+]]:sreg_32 = V_CMP_GT_I32_e64 killed [[FLAT_LOAD_DWORD]], killed [[FLAT_LOAD_DWORD1]], implicit $exec, debug-location !10
+  ; CHECK-O0-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+  ; CHECK-O0-NEXT:   [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 killed [[V_CMP_GT_I32_e64_]], killed [[S_MOV_B32_]], implicit-def dead $scc, debug-location !10
+  ; CHECK-O0-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, killed [[S_XOR_B32_]], implicit-def dead $scc, debug-location !10
+  ; CHECK-O0-NEXT:   $vcc_lo = COPY [[S_AND_B32_]], debug-location !10
+  ; CHECK-O0-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc, debug-location !10
+  ; CHECK-O0-NEXT:   S_BRANCH %bb.1, debug-location !10
   ; CHECK-O0-NEXT: {{  $}}
   ; CHECK-O0-NEXT: bb.1 (%ir-block.6):
   ; CHECK-O0-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-O0-NEXT: {{  $}}
-  ; CHECK-O0-NEXT:   [[FLAT_LOAD_DWORD2:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !11 :: (load (s32) from %ir.0)
-  ; CHECK-O0-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; CHECK-O0-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[FLAT_LOAD_DWORD2]], killed [[S_MOV_B32_]], 0, implicit $exec,  debug-location !11
-  ; CHECK-O0-NEXT:   FLAT_STORE_DWORD [[COPY4]], killed [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !11 :: (store (s32) into %ir.1)
-  ; CHECK-O0-NEXT:   S_BRANCH %bb.3,  debug-location !10
+  ; CHECK-O0-NEXT:   [[FLAT_LOAD_DWORD2:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !11 :: (load (s32) from %ir.0)
+  ; CHECK-O0-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+  ; CHECK-O0-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[FLAT_LOAD_DWORD2]], killed [[S_MOV_B32_1]], 0, implicit $exec, debug-location !11
+  ; CHECK-O0-NEXT:   FLAT_STORE_DWORD [[COPY4]], killed [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !11 :: (store (s32) into %ir.1)
+  ; CHECK-O0-NEXT:   S_BRANCH %bb.3, debug-location !10
   ; CHECK-O0-NEXT: {{  $}}
   ; CHECK-O0-NEXT: bb.2 (%ir-block.9):
   ; CHECK-O0-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-O0-NEXT: {{  $}}
-  ; CHECK-O0-NEXT:   [[FLAT_LOAD_DWORD3:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !12 :: (load (s32) from %ir.1)
-  ; CHECK-O0-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; CHECK-O0-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[FLAT_LOAD_DWORD3]], killed [[S_MOV_B32_1]], 0, implicit $exec,  debug-location !12
-  ; CHECK-O0-NEXT:   FLAT_STORE_DWORD [[COPY4]], killed [[V_ADD_U32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !12 :: (store (s32) into %ir.1)
-  ; CHECK-O0-NEXT:   S_BRANCH %bb.3,  debug-location !10
+  ; CHECK-O0-NEXT:   [[FLAT_LOAD_DWORD3:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !12 :: (load (s32) from %ir.1)
+  ; CHECK-O0-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+  ; CHECK-O0-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[FLAT_LOAD_DWORD3]], killed [[S_MOV_B32_2]], 0, implicit $exec, debug-location !12
+  ; CHECK-O0-NEXT:   FLAT_STORE_DWORD [[COPY4]], killed [[V_ADD_U32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !12 :: (store (s32) into %ir.1)
+  ; CHECK-O0-NEXT:   S_BRANCH %bb.3, debug-location !10
   ; CHECK-O0-NEXT: {{  $}}
   ; CHECK-O0-NEXT: bb.3 (%ir-block.12):
   ; CHECK-O0-NEXT:   SI_RETURN debug-location !13
@@ -64,38 +66,38 @@ define void @_QFPadd(ptr %0, ptr %1) #0 !dbg !12 {
   ; CHECK-O1-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK-O1-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-O1-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-O1-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1,  debug-instr-number 1
-  ; CHECK-O1-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1,  debug-instr-number 4
+  ; CHECK-O1-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1, debug-instr-number 1
+  ; CHECK-O1-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, debug-instr-number 4
   ; CHECK-O1-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; CHECK-O1-NEXT:   DBG_INSTR_REF !9, !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpComposite(2, ptr), DIOpDeref(ptr)), dbg-instr-ref(2, 0), dbg-instr-ref(3, 0),  debug-location !8
+  ; CHECK-O1-NEXT:   DBG_INSTR_REF !9, !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpComposite(2, ptr), DIOpDeref(ptr)), dbg-instr-ref(2, 0), dbg-instr-ref(3, 0), debug-location !8
   ; CHECK-O1-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-  ; CHECK-O1-NEXT:   DBG_INSTR_REF !7, !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpComposite(2, ptr), DIOpDeref(ptr)), dbg-instr-ref(5, 0), dbg-instr-ref(6, 0),  debug-location !8
-  ; CHECK-O1-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]],  debug-location !10
-  ; CHECK-O1-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY6]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !10 :: (load (s32) from %ir.0)
-  ; CHECK-O1-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]],  debug-location !10
-  ; CHECK-O1-NEXT:   [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY7]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !10 :: (load (s32) from %ir.1)
-  ; CHECK-O1-NEXT:   [[V_CMP_LE_I32_e64_:%[0-9]+]]:sreg_32 = V_CMP_LE_I32_e64 killed [[FLAT_LOAD_DWORD]], killed [[FLAT_LOAD_DWORD1]], implicit $exec,  debug-location !10
-  ; CHECK-O1-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, killed [[V_CMP_LE_I32_e64_]], implicit-def dead $scc,  debug-location !10
-  ; CHECK-O1-NEXT:   $vcc_lo = COPY [[S_AND_B32_]],  debug-location !10
-  ; CHECK-O1-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc,  debug-location !10
-  ; CHECK-O1-NEXT:   S_BRANCH %bb.1,  debug-location !10
+  ; CHECK-O1-NEXT:   DBG_INSTR_REF !7, !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpComposite(2, ptr), DIOpDeref(ptr)), dbg-instr-ref(5, 0), dbg-instr-ref(6, 0), debug-location !8
+  ; CHECK-O1-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]], debug-location !10
+  ; CHECK-O1-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY6]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !10 :: (load (s32) from %ir.0)
+  ; CHECK-O1-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]], debug-location !10
+  ; CHECK-O1-NEXT:   [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY7]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !10 :: (load (s32) from %ir.1)
+  ; CHECK-O1-NEXT:   [[V_CMP_LE_I32_e64_:%[0-9]+]]:sreg_32 = V_CMP_LE_I32_e64 killed [[FLAT_LOAD_DWORD]], killed [[FLAT_LOAD_DWORD1]], implicit $exec, debug-location !10
+  ; CHECK-O1-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, killed [[V_CMP_LE_I32_e64_]], implicit-def dead $scc, debug-location !10
+  ; CHECK-O1-NEXT:   $vcc_lo = COPY [[S_AND_B32_]], debug-location !10
+  ; CHECK-O1-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc, debug-location !10
+  ; CHECK-O1-NEXT:   S_BRANCH %bb.1, debug-location !10
   ; CHECK-O1-NEXT: {{  $}}
   ; CHECK-O1-NEXT: bb.1 (%ir-block.6):
   ; CHECK-O1-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-O1-NEXT: {{  $}}
-  ; CHECK-O1-NEXT:   [[FLAT_LOAD_DWORD2:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !11 :: (load (s32) from %ir.0)
+  ; CHECK-O1-NEXT:   [[FLAT_LOAD_DWORD2:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !11 :: (load (s32) from %ir.0)
   ; CHECK-O1-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; CHECK-O1-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[FLAT_LOAD_DWORD2]], killed [[S_MOV_B32_]], 0, implicit $exec,  debug-location !11
-  ; CHECK-O1-NEXT:   FLAT_STORE_DWORD [[COPY4]], killed [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !11 :: (store (s32) into %ir.1)
-  ; CHECK-O1-NEXT:   S_BRANCH %bb.3,  debug-location !10
+  ; CHECK-O1-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[FLAT_LOAD_DWORD2]], killed [[S_MOV_B32_]], 0, implicit $exec, debug-location !11
+  ; CHECK-O1-NEXT:   FLAT_STORE_DWORD [[COPY4]], killed [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !11 :: (store (s32) into %ir.1)
+  ; CHECK-O1-NEXT:   S_BRANCH %bb.3, debug-location !10
   ; CHECK-O1-NEXT: {{  $}}
   ; CHECK-O1-NEXT: bb.2 (%ir-block.9):
   ; CHECK-O1-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-O1-NEXT: {{  $}}
-  ; CHECK-O1-NEXT:   [[FLAT_LOAD_DWORD3:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !12 :: (load (s32) from %ir.1)
+  ; CHECK-O1-NEXT:   [[FLAT_LOAD_DWORD3:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !12 :: (load (s32) from %ir.1)
   ; CHECK-O1-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; CHECK-O1-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[FLAT_LOAD_DWORD3]], killed [[S_MOV_B32_1]], 0, implicit $exec,  debug-location !12
-  ; CHECK-O1-NEXT:   FLAT_STORE_DWORD [[COPY4]], killed [[V_ADD_U32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr,  debug-location !12 :: (store (s32) into %ir.1)
+  ; CHECK-O1-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[FLAT_LOAD_DWORD3]], killed [[S_MOV_B32_1]], 0, implicit $exec, debug-location !12
+  ; CHECK-O1-NEXT:   FLAT_STORE_DWORD [[COPY4]], killed [[V_ADD_U32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr, debug-location !12 :: (store (s32) into %ir.1)
   ; CHECK-O1-NEXT: {{  $}}
   ; CHECK-O1-NEXT: bb.3 (%ir-block.12):
   ; CHECK-O1-NEXT:   SI_RETURN debug-location !13
