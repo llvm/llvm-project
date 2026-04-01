@@ -248,6 +248,7 @@ add_llvm_component_library(LLVMSupport
   RISCVAttributes.cpp
   RISCVAttributeParser.cpp
   RISCVISAUtils.cpp
+  SandboxingFileSystem.cpp
   ScaledNumber.cpp
   ScopedPrinter.cpp
   SHA1.cpp
