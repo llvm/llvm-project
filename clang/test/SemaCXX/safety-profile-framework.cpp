@@ -29,6 +29,19 @@ void some_function(); // #some_function
                                           // expected-note@#some_function {{declaration declared here}}
 
 // ===================================================================
+// Enforce on non-empty declaration (function): error
+// ===================================================================
+[[profiles::enforce(test::type_cast)]] // expected-error {{'profiles::enforce' attribute only allowed on empty-declarations and module-declarations}}
+void enforced_func();
+
+// ===================================================================
+// Enforce inside class scope: error
+// ===================================================================
+struct EnforceInClass {
+  [[profiles::enforce(test::type_cast)]]; // expected-warning {{declaration does not declare anything}}
+};
+
+// ===================================================================
 // Enforce inside a namespace: error
 // ===================================================================
 namespace ns {

@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -std=c++20 %s
 // no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}
 [[profiles::enforce(test::type_cast)]];
+// no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}
+[[profiles::enforce(test::other)]];
 
 void test_violation() {
   int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
@@ -71,5 +73,102 @@ void test_suppress_var_init() {
 void test_discarded_branch() {
   if constexpr (false) {
     int *p = reinterpret_cast<int*>(0);
+  }
+}
+
+// Lambda inside enforced scope.
+void test_lambda() {
+  auto f = []() {
+    int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+  };
+}
+
+// Nested suppression with correct save/restore.
+void test_nested_suppress() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] {
+    int *p = reinterpret_cast<int*>(0);
+    // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+    [[profiles::suppress(test::type_cast)]] {
+      int *q = reinterpret_cast<int*>(0);
+    }
+    int *r = reinterpret_cast<int*>(0);
+  }
+  int *s = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+// sizeof is an unevaluated context.
+void test_sizeof_unevaluated() {
+  auto s = sizeof(reinterpret_cast<int*>(0));
+}
+
+// noexcept is an unevaluated context.
+void test_noexcept_unevaluated() {
+  bool b = noexcept(reinterpret_cast<int*>(0));
+}
+
+// Requires-expression is an unevaluated context.
+void test_requires_unevaluated() {
+  bool b = requires { reinterpret_cast<int*>(0); };
+}
+
+// Default function argument with violation.
+void default_arg_func(int *p = reinterpret_cast<int*>(0)); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+
+// Suppress with justification works identically to suppress without.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast, justification: "legacy code")]]
+void test_suppress_with_justification() {
+  int *p = reinterpret_cast<int*>(0);
+}
+
+// Suppress on various statement kinds.
+void test_suppress_on_stmts() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  for (int *p = reinterpret_cast<int*>(0);;) break;
+
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  while (reinterpret_cast<int*>(0)) break;
+
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  if (reinterpret_cast<int*>(0)) {}
+
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]]
+  (void)reinterpret_cast<int*>(0);
+}
+
+// Suppress on null-statement is a no-op: the next statement is NOT suppressed.
+void test_suppress_null_stmt() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]];
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+// Suppress on class definition: member functions are suppressed via DeclAttr.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(test::type_cast)]] SuppressedStruct {
+  void f() {
+    int *p = reinterpret_cast<int*>(0);
+  }
+};
+
+// Suppress on namespace: functions inside are suppressed via DeclAttr.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+namespace [[profiles::suppress(test::type_cast)]] suppressed_ns {
+  void g() {
+    int *p = reinterpret_cast<int*>(0);
+  }
+}
+
+// Selective suppression: suppressing a different profile does not
+// suppress test::type_cast violations.
+void test_selective_suppress() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::other)]] {
+    int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
   }
 }
