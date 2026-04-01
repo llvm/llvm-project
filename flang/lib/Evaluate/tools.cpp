@@ -1730,8 +1730,8 @@ struct ArgumentExtractor
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
-    // Conditional expressions are not valid atomic operations; return the
-    // immediate operands without descending into nested conditionals.
+    // Return the condition and then/else branches as immediate operands;
+    // nested conditionals are not permitted in an OpenMP atomic context.
     return {Operator::Conditional,
         {AsSomeExpr(x.condition()), AsSomeExpr(x.thenValue()),
             AsSomeExpr(x.elseValue())}};

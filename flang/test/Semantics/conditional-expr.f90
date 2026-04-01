@@ -383,3 +383,26 @@ subroutine constant_folding_cases()
   !ERROR: Must be a constant value
   integer, parameter :: p_true_nconst  = (.true.  ? non_const : 10)
 end subroutine
+
+! Module serialization: conditional expressions in a module must be correctly
+! written to and read back from the .mod file.
+module conditional_expr_mod
+  implicit none
+contains
+  subroutine mod_mixed_expressions(flag, x, y, result)
+    logical, intent(in) :: flag
+    integer, intent(in) :: x, y
+    integer, intent(out) :: result
+
+    result = (flag ? x + y : x - y)
+    result = (flag ? 2 * x : y / 2)
+  end subroutine
+end module
+
+subroutine valid_use_from_module(flag, x, y)
+  use conditional_expr_mod
+  logical :: flag
+  integer :: x, y, result
+
+  call mod_mixed_expressions(flag, x, y, result)
+end subroutine
