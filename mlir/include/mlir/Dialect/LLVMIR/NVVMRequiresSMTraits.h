@@ -70,7 +70,7 @@ struct NVVMCheckSMVersion {
 
     return smVersion * 10 + (isAA ? 3 : 0) + (isFS ? 2 : 0);
   }
-  
+
   static bool isMinimumSMVersion(unsigned fullSmVersion) {
     return getSMVersion(fullSmVersion) >= 20;
   }
