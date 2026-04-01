@@ -159,16 +159,15 @@ static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
     case AArch64::ANDXri:
     case AArch64::EORXri:
       if (I->Op1 == 0)
-        Insts.emplace_back(MCInstBuilder(I->Opcode)
-                               .addReg(DstReg)
-                               .addReg(BitSize == 32 ? AArch64::WZR
-                                                     : AArch64::XZR)
-                               .addImm(I->Op2));
+        Insts.emplace_back(
+            MCInstBuilder(I->Opcode)
+                .addReg(DstReg)
+                .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                .addImm(I->Op2));
       else
-        Insts.emplace_back(MCInstBuilder(I->Opcode)
-                               .addReg(DstReg)
-                               .addReg(DstReg)
-                               .addImm(I->Op2));
+        Insts.emplace_back(
+            MCInstBuilder(I->Opcode).addReg(DstReg).addReg(DstReg).addImm(
+                I->Op2));
       break;
     case AArch64::EORXrs:
     case AArch64::EONXrs:
@@ -184,10 +183,9 @@ static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
     case AArch64::MOVNXi:
     case AArch64::MOVZWi:
     case AArch64::MOVZXi:
-      Insts.emplace_back(MCInstBuilder(I->Opcode)
-                             .addReg(DstReg)
-                             .addImm(I->Op1)
-                             .addImm(I->Op2));
+      Insts.emplace_back(
+          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(I->Op1).addImm(
+              I->Op2));
       break;
     case AArch64::MOVKWi:
     case AArch64::MOVKXi:
@@ -2927,7 +2925,11 @@ public:
 
   InstructionListType createLoadImmediate(const MCPhysReg Dest,
                                           uint64_t Imm) const override {
-    return createMOVImm(Dest, 64, Imm);
+    if (RegInfo->getRegClass(AArch64::GPR64RegClassID).contains(Dest))
+      return createMOVImm(Dest, 64, Imm);
+    if (RegInfo->getRegClass(AArch64::GPR32RegClassID).contains(Dest))
+      return createMOVImm(Dest, 32, Imm);
+    llvm_unreachable("Unexpected RegClass");
   }
 
   void createIndirectCallInst(MCInst &Inst, bool IsTailCall,
