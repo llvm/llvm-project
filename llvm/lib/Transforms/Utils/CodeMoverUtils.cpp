@@ -215,10 +215,11 @@ void llvm::moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
   Instruction *MovePos = ToBB.getTerminator();
   while (FromBB.size() > 1) {
     Instruction &I = FromBB.front();
-    if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
+    if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI)) {
       // Update SCEV to ensure it remains valid throughout the function.
       SE.forgetValue(&I);
       I.moveBeforePreserving(MovePos->getIterator());
+    }
   }
 }
 

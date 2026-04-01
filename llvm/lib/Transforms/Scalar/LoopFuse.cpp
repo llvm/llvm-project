@@ -1700,10 +1700,6 @@ private:
     // since merging the latches may affect the dispositions.
     SE.forgetBlockAndLoopDispositions();
 
-    // Forget the cached SCEV values including the induction variable that may
-    // have changed after the fusion.
-    SE.forgetLoop(FC0.L);
-
     // Move instructions from FC0.Latch to FC1.Latch.
     // Note: mergeLatch requires an updated DT.
     mergeLatch(FC0, FC1);
