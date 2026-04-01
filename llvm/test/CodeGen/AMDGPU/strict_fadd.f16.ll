@@ -533,14 +533,14 @@ define amdgpu_ps half @s_constained_fadd_f16_fpexcept_strict(half inreg %x, half
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_add_f16 s0, s2, s3
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: s_constained_fadd_f16_fpexcept_strict:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_add_f16 s0, s2, s3
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val

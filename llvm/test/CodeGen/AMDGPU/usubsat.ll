@@ -50,11 +50,11 @@ define i8 @s_usubsat_i8(i8 inreg %lhs, i8 inreg %rhs) {
 ; GFX11-TRUE16-LABEL: s_usubsat_i8:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff, v1
-; GFX11-TRUE16-NEXT:    v_max_u32_e32 v1, v1, v0
-; GFX11-TRUE16-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
+; GFX11-TRUE16-NEXT:    s_and_b32 s1, s1, 0xff
+; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0xff
+; GFX11-TRUE16-NEXT:    s_max_u32 s0, s0, s1
+; GFX11-TRUE16-NEXT:    s_sub_i32 s0, s0, s1
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: s_usubsat_i8:

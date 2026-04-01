@@ -507,29 +507,29 @@ define <4 x i32> @scmp_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX12-SDAG-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; GFX12-SDAG-NEXT:    v_bfe_i32 v8, v3, 0, 8
+; GFX12-SDAG-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX12-SDAG-NEXT:    v_bfe_i32 v5, v5, 0, 8
+; GFX12-SDAG-NEXT:    v_bfe_i32 v8, v3, 0, 8
+; GFX12-SDAG-NEXT:    v_bfe_i32 v6, v6, 0, 8
 ; GFX12-SDAG-NEXT:    v_bfe_i32 v1, v1, 0, 8
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v3.l, v4.l
-; GFX12-SDAG-NEXT:    v_bfe_i32 v4, v6, 0, 8
+; GFX12-SDAG-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v0.l, v4.l
 ; GFX12-SDAG-NEXT:    v_bfe_i32 v9, v2, 0, 8
 ; GFX12-SDAG-NEXT:    v_mov_b16_e32 v2.l, v5.l
 ; GFX12-SDAG-NEXT:    v_bfe_i32 v7, v7, 0, 8
-; GFX12-SDAG-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v0.l, v3.l
 ; GFX12-SDAG-NEXT:    v_mov_b16_e32 v5.l, v8.l
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
-; GFX12-SDAG-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v0.l, v3.l
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v3.l, v9.l
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e32 v0, -1, v6, vcc_lo
-; GFX12-SDAG-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v1.l, v2.l
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX12-SDAG-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v0.l, v4.l
+; GFX12-SDAG-NEXT:    v_mov_b16_e32 v4.l, v6.l
 ; GFX12-SDAG-NEXT:    v_mov_b16_e32 v6.l, v7.l
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e32 v0, -1, v3, vcc_lo
+; GFX12-SDAG-NEXT:    v_mov_b16_e32 v3.l, v9.l
+; GFX12-SDAG-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v1.l, v2.l
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-SDAG-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v3.l, v4.l
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
