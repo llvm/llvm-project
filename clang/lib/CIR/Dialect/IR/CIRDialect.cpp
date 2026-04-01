@@ -341,7 +341,94 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
   return success();
 }
 
-LogicalResult cir::ArrayCtor::verify() { return verifyArrayCtorDtor(*this); }
+ParseResult cir::ArrayCtor::parse(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::UnresolvedOperand addrOperand;
+  OpAsmParser::UnresolvedOperand numElementsOperand;
+  bool hasNumElements = false;
+
+  if (parser.parseOperand(addrOperand))
+    return failure();
+
+  if (succeeded(parser.parseOptionalComma())) {
+    if (parser.parseOperand(numElementsOperand))
+      return failure();
+    hasNumElements = true;
+  }
+
+  if (parser.parseColon())
+    return failure();
+
+  mlir::Type addrType;
+  if (parser.parseType(addrType))
+    return failure();
+  if (parser.resolveOperand(addrOperand, addrType, result.operands))
+    return failure();
+
+  if (hasNumElements) {
+    if (parser.parseComma())
+      return failure();
+    mlir::Type numElementsType;
+    if (parser.parseType(numElementsType))
+      return failure();
+    if (parser.resolveOperand(numElementsOperand, numElementsType,
+                              result.operands))
+      return failure();
+  }
+
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body))
+    return failure();
+
+  Region *partialDtor = result.addRegion();
+  if (!parser.parseOptionalKeyword("partial_dtor")) {
+    if (parser.parseRegion(*partialDtor))
+      return failure();
+  }
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+void cir::ArrayCtor::print(OpAsmPrinter &p) {
+  p << " " << getAddr();
+  if (getNumElements())
+    p << ", " << getNumElements();
+
+  p << " : " << getAddr().getType();
+  if (getNumElements())
+    p << ", " << getNumElements().getType();
+
+  p << " ";
+  p.printRegion(getBody());
+
+  if (!getPartialDtor().empty()) {
+    p << " partial_dtor ";
+    p.printRegion(getPartialDtor());
+  }
+
+  p.printOptionalAttrDict(getOperation()->getAttrs());
+}
+
+LogicalResult cir::ArrayCtor::verify() {
+  if (failed(verifyArrayCtorDtor(*this)))
+    return failure();
+
+  mlir::Region &partialDtor = getPartialDtor();
+  if (!partialDtor.empty()) {
+    mlir::Block &dtorBlock = partialDtor.front();
+    if (dtorBlock.getNumArguments() != 1)
+      return emitOpError(
+          "partial_dtor must have exactly one block argument");
+
+    auto bodyArgTy = getBody().front().getArgument(0).getType();
+    if (dtorBlock.getArgument(0).getType() != bodyArgTy)
+      return emitOpError("partial_dtor block argument type must match "
+                         "the body block argument type");
+  }
+  return success();
+}
 LogicalResult cir::ArrayDtor::verify() { return verifyArrayCtorDtor(*this); }
 
 //===----------------------------------------------------------------------===//

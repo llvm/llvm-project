@@ -4578,8 +4578,17 @@ def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
   let summary = "Initialize array elements with C++ constructors";
   let description = [{
     Initialize each array element using the same C++ constructor. This
-    operation has one region, with one single block. The block has an
-    incoming argument for the current array element to initialize.
+    operation has a `body` region and an optional `partial_dtor` region.
+    Both regions have a single block whose argument is a pointer to the
+    current array element.
+
+    The `body` region contains the constructor call for one element.
+
+    The `partial_dtor` region, when non-empty, contains the destructor call
+    for one element. During lowering, it is used to build a cleanup that
+    destroys already-constructed elements if a constructor throws. When the
+    element type has a trivial destructor or exceptions are disabled, the
+    `partial_dtor` region is left empty.
 
     When `num_elements` is absent, `addr` must be a pointer to a fixed-size
     CIR array type and the element count is derived from that array type.
@@ -4591,15 +4600,28 @@ def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
     Examples:
 
     ```mlir
+    // Fixed size without partial destructor:
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
         cir.yield
     }
 
+    // Variable size without partial destructor:
     cir.array.ctor(%ptr, %n : !cir.ptr<!rec_S>, !u64i) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+
+    // Fixed size with partial destructor:
+    cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    } partial_dtor {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_dtor(%arg0) : (!cir.ptr<!rec_S>) -> ()
         cir.yield
     }
     ```
@@ -4610,32 +4632,41 @@ def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
     Optional<CIR_AnyIntType>:$num_elements
   );
 
-  let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = [{
-    $addr (`,` $num_elements^)? `:` qualified(type($addr))
-    (`,` type($num_elements)^)? $body attr-dict
-  }];
+  let regions = (region SizedRegion<1>:$body, AnyRegion:$partial_dtor);
+  let hasCustomAssemblyFormat = 1;
 
   let builders = [
     // Static form: addr is ptr<array<T x N>>, no num_elements.
     OpBuilder<(ins "mlir::Value":$addr,
-      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
-        assert(regionBuilder && "builder callback expected");
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$partialDtorBuilder), [{
+        assert(bodyBuilder && "builder callback expected");
         mlir::OpBuilder::InsertionGuard guard($_builder);
-        mlir::Region *r = $_state.addRegion();
         $_state.addOperands(ValueRange{addr});
-        $_builder.createBlock(r);
-        regionBuilder($_builder, $_state.location);
+        mlir::Region *body = $_state.addRegion();
+        $_builder.createBlock(body);
+        bodyBuilder($_builder, $_state.location);
+        mlir::Region *partialDtor = $_state.addRegion();
+        if (partialDtorBuilder) {
+          $_builder.createBlock(partialDtor);
+          partialDtorBuilder($_builder, $_state.location);
+        }
     }]>,
     // Dynamic form: addr is ptr<T>, num_elements is the runtime count.
     OpBuilder<(ins "mlir::Value":$addr, "mlir::Value":$num_elements,
-      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
-        assert(regionBuilder && "builder callback expected");
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$partialDtorBuilder), [{
+        assert(bodyBuilder && "builder callback expected");
         mlir::OpBuilder::InsertionGuard guard($_builder);
-        mlir::Region *r = $_state.addRegion();
         $_state.addOperands({addr, num_elements});
-        $_builder.createBlock(r);
-        regionBuilder($_builder, $_state.location);
+        mlir::Region *body = $_state.addRegion();
+        $_builder.createBlock(body);
+        bodyBuilder($_builder, $_state.location);
+        mlir::Region *partialDtor = $_state.addRegion();
+        if (partialDtorBuilder) {
+          $_builder.createBlock(partialDtor);
+          partialDtorBuilder($_builder, $_state.location);
+        }
     }]>
   ];
 

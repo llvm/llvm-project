@@ -173,3 +173,16 @@ void multi_dimensional() {
 // OGCG:       br i1 %[[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 // OGCG:     [[EXIT]]:
 // OGCG:       ret void
+
+struct HasDtor {
+    HasDtor();
+    ~HasDtor();
+};
+
+void test_partial_array_cleanup() {
+    HasDtor s[4];
+}
+
+// CIR-BEFORE-LPP:     cir.func {{.*}} @_Z26test_partial_array_cleanupv()
+
+// CIR:     cir.func {{.*}} @_Z26test_partial_array_cleanupv()
