@@ -62,3 +62,14 @@ namespace ExplicitThisInBacktrace {
   static_assert(test()); // both-error {{not an integral constant expression}} \
                          // both-note {{in call to}}
 }
+
+namespace ConstexprUnknownNestedVariables {
+  struct T { constexpr int a() const { return 42; } };
+  constexpr const T& f(const T& t) noexcept { return t; }
+  constexpr int f() {
+      const T& range = f(T());
+      return [&] consteval { return range.a(); }();
+  }
+
+  static_assert(f() == 42);
+}
