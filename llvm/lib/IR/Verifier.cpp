@@ -4783,22 +4783,23 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
       ScalarTy = VecTy->getElementType();
   }
 
-  std::string OpName =
-      (Twine("atomicrmw ") + (RMWI.isElementwise() ? "elementwise " : "") +
-       AtomicRMWInst::getOperationName(Op))
-          .str();
   if (Op == AtomicRMWInst::Xchg) {
     Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
               ScalarTy->isPointerTy(),
-          OpName + " operand must have integer or floating point type!", &RMWI,
-          ElTy);
+          "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
+              " operand must have integer or floating point type!",
+          &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
     Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
-          OpName + " operand must have floating-point or fixed vector of "
-                   "floating-point type!",
+          "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
+              " operand must have floating-point or fixed vector of "
+              "floating-point "
+              "type!",
           &RMWI, ElTy);
   } else {
-    Check(ScalarTy->isIntegerTy(), OpName + " operand must have integer type!",
+    Check(ScalarTy->isIntegerTy(),
+          "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
+              " operand must have integer type!",
           &RMWI, ElTy);
   }
   checkAtomicMemAccessSize(RMWI.isElementwise() ? ScalarTy : ElTy, &RMWI);

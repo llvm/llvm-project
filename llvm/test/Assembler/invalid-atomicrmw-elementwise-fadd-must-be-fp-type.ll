@@ -5,4 +5,4 @@ define <4 x i32> @bad_fadd(ptr %p, <4 x i32> %v) {
   ret <4 x i32> %old
 }
 
-; CHECK: atomicrmw elementwise fadd operand must be a floating point type
+; CHECK: atomicrmw fadd operand must be a floating point type
