@@ -5709,8 +5709,6 @@ def mcall_indirect_overlong : Flag<["-"], "mcall-indirect-overlong">, Group<m_wa
 def mno_call_indirect_overlong : Flag<["-"], "mno-call-indirect-overlong">, Group<m_wasm_Features_Group>;
 def mcompact_imports : Flag<["-"], "mcompact-imports">, Group<m_wasm_Features_Group>;
 def mno_compact_imports : Flag<["-"], "mno-compact-imports">, Group<m_wasm_Features_Group>;
-def mcomponent_model_threading : Flag<["-"], "mcomponent-model-threading">, Group<m_wasm_Features_Group>;
-def mno_component_model_threading : Flag<["-"], "mno-component-model-threading">, Group<m_wasm_Features_Group>;
 def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Features_Group>;
 def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Group>;
@@ -5719,6 +5717,8 @@ def mfp16 : Flag<["-"], "mfp16">, Group<m_wasm_Features_Group>;
 def mno_fp16 : Flag<["-"], "mno-fp16">, Group<m_wasm_Features_Group>;
 def mgc : Flag<["-"], "mgc">, Group<m_wasm_Features_Group>;
 def mno_gc : Flag<["-"], "mno-gc">, Group<m_wasm_Features_Group>;
+def mlibcall_thread_context : Joined<["-"], "mlibcall-thread-context">, Group<m_wasm_Features_Group>;
+def mno_libcall_thread_context : Joined<["-"], "mno-libcall-thread-context">, Group<m_wasm_Features_Group>;
 def mmultimemory : Flag<["-"], "mmultimemory">, Group<m_wasm_Features_Group>;
 def mno_multimemory : Flag<["-"], "mno-multimemory">, Group<m_wasm_Features_Group>;
 def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;

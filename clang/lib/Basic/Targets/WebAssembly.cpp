@@ -56,7 +56,6 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("bulk-memory", HasBulkMemory)
       .Case("bulk-memory-opt", HasBulkMemoryOpt)
       .Case("call-indirect-overlong", HasCallIndirectOverlong)
-      .Case("component-model-threading", HasComponentModelThreading)
       .Case("compact-imports", HasCompactImports)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
@@ -124,8 +123,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
-  if (HasComponentModelThreading)
-    Builder.defineMacro("__wasm_component_model_threading__");
+  if (HasLibcallThreadContext)
+    Builder.defineMacro("__wasm_libcall_thread_context__");
   // Note that not all wasm features appear here.   For example,
   // HasCompatctImports
 
@@ -389,12 +388,12 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasWideArithmetic = false;
       continue;
     }
-    if (Feature == "+component-model-threading") {
-      HasComponentModelThreading = true;
+    if (Feature == "+libcall-thread-context") {
+      HasLibcallThreadContext = true;
       continue;
     }
-    if (Feature == "-component-model-threading") {
-      HasComponentModelThreading = false;
+    if (Feature == "-libcall-thread-context") {
+      HasLibcallThreadContext = false;
       continue;
     }
 
@@ -430,11 +429,10 @@ WebAssemblyTargetInfo::getTargetBuiltins() const {
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
                                    const TargetInfo *Aux) {
   TargetInfo::adjust(Diags, Opts, Aux);
-  // If not using component model threading intrinsics, turn off POSIXThreads
-  // and ThreadModel so that we don't predefine _REENTRANT or __STDCPP_THREADS__
-  // if we will eventually end up stripping atomics because they are
-  // unsupported.
-  if (!HasComponentModelThreading && (!HasAtomics || !HasBulkMemory)) {
+  // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
+  // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
+  // because they are unsupported.
+  if (!HasAtomics || !HasBulkMemory) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
     Opts.ThreadsafeStatics = false;

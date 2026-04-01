@@ -77,13 +77,13 @@
 // '-pthread' sets +atomics, +bulk-memory, +mutable-globals, +sign-ext, and --shared-memory
 // RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD %s
-// PTHREAD: "-cc1" {{.*}} "-target-feature" "+bulk-memory" "-target-feature" "+atomics" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// PTHREAD: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
 // PTHREAD: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
 //
 // '-pthread' with '-nostdlib' should still set '--shared-memory' but not include '-lpthread'
 // RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread -nostdlib 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD-NOSTDLIB %s
-// PTHREAD-NOSTDLIB: "-cc1" {{.*}} "-target-feature" "+bulk-memory" "-target-feature" "+atomics" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// PTHREAD-NOSTDLIB: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
 // PTHREAD-NOSTDLIB: wasm-ld{{.*}}" "--shared-memory" "-o" "a.out"
 
 // '-pthread' not allowed with '-mno-atomics'
@@ -113,7 +113,7 @@
 // 'wasm32-wasi-threads' does the same thing as '-pthread'
 // RUN: %clang -### --target=wasm32-wasi-threads --sysroot=/foo %s 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASI_THREADS %s
-// WASI_THREADS: "-cc1" {{.*}} "-target-feature" "+bulk-memory" "-target-feature" "+atomics" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// WASI_THREADS: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
 // WASI_THREADS: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
 
 // '-mllvm -emscripten-cxx-exceptions-allowed=foo,bar' sets
@@ -304,14 +304,14 @@
 // LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
 
-// `wasm32-wasip3` passes `+component-model-threading` by default.
+// `wasm32-wasip3` passes `+libcall-thread-context` by default.
 
 // RUN: %clang -### --target=wasm32-wasip3 --sysroot=/foo %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=LINK_WASIP3_THREAD_CONTEXT %s
-// LINK_WASIP3_THREAD_CONTEXT: "-cc1" {{.*}} "-target-feature" "+component-model-threading"
+// RUN:   | FileCheck -check-prefix=LINK_WASIP3_LIBCALL_THREAD_CONTEXT %s
+// LINK_WASIP3_LIBCALL_THREAD_CONTEXT: "-cc1" {{.*}} "-target-feature" "+libcall-thread-context"
 
-// `wasm32-wasip3` does not pass `+component-model-threading` when `-mno-component-model-threading` is used.
+// `wasm32-wasip3` does not pass `+libcall-thread-context` when `-mno-libcall-thread-context` is used.
 
-// RUN: %clang -### --target=wasm32-wasip3 --sysroot=/foo -mno-component-model-threading %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=LINK_WASIP3_NO_THREAD_CONTEXT %s
-// LINK_WASIP3_NO_THREAD_CONTEXT: "-cc1" {{.*}} "-target-feature" "-component-model-threading"
+// RUN: %clang -### --target=wasm32-wasip3 --sysroot=/foo -mno-libcall-thread-context %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WASIP3_NO_LIBCALL_THREAD_CONTEXT %s
+// LINK_WASIP3_NO_LIBCALL_THREAD_CONTEXT: "-cc1" {{.*}} "-target-feature" "-libcall-thread-context"

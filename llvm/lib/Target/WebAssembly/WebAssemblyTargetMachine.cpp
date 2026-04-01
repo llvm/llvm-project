@@ -261,9 +261,7 @@ class CoalesceFeaturesAndStripAtomics final : public ModulePass {
   // Take the union of all features used in the module and use it for each
   // function individually, since having multiple feature sets in one module
   // currently does not make sense for WebAssembly. If atomics are not enabled,
-  // also strip atomic operations and thread local storage, unless the target
-  // is using component model threading intrinsics which allow thread local
-  // storage without atomics, in which case only strip atomics.
+  // also strip atomic operations and thread local storage.
   static char ID;
   WebAssemblyTargetMachine *WasmTM;
 
@@ -282,31 +280,19 @@ public:
     bool StrippedAtomics = false;
     bool StrippedTLS = false;
 
-    if (Features[WebAssembly::FeatureComponentModelThreading]) {
-      // Using component model threading intrinsics allows TLS without
-      // atomics, so don't strip TLS even if atomics are disabled.
-      if (!Features[WebAssembly::FeatureAtomics]) {
-        StrippedAtomics = stripAtomics(M);
-      }
-      if (!Features[WebAssembly::FeatureBulkMemory]) {
-        StrippedTLS = stripThreadLocals(M);
-      }
-    } else {
-      if (!Features[WebAssembly::FeatureAtomics]) {
-        StrippedAtomics = stripAtomics(M);
-        StrippedTLS = stripThreadLocals(M);
-      } else if (!Features[WebAssembly::FeatureBulkMemory]) {
-        StrippedTLS |= stripThreadLocals(M);
-      }
-
-      if (StrippedAtomics && !StrippedTLS)
-        stripThreadLocals(M);
-      else if (StrippedTLS && !StrippedAtomics)
-        stripAtomics(M);
+    if (!Features[WebAssembly::FeatureAtomics]) {
+      StrippedAtomics = stripAtomics(M);
+      StrippedTLS = stripThreadLocals(M);
+    } else if (!Features[WebAssembly::FeatureBulkMemory]) {
+      StrippedTLS |= stripThreadLocals(M);
     }
+   
+    if (StrippedAtomics && !StrippedTLS)
+      stripThreadLocals(M);
+    else if (StrippedTLS && !StrippedAtomics)
+      stripAtomics(M);
 
-    recordFeatures(M, WasmTM->getTargetCPU(), Features,
-                   StrippedAtomics || StrippedTLS);
+    recordFeatures(M, WasmTM->getTargetCPU(), Features, StrippedAtomics || StrippedTLS);
 
     // Conservatively assume we have made some change
     return true;
@@ -429,13 +415,13 @@ private:
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
 
-    // Mark component-model-threading as disallowed when not in use to
+    // Mark libcall-thread-context as disallowed when not in use to
     // prevent linking object files with incompatible threading ABIs.
     // This is implicit for MVP since the feature is not supported at all.
     if (CPU != "mvp" &&
-        !Features[WebAssembly::FeatureComponentModelThreading]) {
+        !Features[WebAssembly::FeatureLibcallThreadContext]) {
       M.addModuleFlag(Module::ModFlagBehavior::Error,
-                      "wasm-feature-component-model-threading",
+                      "wasm-feature-libcall-thread-context",
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
   }

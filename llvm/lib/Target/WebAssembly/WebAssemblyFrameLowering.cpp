@@ -135,11 +135,11 @@ bool WebAssemblyFrameLowering::needsSPForLocalFrame(
       any_of(MRI.use_operands(getSPReg(MF)),
              [](MachineOperand &MO) { return !MO.isImplicit(); });
 
-  // With component model thread context, we need SP in the prolog when debug
+  // With libcall thread context, we need SP in the prolog when debug
   // info is present so we can allocate a local for DWARF to reference.
   bool NeedsSPForDebug =
       MF.getFunction().getSubprogram() &&
-      MF.getSubtarget<WebAssemblySubtarget>().hasComponentModelThreading();
+      MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext();
 
   return MFI.getStackSize() || MFI.adjustsStack() || hasFP(MF) ||
          HasExplicitSPUse || NeedsSPForDebug;
@@ -157,7 +157,7 @@ bool WebAssemblyFrameLowering::needsPrologForEH(
 
 /// Returns true if this function needs a local user-space stack pointer.
 /// Unlike a machine stack pointer, the wasm user stack pointer is a global
-/// variable or stored in the component model thread context, so it is loaded
+/// variable or managed by library calls, so it is loaded
 /// into a register in the prolog.
 bool WebAssemblyFrameLowering::needsSP(const MachineFunction &MF) const {
   return needsSPForLocalFrame(MF) || needsPrologForEH(MF);
@@ -240,7 +240,7 @@ void WebAssemblyFrameLowering::writeBackSP(
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
   if (MF.getSubtarget<WebAssemblySubtarget>()
-          .hasComponentModelThreading()) {
+          .hasLibcallThreadContext()) {
     const char *ES = "__wasm_set_stack_pointer";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::CALL))
@@ -299,7 +299,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize)
     SPReg = MRI.createVirtualRegister(PtrRC);
 
-  if (ST.hasComponentModelThreading()) {
+  if (ST.hasLibcallThreadContext()) {
     const char *ES = "__wasm_get_stack_pointer";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CALL), SPReg)

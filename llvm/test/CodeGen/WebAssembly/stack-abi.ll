@@ -1,5 +1,5 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+component-model-threading | FileCheck --check-prefix=CMTC %s
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=-component-model-threading | FileCheck --check-prefix=GLOBAL %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+libcall-thread-context | FileCheck --check-prefix=LIBCALL %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=-libcall-thread-context | FileCheck --check-prefix=GLOBAL %s
 
 declare void @force_sp_save()
 define void @use_stack() #0 {
@@ -10,11 +10,11 @@ define void @use_stack() #0 {
   ret void
 }
 
-; CMTC-LABEL: use_stack:
-; CMTC: call __wasm_get_stack_pointer
-; CMTC: call __wasm_set_stack_pointer
-; CMTC-NOT: global.get __stack_pointer
-; CMTC-NOT: global.set __stack_pointer
+; LIBCALL-LABEL: use_stack:
+; LIBCALL: call __wasm_get_stack_pointer
+; LIBCALL: call __wasm_set_stack_pointer
+; LIBCALL-NOT: global.get __stack_pointer
+; LIBCALL-NOT: global.set __stack_pointer
 
 ; GLOBAL-LABEL: use_stack:
 ; GLOBAL: global.get __stack_pointer

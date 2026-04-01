@@ -966,14 +966,20 @@ static void createPostLTOSymbols() {
 
   bool is64 = ctx.arg.is64.value_or(false);
 
-  auto stack_pointer_name = ctx.externThreadBuiltins
+  auto stack_pointer_name = ctx.libcallThreadContext
                                 ? "__init_stack_pointer"
                                 : "__stack_pointer";
   if (ctx.isPic) {
-    ctx.sym.stackPointer =
+    if (ctx.libcallThreadContext) {
+      ctx.sym.stackPointer =
         createUndefinedGlobal(stack_pointer_name, ctx.arg.is64.value_or(false)
-                                                      ? &mutableGlobalTypeI64
-                                                      : &mutableGlobalTypeI32);
+                                                      ? &globalTypeI64
+                                                      : &globalTypeI32);
+    } 
+    else {
+      ctx.sym.stackPointer = createUndefinedGlobal(stack_pointer_name,
+        ctx.arg.is64.value_or(false) ? &mutableGlobalTypeI64 : &mutableGlobalTypeI32);
+    }
     // For PIC code, we import two global variables (__memory_base and
     // __table_base) from the environment and use these as the offset at
     // which to load our static data and function table.
@@ -987,16 +993,16 @@ static void createPostLTOSymbols() {
   } else {
     // For non-PIC code
     ctx.sym.stackPointer = createGlobalVariable(
-        stack_pointer_name, !ctx.externThreadBuiltins);
+        stack_pointer_name, !ctx.libcallThreadContext);
     ctx.sym.stackPointer->markLive();
   }
 
-  if (ctx.isMultithreaded()) {
+  if (ctx.arg.sharedMemory) {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name =
-        ctx.externThreadBuiltins ? "__init_tls_base" : "__tls_base";
+        ctx.libcallThreadContext ? "__init_tls_base" : "__tls_base";
     ctx.sym.tlsBase =
-        createGlobalVariable(tls_base_name, !ctx.externThreadBuiltins,
+        createGlobalVariable(tls_base_name, !ctx.libcallThreadContext,
                              WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
@@ -1006,7 +1012,7 @@ static void createPostLTOSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
-    if (ctx.externThreadBuiltins) {
+    if (ctx.libcallThreadContext) {
       ctx.sym.tlsBase->markLive();
       ctx.sym.tlsSize->markLive();
       ctx.sym.tlsAlign->markLive();
@@ -1317,14 +1323,14 @@ static void checkZOptions(opt::InputArgList &args) {
 static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
   // A complication is that a user may attempt to link together object files
   // compiled with different versions of LLVM, where one does not specifiy
-  // -component-model-threading when using the global thread context ABI.
+  // -libcall-thread-context when using the global thread context ABI.
   // They may also attempt to link object files with the global ABI compiled
   // with older LLVM versions, but link them with a newer wasm-ld. To ensure the
   // correct behavior in both of these cases, we treat the import of a
   // __stack_pointer global from the env module as an indication that the global
   // thread context ABI is being used.
 
-  enum class ThreadContextABI { Undetermined, ComponentModelBuiltins, Globals };
+  enum class ThreadContextABI { Undetermined, Libcall, Globals };
 
   ThreadContextABI threadContextABI = ThreadContextABI::Undetermined;
 
@@ -1332,10 +1338,10 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
     auto targetFeatures = obj->getWasmObj()->getTargetFeatures();
     auto threadContextFeature =
         llvm::find_if(targetFeatures, [](const auto &f) {
-          return f.Name == "component-model-threading";
+          return f.Name == "libcall-thread-context";
         });
 
-    bool usesComponentModelThreading =
+    bool usesLibcallThreadContext =
         threadContextFeature != targetFeatures.end() &&
         threadContextFeature->Prefix == WASM_FEATURE_PREFIX_USED;
 
@@ -1356,16 +1362,16 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
         continue;
       }
       // Treat this as using the globals ABI
-      usesComponentModelThreading = false;
+      usesLibcallThreadContext = false;
     }
 
-    if (usesComponentModelThreading) {
+    if (usesLibcallThreadContext) {
       if (threadContextABI == ThreadContextABI::Undetermined) {
-        threadContextABI = ThreadContextABI::ComponentModelBuiltins;
-      } else if (threadContextABI != ThreadContextABI::ComponentModelBuiltins) {
+        threadContextABI = ThreadContextABI::Libcall;
+      } else if (threadContextABI != ThreadContextABI::Libcall) {
         error(
             "thread context ABI mismatch: " + obj->getName() +
-            " uses component-model-threading but other files disallow it");
+            " uses libcall-thread-context but other files disallow it");
       }
     } else {
       if (threadContextABI == ThreadContextABI::Undetermined) {
@@ -1373,19 +1379,14 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
       } else if (threadContextABI != ThreadContextABI::Globals) {
         error(
             "thread context ABI mismatch: " + obj->getName() +
-            " disallows component-model-threading but other files use it");
+            " disallows libcall-thread-context but other files use it");
       }
     }
   }
 
   // If the ABI is undetermined at this point, default to the globals ABI
-  if (threadContextABI == ThreadContextABI::ComponentModelBuiltins) {
-    if (ctx.arg.sharedMemory) {
-      error("--shared-memory is currently incompatible with component model "
-            "thread context intrinsics");
-    }
-    ctx.externThreadBuiltins = true;
-    ctx.threadModel = ThreadModel::Cooperative;
+  if (threadContextABI == ThreadContextABI::Libcall) {
+    ctx.libcallThreadContext = true;
   }
 }
 

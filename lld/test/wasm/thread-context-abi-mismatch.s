@@ -4,19 +4,19 @@
 
 # Test that the presence of an import of __stack_pointer from the env module is treated 
 # as an indication that the global thread context ABI is being used, even if the
-# component-model-threading feature is not disallowed.
+# libcall-thread-context feature is not disallowed.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t/start.o %t/start.s
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t/stack-pointer.o %t/stack-pointer.s
 # RUN: not wasm-ld %t/start.o %t/stack-pointer.o -o %t/fail.wasm 2>&1 | FileCheck %s
 
-# Test that explicitly disallowing the component-model-threading feature causes linking to fail 
+# Test that explicitly disallowing the libcall-thread-context feature causes linking to fail 
 # with an error when other files use the feature.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t/disallow.o %t/disallow.s
 # RUN: not wasm-ld %t/start.o %t/disallow.o -o %t/fail.wasm 2>&1 | FileCheck %s
 
-# CHECK: error: thread context ABI mismatch: {{.*}} disallows component-model-threading but other files use it 
+# CHECK: error: thread context ABI mismatch: {{.*}} disallows libcall-thread-context but other files use it 
 
 #--- start.s
 .globl _start
@@ -28,8 +28,8 @@ _start:
 .section  .custom_section.target_features,"",@
   .int8 1
   .int8 43
-  .int8 30
-  .ascii  "component-model-threading"
+  .int8 22
+  .ascii  "libcall-thread-context"
 
 #--- stack-pointer.s
 .globaltype __stack_pointer, i32
@@ -48,5 +48,5 @@ _start:
 .section  .custom_section.target_features,"",@
   .int8 1
   .int8 45
-  .int8 30
-  .ascii  "component-model-threading"
+  .int8 22
+  .ascii  "libcall-thread-context"

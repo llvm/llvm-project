@@ -23,7 +23,7 @@ class WebAssemblyFrameLowering final : public TargetFrameLowering {
 public:
   /// Size of the red zone for the user stack (leaf functions can use this much
   /// space below the stack pointer without writing it back to __stack_pointer
-  /// global/context.set).
+  /// global/__wasm_set_stack_pointer).
   // TODO: (ABI) Revisit and decide how large it should be.
   static const size_t RedZoneSize = 128;
 
@@ -47,7 +47,7 @@ public:
 
   bool needsPrologForEH(const MachineFunction &MF) const;
 
-  /// Write SP back to __stack_pointer global or context.set.
+  /// Write SP back to __stack_pointer global, or call __wasm_set_stack_pointer.
   void writeBackSP(unsigned SrcReg, MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator &InsertStore,
                    const DebugLoc &DL) const;

@@ -38,11 +38,6 @@ def HasCallIndirectOverlong :
     Predicate<"Subtarget->hasCallIndirectOverlong()">,
     AssemblerPredicate<(all_of FeatureCallIndirectOverlong), "call-indirect-overlong">;
 
-def HasComponentModelThreading :
-    Predicate<"Subtarget->hasComponentModelThreading()">,
-    AssemblerPredicate<(all_of FeatureComponentModelThreading),
-                       "component-model-threading">;
-
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
     AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
@@ -57,6 +52,11 @@ def HasFP16 :
 
 def HasGC : Predicate<"Subtarget->hasGC()">,
             AssemblerPredicate<(all_of FeatureGC), "gc">;
+
+def HasLibcallThreadContext :
+    Predicate<"Subtarget->hasLibcallThreadContext()">,
+    AssemblerPredicate<(all_of FeatureLibcallThreadContext),
+                       "libcall-thread-context">;
 
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,

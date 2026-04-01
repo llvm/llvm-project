@@ -135,13 +135,6 @@ struct Config {
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
 
-enum class ThreadModel {
-  Single,
-  SharedMemory,
-  // Used by WASIp3 targets
-  Cooperative,
-};
-
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
   Config arg;
@@ -262,11 +255,11 @@ struct Ctx {
     TableSymbol *indirectFunctionTable;
 
     // __wasm_set_tls_base
-    // Function used to set TLS base in component model modules.
+    // Function used to set TLS base in libcall thread context modules.
     UndefinedFunction *setTLSBase;
 
     // __wasm_get_tls_base
-    // Function used to get TLS base in component model modules.
+    // Function used to get TLS base in libcall thread context modules.
     UndefinedFunction *getTLSBase;
   };
   WasmSym sym;
@@ -287,19 +280,12 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
-  // Whether to use compiler-rt functions for the stack pointer and TLS base 
+  // Whether to use library functions for the stack pointer and TLS base 
   // instead of globals. This is currently used for WASIp3 cooperative threads support.
-  bool externThreadBuiltins = false;
-
-  // The thread model to use for tuning linker-generated code, segment passivity, etc.
-  ThreadModel threadModel = ThreadModel::Single;
+  bool libcallThreadContext = false;
 
   Ctx();
   void reset();
-
-  bool isMultithreaded() const {
-    return threadModel != ThreadModel::Single;
-  }
 };
 
 extern Ctx ctx;

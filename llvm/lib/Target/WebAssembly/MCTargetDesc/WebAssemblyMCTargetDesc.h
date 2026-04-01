@@ -108,8 +108,8 @@ enum TOF {
   MO_MEMORY_BASE_REL,
 
   // On a symbol operand this indicates that the immediate is the symbol
-  // address relative to the TLS base. This is stored in context.get(1)
-  // when using the component model thread context, and the __tls_base global
+  // address relative to the TLS base. This is retrieved through __wasm_get_tls_base()
+  // when using libcall thread context, and the __tls_base global
   // otherwise. Only applicable to data symbols.
   MO_TLS_BASE_REL,
 

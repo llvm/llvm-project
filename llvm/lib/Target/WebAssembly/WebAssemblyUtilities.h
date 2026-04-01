@@ -78,8 +78,8 @@ bool canLowerMultivalueReturn(const WebAssemblySubtarget *Subtarget);
 bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
 
 // Get the TLS base value for the current target
-// If using component model threading intrinsics: calls
-// __wasm_get_tls_base, otherwise: global.get __tls_base
+// If using libcall thread context, calls
+// __wasm_get_tls_base, otherwise, global.get __tls_base
 MachineSDNode *getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
                           const WebAssemblySubtarget *Subtarget,
                           const SDValue Chain = SDValue());

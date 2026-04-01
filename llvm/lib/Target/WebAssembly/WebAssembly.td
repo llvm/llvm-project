@@ -37,9 +37,9 @@ def FeatureCallIndirectOverlong :
       SubtargetFeature<"call-indirect-overlong", "HasCallIndirectOverlong", "true",
                        "Enable overlong encoding for call_indirect immediates">;
 
-def FeatureComponentModelThreading :
-      SubtargetFeature<"component-model-threading", "HasComponentModelThreading", "true",
-                       "Enable component model thread context intrinsics">;
+def FeatureLibcallThreadContext :
+      SubtargetFeature<"libcall-thread-context", "HasLibcallThreadContext", "true",
+                       "Enable using library calls for managing thread context">;
 
 def FeatureExceptionHandling :
       SubtargetFeature<"exception-handling", "HasExceptionHandling", "true",

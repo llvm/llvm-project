@@ -253,10 +253,10 @@
 // BLEEDING-EDGE-NO-SIMD128-NOT: #define __wasm_simd128__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target wasm32-unknown-unknown -mcomponent-model-threading \
-// RUN:   | FileCheck %s -check-prefix=COMPONENT-MODEL-THREAD-CONTEXT
+// RUN:     -target wasm32-unknown-unknown -mlibcall-thread-context \
+// RUN:   | FileCheck %s -check-prefix=LIBCALL-THREAD-CONTEXT
 // RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target wasm64-unknown-unknown -mcomponent-model-threading \
-// RUN:   | FileCheck %s -check-prefix=COMPONENT-MODEL-THREAD-CONTEXT
+// RUN:     -target wasm64-unknown-unknown -mlibcall-thread-context \
+// RUN:   | FileCheck %s -check-prefix=LIBCALL-THREAD-CONTEXT
 
-// COMPONENT-MODEL-THREAD-CONTEXT: #define __wasm_component_model_threading__ 1{{$}}
+// LIBCALL-THREAD-CONTEXT: #define __wasm_libcall_thread_context__ 1{{$}}

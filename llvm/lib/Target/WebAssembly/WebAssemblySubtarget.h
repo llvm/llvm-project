@@ -48,11 +48,11 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
   bool HasCompactImports = false;
-  bool HasComponentModelThreading = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
   bool HasGC = false;
+  bool HasLibcallThreadContext = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -113,13 +113,11 @@ public:
   bool hasBulkMemoryOpt() const { return HasBulkMemoryOpt; }
   bool hasCallIndirectOverlong() const { return HasCallIndirectOverlong; }
   bool hasCompactImports() const { return HasCompactImports; }
-  bool hasComponentModelThreading() const {
-    return HasComponentModelThreading;
-  }
   bool hasExceptionHandling() const { return HasExceptionHandling; }
   bool hasExtendedConst() const { return HasExtendedConst; }
   bool hasFP16() const { return HasFP16; }
   bool hasGC() const { return HasGC; }
+  bool hasLibcallThreadContext() const { return HasLibcallThreadContext; }
   bool hasMultiMemory() const { return HasMultiMemory; }
   bool hasMultivalue() const { return HasMultivalue; }
   bool hasMutableGlobals() const { return HasMutableGlobals; }
