@@ -169,9 +169,8 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
 
   // Issue an extension diagnostic for the paste operator.
   if (HasPasteOperator) {
-    const bool VaOptSupport = hasVaOptSupport(PP.getLangOpts());
     PP.Diag(ResultToks.back().getLocation(), diag::ext_paste_comma)
-        << VaOptSupport;
+        << hasVaOptSupport(PP.getLangOpts());
   }
 
   // Remove the comma.
@@ -530,7 +529,7 @@ void TokenLexer::ExpandFunctionArguments() {
           Macro->isVariadic()) {
         VaArgsPseudoPaste = true;
         // Remove the paste operator, report use of the extension.
-        const bool VaOptSupport = hasVaOptSupport(PP.getLangOpts());
+        bool VaOptSupport = hasVaOptSupport(PP.getLangOpts());
         auto Diag = PP.Diag(ResultToks.pop_back_val().getLocation(),
                             diag::ext_paste_comma)
                     << VaOptSupport;
