@@ -387,6 +387,31 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
+void tools::MinGW::LLVMObjcopy::ConstructJob(Compilation &C,
+                                             const JobAction &JA,
+                                             const InputInfo &Output,
+                                             const InputInfoList &Inputs,
+                                             const ArgList &Args,
+                                             const char *LinkingOutput) const {
+
+  std::string ObjcopyPath = getToolChain().GetProgramPath("llvm-objcopy");
+  const char *Exec = Args.MakeArgString(ObjcopyPath);
+
+  // Assume llvm-objcopy is only used for hybrid ARM64X object files.
+  assert(Inputs.size() == 2 && "Expected 2 inputs.");
+  // Embed the hybrid object in the .obj.arm64ec section.
+  ArgStringList CmdArgs;
+  CmdArgs.push_back(Args.MakeArgString("--add-section=.obj.arm64ec=" +
+                                       Twine(Inputs[0].getFilename())));
+  // Mark the .obj.arm64ec section as discardable.
+  CmdArgs.push_back("--set-section-flags=.obj.arm64ec=debug");
+  CmdArgs.push_back(Inputs[1].getFilename());
+  CmdArgs.push_back(Output.getFilename());
+
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Output));
+}
+
 static bool isCrossCompiling(const llvm::Triple &T, bool RequireArchMatch) {
   llvm::Triple HostTriple(llvm::Triple::normalize(LLVM_HOST_TRIPLE));
   if (HostTriple.getOS() != llvm::Triple::Win32)
@@ -575,6 +600,10 @@ Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
     if (!Compiler)
       Compiler.reset(new tools::gcc::Compiler(*this));
     return Compiler.get();
+  case Action::ObjcopyJobClass:
+    if (!LLVMObjcopy)
+      LLVMObjcopy.reset(new tools::MinGW::LLVMObjcopy(*this));
+    return LLVMObjcopy.get();
   default:
     return ToolChain::getTool(AC);
   }

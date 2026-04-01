@@ -616,10 +616,9 @@ static void setZosTargetVersion(const Driver &D, llvm::Triple &Target,
 ///
 /// This routine provides the logic to compute a target triple from various
 /// args passed to the driver and the default triple string.
-static llvm::Triple computeTargetTriple(const Driver &D,
-                                        StringRef TargetTriple,
+static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
                                         const ArgList &Args,
-                                        StringRef DarwinArchName = "") {
+                                        StringRef ArchName = "") {
   // FIXME: Already done in Compilation *Driver::BuildCompilation
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
@@ -635,9 +634,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   // Handle Apple-specific options available here.
   if (Target.isOSBinFormatMachO()) {
     // If an explicit Darwin arch name is given, that trumps all.
-    if (!DarwinArchName.empty()) {
-      tools::darwin::setTripleTypeForMachOArchName(Target, DarwinArchName,
-                                                   Args);
+    if (!ArchName.empty()) {
+      tools::darwin::setTripleTypeForMachOArchName(Target, ArchName, Args);
       return llvm::Triple(Target.normalize());
     }
 
@@ -646,6 +644,9 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       StringRef ArchName = A->getValue();
       tools::darwin::setTripleTypeForMachOArchName(Target, ArchName, Args);
     }
+  } else if (!ArchName.empty()) {
+    Target.setArchName(ArchName);
+    return Target;
   }
 
   // Handle pseudo-target flags '-mlittle-endian'/'-EL' and
@@ -702,6 +703,11 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       A && !Target.isOSAIX())
     D.Diag(diag::err_drv_unsupported_opt_for_target)
         << A->getAsString(Args) << Target.str();
+
+  // The `-marm64x` flag is only valid for Windows targets.
+  if (Args.hasArgNoClaim(options::OPT_marm64x) && !Target.isOSWindows())
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << "-marm64x" << Target.str();
 
   // Handle pseudo-target flags '-m64', '-mx32', '-m32' and '-m16'.
   Arg *A = Args.getLastArg(options::OPT_m64, options::OPT_mx32,
@@ -4807,9 +4813,11 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (TC.requiresObjcopy(Args)) {
       Action *LastAction = Actions.back();
       // llvm-objcopy expects an unvalidated DXIL container (TY_OBJECT).
-      if (LastAction->getType() == types::TY_Object)
+      if (LastAction->getType() == types::TY_Object) {
+        ActionList ObjcopyActions({LastAction});
         Actions.push_back(
-            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_Object));
+            C.MakeAction<ObjcopyJobAction>(ObjcopyActions, types::TY_Object));
+      }
     }
 
     // Call validator when -Vd not in Args.
@@ -5401,6 +5409,16 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }
   case phases::Assemble:
+    // When -marm64x is used, construct jobs for the EC and native targets and
+    // merge them into an archive with llvm-objcopy.
+    if (Args.hasArg(options::OPT_marm64x)) {
+      Action *Act =
+          C.MakeAction<AssembleJobAction>(std::move(Input), types::TY_Object);
+      ActionList Inputs;
+      Inputs.push_back(C.MakeAction<BindArchAction>(Act, BoundArch("arm64ec")));
+      Inputs.push_back(C.MakeAction<BindArchAction>(Act, BoundArch("aarch64")));
+      return C.MakeAction<ObjcopyJobAction>(Inputs, types::TY_Object);
+    }
     return C.MakeAction<AssembleJobAction>(std::move(Input), types::TY_Object);
   }
 
@@ -5495,7 +5513,8 @@ void Driver::BuildJobs(Compilation &C) const {
     BuildJobsForAction(C, A, &C.getDefaultToolChain(),
                        /*BA=*/{},
                        /*AtTopLevel*/ true,
-                       /*MultipleArchs*/ ArchNames.size() > 1,
+                       /*MultipleArchs*/ ArchNames.size() > 1 ||
+                           C.getArgs().hasArgNoClaim(options::OPT_marm64x),
                        /*LinkingOutput*/ LinkingOutput, CachedResults,
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }

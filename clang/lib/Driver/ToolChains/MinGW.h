@@ -52,6 +52,19 @@ private:
   void AddLibGCC(const llvm::opt::ArgList &Args,
                  llvm::opt::ArgStringList &CmdArgs) const;
 };
+
+class LLVM_LIBRARY_VISIBILITY LLVMObjcopy : public Tool {
+public:
+  LLVMObjcopy(const ToolChain &TC)
+      : Tool("MinGW::LLVMObjcopy", "llvm-objcopy", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
 } // end namespace MinGW
 } // end namespace tools
 
@@ -117,6 +130,7 @@ private:
   std::string TripleDirName;
   mutable std::unique_ptr<tools::gcc::Preprocessor> Preprocessor;
   mutable std::unique_ptr<tools::gcc::Compiler> Compiler;
+  mutable std::unique_ptr<tools::MinGW::LLVMObjcopy> LLVMObjcopy;
   void findGccLibDir(const llvm::Triple &LiteralTriple);
 
   bool NativeLLVMSupport;
