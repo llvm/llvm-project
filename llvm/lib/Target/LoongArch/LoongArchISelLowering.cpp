@@ -9155,6 +9155,24 @@ EVT LoongArchTargetLowering::getSetCCResultType(const DataLayout &DL,
   return VT.changeVectorElementTypeToInteger();
 }
 
+bool LoongArchTargetLowering::canMergeStoresTo(
+    unsigned AddressSpace, EVT MemVT, const MachineFunction &MF) const {
+  // Do not merge to float value size (128 or 256 bits) if no implicit
+  // float attribute is set.
+  bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
+  unsigned MaxIntSize = Subtarget.is64Bit() ? 64 : 32;
+  if (NoFloat)
+    return MemVT.getSizeInBits() <= MaxIntSize;
+
+  // Make sure we don't merge greater than our maximum supported vector width.
+  if (Subtarget.hasExtLASX())
+    MaxIntSize = 256;
+  else if (Subtarget.hasExtLSX())
+    MaxIntSize = 128;
+
+  return MemVT.getSizeInBits() <= MaxIntSize;
+}
+
 bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
   EVT VT = Y.getValueType();
 
