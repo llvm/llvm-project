@@ -350,6 +350,9 @@ Improvements to Clang's diagnostics
   ``-Wunused-private-field`` no longer emits a warning for annotated private
   fields.
 
+- Improved ``-Wgnu-zero-variadic-macro-arguments`` to suggest using
+  ``__VA_OPT__`` if the current language version supports it(#GH188624)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

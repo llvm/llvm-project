@@ -541,7 +541,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
 
   if (Subtarget.hasStdExtP()) {
-    setTargetDAGCombine(ISD::TRUNCATE);
     static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
     static const MVT RV64VTs[] = {MVT::v2i32, MVT::v4i16, MVT::v8i8};
     ArrayRef<MVT> VTs;
@@ -891,10 +890,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SELECT,      ISD::VP_SINT_TO_FP,  ISD::VP_UINT_TO_FP,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
         ISD::VP_SQRT,        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,
-        ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
-        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO,
-        ISD::VP_FRINT,       ISD::VP_FNEARBYINT,  ISD::VP_IS_FPCLASS,
-        ISD::VP_LRINT,       ISD::VP_LLRINT,      ISD::VP_REDUCE_FMINIMUM,
+        ISD::VP_FCOPYSIGN,   ISD::VP_IS_FPCLASS,  ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
 
     static const unsigned IntegerVecReduceOps[] = {
@@ -1226,13 +1222,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SQRT,
         ISD::VP_FMINNUM,
         ISD::VP_FMAXNUM,
-        ISD::VP_FCEIL,
-        ISD::VP_FFLOOR,
-        ISD::VP_FROUND,
-        ISD::VP_FROUNDEVEN,
-        ISD::VP_FROUNDTOZERO,
-        ISD::VP_FRINT,
-        ISD::VP_FNEARBYINT,
         ISD::VP_SETCC,
         ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
@@ -1894,10 +1883,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   // Allow scalar min/max to be combined with vector reductions.
   if (Subtarget.hasVInstructions())
-    setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
+    setTargetDAGCombine({ISD::UMAX, ISD::UMIN});
+  if (Subtarget.hasVInstructions() || Subtarget.hasStdExtP())
+    setTargetDAGCombine({ISD::SMAX, ISD::SMIN});
 
   if ((Subtarget.hasStdExtZbs() && Subtarget.is64Bit()) ||
-      Subtarget.hasVInstructions())
+      Subtarget.hasVInstructions() || Subtarget.hasStdExtP())
     setTargetDAGCombine(ISD::TRUNCATE);
 
   if (Subtarget.hasStdExtZbkb())
@@ -3596,19 +3587,15 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   switch (Opc) {
   case ISD::FROUNDEVEN:
   case ISD::STRICT_FROUNDEVEN:
-  case ISD::VP_FROUNDEVEN:
     return RISCVFPRndMode::RNE;
   case ISD::FTRUNC:
   case ISD::STRICT_FTRUNC:
-  case ISD::VP_FROUNDTOZERO:
     return RISCVFPRndMode::RTZ;
   case ISD::FFLOOR:
   case ISD::STRICT_FFLOOR:
-  case ISD::VP_FFLOOR:
     return RISCVFPRndMode::RDN;
   case ISD::FCEIL:
   case ISD::STRICT_FCEIL:
-  case ISD::VP_FCEIL:
     return RISCVFPRndMode::RUP;
   case ISD::FROUND:
   case ISD::LROUND:
@@ -3616,7 +3603,6 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::STRICT_FROUND:
   case ISD::STRICT_LROUND:
   case ISD::STRICT_LLROUND:
-  case ISD::VP_FROUND:
     return RISCVFPRndMode::RMM;
   case ISD::FRINT:
   case ISD::LRINT:
@@ -3624,17 +3610,13 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::STRICT_FRINT:
   case ISD::STRICT_LRINT:
   case ISD::STRICT_LLRINT:
-  case ISD::VP_FRINT:
-  case ISD::VP_LRINT:
-  case ISD::VP_LLRINT:
     return RISCVFPRndMode::DYN;
   }
 
   return RISCVFPRndMode::Invalid;
 }
 
-// Expand vector FTRUNC, FCEIL, FFLOOR, FROUND, VP_FCEIL, VP_FFLOOR, VP_FROUND
-// VP_FROUNDEVEN, VP_FROUNDTOZERO, VP_FRINT and VP_FNEARBYINT by converting to
+// Expand vector FTRUNC, FCEIL, FFLOOR and FROUND by converting to
 // the integer domain and back. Taking care to avoid converting values that are
 // nan or already correct.
 static SDValue
@@ -3656,16 +3638,7 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
     Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
   }
 
-  SDValue Mask, VL;
-  if (Op->isVPOpcode()) {
-    Mask = Op.getOperand(1);
-    if (VT.isFixedLengthVector())
-      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
-                                     Subtarget);
-    VL = Op.getOperand(2);
-  } else {
-    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-  }
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   // We do the conversion on the absolute value and fix the sign at the end.
   SDValue Abs = DAG.getNode(RISCVISD::FABS_VL, DL, ContainerVT, Src, Mask, VL);
@@ -3699,16 +3672,10 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   default:
     llvm_unreachable("Unexpected opcode");
   case ISD::FRINT:
-  case ISD::VP_FRINT:
   case ISD::FCEIL:
-  case ISD::VP_FCEIL:
   case ISD::FFLOOR:
-  case ISD::VP_FFLOOR:
   case ISD::FROUND:
-  case ISD::FROUNDEVEN:
-  case ISD::VP_FROUND:
-  case ISD::VP_FROUNDEVEN:
-  case ISD::VP_FROUNDTOZERO: {
+  case ISD::FROUNDEVEN: {
     RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Op.getOpcode());
     assert(FRM != RISCVFPRndMode::Invalid);
     Truncated = DAG.getNode(RISCVISD::VFCVT_RM_X_F_VL, DL, IntVT, Src, Mask,
@@ -3720,7 +3687,6 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                             Mask, VL);
     break;
   case ISD::FNEARBYINT:
-  case ISD::VP_FNEARBYINT:
     Truncated = DAG.getNode(RISCVISD::VFROUND_NOEXCEPT_VL, DL, ContainerVT, Src,
                             Mask, VL);
     break;
@@ -7714,9 +7680,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   case ISD::VP_FMAXNUM:
     return RISCVISD::VFMAX_VL;
   case ISD::LRINT:
-  case ISD::VP_LRINT:
   case ISD::LLRINT:
-  case ISD::VP_LLRINT:
     return RISCVISD::VFCVT_RM_X_F_VL;
   }
   // clang-format on
@@ -9053,8 +9017,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_USUBSAT:
   case ISD::VP_SADDSAT:
   case ISD::VP_SSUBSAT:
-  case ISD::VP_LRINT:
-  case ISD::VP_LLRINT:
     return lowerVPOp(Op, DAG);
   case ISD::VP_AND:
   case ISD::VP_OR:
@@ -9158,16 +9120,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPStridedLoad(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     return lowerVPStridedStore(Op, DAG);
-  case ISD::VP_FCEIL:
-  case ISD::VP_FFLOOR:
-  case ISD::VP_FRINT:
-  case ISD::VP_FNEARBYINT:
-  case ISD::VP_FROUND:
-  case ISD::VP_FROUNDEVEN:
-  case ISD::VP_FROUNDTOZERO:
-    if (isPromotedOpNeedingSplit(Op, Subtarget))
-      return SplitVPOp(Op, DAG);
-    return lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::EXPERIMENTAL_VP_SPLICE:
     return lowerVPSpliceExperimental(Op, DAG);
   case ISD::EXPERIMENTAL_VP_REVERSE:
@@ -21439,6 +21391,57 @@ static SDValue performSHLCombine(SDNode *N,
                      Passthru, Mask, VL);
 }
 
+// Fold (smax (smin X, (1 << C) - 1), -(1 << C)) -> riscv_sati X, C.
+// Fold (smin (smax X, -(1 << C)), (1 << C) - 1) -> riscv_sati X, C.
+// Fold (smax (smin X, (1 << C) - 1), 0) -> riscv_usati X, C.
+// Fold (smin (smax X, 0, (1 << C) - 1) -> riscv_usati X, C.
+static SDValue combineMinMaxToSat(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const RISCVSubtarget &Subtarget) {
+  if (!DCI.isAfterLegalizeDAG())
+    return SDValue();
+
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+
+  if (VT != Subtarget.getXLenVT())
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+
+  if ((N0.getOpcode() != ISD::SMIN && N0.getOpcode() != ISD::SMAX) ||
+      !isa<ConstantSDNode>(N->getOperand(1)) ||
+      !isa<ConstantSDNode>(N0.getOperand(1)))
+    return SDValue();
+
+  SDValue Min = SDValue(N, 0);
+  SDValue Max = N0;
+  SDValue Input = N0.getOperand(0);
+  if (Min.getOpcode() == ISD::SMAX)
+    std::swap(Min, Max);
+
+  APInt MinC = Min.getConstantOperandAPInt(1);
+  APInt MaxC = Max.getConstantOperandAPInt(1);
+
+  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX ||
+      !(MinC + 1).isPowerOf2())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  SDLoc DL(N);
+  if (MinC == ~MaxC)
+    return DAG.getNode(RISCVISD::SATI, DL, VT, Input,
+                       DAG.getTargetConstant(MinC.countr_one(), DL, VT));
+  if (MaxC == 0)
+    return DAG.getNode(RISCVISD::USATI, DL, VT, Input,
+                       DAG.getTargetConstant(MinC.countr_one(), DL, VT));
+
+  return SDValue();
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -21800,11 +21803,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue();
     return DAG.getNode(RISCVISD::FSGNJX, DL, VT, N1, N0->getOperand(1));
   }
-  case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
   case ISD::SMAX:
   case ISD::SMIN:
+    if (SDValue V = combineMinMaxToSat(N, DCI, Subtarget))
+      return V;
+    [[fallthrough]];
+  case ISD::FADD:
   case ISD::FMAXNUM:
   case ISD::FMINNUM: {
     if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
