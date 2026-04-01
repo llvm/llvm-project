@@ -73,6 +73,17 @@ declare <vscale x 64 x i8> @llvm.aarch64.sve.ld4.nxv64i8.nxv16i1.p0i8(<vscale x 
 declare <vscale x 32 x i8> @llvm.aarch64.sve.ld2(<vscale x 16 x i1>, i8 *)
 declare <vscale x 32 x i8> @llvm.aarch64.sve.ld2.nxv32i8(<vscale x 16 x i1>, i8 *)
 
+; ldN_sret with implicit addrspace(0) on base pointer
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2_sret_with_implicit_address_space(<vscale x 16 x i1> %pg, ptr %base) {
+; CHECK-LABEL: @ld2_sret_with_implicit_address_space
+; CHECK:  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8.p0(<vscale x 16 x i1> %pg, ptr %base)
+; CHECK-NEXT: ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret(<vscale x 16 x i1> %pg, ptr %base)
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
+declare { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret(<vscale x 16 x i1>, ptr)
+
 ; aarch64.sve.tuple.create.N
 define <vscale x 32 x i8> @create2_nxv32i8_nxv16i8(<vscale x 16 x i8> %z1, <vscale x 16 x i8> %z2) {
 ; CHECK-LABEL: @create2_nxv32i8_nxv16i8

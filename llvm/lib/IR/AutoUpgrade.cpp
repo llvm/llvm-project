@@ -5101,6 +5101,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::aarch64_sve_ld3_sret:
   case Intrinsic::aarch64_sve_ld4_sret:
   case Intrinsic::aarch64_sve_ld2_sret: {
+    // Is this a trivial remangle of the name to support ptr address spaces?
+    if (isa<StructType>(F->getReturnType())) {
+      DefaultCase();
+      return;
+    }
+
     StringRef Name = F->getName();
     Name = Name.substr(5);
     unsigned N = StringSwitch<unsigned>(Name)
