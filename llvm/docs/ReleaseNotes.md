@@ -101,13 +101,6 @@ Changes to LLVM infrastructure
     this may fail if symlink permissions are not available.
   * Added ``readlink``, which reads the target of a symbolic link.
 
-* Bitcode libraries can now implement compiler-managed library functions
-  (libcalls) without causing incorrect API manipulation or undefined references
-  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
-  there are still issues with invalid compiler reasoning about some functions
-  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
-
 Changes to building LLVM
 ------------------------
 
@@ -128,6 +121,11 @@ Changes to the AArch64 Backend
 
 * The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
   requiring the `+d128` feature gating.
+* Added a new internal option `-aarch64-emit-debug-tls-location` to allow the
+  emission of `DW_AT_location` for thread-local variables. This is currently
+  disabled by default to maintain compatibility with Binutils and LLVM older
+  toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
+  type for TLS offsets.
 
 Changes to the AMDGPU Backend
 -----------------------------
