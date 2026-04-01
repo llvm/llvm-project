@@ -49,7 +49,7 @@ llvm::StringRef LanguageProperties::GetSettingName() {
 
 LanguageProperties::LanguageProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-  m_collection_sp->Initialize(g_language_properties);
+  m_collection_sp->Initialize(g_language_properties_def);
 }
 
 bool LanguageProperties::GetEnableFilterForLineBreakpoints() const {
@@ -89,12 +89,8 @@ Language *Language::FindPlugin(lldb::LanguageType language) {
     return iter->second.get();
 
   Language *language_ptr = nullptr;
-  LanguageCreateInstance create_callback;
 
-  for (uint32_t idx = 0;
-       (create_callback =
-            PluginManager::GetLanguageCreateCallbackAtIndex(idx)) != nullptr;
-       ++idx) {
+  for (auto create_callback : PluginManager::GetLanguageCreateCallbacks()) {
     language_ptr = create_callback(language);
 
     if (language_ptr) {

@@ -222,16 +222,32 @@ define protected amdgpu_kernel void @memmove_2048_bytes(ptr addrspace(1) %dst, p
 define protected amdgpu_kernel void @memset(ptr addrspace(1) %dst, i8 %value, i64 noundef %n) {
 ; CHECK-LABEL: define protected amdgpu_kernel void @memset(
 ; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i8 [[VALUE:%.*]], i64 noundef [[N:%.*]]) !dbg [[DBG38:![0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[N]], !dbg [[DBG41:![0-9]+]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]], !dbg [[DBG41]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[VALUE]], i64 0, !dbg [[DBG41:![0-9]+]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <16 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer, !dbg [[DBG41]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <16 x i8> [[SETVALUE_SPLAT_SPLAT]] to <4 x i32>, !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[N]], 15, !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP1]], !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP2]], 0, !dbg [[DBG41]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]], !dbg [[DBG41]]
 ; CHECK:       [[LOADSTORELOOP]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ], !dbg [[DBG41]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP2]], !dbg [[DBG41]]
-; CHECK-NEXT:    store i8 [[VALUE]], ptr addrspace(1) [[TMP3]], align 1, !dbg [[DBG41]]
-; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP2]], 1, !dbg [[DBG41]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], [[N]], !dbg [[DBG41]]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOADSTORELOOP]], label %[[SPLIT]], !dbg [[DBG41]]
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[LOADSTORELOOP]] ], !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[LOOP_INDEX]], !dbg [[DBG41]]
+; CHECK-NEXT:    store <4 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP4]], align 1, !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP5]] = add i64 [[LOOP_INDEX]], 16, !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[TMP2]], !dbg [[DBG41]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[LOADSTORELOOP]], label %[[SPLIT]], !dbg [[DBG41]]
 ; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP1]], 0, !dbg [[DBG41]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_BODY:.*]], label %[[DYNAMIC_MEMSET_POST_EXPANSION:.*]], !dbg [[DBG41]]
+; CHECK:       [[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_BODY]]:
+; CHECK-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, %[[SPLIT]] ], [ [[TMP10:%.*]], %[[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_BODY]] ], !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], [[RESIDUAL_LOOP_INDEX]], !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP8]], !dbg [[DBG41]]
+; CHECK-NEXT:    store i8 [[VALUE]], ptr addrspace(1) [[TMP9]], align 1, !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP10]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1, !dbg [[DBG41]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i64 [[TMP10]], [[TMP1]], !dbg [[DBG41]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_BODY]], label %[[DYNAMIC_MEMSET_POST_EXPANSION]], !dbg [[DBG41]]
+; CHECK:       [[DYNAMIC_MEMSET_POST_EXPANSION]]:
 ; CHECK-NEXT:      #dbg_value(i32 0, [[META40:![0-9]+]], !DIExpression(), [[META42:![0-9]+]])
 ; CHECK-NEXT:    ret void, !dbg [[META42]]
 ;
@@ -242,15 +258,20 @@ define protected amdgpu_kernel void @memset(ptr addrspace(1) %dst, i8 %value, i6
 define protected amdgpu_kernel void @memset_1025_bytes(ptr addrspace(1) %dst, i8 %value) {
 ; CHECK-LABEL: define protected amdgpu_kernel void @memset_1025_bytes(
 ; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i8 [[VALUE:%.*]]) !dbg [[DBG43:![0-9]+]] {
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]], !dbg [[DBG46:![0-9]+]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <256 x i8> poison, i8 [[VALUE]], i64 0, !dbg [[DBG46:![0-9]+]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <256 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <256 x i8> poison, <256 x i32> zeroinitializer, !dbg [[DBG46]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <256 x i8> [[SETVALUE_SPLAT_SPLAT]] to <64 x i32>, !dbg [[DBG46]]
+; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]], !dbg [[DBG46]]
 ; CHECK:       [[LOADSTORELOOP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[LOADSTORELOOP]] ], !dbg [[DBG46]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP1]], !dbg [[DBG46]]
-; CHECK-NEXT:    store i8 [[VALUE]], ptr addrspace(1) [[TMP2]], align 1, !dbg [[DBG46]]
-; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1, !dbg [[DBG46]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1025, !dbg [[DBG46]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT]], !dbg [[DBG46]]
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], %[[LOADSTORELOOP]] ], !dbg [[DBG46]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[LOOP_INDEX]], !dbg [[DBG46]]
+; CHECK-NEXT:    store <64 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG46]]
+; CHECK-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 256, !dbg [[DBG46]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 1024, !dbg [[DBG46]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]], !dbg [[DBG46]]
 ; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 1024, !dbg [[DBG46]]
+; CHECK-NEXT:    store i8 [[VALUE]], ptr addrspace(1) [[TMP4]], align 1, !dbg [[DBG46]]
 ; CHECK-NEXT:      #dbg_value(i32 0, [[META45:![0-9]+]], !DIExpression(), [[META47:![0-9]+]])
 ; CHECK-NEXT:    ret void, !dbg [[META47]]
 ;
@@ -261,14 +282,17 @@ define protected amdgpu_kernel void @memset_1025_bytes(ptr addrspace(1) %dst, i8
 define protected amdgpu_kernel void @memset_2048_bytes(ptr addrspace(1) %dst, i8 %value) {
 ; CHECK-LABEL: define protected amdgpu_kernel void @memset_2048_bytes(
 ; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i8 [[VALUE:%.*]]) !dbg [[DBG48:![0-9]+]] {
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]], !dbg [[DBG51:![0-9]+]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <256 x i8> poison, i8 [[VALUE]], i64 0, !dbg [[DBG51:![0-9]+]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <256 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <256 x i8> poison, <256 x i32> zeroinitializer, !dbg [[DBG51]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <256 x i8> [[SETVALUE_SPLAT_SPLAT]] to <64 x i32>, !dbg [[DBG51]]
+; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]], !dbg [[DBG51]]
 ; CHECK:       [[LOADSTORELOOP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[LOADSTORELOOP]] ], !dbg [[DBG51]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP1]], !dbg [[DBG51]]
-; CHECK-NEXT:    store i8 [[VALUE]], ptr addrspace(1) [[TMP2]], align 1, !dbg [[DBG51]]
-; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1, !dbg [[DBG51]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 2048, !dbg [[DBG51]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT]], !dbg [[DBG51]]
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], %[[LOADSTORELOOP]] ], !dbg [[DBG51]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[LOOP_INDEX]], !dbg [[DBG51]]
+; CHECK-NEXT:    store <64 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG51]]
+; CHECK-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 256, !dbg [[DBG51]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 2048, !dbg [[DBG51]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]], !dbg [[DBG51]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:      #dbg_value(i32 0, [[META50:![0-9]+]], !DIExpression(), [[META52:![0-9]+]])
 ; CHECK-NEXT:    ret void, !dbg [[META52]]

@@ -108,6 +108,17 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
+    libc.src.wctype.iswupper
+    libc.src.wctype.iswalnum
+    libc.src.wctype.iswgraph
+    libc.src.wctype.iswcntrl
+    libc.src.wctype.iswdigit
+    libc.src.wctype.iswlower
+    libc.src.wctype.iswspace
+    libc.src.wctype.iswblank
+    libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
+    libc.src.wctype.iswprint
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -133,9 +144,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.acospif
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpi
+    libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atan
@@ -143,6 +157,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atanhf
     libc.src.math.cbrt
     libc.src.math.cbrtf
+    libc.src.math.cbrtbf16
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
@@ -181,6 +196,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorf
     libc.src.math.floorl
     libc.src.math.fma
+    libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmin
     libc.src.math.fminf
@@ -306,6 +322,8 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
+  libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
@@ -342,6 +360,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
+  libc.src.math.hypotbf16
   libc.src.math.ilogbbf16
   libc.src.math.iscanonicalbf16
   libc.src.math.issignalingbf16

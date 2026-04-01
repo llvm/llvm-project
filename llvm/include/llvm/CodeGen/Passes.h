@@ -454,8 +454,8 @@ LLVM_ABI extern char &FinalizeISelID;
 /// UnpackMachineBundles - This pass unpack machine instruction bundles.
 LLVM_ABI extern char &UnpackMachineBundlesID;
 
-LLVM_ABI FunctionPass *
-createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
+LLVM_ABI FunctionPass *createUnpackMachineBundlesLegacy(
+    std::function<bool(const MachineFunction &)> Ftor);
 
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to
@@ -622,7 +622,7 @@ LLVM_ABI ModulePass *createJMCInstrumenterPass();
 /// This pass converts conditional moves to conditional jumps when profitable.
 LLVM_ABI FunctionPass *createSelectOptimizePass();
 
-LLVM_ABI FunctionPass *createCallBrPass();
+LLVM_ABI FunctionPass *createInlineAsmPreparePass();
 
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
 LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();

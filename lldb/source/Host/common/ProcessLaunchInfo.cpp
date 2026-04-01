@@ -33,7 +33,11 @@ using namespace lldb_private;
 
 ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),
-      m_file_actions(), m_pty(new PTY), m_monitor_callback(nullptr) {}
+      m_file_actions(), m_monitor_callback(nullptr) {
+#ifndef _WIN32
+  m_pty = std::make_shared<PTY>();
+#endif
+}
 
 ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &stdout_file_spec,
@@ -41,7 +45,10 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &working_directory,
                                      uint32_t launch_flags)
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
-      m_file_actions(), m_pty(new PTY) {
+      m_file_actions() {
+#ifndef _WIN32
+  m_pty = std::make_shared<PTY>();
+#endif
   if (stdin_file_spec) {
     FileAction file_action;
     const bool read = true;
@@ -200,6 +207,9 @@ void ProcessLaunchInfo::SetDetachOnError(bool enable) {
 llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   Log *log = GetLog(LLDBLog::Process);
 
+  if (!m_pty)
+    m_pty = std::make_shared<PTY>();
+
   bool stdin_free = GetFileActionForFD(STDIN_FILENO) == nullptr;
   bool stdout_free = GetFileActionForFD(STDOUT_FILENO) == nullptr;
   bool stderr_free = GetFileActionForFD(STDERR_FILENO) == nullptr;
@@ -231,6 +241,14 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   return llvm::Error::success();
 #endif
 }
+
+#ifdef _WIN32
+llvm::Error ProcessLaunchInfo::SetUpPipeRedirection() {
+  if (!m_pty)
+    m_pty = std::make_shared<PTY>();
+  return m_pty->OpenAnonymousPipes();
+}
+#endif
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
     Status &error, bool will_debug, bool first_arg_is_full_shell_command,

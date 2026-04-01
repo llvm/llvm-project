@@ -1143,7 +1143,7 @@ bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
       bool isComponent{sym.owner().IsDerivedType()};
       bool skipComponent{false};
       if (!skipNext) {
-        if (IsCUDADeviceSymbol(sym)) {
+        if (IsCUDADeviceOnlySymbol(sym)) {
           deviceSymbols.insert(sym);
         } else if (isComponent) {
           skipComponent = true; // Component is not device. Look on the base.
@@ -1168,6 +1168,16 @@ bool IsCUDADeviceSymbol(const Symbol &sym) {
   } else if (const auto *details =
                  sym.GetUltimate().detailsIf<semantics::AssocEntityDetails>()) {
     return GetNbOfCUDADeviceSymbols(details->expr()) > 0;
+  }
+  return false;
+}
+
+bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Constant);
   }
   return false;
 }
@@ -2643,6 +2653,18 @@ const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
     }
   }
   return nullptr;
+}
+
+const Symbol &GetCrayPointer(const Symbol &crayPointee) {
+  const Symbol *found{nullptr};
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
+      found = &pointer.get();
+      break;
+    }
+  }
+  return DEREF(found);
 }
 
 } // namespace Fortran::semantics

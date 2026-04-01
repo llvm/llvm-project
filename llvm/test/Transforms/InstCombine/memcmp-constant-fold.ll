@@ -2,6 +2,9 @@
 ; RUN: opt < %s -passes=instcombine -S -data-layout=e-n32 | FileCheck %s --check-prefix=ALL --check-prefix=LE
 ; RUN: opt < %s -passes=instcombine -S -data-layout=E-n32 | FileCheck %s --check-prefix=ALL --check-prefix=BE
 
+; RUN: opt < %s -passes=instcombine -S -data-layout=e-n32 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefix=ALL --check-prefix=LE
+; RUN: opt < %s -passes=instcombine -S -data-layout=E-n32 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefix=ALL --check-prefix=BE
+
 declare i32 @memcmp(ptr, ptr, i64)
 
 ; The alignment of this constant does not matter. We constant fold the load.
@@ -45,7 +48,7 @@ define i1 @memcmp_4bytes_unaligned_constant_i16(ptr align 4 %x) {
   ret i1 %cmpeq0
 }
 
-; Verif that a memcmp call where all arguments are constants is constant
+; Verify that a memcmp call where all arguments are constants is constant
 ; folded even for arrays of other types than i8.
 
 @intbuf = private unnamed_addr constant [2 x i32] [i32 0, i32 1], align 4
@@ -76,3 +79,26 @@ define i1 @memcmp_4bytes_one_unaligned_i8(ptr align 4 %x, ptr align 1 %y) {
   ret i1 %cmpeq0
 }
 
+;
+
+@constant_splat_vector_fp = constant <4 x i128> splat (i128 1), align 16
+@constant_vector_fp = constant <4 x i128> <i128 1, i128 0, i128 0, i128 0>, align 16
+
+define i32 @memcmp_vector_constant_fp() {
+; ALL-LABEL: @memcmp_vector_constant_fp(
+; ALL-NEXT:    ret i32 1
+;
+  %r = call i32 @memcmp(ptr @constant_splat_vector_fp, ptr @constant_vector_fp, i64 64)
+  ret i32 %r
+}
+
+@constant_splat_vector_int = constant <4 x float> splat (float 1.0), align 16
+@constant_vector_int = constant <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, align 16
+
+define i32 @memcmp_vector_constant_int() {
+; ALL-LABEL: @memcmp_vector_constant_int(
+; ALL-NEXT:    ret i32 0
+;
+  %r = call i32 @memcmp(ptr @constant_splat_vector_int, ptr @constant_vector_int, i64 16)
+  ret i32 %r
+}

@@ -14,7 +14,6 @@
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 
-#include <cctype>
 #include <optional>
 
 namespace clang::tidy {
@@ -270,10 +269,8 @@ classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
 
       if (Info.hasMacroDefinition()) {
         const MacroInfo *MI = PP->getMacroInfo(&Info);
-        if (!MI || MI->isFunctionLike()) {
-          // Cannot handle function style macros.
+        if (!MI || MI->isFunctionLike() || MI->isBuiltinMacro())
           return std::nullopt;
-        }
       }
 
       T.setIdentifierInfo(&Info);

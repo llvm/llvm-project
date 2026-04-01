@@ -95,35 +95,35 @@ def rev : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchREV(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def zip : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchZip(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def uzp : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchUZP(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def dup: GICombineRule <
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchDup(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def trn : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchTRN(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def ext: GICombineRule <
@@ -241,6 +241,16 @@ def extmultomull : GICombineRule<
           [{ return matchExtMulToMULL(*${root}, MRI, VT, ${matchinfo}); }]),
   (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
+
+// The mid end will reassociate sub(sub(x, m1), m2) to sub(x, add(m1, m2))
+// This reassociates it back to allow the creation of more mls instructions.
+def subaddmulreassoc : GICombineRule<
+  (defs root:$dst),
+  (match (G_ADD $tmp, $src1, $src2):$sub,
+         (G_SUB $dst, $src3, $tmp):$root,
+         [{ return matchSubAddMulReassoc(${src1}.getReg(), ${src2}.getReg(),
+                                         ${tmp}.getReg(), ${src3}.getReg(), MRI); }]),
+  (apply [{ applySubAddMulReassoc(*${root}, *${sub}, MRI, B, Observer); }])>;
 
 def lower_mulv2s64 : GICombineRule<
   (defs root:$root),
@@ -367,6 +377,7 @@ def AArch64PostLegalizerCombiner
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate,
-                        extmultomull, truncsat_combines, lshr_of_trunc_of_lshr,
+                        extmultomull, subaddmulreassoc, truncsat_combines,
+                        lshr_of_trunc_of_lshr,
                         funnel_shift_from_or_shift_constants_are_legal]> {
 }

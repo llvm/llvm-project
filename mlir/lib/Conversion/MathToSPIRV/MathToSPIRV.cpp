@@ -155,11 +155,11 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
       int count = vectorType.getNumElements();
       intType = VectorType::get(count, intType);
 
-      SmallVector<Value> signSplat(count, signMask);
+      Repeated<Value> signSplat(count, signMask);
       signMask = spirv::CompositeConstructOp::create(rewriter, loc, intType,
                                                      signSplat);
 
-      SmallVector<Value> valueSplat(count, valueMask);
+      Repeated<Value> valueSplat(count, valueMask);
       valueMask = spirv::CompositeConstructOp::create(rewriter, loc, intType,
                                                       valueSplat);
     }
@@ -449,8 +449,14 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
       return res;
 
     Location loc = roundOp.getLoc();
-    Value operand = roundOp.getOperand();
-    Type ty = operand.getType();
+    auto ty = getTypeConverter()->convertType(adaptor.getOperand().getType());
+    if (!ty) {
+      return rewriter.notifyMatchFailure(
+          roundOp->getLoc(),
+          llvm::formatv("failed to convert type {0} for SPIR-V",
+                        roundOp.getType()));
+    }
+
     Type ety = getElementTypeOrSelf(ty);
 
     auto zero = spirv::ConstantOp::getZero(ty, loc, rewriter);
@@ -466,14 +472,15 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
                                        rewriter.getFloatAttr(ety, 0.5));
     }
 
-    auto abs = spirv::GLFAbsOp::create(rewriter, loc, operand);
+    auto abs = spirv::GLFAbsOp::create(rewriter, loc, adaptor.getOperand());
     auto floor = spirv::GLFloorOp::create(rewriter, loc, abs);
     auto sub = spirv::FSubOp::create(rewriter, loc, abs, floor);
     auto greater =
         spirv::FOrdGreaterThanEqualOp::create(rewriter, loc, sub, half);
     auto select = spirv::SelectOp::create(rewriter, loc, greater, one, zero);
     auto add = spirv::FAddOp::create(rewriter, loc, floor, select);
-    rewriter.replaceOpWithNewOp<math::CopySignOp>(roundOp, add, operand);
+    rewriter.replaceOpWithNewOp<math::CopySignOp>(roundOp, add,
+                                                  adaptor.getOperand());
     return success();
   }
 };

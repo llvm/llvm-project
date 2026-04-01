@@ -192,8 +192,10 @@ define float @signbits_ashr_shl_extract_sitofp(<2 x i64> %a0) nounwind {
 ; X86-LABEL: signbits_ashr_shl_extract_sitofp:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X86-NEXT:    vpsrad $29, %xmm0, %xmm0
+; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
 ; X86-NEXT:    vpsllq $20, %xmm0, %xmm0
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
@@ -201,13 +203,25 @@ define float @signbits_ashr_shl_extract_sitofp(<2 x i64> %a0) nounwind {
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: signbits_ashr_shl_extract_sitofp:
-; X64:       # %bb.0:
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; X64-NEXT:    vpsrad $29, %xmm0, %xmm0
-; X64-NEXT:    vpsllq $20, %xmm0, %xmm0
-; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X64-NEXT:    retq
+; X64-AVX1-LABEL: signbits_ashr_shl_extract_sitofp:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-AVX1-NEXT:    vpsrad $29, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; X64-AVX1-NEXT:    vpsllq $20, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: signbits_ashr_shl_extract_sitofp:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
+; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-AVX2-NEXT:    vpsrad $29, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; X64-AVX2-NEXT:    vpsllq $20, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-AVX2-NEXT:    retq
   %1 = ashr <2 x i64> %a0, <i64 61, i64 60>
   %2 = shl <2 x i64> %1, <i64 20, i64 16>
   %3 = extractelement <2 x i64> %2, i32 0
@@ -459,8 +473,10 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ;
 ; X64-AVX2-LABEL: signbits_ashr_sext_select_shuffle_sitofp:
 ; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpsrad $31, %ymm2, %ymm4
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} ymm2 = ymm2[1,1,3,3,5,5,7,7]
 ; X64-AVX2-NEXT:    vpsrad $1, %ymm2, %ymm2
+; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm4[1],ymm2[2],ymm4[3],ymm2[4],ymm4[5],ymm2[6],ymm4[7]
 ; X64-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; X64-AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vblendvpd %ymm0, %ymm2, %ymm3, %ymm0

@@ -147,6 +147,19 @@ mlir::Value fir::runtime::genCharCompare(fir::FirOpBuilder &builder,
                         rhsBuffer, fir::getLen(rhs));
 }
 
+void fir::runtime::genFCString(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value resultBox, mlir::Value stringBox,
+                               mlir::Value asis) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(FCString)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args = fir::runtime::createArguments(
+      builder, loc, fTy, resultBox, stringBox, asis, sourceFile, sourceLine);
+  fir::CallOp::create(builder, loc, func, args);
+}
+
 mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
                                    mlir::Location loc, int kind,
                                    mlir::Value stringBase,
@@ -272,6 +285,35 @@ void fir::runtime::genVerifyDescriptor(fir::FirOpBuilder &builder,
                      kind);
 }
 
+void fir::runtime::genTokenize(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value tokensBox, mlir::Value separatorBox,
+                               mlir::Value stringBox, mlir::Value setBox) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Tokenize)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, tokensBox, separatorBox,
+                                    stringBox, setBox, sourceFile, sourceLine);
+  fir::CallOp::create(builder, loc, func, args);
+}
+
+void fir::runtime::genTokenizePositions(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value firstBox,
+    mlir::Value lastBox, mlir::Value stringBox, mlir::Value setBox) {
+  auto func =
+      fir::runtime::getRuntimeFunc<mkRTKey(TokenizePositions)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, firstBox, lastBox,
+                                    stringBox, setBox, sourceFile, sourceLine);
+  fir::CallOp::create(builder, loc, func, args);
+}
+
 mlir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
                                     mlir::Location loc, int kind,
                                     mlir::Value stringBase,
@@ -295,5 +337,32 @@ mlir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
   auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, stringBase,
                                             stringLen, setBase, setLen, back);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
+}
+
+mlir::Value fir::runtime::genSplit(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, int kind,
+                                   mlir::Value stringBase,
+                                   mlir::Value stringLen, mlir::Value setBase,
+                                   mlir::Value setLen, mlir::Value pos,
+                                   mlir::Value back) {
+  mlir::func::FuncOp func;
+  switch (kind) {
+  case 1:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Split1)>(loc, builder);
+    break;
+  case 2:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Split2)>(loc, builder);
+    break;
+  case 4:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Split4)>(loc, builder);
+    break;
+  default:
+    fir::emitFatalError(
+        loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
+  }
+  auto fTy = func.getFunctionType();
+  auto args = fir::runtime::createArguments(
+      builder, loc, fTy, stringBase, stringLen, setBase, setLen, pos, back);
   return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }

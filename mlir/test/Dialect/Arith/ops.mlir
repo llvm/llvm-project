@@ -625,6 +625,20 @@ func.func @test_extui_scalable_vector(%arg0 : vector<[8]xi32>) -> vector<[8]xi64
   return %0 : vector<[8]xi64>
 }
 
+// CHECK-LABEL: test_extui_nneg
+// CHECK: arith.extui %{{.*}} nneg : i32 to i64
+func.func @test_extui_nneg(%arg0 : i32) -> i64 {
+  %0 = arith.extui %arg0 nneg : i32 to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_extui_nneg_vector
+// CHECK: arith.extui %{{.*}} nneg : vector<8xi32> to vector<8xi64>
+func.func @test_extui_nneg_vector(%arg0 : vector<8xi32>) -> vector<8xi64> {
+  %0 = arith.extui %arg0 nneg : vector<8xi32> to vector<8xi64>
+  return %0 : vector<8xi64>
+}
+
 // CHECK-LABEL: test_extsi
 func.func @test_extsi(%arg0 : i32) -> i64 {
   %0 = arith.extsi %arg0 : i32 to i64
@@ -737,6 +751,41 @@ func.func @test_truncf_rounding_mode(%arg0 : f64) -> (f32, f32, f32, f32, f32) {
   return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
 
+// CHECK-LABEL: test_convertf
+func.func @test_convertf(%arg0 : f16) -> bf16 {
+  // CHECK: arith.convertf %arg0 : f16 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: test_convertf_vector
+func.func @test_convertf_vector(%arg0 : vector<8xf16>) -> vector<8xbf16> {
+  // CHECK: arith.convertf %arg0 : vector<8xf16> to vector<8xbf16>
+  %0 = arith.convertf %arg0 : vector<8xf16> to vector<8xbf16>
+  return %0 : vector<8xbf16>
+}
+
+// CHECK-LABEL: test_convertf_scalable_vector
+func.func @test_convertf_scalable_vector(%arg0 : vector<[8]xbf16>) -> vector<[8]xf16> {
+  // CHECK: arith.convertf %arg0 : vector<[8]xbf16> to vector<[8]xf16>
+  %0 = arith.convertf %arg0 : vector<[8]xbf16> to vector<[8]xf16>
+  return %0 : vector<[8]xf16>
+}
+
+// CHECK-LABEL: test_convertf_tensor
+func.func @test_convertf_tensor(%arg0 : tensor<8x8xf16>) -> tensor<8x8xbf16> {
+  // CHECK: arith.convertf %arg0 : tensor<8x8xf16> to tensor<8x8xbf16>
+  %0 = arith.convertf %arg0 : tensor<8x8xf16> to tensor<8x8xbf16>
+  return %0 : tensor<8x8xbf16>
+}
+
+// CHECK-LABEL: test_convertf_rounding_mode
+func.func @test_convertf_rounding_mode(%arg0 : bf16) -> f16 {
+  // CHECK: arith.convertf %arg0 to_nearest_even : bf16 to f16
+  %0 = arith.convertf %arg0 to_nearest_even : bf16 to f16
+  return %0 : f16
+}
+
 // CHECK-LABEL: test_uitofp
 func.func @test_uitofp(%arg0 : i32) -> f32 {
   %0 = arith.uitofp %arg0 : i32 to f32
@@ -759,6 +808,20 @@ func.func @test_uitofp_vector(%arg0 : vector<8xi32>) -> vector<8xf32> {
 func.func @test_uitofp_scalable_vector(%arg0 : vector<[8]xi32>) -> vector<[8]xf32> {
   %0 = arith.uitofp %arg0 : vector<[8]xi32> to vector<[8]xf32>
   return %0 : vector<[8]xf32>
+}
+
+// CHECK-LABEL: test_uitofp_nneg
+// CHECK: arith.uitofp %{{.*}} nneg : i32 to f32
+func.func @test_uitofp_nneg(%arg0 : i32) -> f32 {
+  %0 = arith.uitofp %arg0 nneg : i32 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: test_uitofp_nneg_vector
+// CHECK: arith.uitofp %{{.*}} nneg : vector<8xi32> to vector<8xf32>
+func.func @test_uitofp_nneg_vector(%arg0 : vector<8xi32>) -> vector<8xf32> {
+  %0 = arith.uitofp %arg0 nneg : vector<8xi32> to vector<8xf32>
+  return %0 : vector<8xf32>
 }
 
 // CHECK-LABEL: test_sitofp
@@ -881,7 +944,6 @@ func.func @test_index_cast_scalable_vector1(%arg0 : vector<[8]xindex>) -> vector
   return %0 : vector<[8]xi64>
 }
 
-
 // CHECK-LABEL: test_index_castui0
 func.func @test_index_castui0(%arg0 : i32) -> index {
   %0 = arith.index_castui %arg0 : i32 to index
@@ -928,6 +990,20 @@ func.func @test_index_castui_vector1(%arg0 : vector<8xindex>) -> vector<8xi64> {
 func.func @test_index_castui_scalable_vector1(%arg0 : vector<[8]xindex>) -> vector<[8]xi64> {
   %0 = arith.index_castui %arg0 : vector<[8]xindex> to vector<[8]xi64>
   return %0 : vector<[8]xi64>
+}
+
+// CHECK-LABEL: test_index_castui_nneg
+// CHECK: arith.index_castui %{{.*}} nneg : i32 to index
+func.func @test_index_castui_nneg(%arg0 : i32) -> index {
+  %0 = arith.index_castui %arg0 nneg : i32 to index
+  return %0 : index
+}
+
+// CHECK-LABEL: test_index_castui_nneg_vector
+// CHECK: arith.index_castui %{{.*}} nneg : vector<8xi32> to vector<8xindex>
+func.func @test_index_castui_nneg_vector(%arg0 : vector<8xi32>) -> vector<8xindex> {
+  %0 = arith.index_castui %arg0 nneg : vector<8xi32> to vector<8xindex>
+  return %0 : vector<8xindex>
 }
 
 // CHECK-LABEL: test_bitcast0
@@ -1187,3 +1263,4 @@ func.func @intflags_func(%arg0: i64, %arg1: i64) {
   %4 = arith.trunci %arg0 overflow<nsw, nuw> : i64 to i32
   return
 }
+

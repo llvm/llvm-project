@@ -36,9 +36,8 @@
 ; GCN-O0-NEXT: amdgpu-lower-intrinsics
 ; GCN-O0-NEXT: cgscc(function(lower-switch
 ; GCN-O0-NEXT: lower-invoke
-; GCN-O0-NEXT: unreachableblockelim))
-; GCN-O0-NEXT: require<amdgpu-argument-usage>
-; GCN-O0-NEXT: cgscc(function(amdgpu-unify-divergent-exit-nodes
+; GCN-O0-NEXT: unreachableblockelim
+; GCN-O0-NEXT: amdgpu-unify-divergent-exit-nodes
 ; GCN-O0-NEXT: fix-irreducible
 ; GCN-O0-NEXT: unify-loop-exits
 ; GCN-O0-NEXT: StructurizeCFGPass
@@ -47,7 +46,7 @@
 ; GCN-O0-NEXT: amdgpu-rewrite-undef-for-phi
 ; GCN-O0-NEXT: lcssa
 ; GCN-O0-NEXT: require<uniformity>
-; GCN-O0-NEXT: callbr-prepare
+; GCN-O0-NEXT: inline-asm-prepare
 ; GCN-O0-NEXT: safe-stack
 ; GCN-O0-NEXT: stack-protector
 ; GCN-O0-NEXT: verify))
@@ -100,6 +99,7 @@
 ; GCN-O2-NEXT: require<collector-metadata>
 ; GCN-O2-NEXT: require<runtime-libcall-info>
 ; GCN-O2-NEXT: require<libcall-lowering-info>
+; GCN-O2-NEXT: function(objc-arc-contract)
 ; GCN-O2-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O2-NEXT: function(expand-ir-insts<O2>)
 ; GCN-O2-NEXT: amdgpu-remove-incompatible-functions
@@ -145,9 +145,8 @@
 ; GCN-O2-NEXT: amdgpu-lower-intrinsics
 ; GCN-O2-NEXT: cgscc(function(lower-switch
 ; GCN-O2-NEXT: lower-invoke
-; GCN-O2-NEXT: unreachableblockelim))
-; GCN-O2-NEXT: require<amdgpu-argument-usage>
-; GCN-O2-NEXT: cgscc(function(flatten-cfg
+; GCN-O2-NEXT: unreachableblockelim
+; GCN-O2-NEXT: flatten-cfg
 ; GCN-O2-NEXT: sink
 ; GCN-O2-NEXT: amdgpu-late-codegenprepare
 ; GCN-O2-NEXT: amdgpu-unify-divergent-exit-nodes
@@ -160,8 +159,7 @@
 ; GCN-O2-NEXT: lcssa))
 ; GCN-O2-NEXT: amdgpu-perf-hint
 ; GCN-O2-NEXT: cgscc(function(require<uniformity>
-; GCN-O2-NEXT: objc-arc-contract
-; GCN-O2-NEXT: callbr-prepare
+; GCN-O2-NEXT: inline-asm-prepare
 ; GCN-O2-NEXT: safe-stack
 ; GCN-O2-NEXT: stack-protector
 ; GCN-O2-NEXT: verify))
@@ -272,6 +270,7 @@
 ; GCN-O3-NEXT: require<collector-metadata>
 ; GCN-O3-NEXT: require<runtime-libcall-info>
 ; GCN-O3-NEXT: require<libcall-lowering-info>
+; GCN-O3-NEXT: function(objc-arc-contract)
 ; GCN-O3-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O3-NEXT: function(expand-ir-insts<O3>)
 ; GCN-O3-NEXT: amdgpu-remove-incompatible-functions
@@ -317,9 +316,8 @@
 ; GCN-O3-NEXT: amdgpu-lower-intrinsics
 ; GCN-O3-NEXT: cgscc(function(lower-switch
 ; GCN-O3-NEXT: lower-invoke
-; GCN-O3-NEXT: unreachableblockelim))
-; GCN-O3-NEXT: require<amdgpu-argument-usage>
-; GCN-O3-NEXT: cgscc(function(flatten-cfg
+; GCN-O3-NEXT: unreachableblockelim
+; GCN-O3-NEXT: flatten-cfg
 ; GCN-O3-NEXT: sink
 ; GCN-O3-NEXT: amdgpu-late-codegenprepare
 ; GCN-O3-NEXT: amdgpu-unify-divergent-exit-nodes
@@ -332,8 +330,7 @@
 ; GCN-O3-NEXT: lcssa))
 ; GCN-O3-NEXT: amdgpu-perf-hint
 ; GCN-O3-NEXT: cgscc(function(require<uniformity>
-; GCN-O3-NEXT: objc-arc-contract
-; GCN-O3-NEXT: callbr-prepare
+; GCN-O3-NEXT: inline-asm-prepare
 ; GCN-O3-NEXT: safe-stack
 ; GCN-O3-NEXT: stack-protector
 ; GCN-O3-NEXT: verify))

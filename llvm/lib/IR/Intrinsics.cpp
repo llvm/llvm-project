@@ -40,7 +40,6 @@ using namespace llvm;
 /// Table of string intrinsic names indexed by enum value.
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_NAME_TABLE
 
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
@@ -147,6 +146,9 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     case Type::IntegerTyID:
       Result += "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
       break;
+    case Type::ByteTyID:
+      Result += "b" + utostr(cast<ByteType>(Ty)->getBitWidth());
+      break;
     }
   }
   return Result;
@@ -196,7 +198,6 @@ std::string Intrinsic::getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> Tys) {
 enum IIT_Info {
 #define GET_INTRINSIC_IITINFO
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_IITINFO
 };
 
 static void
@@ -434,7 +435,6 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 
 #define GET_INTRINSIC_GENERATOR_GLOBAL
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_GENERATOR_GLOBAL
 
 void Intrinsic::getIntrinsicInfoTableEntries(
     ID id, SmallVectorImpl<IITDescriptor> &T) {
@@ -448,8 +448,11 @@ void Intrinsic::getIntrinsicInfoTableEntries(
 
   FixedEncodingTy TableVal = IIT_Table[id - 1];
 
-  // Decode the TableVal into an array of IITValues.
-  SmallVector<unsigned char> IITValues;
+  // Array to hold the inlined fixed encoding values expanded from nibbles to
+  // bytes. Its size can be be atmost FixedEncodingBits / 4 i.e., number
+  // of nibbles that can fit in `FixedEncodingTy`.
+  unsigned char IITValues[FixedEncodingBits / 4];
+
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
   // Check to see if the intrinsic's type was inlined in the fixed encoding
@@ -464,11 +467,11 @@ void Intrinsic::getIntrinsicInfoTableEntries(
     // If the entry was encoded into a single word in the table itself, decode
     // it from an array of nibbles to an array of bytes.
     do {
-      IITValues.push_back(TableVal & 0xF);
+      IITValues[NextElt++] = TableVal & 0xF;
       TableVal >>= 4;
     } while (TableVal);
 
-    IITEntries = IITValues;
+    IITEntries = ArrayRef(IITValues).take_front(NextElt);
     NextElt = 0;
   }
 
@@ -514,15 +517,14 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return TargetExtType::get(Context, "aarch64.svcount");
 
   case IITDescriptor::Integer:
-    return IntegerType::get(Context, D.Integer_Width);
+    return IntegerType::get(Context, D.IntegerWidth);
   case IITDescriptor::Vector:
-    return VectorType::get(DecodeFixedType(Infos, Tys, Context),
-                           D.Vector_Width);
+    return VectorType::get(DecodeFixedType(Infos, Tys, Context), D.VectorWidth);
   case IITDescriptor::Pointer:
-    return PointerType::get(Context, D.Pointer_AddressSpace);
+    return PointerType::get(Context, D.PointerAddressSpace);
   case IITDescriptor::Struct: {
     SmallVector<Type *, 8> Elts;
-    for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
+    for (unsigned i = 0, e = D.StructNumElements; i != e; ++i)
       Elts.push_back(DecodeFixedType(Infos, Tys, Context));
     return StructType::get(Context, Elts);
   }
@@ -606,19 +608,16 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
 bool Intrinsic::isOverloaded(ID id) {
 #define GET_INTRINSIC_OVERLOAD_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 
 bool Intrinsic::hasPrettyPrintedArgs(ID id){
 #define GET_INTRINSIC_PRETTY_PRINT_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_PRETTY_PRINT_TABLE
 }
 
 /// Table of per-target intrinsic name tables.
 #define GET_INTRINSIC_TARGET_DATA
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_TARGET_DATA
 
 bool Intrinsic::isTargetIntrinsic(Intrinsic::ID IID) {
   return IID > TargetInfos[0].Count;
@@ -732,7 +731,6 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 /// This defines the "Intrinsic::getAttributes(ID id)" method.
 #define GET_INTRINSIC_ATTRIBUTES
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_ATTRIBUTES
 
 static Function *getOrInsertIntrinsicDeclarationImpl(Module *M,
                                                      Intrinsic::ID id,
@@ -809,12 +807,10 @@ Function *Intrinsic::getDeclarationIfExists(Module *M, ID id,
 // This defines the "Intrinsic::getIntrinsicForClangBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_CLANG_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_LLVM_INTRINSIC_FOR_CLANG_BUILTIN
 
 // This defines the "Intrinsic::getIntrinsicForMSBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 
 bool Intrinsic::isConstrainedFPIntrinsic(ID QID) {
   switch (QID) {
@@ -893,28 +889,28 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::PPCQuad:
     return !Ty->isPPC_FP128Ty();
   case IITDescriptor::Integer:
-    return !Ty->isIntegerTy(D.Integer_Width);
+    return !Ty->isIntegerTy(D.IntegerWidth);
   case IITDescriptor::AArch64Svcount:
     return !isa<TargetExtType>(Ty) ||
            cast<TargetExtType>(Ty)->getName() != "aarch64.svcount";
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
-    return !VT || VT->getElementCount() != D.Vector_Width ||
+    return !VT || VT->getElementCount() != D.VectorWidth ||
            matchIntrinsicType(VT->getElementType(), Infos, ArgTys,
                               DeferredChecks, IsDeferredCheck);
   }
   case IITDescriptor::Pointer: {
     PointerType *PT = dyn_cast<PointerType>(Ty);
-    return !PT || PT->getAddressSpace() != D.Pointer_AddressSpace;
+    return !PT || PT->getAddressSpace() != D.PointerAddressSpace;
   }
 
   case IITDescriptor::Struct: {
     StructType *ST = dyn_cast<StructType>(Ty);
     if (!ST || !ST->isLiteral() || ST->isPacked() ||
-        ST->getNumElements() != D.Struct_NumElements)
+        ST->getNumElements() != D.StructNumElements)
       return true;
 
-    for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
+    for (unsigned i = 0, e = D.StructNumElements; i != e; ++i)
       if (matchIntrinsicType(ST->getElementType(i), Infos, ArgTys,
                              DeferredChecks, IsDeferredCheck))
         return true;
@@ -1201,4 +1197,3 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
 
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS

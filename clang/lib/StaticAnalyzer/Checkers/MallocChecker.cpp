@@ -1705,13 +1705,9 @@ bool MallocChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
     return true;
   }
 
-  if (isFreeingOwnershipAttrCall(Call)) {
-    checkOwnershipAttr(State, Call, C);
-    return true;
-  }
-
-  if (isAllocatingOwnershipAttrCall(Call)) {
-    State = MallocBindRetVal(C, Call, State, false);
+  if (isFreeingOwnershipAttrCall(Call) || isAllocatingOwnershipAttrCall(Call)) {
+    if (isAllocatingOwnershipAttrCall(Call))
+      State = MallocBindRetVal(C, Call, State, false);
     checkOwnershipAttr(State, Call, C);
     return true;
   }
@@ -4228,3 +4224,5 @@ REGISTER_CHECKER(NewDeleteChecker)
 REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)
 REGISTER_CHECKER(TaintedAllocChecker)
+
+#undef REGISTER_CHECKER

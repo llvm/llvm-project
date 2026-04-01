@@ -186,8 +186,8 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       return success();
   }
 
-  if (mdescTy.getRank() != 2)
-    return emitError() << "mem_desc must be 2D.";
+  if (mdescTy.getRank() < 2)
+    return emitError() << "mem_desc must be 2D or greater.";
 
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
@@ -1101,39 +1101,18 @@ LogicalResult ConvertLayoutOp::verify() {
     return emitOpError("expected input layout and target layout be WgLayout or "
                        "SgLayout at the same time.");
 
-  auto shape = getSource().getType().getShape();
-  if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
-    return emitOpError(
-        "invalid input layout, data cannot be evenly distributed.");
+  Type srcType = getSource().getType();
+  if (llvm::isa<VectorType>(srcType)) {
+    auto shape = llvm::cast<VectorType>(srcType).getShape();
+    if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
+      return emitOpError(
+          "invalid input layout, data cannot be evenly distributed.");
 
-  if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
-    return emitOpError(
-        "invalid target layout, data cannot be evenly distributed.");
-
-  return mlir::success();
-}
-
-OpFoldResult ConvertLayoutOp::fold(FoldAdaptor adaptor) {
-  if (getInputLayout() == getTargetLayout())
-    return getSource();
-  return {};
-}
-
-struct FoldConvertLayoutOp : public OpRewritePattern<xegpu::ConvertLayoutOp> {
-  using OpRewritePattern<xegpu::ConvertLayoutOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.getInputLayout() == op.getTargetLayout()) {
-      rewriter.replaceOp(op, op.getSource());
-      return success();
-    }
-    return failure();
+    if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
+      return emitOpError(
+          "invalid target layout, data cannot be evenly distributed.");
   }
-};
-
-void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
-                                                  MLIRContext *context) {
-  patterns.add<FoldConvertLayoutOp>(context);
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1185,6 +1164,32 @@ LogicalResult StoreMatrixOp::verify() {
   MemDescType mdescTy = getMemDesc().getType();
   return IsValidMatrixOpParams(dataTy, mdescTy, subgroup_block_io,
                                getLayoutAttr(), [&]() { return emitError(); });
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_TruncfOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TruncfOp::verify() {
+  auto sourceVecType = dyn_cast<VectorType>(getSource().getType());
+  auto resultVecType = dyn_cast<VectorType>(getResult().getType());
+
+  if (sourceVecType.getElementTypeBitWidth() <=
+      resultVecType.getElementTypeBitWidth())
+    return emitOpError("input type must be wider than result type.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_DpasMxOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DpasMxOp::verify() {
+  if (getAcc() && getAcc().getType() != getResultType())
+    return emitOpError("Expecting the acc type to be the same as result.");
+
+  return success();
 }
 
 namespace mlir {

@@ -3,6 +3,9 @@
 // RUN:   %s | FileCheck %s
 
 shard.grid @grid_1d(shape = 2)
+shard.grid @grid_1d_4(shape = 4)
+shard.grid @grid_2d_16(shape = 4x4)
+shard.grid @grid_4d(shape = 2x3x4x5)
 
 // CHECK-LABEL: func @return_sharding
 func.func @return_sharding(
@@ -50,6 +53,57 @@ func.func @sharding_triplet(
   return %sharded_1 : tensor<2xf32>
 }
 
+// CHECK-LABEL: func.func @unsplit_last_axes_some(
+// CHECK-SAME: [[varg0:%.*]]: tensor<6x2xi8>) -> tensor<6x24xi8> {
+func.func @unsplit_last_axes_some( %in2: tensor<6x48xi8>) -> tensor<6x48xi8> {
+  %sharding0 = shard.sharding @grid_4d split_axes = [[], [0,1,2]] : !shard.sharding
+  %sharding1 = shard.shard %in2 to %sharding0 : tensor<6x48xi8>
+  %sharding2 = shard.sharding @grid_4d split_axes = [[], [0]] : !shard.sharding
+  %sharding3 = shard.shard %sharding1 to %sharding2 annotate_for_users : tensor<6x48xi8>
+  // CHECK: [[vall_gather:%.*]] = shard.all_gather [[varg0]] on @grid_4d grid_axes = [1, 2] gather_axis = 1 : tensor<6x2xi8> -> tensor<6x24xi8>
+  // CHECK: return [[vall_gather]] : tensor<6x24xi8>
+  return %sharding3 : tensor<6x48xi8>
+}
+
+// CHECK-LABEL: func.func @unsplit_last_axes_all(
+// CHECK-SAME: [[varg0:%.*]]: tensor<2x48xi8>) -> tensor<48x48xi8> {
+func.func @unsplit_last_axes_all(%in2: tensor<48x48xi8>) -> tensor<48x48xi8> {
+  %sharding0 = shard.sharding @grid_4d split_axes = [[0,1,2]] : !shard.sharding
+  %sharding1 = shard.shard %in2 to %sharding0 : tensor<48x48xi8>
+  %sharding2 = shard.sharding @grid_4d split_axes = [[]] : !shard.sharding
+  %sharding3 = shard.shard %sharding1 to %sharding2 annotate_for_users : tensor<48x48xi8>
+  // CHECK: [[vall_gather:%.*]] = shard.all_gather [[varg0]] on @grid_4d grid_axes = [0, 1, 2] gather_axis = 0 : tensor<2x48xi8> -> tensor<48x48xi8>
+  // CHECK: return [[vall_gather]] : tensor<48x48xi8>
+  return %sharding3 : tensor<48x48xi8>
+}
+
+// CHECK-LABEL: func.func @unsplit_all_dims(
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x2x4x5xi8>) -> tensor<6x10x16x15xi8> {
+func.func @unsplit_all_dims(%arg: tensor<6x10x16x15xi8>) -> tensor<6x10x16x15xi8> {
+  %sharding1 = shard.sharding @grid_4d split_axes = [[0], [3], [2], [1]] : !shard.sharding
+  %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x16x15xi8>
+  %sharding2 = shard.sharding @grid_4d split_axes = [[], []] : !shard.sharding
+  %res_sharded = shard.shard %arg_sharded to %sharding2 annotate_for_users : tensor<6x10x16x15xi8>
+  // CHECK: [[vall_gather:%.*]] = shard.all_gather [[varg0]] on @grid_4d grid_axes = [0] gather_axis = 0 : tensor<3x2x4x5xi8> -> tensor<6x2x4x5xi8>
+  // CHECK: [[vall_gather_0:%.*]] = shard.all_gather [[vall_gather]] on @grid_4d grid_axes = [3] gather_axis = 1 : tensor<6x2x4x5xi8> -> tensor<6x10x4x5xi8>
+  // CHECK: [[vall_gather_1:%.*]] = shard.all_gather [[vall_gather_0]] on @grid_4d grid_axes = [2] gather_axis = 2 : tensor<6x10x4x5xi8> -> tensor<6x10x16x5xi8>
+  // CHECK: [[vall_gather_2:%.*]] = shard.all_gather [[vall_gather_1]] on @grid_4d grid_axes = [1] gather_axis = 3 : tensor<6x10x16x5xi8> -> tensor<6x10x16x15xi8>
+  // CHECK: return [[vall_gather_2]] : tensor<6x10x16x15xi8>
+  return %res_sharded : tensor<6x10x16x15xi8>
+}
+
+// CHECK-LABEL: func.func @unsplit_some_dims(
+// CHECK-SAME: [[varg0:%.*]]: tensor<6x2x4x15xi8>) -> tensor<6x10x16x15xi8> {
+func.func @unsplit_some_dims(%arg: tensor<6x10x16x15xi8>) -> tensor<6x10x16x15xi8> {
+  %sharding1 = shard.sharding @grid_4d split_axes = [[], [3], [2], []] : !shard.sharding
+  %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x16x15xi8>
+  %sharding2 = shard.sharding @grid_4d split_axes = [[]] : !shard.sharding
+  %res_sharded = shard.shard %arg_sharded to %sharding2 annotate_for_users : tensor<6x10x16x15xi8>
+  // CHECK: [[vall_gather:%.*]] = shard.all_gather [[varg0]] on @grid_4d grid_axes = [3] gather_axis = 1 : tensor<6x2x4x15xi8> -> tensor<6x10x4x15xi8>
+  // CHECK: [[vall_gather_0:%.*]] = shard.all_gather [[vall_gather]] on @grid_4d grid_axes = [2] gather_axis = 2 : tensor<6x10x4x15xi8> -> tensor<6x10x16x15xi8>
+  // CHECK: return [[vall_gather_0]] : tensor<6x10x16x15xi8>
+  return %res_sharded : tensor<6x10x16x15xi8>
+}
 
 // CHECK-LABEL: func @move_split_axis
 func.func @move_split_axis(
@@ -65,6 +119,59 @@ func.func @move_split_axis(
   %1 = shard.shard %0 to %s1  annotate_for_users : tensor<2x2xi8>
   // CHECK: return %[[ALL_TO_ALL]] : tensor<2x1xi8>
   return %1 : tensor<2x2xi8>
+}
+
+// CHECK-LABEL: func.func @unsplit_and_split(
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x10x2x15xi8> {
+func.func @unsplit_and_split(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15xi8> {
+  %sharding1 = shard.sharding @grid_4d split_axes = [[0], [], [1,2]] : !shard.sharding
+  %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x120x15xi8>
+  %sharding2 = shard.sharding @grid_4d split_axes = [[], [], [1,2,3]] : !shard.sharding
+  %res_sharded = shard.shard %arg_sharded to %sharding2 annotate_for_users : tensor<6x10x120x15xi8>
+  // CHECK: [[vall_gather:%.*]] = shard.all_gather [[varg0]] on @grid_4d grid_axes = [0] gather_axis = 0 : tensor<3x10x10x15xi8> -> tensor<6x10x10x15xi8>
+  // CHECK: [[vall_slice:%.*]] = shard.all_slice [[vall_gather]] on @grid_4d grid_axes = [3] slice_axis = 2 : tensor<6x10x10x15xi8> -> tensor<6x10x2x15xi8>
+  // CHECK: return [[vall_slice]] : tensor<6x10x2x15xi8>
+  return %res_sharded : tensor<6x10x120x15xi8>
+}
+
+// CHECK-LABEL: func.func @move_and_split(
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x5x2x15xi8> {
+func.func @move_and_split(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15xi8> {
+  %sharding1 = shard.sharding @grid_4d split_axes = [[0], [], [1,2]] : !shard.sharding
+  %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x120x15xi8>
+  %sharding2 = shard.sharding @grid_4d split_axes = [[], [0], [1,2,3]] : !shard.sharding
+  %res_sharded = shard.shard %arg_sharded to %sharding2 annotate_for_users : tensor<6x10x120x15xi8>
+  // CHECK: [[vall_to_all:%.*]] = shard.all_to_all [[varg0]] on @grid_4d grid_axes = [0] split_axis = 1 concat_axis = 0 : tensor<3x10x10x15xi8> -> tensor<6x5x10x15xi8>
+  // CHECK: [[vall_slice:%.*]] = shard.all_slice [[vall_to_all]] on @grid_4d grid_axes = [3] slice_axis = 2 : tensor<6x5x10x15xi8> -> tensor<6x5x2x15xi8>
+  // CHECK: return [[vall_slice]] : tensor<6x5x2x15xi8>
+  return %res_sharded : tensor<6x10x120x15xi8>
+}
+
+// CHECK-LABEL: func.func @move_and_unsplit(
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x10x10x15xi8>) -> tensor<6x5x40x15xi8> {
+func.func @move_and_unsplit(%arg: tensor<6x10x120x15xi8>) -> tensor<6x10x120x15xi8> {
+  %sharding1 = shard.sharding @grid_4d split_axes = [[0], [], [1,2]] : !shard.sharding
+  %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x10x120x15xi8>
+  %sharding2 = shard.sharding @grid_4d split_axes = [[], [0], [1]] : !shard.sharding
+  %res_sharded = shard.shard %arg_sharded to %sharding2 annotate_for_users : tensor<6x10x120x15xi8>
+  // CHECK: [[vall_to_all:%.*]] = shard.all_to_all [[varg0]] on @grid_4d grid_axes = [0] split_axis = 1 concat_axis = 0 : tensor<3x10x10x15xi8> -> tensor<6x5x10x15xi8>
+  // CHECK: [[vall_gather:%.*]] = shard.all_gather [[vall_to_all]] on @grid_4d grid_axes = [2] gather_axis = 2 : tensor<6x5x10x15xi8> -> tensor<6x5x40x15xi8>
+  // CHECK: return [[vall_gather]] : tensor<6x5x40x15xi8>
+  return %res_sharded : tensor<6x10x120x15xi8>
+}
+
+// CHECK-LABEL: func.func @unsplit_move_split(
+// CHECK-SAME: [[varg0:%.*]]: tensor<3x5x120x3xi8>) -> tensor<6x20x30x1xi8>
+func.func @unsplit_move_split(%arg: tensor<6x20x120x15xi8>) -> tensor<6x20x120x15xi8> {
+  %sharding1 = shard.sharding @grid_4d split_axes = [[0], [2], [], [3]] : !shard.sharding
+  %arg_sharded = shard.shard %arg to %sharding1 : tensor<6x20x120x15xi8>
+  %sharding2 = shard.sharding @grid_4d split_axes = [[], [], [2], [3, 1]] : !shard.sharding
+  %res_sharded = shard.shard %arg_sharded to %sharding2 annotate_for_users : tensor<6x20x120x15xi8>
+  // CHECK: [[vall_gather:%.*]] = shard.all_gather [[varg0]] on @grid_4d grid_axes = [0] gather_axis = 0 : tensor<3x5x120x3xi8> -> tensor<6x5x120x3xi8>
+  // CHECK: [[vall_to_all:%.*]] = shard.all_to_all [[vall_gather]] on @grid_4d grid_axes = [2] split_axis = 2 concat_axis = 1 : tensor<6x5x120x3xi8> -> tensor<6x20x30x3xi8>
+  // CHECK: [[vall_slice:%.*]] = shard.all_slice [[vall_to_all]] on @grid_4d grid_axes = [1] slice_axis = 3 : tensor<6x20x30x3xi8> -> tensor<6x20x30x1xi8>
+  // CHECK: return [[vall_slice]] : tensor<6x20x30x1xi8>
+  return %res_sharded : tensor<6x20x120x15xi8>
 }
 
 // CHECK-LABEL: func @non_tensor_value
@@ -204,8 +311,6 @@ func.func @incomplete_sharding(
   return %3 : tensor<8x16xf32>
 }
 
-shard.grid @grid_1d_4(shape = 4)
-
 // CHECK-LABEL: func @ew_chain_with_halo
 func.func @ew_chain_with_halo(
   // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<5x16xf32>
@@ -317,4 +422,57 @@ func.func @test_reduce_1d(%arg0: tensor<6x6xi32>) -> (tensor<6xi32>) {
   %sharded_ret = shard.shard %sharded_red to %sharding annotate_for_users : tensor<6xi32>
   // CHECK: return %[[reduced]] : tensor<3xi32>
   return %sharded_ret : tensor<6xi32>
+}
+
+// CHECK-LABEL: func.func @mlp_1d_weight_stationary
+// CHECK-SAME: [[varg0:%.*]]: tensor<512x512xf32>, [[varg1:%.*]]: tensor<2048x256xf32>, [[varg2:%.*]]: tensor<256x2048xf32>) -> tensor<512x2048xf32>
+func.func @mlp_1d_weight_stationary(%arg0: tensor<512x2048xf32>, %arg1: tensor<2048x1024xf32>, %arg2: tensor<1024x2048xf32>) -> tensor<512x2048xf32> attributes {llvm.emit_c_interface} {
+  // CHECK: [[vcst:%.*]] = arith.constant 0.000000e+00 : f32
+  %sharding = shard.sharding @grid_1d_4 split_axes = [[], [0]] : !shard.sharding
+  %sharding_0 = shard.sharding @grid_1d_4 split_axes = [[0], []] : !shard.sharding
+  %sharding_1 = shard.sharding @grid_1d_4 split_axes = [[]] : !shard.sharding
+  %sharding_2 = shard.sharding @grid_1d_4 split_axes = [[], [0]] : !shard.sharding
+  %sharding_3 = shard.sharding @grid_1d_4 split_axes = [[], [0]] : !shard.sharding
+  %sharding_4 = shard.sharding @grid_1d_4 split_axes = [[0], []] : !shard.sharding
+  %sharding_5 = shard.sharding @grid_1d_4 split_axes = [[]] : !shard.sharding
+  %sharding_annotated = shard.shard %arg0 to %sharding_2 : tensor<512x2048xf32>
+  %sharding_annotated_6 = shard.shard %arg1 to %sharding_3 : tensor<2048x1024xf32>
+  %sharding_annotated_7 = shard.shard %arg2 to %sharding_4 : tensor<1024x2048xf32>
+  // CHECK-DAG: [[v0:%.*]] = tensor.empty() : tensor<512x256xf32>
+  %0 = tensor.empty() : tensor<512x1024xf32>
+  %sharding_annotated_8 = shard.shard %0 to %sharding : tensor<512x1024xf32>
+  %cst = arith.constant 0.000000e+00 : f32
+  %sharding_annotated_9 = shard.shard %sharding_annotated_8 to %sharding annotate_for_users : tensor<512x1024xf32>
+  // CHECK-DAG: [[v1:%.*]] = linalg.fill ins([[vcst]] : f32) outs([[v0]] : tensor<512x256xf32>) -> tensor<512x256xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%sharding_annotated_9 : tensor<512x1024xf32>) -> tensor<512x1024xf32>
+  %sharding_annotated_10 = shard.shard %1 to %sharding : tensor<512x1024xf32>
+  // CHECK-DAG: [[vall_gather:%.*]] = shard.all_gather [[varg0]] on @grid_1d_4 grid_axes = [0] gather_axis = 1 : tensor<512x512xf32> -> tensor<512x2048xf32>
+  %sharding_annotated_11 = shard.shard %sharding_annotated to %sharding_1 annotate_for_users : tensor<512x2048xf32>
+  %sharding_annotated_12 = shard.shard %sharding_annotated_6 to %sharding annotate_for_users : tensor<2048x1024xf32>
+  %sharding_annotated_13 = shard.shard %sharding_annotated_10 to %sharding annotate_for_users : tensor<512x1024xf32>
+  // CHECK: [[v2:%.*]] = linalg.matmul ins([[vall_gather]], [[varg1]] : tensor<512x2048xf32>, tensor<2048x256xf32>) outs([[v1]] : tensor<512x256xf32>) -> tensor<512x256xf32>
+  %2 = linalg.matmul ins(%sharding_annotated_11, %sharding_annotated_12 : tensor<512x2048xf32>, tensor<2048x1024xf32>) outs(%sharding_annotated_13 : tensor<512x1024xf32>) -> tensor<512x1024xf32>
+  %sharding_annotated_14 = shard.shard %2 to %sharding : tensor<512x1024xf32>
+  %sharding_annotated_15 = shard.shard %sharding_annotated_14 to %sharding annotate_for_users : tensor<512x1024xf32>
+  // CHECK: [[v3:%.*]] = tosa.sigmoid [[v2]] : (tensor<512x256xf32>) -> tensor<512x256xf32>
+  %3 = tosa.sigmoid %sharding_annotated_15 : (tensor<512x1024xf32>) -> tensor<512x1024xf32>
+  %sharding_annotated_16 = shard.shard %3 to %sharding : tensor<512x1024xf32>
+  // CHECK: [[v9:%.*]] = tensor.empty() : tensor<512x2048xf32>
+  %4 = tensor.empty() : tensor<512x2048xf32>
+  %sharding_annotated_17 = shard.shard %4 to %sharding_1 : tensor<512x2048xf32>
+  %sharding_annotated_18 = shard.shard %sharding_annotated_17 to %sharding_1 annotate_for_users : tensor<512x2048xf32>
+  // CHECK: [[v10:%.*]] = linalg.fill ins([[vcst]] : f32) outs([[v9]] : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %5 = linalg.fill ins(%cst : f32) outs(%sharding_annotated_18 : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %sharding_annotated_19 = shard.shard %5 to %sharding_1 : tensor<512x2048xf32>
+  %sharding_annotated_20 = shard.shard %sharding_annotated_16 to %sharding annotate_for_users : tensor<512x1024xf32>
+  %sharding_annotated_21 = shard.shard %sharding_annotated_7 to %sharding_0 annotate_for_users : tensor<1024x2048xf32>
+  %sharding_annotated_22 = shard.shard %sharding_annotated_19 to %sharding_1 annotate_for_users : tensor<512x2048xf32>
+  // CHECK: [[v7:%.*]] = scf.if
+  // CHECK: [[v8:%.*]] = linalg.matmul ins([[v3]], [[varg2]] : tensor<512x256xf32>, tensor<256x2048xf32>) outs([[v7]] : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %6 = linalg.matmul ins(%sharding_annotated_20, %sharding_annotated_21 : tensor<512x1024xf32>, tensor<1024x2048xf32>) outs(%sharding_annotated_22 : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %sharding_annotated_23 = shard.shard %6 to %sharding_1 : tensor<512x2048xf32>
+  // CHECK: [[vall_reduce:%.*]] = shard.all_reduce [[v8]] on @grid_1d_4 grid_axes = [0] : tensor<512x2048xf32> -> tensor<512x2048xf32>
+  %sharding_annotated_24 = shard.shard %sharding_annotated_23 to %sharding_5 annotate_for_users : tensor<512x2048xf32>
+  // CHECK: return [[vall_reduce]] : tensor<512x2048xf32>
+  return %sharding_annotated_24 : tensor<512x2048xf32>
 }

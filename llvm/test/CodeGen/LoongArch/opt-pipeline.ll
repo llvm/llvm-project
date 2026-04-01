@@ -21,8 +21,8 @@
 ; LAXX-NEXT: Target Pass Configuration
 ; LAXX-NEXT: Machine Module Information
 ; LAXX-NEXT: Target Transform Information
-; LAXX-NEXT: Library Function Lowering Analysis
 ; LAXX-NEXT: Assumption Cache Tracker
+; LAXX-NEXT: Library Function Lowering Analysis
 ; LAXX-NEXT: Type-Based Alias Analysis
 ; LAXX-NEXT: Scoped NoAlias Alias Analysis
 ; LAXX-NEXT: Profile summary info
@@ -31,6 +31,11 @@
 ; LAXX-NEXT: Default Regalloc Eviction Advisor
 ; LAXX-NEXT: Default Regalloc Priority Advisor
 ; LAXX-NEXT:   ModulePass Manager
+; LAXX-NEXT:     FunctionPass Manager
+; LAXX-NEXT:       Dominator Tree Construction
+; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
+; LAXX-NEXT:       Function Alias Analysis Results
+; LAXX-NEXT:       ObjC ARC contraction
 ; LAXX-NEXT:     Pre-ISel Intrinsic Lowering
 ; LAXX-NEXT:     FunctionPass Manager
 ; LAXX-NEXT:       Expand IR instructions
@@ -70,13 +75,13 @@
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Type Promotion
+; LAXX-NEXT:       Post-Dominator Tree Construction
+; LAXX-NEXT:       Branch Probability Analysis
+; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
-; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
-; LAXX-NEXT:       Function Alias Analysis Results
-; LAXX-NEXT:       ObjC ARC contraction
-; LAXX-NEXT:       Prepare callbr
+; LAXX-NEXT:       Prepare inline asm insts
 ; LAXX-NEXT:       Safe Stack instrumentation pass
 ; LAXX-NEXT:       Insert stack protectors
 ; LAXX-NEXT:       Module Verifier

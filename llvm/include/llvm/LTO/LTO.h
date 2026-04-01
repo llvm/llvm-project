@@ -65,7 +65,8 @@ LLVM_ABI void thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing);
+        isPrevailing,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
 
 /// Computes a unique hash for the Module considering the current list of
 /// export/import and other global analysis results.
@@ -366,13 +367,15 @@ LLVM_ABI ThinBackend createInProcessThinBackend(
 /// backend compilations.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
 /// backend from being cleaned up.
+/// AddBuffer is used to add a pre-existing native object buffer to the link.
 LLVM_ABI ThinBackend createOutOfProcessThinBackend(
     ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite,
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
     ArrayRef<StringRef> RemoteCompilerPrependArgs,
-    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
+    AddBufferFn AddBuffer);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
@@ -465,10 +468,10 @@ public:
 
 protected:
   // Called at the start of run().
-  virtual Error handleArchiveInputs() { return Error::success(); }
+  virtual Error serializeInputsForDistribution() { return Error::success(); }
 
   // Called before returning from run().
-  virtual void cleanup() {}
+  virtual void cleanup();
 
 private:
   Config Conf;
@@ -642,7 +645,23 @@ private:
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
 
+  // A dummy module to host the dummy function.
+  std::unique_ptr<Module> DummyModule;
+
+  // A dummy function created in a private module to provide a context for
+  // LTO-link optimization remarks. This is needed for ThinLTO where we
+  // may not have any IR functions available, because the optimization remark
+  // handling requires a function.
+  Function *LinkerRemarkFunction = nullptr;
+
+  // Setup optimization remarks according to the provided configuration.
+  Error setupOptimizationRemarks();
+
 public:
+  /// Helper to emit an optimization remark during the LTO link when outside of
+  /// the standard optimization pass pipeline.
+  void emitRemark(OptimizationRemark &Remark);
+
   virtual Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());

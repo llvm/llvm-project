@@ -1170,10 +1170,12 @@ def VPICKVE2GR_HU : LSX2RI3_RVI<0x72f3c000>;
 def VPICKVE2GR_WU : LSX2RI2_RVI<0x72f3e000>;
 def VPICKVE2GR_DU : LSX2RI1_RVI<0x72f3f000>;
 
+let isReMaterializable = 1 in {
 def VREPLGR2VR_B : LSX2R_VR<0x729f0000>;
 def VREPLGR2VR_H : LSX2R_VR<0x729f0400>;
 def VREPLGR2VR_W : LSX2R_VR<0x729f0800>;
 def VREPLGR2VR_D : LSX2R_VR<0x729f0c00>;
+}
 
 def VREPLVE_B : LSX3R_VVR<0x71220000>;
 def VREPLVE_H : LSX3R_VVR<0x71228000>;
@@ -1907,20 +1909,20 @@ def : Pat<(vector_insert v2f64:$vd, (f64 (bitconvert i64:$rj)), uimm1:$imm),
 foreach imm = 0...3 in {
   defvar Imm = !shl(imm, 4);
   def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, imm),
-            (VEXTRINS_W $vd, (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), Imm)>;
+            (VEXTRINS_W $vd, (SUBREG_TO_REG FPR32:$fj, sub_32), Imm)>;
 }
 
 foreach imm = 0...1 in {
   defvar Imm = !shl(imm, 4);
   def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, imm),
-            (VEXTRINS_D $vd, (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), Imm)>;
+            (VEXTRINS_D $vd, (SUBREG_TO_REG FPR64:$fj, sub_64), Imm)>;
 }
 
 // scalar_to_vector
 def : Pat<(v4f32 (scalar_to_vector FPR32:$fj)),
-          (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32)>;
+          (SUBREG_TO_REG FPR32:$fj, sub_32)>;
 def : Pat<(v2f64 (scalar_to_vector FPR64:$fj)),
-          (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64)>;
+          (SUBREG_TO_REG FPR64:$fj, sub_64)>;
 
 // VPICKVE2GR_{B/H/W}[U]
 def : Pat<(loongarch_vpick_sext_elt v16i8:$vd, uimm4:$imm, i8),
@@ -2090,9 +2092,9 @@ def : Pat<(loongarch_vreplvei v2f64:$vj, immZExt1:$ui1),
 
 // VREPLVEI_{W/D}
 def : Pat<(lsxsplatf32 FPR32:$fj),
-          (VREPLVEI_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)>;
+          (VREPLVEI_W (SUBREG_TO_REG FPR32:$fj, sub_32), 0)>;
 def : Pat<(lsxsplatf64 FPR64:$fj),
-          (VREPLVEI_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)>;
+          (VREPLVEI_D (SUBREG_TO_REG FPR64:$fj, sub_64), 0)>;
 
 defm : VstelmPat<truncstorei8, v16i8, VSTELM_B, simm8, uimm4>;
 defm : VstelmPat<truncstorei16, v8i16, VSTELM_H, simm8_lsl1, uimm3>;
@@ -2547,28 +2549,28 @@ def : Pat<(loongarch_vfrsqrte v2f64:$src),
 // Vector floating-point conversion
 def : Pat<(f32 (fceil FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRP_S (VREPLVEI_W
-               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
 def : Pat<(f64 (fceil FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRP_D (VREPLVEI_D
-               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
 def : Pat<(f32 (ffloor FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRM_S (VREPLVEI_W
-               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
 def : Pat<(f64 (ffloor FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRM_D (VREPLVEI_D
-               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
 def : Pat<(f32 (ftrunc FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRZ_S (VREPLVEI_W
-               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
 def : Pat<(f64 (ftrunc FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRZ_D (VREPLVEI_D
-               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
 def : Pat<(f32 (froundeven FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRNE_S (VREPLVEI_W
-               (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)), sub_32))>;
+               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
 def : Pat<(f64 (froundeven FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
-               (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
 
 defm : PatVrF<fceil, "VFRINTRP">;
 defm : PatVrF<ffloor, "VFRINTRM">;

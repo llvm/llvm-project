@@ -1297,6 +1297,7 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::string &argName);
 
 bool IsCUDADeviceSymbol(const Symbol &sym);
+bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1349,10 +1350,17 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
+  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
+      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Managed arrays initialization is performed on the device.
+  }
+
   // Special cases performed on the host:
   // - Only managed or unifed symbols are involved on RHS and LHS.
   // - LHS is managed or unified and the RHS is host only.
   if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+      (lhsNbManagedSymbols == 0 && rhsNbManagedSymbols >= 1 &&
+          rhsNbManagedSymbols == rhsNbSymbols) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }
@@ -1637,6 +1645,9 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
+
+// Given a Cray pointee symbol, returns the related Cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 } // namespace Fortran::semantics
 

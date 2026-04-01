@@ -273,16 +273,16 @@ bool ObjectFileWasm::DecodeSections() {
   return true;
 }
 
-size_t ObjectFileWasm::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!ValidateModuleHeader(extractor_sp->GetData())) {
-    return 0;
-  }
+ModuleSpecList
+ObjectFileWasm::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
+  if (!ValidateModuleHeader(extractor_sp->GetData()))
+    return {};
 
-  ModuleSpec spec(file, ArchSpec("wasm32-unknown-unknown-wasm"));
-  specs.Append(spec);
-  return 1;
+  ModuleSpecList specs;
+  specs.Append(ModuleSpec(file, ArchSpec("wasm32-unknown-unknown-wasm")));
+  return specs;
 }
 
 ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
@@ -626,8 +626,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         file_offset,    // Offset of this section in the file.
         sect_info.size, // Size of the section as found in the file.
         0,              // Alignment of the section
-        0,              // Flags for this section.
-        1);             // Number of host bytes per target byte
+        0);             // Flags for this section.
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }

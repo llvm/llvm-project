@@ -43,6 +43,26 @@ static_assert(NumBuiltins ==
                NumSVENeonBridgeBuiltins + NumSMEBuiltins + NumAArch64Builtins));
 
 namespace clang {
+namespace AArch64 {
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsAArch64.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsAArch64.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsAArch64.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumAArch64Builtins);
+} // namespace AArch64
+
 namespace NEON {
 #define GET_NEON_BUILTIN_STR_TABLE
 #include "clang/Basic/arm_neon.inc"
@@ -100,13 +120,6 @@ static constexpr llvm::StringTable BuiltinSVENeonBridgeStrings =
 #undef GET_SVE_BUILTINS
 #undef TARGET_BUILTIN
     ;
-static constexpr llvm::StringTable BuiltinAArch64Strings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsAArch64.def"
-    ;
 
 static constexpr auto BuiltinSVENeonBridgeInfos =
     Builtin::MakeInfos<NumSVENeonBridgeBuiltins>({
@@ -115,14 +128,6 @@ static constexpr auto BuiltinSVENeonBridgeInfos =
 #include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
 #undef GET_SVE_BUILTINS
 #undef TARGET_BUILTIN
-    });
-static constexpr auto BuiltinAArch64Infos =
-    Builtin::MakeInfos<NumAArch64Builtins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsAArch64.def"
     });
 
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
@@ -775,7 +780,9 @@ AArch64TargetInfo::getTargetBuiltins() const {
       {&SVE::BuiltinStrings, SVE::BuiltinInfos, "__builtin_sve_"},
       {&BuiltinSVENeonBridgeStrings, BuiltinSVENeonBridgeInfos},
       {&SME::BuiltinStrings, SME::BuiltinInfos, "__builtin_sme_"},
-      {&BuiltinAArch64Strings, BuiltinAArch64Infos},
+      {&AArch64::BuiltinStrings, AArch64::BuiltinInfos},
+      {&AArch64::BuiltinStrings, AArch64::PrefixedBuiltinInfos,
+       "__builtin_arm_"},
   };
 }
 
@@ -839,8 +846,30 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return true;
 }
 
-bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
-  return llvm::StringSwitch<bool>(Feature)
+/// A helper class for "hasFeature" lookups (mimicking a StringSwitch).
+struct FeatureLookupBuilder {
+  FeatureLookupBuilder(AArch64FeatureSet &Features) : Features(Features) {
+    Features.clear();
+  }
+
+  FeatureLookupBuilder &Case(StringRef Feat, bool HasFeature) {
+    if (HasFeature)
+      Features.insert(Feat);
+    return *this;
+  }
+
+  FeatureLookupBuilder &Cases(ArrayRef<StringRef> Feats, bool HasFeature) {
+    if (HasFeature)
+      Features.insert_range(Feats);
+    return *this;
+  }
+
+private:
+  AArch64FeatureSet &Features;
+};
+
+void AArch64TargetInfo::computeFeatureLookup() {
+  FeatureLookupBuilder(HasFeatureLookup)
       .Cases({"aarch64", "arm64", "arm"}, true)
       .Case("fmv", HasFMV)
       .Case("fp", FPU & FPUMode)
@@ -911,8 +940,11 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve-aes2", HasSVE_AES2)
       .Case("ssve-aes", HasSSVE_AES)
       .Case("sve2p2", FPU & SveMode && HasSVE2p2)
-      .Case("sme2p2", HasSME2p2)
-      .Default(false);
+      .Case("sme2p2", HasSME2p2);
+}
+
+bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
+  return HasFeatureLookup.contains(Feature);
 }
 
 void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
@@ -1286,6 +1318,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (HasNoSVE)
     FPU &= ~SveMode;
 
+  computeFeatureLookup();
   return true;
 }
 
@@ -1843,8 +1876,10 @@ void clang::targets::getAppleMachOAArch64Defines(MacroBuilder &Builder,
   Builder.defineMacro("__arm64", "1");
   Builder.defineMacro("__arm64__", "1");
 
-  if (Triple.isArm64e())
+  if (Triple.isArm64e()) {
     Builder.defineMacro("__arm64e__", "1");
+    Builder.defineMacro("__PTRAUTH_INTRINSICS__", "1");
+  }
 }
 
 void AppleMachOAArch64TargetInfo::getOSDefines(const LangOptions &Opts,

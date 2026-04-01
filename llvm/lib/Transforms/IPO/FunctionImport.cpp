@@ -1107,9 +1107,8 @@ void ModuleImportsManager::computeImportForModule(
     auto *Summary = std::get<0>(GVInfo);
     auto Threshold = std::get<1>(GVInfo);
 
-    if (auto *FS = dyn_cast<FunctionSummary>(Summary))
-      computeImportForFunction(*FS, Threshold, DefinedGVSummaries, Worklist,
-                               GVI, ImportList, ImportThresholds);
+    computeImportForFunction(*Summary, Threshold, DefinedGVSummaries, Worklist,
+                             GVI, ImportList, ImportThresholds);
   }
 
   // Print stats about functions considered but rejected for importing
@@ -2106,7 +2105,7 @@ static bool doImportingForModuleForTest(
   for (auto &I : *Index) {
     for (auto &S : I.second.getSummaryList()) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
+        S->setExternalLinkageForTest();
     }
   }
 

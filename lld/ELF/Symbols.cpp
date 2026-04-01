@@ -88,8 +88,16 @@ static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
     // To make this work, we incorporate the addend into the section
     // offset (and zero out the addend for later processing) so that
     // we find the right object in the section.
-    if (d.isSection())
+    if (d.isSection()) {
       offset += addend;
+      if (auto *ms = dyn_cast<MergeInputSection>(isec);
+          ms && offset >= ms->content().size()) {
+        if (offset > ms->content().size())
+          Err(ctx) << ms << ": offset 0x" << Twine::utohexstr(offset)
+                   << " is outside the section";
+        return 0;
+      }
+    }
 
     // In the typical case, this is actually very simple and boils
     // down to adding together 3 numbers:
@@ -501,6 +509,12 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // reference is weak.
     if (other.binding != STB_WEAK || !referenced)
       binding = other.binding;
+    // -u creates a placeholder Undefined (internalFile, STT_NOTYPE).
+    // Adopt the real file and type from the object file's undefined.
+    if (file == ctx.internalFile) {
+      file = other.file;
+      type = other.type;
+    }
   }
 }
 

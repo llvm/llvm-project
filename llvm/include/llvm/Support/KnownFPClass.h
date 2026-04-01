@@ -225,6 +225,10 @@ struct KnownFPClass {
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
+  /// Report known values for a bitcast into a float with provided semantics.
+  LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
+                                       const KnownBits &Bits);
+
   /// Report known values for fadd
   LLVM_ABI static KnownFPClass
   fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
@@ -255,6 +259,10 @@ struct KnownFPClass {
     Known.propagateNaN(Src);
     return Known;
   }
+
+  LLVM_ABI static KnownFPClass
+  fmul(const KnownFPClass &LHS, const APFloat &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Report known values for fdiv
   LLVM_ABI static KnownFPClass

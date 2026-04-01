@@ -130,7 +130,6 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
   auto [EntriesB, EntriesE] = EntryArray;
 
   auto *Zero = ConstantInt::get(getSizeTTy(M), 0u);
-  Constant *ZeroZero[] = {Zero, Zero};
 
   // Create initializer for the images array.
   SmallVector<Constant *, 4u> ImagesInits;
@@ -161,7 +160,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
               Binary.bytes_begin());
       const auto *Entry =
           reinterpret_cast<const object::OffloadBinary::Entry *>(
-              Binary.bytes_begin() + Header->EntryOffset);
+              Binary.bytes_begin() + Header->EntriesOffset);
       BeginOffset = Entry->ImageOffset;
       EndOffset = Entry->ImageOffset + Entry->ImageSize;
     }
@@ -190,13 +189,10 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
                          ".omp_offloading.device_images" + Suffix);
   Images->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
-  auto *ImagesB =
-      ConstantExpr::getGetElementPtr(Images->getValueType(), Images, ZeroZero);
-
   // And finally create the binary descriptor object.
   auto *DescInit = ConstantStruct::get(
       getBinDescTy(M),
-      ConstantInt::get(Type::getInt32Ty(C), ImagesInits.size()), ImagesB,
+      ConstantInt::get(Type::getInt32Ty(C), ImagesInits.size()), Images,
       EntriesB, EntriesE);
 
   return new GlobalVariable(M, DescInit->getType(), /*isConstant=*/true,
@@ -542,18 +538,8 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
   Builder.SetInsertPoint(IfEndBB);
   auto *NewEntry = Builder.CreateInBoundsGEP(
       offloading::getEntryTy(M), Entry, ConstantInt::get(getSizeTTy(M), 1));
-  auto *Cmp = Builder.CreateICmpEQ(
-      NewEntry,
-      ConstantExpr::getInBoundsGetElementPtr(
-          ArrayType::get(offloading::getEntryTy(M), 0), EntriesE,
-          ArrayRef<Constant *>({ConstantInt::get(getSizeTTy(M), 0),
-                                ConstantInt::get(getSizeTTy(M), 0)})));
-  Entry->addIncoming(
-      ConstantExpr::getInBoundsGetElementPtr(
-          ArrayType::get(offloading::getEntryTy(M), 0), EntriesB,
-          ArrayRef<Constant *>({ConstantInt::get(getSizeTTy(M), 0),
-                                ConstantInt::get(getSizeTTy(M), 0)})),
-      &RegGlobalsFn->getEntryBlock());
+  auto *Cmp = Builder.CreateICmpEQ(NewEntry, EntriesE);
+  Entry->addIncoming(EntriesB, &RegGlobalsFn->getEntryBlock());
   Entry->addIncoming(NewEntry, IfEndBB);
   Builder.CreateCondBr(Cmp, ExitBB, EntryBB);
   Builder.SetInsertPoint(ExitBB);
@@ -903,9 +889,7 @@ private:
         new GlobalVariable(M, Arr->getType(), /*isConstant*/ true,
                            GlobalVariable::InternalLinkage, Arr, Name);
     Var->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    ConstantInt *Zero = ConstantInt::get(getSizeTTy(), 0);
-    Constant *ZeroZero[] = {Zero, Zero};
-    return ConstantExpr::getGetElementPtr(Var->getValueType(), Var, ZeroZero);
+    return Var;
   }
 
   /// Each image contains its own set of symbols, which may contain different
@@ -916,14 +900,19 @@ private:
   std::pair<Constant *, Constant *>
   initOffloadEntriesPerImage(StringRef Entries, const Twine &OffloadKindTag) {
     SmallVector<Constant *> EntriesInits;
-    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-        Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
-    for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
-      GlobalVariable *GV =
-          emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL,
-                              Constant::getNullValue(PointerType::getUnqual(C)),
-                              /*Name*/ *LI, /*Size*/ 0,
-                              /*Flags*/ 0, /*Data*/ 0);
+    const char *Current = Entries.data();
+    const char *End = Current + Entries.size();
+    while (Current < End) {
+      StringRef Name(Current);
+      Current += Name.size() + 1;
+
+      if (Name.empty())
+        continue;
+
+      GlobalVariable *GV = emitOffloadingEntry(
+          M, /*Kind*/ OffloadKind::OFK_SYCL,
+          Constant::getNullValue(PointerType::getUnqual(C)), Name, /*Size*/ 0,
+          /*Flags*/ 0, /*Data*/ 0);
       EntriesInits.push_back(GV->getInitializer());
     }
 
@@ -997,18 +986,13 @@ private:
                            Twine(OffloadKindTag) + "device_images");
     ImagesGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
-    ConstantInt *Zero = ConstantInt::get(getSizeTTy(), 0);
-    Constant *ZeroZero[] = {Zero, Zero};
-    Constant *ImagesB = ConstantExpr::getGetElementPtr(ImagesGV->getValueType(),
-                                                       ImagesGV, ZeroZero);
-
     Constant *EntriesB = Constant::getNullValue(PointerType::getUnqual(C));
     Constant *EntriesE = Constant::getNullValue(PointerType::getUnqual(C));
     static constexpr uint16_t BinDescStructVersion = 1;
     Constant *DescInit = ConstantStruct::get(
         SyclBinDescTy,
         ConstantInt::get(Type::getInt16Ty(C), BinDescStructVersion),
-        ConstantInt::get(Type::getInt16Ty(C), WrappedImages.size()), ImagesB,
+        ConstantInt::get(Type::getInt16Ty(C), WrappedImages.size()), ImagesGV,
         EntriesB, EntriesE);
 
     return new GlobalVariable(M, DescInit->getType(), /*isConstant*/ true,

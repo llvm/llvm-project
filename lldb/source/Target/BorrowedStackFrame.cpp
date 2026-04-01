@@ -20,8 +20,8 @@ BorrowedStackFrame::BorrowedStackFrame(
           borrowed_frame_sp->GetThread(), new_frame_index,
           borrowed_frame_sp->GetConcreteFrameIndex(),
           borrowed_frame_sp->GetRegisterContextSP(),
-          borrowed_frame_sp->GetStackID().GetPC(),
           borrowed_frame_sp->GetStackID().GetCallFrameAddressWithoutMetadata(),
+          borrowed_frame_sp->GetStackID().GetPC(),
           borrowed_frame_sp->m_behaves_like_zeroth_frame,
           &borrowed_frame_sp->GetSymbolContext(eSymbolContextEverything)),
       m_borrowed_frame_sp(borrowed_frame_sp),
@@ -99,9 +99,9 @@ BorrowedStackFrame::GetInScopeVariableList(bool get_file_globals,
 
 ValueObjectSP BorrowedStackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error) {
+    VariableSP &var_sp, Status &error, lldb::DILMode mode) {
   return m_borrowed_frame_sp->GetValueForVariableExpressionPath(
-      var_expr, use_dynamic, options, var_sp, error);
+      var_expr, use_dynamic, options, var_sp, error, mode);
 }
 
 bool BorrowedStackFrame::HasDebugInformation() {

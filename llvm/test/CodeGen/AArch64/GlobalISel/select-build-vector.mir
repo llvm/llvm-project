@@ -250,7 +250,7 @@ body:             |
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %val:fpr32 = COPY $s0
-    ; CHECK-NEXT: %bv:fpr128 = SUBREG_TO_REG 0, %val, %subreg.ssub
+    ; CHECK-NEXT: %bv:fpr128 = SUBREG_TO_REG %val, %subreg.ssub
     ; CHECK-NEXT: $q0 = COPY %bv
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %val:fpr(s32) = COPY $s0

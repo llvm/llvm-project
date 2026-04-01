@@ -85,6 +85,12 @@ public:
       unsigned Opcode, Type *Ty, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond, bool UseMaskForGaps) const override;
+  InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
+                 const Instruction *CxtI = nullptr) const override;
+
   using BaseT::getVectorInstrCost;
   InstructionCost
   getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
@@ -97,10 +103,6 @@ public:
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind,
       std::optional<FastMathFlags> FMF) const override;
-
-  InstructionCost
-  getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                        TTI::TargetCostKind CostKind) const override;
 
   TTI::ReductionShuffle
   getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const override;

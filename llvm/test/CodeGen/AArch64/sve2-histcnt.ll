@@ -496,4 +496,54 @@ define void @histogram_sext_zero_mask(ptr %base, <vscale x 4 x i32> %indices, <v
   ret void
 }
 
+; Test that we don't use nxv4i32 offsets when the increment must be performed as i64's.
+define void @histogram_dont_optimize_index(ptr %p, i64 %inc, <vscale x 4 x i1> %mask, <vscale x 4 x i8> %offsets) #0 {
+; CHECK-LABEL: histogram_dont_optimize_index:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xff
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    mov z4.d, x1
+; CHECK-NEXT:    ptrue p2.d
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uunpklo z1.d, z0.s
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    histcnt z2.d, p1/z, z1.d, z1.d
+; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x0, z1.d, lsl #3]
+; CHECK-NEXT:    mad z2.d, p2/m, z4.d, z3.d
+; CHECK-NEXT:    st1d { z2.d }, p1, [x0, z1.d, lsl #3]
+; CHECK-NEXT:    histcnt z1.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0, z0.d, lsl #3]
+; CHECK-NEXT:    mad z1.d, p2/m, z4.d, z2.d
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0, z0.d, lsl #3]
+; CHECK-NEXT:    ret
+  %4 = zext <vscale x 4 x i8> %offsets to <vscale x 4 x i64>
+  %5 = getelementptr i64, ptr %p, <vscale x 4 x i64> %4
+  call void @llvm.experimental.vector.histogram.add.nxv16p0.i64(<vscale x 4 x ptr> %5, i64 %inc, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+; Test that we don't use nxv4i32 offsets when the increment must be performed as i64's.
+define void @histogram_sign_extend_index(ptr %p, i64 %inc, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %offsets) #0 {
+; CHECK-LABEL: histogram_sign_extend_index:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sunpklo z1.d, z0.s
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    mov z4.d, x1
+; CHECK-NEXT:    ptrue p2.d
+; CHECK-NEXT:    sunpkhi z0.d, z0.s
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    histcnt z2.d, p1/z, z1.d, z1.d
+; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x0, z1.d, lsl #3]
+; CHECK-NEXT:    mad z2.d, p2/m, z4.d, z3.d
+; CHECK-NEXT:    st1d { z2.d }, p1, [x0, z1.d, lsl #3]
+; CHECK-NEXT:    histcnt z1.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0, z0.d, lsl #3]
+; CHECK-NEXT:    mad z1.d, p2/m, z4.d, z2.d
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0, z0.d, lsl #3]
+; CHECK-NEXT:    ret
+  %5 = getelementptr i64, ptr %p, <vscale x 4 x i32> %offsets
+  call void @llvm.experimental.vector.histogram.add.nxv16p0.i64(<vscale x 4 x ptr> %5, i64 %inc, <vscale x 4 x i1> %mask)
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1, 16) }

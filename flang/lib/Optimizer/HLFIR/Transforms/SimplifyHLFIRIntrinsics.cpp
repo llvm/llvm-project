@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -381,6 +382,10 @@ template <bool IS_MAX>
 static mlir::Value
 genMinMaxComparison(mlir::Location loc, fir::FirOpBuilder &builder,
                     mlir::Value elem, mlir::Value reduction) {
+  // TODO: there is some opportunity to generalize this code with
+  // IntrinsicLibrary::genExtremum(), but one have to be careful
+  // to preserve the NaNs behavior (when needed) that is handled
+  // here with the three FP comparisons.
   if (mlir::isa<mlir::FloatType>(reduction.getType())) {
     // For FP reductions we want the first smallest value to be used, that
     // is not NaN. A OGL/OLT condition will usually work for this unless all
@@ -476,8 +481,10 @@ class MinMaxlocAsElementalConverter : public ReductionAsElementalConverter {
   using Base = ReductionAsElementalConverter;
 
 public:
-  MinMaxlocAsElementalConverter(T op, mlir::PatternRewriter &rewriter)
-      : Base{op.getOperation(), rewriter} {}
+  MinMaxlocAsElementalConverter(
+      T op, mlir::PatternRewriter &rewriter,
+      Fortran::common::FPMaxminBehavior fpMaxminBehavior)
+      : Base{op.getOperation(), rewriter}, fpMaxminBehavior{fpMaxminBehavior} {}
 
 private:
   virtual mlir::Value getSource() const final { return getOp().getArray(); }
@@ -558,6 +565,12 @@ private:
   // value to +/-LARGEST; the coordinates are guaranteed to be updated
   // properly for non-empty input without NaNs.
   bool useIsFirst() const { return getMask() && honorNans(); }
+
+  // Specifies the behavior of max/min idiom.
+  // TODO: for consistency, maxloc/minloc should probably take
+  // this control into account, though, we need to define what
+  // this means exactly.
+  [[maybe_unused]] Fortran::common::FPMaxminBehavior fpMaxminBehavior;
 };
 
 template <typename T>
@@ -762,8 +775,10 @@ class MinMaxvalAsElementalConverter
   using Base = NumericReductionAsElementalConverterBase<T>;
 
 public:
-  MinMaxvalAsElementalConverter(T op, mlir::PatternRewriter &rewriter)
-      : Base{op, rewriter} {}
+  MinMaxvalAsElementalConverter(
+      T op, mlir::PatternRewriter &rewriter,
+      Fortran::common::FPMaxminBehavior fpMaxminBehavior)
+      : Base{op, rewriter}, fpMaxminBehavior{fpMaxminBehavior} {}
 
 private:
   virtual mlir::LogicalResult isConvertible() const final {
@@ -771,6 +786,12 @@ private:
       return this->rewriter.notifyMatchFailure(
           this->getOp(),
           "CHARACTER type is not supported for MINVAL/MAXVAL inlining");
+    if (auto intType =
+            mlir::dyn_cast<mlir::IntegerType>(this->getSourceElementType()))
+      if (intType.isUnsigned())
+        return this->rewriter.notifyMatchFailure(
+            this->getOp(),
+            "UNSIGNED type is not supported for MINVAL/MAXVAL inlining");
     return mlir::success();
   }
 
@@ -785,20 +806,26 @@ private:
     this->checkReductions(currentValue);
     llvm::SmallVector<mlir::Value> result;
     fir::FirOpBuilder &builder = this->builder;
+    builder.setFPMaxminBehavior(fpMaxminBehavior);
     mlir::Location loc = this->loc;
     hlfir::Entity elementValue =
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
     mlir::Value currentMinMax = getCurrentMinMax(currentValue);
-    mlir::Value cmp =
-        genMinMaxComparison<isMax>(loc, builder, elementValue, currentMinMax);
-    if (useIsFirst())
-      cmp = mlir::arith::OrIOp::create(builder, loc, cmp,
-                                       getIsFirst(currentValue));
-    mlir::Value newMinMax = mlir::arith::SelectOp::create(
-        builder, loc, cmp, elementValue, currentMinMax);
-    result.push_back(newMinMax);
-    if (useIsFirst())
-      result.push_back(builder.createBool(loc, false));
+    if (isUnordered()) {
+      result.push_back(
+          reduceOneElementUnordered(loc, builder, elementValue, currentMinMax));
+    } else {
+      mlir::Value cmp =
+          genMinMaxComparison<isMax>(loc, builder, elementValue, currentMinMax);
+      if (useIsFirst())
+        cmp = mlir::arith::OrIOp::create(builder, loc, cmp,
+                                         getIsFirst(currentValue));
+      mlir::Value newMinMax = mlir::arith::SelectOp::create(
+          builder, loc, cmp, elementValue, currentMinMax);
+      result.push_back(newMinMax);
+      if (useIsFirst())
+        result.push_back(builder.createBool(loc, false));
+    }
     return result;
   }
 
@@ -830,8 +857,8 @@ private:
   // Return true iff the input can contain NaNs, and they should be
   // honored, such that all-NaNs input must produce NaN result.
   bool honorNans() const {
-    return !static_cast<bool>(this->getFastMath() &
-                              mlir::arith::FastMathFlags::nnan);
+    return !mlir::arith::bitEnumContainsAny(this->getFastMath(),
+                                            mlir::arith::FastMathFlags::nnan);
   }
 
   // Return true iff we have to use the loop-carried IsFirst predicate.
@@ -839,9 +866,47 @@ private:
   // the first elements of the input.
   // If NaNs are not honored, we can initialize the starting MIN/MAX
   // value to +/-LARGEST.
-  bool useIsFirst() const { return this->getMask() && honorNans(); }
+  bool useIsFirst() const {
+    return this->getMask() && honorNans() && !isUnordered();
+  }
+
+  // Return true iff the max/min reduction can be unordered.
+  // This is always true for integer type.
+  // For FP type, this is only true for Extremum and ExtremeNum modes,
+  // and for Portble mode when nnan and nsz are present.
+  // We used to mark the reduction loop unordered when reassoc
+  // FMF was present - it is unclear if it should indeed behave
+  // this way.
+  virtual bool isUnordered() const override {
+    if (mlir::isa<mlir::IntegerType>(this->getSourceElementType()))
+      return true;
+
+    return fpMaxminBehavior == Fortran::common::FPMaxminBehavior::Extremum ||
+           fpMaxminBehavior == Fortran::common::FPMaxminBehavior::ExtremeNum ||
+           (fpMaxminBehavior == Fortran::common::FPMaxminBehavior::Portable &&
+            mlir::arith::bitEnumContainsAll(
+                this->getFastMath(), mlir::arith::FastMathFlags::nnan |
+                                         mlir::arith::FastMathFlags::nsz));
+  }
+
+  // Generate arith.max/minsi, arith.max/minimumf or arith.max/minnumf to reduce
+  // a single element.
+  mlir::Value reduceOneElementUnordered(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        mlir::Value elementValue,
+                                        mlir::Value currentMinMax) {
+    assert(!useIsFirst() &&
+           "unordered max/min reduction must not use first predicate");
+
+    if constexpr (isMax)
+      return fir::genMax(builder, loc, {elementValue, currentMinMax});
+    else
+      return fir::genMin(builder, loc, {elementValue, currentMinMax});
+  }
 
   std::size_t getNumReductions() const { return useIsFirst() ? 2 : 1; }
+
+  Fortran::common::FPMaxminBehavior fpMaxminBehavior;
 };
 
 template <typename T>
@@ -854,7 +919,8 @@ MinMaxvalAsElementalConverter<T>::genReductionInitValues(
   mlir::Location loc = this->loc;
 
   fir::IfOp ifOp;
-  if (!useIsFirst() && honorNans()) {
+  // Unordered max/min reductions use +/-LARGEST always.
+  if (!useIsFirst() && honorNans() && !isUnordered()) {
     // Check if we can load the value of the first element in the array
     // or its section (for partial reduction).
     assert(!this->getMask() &&
@@ -1292,15 +1358,7 @@ public:
 
   llvm::LogicalResult
   matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
-    if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
-                  std::is_same_v<Op, hlfir::MinlocOp>) {
-      MinMaxlocAsElementalConverter<Op> converter(op, rewriter);
-      return converter.convert();
-    } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
-                         std::is_same_v<Op, hlfir::MinvalOp>) {
-      MinMaxvalAsElementalConverter<Op> converter(op, rewriter);
-      return converter.convert();
-    } else if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
+    if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
       CountAsElementalConverter converter(op, rewriter);
       return converter.convert();
     } else if constexpr (std::is_same_v<Op, hlfir::AllOp> ||
@@ -1316,6 +1374,40 @@ public:
     }
     return rewriter.notifyMatchFailure(op, "unexpected reduction operation");
   }
+};
+
+/// Convert an operation that is a partial or total max/min reduction
+/// over an array of values into a reduction loop[-nest]
+/// optionally wrapped into hlfir.elemental.
+template <typename Op>
+class ExtremumReductionConversion : public mlir::OpRewritePattern<Op> {
+public:
+  using mlir::OpRewritePattern<Op>::OpRewritePattern;
+
+  ExtremumReductionConversion(
+      mlir::MLIRContext *ctx,
+      Fortran::common::FPMaxminBehavior fpMaxminBehavior =
+          Fortran::common::FPMaxminBehavior::Legacy)
+      : mlir::OpRewritePattern<Op>{ctx}, fpMaxminBehavior{fpMaxminBehavior} {}
+
+  llvm::LogicalResult
+  matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
+    if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
+                  std::is_same_v<Op, hlfir::MinlocOp>) {
+      MinMaxlocAsElementalConverter<Op> converter(op, rewriter,
+                                                  fpMaxminBehavior);
+      return converter.convert();
+    } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
+                         std::is_same_v<Op, hlfir::MinvalOp>) {
+      MinMaxvalAsElementalConverter<Op> converter(op, rewriter,
+                                                  fpMaxminBehavior);
+      return converter.convert();
+    }
+    return rewriter.notifyMatchFailure(op, "unexpected reduction operation");
+  }
+
+private:
+  Fortran::common::FPMaxminBehavior fpMaxminBehavior;
 };
 
 template <typename Op>
@@ -1419,15 +1511,12 @@ private:
   }
 
   /// The indices computations for the array shifts are done using I64 type.
-  /// For CSHIFT, all computations do not overflow signed and unsigned I64.
-  /// For EOSHIFT, some computations may involve negative shift values,
-  /// so using no-unsigned wrap flag would be incorrect.
+  /// For CSHIFT, and EOSHIFT all computations do not overflow signed I64.
+  /// While no-unsigned wrap could be set on some operation generated for
+  /// CSHIFT, it is in general unsafe to mix with computations involving
+  /// user defined bounds that may be negative.
   static void setArithOverflowFlags(Op op, fir::FirOpBuilder &builder) {
-    if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>)
-      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
-    else
-      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
-                                      mlir::arith::IntegerOverflowFlags::nuw);
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
   }
 
   /// Return the element type of the EOSHIFT boundary that may be omitted
@@ -1872,10 +1961,10 @@ private:
     // For CSHIFT, shiftVal is the normalized shift value that satisfies
     // (SH >= 0 && SH < SIZE(ARRAY,DIM)).
     //
-    auto genDimensionShift = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                                 mlir::Value shiftVal, mlir::Value boundary,
-                                 bool exposeContiguity,
-                                 mlir::ValueRange oneBasedIndices)
+    auto genDimensionShift =
+        [&](mlir::Location loc, fir::FirOpBuilder &builder,
+            mlir::Value shiftVal, [[maybe_unused]] mlir::Value boundary,
+            bool exposeContiguity, mlir::ValueRange oneBasedIndices)
         -> llvm::SmallVector<mlir::Value, 0> {
       // Create a vector of indices (s(1), ..., s(dim-1), nullptr, s(dim+1),
       // ..., s(n)) so that we can update the dimVal index as needed.
@@ -1889,11 +1978,9 @@ private:
       hlfir::Entity srcArray = array;
       if (exposeContiguity && mlir::isa<fir::BaseBoxType>(srcArray.getType())) {
         assert(dimVal == 1 && "can expose contiguity only for dim 1");
-        llvm::SmallVector<mlir::Value, maxRank> arrayLbounds =
-            hlfir::genLowerbounds(loc, builder, arrayShape, array.getRank());
         hlfir::Entity section =
-            hlfir::gen1DSection(loc, builder, srcArray, dimVal, arrayLbounds,
-                                arrayExtents, oneBasedIndices, typeParams);
+            hlfir::gen1DSection(loc, builder, srcArray, dimVal, arrayExtents,
+                                oneBasedIndices, typeParams);
         mlir::Value addr = hlfir::genVariableRawAddress(loc, builder, section);
         mlir::Value shape = hlfir::genShape(loc, builder, section);
         mlir::Type boxType = fir::wrapInClassOrBoxType(
@@ -3215,10 +3302,14 @@ public:
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AllOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MaxlocOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MinlocOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MaxvalOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MinvalOp>>(context);
+    patterns.insert<ExtremumReductionConversion<hlfir::MaxlocOp>>(
+        context, this->fpMaxminBehavior);
+    patterns.insert<ExtremumReductionConversion<hlfir::MinlocOp>>(
+        context, this->fpMaxminBehavior);
+    patterns.insert<ExtremumReductionConversion<hlfir::MaxvalOp>>(
+        context, this->fpMaxminBehavior);
+    patterns.insert<ExtremumReductionConversion<hlfir::MinvalOp>>(
+        context, this->fpMaxminBehavior);
 
     // If forceMatmulAsElemental is false, then hlfir.matmul inlining
     // will introduce hlfir.eval_in_mem operation with new memory side

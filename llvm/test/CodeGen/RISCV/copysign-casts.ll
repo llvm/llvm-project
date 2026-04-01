@@ -253,8 +253,7 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32IZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IZDINX-NEXT:    mv s1, a1
-; RV32IZDINX-NEXT:    mv s0, a0
+; RV32IZDINX-NEXT:    fmv.d s0, a0
 ; RV32IZDINX-NEXT:    mv a0, a2
 ; RV32IZDINX-NEXT:    call __extendhfsf2
 ; RV32IZDINX-NEXT:    fcvt.d.s a0, a0

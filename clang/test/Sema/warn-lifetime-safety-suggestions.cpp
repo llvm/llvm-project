@@ -50,6 +50,9 @@ inline View redeclared_in_header(View a) {  // expected-warning {{parameter in i
   return a;                                 // expected-note {{param returned here}}
 }
 
+View return_unnamed_view(View);                // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+MyObj& return_unnamed_ref(MyObj&, bool);       // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
 struct ReturnThis {
   const ReturnThis& get() const;           // expected-warning {{implicit this in cross-TU function should be marked [[clang::lifetimebound]]}}.
 };
@@ -88,6 +91,14 @@ int* return_pointer_directly(int* a) {
 
 MyObj* return_pointer_object(MyObj* a) {
   return a;                                // expected-note {{param returned here}} 
+}
+
+View return_unnamed_view(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
+
+MyObj& return_unnamed_ref(MyObj& a, bool c) {
+  return a;                               // expected-note {{param returned here}}
 }
 
 MyObj& return_reference(MyObj& a, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
@@ -344,6 +355,26 @@ MyObj* test_template_inference_with_stack() {
 }
 } // namespace inference_with_templates
 
+namespace trailing_return {
+struct TrailingReturn {
+  TrailingReturn() {}
+  ~TrailingReturn() {}
+  MyObj data;
+
+  auto get_view() -> View {                   // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return data;                              // expected-note {{param returned here}}
+  }
+
+  auto get_view_const() const -> View {       // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return data;                              // expected-note {{param returned here}}
+  }
+
+  auto get_ref() const -> const MyObj& {      // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return data;                              // expected-note {{param returned here}}
+  }
+};
+} // namespace trailing_return
+
 //===----------------------------------------------------------------------===//
 // Negative Test Cases
 //===----------------------------------------------------------------------===//
@@ -362,3 +393,63 @@ View Reassigned(View a) {
   a = Global;
   return a;
 }
+
+namespace lambda_captures {
+
+struct NoSuggestionForThisCapturedByLambda {
+  MyObj s;
+  bool cond;
+  void foo() {
+    auto x = [&]() { 
+      return cond > 0 ?  &this->s : &s;
+    };
+  }
+};
+
+void Foo(int, int*, const MyObj&, View);
+
+auto implicit_ref_capture(int integer, int* ptr,
+                          const MyObj& ref, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+                          View view) {
+  return [&]() { Foo(integer, ptr, ref, view); }; // expected-warning 3 {{address of stack memory is returned later}} \
+                                                  // expected-note 3 {{returned here}} \
+                                                  // expected-note {{param returned here}}
+}
+
+auto implicit_value_capture(int integer,
+                            int* ptr, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+                            const MyObj& ref,
+                            View view) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return [=]() { Foo(integer, ptr, ref, view); }; // expected-note 2 {{param returned here}}
+}
+} // namespace lambda_captures
+
+namespace array {
+
+struct MemberArrayReturn {
+  int arr[10];
+
+  int* getFirst() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return &arr[0]; // expected-note {{param returned here}}
+  }
+
+  int* getData() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return arr;    // expected-note {{param returned here}}
+  }
+};
+
+} // namespace array
+
+namespace track_origins_for_lifetimebound_record_type {
+
+struct S {
+  View view;
+};
+
+S getS(const MyObj &obj [[clang::lifetimebound]]);
+
+S forward(const MyObj &obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return getS(obj);           // expected-note {{param returned here}}
+}
+
+} // namespace track_origins_for_lifetimebound_record_type

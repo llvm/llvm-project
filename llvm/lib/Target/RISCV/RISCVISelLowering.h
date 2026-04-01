@@ -71,6 +71,8 @@ public:
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
+  void finalizeLowering(MachineFunction &MF) const override;
+
   /// Customize the preferred legalization strategy for certain types.
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
@@ -389,8 +391,6 @@ public:
                                           const MachineBasicBlock *MBB,
                                           unsigned uid,
                                           MCContext &Ctx) const override;
-
-  bool isVScaleKnownToBeAPowerOfTwo() const override;
 
   bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
                               ISD::MemIndexedMode &AM, SelectionDAG &DAG) const;

@@ -346,6 +346,9 @@ struct VPCostContext {
   PredicatedScalarEvolution &PSE;
   const Loop *L;
 
+  /// Number of predicated stores in the VPlan, computed on demand.
+  std::optional<unsigned> NumPredStores;
+
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind,
@@ -363,7 +366,7 @@ struct VPCostContext {
 
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
-  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
+  uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
@@ -383,6 +386,10 @@ struct VPCostContext {
       Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None,
       bool AlwaysIncludeReplicatingR = false);
+
+  /// Returns true if an artificially high cost for emulated masked memrefs
+  /// should be used.
+  bool useEmulatedMaskMemRefHack(const VPReplicateRecipe *R, ElementCount VF);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

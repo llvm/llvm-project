@@ -955,5 +955,16 @@ define void @test_dead_on_return_variable_memset(ptr dead_on_return(8) %p, i64 %
   ret void
 }
 
+define void @test_dead_on_return_variable_offset(ptr dead_on_return(4) %p, i64 %offset) {
+; CHECK-LABEL: @test_dead_on_return_variable_offset(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr i8, ptr %p, i64 %offset
+  store i32 0, ptr %p1
+  ret void
+}
+
 declare void @opaque(ptr)
 declare void @maythrow() memory(none)

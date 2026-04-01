@@ -308,13 +308,15 @@ public:
                                  const ObjCMethodCall &msg, ExprEngine &Eng,
                                  bool wasInlined = false);
 
-  /// Run checkers for pre-visiting obj-c messages.
+  /// Run checkers for pre-visiting function calls (including methods,
+  /// constructors, destructors etc. but excluding obj-c messages).
   void runCheckersForPreCall(ExplodedNodeSet &Dst, const ExplodedNodeSet &Src,
                              const CallEvent &Call, ExprEngine &Eng) {
     runCheckersForCallEvent(/*isPreVisit=*/true, Dst, Src, Call, Eng);
   }
 
-  /// Run checkers for post-visiting obj-c messages.
+  /// Run checkers for post-visiting function calls (including methods,
+  /// constructors, destructors etc. but excluding obj-c messages).
   void runCheckersForPostCall(ExplodedNodeSet &Dst, const ExplodedNodeSet &Src,
                               const CallEvent &Call, ExprEngine &Eng,
                               bool wasInlined = false) {
@@ -322,7 +324,8 @@ public:
                             wasInlined);
   }
 
-  /// Run checkers for visiting obj-c messages.
+  /// Run checkers for visiting function calls (including methods,
+  /// constructors, destructors etc. but excluding obj-c messages).
   void runCheckersForCallEvent(bool isPreVisit, ExplodedNodeSet &Dst,
                                const ExplodedNodeSet &Src,
                                const CallEvent &Call, ExprEngine &Eng,
@@ -360,11 +363,8 @@ public:
                                    ExprEngine &Eng);
 
   /// Run checkers on end of function.
-  void runCheckersForEndFunction(NodeBuilderContext &BC,
-                                 ExplodedNodeSet &Dst,
-                                 ExplodedNode *Pred,
-                                 ExprEngine &Eng,
-                                 const ReturnStmt *RS);
+  void runCheckersForEndFunction(ExplodedNodeSet &Dst, ExplodedNode *Pred,
+                                 ExprEngine &Eng, const ReturnStmt *RS);
 
   /// Run checkers for branch condition.
   void runCheckersForBranchCondition(const Stmt *condition,

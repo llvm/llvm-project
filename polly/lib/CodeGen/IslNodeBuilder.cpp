@@ -234,7 +234,8 @@ static void findReferencesInStmt(ScopStmt *Stmt, SetVector<Value *> &Values,
   LoopInfo *LI = Stmt->getParent()->getLI();
 
   BasicBlock *BB = Stmt->getBasicBlock();
-  Loop *Scope = LI->getLoopFor(BB);
+  // TODO: Should BB ever be null?
+  Loop *Scope = BB ? LI->getLoopFor(BB) : nullptr;
   for (Instruction *Inst : Stmt->getInstructions())
     findReferencesInInst(Inst, Stmt, Scope, GlobalMap, Values, SCEVs);
 
@@ -807,8 +808,6 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
 
     // isl cannot generate an index expression for access-nothing accesses.
     isl::set AccDomain = PWAccRel.domain();
-    isl::set Context = S.getContext();
-    AccDomain = AccDomain.intersect_params(Context);
     if (AccDomain.is_empty())
       continue;
 
