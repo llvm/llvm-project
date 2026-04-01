@@ -26,11 +26,24 @@ define void @readfirstlane_demanded_i8_sext_store(i8 %src, ptr addrspace(1) %ptr
 ; GCN-NEXT:    global_store_byte v[1:2], v0, off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %zext = sext i8 %src to i32
-  %readfirstlane = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %zext)
+  %sext = sext i8 %src to i32
+  %readfirstlane = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %sext)
   %trunc = trunc i32 %readfirstlane to i8
   store i8 %trunc, ptr addrspace(1) %ptr
   ret void
+}
+
+define i16 @readfirstlane_demanded_i16_zext(i16 %src) {
+; GCN-LABEL: readfirstlane_demanded_i16_zext:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_readfirstlane_b32 s4, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %zext = zext i16 %src to i32
+  %readfirstlane = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %zext)
+  %trunc = trunc i32 %readfirstlane to i16
+  ret i16 %trunc
 }
 
 define i16 @readfirstlane_demanded_i16_sext(i16 %src) {
@@ -40,8 +53,8 @@ define i16 @readfirstlane_demanded_i16_sext(i16 %src) {
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %zext = sext i16 %src to i32
-  %readfirstlane = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %zext)
+  %sext = sext i16 %src to i32
+  %readfirstlane = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %sext)
   %trunc = trunc i32 %readfirstlane to i16
   ret i16 %trunc
 }
