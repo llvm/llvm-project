@@ -552,8 +552,6 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   auto lex_or_err = dil::DILLexer::Create(var_expr, mode);
   if (!lex_or_err) {
     error = Status::FromError(lex_or_err.takeError());
-    // Duplicate the error so that it can be accessed from both
-    // the return result and the `&error` argument.
     return ValueObjectConstResult::Create(nullptr, error.Clone());
   }
 
