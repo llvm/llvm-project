@@ -1178,13 +1178,11 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
   bool IsTerminator = Before == MBBE;
   if (!IsTerminator) {
     auto FirstTerm = MBB.getFirstTerminator();
-    if (FirstTerm != MBBE) {
-      MachineBasicBlock::iterator BeforeNonDbg = skipDebugInstructionsForward(Before, MBBE);
-      if (BeforeNonDbg != MBBE) {
-        SlotIndex FirstTermIdx = LIS->getInstructionIndex(*FirstTerm);
-        SlotIndex BeforeIdx = LIS->getInstructionIndex(*BeforeNonDbg);
-        IsTerminator = BeforeIdx > FirstTermIdx;
-      }
+    MachineBasicBlock::iterator BeforeNonDbg = skipDebugInstructionsForward(Before, MBBE);
+    if (FirstTerm != MBBE && BeforeNonDbg != MBBE) {
+      SlotIndex FirstTermIdx = LIS->getInstructionIndex(*FirstTerm);
+      SlotIndex BeforeIdx = LIS->getInstructionIndex(*BeforeNonDbg);
+      IsTerminator = BeforeIdx > FirstTermIdx;
     }
   }
 
