@@ -1766,9 +1766,8 @@ void Sema::CheckMemberAccessOfNoDeref(const MemberExpr *E) {
       CheckAddressOfNoDeref(E->getBase());
     }
   } else if (E->isArrow()) {
-    if (const auto *Ptr = dyn_cast<PointerType>(
-            E->getBase()->getType().getDesugaredType(Context))) {
-      if (Ptr->getPointeeType()->hasAttr(attr::NoDeref))
+    if (E->getBase()->getType()->getAs<PointerType>()) {
+      if (E->getBase()->getType()->hasAttr(attr::NoDeref))
         ExprEvalContexts.back().PossibleDerefs.insert(E);
     }
   }
@@ -1831,7 +1830,7 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     // result. E.g. the expression
     //     &someNoDerefPtr->pointerMember
     // should be a noderef pointer again.
-    if (BaseType->hasAttr(attr::NoDeref))
+    if (BaseExpr->getType()->hasAttr(attr::NoDeref))
       MemberType =
           Context.getAttributedType(attr::NoDeref, MemberType, MemberType);
   }

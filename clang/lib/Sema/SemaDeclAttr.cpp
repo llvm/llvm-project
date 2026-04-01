@@ -7445,13 +7445,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
         // processTypeAttr().
         break;
       }
-
-      if (AL.getKind() == ParsedAttr::AT_NoDeref) {
-        // FIXME: `noderef` currently doesn't work correctly in [[]] syntax.
-        // See https://github.com/llvm/llvm-project/issues/55790 for details.
-        // We allow processTypeAttrs() to emit a warning and silently move on.
-        break;
-      }
     }
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
     // statement attribute is not written on a declaration, but this code is

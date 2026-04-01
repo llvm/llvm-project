@@ -8417,7 +8417,11 @@ private:
   /// keeping a container of all pending expressions and checking if the address
   /// of them are eventually taken.
   void CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E);
-  void CheckAddressOfNoDeref(const Expr *E);
+
+  /// Check if the address of a `noderef` expression is taken. Return true if
+  /// the expression was marked with `noderef` and the attribute should be
+  /// propagated to the resulting pointer type.
+  bool CheckAddressOfNoDeref(const Expr *E);
 
   ///@}
 
