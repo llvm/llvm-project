@@ -344,10 +344,10 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   const MachineOperand &MIVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
   const MachineOperand &TrueVL =
       True->getOperand(RISCVII::getVLOpNum(True->getDesc()));
+  Register FalseReg = MI.getOperand(2).getReg();
   if (!RISCV::isVLKnownLE(MIVL, TrueVL)) {
-    Register FalseReg = MI.getOperand(2).getReg();
     Register PassthruReg = MI.getOperand(1).getReg();
-    if (!PassthruReg.isValid() || FalseReg != PassthruReg)
+    if (FalseReg.isValid() && FalseReg != PassthruReg)
       return false;
     if (!RISCVII::hasVecPolicyOp(True->getDesc().TSFlags))
       return false;
@@ -360,7 +360,6 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
 
   // True's passthru needs to be equivalent to False
   Register TruePassthruReg = True->getOperand(1).getReg();
-  Register FalseReg = MI.getOperand(2).getReg();
   if (TruePassthruReg != FalseReg) {
     // If True's passthru is undef see if we can change it to False
     if (TruePassthruReg.isValid() ||
