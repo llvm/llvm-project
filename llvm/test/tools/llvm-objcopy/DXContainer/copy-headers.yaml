@@ -12,9 +12,9 @@ Header:
   Version:
     Major:           1
     Minor:           0
-  FileSize:        1996
-  PartCount:       7
-  PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
+  FileSize:        2036
+  PartCount:       8
+  PartOffsets:     [ 64, 80, 96, 112, 240, 1936, 1964, 2000 ]
 Parts:
   - Name:            FKE0
     Size:            8
@@ -28,6 +28,17 @@ Parts:
     Size:            1688
   - Name:            FKE5
     Size:            20
+  - Name:            ILDB
+    Size:            28
+    Program:
+      MajorVersion:    6
+      MinorVersion:    5
+      ShaderKind:      5
+      Size:            8
+      DXILMajorVersion: 1
+      DXILMinorVersion: 5
+      DXILSize:        4
+      DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
   - Name:            DXIL
     Size:            28
     Program:
