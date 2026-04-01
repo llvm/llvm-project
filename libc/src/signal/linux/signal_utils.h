@@ -19,6 +19,7 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/raw_rwlock.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -121,9 +122,38 @@ LIBC_INLINE int unblock_signal(int signal) {
                                            &set, nullptr, sizeof(sigset_t));
 }
 
+// This guard is used to:
+// 1. temporarily block the all signal, avoid post fork invalid state to be
+//    exposed to async signal handlers.
+// 2. ensure the ordering between sigaction and fork/spawn, so that forked
+//    processes can see modification from a just returned concurrent call.
+class SigAbortGuard {
+private:
+  sigset_t old_mask;
+  LIBC_INLINE_VAR static RawRwLock abort_lock;
+
+public:
+  LIBC_INLINE constexpr SigAbortGuard(bool exclusive) : old_mask{} {
+    RawRwLock::LockResult result = RawRwLock::LockResult::Success;
+    do {
+      if (exclusive)
+        result = abort_lock.write_lock(cpp::nullopt);
+      else
+        result = abort_lock.read_lock(cpp::nullopt);
+    } while (result == RawRwLock::LockResult::Overflow);
+
+    (void)block_all_signals(old_mask);
+  }
+
+  LIBC_INLINE ~SigAbortGuard() {
+    (void)restore_signals(old_mask);
+    (void)abort_lock.unlock();
+  }
+};
+
 LIBC_INLINE ErrorOr<int>
-do_sigaction(int signal, const struct sigaction *__restrict libc_new,
-             struct sigaction *__restrict libc_old) {
+unchecked_sigaction(int signal, const struct sigaction *__restrict libc_new,
+                    struct sigaction *__restrict libc_old) {
   vdso::TypedSymbol<vdso::VDSOSym::RTSigReturn> rt_sigreturn;
   KernelSigaction kernel_new;
   if (libc_new) {
@@ -144,6 +174,18 @@ do_sigaction(int signal, const struct sigaction *__restrict libc_new,
   if (libc_old)
     *libc_old = kernel_old;
   return 0;
+}
+
+LIBC_INLINE ErrorOr<int>
+checked_sigaction(int signal, const struct sigaction *__restrict libc_new,
+                  struct sigaction *__restrict libc_old) {
+  if (signal <= 0 || signal >= NSIG)
+    return Error(-EINVAL);
+  if (signal == SIGABRT) {
+    SigAbortGuard guard(true);
+    return unchecked_sigaction(signal, libc_new, libc_old);
+  }
+  return unchecked_sigaction(signal, libc_new, libc_old);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
