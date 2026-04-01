@@ -309,14 +309,6 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
                       "8");
 
-  // For SPIR-V, apply the default -O3 optimization level if no optimization
-  // level is specified, matching the behavior of OpenCL compilation.
-  if (getTriple().isSPIRV() &&
-      !Args.hasArg(options::OPT_O, options::OPT_O0, options::OPT_O4,
-                   options::OPT_Ofast))
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O),
-                      getOptionDefault(options::OPT_O));
-
   return DAL;
 }
 
