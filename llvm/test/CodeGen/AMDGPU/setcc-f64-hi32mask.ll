@@ -124,7 +124,7 @@ define i32 @select.hi32.sgpr.ueq.bad.zero(double inreg %x, double inreg %y, i32 
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s19
-; CHECK-NEXT:    v_cmp_nlg_f64_e32 vcc, s[4:5], v[0:1]
+; CHECK-NEXT:    v_cmp_eq_f64_e32 vcc, s[4:5], v[0:1]
 ; CHECK-NEXT:    s_and_b64 s[4:5], vcc, exec
 ; CHECK-NEXT:    s_cselect_b32 s4, s20, s21
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
@@ -595,7 +595,7 @@ define i32 @select.hi32.vgpr.ueq.bad.zero(double %x, double %y, i32 %a, i32 %b) 
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0xbfffffff, v1
 ; CHECK-NEXT:    v_and_b32_e32 v3, 0xbfffffff, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
-; CHECK-NEXT:    v_cmp_nlg_f64_e32 vcc, v[0:1], v[2:3]
+; CHECK-NEXT:    v_cmp_eq_f64_e32 vcc, v[0:1], v[2:3]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v5, v4, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %x.i64 = bitcast double %x to i64
