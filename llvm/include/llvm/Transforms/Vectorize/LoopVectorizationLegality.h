@@ -292,11 +292,7 @@ public:
   /// Returns true if it is legal to vectorize this loop.
   /// This does not mean that it is profitable to vectorize this
   /// loop, only that it is legal to do so.
-  /// Temporarily taking UseVPlanNativePath parameter. If true, take
-  /// the new code path being implemented for outer loop vectorization
-  /// (should be functional for inner loop vectorization) based on VPlan.
-  /// If false, good old LV code.
-  bool canVectorize(bool UseVPlanNativePath);
+  bool canVectorize();
 
   /// Returns true if it is legal to vectorize the FP math operations in this
   /// loop. Vectorizing is legal if we allow reordering of FP operations, or if
@@ -500,11 +496,7 @@ private:
   /// Return true if the pre-header, exiting and latch blocks of \p Lp and all
   /// its nested loops are considered legal for vectorization. These legal
   /// checks are common for inner and outer loop vectorization.
-  /// Temporarily taking UseVPlanNativePath parameter. If true, take
-  /// the new code path being implemented for outer loop vectorization
-  /// (should be functional for inner loop vectorization) based on VPlan.
-  /// If false, good old LV code.
-  bool canVectorizeLoopNestCFG(Loop *Lp, bool UseVPlanNativePath);
+  bool canVectorizeLoopNestCFG(Loop *Lp);
 
   /// Set up outer loop inductions by checking Phis in outer loop header for
   /// supported inductions (int inductions). Return false if any of these Phis
@@ -513,11 +505,7 @@ private:
 
   /// Return true if the pre-header, exiting and latch blocks of \p Lp
   /// (non-recursive) are considered legal for vectorization.
-  /// Temporarily taking UseVPlanNativePath parameter. If true, take
-  /// the new code path being implemented for outer loop vectorization
-  /// (should be functional for inner loop vectorization) based on VPlan.
-  /// If false, good old LV code.
-  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath);
+  bool canVectorizeLoopCFG(Loop *Lp);
 
   /// Check if a single basic block loop is vectorizable.
   /// At this point we know that this is a loop with a constant trip count
@@ -541,10 +529,6 @@ private:
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
   bool canVectorizeWithIfConvert();
-
-  /// Return true if we can vectorize this outer loop. The method performs
-  /// specific checks for outer loop vectorization.
-  bool canVectorizeOuterLoop();
 
   /// Returns true if this is an early exit loop that can be vectorized.
   /// Currently, a loop with an uncountable early exit is considered

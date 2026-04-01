@@ -335,86 +335,6 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
   }
 }
 
-// Return true if the inner loop \p Lp is uniform with regard to the outer loop
-// \p OuterLp (i.e., if the outer loop is vectorized, all the vector lanes
-// executing the inner loop will execute the same iterations). This check is
-// very constrained for now but it will be relaxed in the future. \p Lp is
-// considered uniform if it meets all the following conditions:
-//   1) it has a canonical IV (starting from 0 and with stride 1),
-//   2) its latch terminator is a conditional branch and,
-//   3) its latch condition is a compare instruction whose operands are the
-//      canonical IV and an OuterLp invariant.
-// This check doesn't take into account the uniformity of other conditions not
-// related to the loop latch because they don't affect the loop uniformity.
-//
-// NOTE: We decided to keep all these checks and its associated documentation
-// together so that we can easily have a picture of the current supported loop
-// nests. However, some of the current checks don't depend on \p OuterLp and
-// would be redundantly executed for each \p Lp if we invoked this function for
-// different candidate outer loops. This is not the case for now because we
-// don't currently have the infrastructure to evaluate multiple candidate outer
-// loops and \p OuterLp will be a fixed parameter while we only support explicit
-// outer loop vectorization. It's also very likely that these checks go away
-// before introducing the aforementioned infrastructure. However, if this is not
-// the case, we should move the \p OuterLp independent checks to a separate
-// function that is only executed once for each \p Lp.
-static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
-  assert(Lp->getLoopLatch() && "Expected loop with a single latch.");
-
-  // If Lp is the outer loop, it's uniform by definition.
-  if (Lp == OuterLp)
-    return true;
-  assert(OuterLp->contains(Lp) && "OuterLp must contain Lp.");
-
-  // 1.
-  PHINode *IV = Lp->getCanonicalInductionVariable();
-  if (!IV) {
-    LLVM_DEBUG(dbgs() << "LV: Canonical IV not found.\n");
-    return false;
-  }
-
-  // 2.
-  BasicBlock *Latch = Lp->getLoopLatch();
-  auto *LatchBr = dyn_cast<CondBrInst>(Latch->getTerminator());
-  if (!LatchBr) {
-    LLVM_DEBUG(dbgs() << "LV: Unsupported loop latch branch.\n");
-    return false;
-  }
-
-  // 3.
-  auto *LatchCmp = dyn_cast<CmpInst>(LatchBr->getCondition());
-  if (!LatchCmp) {
-    LLVM_DEBUG(
-        dbgs() << "LV: Loop latch condition is not a compare instruction.\n");
-    return false;
-  }
-
-  Value *CondOp0 = LatchCmp->getOperand(0);
-  Value *CondOp1 = LatchCmp->getOperand(1);
-  Value *IVUpdate = IV->getIncomingValueForBlock(Latch);
-  if (!(CondOp0 == IVUpdate && OuterLp->isLoopInvariant(CondOp1)) &&
-      !(CondOp1 == IVUpdate && OuterLp->isLoopInvariant(CondOp0))) {
-    LLVM_DEBUG(dbgs() << "LV: Loop latch condition is not uniform.\n");
-    return false;
-  }
-
-  return true;
-}
-
-// Return true if \p Lp and all its nested loops are uniform with regard to \p
-// OuterLp.
-static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp) {
-  if (!isUniformLoop(Lp, OuterLp))
-    return false;
-
-  // Check if nested loops are uniform.
-  for (Loop *SubLp : *Lp)
-    if (!isUniformLoopNest(SubLp, OuterLp))
-      return false;
-
-  return true;
-}
-
 static IntegerType *getInductionIntegerTy(const DataLayout &DL, Type *Ty) {
   assert(Ty->isIntOrPtrTy() && "Expected integer or pointer type");
 
@@ -628,73 +548,6 @@ bool LoopVectorizationLegality::isUniformMemOp(Instruction &I,
   // it; in particular, the cost model distinguishes scatter/gather from
   // scalar w/predication, and we currently rely on the scalar path.
   return isUniform(Ptr, VF) && !blockNeedsPredication(I.getParent());
-}
-
-bool LoopVectorizationLegality::canVectorizeOuterLoop() {
-  assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
-  // Store the result and return it at the end instead of exiting early, in case
-  // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
-  bool Result = true;
-  bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
-
-  for (BasicBlock *BB : TheLoop->blocks()) {
-    // Check whether the BB terminator is a branch. Any other terminator is
-    // not supported yet.
-    Instruction *Term = BB->getTerminator();
-    if (!isa<UncondBrInst, CondBrInst>(Term)) {
-      reportVectorizationFailure("Unsupported basic block terminator",
-          "loop control flow is not understood by vectorizer",
-          "CFGNotUnderstood", ORE, TheLoop);
-      if (DoExtraAnalysis)
-        Result = false;
-      else
-        return false;
-    }
-
-    // Check whether the branch is a supported one. Only unconditional
-    // branches, conditional branches with an outer loop invariant condition or
-    // backedges are supported.
-    // FIXME: We skip these checks when VPlan predication is enabled as we
-    // want to allow divergent branches. This whole check will be removed
-    // once VPlan predication is on by default.
-    auto *Br = dyn_cast<CondBrInst>(Term);
-    if (Br && !TheLoop->isLoopInvariant(Br->getCondition()) &&
-        !LI->isLoopHeader(Br->getSuccessor(0)) &&
-        !LI->isLoopHeader(Br->getSuccessor(1))) {
-      reportVectorizationFailure("Unsupported conditional branch",
-          "loop control flow is not understood by vectorizer",
-          "CFGNotUnderstood", ORE, TheLoop);
-      if (DoExtraAnalysis)
-        Result = false;
-      else
-        return false;
-    }
-  }
-
-  // Check whether inner loops are uniform. At this point, we only support
-  // simple outer loops scenarios with uniform nested loops.
-  if (!isUniformLoopNest(TheLoop /*loop nest*/,
-                         TheLoop /*context outer loop*/)) {
-    reportVectorizationFailure("Outer loop contains divergent loops",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
-  }
-
-  // Check whether we are able to set up outer loop induction.
-  if (!setupOuterLoopInductions()) {
-    reportVectorizationFailure("Unsupported outer loop Phi(s)",
-                               "UnsupportedPhi", ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
-  }
-
-  return Result;
 }
 
 void LoopVectorizationLegality::addInductionPhi(
@@ -1616,10 +1469,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 }
 
 // Helper function to canVectorizeLoopNestCFG.
-bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
-                                                    bool UseVPlanNativePath) {
-  assert((UseVPlanNativePath || Lp->isInnermost()) &&
-         "VPlan-native path is not enabled.");
+bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp) {
+  assert(Lp->isInnermost() && "Expected innermost loop");
 
   // TODO: ORE should be improved to show more accurate information when an
   // outer loop can't be vectorized because a nested loop is not understood or
@@ -1670,13 +1521,12 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   return Result;
 }
 
-bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
-    Loop *Lp, bool UseVPlanNativePath) {
+bool LoopVectorizationLegality::canVectorizeLoopNestCFG(Loop *Lp) {
   // Store the result and return it at the end instead of exiting early, in case
   // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
   bool Result = true;
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
-  if (!canVectorizeLoopCFG(Lp, UseVPlanNativePath)) {
+  if (!canVectorizeLoopCFG(Lp)) {
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1686,7 +1536,7 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
   // Recursively check whether the loop control flow of nested loops is
   // understood.
   for (Loop *SubLp : *Lp)
-    if (!canVectorizeLoopNestCFG(SubLp, UseVPlanNativePath)) {
+    if (!canVectorizeLoopNestCFG(SubLp)) {
       if (DoExtraAnalysis)
         Result = false;
       else
@@ -1930,7 +1780,7 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   return true;
 }
 
-bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
+bool LoopVectorizationLegality::canVectorize() {
   // Store the result and return it at the end instead of exiting early, in case
   // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
   bool Result = true;
@@ -1938,7 +1788,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   // Check whether the loop-related control flow in the loop nest is expected by
   // vectorizer.
-  if (!canVectorizeLoopNestCFG(TheLoop, UseVPlanNativePath)) {
+  if (!canVectorizeLoopNestCFG(TheLoop)) {
     if (DoExtraAnalysis) {
       LLVM_DEBUG(dbgs() << "LV: legality check failed: loop nest");
       Result = false;
@@ -1954,18 +1804,9 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   // Specific checks for outer loops. We skip the remaining legal checks at this
   // point because they don't support outer loops.
   if (!TheLoop->isInnermost()) {
-    assert(UseVPlanNativePath && "VPlan-native path is not enabled.");
-
-    if (!canVectorizeOuterLoop()) {
-      reportVectorizationFailure("Unsupported outer loop",
-                                 "UnsupportedOuterLoop", ORE, TheLoop);
-      // TODO: Implement DoExtraAnalysis when subsequent legal checks support
-      // outer loops.
-      return false;
-    }
-
-    LLVM_DEBUG(dbgs() << "LV: We can vectorize this outer loop!\n");
-    return Result;
+    reportVectorizationFailure("Unsupported outer loop vectorization",
+                               "UnsupportedOuterLoop", ORE, TheLoop);
+    return false;
   }
 
   assert(TheLoop->isInnermost() && "Inner loop expected.");

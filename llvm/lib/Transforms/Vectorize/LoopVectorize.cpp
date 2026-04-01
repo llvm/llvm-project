@@ -26,12 +26,7 @@
 //    can be one, if vectorization is not profitable.
 //
 // There is a development effort going on to migrate loop vectorizer to the
-// VPlan infrastructure and to introduce outer loop vectorization support (see
-// docs/VectorizationPlan.rst and
-// http://lists.llvm.org/pipermail/llvm-dev/2017-December/119523.html). For this
-// purpose, we temporarily introduced the VPlan-native vectorization path: an
-// alternative vectorization path that is natively implemented on top of the
-// VPlan infrastructure. See EnableVPlanNativePath for enabling.
+// VPlan infrastructure and (see docs/VectorizationPlan.rst).
 //
 //===----------------------------------------------------------------------===//
 //
@@ -355,11 +350,6 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
     cl::desc(
         "Prefer predicating a reduction operation over an after loop select."));
 
-cl::opt<bool> llvm::EnableVPlanNativePath(
-    "enable-vplan-native-path", cl::Hidden,
-    cl::desc("Enable VPlan-native vectorization path with "
-             "support for outer loop vectorization."));
-
 cl::opt<bool>
     llvm::VerifyEachVPlan("vplan-verify-each",
 #ifdef EXPENSIVE_CHECKS
@@ -384,17 +374,6 @@ cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
     cl::desc("Limit VPlan printing to vector loop region in "
              "`-vplan-print-after*` if the plan has one."));
 #endif
-
-// This flag enables the stress testing of the VPlan H-CFG construction in the
-// VPlan-native vectorization path. It must be used in conjuction with
-// -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the
-// verification of the H-CFGs built.
-static cl::opt<bool> VPlanBuildStressTest(
-    "vplan-build-stress-test", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Build VPlan for every supported loop nest in the function and bail "
-        "out right after the build (stress test the VPlan H-CFG construction "
-        "in the VPlan-native vectorization path)."));
 
 cl::opt<bool> llvm::EnableLoopInterleaving(
     "interleave-loops", cl::init(true), cl::Hidden,
@@ -1360,8 +1339,8 @@ public:
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
-    bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
-                      TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
+    bool EVLIsLegal =
+        UserIC <= 1 && IsScalableVF && TTI.hasActiveVectorLength();
     if (EVLIsLegal)
       return;
     // If for some reason EVL mode is unsupported, fallback to a scalar epilogue
@@ -2100,48 +2079,6 @@ static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
   return Style == TailFoldingStyle::DataAndControlFlow;
 }
 
-// Return true if \p OuterLp is an outer loop annotated with hints for explicit
-// vectorization. The loop needs to be annotated with #pragma omp simd
-// simdlen(#) or #pragma clang vectorize(enable) vectorize_width(#). If the
-// vector length information is not provided, vectorization is not considered
-// explicit. Interleave hints are not allowed either. These limitations will be
-// relaxed in the future.
-// Please, note that we are currently forced to abuse the pragma 'clang
-// vectorize' semantics. This pragma provides *auto-vectorization hints*
-// (i.e., LV must check that vectorization is legal) whereas pragma 'omp simd'
-// provides *explicit vectorization hints* (LV can bypass legal checks and
-// assume that vectorization is legal). However, both hints are implemented
-// using the same metadata (llvm.loop.vectorize, processed by
-// LoopVectorizeHints). This will be fixed in the future when the native IR
-// representation for pragma 'omp simd' is introduced.
-static bool isExplicitVecOuterLoop(Loop *OuterLp,
-                                   OptimizationRemarkEmitter *ORE) {
-  assert(!OuterLp->isInnermost() && "This is not an outer loop");
-  LoopVectorizeHints Hints(OuterLp, true /*DisableInterleaving*/, *ORE);
-
-  // Only outer loops with an explicit vectorization hint are supported.
-  // Unannotated outer loops are ignored.
-  if (Hints.getForce() == LoopVectorizeHints::FK_Undefined)
-    return false;
-
-  Function *Fn = OuterLp->getHeader()->getParent();
-  if (!Hints.allowVectorization(Fn, OuterLp,
-                                true /*VectorizeOnlyWhenForced*/)) {
-    LLVM_DEBUG(dbgs() << "LV: Loop hints prevent outer loop vectorization.\n");
-    return false;
-  }
-
-  if (Hints.getInterleave() > 1) {
-    // TODO: Interleave support is future work.
-    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Interleave is not supported for "
-                         "outer loops.\n");
-    Hints.emitRemarkWithHints();
-    return false;
-  }
-
-  return true;
-}
-
 static void collectSupportedLoops(Loop &L, LoopInfo *LI,
                                   OptimizationRemarkEmitter *ORE,
                                   SmallVectorImpl<Loop *> &V) {
@@ -2149,8 +2086,7 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
   // now, only collect outer loops that have explicit vectorization hints. If we
   // are stress testing the VPlan H-CFG construction, we collect the outermost
   // loop of every loop nest.
-  if (L.isInnermost() || VPlanBuildStressTest ||
-      (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
+  if (L.isInnermost()) {
     LoopBlocksRPO RPOT(&L);
     RPOT.perform(LI);
     if (!containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI)) {
@@ -6663,83 +6599,6 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
   }
 }
 
-// This function will select a scalable VF if the target supports scalable
-// vectors and a fixed one otherwise.
-// TODO: we could return a pair of values that specify the max VF and
-// min VF, to be used in `buildVPlans(MinVF, MaxVF)` instead of
-// `buildVPlans(VF, VF)`. We cannot do it because VPLAN at the moment
-// doesn't have a cost model that can choose which plan to execute if
-// more than one is generated.
-static ElementCount determineVPlanVF(const TargetTransformInfo &TTI,
-                                     LoopVectorizationCostModel &CM) {
-  unsigned WidestType;
-  std::tie(std::ignore, WidestType) = CM.getSmallestAndWidestTypes();
-
-  TargetTransformInfo::RegisterKind RegKind =
-      TTI.enableScalableVectorization()
-          ? TargetTransformInfo::RGK_ScalableVector
-          : TargetTransformInfo::RGK_FixedWidthVector;
-
-  TypeSize RegSize = TTI.getRegisterBitWidth(RegKind);
-  unsigned N = RegSize.getKnownMinValue() / WidestType;
-  return ElementCount::get(N, RegSize.isScalable());
-}
-
-VectorizationFactor
-LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
-  ElementCount VF = UserVF;
-  // Outer loop handling: They may require CFG and instruction level
-  // transformations before even evaluating whether vectorization is profitable.
-  // Since we cannot modify the incoming IR, we need to build VPlan upfront in
-  // the vectorization pipeline.
-  if (!OrigLoop->isInnermost()) {
-    // If the user doesn't provide a vectorization factor, determine a
-    // reasonable one.
-    if (UserVF.isZero()) {
-      VF = determineVPlanVF(TTI, CM);
-      LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
-
-      // Make sure we have a VF > 1 for stress testing.
-      if (VPlanBuildStressTest && (VF.isScalar() || VF.isZero())) {
-        LLVM_DEBUG(dbgs() << "LV: VPlan stress testing: "
-                          << "overriding computed VF.\n");
-        VF = ElementCount::getFixed(4);
-      }
-    } else if (UserVF.isScalable() && !TTI.supportsScalableVectors() &&
-               !ForceTargetSupportsScalableVectors) {
-      LLVM_DEBUG(dbgs() << "LV: Not vectorizing. Scalable VF requested, but "
-                        << "not supported by the target.\n");
-      reportVectorizationFailure(
-          "Scalable vectorization requested but not supported by the target",
-          "the scalable user-specified vectorization width for outer-loop "
-          "vectorization cannot be used because the target does not support "
-          "scalable vectors.",
-          "ScalableVFUnfeasible", ORE, OrigLoop);
-      return VectorizationFactor::Disabled();
-    }
-    assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
-    assert(isPowerOf2_32(VF.getKnownMinValue()) &&
-           "VF needs to be a power of two");
-    LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")
-                      << "VF " << VF << " to build VPlans.\n");
-    buildVPlans(VF, VF);
-
-    if (VPlans.empty())
-      return VectorizationFactor::Disabled();
-
-    // For VPlan build stress testing, we bail out after VPlan construction.
-    if (VPlanBuildStressTest)
-      return VectorizationFactor::Disabled();
-
-    return {VF, 0 /*Cost*/, 0 /* ScalarCost */};
-  }
-
-  LLVM_DEBUG(
-      dbgs() << "LV: Not vectorizing. Inner loops aren't supported in the "
-                "VPlan-native path.\n");
-  return VectorizationFactor::Disabled();
-}
-
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
   CM.collectValuesToIgnore();
@@ -8233,46 +8092,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   return Plan;
 }
 
-VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
-  // Outer loop handling: They may require CFG and instruction level
-  // transformations before even evaluating whether vectorization is profitable.
-  // Since we cannot modify the incoming IR, we need to build VPlan upfront in
-  // the vectorization pipeline.
-  assert(!OrigLoop->isInnermost());
-  assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
-
-  auto Plan = VPlanTransforms::buildVPlan0(
-      OrigLoop, *LI, Legal->getWidestInductionType(),
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
-
-  VPlanTransforms::createHeaderPhiRecipes(
-      *Plan, PSE, *OrigLoop, Legal->getInductionVars(),
-      MapVector<PHINode *, RecurrenceDescriptor>(),
-      SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
-      /*AllowReordering=*/false);
-  [[maybe_unused]] bool CanHandleExits = VPlanTransforms::handleEarlyExits(
-      *Plan, UncountableExitStyle::NoUncountableExit, OrigLoop, PSE, *DT,
-      Legal->getAssumptionCache());
-  assert(CanHandleExits &&
-         "early-exits are not supported in VPlan-native path");
-  VPlanTransforms::addMiddleCheck(*Plan, /*TailFolded*/ false);
-
-  VPlanTransforms::createLoopRegions(*Plan);
-
-  for (ElementCount VF : Range)
-    Plan->addVF(VF);
-
-  if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
-    return nullptr;
-
-  // Optimize induction live-out users to use precomputed end values.
-  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
-                                                 /*FoldTail=*/false);
-
-  assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
-  return Plan;
-}
-
 void LoopVectorizationPlanner::addReductionResultComputation(
     VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
@@ -8477,7 +8296,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   if (MemCheckBlock && MemCheckBlock->hasNPredecessors(0)) {
     // VPlan-native path does not do any analysis for runtime checks
     // currently.
-    assert((!EnableVPlanNativePath || OrigLoop->isInnermost()) &&
+    assert(OrigLoop->isInnermost() &&
            "Runtime checks are not supported for outer loops yet");
 
     if (CM.OptForSize) {
@@ -8554,74 +8373,6 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
   return CM_ScalarEpilogueAllowed;
-}
-
-// Process the loop in the VPlan-native vectorization path. This path builds
-// VPlan upfront in the vectorization pipeline, which allows to apply
-// VPlan-to-VPlan transformations from the very beginning without modifying the
-// input LLVM IR.
-static bool processLoopInVPlanNativePath(
-    Loop *L, PredicatedScalarEvolution &PSE, LoopInfo *LI, DominatorTree *DT,
-    LoopVectorizationLegality *LVL, TargetTransformInfo *TTI,
-    TargetLibraryInfo *TLI, DemandedBits *DB, AssumptionCache *AC,
-    OptimizationRemarkEmitter *ORE,
-    std::function<BlockFrequencyInfo &()> GetBFI, bool OptForSize,
-    LoopVectorizeHints &Hints, LoopVectorizationRequirements &Requirements) {
-
-  if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
-    LLVM_DEBUG(dbgs() << "LV: cannot compute the outer-loop trip count\n");
-    return false;
-  }
-  assert(EnableVPlanNativePath && "VPlan-native path is disabled.");
-  Function *F = L->getHeader()->getParent();
-  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL->getLAI());
-
-  ScalarEpilogueLowering SEL =
-      getScalarEpilogueLowering(F, L, Hints, OptForSize, TTI, TLI, *LVL, &IAI);
-
-  LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE,
-                                GetBFI, F, &Hints, IAI, OptForSize);
-  // Use the planner for outer loop vectorization.
-  // TODO: CM is not used at this point inside the planner. Turn CM into an
-  // optional argument if we don't need it in the future.
-  LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, LVL, CM, IAI, PSE, Hints,
-                               ORE);
-
-  // Get user vectorization factor.
-  ElementCount UserVF = Hints.getWidth();
-
-  CM.collectElementTypesForWidening();
-
-  // Plan how to best vectorize, return the best VF and its cost.
-  const VectorizationFactor VF = LVP.planInVPlanNativePath(UserVF);
-
-  // If we are stress testing VPlan builds, do not attempt to generate vector
-  // code. Masked vector code generation support will follow soon.
-  // Also, do not attempt to vectorize if no vector code will be produced.
-  if (VPlanBuildStressTest || VectorizationFactor::Disabled() == VF)
-    return false;
-
-  VPlan &BestPlan = LVP.getPlanFor(VF.Width);
-
-  {
-    GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind);
-    InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, /*UF=*/1, &CM,
-                           Checks, BestPlan);
-    LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
-                      << L->getHeader()->getParent()->getName() << "\"\n");
-    LVP.addMinimumIterationCheck(BestPlan, VF.Width, /*UF=*/1,
-                                 VF.MinProfitableTripCount);
-    bool HasBranchWeights =
-        hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
-    LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
-
-    LVP.executePlan(VF.Width, /*UF=*/1, BestPlan, LB, DT);
-  }
-
-  reportVectorization(ORE, L, VF, 1);
-
-  assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()));
-  return true;
 }
 
 // Emit a remark if there are stores to floats that required a floating point
@@ -9248,7 +8999,7 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
 }
 
 bool LoopVectorizePass::processLoop(Loop *L) {
-  assert((EnableVPlanNativePath || L->isInnermost()) &&
+  assert(L->isInnermost() &&
          "VPlan-native path is not enabled. Only process inner loops.");
 
   LLVM_DEBUG(dbgs() << "\nLV: Checking a loop in '"
@@ -9298,7 +9049,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE,
                                 &Requirements, &Hints, DB, AC,
                                 /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
-  if (!LVL.canVectorize(EnableVPlanNativePath)) {
+  if (!LVL.canVectorize()) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
     Hints.emitRemarkWithHints();
     return false;
@@ -9312,18 +9063,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       return false;
     }
   }
-
-  // Entrance to the VPlan-native vectorization path. Outer loops are processed
-  // here. They may require CFG and instruction level transformations before
-  // even evaluating whether vectorization is profitable. Since we cannot modify
-  // the incoming IR, we need to build VPlan upfront in the vectorization
-  // pipeline.
-  if (!L->isInnermost())
-    return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
-                                        ORE, GetBFI, OptForSize, Hints,
-                                        Requirements);
-
-  assert(L->isInnermost() && "Inner loop expected.");
 
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
   bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
