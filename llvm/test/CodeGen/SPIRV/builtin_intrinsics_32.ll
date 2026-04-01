@@ -4,34 +4,34 @@
 target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
 target triple = "spirv32-unknown-unknown"
 
-; CHECK: OpDecorate [[NumWorkgroups:%[0-9]*]] BuiltIn NumWorkgroups
-; CHECK: OpDecorate [[WorkgroupSize:%[0-9]*]] BuiltIn WorkgroupSize
-; CHECK: OpDecorate [[WorkgroupId:%[0-9]*]] BuiltIn WorkgroupId
-; CHECK: OpDecorate [[LocalInvocationId:%[0-9]*]] BuiltIn LocalInvocationId
-; CHECK: OpDecorate [[GlobalInvocationId:%[0-9]*]] BuiltIn GlobalInvocationId
-; CHECK: OpDecorate [[GlobalSize:%[0-9]*]] BuiltIn GlobalSize
-; CHECK: OpDecorate [[GlobalOffset:%[0-9]*]] BuiltIn GlobalOffset
-; CHECK: OpDecorate [[SubgroupSize:%[0-9]*]] BuiltIn SubgroupSize
-; CHECK: OpDecorate [[SubgroupMaxSize:%[0-9]*]] BuiltIn SubgroupMaxSize
-; CHECK: OpDecorate [[NumSubgroups:%[0-9]*]] BuiltIn NumSubgroups
-; CHECK: OpDecorate [[SubgroupId:%[0-9]*]] BuiltIn SubgroupId
-; CHECK: OpDecorate [[SubgroupLocalInvocationId:%[0-9]*]] BuiltIn SubgroupLocalInvocationId
-; CHECK: [[I32:%[0-9]*]] = OpTypeInt 32 0
-; CHECK: [[I32PTR:%[0-9]*]] = OpTypePointer Input [[I32]]
-; CHECK: [[I32V3:%[0-9]*]] = OpTypeVector [[I32]] 3
-; CHECK: [[I32V3PTR:%[0-9]*]] = OpTypePointer Input [[I32V3]]
-; CHECK: [[NumWorkgroups]] = OpVariable [[I32V3PTR]] Input
-; CHECK: [[WorkgroupSize]] = OpVariable [[I32V3PTR]] Input
-; CHECK: [[WorkgroupId]] = OpVariable [[I32V3PTR]] Input
-; CHECK: [[LocalInvocationId]] = OpVariable [[I32V3PTR]] Input
-; CHECK: [[GlobalInvocationId]] = OpVariable [[I32V3PTR]] Input
-; CHECK: [[GlobalSize]] = OpVariable [[I32V3PTR]] Input
-; CHECK: [[GlobalOffset]] = OpVariable [[I32V3PTR]] Input
-; CHECK: [[SubgroupSize]] = OpVariable [[I32PTR]] Input
-; CHECK: [[SubgroupMaxSize]] = OpVariable [[I32PTR]] Input
-; CHECK: [[NumSubgroups]] = OpVariable [[I32PTR]] Input
-; CHECK: [[SubgroupId]] = OpVariable [[I32PTR]] Input
-; CHECK: [[SubgroupLocalInvocationId]] = OpVariable [[I32PTR]] Input
+; CHECK-DAG: OpDecorate [[NumWorkgroups:%[0-9]*]] BuiltIn NumWorkgroups
+; CHECK-DAG: OpDecorate [[WorkgroupSize:%[0-9]*]] BuiltIn WorkgroupSize
+; CHECK-DAG: OpDecorate [[WorkgroupId:%[0-9]*]] BuiltIn WorkgroupId
+; CHECK-DAG: OpDecorate [[LocalInvocationId:%[0-9]*]] BuiltIn LocalInvocationId
+; CHECK-DAG: OpDecorate [[GlobalInvocationId:%[0-9]*]] BuiltIn GlobalInvocationId
+; CHECK-DAG: OpDecorate [[GlobalSize:%[0-9]*]] BuiltIn GlobalSize
+; CHECK-DAG: OpDecorate [[GlobalOffset:%[0-9]*]] BuiltIn GlobalOffset
+; CHECK-DAG: OpDecorate [[SubgroupSize:%[0-9]*]] BuiltIn SubgroupSize
+; CHECK-DAG: OpDecorate [[SubgroupMaxSize:%[0-9]*]] BuiltIn SubgroupMaxSize
+; CHECK-DAG: OpDecorate [[NumSubgroups:%[0-9]*]] BuiltIn NumSubgroups
+; CHECK-DAG: OpDecorate [[SubgroupId:%[0-9]*]] BuiltIn SubgroupId
+; CHECK-DAG: OpDecorate [[SubgroupLocalInvocationId:%[0-9]*]] BuiltIn SubgroupLocalInvocationId
+; CHECK-DAG: [[I32:%[0-9]*]] = OpTypeInt 32 0
+; CHECK-DAG: [[I32PTR:%[0-9]*]] = OpTypePointer Input [[I32]]
+; CHECK-DAG: [[I32V3:%[0-9]*]] = OpTypeVector [[I32]] 3
+; CHECK-DAG: [[I32V3PTR:%[0-9]*]] = OpTypePointer Input [[I32V3]]
+; CHECK-DAG: [[NumWorkgroups]] = OpVariable [[I32V3PTR]] Input
+; CHECK-DAG: [[WorkgroupSize]] = OpVariable [[I32V3PTR]] Input
+; CHECK-DAG: [[WorkgroupId]] = OpVariable [[I32V3PTR]] Input
+; CHECK-DAG: [[LocalInvocationId]] = OpVariable [[I32V3PTR]] Input
+; CHECK-DAG: [[GlobalInvocationId]] = OpVariable [[I32V3PTR]] Input
+; CHECK-DAG: [[GlobalSize]] = OpVariable [[I32V3PTR]] Input
+; CHECK-DAG: [[GlobalOffset]] = OpVariable [[I32V3PTR]] Input
+; CHECK-DAG: [[SubgroupSize]] = OpVariable [[I32PTR]] Input
+; CHECK-DAG: [[SubgroupMaxSize]] = OpVariable [[I32PTR]] Input
+; CHECK-DAG: [[NumSubgroups]] = OpVariable [[I32PTR]] Input
+; CHECK-DAG: [[SubgroupId]] = OpVariable [[I32PTR]] Input
+; CHECK-DAG: [[SubgroupLocalInvocationId]] = OpVariable [[I32PTR]] Input
 
 @G_spv_num_workgroups_0 = global i32 0
 @G_spv_num_workgroups_1 = global i32 0
