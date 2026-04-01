@@ -1,5 +1,6 @@
 #include "CIRGenTypes.h"
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -652,11 +653,12 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   if (const auto *rd = t->getAsRecordDecl())
     return isZeroInitializable(rd);
 
-  if (t->getAs<MemberPointerType>()) {
-    cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",
-                 t);
-    return false;
-  }
+  if (const auto *mpt = t->getAs<MemberPointerType>())
+    return theCXXABI.isZeroInitializable(mpt);
+
+  if (t->getAs<HLSLInlineSpirvType>())
+    cgm.errorNYI(SourceLocation(),
+                 "isZeroInitializable for HLSLInlineSpirvType");
 
   return true;
 }

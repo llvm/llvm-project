@@ -38,6 +38,8 @@ class TensorArmRankOf<list<Type> allowedTypes, list<int> ranks>
       [HasAnyRankOfPred<ranks>],
       !interleave(!foreach(rank, ranks, rank # "D"), "/") # " tensorArm">;
 
+def SPIRV_Int8_TensorArm1D : TensorArmRankOf<[SPIRV_Int8], [1]>;
+def SPIRV_Int16OrInt32_TensorArm1D : TensorArmRankOf<[SPIRV_Int16, SPIRV_Int32], [1]>;
 def SPIRV_Int32_TensorArm2D : TensorArmRankOf<[SPIRV_Int32], [2]>;
 def SPIRV_Float32_TensorArm3D: TensorArmRankOf<[SPIRV_Float32], [3]>;
 def SPIRV_TosaInteger_TensorArm1D : TensorArmRankOf<[SPIRV_TosaInteger], [1]>;
@@ -92,6 +94,7 @@ def SPIRV_Int32_1DTensorArmOfLength1To6Attr : ConfinedAttr<
   I32ElementsAttr, [SPIRV_DenseElementAttrsWithTensorArmType, Is1DTensorArmAttrOfLength<[1, 2, 3, 4, 5, 6]>]>;
 
 def SPIRV_Int8_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_Int8]>;
+def SPIRV_TosaInteger_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_TosaInteger]>;
 def SPIRV_TosaNumerical_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_TosaNumerical]>;
 def SPIRV_TosaAny_1DTensorArmOfLength1 : SPIRV_1DTensorArmOfLengthAndType<[1], [SPIRV_TosaAny]>;
 
@@ -119,6 +122,13 @@ class TypeConstraintImplicationOn<string name, Type type, string other, list<Typ
               other # " must have a type in [" #
               !interleave(!foreach(type, allowedTypes, type.summary), ",") # "]",
     Implies<ElementTypeIsPred<name, type>,
+    !foreach(allowedType, allowedTypes, ElementTypeIsPred<other, allowedType>)>>;
+
+class BoolAttrTypeConstraintImplicationOn<string boolAttr, string other, list<Type> allowedTypes>:
+  PredOpTrait<"if " # boolAttr # " is true then " #
+              other # " must have a type in [" #
+              !interleave(!foreach(type, allowedTypes, type.summary), ",") # "]",
+    Implies<CPred<"get" # snakeCaseToCamelCase<boolAttr>.ret # "()" >,
     !foreach(allowedType, allowedTypes, ElementTypeIsPred<other, allowedType>)>>;
 
 class AxisValueLessThanRankOf<string input>:
@@ -200,6 +210,17 @@ class VariadicInputAllSameRank<string reference, string input>:
                      # HasRank<reference>.result #
                      " && ::llvm::cast<::mlir::ShapedType>(t).getRank() == "
                      # Rank<reference>.result # "; })">>;
+
+class ElementTypeMatchesScale32<string tensor> :
+  PredOpTrait<tensor # " must have element type i32 when scale32 is true, otherwise i16",
+    CPred<"::llvm::cast<::mlir::ShapedType>($" # tensor # ".getType()).getElementType()."
+          "isInteger(getScale32() ? 32 : 16)">>;
+
+class TensorLengthMatchesPerChannel<string tensor> :
+  PredOpTrait<tensor # " must have length rank(input) - 1 when per_channel is true, otherwise length 1",
+    CPred<"::llvm::cast<::mlir::ShapedType>($" # tensor # ".getType()).getShape()[0] == "
+          "(getPerChannel() ? "
+          "::llvm::cast<::mlir::ShapedType>($input.getType()).getRank() - 1 : 1)">>;
 
 
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_TYPES

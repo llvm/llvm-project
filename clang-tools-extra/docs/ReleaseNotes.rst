@@ -433,6 +433,10 @@ Changes in existing checks
   - Warn and provide fix-its when a macro defined in a system header (e.g.
     ``NULL``) is implicitly converted to ``bool``.
 
+  - Added `AllowLogicalOperatorConversion` option to suppress warnings on
+    implicit conversions of logical operator results (``&&``, ``||``, ``!``)
+    to ``bool`` in C.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
   positives on parameters used in dependent expressions (e.g. inside generic

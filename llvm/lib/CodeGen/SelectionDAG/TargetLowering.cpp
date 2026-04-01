@@ -8866,6 +8866,26 @@ void TargetLowering::expandShiftParts(SDNode *Node, SDValue &Lo, SDValue &Hi,
   }
 }
 
+SDValue TargetLowering::expandFCANONICALIZE(SDNode *Node,
+                                            SelectionDAG &DAG) const {
+  // This implements llvm.canonicalize.f* by multiplication with 1.0, as
+  // suggested in
+  // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
+  // It uses strict_fp operations even outside a strict_fp context in order
+  // to guarantee that the canonicalization is not optimized away by later
+  // passes. The result chain introduced by that is intentionally ignored
+  // since no ordering requirement is intended here.
+  EVT VT = Node->getValueType(0);
+  SDLoc DL(Node);
+  SDNodeFlags Flags = Node->getFlags();
+  Flags.setNoFPExcept(true);
+  SDValue One = DAG.getConstantFP(1.0, DL, VT);
+  SDValue Mul =
+      DAG.getNode(ISD::STRICT_FMUL, DL, {VT, MVT::Other},
+                  {DAG.getEntryNode(), Node->getOperand(0), One}, Flags);
+  return Mul;
+}
+
 bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
                                       SelectionDAG &DAG) const {
   unsigned OpNo = Node->isStrictFPOpcode() ? 1 : 0;
@@ -10120,22 +10140,24 @@ SDValue TargetLowering::expandVPCTTZElements(SDNode *N,
   return DAG.getNode(ISD::VP_REDUCE_UMIN, DL, ResVT, ExtEVL, Select, Mask, EVL);
 }
 
-SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
-                                                   SelectionDAG &DAG) const {
-  SDLoc DL(N);
-  SDValue Mask = N->getOperand(0);
+/// Returns a type-legalized version of \p Mask as the first item in the
+/// pair. The second item contains a type-legalized step vector that's
+/// guaranteed to fit the number of elements in \p Mask.
+static std::pair<SDValue, SDValue>
+getLegalMaskAndStepVector(SDValue Mask, bool ZeroIsPoison, SDLoc DL,
+                          SelectionDAG &DAG) {
   EVT MaskVT = Mask.getValueType();
   EVT BoolVT = MaskVT.getScalarType();
 
   // Find a suitable type for a stepvector.
+  // If zero is poison, we can assume the upper limit of the result is VF-1.
   ConstantRange VScaleRange(1, /*isFullSet=*/true); // Fixed length default.
   if (MaskVT.isScalableVector())
     VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   uint64_t EltWidth = TLI.getBitWidthForCttzElements(
-      EVT(getVectorIdxTy(DAG.getDataLayout())).getTypeForEVT(*DAG.getContext()),
-      MaskVT.getVectorElementCount(),
-      /*ZeroIsPoison=*/true, &VScaleRange);
+      EVT(TLI.getVectorIdxTy(DAG.getDataLayout())),
+      MaskVT.getVectorElementCount(), ZeroIsPoison, &VScaleRange);
   // If the step vector element type is smaller than the mask element type,
   // use the mask type directly to avoid widening issues.
   EltWidth = std::max(EltWidth, BoolVT.getFixedSizeInBits());
@@ -10151,7 +10173,6 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   SDValue StepVec;
   if (TypeAction == TargetLowering::TypePromoteInteger) {
     StepVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), StepVecVT);
-    StepVT = StepVecVT.getVectorElementType();
     StepVec = DAG.getStepVector(DL, StepVecVT);
   } else if (TypeAction == TargetLowering::TypeWidenVector) {
     // For widening, the element count changes. Create a step vector with only
@@ -10168,12 +10189,20 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
     EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), BoolVT, WideNumElts);
     SDValue ZeroMask = DAG.getConstant(0, DL, WideMaskVT);
     Mask = DAG.getInsertSubvector(DL, ZeroMask, Mask, 0);
-
-    StepVecVT = WideVecVT;
-    StepVT = WideVecVT.getVectorElementType();
   } else {
     StepVec = DAG.getStepVector(DL, StepVecVT);
   }
+
+  return {Mask, StepVec};
+}
+
+SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
+                                                   SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  auto [Mask, StepVec] = getLegalMaskAndStepVector(
+      N->getOperand(0), /*ZeroIsPoison=*/true, DL, DAG);
+  EVT StepVecVT = StepVec.getValueType();
+  EVT StepVT = StepVec.getValueType().getVectorElementType();
 
   // Zero out lanes with inactive elements, then find the highest remaining
   // value from the stepvector.
@@ -11463,39 +11492,39 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getSelect(dl, VT, Overflow, Zero, SumDiff);
   }
 
-  if (Opcode == ISD::SADDSAT || Opcode == ISD::SSUBSAT) {
-    APInt MinVal = APInt::getSignedMinValue(BitWidth);
-    APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
+  assert((Opcode == ISD::SADDSAT || Opcode == ISD::SSUBSAT) &&
+         "Expected signed saturating add/sub opcode");
 
-    KnownBits KnownLHS = DAG.computeKnownBits(LHS);
-    KnownBits KnownRHS = DAG.computeKnownBits(RHS);
+  const APInt MinVal = APInt::getSignedMinValue(BitWidth);
+  const APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
 
-    // If either of the operand signs are known, then they are guaranteed to
-    // only saturate in one direction. If non-negative they will saturate
-    // towards SIGNED_MAX, if negative they will saturate towards SIGNED_MIN.
-    //
-    // In the case of ISD::SSUBSAT, 'x - y' is equivalent to 'x + (-y)', so the
-    // sign of 'y' has to be flipped.
+  KnownBits KnownLHS = DAG.computeKnownBits(LHS);
+  KnownBits KnownRHS = DAG.computeKnownBits(RHS);
 
-    bool LHSIsNonNegative = KnownLHS.isNonNegative();
-    bool RHSIsNonNegative = Opcode == ISD::SADDSAT ? KnownRHS.isNonNegative()
-                                                   : KnownRHS.isNegative();
-    if (LHSIsNonNegative || RHSIsNonNegative) {
-      SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
-      return DAG.getSelect(dl, VT, Overflow, SatMax, SumDiff);
-    }
+  // If either of the operand signs are known, then they are guaranteed to
+  // only saturate in one direction. If non-negative they will saturate
+  // towards SIGNED_MAX, if negative they will saturate towards SIGNED_MIN.
+  //
+  // In the case of ISD::SSUBSAT, 'x - y' is equivalent to 'x + (-y)', so the
+  // sign of 'y' has to be flipped.
 
-    bool LHSIsNegative = KnownLHS.isNegative();
-    bool RHSIsNegative = Opcode == ISD::SADDSAT ? KnownRHS.isNegative()
-                                                : KnownRHS.isNonNegative();
-    if (LHSIsNegative || RHSIsNegative) {
-      SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
-      return DAG.getSelect(dl, VT, Overflow, SatMin, SumDiff);
-    }
+  bool LHSIsNonNegative = KnownLHS.isNonNegative();
+  bool RHSIsNonNegative =
+      Opcode == ISD::SADDSAT ? KnownRHS.isNonNegative() : KnownRHS.isNegative();
+  if (LHSIsNonNegative || RHSIsNonNegative) {
+    SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
+    return DAG.getSelect(dl, VT, Overflow, SatMax, SumDiff);
+  }
+
+  bool LHSIsNegative = KnownLHS.isNegative();
+  bool RHSIsNegative =
+      Opcode == ISD::SADDSAT ? KnownRHS.isNegative() : KnownRHS.isNonNegative();
+  if (LHSIsNegative || RHSIsNegative) {
+    SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
+    return DAG.getSelect(dl, VT, Overflow, SatMin, SumDiff);
   }
 
   // Overflow ? (SumDiff >> BW) ^ MinVal : SumDiff
-  APInt MinVal = APInt::getSignedMinValue(BitWidth);
   SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
   SDValue Shift = DAG.getNode(ISD::SRA, dl, VT, SumDiff,
                               DAG.getConstant(BitWidth - 1, dl, VT));
@@ -12594,6 +12623,34 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   }
 
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
+}
+
+SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+
+  bool ZeroIsPoison = Node->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON;
+  auto [Mask, StepVec] =
+      getLegalMaskAndStepVector(Node->getOperand(0), ZeroIsPoison, DL, DAG);
+  EVT StepVecVT = StepVec.getValueType();
+  EVT StepVT = StepVecVT.getVectorElementType();
+
+  // Promote the scalar result type early to avoid redundant zexts.
+  if (getTypeAction(StepVT.getSimpleVT()) == TypePromoteInteger)
+    StepVT = getTypeToTransformTo(*DAG.getContext(), StepVT);
+
+  SDValue VL =
+      DAG.getElementCount(DL, StepVT, StepVecVT.getVectorElementCount());
+  SDValue SplatVL = DAG.getSplat(StepVecVT, DL, VL);
+  StepVec = DAG.getNode(ISD::SUB, DL, StepVecVT, SplatVL, StepVec);
+  SDValue Zeroes = DAG.getConstant(0, DL, StepVecVT);
+  SDValue Select = DAG.getSelect(DL, StepVecVT, Mask, StepVec, Zeroes);
+  SDValue Max = DAG.getNode(ISD::VECREDUCE_UMAX, DL,
+                            StepVecVT.getVectorElementType(), Select);
+  SDValue Sub = DAG.getNode(ISD::SUB, DL, StepVT, VL,
+                            DAG.getZExtOrTrunc(Max, DL, StepVT));
+
+  return DAG.getZExtOrTrunc(Sub, DL, VT);
 }
 
 SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,

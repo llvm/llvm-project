@@ -445,6 +445,13 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::atanbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::asinbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
+  EXPECT_FP_EQ(bfloat16(2.0f), LIBC_NAMESPACE::shared::bf16divf(4.0f, 2.0f));
+  EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16divl(6.0L, 3.0L));
+  EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16div(4.0, 2.0));
+  EXPECT_FP_EQ(bfloat16(10.0),
+               LIBC_NAMESPACE::shared::bf16fmal(2.0L, 3.0L, 4.0L));
 
   bfloat16 canonicalizebf16_cx = bfloat16(0.0);
   bfloat16 canonicalizebf16_x = bfloat16(0.0);

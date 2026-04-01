@@ -5,7 +5,11 @@ function(_get_common_test_compile_options output_var c_test flags)
 
   # Death test executor is only available in Linux for now.
   if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
-    list(REMOVE_ITEM config_flags "-DLIBC_ADD_NULL_CHECKS")
+    if (MSVC)
+      list(REMOVE_ITEM config_flags "/DLIBC_ADD_NULL_CHECKS")
+    else()
+      list(REMOVE_ITEM config_flags "-DLIBC_ADD_NULL_CHECKS")
+    endif()
   endif()
 
   set(compile_options
@@ -68,11 +72,15 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var)
   _get_common_test_compile_options(compile_options "" "")
-  list(APPEND compile_options "-DLIBC_TEST=HERMETIC")
+  libc_add_definition(compile_options "LIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
-    list(REMOVE_ITEM compile_options "-DLIBC_ADD_NULL_CHECKS")
+    if(MSVC)
+      list(REMOVE_ITEM compile_options "/DLIBC_ADD_NULL_CHECKS")
+    else()
+      list(REMOVE_ITEM compile_options "-DLIBC_ADD_NULL_CHECKS")
+    endif()
   endif()
 
   # The GPU build requires overriding the default CMake triple and architecture.
@@ -187,6 +195,16 @@ function(get_object_files_for_test result skipped_entrypoints_list)
 
 endfunction(get_object_files_for_test)
 
+function(get_link_options link_options)
+  set(link_opts "")
+  foreach(opt IN LISTS ARGN)
+    if((NOT ${opt} MATCHES "^/D") AND (NOT ${opt} MATCHES "^-D"))
+      list(APPEND link_opts ${opt})
+    endif()
+  endforeach()
+  set(${link_options} "${link_opts}" PARENT_SCOPE)
+endfunction()
+
 # Rule to add a libc unittest.
 # Usage
 #    add_libc_unittest(
@@ -229,12 +247,12 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
-  list(APPEND compile_options "-DLIBC_TEST=UNIT")
-  # TODO: Ideally we would have a separate function for link options.
-  set(link_options
-    ${compile_options}
-    ${LIBC_LINK_OPTIONS_DEFAULT}
-    ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+  libc_add_definition(compile_options "LIBC_TEST=UNIT")
+
+  get_link_options(link_options
+                   ${compile_options}
+                   ${LIBC_LINK_OPTIONS_DEFAULT}
+                   ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
   )
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
