@@ -49,6 +49,7 @@ protected:
   void initializeTargetDebugInfo(const MachineFunction &MF) override;
   void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) override;
   bool shouldAttachCompileUnitRanges() const override;
+  bool shouldEmitDwarfPubSections() const override { return false; }
 };
 
 } // end namespace llvm

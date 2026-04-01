@@ -40,6 +40,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           fetch-depth: 250
 
       - name: Get LLVM version
@@ -104,6 +105,7 @@ jobs:
       - name: Download source code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          persist-credentials: false
           ref: ${{ matrix.ref }}
           repository: ${{ matrix.repo }}
       - name: Configure

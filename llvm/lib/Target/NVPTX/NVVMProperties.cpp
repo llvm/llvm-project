@@ -18,11 +18,13 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include <functional>
 #include <map>
 #include <mutex>
@@ -46,6 +48,18 @@ AnnotationCache &getAnnotationCache() {
   return AC;
 }
 } // namespace
+
+// TODO: Replace these legacy nvvm.annotations metadata names with proper
+// function/parameter attributes (like the NVVMAttr:: constants).
+namespace NVVMMetadata {
+constexpr StringLiteral Texture("texture");
+constexpr StringLiteral Surface("surface");
+constexpr StringLiteral Sampler("sampler");
+constexpr StringLiteral ReadOnlyImage("rdoimage");
+constexpr StringLiteral WriteOnlyImage("wroimage");
+constexpr StringLiteral ReadWriteImage("rdwrimage");
+constexpr StringLiteral Managed("managed");
+} // namespace NVVMMetadata
 
 void clearAnnotationCache(const Module *Mod) {
   auto &AC = getAnnotationCache();
@@ -102,7 +116,7 @@ static void cacheAnnotationFromMD(const Module *M, const GlobalValue *GV) {
 }
 
 static std::optional<unsigned> findOneNVVMAnnotation(const GlobalValue *GV,
-                                                     const std::string &Prop) {
+                                                     StringRef Prop) {
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *M = GV->getParent();
@@ -113,14 +127,13 @@ static std::optional<unsigned> findOneNVVMAnnotation(const GlobalValue *GV,
     cacheAnnotationFromMD(M, GV);
 
   auto &KVP = AC.Cache[M][GV];
-  auto It = KVP.find(Prop);
+  auto It = KVP.find(Prop.str());
   if (It == KVP.end())
     return std::nullopt;
   return It->second[0];
 }
 
-static bool findAllNVVMAnnotation(const GlobalValue *GV,
-                                  const std::string &Prop,
+static bool findAllNVVMAnnotation(const GlobalValue *GV, StringRef Prop,
                                   std::vector<unsigned> &RetVal) {
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
@@ -132,14 +145,14 @@ static bool findAllNVVMAnnotation(const GlobalValue *GV,
     cacheAnnotationFromMD(M, GV);
 
   auto &KVP = AC.Cache[M][GV];
-  auto It = KVP.find(Prop);
+  auto It = KVP.find(Prop.str());
   if (It == KVP.end())
     return false;
   RetVal = It->second;
   return true;
 }
 
-static bool globalHasNVVMAnnotation(const Value &V, const std::string &Prop) {
+static bool globalHasNVVMAnnotation(const Value &V, StringRef Prop) {
   if (const auto *GV = dyn_cast<GlobalValue>(&V))
     if (const auto Annot = findOneNVVMAnnotation(GV, Prop)) {
       assert((*Annot == 1) && "Unexpected annotation on a symbol");
@@ -149,8 +162,7 @@ static bool globalHasNVVMAnnotation(const Value &V, const std::string &Prop) {
   return false;
 }
 
-static bool argHasNVVMAnnotation(const Value &Val,
-                                 const std::string &Annotation) {
+static bool argHasNVVMAnnotation(const Value &Val, StringRef Annotation) {
   if (const auto *Arg = dyn_cast<Argument>(&Val)) {
     std::vector<unsigned> Annot;
     if (findAllNVVMAnnotation(Arg->getParent(), Annotation, Annot) &&
@@ -197,44 +209,49 @@ static std::optional<uint64_t> getVectorProduct(ArrayRef<unsigned> V) {
                          std::multiplies<uint64_t>{});
 }
 
-bool isTexture(const Value &V) { return globalHasNVVMAnnotation(V, "texture"); }
-
-bool isSurface(const Value &V) { return globalHasNVVMAnnotation(V, "surface"); }
-
-bool isSampler(const Value &V) {
-  const char *AnnotationName = "sampler";
-  return globalHasNVVMAnnotation(V, AnnotationName) ||
-         argHasNVVMAnnotation(V, AnnotationName);
+PTXOpaqueType getPTXOpaqueType(const GlobalVariable &GV) {
+  if (findOneNVVMAnnotation(&GV, NVVMMetadata::Texture))
+    return PTXOpaqueType::Texture;
+  if (findOneNVVMAnnotation(&GV, NVVMMetadata::Surface))
+    return PTXOpaqueType::Surface;
+  if (findOneNVVMAnnotation(&GV, NVVMMetadata::Sampler))
+    return PTXOpaqueType::Sampler;
+  return PTXOpaqueType::None;
 }
 
-bool isImageReadOnly(const Value &V) {
-  return argHasNVVMAnnotation(V, "rdoimage");
+PTXOpaqueType getPTXOpaqueType(const Argument &Arg) {
+  if (argHasNVVMAnnotation(Arg, NVVMMetadata::Sampler))
+    return PTXOpaqueType::Sampler;
+  if (argHasNVVMAnnotation(Arg, NVVMMetadata::ReadOnlyImage))
+    return PTXOpaqueType::Texture;
+  if (argHasNVVMAnnotation(Arg, NVVMMetadata::WriteOnlyImage) ||
+      argHasNVVMAnnotation(Arg, NVVMMetadata::ReadWriteImage))
+    return PTXOpaqueType::Surface;
+  return PTXOpaqueType::None;
 }
 
-bool isImageWriteOnly(const Value &V) {
-  return argHasNVVMAnnotation(V, "wroimage");
+PTXOpaqueType getPTXOpaqueType(const Value &V) {
+  if (const auto *GV = dyn_cast<GlobalVariable>(&V))
+    return getPTXOpaqueType(*GV);
+  if (const auto *Arg = dyn_cast<Argument>(&V))
+    return getPTXOpaqueType(*Arg);
+  return PTXOpaqueType::None;
 }
 
-bool isImageReadWrite(const Value &V) {
-  return argHasNVVMAnnotation(V, "rdwrimage");
+bool isManaged(const Value &V) {
+  return globalHasNVVMAnnotation(V, NVVMMetadata::Managed);
 }
-
-bool isImage(const Value &V) {
-  return isImageReadOnly(V) || isImageWriteOnly(V) || isImageReadWrite(V);
-}
-
-bool isManaged(const Value &V) { return globalHasNVVMAnnotation(V, "managed"); }
 
 SmallVector<unsigned, 3> getMaxNTID(const Function &F) {
-  return getFnAttrParsedVector(F, "nvvm.maxntid");
+  return getFnAttrParsedVector(F, NVVMAttr::MaxNTID);
 }
 
 SmallVector<unsigned, 3> getReqNTID(const Function &F) {
-  return getFnAttrParsedVector(F, "nvvm.reqntid");
+  return getFnAttrParsedVector(F, NVVMAttr::ReqNTID);
 }
 
 SmallVector<unsigned, 3> getClusterDim(const Function &F) {
-  return getFnAttrParsedVector(F, "nvvm.cluster_dim");
+  return getFnAttrParsedVector(F, NVVMAttr::ClusterDim);
 }
 
 std::optional<uint64_t> getOverallMaxNTID(const Function &F) {
@@ -262,19 +279,19 @@ std::optional<uint64_t> getOverallClusterRank(const Function &F) {
 }
 
 std::optional<unsigned> getMaxClusterRank(const Function &F) {
-  return getFnAttrParsedInt(F, "nvvm.maxclusterrank");
+  return getFnAttrParsedInt(F, NVVMAttr::MaxClusterRank);
 }
 
 std::optional<unsigned> getMinCTASm(const Function &F) {
-  return getFnAttrParsedInt(F, "nvvm.minctasm");
+  return getFnAttrParsedInt(F, NVVMAttr::MinCTASm);
 }
 
 std::optional<unsigned> getMaxNReg(const Function &F) {
-  return getFnAttrParsedInt(F, "nvvm.maxnreg");
+  return getFnAttrParsedInt(F, NVVMAttr::MaxNReg);
 }
 
 bool hasBlocksAreClusters(const Function &F) {
-  return F.hasFnAttribute("nvvm.blocksareclusters");
+  return F.hasFnAttribute(NVVMAttr::BlocksAreClusters);
 }
 
 bool isParamGridConstant(const Argument &Arg) {
@@ -297,7 +314,7 @@ bool isParamGridConstant(const Argument &Arg) {
   }
 
   // "grid_constant" counts argument indices starting from 1
-  return Arg.hasAttribute("nvvm.grid_constant");
+  return Arg.hasAttribute(NVVMAttr::GridConstant);
 }
 
 MaybeAlign getAlign(const CallInst &I, unsigned Index) {

@@ -8,6 +8,7 @@
 
 #include "PassDetail.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/IRMapping.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
@@ -1435,9 +1436,17 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
 
-        cir::CallOp ctorCall;
-        op->walk([&](cir::CallOp c) { ctorCall = c; });
-        assert(ctorCall && "expected ctor call");
+        // Clone the region body (ctor/dtor call and any setup ops like
+        // per-element zero-init) into the loop, remapping the block argument
+        // to the current element pointer.
+        mlir::Block *oldBlock = &op->getRegion(0).front();
+        mlir::BlockArgument oldArg = oldBlock->getArgument(0);
+        mlir::IRMapping map;
+        map.map(oldArg, currentElement);
+        for (mlir::Operation &regionOp : *oldBlock) {
+          if (!mlir::isa<cir::YieldOp>(&regionOp))
+            builder.clone(regionOp, map);
+        }
 
         // Array elements get constructed in order but destructed in reverse.
         mlir::Value stride;
@@ -1446,8 +1455,6 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
         else
           stride = builder.getSignedInt(loc, -1, sizeTypeSize);
 
-        ctorCall->moveBefore(stride.getDefiningOp());
-        ctorCall->setOperand(0, currentElement);
         auto nextElement = cir::PtrStrideOp::create(builder, loc, eltTy,
                                                     currentElement, stride);
 

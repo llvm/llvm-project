@@ -66,7 +66,7 @@ LIBC_INLINE constexpr float atanhf(float x) {
     return static_cast<float>(fputil::multiply_add(xdbl, pe, xdbl));
   }
   double xdbl = x;
-  return static_cast<float>(0.5 * log_eval((xdbl + 1.0) / (xdbl - 1.0)));
+  return static_cast<float>(0.5 * log_eval((1.0 + xdbl) / (1.0 - x)));
 }
 
 } // namespace math

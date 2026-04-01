@@ -11,8 +11,17 @@
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <memory>
+#include <vector>
 
 typedef decltype(nullptr) nullptr_t;
 
@@ -30,62 +39,6 @@ struct any {
   any();
   void reset();
 };
-
-template <typename T1, typename T2>
-struct pair {};
-
-template <typename Key, typename T>
-struct map {
-  struct iterator {};
-
-  map();
-  void clear();
-  bool empty();
-  template <class... Args>
-  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
-};
-
-template <typename Key, typename T>
-struct unordered_map {
-  struct iterator {};
-
-  unordered_map();
-  void clear();
-  bool empty();
-  template <class... Args>
-  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
-};
-
-#define DECLARE_STANDARD_CONTAINER(name) \
-  template <typename T>                  \
-  struct name {                          \
-    name();                              \
-    void clear();                        \
-    bool empty();                        \
-  }
-
-#define DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(name) \
-  template <typename T>                              \
-  struct name {                                      \
-    name();                                          \
-    void clear();                                    \
-    bool empty();                                    \
-    void assign(size_t, const T &);                  \
-  }
-
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(basic_string);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(vector);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(deque);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(forward_list);
-DECLARE_STANDARD_CONTAINER_WITH_ASSIGN(list);
-DECLARE_STANDARD_CONTAINER(set);
-DECLARE_STANDARD_CONTAINER(multiset);
-DECLARE_STANDARD_CONTAINER(multimap);
-DECLARE_STANDARD_CONTAINER(unordered_set);
-DECLARE_STANDARD_CONTAINER(unordered_multiset);
-DECLARE_STANDARD_CONTAINER(unordered_multimap);
-
-typedef basic_string<char> string;
 
 } // namespace std
 
@@ -851,7 +804,7 @@ void standardContainerClearIsReinit() {
     container.empty();
   }
   {
-    std::multimap<int> container;
+    std::multimap<int, int> container;
     std::move(container);
     container.clear();
     container.empty();
@@ -875,7 +828,7 @@ void standardContainerClearIsReinit() {
     container.empty();
   }
   {
-    std::unordered_multimap<int> container;
+    std::unordered_multimap<int, int> container;
     std::move(container);
     container.clear();
     container.empty();
