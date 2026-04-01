@@ -3616,9 +3616,7 @@ static SDValue combineWideMaskReduction(SDNode *N, SDValue Mask, EVT MaskVT,
     Acc = DAG.getNode(ISD::XOR, DL, MVT::i32, Acc,
                       DAG.getConstant(1, DL, MVT::i32));
 
-  if (N->getValueType(0) != MVT::i32)
-    return DAG.getZExtOrTrunc(Acc, DL, N->getValueType(0));
-  return Acc;
+  return DAG.getZExtOrTrunc(Acc, DL, N->getValueType(0));
 }
 
 static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
