@@ -1480,6 +1480,9 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
 // algorithm doesn't overflow.
 static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
                     const APInt &Delta, APInt &G, APInt &X, APInt &Y) {
+  LLVM_DEBUG(dbgs() << "\t    AM = " << AM << "\n");
+  LLVM_DEBUG(dbgs() << "\t    BM = " << BM << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << Delta << "\n");
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
   APInt B0(Bits, 0, true), B1(Bits, 1, true);
   APInt G0 = AM.abs();
@@ -1629,8 +1632,8 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
   const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
-  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactSIVapplications;
@@ -1953,13 +1956,13 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
     return false;
 
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
-  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
-  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactRDIVapplications;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << " = CM\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   const SCEVConstant *ConstDstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
