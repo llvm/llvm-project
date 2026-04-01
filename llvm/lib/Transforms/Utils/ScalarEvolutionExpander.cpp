@@ -1162,7 +1162,7 @@ SCEVExpander::expandAddRecExprLiterally(SCEVUseT<const SCEVAddRecExpr *> S) {
 
   // Determine a normalized form of this expression, which is the expression
   // before any post-inc adjustment is made.
-  const SCEVAddRecExpr *Normalized = S.getPointer();
+  const SCEVAddRecExpr *Normalized = S;
   if (PostIncLoops.count(L)) {
     PostIncLoopSet Loops;
     Loops.insert(L);
@@ -1260,7 +1260,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
   auto CanReuse = [&](const SCEV *ExitSCEV) -> const SCEV * {
     if (isa<SCEVCouldNotCompute>(ExitSCEV))
       return nullptr;
-    const SCEV *Diff = SE.getMinusSCEV(S.getPointer(), ExitSCEV);
+    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
     const SCEV *Op = Diff;
     match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
     match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));

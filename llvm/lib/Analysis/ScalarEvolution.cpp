@@ -336,16 +336,9 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void SCEVUse::dump() const {
-  print(dbgs());
-  dbgs() << '\n';
-}
-#endif
-
 template <> void SCEVUseT<const SCEV *>::print(raw_ostream &OS) const {
-  getPointer()->print(OS);
-  SCEV::NoWrapFlags Flags = static_cast<SCEV::NoWrapFlags>(getInt());
+  Base::getPointer()->print(OS);
+  SCEV::NoWrapFlags Flags = static_cast<SCEV::NoWrapFlags>(Base::getInt());
   if (Flags & SCEV::FlagNUW)
     OS << "(u nuw)";
   if (Flags & SCEV::FlagNSW)

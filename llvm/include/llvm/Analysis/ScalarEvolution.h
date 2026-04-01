@@ -80,7 +80,7 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
       : Base(Other.getPointer(), Other.getInt()) {}
 
-  operator const SCEV *() const { return Base::getPointer(); }
+  operator SCEVPtrT() const { return Base::getPointer(); }
   SCEVPtrT operator->() const { return Base::getPointer(); }
 
   void *getRawPointer() const { return Base::getOpaqueValue(); }
@@ -92,8 +92,7 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
 
-  unsigned getFlags() const { return getInt(); }
-
+  unsigned getFlags() const { return Base::getInt(); }
 
   bool operator==(const SCEVUseT &RHS) const {
     return getRawPointer() == RHS.getRawPointer();
@@ -113,6 +112,9 @@ struct SCEVUseT : PointerIntPair<SCEVPtrT, 2> {
 template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
 
 using SCEVUse = SCEVUseT<const SCEV *>;
+
+template <> void SCEVUseT<const SCEV *>::print(raw_ostream &OS) const;
+template <> void SCEVUseT<const SCEV *>::dump() const;
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.
@@ -2666,8 +2668,8 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
   }
 };
 
-inline const SCEV *SCEVUse::getCanonical() const {
-  return getPointer()->getCanonical();
+template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
+  return Base::getPointer()->getCanonical();
 }
 
 } // end namespace llvm
