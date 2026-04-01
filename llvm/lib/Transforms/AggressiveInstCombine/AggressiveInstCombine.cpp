@@ -374,8 +374,6 @@ static bool tryToRecognizePopCount(Instruction &I) {
 
 // Try to recognize below function as popcount intrinsic.
 // Ref. Hackers Delight
-// Also used in TargetLowering::expandCTPOP().
-//
 // int popcnt(unsigned x) {
 // x = x - ((x >> 1) & 0x55555555);
 // x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
@@ -441,14 +439,14 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
   llvm::APInt NegThree(/*BitWidth=*/Len, /*Value=*/-3,
                        /*isSigned=*/true);
   // x = (x & 0x33333333) + ((x >> 2) & 0x33333333)".
-  if (!(match(Add2, m_c_Add(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
-                                  m_SpecificInt(Mask33)),
-                            m_And(m_Deferred(Sub1), m_SpecificInt(Mask33)))) ||
-        // Matching "x = x - 3*((x >> 2) & 0x33333333)".
-        match(Add2, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
-                                      m_SpecificInt(Mask33)),
-                                m_SpecificInt(NegThree)),
-                          m_Deferred(Sub1)))))
+  if (!match(Add2, m_c_Add(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                 m_SpecificInt(Mask33)),
+                           m_And(m_Deferred(Sub1), m_SpecificInt(Mask33)))) &&
+      // Matching "x = x - 3*((x >> 2) & 0x33333333)".
+      !match(Add2, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                     m_SpecificInt(Mask33)),
+                               m_SpecificInt(NegThree)),
+                         m_Deferred(Sub1))))
     return false;
 
   Value *Root;
