@@ -741,13 +741,30 @@ template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange bounds, mlir::Value initVal, mlir::acc::VariableInfoAttr,
-    bool &needsDestroy) const {
+    mlir::ValueRange bounds, mlir::Value initVal,
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const {
   mlir::ModuleOp mod = mlirBuilder.getInsertionBlock()
                            ->getParent()
                            ->getParentOfType<mlir::ModuleOp>();
   assert(mod && "failed to retrieve ModuleOp");
   fir::FirOpBuilder builder(mlirBuilder, mod);
+
+  // When variable is optional: use fir.is_present to check. When non-optional,
+  // skip the conditional to avoid unnecessary branches.
+  std::optional<fir::IfOp> optIfOp;
+  bool isOptional = false;
+  if (auto fortranVarInfo =
+          mlir::dyn_cast_if_present<fir::OpenACCFortranVariableInfoAttr>(
+              varInfo)) {
+    isOptional = fortranVarInfo.getMayBeOptional();
+    if (isOptional) {
+      mlir::Value cond =
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), var);
+      optIfOp = fir::IfOp::create(builder, loc, mlir::TypeRange{type}, cond,
+                                  /*withElseRegion=*/true);
+      builder.setInsertionPointToStart(&optIfOp->getThenRegion().front());
+    }
+  }
 
   hlfir::Entity inputVar = hlfir::Entity{var};
   if (inputVar.isPolymorphic())
@@ -844,80 +861,91 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
          "dynamic allocation of the whole base in case of section is not "
          "expected");
 
-  if (inputVar.getType() == alloc.getType() && !allocateSection)
-    return alloc;
+  mlir::Value retVal;
+  if (inputVar.getType() == alloc.getType() && !allocateSection) {
+    retVal = alloc;
+  } else {
+    // Step4: reconstruct the input variable from the privatized part:
+    // - get a mock base address if the privatized part is a section (so that
+    // any addressing of the input variable can be replaced by the same
+    // addressing of the privatized part even though the allocated part for the
+    // private does not cover all the input variable storage. This is relying on
+    // OpenACC constraint that any addressing of such privatized variable inside
+    // the construct region can only address the variable inside the privatized
+    // section).
+    // - reconstruct a descriptor with the same bounds and type parameters as
+    // the input if needed.
+    // - store this new descriptor in a temporary allocation if the input
+    // variable is a POINTER/ALLOCATABLE.
+    llvm::SmallVector<mlir::Value> inputVarLowerBounds, inputVarExtents;
+    if (dereferencedVar.isArray()) {
+      for (int dim = 0; dim < dereferencedVar.getRank(); ++dim) {
+        inputVarLowerBounds.push_back(
+            hlfir::genLBound(loc, builder, dereferencedVar, dim));
+        inputVarExtents.push_back(
+            hlfir::genExtent(loc, builder, dereferencedVar, dim));
+      }
+    }
 
-  // Step4: reconstruct the input variable from the privatized part:
-  // - get a mock base address if the privatized part is a section (so that any
-  // addressing of the input variable can be replaced by the same addressing of
-  // the privatized part even though the allocated part for the private does not
-  // cover all the input variable storage. This is relying on OpenACC
-  // constraint that any addressing of such privatized variable inside the
-  // construct region can only address the variable inside the privatized
-  // section).
-  // - reconstruct a descriptor with the same bounds and type parameters as the
-  // input if needed.
-  // - store this new descriptor in a temporary allocation if the input variable
-  // is a POINTER/ALLOCATABLE.
-  llvm::SmallVector<mlir::Value> inputVarLowerBounds, inputVarExtents;
-  if (dereferencedVar.isArray()) {
-    for (int dim = 0; dim < dereferencedVar.getRank(); ++dim) {
-      inputVarLowerBounds.push_back(
-          hlfir::genLBound(loc, builder, dereferencedVar, dim));
-      inputVarExtents.push_back(
-          hlfir::genExtent(loc, builder, dereferencedVar, dim));
+    mlir::Value privateVarBaseAddr = alloc;
+    if (allocateSection) {
+      // To compute the mock base address without doing pointer arithmetic,
+      // compute: TYPE, TEMP(ZERO_BASED_SECTION_LB:) MOCK_BASE = TEMP(0)
+      // This addresses the section "backwards" (0 <= ZERO_BASED_SECTION_LB).
+      // This is currently OK, but care should be taken to avoid tripping bound
+      // checks if added in the future.
+      mlir::Type inputBaseAddrType =
+          dereferencedVar.getBoxType().getBaseAddressType();
+      mlir::Value tempBaseAddr =
+          builder.createConvert(loc, inputBaseAddrType, alloc);
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+      llvm::SmallVector<mlir::Value> lowerBounds;
+      llvm::SmallVector<mlir::Value> zeros;
+      for (unsigned i = 0; i < bounds.size(); i += 3) {
+        lowerBounds.push_back(bounds[i]);
+        zeros.push_back(zero);
+      }
+      mlir::Value offsetShapeShift =
+          builder.genShape(loc, lowerBounds, inputVarExtents);
+      mlir::Type eleRefType =
+          builder.getRefType(privatizedVar.getFortranElementType());
+      mlir::Value mockBase = fir::ArrayCoorOp::create(
+          builder, loc, eleRefType, tempBaseAddr, offsetShapeShift,
+          /*slice=*/mlir::Value{}, /*indices=*/zeros,
+          /*typeParams=*/mlir::ValueRange{});
+      privateVarBaseAddr =
+          builder.createConvert(loc, inputBaseAddrType, mockBase);
+    }
+
+    retVal = privateVarBaseAddr;
+    if (inputVar.isBoxAddressOrValue()) {
+      // Recreate descriptor with same bounds as the input variable.
+      mlir::Value shape;
+      if (!inputVarExtents.empty())
+        shape = builder.genShape(loc, inputVarLowerBounds, inputVarExtents);
+      mlir::Value box = fir::EmboxOp::create(
+          builder, loc, inputVar.getBoxType(), privateVarBaseAddr, shape,
+          /*slice=*/mlir::Value{}, typeParams);
+      if (inputVar.isMutableBox()) {
+        mlir::Value boxAlloc =
+            fir::AllocaOp::create(builder, loc, inputVar.getBoxType());
+        fir::StoreOp::create(builder, loc, box, boxAlloc);
+        retVal = boxAlloc;
+      } else {
+        retVal = box;
+      }
     }
   }
 
-  mlir::Value privateVarBaseAddr = alloc;
-  if (allocateSection) {
-    // To compute the mock base address without doing pointer arithmetic,
-    // compute: TYPE, TEMP(ZERO_BASED_SECTION_LB:) MOCK_BASE = TEMP(0)
-    // This addresses the section "backwards" (0 <= ZERO_BASED_SECTION_LB). This
-    // is currently OK, but care should be taken to avoid tripping bound checks
-    // if added in the future.
-    mlir::Type inputBaseAddrType =
-        dereferencedVar.getBoxType().getBaseAddressType();
-    mlir::Value tempBaseAddr =
-        builder.createConvert(loc, inputBaseAddrType, alloc);
-    mlir::Value zero =
-        builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-    llvm::SmallVector<mlir::Value> lowerBounds;
-    llvm::SmallVector<mlir::Value> zeros;
-    for (unsigned i = 0; i < bounds.size(); i += 3) {
-      lowerBounds.push_back(bounds[i]);
-      zeros.push_back(zero);
-    }
-    mlir::Value offsetShapeShift =
-        builder.genShape(loc, lowerBounds, inputVarExtents);
-    mlir::Type eleRefType =
-        builder.getRefType(privatizedVar.getFortranElementType());
-    mlir::Value mockBase = fir::ArrayCoorOp::create(
-        builder, loc, eleRefType, tempBaseAddr, offsetShapeShift,
-        /*slice=*/mlir::Value{}, /*indices=*/zeros,
-        /*typeParams=*/mlir::ValueRange{});
-    privateVarBaseAddr =
-        builder.createConvert(loc, inputBaseAddrType, mockBase);
+  if (isOptional) {
+    fir::ResultOp::create(builder, loc, retVal);
+    builder.setInsertionPointToStart(&optIfOp->getElseRegion().front());
+    mlir::Value absent = fir::AbsentOp::create(builder, loc, type);
+    fir::ResultOp::create(builder, loc, absent);
+    return optIfOp->getResult(0);
   }
 
-  mlir::Value retVal = privateVarBaseAddr;
-  if (inputVar.isBoxAddressOrValue()) {
-    // Recreate descriptor with same bounds as the input variable.
-    mlir::Value shape;
-    if (!inputVarExtents.empty())
-      shape = builder.genShape(loc, inputVarLowerBounds, inputVarExtents);
-    mlir::Value box = fir::EmboxOp::create(builder, loc, inputVar.getBoxType(),
-                                           privateVarBaseAddr, shape,
-                                           /*slice=*/mlir::Value{}, typeParams);
-    if (inputVar.isMutableBox()) {
-      mlir::Value boxAlloc =
-          fir::AllocaOp::create(builder, loc, inputVar.getBoxType());
-      fir::StoreOp::create(builder, loc, box, boxAlloc);
-      retVal = boxAlloc;
-    } else {
-      retVal = box;
-    }
-  }
   return retVal;
 }
 
@@ -963,6 +991,25 @@ bool OpenACCMappableModel<Ty>::generateCopy(
 
   source = hlfir::derefPointersAndAllocatables(loc, builder, source);
   destination = hlfir::derefPointersAndAllocatables(loc, builder, destination);
+
+  // When optional: only copy when source is present (fir.is_present). When
+  // absent, destination is already null from init. When non-optional, copy
+  // directly without the conditional.
+  std::optional<fir::IfOp> optIfOp;
+  if (auto fortranVarInfo =
+          mlir::dyn_cast_if_present<fir::OpenACCFortranVariableInfoAttr>(
+              varInfo)) {
+    if (fortranVarInfo.getMayBeOptional()) {
+      // When variable is optional: use fir.is_present to check. When
+      // non-optional, skip the conditional to avoid unnecessary branches.
+      std::optional<fir::IfOp> optIfOp;
+      mlir::Value cond =
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), src);
+      optIfOp = fir::IfOp::create(builder, loc, mlir::TypeRange{}, cond,
+                                  /*withElseRegion=*/false);
+      builder.setInsertionPointToStart(&optIfOp->getThenRegion().front());
+    }
+  }
 
   if (!bounds.empty())
     std::tie(source, destination) =
