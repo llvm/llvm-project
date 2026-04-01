@@ -1216,7 +1216,7 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
 
     if (Divisor.isPowerOf2()) {
       unsigned Shift = Divisor.logBase2();
-      KnownBits Known = LHS;
+      Known = LHS;
       Known.One.lshrInPlace(Shift);
       Known.Zero.lshrInPlace(Shift);
       return Known;
