@@ -97,14 +97,14 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:  Successor(s): scalar.ph, vector.ph
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:  vector.ph:
-; VECTOR-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast ir<%c>
+; VECTOR-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast ir<%c>
 ; VECTOR-NEXT:  Successor(s): vector loop
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:  <x1> vector loop: {
 ; VECTOR-NEXT:    vector.body:
-; VECTOR-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; VECTOR-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
-; VECTOR-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>, ir<1>
+; VECTOR-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; VECTOR-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
+; VECTOR-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>, ir<1>
 ; VECTOR-NEXT:    Successor(s): pred.load
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    <xVFxUF> pred.load: {
@@ -113,13 +113,13 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:      Successor(s): pred.load.if, pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:      pred.load.if:
-; VECTOR-NEXT:        vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
-; VECTOR-NEXT:        REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP9]]>
+; VECTOR-NEXT:        vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
+; VECTOR-NEXT:        REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[VP8]]>
 ; VECTOR-NEXT:        REPLICATE ir<%lv> = load ir<%gep> (S->V)
 ; VECTOR-NEXT:      Successor(s): pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:      pred.load.continue:
-; VECTOR-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP10:%[0-9]+]]> = ir<%lv>
+; VECTOR-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP9:%[0-9]+]]> = ir<%lv>
 ; VECTOR-NEXT:      No successors
 ; VECTOR-NEXT:    }
 ; VECTOR-NEXT:    Successor(s): pred.load
@@ -130,27 +130,27 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:      Successor(s): pred.load.if, pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:      pred.load.if:
-; VECTOR-NEXT:        vp<[[VP11:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>, vp<[[VP0]]>
-; VECTOR-NEXT:        REPLICATE ir<%gep>.1 = getelementptr ir<%ptr>, vp<[[VP11]]>
+; VECTOR-NEXT:        vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>, vp<[[VP0]]>
+; VECTOR-NEXT:        REPLICATE ir<%gep>.1 = getelementptr ir<%ptr>, vp<[[VP10]]>
 ; VECTOR-NEXT:        REPLICATE ir<%lv>.1 = load ir<%gep>.1 (S->V)
 ; VECTOR-NEXT:      Successor(s): pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:      pred.load.continue:
-; VECTOR-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP12:%[0-9]+]]> = ir<%lv>.1
+; VECTOR-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP11:%[0-9]+]]> = ir<%lv>.1
 ; VECTOR-NEXT:      No successors
 ; VECTOR-NEXT:    }
 ; VECTOR-NEXT:    Successor(s): if.then.0
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    if.then.0:
-; VECTOR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%10>/vp<[[VP5]]>
-; VECTOR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%12>/vp<[[VP5]]>
-; VECTOR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP7]]>
-; VECTOR-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = mul nuw nsw vp<[[VP0]]>, ir<1>
-; VECTOR-NEXT:      vp<[[VP14:%[0-9]+]]> = vector-pointer ir<%gep.dst>
-; VECTOR-NEXT:      vp<[[VP15:%[0-9]+]]> = vector-pointer ir<%gep.dst>, vp<[[VP13]]>
-; VECTOR-NEXT:      WIDEN store vp<[[VP14]]>, ir<%pred.val>
-; VECTOR-NEXT:      WIDEN store vp<[[VP15]]>, ir<%pred.val>.1
-; VECTOR-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
+; VECTOR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%9>/vp<[[VP4]]>
+; VECTOR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%11>/vp<[[VP4]]>
+; VECTOR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP6]]>
+; VECTOR-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = mul nuw nsw vp<[[VP0]]>, ir<1>
+; VECTOR-NEXT:      vp<[[VP13:%[0-9]+]]> = vector-pointer ir<%gep.dst>
+; VECTOR-NEXT:      vp<[[VP14:%[0-9]+]]> = vector-pointer ir<%gep.dst>, vp<[[VP12]]>
+; VECTOR-NEXT:      WIDEN store vp<[[VP13]]>, ir<%pred.val>
+; VECTOR-NEXT:      WIDEN store vp<[[VP14]]>, ir<%pred.val>.1
+; VECTOR-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; VECTOR-NEXT:      EMIT branch-on-count vp<%index.next>, ir<1024>
 ; VECTOR-NEXT:    No successors
 ; VECTOR-NEXT:  }
