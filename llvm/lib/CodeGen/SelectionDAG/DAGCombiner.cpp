@@ -16031,12 +16031,6 @@ SDValue DAGCombiner::visitIS_FPCLASS(SDNode *N) {
         DAG.getTargetConstant(Mask & Known.KnownFPClasses, DL, MVT::i32),
         N->getFlags());
 
-  // If none of the tests which can return false are possible, fold to true.
-  // fp_class (nnan x), ~(qnan|snan) -> true
-  // fp_class (ninf x), ~(ninf|pinf) -> true
-  if (Mask == Known.KnownFPClasses)
-    return DAG.getBoolConstant(true, DL, VT, Src.getValueType());
-
   return SDValue();
 }
 
