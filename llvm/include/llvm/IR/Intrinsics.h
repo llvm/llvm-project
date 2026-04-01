@@ -269,11 +269,12 @@ namespace Intrinsic {
   matchIntrinsicSignature(FunctionType *FTy, ArrayRef<IITDescriptor> &Infos,
                           SmallVectorImpl<Type *> &ArgTys);
 
-  /// Verify if the intrinsic has variable arguments. This method is intended to
-  /// be called after all the fixed arguments have been matched first.
+  /// Verify if the intrinsic vararg propertly matches \p IsVarArg. This method
+  /// is intended to be called after all the fixed arguments have been matched
+  /// first.
   ///
   /// This method returns true on error.
-  LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg,
+  LLVM_ABI bool matchIntrinsicVarArg(bool IsVarArg,
                                      ArrayRef<IITDescriptor> &Infos);
 
   /// Gets the type arguments of an intrinsic call by matching type contraints

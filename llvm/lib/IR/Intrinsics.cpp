@@ -1096,22 +1096,12 @@ Intrinsic::matchIntrinsicSignature(FunctionType *FTy,
 }
 
 bool Intrinsic::matchIntrinsicVarArg(
-    bool isVarArg, ArrayRef<Intrinsic::IITDescriptor> &Infos) {
-  // If there are no descriptors left, then it can't be a vararg.
-  if (Infos.empty())
-    return isVarArg;
+    bool IsVarArg, ArrayRef<Intrinsic::IITDescriptor> &Infos) {
+  bool InferredVarArg =
+      Infos.size() == 1 && Infos.consume_front().Kind == IITDescriptor::VarArg;
 
-  // There should be only one descriptor remaining at this point.
-  if (Infos.size() != 1)
-    return true;
-
-  // Check and verify the descriptor.
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
-  if (D.Kind == IITDescriptor::VarArg)
-    return !isVarArg;
-
-  return true;
+  // Return true of the inferred VarArg and IsVarArg mismatch.
+  return InferredVarArg != IsVarArg;
 }
 
 bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
