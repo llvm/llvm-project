@@ -119,7 +119,7 @@ public:
   void helpSync(const parallel::detail::Latch &L) {
     while (L.getCount() != 0) {
       std::unique_lock<std::mutex> Lock(Mutex);
-      if (WorkStack.empty())
+      if (Stop || WorkStack.empty())
         return;
       popAndRun(Lock);
     }
