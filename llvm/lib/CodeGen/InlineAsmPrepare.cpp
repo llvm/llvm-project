@@ -133,14 +133,7 @@ static std::pair<std::string, MemoryEffects> convertConstraintsToMemory(
       NewConstraint += *I++;
     if (I == E)
       return {std::string(), MemoryEffects::none()};
-    if (I != E && *I == '*')
-      NewConstraint += *I++;
-    while (I != E && (*I == '&' || *I == '%'))
-      NewConstraint += *I++;
-    if (I == E)
-      return {std::string(), MemoryEffects::none()};
 
-    std::string RestConstraint(I, E);
     bool IsOutput = CI.Type == InlineAsm::isOutput;
     if (CI.hasRegMemConstraints() && !CI.isIndirect &&
         !(IsOutput && CI.hasMatchingInput())) {
@@ -152,8 +145,17 @@ static std::pair<std::string, MemoryEffects> convertConstraintsToMemory(
       NewME |= MemoryEffects::argMemOnly(IsOutput ? ModRefInfo::Mod
                                                   : ModRefInfo::Ref);
       NewConstraint += '*';
+    } else if (I != E && *I == '*') {
+      NewConstraint += *I++;
     }
 
+    while (I != E && (*I == '&' || *I == '%'))
+      NewConstraint += *I++;
+
+    if (I == E)
+      return {std::string(), MemoryEffects::none()};
+
+    std::string RestConstraint(I, E);
     Constraints.push_back(NewConstraint + RestConstraint);
   }
 
@@ -682,20 +684,24 @@ findInlineAsmCandidates(Function &F, const TargetMachine *TM) {
       if (!CB || !CB->isInlineAsm())
         continue;
 
-      InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
-      StringRef ConstraintStr = IA->getConstraintString();
-      bool HasRegMemConstraints = ConstraintStr.size() == 2 &&
-                                  ConstraintStr.contains("r") &&
-                                  ConstraintStr.contains("m");
+      auto NeedsConversion = [isOptLevelNone](CallBase *CB) {
+        if (!isOptLevelNone)
+          return false;
+        InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
+        for (const auto &C : IA->ParseConstraints()) {
+          if (C.hasRegMemConstraints() && !C.isIndirect &&
+              !(C.Type == InlineAsm::isOutput && C.hasMatchingInput()))
+            return true;
+        }
+        return false;
+      };
 
       if (auto *CBR = dyn_cast<CallBrInst>(CB)) {
         bool NeedsSSA = !CBR->getType()->isVoidTy() && !CBR->use_empty();
-        bool NeedsConversion = isOptLevelNone && HasRegMemConstraints;
-        if (NeedsSSA || NeedsConversion)
+        if (NeedsSSA || NeedsConversion(CBR))
           InlineAsms.push_back(CBR);
-      } else if (isOptLevelNone) {
-        if (HasRegMemConstraints)
-          InlineAsms.push_back(CB);
+      } else if (NeedsConversion(CB)) {
+        InlineAsms.push_back(CB);
       }
     }
   }
