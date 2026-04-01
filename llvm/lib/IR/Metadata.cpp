@@ -1683,6 +1683,8 @@ void Value::clearMetadata() {
 }
 
 void Instruction::setMetadata(StringRef Kind, MDNode *Node) {
+  if (!Node && MetadataIndex == 0)
+    return;
   setMetadata(getContext().getMDKindID(Kind), Node);
 }
 
