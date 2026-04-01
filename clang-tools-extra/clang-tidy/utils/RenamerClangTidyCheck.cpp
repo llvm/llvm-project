@@ -116,6 +116,10 @@ static bool hasNoName(const NamedDecl *Decl) {
 }
 
 static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
+  if (const auto *Template = dyn_cast<FunctionTemplateDecl>(ND))
+    if (const FunctionDecl *TemplatedDecl = Template->getTemplatedDecl())
+      ND = TemplatedDecl;
+
   const auto *Canonical = cast<NamedDecl>(ND->getCanonicalDecl());
   if (Canonical != ND)
     return Canonical;

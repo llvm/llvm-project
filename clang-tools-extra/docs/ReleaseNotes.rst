@@ -217,7 +217,7 @@ Changes in existing checks
   C++ files because suggested ``reinterpret_cast`` is not available in pure C.
 
 - Improved :doc:`bugprone-derived-method-shadowing-base-method
-  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by 
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by
   correctly ignoring function templates.
 
 - Improved :doc:`bugprone-exception-escape
@@ -248,7 +248,7 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
   user-defined type and by removing detection of the compiler generated ``std``
-  namespace extensions. 
+  namespace extensions.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
@@ -421,6 +421,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
+
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check by fixing a false
+  positive where function templates could be diagnosed as generic identifiers
+  when ``DefaultCase`` was enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
