@@ -301,8 +301,7 @@ void ModuleMap::resolveHeader(Module *Mod,
       else
         // Record this umbrella header.
         setUmbrellaHeaderAsWritten(Mod, *File, Header.FileName,
-                                   RelativePathName.str(),
-                                   Header.FileNameLoc);
+                                   RelativePathName.str(), Header.FileNameLoc);
     } else {
       Module::Header H = {Header.FileName, std::string(RelativePathName),
                           *File};
@@ -576,8 +575,7 @@ void ModuleMap::diagnoseDuplicateHeaderOwnership(SourceLocation FilenameLoc,
   if (Known == Headers.end())
     return;
 
-  if (Diags.isIgnored(diag::warn_mmap_duplicate_header_ownership,
-                      FilenameLoc))
+  if (Diags.isIgnored(diag::warn_mmap_duplicate_header_ownership, FilenameLoc))
     return;
 
   // Only diagnose each header once.
@@ -624,14 +622,15 @@ void ModuleMap::diagnoseDuplicateHeaderOwnership(SourceLocation FilenameLoc,
     // excluded from the umbrella module.
     if (SeenTopLevel.insert(TopLevel).second) {
       // Check that the header isn't excluded in the umbrella module.
-      bool IsExcluded = llvm::any_of(Known->second, [TopLevel](const KnownHeader &H) {
-        return H.getModule()->getTopLevelModule() == TopLevel &&
-               H.getRole() == ExcludedHeader;
-      });
+      bool IsExcluded =
+          llvm::any_of(Known->second, [TopLevel](const KnownHeader &H) {
+            return H.getModule()->getTopLevelModule() == TopLevel &&
+                   H.getRole() == ExcludedHeader;
+          });
       if (!IsExcluded) {
-        OwningModules.push_back(
-            {TopLevel, UmbrellaOwner.getModule()->UmbrellaDeclLoc,
-             /*IsUmbrella=*/true});
+        OwningModules.push_back({TopLevel,
+                                 UmbrellaOwner.getModule()->UmbrellaDeclLoc,
+                                 /*IsUmbrella=*/true});
       }
     }
   }

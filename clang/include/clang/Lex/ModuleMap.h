@@ -740,9 +740,8 @@ public:
 
   /// Adds this header to the given module.
   /// \param Role The role of the header wrt the module.
-  void addHeader(Module *Mod, Module::Header Header,
-                 ModuleHeaderRole Role, bool Imported = false,
-                 SourceLocation Loc = SourceLocation());
+  void addHeader(Module *Mod, Module::Header Header, ModuleHeaderRole Role,
+                 bool Imported = false, SourceLocation Loc = SourceLocation());
 
   /// Parse a module map without creating `clang::Module` instances.
   bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
