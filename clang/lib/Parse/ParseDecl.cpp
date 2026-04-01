@@ -23,6 +23,7 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -2135,6 +2136,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   // attributes higher up the callchain.
   ParsedAttributes LocalAttrs(AttrFactory);
   LocalAttrs.takeAllPrependingFrom(Attrs);
+
+  Sema::ProfileSuppressRAII ProfileSuppressGuard(Actions, LocalAttrs);
+
   ParsingDeclarator D(*this, DS, LocalAttrs, Context);
   if (TemplateInfo.TemplateParams)
     D.setTemplateParameterLists(*TemplateInfo.TemplateParams);

@@ -463,6 +463,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // Process [[profiles::enforce]] on the module-declaration.
   for (const auto &AL : Attrs) {
     if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce) {
+      if (!AL.checkAtLeastNumArgs(*this, 2))
+        continue;
       unsigned NumDesignators = AL.getNumArgs() / 2;
       for (unsigned I = 0; I < NumDesignators; ++I) {
         StringRef Name, Desig;

@@ -55,3 +55,21 @@ static_assert(__is_same(decltype(sfinae_cast<long>(0L)), int *),
 void test_unevaluated() {
   using T = decltype(reinterpret_cast<int*>(0));
 }
+
+// Suppress on TU-scope variable initializer (pull model via push in ParseDeclGroup).
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(test::type_cast)]]
+int *tu_scope_var = reinterpret_cast<int*>(0);
+
+// Suppress on block-scope variable initializer.
+void test_suppress_var_init() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(test::type_cast)]] int *p = reinterpret_cast<int*>(0);
+}
+
+// Profile violations are suppressed in discarded if-constexpr branches.
+void test_discarded_branch() {
+  if constexpr (false) {
+    int *p = reinterpret_cast<int*>(0);
+  }
+}
