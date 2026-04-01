@@ -133,11 +133,10 @@ ModuleSpecList ObjectFileXCOFF::GetModuleSpecifications(
     return {};
 
   ModuleSpecList specs;
-  uint16_t magic = 0;
-  if ((magic = ObjectFileXCOFF::GetMagicBytes(
-           extractor_sp, 0, extractor_sp->GetByteSize())) != 0) {
+  if (auto magic = ObjectFileXCOFF::GetMagicBytes(
+          extractor_sp, 0, extractor_sp->GetByteSize())) {
     const uint32_t cpu_type =
-        (magic == XCOFF::XCOFF64) ? XCOFF::TCPU_PPC64 : XCOFF::TCPU_PPC;
+        (*magic == XCOFF::XCOFF64) ? XCOFF::TCPU_PPC64 : XCOFF::TCPU_PPC;
     ArchSpec arch_spec =
         ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);
@@ -148,9 +147,10 @@ ModuleSpecList ObjectFileXCOFF::GetModuleSpecifications(
   return specs;
 }
 
-uint16_t ObjectFileXCOFF::GetMagicBytes(DataExtractorSP &extractor_sp,
-                                        lldb::addr_t data_offset,
-                                        lldb::addr_t data_length) {
+std::optional<XCOFF::MagicNumber>
+ObjectFileXCOFF::GetMagicBytes(DataExtractorSP &extractor_sp,
+                               lldb::addr_t data_offset,
+                               lldb::addr_t data_length) {
   DataExtractorSP magic_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(data_offset);
   // Need to set this as XCOFF is only compatible with Big Endian
@@ -159,9 +159,9 @@ uint16_t ObjectFileXCOFF::GetMagicBytes(DataExtractorSP &extractor_sp,
   uint16_t magic = magic_extractor_sp->GetU16(&offset);
   // Validating magic
   if (magic == XCOFF::XCOFF64 || magic == XCOFF::XCOFF32)
-    return magic;
-  else
-    return 0;
+    return static_cast<llvm::XCOFF::MagicNumber>(magic);
+
+  return std::nullopt;
 }
 
 bool ObjectFileXCOFF::ParseHeader() {
@@ -361,8 +361,7 @@ void ObjectFileXCOFF::Dump(Stream *s) {}
 ArchSpec ObjectFileXCOFF::GetArchitecture() {
   const uint32_t cpu_type =
       m_binary->is64Bit() ? XCOFF::TCPU_PPC64 : XCOFF::TCPU_PPC;
-  ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE);
-  return arch_spec;
+  return (ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE));
 }
 
 UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
