@@ -377,7 +377,11 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   // Emit initial .loc debug directive for correct relocation symbol data.
   if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
     assert(SP->getUnit());
-    if (!SP->getUnit()->isDebugDirectivesOnly())
+    // NoDebug and DebugDirectivesOnly do not require emitting the initial loc
+    // directive. NoDebug does not require any debug directives and the initial
+    // loc directive is not needed for DebugDirectivesOnly as it is redundant
+    // assuming this is a non-empty function.
+    if (!SP->getUnit()->isDebugDirectivesOnly() && !SP->getUnit()->isNoDebug())
       emitInitialRawDwarfLocDirective(*MF);
   }
 }
