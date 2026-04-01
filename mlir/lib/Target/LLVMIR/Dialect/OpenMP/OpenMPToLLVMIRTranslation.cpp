@@ -357,6 +357,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
   };
+  auto checkDependIteratorModifier = [&todo](auto op, LogicalResult &result) {
+    if (!op.getDependIterated().empty() ||
+        (op.getDependIteratedKinds() && !op.getDependIteratedKinds()->empty()))
+      result = todo("depend with iterator modifier");
+  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -429,6 +434,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
+        checkDependIteratorModifier(op, result);
         checkInReduction(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
@@ -463,6 +469,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
+        checkDependIteratorModifier(op, result);
         checkInReduction(op, result);
         checkThreadLimit(op, result);
       })
@@ -2466,11 +2473,14 @@ convertIteratorRegion(llvm::Value *linearIV, IteratorInfo &iterInfo,
   return mlir::success();
 }
 
+using IteratorStoreEntryTy =
+    llvm::function_ref<void(llvm::Value *linearIV, mlir::omp::YieldOp yield)>;
+
 static mlir::LogicalResult
-fillAffinityIteratorLoop(mlir::omp::IteratorOp itersOp,
-                         llvm::IRBuilderBase &builder,
-                         mlir::LLVM::ModuleTranslation &moduleTranslation,
-                         llvm::Value *affinityList, IteratorInfo &iterInfo) {
+fillIteratorLoop(mlir::omp::IteratorOp itersOp, llvm::IRBuilderBase &builder,
+                 mlir::LLVM::ModuleTranslation &moduleTranslation,
+                 IteratorInfo &iterInfo, llvm::StringRef loopName,
+                 IteratorStoreEntryTy genStoreEntry) {
   mlir::Region &itersRegion = itersOp.getRegion();
   mlir::Block &iteratorRegionBlock = itersRegion.front();
 
@@ -2487,19 +2497,12 @@ fillAffinityIteratorLoop(mlir::omp::IteratorOp itersOp,
           "failed to convert iterator region", llvm::inconvertibleErrorCode());
     }
 
-    // Extract affinity entry from omp.yield and store into list[linearIV].
     auto yield =
         mlir::dyn_cast<mlir::omp::YieldOp>(iteratorRegionBlock.getTerminator());
     assert(yield && yield.getResults().size() == 1 &&
            "expect omp.yield in iterator region to have one result");
-    auto entryOp =
-        yield.getResults()[0].getDefiningOp<mlir::omp::AffinityEntryOp>();
-    assert(entryOp && "expect yield generate an affinity entry");
 
-    llvm::Value *addr = moduleTranslation.lookupValue(entryOp.getAddr());
-    llvm::Value *len = moduleTranslation.lookupValue(entryOp.getLen());
-    storeAffinityEntry(builder, *moduleTranslation.getOpenMPBuilder(),
-                       affinityList, linearIV, addr, len);
+    genStoreEntry(linearIV, yield);
 
     // Iterator-region block/value mappings are temporary for this conversion,
     // clear them to avoid stale entries in ModuleTranslation.
@@ -2510,8 +2513,7 @@ fillAffinityIteratorLoop(mlir::omp::IteratorOp itersOp,
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createIteratorLoop(
-          loc, iterInfo.getTotalTrips(), bodyGen,
-          /*Name=*/"iterator");
+          loc, iterInfo.getTotalTrips(), bodyGen, loopName);
   if (failed(handleError(afterIP, *itersOp)))
     return failure();
 
@@ -2568,8 +2570,20 @@ buildAffinityData(mlir::omp::TaskOp &taskOp, llvm::IRBuilderBase &builder,
       assert(itersOp && "iterated value must be defined by omp.iterator");
       IteratorInfo iterInfo(itersOp, moduleTranslation, builder);
       llvm::Value *affList = allocateAffinityList(iterInfo.getTotalTrips());
-      if (failed(fillAffinityIteratorLoop(itersOp, builder, moduleTranslation,
-                                          affList, iterInfo)))
+      if (failed(fillIteratorLoop(
+              itersOp, builder, moduleTranslation, iterInfo, "iterator",
+              [&](llvm::Value *linearIV, mlir::omp::YieldOp yield) {
+                auto entryOp = yield.getResults()[0]
+                                   .getDefiningOp<mlir::omp::AffinityEntryOp>();
+                assert(entryOp && "expect yield produce an affinity entry");
+                llvm::Value *addr =
+                    moduleTranslation.lookupValue(entryOp.getAddr());
+                llvm::Value *len =
+                    moduleTranslation.lookupValue(entryOp.getLen());
+                storeAffinityEntry(builder,
+                                   *moduleTranslation.getOpenMPBuilder(),
+                                   affList, linearIV, addr, len);
+              })))
         return llvm::failure();
       ads.emplace_back(createAffinity(iterInfo.getTotalTrips(), affList));
     }
