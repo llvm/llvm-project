@@ -647,15 +647,15 @@ static SmallString<512> buildMinimalV2Binary(uint64_t BaseAddr,
   const uint64_t FuncInfoSize = FIBuf.size();
 
   // Write header.
-  FW.writeU32(GSYM_MAGIC);     // Magic
+  FW.writeU32(GSYM_MAGIC);             // Magic
   FW.writeU16(HeaderV2::getVersion()); // Version
-  FW.writeU16(0);              // Padding
-  FW.writeU64(BaseAddr);       // BaseAddress
-  FW.writeU32(NumAddresses);   // NumAddresses
-  FW.writeU8(AddrOffSize);     // AddrOffSize
-  FW.writeU8(AddrInfoOffSize); // AddrInfoOffSize
-  FW.writeU8(4);               // StrpSize
-  FW.writeU8(0);               // StrTableEncoding
+  FW.writeU16(0);                      // Padding
+  FW.writeU64(BaseAddr);               // BaseAddress
+  FW.writeU32(NumAddresses);           // NumAddresses
+  FW.writeU8(AddrOffSize);             // AddrOffSize
+  FW.writeU8(AddrInfoOffSize);         // AddrInfoOffSize
+  FW.writeU8(4);                       // StrpSize
+  FW.writeU8(0);                       // StrTableEncoding
 
   // GlobalData entries.
   auto writeGD = [&](GlobalInfoType Type, uint64_t Off, uint64_t Size) {
