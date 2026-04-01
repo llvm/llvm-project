@@ -395,7 +395,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
     Register ArgReg = VRegs[i][0];
     MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
-    MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
                    .addDef(ArgReg)
                    .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
