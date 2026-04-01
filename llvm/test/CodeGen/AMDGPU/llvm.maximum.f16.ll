@@ -548,9 +548,9 @@ define half @v_maximum_f16__nnan_src1(half %src0, half %arg1) {
 ; GFX1170-TRUE16-LABEL: v_maximum_f16__nnan_src1:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_add_f16_e32 v1.l, 1.0, v1.l
+; GFX1170-TRUE16-NEXT:    v_add_f16_e32 v0.h, 1.0, v1.l
 ; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v1.l
+; GFX1170-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v0.h
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-LABEL: v_maximum_f16__nnan_src1:
@@ -568,9 +568,9 @@ define half @v_maximum_f16__nnan_src1(half %src0, half %arg1) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_add_f16_e32 v1.l, 1.0, v1.l
+; GFX12-TRUE16-NEXT:    v_add_f16_e32 v0.h, 1.0, v1.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v1.l
+; GFX12-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v0.h
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: v_maximum_f16__nnan_src1:

@@ -38,9 +38,9 @@ define i8 @v_ashr_i8(i8 %value, i8 %amount) {
 ; GFX11-TRUE16-LABEL: v_ashr_i8:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v1.l
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v1.l, v0.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, 0xff, v1.l
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v1, v0, 0, 8
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v0.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_ashr_i8:
@@ -2055,18 +2055,18 @@ define <4 x i2> @v_ashr_v4i2(<4 x i2> %value, <4 x i2> %amount) {
 ; GFX11-TRUE16-LABEL: v_ashr_v4i2:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 2
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 2
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v2, v2, 0, 2
-; GFX11-TRUE16-NEXT:    v_and_b16 v4.l, v4.l, 3
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, v5.l, 3
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v6.l, 3
-; GFX11-TRUE16-NEXT:    v_and_b16 v2.h, v7.l, 3
-; GFX11-TRUE16-NEXT:    v_bfe_i32 v3, v3, 0, 2
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v4.l, v0.l
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.l, v0.h, v1.l
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v2.l, v1.h, v2.l
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v3.l, v2.h, v3.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, v4.l, 3
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v5.l, 3
+; GFX11-TRUE16-NEXT:    v_and_b16 v2.h, v6.l, 3
+; GFX11-TRUE16-NEXT:    v_and_b16 v3.h, v7.l, 3
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v4, v0, 0, 2
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v5, v1, 0, 2
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v6, v2, 0, 2
+; GFX11-TRUE16-NEXT:    v_bfe_i32 v7, v3, 0, 2
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v0.h, v4.l
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.l, v1.h, v5.l
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v2.l, v2.h, v6.l
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v3.l, v3.h, v7.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_ashr_v4i2:

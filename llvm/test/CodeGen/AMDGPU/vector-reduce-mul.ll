@@ -902,23 +902,23 @@ define i8 @test_vector_reduce_mul_v16i8(<16 x i8> %v) {
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_mul_v16i8:
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.h, v5.l, v13.l
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v5.l, v13.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.l, v1.l, v9.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v5.l, v7.l, v15.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v6.l, v14.l
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.h, v7.l, v15.l
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.h, v6.l, v14.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.l, v2.l, v10.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.h, v3.l, v11.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v3.l, v4.l, v12.l
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v3.l, v3.l, v11.l
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v3.h, v4.l, v12.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v8.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.l, v1.l, v1.h
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v2.l, v0.h
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.l, v2.h, v5.l
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v1.l, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.l, v2.l, v2.h
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.h, v3.l, v1.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v3.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.l, v1.l, v2.l
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v3.h
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v0.h, v1.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
-; GFX11-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1004,23 +1004,23 @@ define i8 @test_vector_reduce_mul_v16i8(<16 x i8> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.h, v5.l, v13.l
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v5.l, v13.l
 ; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.l, v1.l, v9.l
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v5.l, v7.l, v15.l
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v6.l, v14.l
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.h, v7.l, v15.l
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.h, v6.l, v14.l
 ; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.l, v2.l, v10.l
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.h, v3.l, v11.l
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v3.l, v4.l, v12.l
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v3.l, v3.l, v11.l
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v3.h, v4.l, v12.l
 ; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v8.l
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.l, v1.l, v1.h
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v2.l, v0.h
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.l, v2.h, v5.l
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v1.l, v0.h
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v2.l, v2.l, v2.h
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.h, v3.l, v1.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v3.l
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v1.l, v1.l, v2.l
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v3.h
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v0.h, v1.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v2.l
 ; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v0.h
-; GFX12-SDAG-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
