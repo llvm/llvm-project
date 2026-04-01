@@ -13,6 +13,7 @@ define <vscale x 8 x i8>  @foo(<vscale x 8 x i8> %0, <vscale x 8 x i8> %1, <vsca
 ; DISABLE-LABEL: foo:
 ; DISABLE:       # %bb.0: # %entry
 ; DISABLE-NEXT:    vmv1r.v v8, v9
+; DISABLE-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; DISABLE-NEXT:    vmadd.vv v8, v9, v9
 ; DISABLE-NEXT:    ret
 entry:
