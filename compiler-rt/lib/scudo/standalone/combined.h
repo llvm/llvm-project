@@ -614,16 +614,13 @@ public:
 
     void *BlockBegin = getBlockBegin(OldTaggedPtr, &Header);
     uptr BlockEnd;
-    uptr OldSize;
+    uptr OldSize = getUsableSize(OldTaggedPtr, &Header);
     const uptr ClassId = Header.ClassId;
     if (LIKELY(ClassId)) {
       BlockEnd = reinterpret_cast<uptr>(BlockBegin) +
                  SizeClassMap::getSizeByClassId(ClassId);
-      OldSize = Header.SizeOrUnusedBytes;
     } else {
       BlockEnd = SecondaryT::getBlockEnd(BlockBegin);
-      OldSize = BlockEnd - (reinterpret_cast<uptr>(OldTaggedPtr) +
-                            Header.SizeOrUnusedBytes);
     }
     // If the new chunk still fits in the previously allocated block (with a
     // reasonable delta), we just keep the old block, and update the chunk

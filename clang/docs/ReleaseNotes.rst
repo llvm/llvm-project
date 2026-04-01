@@ -350,6 +350,14 @@ Improvements to Clang's diagnostics
   ``-Wunused-private-field`` no longer emits a warning for annotated private
   fields.
 
+- Improved ``-Wgnu-zero-variadic-macro-arguments`` to suggest using
+  ``__VA_OPT__`` if the current language version supports it(#GH188624)
+
+- The :doc:`ThreadSafetyAnalysis` no longer performs call-based alias
+  invalidation (alias analysis only with ``-Wthread-safety-beta``), eliminating
+  false positives when passing local variable aliases by non-const pointer or
+  reference.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -427,7 +435,6 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
-- Fixed a assertion when __block is used on global variables in C mode. (#GH183974)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
