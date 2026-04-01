@@ -30,7 +30,7 @@ namespace acc {
 /// `accumulatedAttrs` collects Fortran variable attributes from the path from
 /// the queried value to `accOp` (e.g. [hl]fir.declare); they are merged into
 /// the returned source so TARGET/POINTER/INTENT_IN are not dropped.
-fir::AliasAnalysis::Source getSourceFromACCValue(
+fir::AliasAnalysis::Source getSourceForACCValue(
     mlir::Value mappedValue, mlir::Operation *accOp,
     llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> getSourceFn,
     bool originIsData,

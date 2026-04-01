@@ -943,7 +943,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             followBoxData = true;
         })
         .Case<ACC_DATA_ENTRY_AND_INIT_OPS>([&](auto op) {
-          accSourceReturn = fir::acc::getSourceFromACCValue(
+          accSourceReturn = fir::acc::getSourceForACCValue(
               v, op.getOperation(),
               [&](mlir::Value x) {
                 return getSource(x, getLastInstantiationPoint);
@@ -974,7 +974,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       ty = v.getType();
     } else if (mlir::Operation *accOp =
                    mlir::acc::getACCDataClauseOpForBlockArg(v)) {
-      return fir::acc::getSourceFromACCValue(
+      return fir::acc::getSourceForACCValue(
           v, accOp,
           [&](mlir::Value x) {
             return getSource(x, getLastInstantiationPoint);

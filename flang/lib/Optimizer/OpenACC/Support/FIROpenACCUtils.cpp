@@ -625,7 +625,7 @@ static bool isACCPrivateLikeOp(mlir::Operation *op) {
                    mlir::acc::FirstprivateMapInitialOp>(op);
 }
 
-fir::AliasAnalysis::Source fir::acc::getSourceFromACCValue(
+fir::AliasAnalysis::Source fir::acc::getSourceForACCValue(
     mlir::Value mappedValue, mlir::Operation *accOp,
     llvm::function_ref<fir::AliasAnalysis::Source(mlir::Value)> getSourceFn,
     bool originIsData,
