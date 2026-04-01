@@ -789,11 +789,11 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     // For private/firstprivate, attach (and optionally record) the recipe.
     if constexpr (std::is_same_v<Op, mlir::acc::PrivateOp>) {
       mlir::SymbolRefAttr recipeAttr = fir::acc::createOrGetPrivateRecipe(
-          builder, operandLocation, baseAddr.getType(), bounds);
+          builder, operandLocation, baseAddr, bounds);
       op.setRecipeAttr(recipeAttr);
     } else if constexpr (std::is_same_v<Op, mlir::acc::FirstprivateOp>) {
       mlir::SymbolRefAttr recipeAttr = fir::acc::createOrGetFirstprivateRecipe(
-          builder, operandLocation, baseAddr.getType(), bounds);
+          builder, operandLocation, baseAddr, bounds);
       op.setRecipeAttr(recipeAttr);
     }
   }
@@ -1176,13 +1176,12 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
         /*structured=*/true, /*implicit=*/false,
         mlir::acc::DataClause::acc_reduction, info.addr.getType(), async,
         asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true);
-    mlir::Type ty = op.getAccVar().getType();
     mlir::Attribute fastMathAttr;
     if (builder.getFastMathFlags() != mlir::arith::FastMathFlags::none)
       fastMathAttr = mlir::arith::FastMathFlagsAttr::get(
           builder.getContext(), builder.getFastMathFlags());
     mlir::SymbolRefAttr recipe = fir::acc::createOrGetReductionRecipe(
-        builder, operandLocation, ty, mlirOp, bounds, fastMathAttr);
+        builder, operandLocation, info.addr, mlirOp, bounds, fastMathAttr);
     op.setRecipeAttr(recipe);
     reductionOperands.push_back(op.getAccVar());
     // Track the symbol and its corresponding mlir::Value if requested so that
@@ -1427,8 +1426,8 @@ static void privatizeIv(
 
   if (privateOp == nullptr) {
     llvm::SmallVector<mlir::Value> noBounds;
-    mlir::SymbolRefAttr recipe = fir::acc::createOrGetPrivateRecipe(
-        builder, loc, ivValue.getType(), noBounds);
+    mlir::SymbolRefAttr recipe =
+        fir::acc::createOrGetPrivateRecipe(builder, loc, ivValue, noBounds);
 
     std::stringstream asFortran;
     asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym.name()));
@@ -2768,7 +2767,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, waitOperands);
   addOperands(operands, operandSegments, dataClauseOperands);
 
-  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent)
+  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent &&
+      !eval.lowerAsUnstructured())
     return;
 
   auto dataOp = createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
@@ -4564,6 +4564,35 @@ void Fortran::lower::genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &builder,
   mlir::Value yieldValue =
       builder.createIntegerConstant(loc, builder.getI1Type(), 1);
   mlir::acc::YieldOp::create(builder, loc, yieldValue);
+}
+
+bool Fortran::lower::genOpenACCRegionExitBranch(fir::FirOpBuilder &builder,
+                                                mlir::Location loc,
+                                                mlir::Block *targetBlock) {
+  mlir::Block *currentBlock = builder.getBlock();
+  if (!currentBlock || !targetBlock)
+    return false;
+  mlir::Region *curRegion = currentBlock->getParent();
+  mlir::Region *targetRegion = targetBlock->getParent();
+  if (curRegion == targetRegion)
+    return false;
+
+  // Check all regions between the current region and the target for ACC ops.
+  for (mlir::Region *r = curRegion; r && r != targetRegion;
+       r = r->getParentRegion()) {
+    mlir::Operation *op = r->getParentOp();
+    if (op &&
+        mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS, ACC_DATA_CONSTRUCT_STRUCTURED_OPS,
+                  mlir::acc::LoopOp>(op)) {
+      if (targetRegion == r->getParentRegion()) {
+        genOpenACCTerminator(builder, op, loc);
+        return true;
+      }
+      TODO(loc, "GOTO exiting OpenACC region");
+    }
+  }
+
+  return false;
 }
 
 uint64_t Fortran::lower::getLoopCountForCollapseAndTile(

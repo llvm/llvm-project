@@ -16,6 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
+#include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attrs.inc"
@@ -134,6 +135,16 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                        cir::OptInfoAttr::get(&mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
+
+  if (langOpts.OpenMP) {
+    mlir::omp::OffloadModuleOpts ompOpts(
+        langOpts.OpenMPTargetDebug, langOpts.OpenMPTeamSubscription,
+        langOpts.OpenMPThreadSubscription, langOpts.OpenMPNoThreadState,
+        langOpts.OpenMPNoNestedParallelism, langOpts.OpenMPIsTargetDevice,
+        getTriple().isGPU(), langOpts.OpenMPForceUSM, langOpts.OpenMP,
+        langOpts.OMPHostIRFile, langOpts.OMPTargetTriples, langOpts.NoGPULib);
+    mlir::omp::setOffloadModuleInterfaceAttributes(theModule, ompOpts);
+  }
 
   if (langOpts.CUDA)
     createCUDARuntime();
@@ -3104,9 +3115,15 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
   // Alias constructors and destructors are always unnamed_addr.
   assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
 
-  // Switch any previous uses to the alias.
   if (op) {
-    errorNYI(aliasFD->getSourceRange(), "emitAliasForGlobal: previous uses");
+    // Any existing users of the existing function declaration will be
+    // referencing the function by flat symbol reference (i.e. the name), so
+    // those uses will automatically resolve to the alias now that we've
+    // replaced the function declaration. We can safely erase the existing
+    // function declaration.
+    assert(cast<cir::FuncOp>(op).getFunctionType() == alias.getFunctionType() &&
+           "declaration exists with different type");
+    op->erase();
   } else {
     // Name already set by createCIRFunction
   }

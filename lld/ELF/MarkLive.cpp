@@ -227,51 +227,6 @@ void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
   }
 }
 
-// Walk all GC edges from sec and call fn(target, offset) for each edge.
-template <class ELFT, class Fn>
-static void
-forEachEdge(Ctx &ctx, InputSectionBase &sec,
-            const DenseMap<StringRef, SmallVector<InputSectionBase *, 0>>
-                &cNamedSections,
-            Fn fn) {
-  auto resolveEdge = [&](const auto &rel) {
-    Symbol &sym = sec.file->getRelocTargetSym(rel);
-    if (!sym.used)
-      sym.used = true;
-    if (auto *d = dyn_cast<Defined>(&sym)) {
-      if (auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section)) {
-        uint64_t offset = d->value;
-        if (d->isSection()) {
-          offset += getAddend<ELFT>(ctx, sec, rel);
-          if (auto *ms = dyn_cast<MergeInputSection>(relSec);
-              ms && offset >= ms->content().size())
-            return;
-        }
-        if (auto *ms = dyn_cast<MergeInputSection>(relSec))
-          ms->getSectionPiece(offset).live = true;
-        fn(relSec, offset);
-      }
-      return;
-    }
-    if (auto *ss = dyn_cast<SharedSymbol>(&sym))
-      if (!ss->isWeak())
-        cast<SharedFile>(ss->file)->isNeeded = true;
-    for (InputSectionBase *csec : cNamedSections.lookup(sym.getName()))
-      fn(csec, 0);
-  };
-  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
-  for (const typename ELFT::Rel &rel : rels.rels)
-    resolveEdge(rel);
-  for (const typename ELFT::Rela &rel : rels.relas)
-    resolveEdge(rel);
-  for (const typename ELFT::Crel &rel : rels.crels)
-    resolveEdge(rel);
-  for (InputSectionBase *isec : sec.dependentSections)
-    fn(isec, 0);
-  if (sec.nextInSectionGroup)
-    fn(sec.nextInSectionGroup, 0);
-}
-
 // Some sections are used directly by the loader, so they should never be
 // garbage-collected. This function returns true if a given section is such
 // section.
@@ -539,6 +494,54 @@ void MarkLive<ELFT, TrackWhyLive>::mark() {
   }
 }
 
+// Helper function for markParallel. Walk all GC edges from sec, marking
+// everything that needs to be live. Call fn(target section, offset) for each
+// edge, which will mark the section live and handle further processing of edges
+// from that section.
+template <class ELFT, class Fn>
+static void processSectionEdges(
+    Ctx &ctx, InputSectionBase &sec,
+    const DenseMap<StringRef, SmallVector<InputSectionBase *, 0>>
+        &cNamedSections,
+    Fn fn) {
+  auto resolveEdge = [&](const auto &rel) {
+    Symbol &sym = sec.file->getRelocTargetSym(rel);
+    if (!sym.used)
+      sym.used = true;
+    if (auto *d = dyn_cast<Defined>(&sym)) {
+      if (auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section)) {
+        uint64_t offset = d->value;
+        if (d->isSection()) {
+          offset += getAddend<ELFT>(ctx, sec, rel);
+          if (auto *ms = dyn_cast<MergeInputSection>(relSec);
+              ms && offset >= ms->content().size())
+            return;
+        }
+        if (auto *ms = dyn_cast<MergeInputSection>(relSec))
+          ms->getSectionPiece(offset).live = true;
+        fn(relSec, offset);
+      }
+      return;
+    }
+    if (auto *ss = dyn_cast<SharedSymbol>(&sym))
+      if (!ss->isWeak())
+        cast<SharedFile>(ss->file)->isNeeded = true;
+    for (InputSectionBase *csec : cNamedSections.lookup(sym.getName()))
+      fn(csec, 0);
+  };
+  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
+  for (const typename ELFT::Rel &rel : rels.rels)
+    resolveEdge(rel);
+  for (const typename ELFT::Rela &rel : rels.relas)
+    resolveEdge(rel);
+  for (const typename ELFT::Crel &rel : rels.crels)
+    resolveEdge(rel);
+  for (InputSectionBase *isec : sec.dependentSections)
+    fn(isec, 0);
+  if (sec.nextInSectionGroup)
+    fn(sec.nextInSectionGroup, 0);
+}
+
 // Parallel mark using level-synchronized BFS with depth-limited inline
 // recursion. Each parallelFor iteration processes a subtree up to depth 3
 // (DFS for cache locality), then queues deeper discoveries for the next level.
@@ -548,22 +551,23 @@ void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   auto visit = [&](InputSection *sec, int depth,
                    SmallVector<InputSection *, 0> &localQueue,
                    auto &self) -> void {
-    forEachEdge<ELFT>(ctx, *sec, cNamedSections,
-                      [&](InputSectionBase *target, uint64_t offset) {
-                        auto &part = reinterpret_cast<std::atomic<uint8_t> &>(
-                            target->partition);
-                        // Optimistic load-then-exchange avoids expensive atomic
-                        // RMW on already-visited sections.
-                        if (part.load(std::memory_order_relaxed) != 0 ||
-                            part.exchange(1, std::memory_order_relaxed) != 0)
-                          return;
-                        if (auto *s = dyn_cast<InputSection>(target)) {
-                          if (depth < 3)
-                            self(s, depth + 1, localQueue, self);
-                          else
-                            localQueue.push_back(s);
-                        }
-                      });
+    processSectionEdges<ELFT>(
+        ctx, *sec, cNamedSections,
+        [&](InputSectionBase *target, uint64_t offset) {
+          auto &part =
+              reinterpret_cast<std::atomic<uint8_t> &>(target->partition);
+          // Optimistic load-then-exchange avoids expensive atomic
+          // RMW on already-visited sections.
+          if (part.load(std::memory_order_relaxed) != 0 ||
+              part.exchange(1, std::memory_order_relaxed) != 0)
+            return;
+          if (auto *s = dyn_cast<InputSection>(target)) {
+            if (depth < 3)
+              self(s, depth + 1, localQueue, self);
+            else
+              localQueue.push_back(s);
+          }
+        });
   };
 
   while (!queue.empty()) {
