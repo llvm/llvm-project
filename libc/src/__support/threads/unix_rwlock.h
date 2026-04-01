@@ -72,10 +72,12 @@ public:
 
   [[nodiscard]] LIBC_INLINE LockResult unlock() {
     bool is_writer_unlock = raw.has_active_writer();
-    LockResult result = raw.unlock();
-    if (is_writer_unlock && result == LockResult::Success)
+    if (is_writer_unlock) {
+      if (get_writer_tid() != internal::gettid())
+        return LockResult::PermissionDenied;
       set_writer_tid(0);
-    return result;
+    }
+    return raw.unlock();
   }
 
   [[nodiscard]] LIBC_INLINE LockResult check_for_destroy() {
