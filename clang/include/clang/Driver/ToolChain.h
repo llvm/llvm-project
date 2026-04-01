@@ -283,9 +283,7 @@ public:
   /// this toolchain.
   StringRef getDefaultUniversalArchName() const;
 
-  std::string getTripleString() const {
-    return Triple.getTriple();
-  }
+  StringRef getTripleString() const { return Triple.getTriple(); }
 
   /// Get the toolchain's effective clang triple.
   const llvm::Triple &getEffectiveTriple() const {
@@ -850,22 +848,28 @@ public:
 
   // We want to expand the shortened versions of the triples passed in to
   // the values used for the bitcode libraries.
-  static llvm::Triple getOpenMPTriple(StringRef TripleStr) {
-    llvm::Triple TT(TripleStr);
-    if (TT.getVendor() == llvm::Triple::UnknownVendor ||
-        TT.getOS() == llvm::Triple::UnknownOS) {
-      if (TT.getArch() == llvm::Triple::nvptx)
-        return llvm::Triple("nvptx-nvidia-cuda");
-      if (TT.getArch() == llvm::Triple::nvptx64)
-        return llvm::Triple("nvptx64-nvidia-cuda");
-      if (TT.isAMDGCN())
-        return llvm::Triple("amdgcn-amd-amdhsa");
+  static void normalizeOffloadTriple(llvm::Triple &TT) {
+    if (TT.isNVPTX()) {
+      if (TT.getVendor() == llvm::Triple::UnknownVendor)
+        TT.setVendor(llvm::Triple::NVIDIA);
+      if (TT.getOS() == llvm::Triple::UnknownOS)
+        TT.setOS(llvm::Triple::CUDA);
+      return;
     }
-    return TT;
+
+    if (TT.isAMDGPU()) {
+      if (TT.getVendor() == llvm::Triple::UnknownVendor)
+        TT.setVendor(llvm::Triple::AMD);
+      if (TT.getOS() == llvm::Triple::UnknownOS)
+        TT.setOS(llvm::Triple::AMDHSA);
+      return;
+    }
   }
 
-  static llvm::Triple getOpenMPTriple(const llvm::Triple &OrigTT) {
-    return getOpenMPTriple(OrigTT.str());
+  static llvm::Triple normalizeOffloadTriple(llvm::StringRef OrigTT) {
+    llvm::Triple TT(OrigTT);
+    normalizeOffloadTriple(TT);
+    return TT;
   }
 };
 

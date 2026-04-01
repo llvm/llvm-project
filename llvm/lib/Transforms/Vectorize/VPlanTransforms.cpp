@@ -94,10 +94,38 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
           if (VectorID == Intrinsic::not_intrinsic)
             return false;
-          NewRecipe = new VPWidenIntrinsicRecipe(
-              *CI, getVectorIntrinsicIDForCall(CI, &TLI),
-              drop_end(Ingredient.operands()), CI->getType(), VPIRFlags(*CI),
-              *VPI, CI->getDebugLoc());
+
+          // The noalias.scope.decl intrinsic declares a noalias scope that
+          // is valid for a single iteration. Emitting it as a single-scalar
+          // replicate would incorrectly extend the scope across multiple
+          // original iterations packed into one vector iteration.
+          // FIXME: If we want to vectorize this loop, then we have to drop
+          // all the associated !alias.scope and !noalias.
+          if (VectorID == Intrinsic::experimental_noalias_scope_decl)
+            return false;
+
+          // These intrinsics are recognized by getVectorIntrinsicIDForCall
+          // but are not widenable. Emit them as replicate instead of widening.
+          if (VectorID == Intrinsic::assume ||
+              VectorID == Intrinsic::lifetime_end ||
+              VectorID == Intrinsic::lifetime_start ||
+              VectorID == Intrinsic::sideeffect ||
+              VectorID == Intrinsic::pseudoprobe) {
+            // If the operand of llvm.assume holds before vectorization, it will
+            // also hold per lane.
+            // llvm.pseudoprobe requires to be duplicated per lane for accurate
+            // sample count.
+            const bool IsSingleScalar = VectorID != Intrinsic::assume &&
+                                        VectorID != Intrinsic::pseudoprobe;
+            NewRecipe = new VPReplicateRecipe(CI, Ingredient.operands(),
+                                              /*IsSingleScalar=*/IsSingleScalar,
+                                              /*Mask=*/nullptr, *VPI, *VPI,
+                                              Ingredient.getDebugLoc());
+          } else {
+            NewRecipe = new VPWidenIntrinsicRecipe(
+                *CI, VectorID, drop_end(Ingredient.operands()), CI->getType(),
+                VPIRFlags(*CI), *VPI, CI->getDebugLoc());
+          }
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
           NewRecipe = new VPWidenCastRecipe(
               CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), CI,
@@ -187,12 +215,12 @@ public:
   }
 };
 
-/// Check if a memory operation doesn't alias with memory operations in blocks
-/// between \p FirstBB and \p LastBB using scoped noalias metadata. If
-/// \p SinkInfo is std::nullopt, only recipes that may write to memory are
-/// checked (for load hoisting). Otherwise recipes that both read and write
-/// memory are checked, and SCEV is used to prove no-alias between the group
-/// leader and other replicate recipes (for store sinking).
+/// Check if a memory operation doesn't alias with memory operations using
+/// scoped noalias metadata, in blocks in the single-successor chain between \p
+/// FirstBB and \p LastBB. If \p SinkInfo is std::nullopt, only recipes that may
+/// write to memory are checked (for load hoisting). Otherwise recipes that both
+/// read and write memory are checked, and SCEV is used to prove no-alias
+/// between the group leader and other replicate recipes (for store sinking).
 static bool
 canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
@@ -201,11 +229,8 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   if (!MemLoc.AATags.Scope)
     return false;
 
-  for (VPBlockBase *Block = FirstBB; Block;
-       Block = Block->getSingleSuccessor()) {
-    assert(Block->getNumSuccessors() <= 1 &&
-           "Expected at most one successor in block chain");
-    auto *VPBB = cast<VPBasicBlock>(Block);
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
     for (VPRecipeBase &R : *VPBB) {
       if (SinkInfo && SinkInfo->shouldSkip(R))
         continue;
@@ -223,14 +248,12 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
       if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
-
-    if (Block == LastBB)
-      break;
   }
   return true;
 }
 
-/// Collect either replicated Loads or Stores grouped by their address SCEV.
+/// Collect either replicated Loads or Stores grouped by their address SCEV, in
+/// a deep-traversal of the vector loop region in \p Plan.
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
@@ -241,9 +264,8 @@ collectGroupedReplicateMemOps(
   constexpr bool IsLoad = (Opcode == Instruction::Load);
   SmallDenseMap<const SCEV *, SmallVector<VPReplicateRecipe *, 4>>
       RecipesByAddress;
-  for (VPBlockBase *Block :
-       vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry())) {
-    auto *VPBB = cast<VPBasicBlock>(Block);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (!RepR || RepR->getOpcode() != Opcode || !FilterFn(RepR))
@@ -2636,8 +2658,9 @@ void VPlanTransforms::cse(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
   DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
 
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : *VPBB) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))

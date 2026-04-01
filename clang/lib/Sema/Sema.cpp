@@ -568,8 +568,13 @@ void Sema::Initialize() {
   }
 
   if (Context.getTargetInfo().getTriple().isAMDGPU() ||
+      (Context.getTargetInfo().getTriple().isSPIRV() &&
+       Context.getTargetInfo().getTriple().getVendor() == llvm::Triple::AMD) ||
       (Context.getAuxTargetInfo() &&
-       Context.getAuxTargetInfo()->getTriple().isAMDGPU())) {
+       (Context.getAuxTargetInfo()->getTriple().isAMDGPU() ||
+        (Context.getAuxTargetInfo()->getTriple().isSPIRV() &&
+         Context.getAuxTargetInfo()->getTriple().getVendor() ==
+             llvm::Triple::AMD)))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
@@ -1089,6 +1094,15 @@ void Sema::LoadExternalWeakUndeclaredIdentifiers() {
     (void)WeakUndeclaredIdentifiers[WeakID.first].insert(WeakID.second);
 }
 
+void Sema::LoadExternalExtnameUndeclaredIdentifiers() {
+  if (!ExternalSource)
+    return;
+
+  SmallVector<std::pair<IdentifierInfo *, AsmLabelAttr *>, 4> ExtnameIDs;
+  ExternalSource->ReadExtnameUndeclaredIdentifiers(ExtnameIDs);
+  for (auto &ExtnameID : ExtnameIDs)
+    ExtnameUndeclaredIdentifiers[ExtnameID.first] = ExtnameID.second;
+}
 
 typedef llvm::DenseMap<const CXXRecordDecl*, bool> RecordCompleteMap;
 

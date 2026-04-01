@@ -2637,9 +2637,10 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 CompilerType Target::GetRegisterType(const std::string &name,
                                      const lldb_private::RegisterFlags &flags,
                                      uint32_t byte_size) {
-  RegisterTypeBuilderSP provider = PluginManager::GetRegisterTypeBuilder(*this);
-  assert(provider);
-  return provider->GetRegisterType(name, flags, byte_size);
+  if (!m_register_type_builder_sp)
+    m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
+  assert(m_register_type_builder_sp);
+  return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -3864,8 +3865,19 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
       }
 
       if (default_to_use_pty) {
-        llvm::Error Err = info.SetUpPtyRedirection();
-        LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
+#ifdef _WIN32
+        if (info.GetFlags().Test(eLaunchFlagUsePipes)) {
+          llvm::Error Err = info.SetUpPipeRedirection();
+          LLDB_LOG_ERROR(log, std::move(Err),
+                         "SetUpPipeRedirection failed: {0}");
+        } else {
+#endif
+          llvm::Error Err = info.SetUpPtyRedirection();
+          LLDB_LOG_ERROR(log, std::move(Err),
+                         "SetUpPtyRedirection failed: {0}");
+#ifdef _WIN32
+        }
+#endif
       }
     }
   }

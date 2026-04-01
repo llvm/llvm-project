@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; CHECK-LABEL: @read_mod_write_single_ptr(
 ; CHECK: load <8 x float>
 ; CHECK: ret void
-define void @read_mod_write_single_ptr(ptr nocapture %a, i32 %n) nounwind uwtable ssp {
+define void @read_mod_write_single_ptr(ptr nocapture %a, i32 %n) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -31,7 +31,7 @@ define void @read_mod_write_single_ptr(ptr nocapture %a, i32 %n) nounwind uwtabl
 ; SLOWMEM32: load <2 x i64>
 ; FASTMEM32: load <4 x i64>
 ; CHECK: ret void
-define void @read_mod_i64(ptr nocapture %a, i32 %n) nounwind uwtable ssp {
+define void @read_mod_i64(ptr nocapture %a, i32 %n) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 

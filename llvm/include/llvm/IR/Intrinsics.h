@@ -183,12 +183,11 @@ namespace Intrinsic {
     } Kind;
 
     union {
-      unsigned Integer_Width;
-      unsigned Float_Width;
-      unsigned Pointer_AddressSpace;
-      unsigned Struct_NumElements;
-      unsigned Argument_Info;
-      ElementCount Vector_Width;
+      unsigned IntegerWidth;
+      unsigned PointerAddressSpace;
+      unsigned StructNumElements;
+      unsigned ArgumentInfo;
+      ElementCount VectorWidth;
     };
 
     // AK_% : Defined in Intrinsics.td
@@ -202,31 +201,31 @@ namespace Intrinsic {
              Kind == TruncArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
-      return Argument_Info >> 3;
+      return ArgumentInfo >> 3;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
-      return (ArgKind)(Argument_Info & 7);
+      return (ArgKind)(ArgumentInfo & 7);
     }
 
     // VecOfAnyPtrsToElt uses both an overloaded argument (for address space)
     // and a reference argument (for matching vector width and element types)
     unsigned getOverloadArgNumber() const {
       assert(Kind == VecOfAnyPtrsToElt);
-      return Argument_Info >> 16;
+      return ArgumentInfo >> 16;
     }
     // OneNthEltsVecArguments uses both a divisor N and a reference argument for
     // the full-width vector to match
     unsigned getVectorDivisor() const {
       assert(Kind == OneNthEltsVecArgument);
-      return Argument_Info >> 16;
+      return ArgumentInfo >> 16;
     }
     unsigned getRefArgNumber() const {
       assert(Kind == VecOfAnyPtrsToElt || Kind == OneNthEltsVecArgument);
-      return Argument_Info & 0xFFFF;
+      return ArgumentInfo & 0xFFFF;
     }
 
     static IITDescriptor get(IITDescriptorKind K, unsigned Field) {
@@ -243,7 +242,7 @@ namespace Intrinsic {
 
     static IITDescriptor getVector(unsigned Width, bool IsScalable) {
       IITDescriptor Result = {Vector, {0}};
-      Result.Vector_Width = ElementCount::get(Width, IsScalable);
+      Result.VectorWidth = ElementCount::get(Width, IsScalable);
       return Result;
     }
   };
