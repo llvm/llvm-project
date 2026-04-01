@@ -232,7 +232,7 @@ AArch64O0PreLegalizerCombinerPass::run(MachineFunction &MF,
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(
           *MF.getFunction().getParent());
   if (!LibcallResult)
-    report_fatal_error("LibcallLoweringModuleAnalysis result not available");
+    reportFatalUsageError("LibcallLoweringModuleAnalysis result not available");
 
   const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
 
