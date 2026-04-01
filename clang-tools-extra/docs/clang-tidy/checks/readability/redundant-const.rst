@@ -1,7 +1,7 @@
 .. title:: clang-tidy - readability-redundant-const
 
 readability-redundant-const
-=============================
+===========================
 
 Detects redundant ``const`` specifiers on variable declarations.
 
