@@ -562,6 +562,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
+  ctx.arg.libcallThreadContext = args.hasArg(OPT_libcall_thread_context);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(ctx.arg.ltoo));
@@ -938,23 +939,12 @@ static DefinedGlobal *createOptionalGlobal(StringRef name, bool isMutable) {
   return symtab->addOptionalGlobalSymbol(name, g);
 }
 
-// Create ABI-defined synthetic symbols that are needed early, before LTO.
-static void createEarlySyntheticSymbols() {
+// Create ABI-defined synthetic symbols
+static void createSyntheticSymbols() {
   if (ctx.arg.relocatable)
     return;
 
   static WasmSignature nullSignature = {{}, {}};
-  ctx.sym.callCtors = symtab->addSyntheticFunction(
-      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
-      make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
-}
-
-// Create synthetic symbols that rely on information that is only available
-// after LTO, e.g. __stack_pointer, __tls_base.
-static void createPostLTOSymbols() {
-  if (ctx.arg.relocatable)
-    return;
-
   static WasmSignature i32ArgSignature = {{}, {ValType::I32}};
   static WasmSignature i64ArgSignature = {{}, {ValType::I64}};
   static llvm::wasm::WasmGlobalType globalTypeI32 = {WASM_TYPE_I32, false};
@@ -964,12 +954,16 @@ static void createPostLTOSymbols() {
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI64 = {WASM_TYPE_I64,
                                                             true};
 
+  ctx.sym.callCtors = symtab->addSyntheticFunction(
+      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
+      make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
+
   bool is64 = ctx.arg.is64.value_or(false);
 
   auto stack_pointer_name =
-      ctx.libcallThreadContext ? "__init_stack_pointer" : "__stack_pointer";
+      ctx.arg.libcallThreadContext ? "__init_stack_pointer" : "__stack_pointer";
   if (ctx.isPic) {
-    if (ctx.libcallThreadContext) {
+    if (ctx.arg.libcallThreadContext) {
       ctx.sym.stackPointer = createUndefinedGlobal(
           stack_pointer_name,
           ctx.arg.is64.value_or(false) ? &globalTypeI64 : &globalTypeI32);
@@ -992,16 +986,16 @@ static void createPostLTOSymbols() {
   } else {
     // For non-PIC code
     ctx.sym.stackPointer =
-        createGlobalVariable(stack_pointer_name, !ctx.libcallThreadContext);
+        createGlobalVariable(stack_pointer_name, !ctx.arg.libcallThreadContext);
     ctx.sym.stackPointer->markLive();
   }
 
   if (ctx.arg.sharedMemory) {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name =
-        ctx.libcallThreadContext ? "__init_tls_base" : "__tls_base";
+        ctx.arg.libcallThreadContext ? "__init_tls_base" : "__tls_base";
     ctx.sym.tlsBase =
-        createGlobalVariable(tls_base_name, !ctx.libcallThreadContext,
+        createGlobalVariable(tls_base_name, !ctx.arg.libcallThreadContext,
                              WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
@@ -1011,7 +1005,7 @@ static void createPostLTOSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
-    if (ctx.libcallThreadContext) {
+    if (ctx.arg.libcallThreadContext) {
       ctx.sym.tlsBase->markLive();
       ctx.sym.tlsSize->markLive();
       ctx.sym.tlsAlign->markLive();
@@ -1317,76 +1311,6 @@ static void checkZOptions(opt::InputArgList &args) {
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
-// Determine the thread context ABI based on object file features.
-// This must be called after LTO, since LTO object files are needed.
-static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
-  // A complication is that a user may attempt to link together object files
-  // compiled with different versions of LLVM, where one does not specifiy
-  // -libcall-thread-context when using the global thread context ABI.
-  // They may also attempt to link object files with the global ABI compiled
-  // with older LLVM versions, but link them with a newer wasm-ld. To ensure the
-  // correct behavior in both of these cases, we treat the import of a
-  // __stack_pointer global from the env module as an indication that the global
-  // thread context ABI is being used.
-
-  enum class ThreadContextABI { Undetermined, Libcall, Globals };
-
-  ThreadContextABI threadContextABI = ThreadContextABI::Undetermined;
-
-  for (ObjFile *obj : files) {
-    auto targetFeatures = obj->getWasmObj()->getTargetFeatures();
-    auto threadContextFeature =
-        llvm::find_if(targetFeatures, [](const auto &f) {
-          return f.Name == "libcall-thread-context";
-        });
-
-    bool usesLibcallThreadContext =
-        threadContextFeature != targetFeatures.end() &&
-        threadContextFeature->Prefix == WASM_FEATURE_PREFIX_USED;
-
-    if (threadContextFeature == targetFeatures.end()) {
-      // If the feature is not explicitly used or disallowed, check for the
-      // presence of a __stack_pointer import in this specific file to determine
-      // if the global thread context ABI is being used.
-      bool hasStackPointerImport =
-          llvm::any_of(obj->getSymbols(), [](const auto &sym) {
-            return sym && sym->getName() == "__stack_pointer" &&
-                   sym->kind() == Symbol::UndefinedGlobalKind &&
-                   sym->importModule && sym->importModule == "env";
-          });
-      if (!hasStackPointerImport) {
-        // No __stack_pointer import, so this is probably an object file
-        // compiled from assembly or some other source that doesn't care about
-        // the thread context ABI. As such, we let it pass.
-        continue;
-      }
-      // Treat this as using the globals ABI
-      usesLibcallThreadContext = false;
-    }
-
-    if (usesLibcallThreadContext) {
-      if (threadContextABI == ThreadContextABI::Undetermined) {
-        threadContextABI = ThreadContextABI::Libcall;
-      } else if (threadContextABI != ThreadContextABI::Libcall) {
-        error("thread context ABI mismatch: " + obj->getName() +
-              " uses libcall-thread-context but other files disallow it");
-      }
-    } else {
-      if (threadContextABI == ThreadContextABI::Undetermined) {
-        threadContextABI = ThreadContextABI::Globals;
-      } else if (threadContextABI != ThreadContextABI::Globals) {
-        error("thread context ABI mismatch: " + obj->getName() +
-              " disallows libcall-thread-context but other files use it");
-      }
-    }
-  }
-
-  // If the ABI is undetermined at this point, default to the globals ABI
-  if (threadContextABI == ThreadContextABI::Libcall) {
-    ctx.libcallThreadContext = true;
-  }
-}
-
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
@@ -1476,7 +1400,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.arg.requiredExports.push_back(arg->getValue());
   }
 
-  createEarlySyntheticSymbols();
+  createSyntheticSymbols();
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.
@@ -1560,12 +1484,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   symtab->compileBitcodeFiles();
   if (errorCount())
     return;
-
-  // Now that LTO is complete and all object files are available, determine the
-  // thread context ABI and create symbols (__stack_pointer, __tls_base, etc.)
-  // based on the determined ABI.
-  determineThreadContextABI(ctx.objectFiles);
-  createPostLTOSymbols();
 
   // The LTO process can generate new undefined symbols, specifically libcall
   // functions.  Because those symbols might be declared in a stub library we

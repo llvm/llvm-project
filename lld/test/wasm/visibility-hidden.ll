@@ -43,6 +43,9 @@ entry:
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:       - Name:            __stack_pointer
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:       - Name:            objectDefault
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
@@ -52,9 +55,6 @@ entry:
 ; CHECK-NEXT:       - Name:            archiveDefault
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           4
-; CHECK-NEXT:       - Name:            __stack_pointer
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:   - Type:
 
 

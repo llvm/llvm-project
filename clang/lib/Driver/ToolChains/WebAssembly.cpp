@@ -179,6 +179,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  if (WantsLibcallThreadContext(ToolChain.getTriple(), Args))
+    CmdArgs.push_back("--libcall-thread-context");
+
   if (WantsPthread(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");
 

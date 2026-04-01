@@ -1,9 +1,13 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld -no-gc-sections -o %t.wasm %t.o
+# RUN: wasm-ld --libcall-thread-context --shared-memory -no-gc-sections -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-print-imm-hex --no-show-raw-insn %t.wasm | FileCheck %s --check-prefix=DIS
 
-.functype       __wasm_get_tls_base () -> (i32)
+.globl         __wasm_get_tls_base
+__wasm_get_tls_base:
+    .functype   __wasm_get_tls_base () -> (i32)
+    i32.const 0
+    end_function
 
 .globl _start
 _start:
@@ -32,13 +36,16 @@ tls2:
   .size tls2, 4
 
 .section  .custom_section.target_features,"",@
-  .int8 2
+  .int8 3
   .int8 43
   .int8 22
   .ascii  "libcall-thread-context"
   .int8 43
   .int8 11
   .ascii  "bulk-memory"
+  .int8 43
+  .int8 7
+  .ascii  "atomics"
 
 
 # CHECK:      GlobalNames:
@@ -52,22 +59,14 @@ tls2:
 # CHECK-NEXT:        Name:            __tls_align
 
 # DIS-LABEL: <__wasm_init_memory>:
-# DIS-EMPTY:
-# DIS-NEXT:       i32.const       65536
-# DIS-NEXT:       i32.const       65536
-# DIS-NEXT:       call    1
-# DIS-NEXT:       i32.const       0
-# DIS-NEXT:       i32.const       8
-# DIS-NEXT:       memory.init     0, 0
-# DIS-NEXT:       end
 
 # DIS-LABEL: <_start>:
 # DIS-EMPTY:
-# DIS-NEXT:       call    0
+# DIS-NEXT:       call    4
 # DIS-NEXT:       i32.const       0
 # DIS-NEXT:       i32.add 
 # DIS-NEXT:       i32.load        0
-# DIS-NEXT:       call    0
+# DIS-NEXT:       call    4
 # DIS-NEXT:       i32.const       4
 # DIS-NEXT:       i32.add 
 # DIS-NEXT:       i32.load        0

@@ -66,6 +66,7 @@ struct Config {
   bool growableTable;
   bool gcSections;
   llvm::StringSet<> keepSections;
+  bool libcallThreadContext;
   std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
   std::optional<llvm::StringRef> memoryExport;
   bool sharedMemory;
@@ -279,11 +280,6 @@ struct Ctx {
   llvm::SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>,
                     0>
       whyExtractRecords;
-
-  // Whether to use library functions for the stack pointer and TLS base
-  // instead of globals. This is currently used for WASIp3 cooperative threads
-  // support.
-  bool libcallThreadContext = false;
 
   Ctx();
   void reset();
