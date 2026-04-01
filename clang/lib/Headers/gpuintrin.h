@@ -213,7 +213,7 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
                                             __type __x) {                      \
     uint64_t __above = __lane_mask & -(2ull << __gpu_lane_id());               \
     for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {       \
-      uint32_t __src = __above ? __builtin_ctzg(__above) : __gpu_lane_id();    \
+      uint32_t __src = __builtin_ctzg(__above, (int)sizeof(__above) * 8);      \
       __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
                                                      __gpu_num_lanes());       \
       __x = __op(__x, __above ? __result : (__type)__identity);                \
@@ -228,8 +228,7 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
                                             __type __x) {                      \
     uint64_t __below = __lane_mask & ((1ull << __gpu_lane_id()) - 1);          \
     for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {       \
-      uint32_t __src =                                                         \
-          __below ? (63 - __builtin_clzg(__below)) : __gpu_lane_id();          \
+      uint32_t __src = 63 - __builtin_clzg(__below, (int)sizeof(__below) * 8); \
       __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
                                                      __gpu_num_lanes());       \
       __x = __op(__x, __below ? __result : (__type)__identity);                \
@@ -247,10 +246,10 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
   }
 
 #define __GPU_OP(__x, __y) ((__x) + (__y))
-__DO_LANE_OPS(uint32_t, __GPU_OP, 0, sum, u32);
-__DO_LANE_OPS(uint64_t, __GPU_OP, 0, sum, u64);
-__DO_LANE_OPS(float, __GPU_OP, 0, sum, f32);
-__DO_LANE_OPS(double, __GPU_OP, 0, sum, f64);
+__DO_LANE_OPS(uint32_t, __GPU_OP, 0, add, u32);
+__DO_LANE_OPS(uint64_t, __GPU_OP, 0, add, u64);
+__DO_LANE_OPS(float, __GPU_OP, 0, add, f32);
+__DO_LANE_OPS(double, __GPU_OP, 0, add, f64);
 #undef __GPU_OP
 
 #define __GPU_OP(__x, __y) ((__x) & (__y))
