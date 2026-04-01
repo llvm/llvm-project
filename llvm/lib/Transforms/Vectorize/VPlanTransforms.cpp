@@ -1645,15 +1645,14 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (isa<VPPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(Def)) {
-    if (Def->getNumOperands() == 1) {
-      Def->replaceAllUsesWith(Def->getOperand(0));
-      return;
-    }
-    if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
-      if (all_equal(Phi->incoming_values()))
-        Phi->replaceAllUsesWith(Phi->getOperand(0));
-    }
+  if (auto *Phi = dyn_cast<VPPhiAccessors>(Def)) {
+    // TODO: We cannot simplify all phis with all-eq incoming yet due to various
+    // incomplete phi constructions.
+    if ((isa<VPPhi, VPFirstOrderRecurrencePHIRecipe>(Def) &&
+         all_equal(Phi->incoming_values())) ||
+        (isa<VPWidenPHIRecipe, VPHeaderPHIRecipe>(Def) &&
+         Def->getNumOperands() == 1))
+      Def->replaceAllUsesWith(Phi->getIncomingValue(0));
     return;
   }
 
