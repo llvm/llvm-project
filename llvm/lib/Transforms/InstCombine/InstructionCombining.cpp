@@ -5761,6 +5761,9 @@ void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
 }
 
 bool InstCombinerImpl::run() {
+  // Weak VHs to keep track of sunk instructions for the purpose of pushing them
+  // back into worklist at final.
+  SmallVector<WeakTrackingVH, 8> SunkInsts;
   while (!Worklist.isEmpty()) {
     // Walk deferred instructions in reverse order, and push them to the
     // worklist, which means they'll end up popped from the worklist in-order.
@@ -5779,6 +5782,19 @@ bool InstCombinerImpl::run() {
     }
 
     Instruction *I = Worklist.removeOne();
+    if (Worklist.isEmpty() && !SunkInsts.empty()) {
+      LLVM_DEBUG(dbgs() << "Begin to Push Sunk Instructions.\n");
+      // These sunk instructions might be visited before its dom condtion is
+      // visited, and thus the instcombine cannot reach fixpoint in ONE
+      // iteration.
+      // Therefore, we need to push them back to the worklist after
+      // all instructions are visited.
+      for (auto SunkInst : SunkInsts)
+        if (SunkInst)
+          Worklist.push(dyn_cast<Instruction>(SunkInst));
+      LLVM_DEBUG(dbgs() << "End to Push Sunk Instructions.\n");
+      SunkInsts.clear();
+    }
     if (I == nullptr) continue;  // skip null values.
 
     // Check to see if we can DCE the instruction.
@@ -5875,6 +5891,7 @@ bool InstCombinerImpl::run() {
         for (Use &U : I->operands())
           if (Instruction *OpI = dyn_cast<Instruction>(U.get()))
             Worklist.push(OpI);
+        SunkInsts.push_back(WeakTrackingVH(I));
       }
     }
 
