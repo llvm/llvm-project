@@ -16,6 +16,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -185,10 +186,30 @@ Expected<bool> LockFileManager::tryLock() {
   UniqueLockFileName = LockFileName;
   UniqueLockFileName += "-%%%%%%%%";
   int UniqueLockFileID;
-  if (std::error_code EC = sys::fs::createUniqueFile(
-          UniqueLockFileName, UniqueLockFileID, UniqueLockFileName))
-    return createStringError(EC, "failed to create unique file " +
+
+  {
+    std::error_code EC = sys::fs::createUniqueFile(
+        UniqueLockFileName, UniqueLockFileID, UniqueLockFileName);
+    if (EC == errc::no_such_file_or_directory) {
+      SmallString<128> Dir = sys::path::parent_path(UniqueLockFileName);
+      if (!Dir.empty()) {
+        if (std::error_code DirEC = sys::fs::create_directories(Dir))
+          return createStringError(DirEC,
+                                   "failed to create lock directory " + Dir);
+      }
+
+      // Retry creating lock file
+      UniqueLockFileName = LockFileName;
+      UniqueLockFileName += "-%%%%%%%%";
+
+      EC = sys::fs::createUniqueFile(UniqueLockFileName, UniqueLockFileID,
                                      UniqueLockFileName);
+    }
+
+    if (EC)
+      return createStringError(EC, "failed to create unique file " +
+                                       UniqueLockFileName);
+  }
 
   // Clean up the unique file on signal or scope exit.
   RemoveUniqueLockFileOnSignal RemoveUniqueFile(UniqueLockFileName);
