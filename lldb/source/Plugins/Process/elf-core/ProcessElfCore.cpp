@@ -1161,6 +1161,13 @@ DataExtractor ProcessElfCore::GetAuxvData() {
           m_auxv.GetAddressByteSize() == GetAddressByteSize()));
   return DataExtractor(m_auxv);
 }
+std::optional<CoreArgs> ProcessElfCore::GetCoreFileArgs() {
+  if (m_process_args.empty())
+    return std::nullopt;
+  std::string cmd;
+  m_process_args.GetCommandString(cmd);
+  return CoreArgs(m_process_args, cmd.size() == 79);
+}
 
 bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
   info.Clear();

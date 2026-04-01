@@ -97,6 +97,7 @@ public:
   // Returns AUXV structure found in the core file
   lldb_private::DataExtractor GetAuxvData() override;
 
+  std::optional<lldb_private::CoreArgs> GetCoreFileArgs() override;
   bool GetProcessInfo(lldb_private::ProcessInstanceInfo &info) override;
 
 protected:
